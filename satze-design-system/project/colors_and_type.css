@@ -1,0 +1,215 @@
+/* Satze Design System — Colors & Type
+ * Source: Satze/src/theme/hudOratorioPalette.js
+ * Fonts: Chakra Petch, Cinzel, Share Tech Mono (Google Fonts)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  /* ─────────── Base / HUD neutrals ─────────── */
+  --bg-void:        #000000;  /* deepest space */
+  --bg-night:       #050608;  /* hud background */
+  --bg-panel:       #0a1628;  /* panel / card surface */
+  --bg-panel-2:     #0b0f1a;  /* alt panel (campaign) */
+  --bg-ember:       #1a1410;  /* warm dark underlay */
+  --bg-steel:       #1e293b;  /* raised surface */
+
+  /* ─────────── Foreground ─────────── */
+  --fg1:            #e8eaed;  /* primary text */
+  --fg2:            #94a3b8;  /* muted (slate-400) */
+  --fg3:            #64748b;  /* dim (slate-500) */
+  --fg-disabled:    #475569;
+
+  /* ─────────── Primary accents ─────────── */
+  --accent-cyan:    #38bdf8;  /* PALETTE.primary — the Satze cyan */
+  --accent-cyan-d:  #0891b2;
+  --accent-gold:    #d4af37;  /* PALETTE.gold */
+  --accent-gold-l:  #fbbf24;
+  --accent-fire:    #f97316;  /* PALETTE.fire — amber-orange */
+  --accent-fire-d:  #c2410c;
+  --accent-magenta: #d946ef;  /* PALETTE.magenta — rare highlight */
+  --accent-blood:   #dc2626;  /* danger / HP */
+  --accent-slate:   #334155;  /* default border */
+  --accent-ice:     #60a5fa;
+
+  /* ─────────── Semantic ─────────── */
+  --fc-success:     #10b981;  /* emerald */
+  --fc-warning:     #fbbf24;
+  --fc-danger:      #dc2626;
+  --fc-info:        #38bdf8;
+
+  /* ─────────── Faction (Armata) accents ─────────── */
+  --army-orizzonte:       #a78bfa;  /* violet — comet/stellar */
+  --army-kethran:         #fbbf24;  /* amber — temples */
+  --army-corte-rossa:     #dc2626;  /* red — fire/blood */
+  --army-calibri-pesanti: #64748b;  /* slate — industrial */
+  --army-orathai:         #14b8a6;  /* teal — moon/tide */
+  --army-mounthborn:      #84cc16;  /* lime — spore/growth */
+  --army-enclave:         #ea580c;  /* orange — dragon/volcano */
+  --army-ratti:           #10b981;  /* emerald — plague/rat */
+
+  /* ─────────── Campaign chroma (missions) ─────────── */
+  --camp-ass:       #f97316;  /* Assault  */
+  --camp-dif:       #38bdf8;  /* Defence  */
+  --camp-dom:       #d4af37;  /* Domination */
+  --camp-ann:       #dc2626;  /* Annihilation */
+  --camp-spc:       #a78bfa;  /* Special */
+
+  /* ─────────── Type families ─────────── */
+  --font-display:   'Cinzel', 'Times New Roman', serif;       /* Menu banners, hero titles */
+  --font-ui:        'Chakra Petch', system-ui, sans-serif;    /* All UI — primary */
+  --font-mono:      'Share Tech Mono', 'Courier New', monospace;
+
+  /* ─────────── Type scale ─────────── */
+  --fs-xs:          11px;
+  --fs-sm:          13px;
+  --fs-base:        15px;
+  --fs-md:          17px;
+  --fs-lg:          20px;
+  --fs-xl:          28px;
+  --fs-2xl:         40px;
+  --fs-3xl:         56px;
+  --fs-4xl:         72px;   /* SATZE banner-scale */
+  --fs-5xl:         96px;
+
+  /* ─────────── Tracking (signature wide spacing) ─────────── */
+  --tracking-hud:    0.15em;
+  --tracking-wide:   0.22em;
+  --tracking-banner: 0.35em;
+
+  /* ─────────── Spacing (4px rhythm) ─────────── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+
+  /* ─────────── Radii (flat-first HUD) ─────────── */
+  --r-0:  0px;
+  --r-1:  2px;
+  --r-2:  4px;
+  --r-3:  8px;
+  --r-card: 12px;  /* rounded-xl — reserved for full-art cards */
+  --r-pill: 9999px;
+
+  /* ─────────── Borders ─────────── */
+  --border-hair:  1px solid var(--accent-slate);
+  --border-std:   1.5px solid var(--accent-slate);
+  --border-bold:  2px solid var(--accent-slate);
+
+  /* ─────────── Shadow system ─────────── */
+  --sh-flat:    0 2px 8px rgba(0,0,0,0.8);
+  --sh-drop:    0 4px 16px rgba(0,0,0,0.9);
+  --sh-inset:   inset 0 0 40px rgba(0,0,0,0.45);
+  --glow-cyan:  0 0 12px rgba(56,189,248,0.55), 0 0 24px rgba(56,189,248,0.28);
+  --glow-gold:  0 0 12px rgba(212,175,55,0.55), 0 0 24px rgba(212,175,55,0.28);
+  --glow-fire:  0 0 12px rgba(249,115,22,0.55), 0 0 24px rgba(249,115,22,0.28);
+  --glow-blood: 0 0 12px rgba(220,38,38,0.55), 0 0 24px rgba(220,38,38,0.28);
+
+  /* ─────────── Easing ─────────── */
+  --ease-btn:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-ambient: ease-in-out;
+
+  /* ─────────── Z-index ─────────── */
+  --z-bg:       0;
+  --z-content:  10;
+  --z-hud:      20;
+  --z-overlay:  40;
+  --z-modal:    60;
+}
+
+/* ─────────── Semantic element styles ─────────── */
+
+.ds-h1, h1.ds {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-4xl);
+  letter-spacing: var(--tracking-banner);
+  color: var(--fg1);
+  text-transform: uppercase;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.9);
+}
+
+.ds-h2, h2.ds {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg1);
+  text-transform: uppercase;
+}
+
+.ds-h3, h3.ds {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-xl);
+  letter-spacing: var(--tracking-hud);
+  color: var(--fg1);
+}
+
+.ds-hud-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+
+.ds-body, p.ds {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--fg1);
+}
+
+.ds-flavor {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--fg2);
+  line-height: 1.4;
+}
+
+.ds-mono, code.ds {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-cyan);
+  letter-spacing: 0.06em;
+}
+
+.ds-stat {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  color: var(--accent-gold-l);
+  letter-spacing: 0.05em;
+}
+
+/* ─────────── Button baseline (HUD) ─────────── */
+.ds-btn {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--fg1);
+  background: rgba(56, 189, 248, 0.06);
+  border: var(--border-std);
+  border-color: var(--accent-slate);
+  padding: 10px 20px;
+  transition: all 0.2s var(--ease-btn);
+  cursor: pointer;
+}
+.ds-btn:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(56,189,248,0.18);
+  box-shadow: var(--glow-cyan);
+}
+.ds-btn:active { transform: scale(0.98); }
+.ds-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }

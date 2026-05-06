@@ -1,0 +1,142 @@
+/* Cosmic flow transition keyframes & helpers
+ * Extracted from flow-prototype.html. Import once at app root.
+ */
+html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#06030a; color:#f5f3eb; font-family:'Chakra Petch', sans-serif; overflow: hidden; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+
+  @keyframes float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+  @keyframes drift-x { 0%,100% { transform: translateX(0) } 50% { transform: translateX(8px) } }
+  @keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
+  @keyframes data-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+  @keyframes p5-slide-in { from { opacity: 0; transform: translateX(40px) skewX(-12deg) } to { opacity: 1; transform: translateX(0) skewX(-12deg) } }
+
+  .stage { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; }
+
+  /* ============================================================
+     TRANSITION TIMELINE (total ~720ms)
+     0       — click pulse
+     0–280   — phase A: outgoing scene exits + sweep covers 100%
+     280–320 — peak: full magenta cortina, scene-swap happens
+     320–720 — phase B: sweep retreats revealing the NEW scene
+     ============================================================ */
+
+  /* Sweep panels — diagonal magenta cortina that fully covers the stage */
+  @keyframes sweep-cover {
+    from { transform: skewX(-22deg) translateX(-140%); }
+    to   { transform: skewX(-22deg) translateX(0%); }
+  }
+  @keyframes sweep-uncover {
+    from { transform: skewX(-22deg) translateX(0%); }
+    to   { transform: skewX(-22deg) translateX(140%); }
+  }
+  .sweep-panel {
+    position: absolute; top: -10%; bottom: -10%; width: 75vw;
+    transform: skewX(-22deg) translateX(-140%);
+    pointer-events: none;
+    will-change: transform;
+  }
+  .sweep-panel--a {
+    left: -25vw;
+    background: linear-gradient(90deg, #ec4899 0%, #c026d3 100%);
+    box-shadow: 0 0 80px rgba(192,38,211,0.9);
+    animation: sweep-cover 0.28s cubic-bezier(0.5,0,0.2,1) forwards,
+               sweep-uncover 0.4s 0.32s cubic-bezier(0.6,0,0.3,1) forwards;
+  }
+  .sweep-panel--b {
+    left:  25vw;
+    background: linear-gradient(90deg, #c026d3 0%, #581c87 100%);
+    animation: sweep-cover 0.28s 0.04s cubic-bezier(0.5,0,0.2,1) forwards,
+               sweep-uncover 0.4s 0.36s cubic-bezier(0.6,0,0.3,1) forwards;
+  }
+
+  /* Outgoing scene: must be GONE by the time the sweep retracts */
+  @keyframes scene-exit {
+    0%   { transform: scale(1) translateX(0); opacity: 1; filter: blur(0) brightness(1); }
+    100% { transform: scale(0.94) translateX(-30px); opacity: 0; filter: blur(6px) brightness(1.4); }
+  }
+  .scene--exit { animation: scene-exit 0.28s cubic-bezier(0.6,0,0.8,0.2) forwards; }
+
+  /* Incoming scene: stays HIDDEN until the cortina covers, then fades up
+     UNDER the retracting sweep (sweep is on top z-index 100, scene below). */
+  @keyframes scene-enter {
+    0%   { opacity: 0; transform: scale(1.04); filter: blur(8px) brightness(1.3); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
+  }
+  .scene--enter {
+    /* Hidden until cortina is at peak, then animates in DURING the uncover */
+    opacity: 0;
+    animation: scene-enter 0.36s 0.28s cubic-bezier(0.2,0.7,0.2,1) forwards;
+  }
+  /* While cortina is peaking, paint a black backdrop so we never see old/new bleed */
+  .stage-backdrop {
+    position: absolute; inset: 0; z-index: 90;
+    background: #06030a;
+    opacity: 0;
+    pointer-events: none;
+    animation: backdrop-veil 0.72s ease-out forwards;
+  }
+  @keyframes backdrop-veil {
+    0%   { opacity: 0; }
+    35%  { opacity: 1; }
+    65%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Flash + scan lines */
+  @keyframes flash-bloom {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .flash-bloom {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(236,72,153,0.85) 0%, rgba(192,38,211,0.4) 30%, transparent 70%);
+    animation: flash-bloom 0.5s ease-out;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  @keyframes glitch-line {
+    0%   { transform: translateY(0); opacity: 0.0 }
+    20%  { opacity: 0.9 }
+    100% { transform: translateY(120vh); opacity: 0 }
+  }
+  .glitch-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #ec4899, #c026d3, transparent);
+    box-shadow: 0 0 18px #ec4899;
+    animation: glitch-line 0.5s ease-out;
+    pointer-events: none;
+  }
+
+  /* Loading flash text — visible only at peak */
+  @keyframes load-text-fade {
+    0%   { opacity: 0; letter-spacing: 0.2em; }
+    40%  { opacity: 1; letter-spacing: 0.5em; }
+    70%  { opacity: 1; letter-spacing: 0.55em; }
+    100% { opacity: 0; letter-spacing: 0.6em; }
+  }
+  .load-text {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-family: 'Cinzel', serif; font-weight: 900;
+    font-size: 56px; letter-spacing: 0.5em;
+    color: #06030a; text-shadow: 2px 2px 0 #f5f3eb;
+    animation: load-text-fade 0.65s 0.05s ease-out;
+    pointer-events: none; white-space: nowrap;
+  }
+  .load-sub {
+    position: absolute; left: 50%; top: calc(50% + 50px); transform: translate(-50%, 0);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; letter-spacing: 0.5em;
+    color: #06030a; opacity: 0;
+    animation: load-text-fade 0.65s 0.1s ease-out;
+    pointer-events: none; white-space: nowrap;
+  }
+
+  @keyframes press-pulse {
+    0%   { transform: scale(1); filter: brightness(1); }
+    40%  { transform: scale(1.04); filter: brightness(1.6) drop-shadow(0 0 30px #ec4899); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  .pressing { animation: press-pulse 0.32s ease-out; }

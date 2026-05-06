@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze — Card Layout (P4 base)</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#050608; }
+  * { box-sizing: border-box; }
+  .card-art { background-size: cover; background-position: center; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+
+// Sample agent data
+const AGENT_ORIZZONTE = {
+  name: "L'Eco del Primo Sole", league: 5, pot: 5, dan: 6,
+  power: "Turbo: +8 VA", bonus: "-5 VA nem. (min 6)",
+  army: 'orizzonte', armyName: "FIGLI DELL'ORIZZONTE", color: '#a78bfa',
+  portrait: '501',
+  flavor: "Non aspettò la Fusione. Camminò nella Nebula con gli occhi aperti."
+};
+const AGENT_CORTE = {
+  name: "Lama Rossa", league: 3, pot: 7, dan: 9,
+  power: "Debito: +2 POT", bonus: "Sangue: -1 PV nem.",
+  army: 'corte-rossa', armyName: "CORTE ROSSA", color: '#dc2626',
+  portrait: '301',
+  flavor: "Il debito viene sempre riscosso. Con l'oro o col sangue."
+};
+const AGENT_KETHRAN = {
+  name: "Keth il Muto", league: 4, pot: 11, dan: 7,
+  power: "Coro: +2 POT", bonus: "+1 FC",
+  army: 'kethran', armyName: "KETHRAN", color: '#fbbf24',
+  portrait: '411',
+  flavor: "I templi cantano. La pietra ascolta, la carne dimentica."
+};
+
+// Helper: render one card per agent in a horizontal row
+function ROW({ Comp, agents }) {
+  return (
+    <div style={{ display: 'flex', gap: 24, padding: 30, justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      {agents.map(a => <Comp key={a.army} agent={a} />)}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// P4 — Sash "rune": glow + glifi runici (V2 Obelisco) sopra/sotto
+// ─────────────────────────────────────────────────────────
+function CardC2AP4({ agent }) {
+  const a = agent;
+  // 9 different rune glyphs for the obelisk sash
+  const RUNES = [
+    'M -3 -3 L 3 -3 L 0 3 Z',
+    'M -3 0 L 0 -3 L 3 0 L 0 3 Z',
+    'M -3 -3 L 3 3 M -3 3 L 3 -3',
+    'M -3 0 L 3 0 M 0 -3 L 0 3',
+    'M -3 -2 L 3 -2 M -3 2 L 3 2',
+    'M 0 -3 L 3 0 L 0 3 L -3 0 Z',
+    'M -3 -3 L 3 -3 M 0 -3 L 0 3',
+    'M -3 -3 L -3 3 L 3 0 Z',
+    'M -3 -3 L 3 -3 L 3 3 L -3 3 Z M -3 0 L 3 0'
+  ];
+  // Deterministic random based on name hash so each card has stable unique runes
+  let seed = 0;
+  for (let i = 0; i < a.name.length; i++) seed = (seed * 31 + a.name.charCodeAt(i)) >>> 0;
+  const rand = () => {
+    seed = (seed + 0x6D2B79F5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const COUNT = 15;
+  const STEP = 220 / (COUNT + 1);
+  const topR = Array.from({ length: COUNT }, () => Math.floor(rand() * RUNES.length));
+  const botR = Array.from({ length: COUNT }, () => Math.floor(rand() * RUNES.length));
+
+  return (
+    <div style={{ position: 'relative', width: 230, height: 330,
+      background: '#0a0a0d', overflow: 'hidden',
+      border: `1.5px solid ${a.color}`,
+      borderRadius: '0 0 14px 14px',
+      boxShadow: `0 0 14px ${a.color}66, 0 4px 16px rgba(0,0,0,.9)`,
+      fontFamily: 'Chakra Petch' }}>
+      {/* portrait */}
+      <div className="card-art" style={{ position: 'absolute', inset: 0,
+        backgroundImage: `url('../assets/cards/${a.portrait}.png')` }} />
+      {/* top dim only — no bottom dark fade */}
+      <div style={{ position: 'absolute', inset: 0,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 18%, transparent 100%)' }} />
+      {/* league disc */}
+      <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 4,
+        width: 38, height: 38, borderRadius: '50%',
+        background: 'rgba(0,0,0,0.85)', border: `2px solid ${a.color}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        boxShadow: `0 0 10px ${a.color}aa` }}>
+        <div style={{ fontSize: 6, color: a.color, letterSpacing: '0.1em', fontWeight: 700 }}>LEGA</div>
+        <div style={{ fontFamily: 'Cinzel', fontWeight: 900, fontSize: 17, color: '#fff', lineHeight: 0.9 }}>{a.league}</div>
+      </div>
+      {/* rune sash — glifi runici random per carta (V2 Obelisco) */}
+      <div style={{ position: 'absolute', top: 30, left: -26, transform: 'rotate(-22deg)', transformOrigin: 'left center', zIndex: 3 }}>
+        <div style={{ position: 'absolute', inset: '-8px -10px', background: a.color, opacity: 0.32, filter: 'blur(14px)' }} />
+        <svg width="220" height="52" viewBox="0 0 220 52" style={{ position: 'relative', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.85))' }}>
+          <defs>
+            <linearGradient id={`rg-${a.army}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={a.color} stopOpacity="0.4" />
+              <stop offset="20%" stopColor={a.color} />
+              <stop offset="80%" stopColor={a.color} />
+              <stop offset="100%" stopColor={a.color} stopOpacity="0.4" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="15" width="220" height="22" fill={`url(#rg-${a.army})`} />
+          <line x1="0" y1="14" x2="220" y2="14" stroke={a.color} strokeWidth="0.8" />
+          <line x1="0" y1="38" x2="220" y2="38" stroke={a.color} strokeWidth="0.8" />
+          {topR.map((idx, i) => (
+            <g key={`tg-${i}`} transform={`translate(${STEP * (i + 1)} 7)`}>
+              <path d={RUNES[idx]} fill="none" stroke={a.color} strokeWidth="0.9" opacity="0.9"/>
+            </g>
+          ))}
+          {botR.map((idx, i) => (
+            <g key={`bg-${i}`} transform={`translate(${STEP * (i + 1)} 45)`}>
+              <path d={RUNES[idx]} fill="none" stroke={a.color} strokeWidth="0.9" opacity="0.9"/>
+            </g>
+          ))}
+          <rect x="0" y="24" width="220" height="2" fill="rgba(255,255,255,0.25)" />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', color: '#0a0a0d',
+          fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 12, letterSpacing: '0.18em',
+          textTransform: 'uppercase', whiteSpace: 'nowrap',
+          textShadow: `0 0 8px ${a.color}, 0 1px 0 rgba(255,255,255,0.25)` }}>{a.name}</div>
+      </div>
+      {/* POT / DAN stats */}
+      <div style={{ position: 'absolute', bottom: 96, left: 0, right: 0, zIndex: 2,
+        display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '0 14px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Cinzel', fontWeight: 900, fontSize: 46, color: a.color, lineHeight: 0.9,
+            textShadow: '0 0 16px rgba(0,0,0,1), 0 2px 6px #000' }}>{a.pot}</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#cbd5e1', fontWeight: 600, marginTop: 3 }}>POTENZA</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Cinzel', fontWeight: 900, fontSize: 46, color: '#fff', lineHeight: 0.9,
+            textShadow: '0 0 16px rgba(0,0,0,1), 0 2px 6px #000' }}>{a.dan}</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#cbd5e1', fontWeight: 600, marginTop: 3 }}>DANNO</div>
+        </div>
+      </div>
+      {/* footer armata: POT / BON */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
+        background: `linear-gradient(180deg, ${a.color}dd 0%, ${a.color} 100%)`,
+        color: '#0a0a0d', padding: '8px 12px 10px',
+        borderRadius: '0 0 14px 14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontWeight: 800, fontSize: 9, letterSpacing: '0.15em' }}>⚡ POT</span>
+          <span style={{ fontWeight: 700, fontSize: 11 }}>{a.power}</span>
+        </div>
+        <div style={{ height: 1, background: 'rgba(0,0,0,0.3)', margin: '4px 0' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontWeight: 800, fontSize: 9, letterSpacing: '0.15em' }}>▢ BON</span>
+          <span style={{ fontWeight: 700, fontSize: 11 }}>{a.bonus}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const agents = [AGENT_ORIZZONTE, AGENT_CORTE, AGENT_KETHRAN];
+  return (
+    <DesignCanvas>
+      <DCSection id="base" title="Carta base">
+        <DCArtboard id="base" label="P4 · Rune: glifi runici sopra/sotto" width={760} height={400}>
+          <ROW Comp={CardC2AP4} agents={agents} />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

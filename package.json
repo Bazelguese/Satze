@@ -1,0 +1,82 @@
+{
+  "name": "satze",
+  "version": "1.0.0",
+  "description": "Gioco di carte strategico SATZE",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -n ws,vite -c cyan,magenta \"node server/index.mjs\" \"vite\"",
+    "dev:vite": "vite",
+    "build": "vite build",
+    "test": "node --test \"src/game/duel/*.test.js\" \"src/game/campaign/*.test.js\" \"src/data/campaignSaves.test.js\" \"src/config/duelVisualTimeline.test.js\" && vitest run",
+    "test:unit": "node --test \"src/game/duel/*.test.js\" \"src/game/campaign/*.test.js\" \"src/data/campaignSaves.test.js\" \"src/config/duelVisualTimeline.test.js\"",
+    "test:integration": "vitest run",
+    "preview": "vite preview",
+    "update-images": "node scripts/update-card-images.js",
+    "icons-nobg": "node scripts/remove-icon-backgrounds.js",
+    "logo:transparent": "node scripts/process-brand-logo.mjs",
+    "generate-menu-gif": "node scripts/generate-menu-gif-runner.cjs",
+    "electron:dev": "concurrently -k \"vite\" \"npx wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && electron-builder --win --x64 --dir",
+    "electron:pack": "vite build && electron-builder --dir",
+    "electron:installer": "vite build && electron-builder --win --x64",
+    "server": "node server/index.mjs",
+    "dev:full": "npm run dev",
+    "docker:build": "docker build -t satze-ws .",
+    "docker:run": "docker run --rm -p 3847:3847 -e PORT=3847 satze-ws"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.23",
+    "concurrently": "^9.1.2",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
+    "postcss": "^8.5.6",
+    "puppeteer": "^24.37.5",
+    "serve": "^14.2.5",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.19",
+    "vite": "^5.0.8",
+    "vitest": "^2.1.9",
+    "ws": "^8.18.0"
+  },
+  "build": {
+    "appId": "com.satze.game",
+    "productName": "SATZE",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/multiplayer.json.example",
+        "to": "multiplayer.json.example"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

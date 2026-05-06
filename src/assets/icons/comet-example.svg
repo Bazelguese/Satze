@@ -1,0 +1,8 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Esempio di icona cometa per "Figli dell'Orizzonte" -->
+  <!-- Puoi sostituire questo con la tua icona personalizzata -->
+  <path d="M12 2L14 8L20 10L14 12L12 18L10 12L4 10L10 8L12 2Z" fill="#a78bfa" stroke="#a78bfa" stroke-width="1.5"/>
+  <path d="M12 2L13 6L17 7L13 8L12 12L11 8L7 7L11 6L12 2Z" fill="white" opacity="0.8"/>
+  <!-- Coda della cometa -->
+  <path d="M4 10L2 14L0 18" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+</svg>

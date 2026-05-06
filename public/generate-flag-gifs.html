@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Genera GIF bandiere 32-bit per pulsanti modalità</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #1a1a1a; color: #ddd; padding: 1.5rem; }
+    h1 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    p { margin: 0.5rem 0; font-size: 0.9rem; opacity: 0.9; }
+    .flags { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+    .flags canvas { border: 1px solid #333; image-rendering: pixelated; image-rendering: crisp-edges; }
+    button { padding: 0.6rem 1.2rem; font-size: 0.9rem; cursor: pointer; background: #c2410c; color: #fff; border: none; border-radius: 4px; margin-right: 0.5rem; margin-top: 0.5rem; }
+    button:hover { background: #ea580c; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status { margin-top: 1rem; font-size: 0.85rem; color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <h1>Bandiere animate 32-bit per pulsanti modalità</h1>
+  <p>Tema guerra/medievale: palette 256 colori, effetto vento. Clicca "Genera tutte" per creare le 7 GIF.</p>
+  <div class="flags" id="preview"></div>
+  <button id="btnAll">Genera tutte e scarica (flag-mode-1.gif … flag-mode-7.gif)</button>
+  <p id="status"></p>
+
+  <script type="module">
+    const FLAG_W = 80;
+    const FLAG_H = 56;
+    const FPS = 12;
+    const TOTAL_FRAMES = 16;
+    const DELAY_MS = Math.round(1000 / FPS);
+
+    const MODES = [
+      { name: 'Classic', colors: ['#d97706', '#b45309', '#92400e', '#78350f'] },
+      { name: 'Bare Hands', colors: ['#475569', '#334155', '#1e293b', '#0f172a'] },
+      { name: 'Campagna', colors: ['#7c3aed', '#5b21b6', '#4c1d95', '#3b0764'] },
+      { name: 'Multiplayer', colors: ['#0d9488', '#0f766e', '#115e59', '#134e4a'] },
+      { name: 'Mazzi', colors: ['#4f46e5', '#3730a3', '#312e81', '#1e1b4b'] },
+      { name: 'Tutorial', colors: ['#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a'] },
+      { name: 'Galleria', colors: ['#64748b', '#475569', '#334155', '#1e293b'] },
+    ];
+
+    const canvas = document.createElement('canvas');
+    canvas.width = FLAG_W;
+    canvas.height = FLAG_H;
+    const ctx = canvas.getContext('2d');
+
+    function drawFlagFrame(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const wave = (x) => Math.sin((x / FLAG_W) * Math.PI * 2 + (frame / TOTAL_FRAMES) * Math.PI * 2) * 4;
+      for (let x = 2; x < FLAG_W - 2; x++) {
+        const offset = wave(x);
+        const stripe = Math.floor((x / (FLAG_W - 4)) * 3) % 3;
+        ctx.fillStyle = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+        ctx.beginPath();
+        ctx.moveTo(x, 2);
+        ctx.lineTo(x + 1, 2);
+        ctx.lineTo(x + 1, FLAG_H - 2);
+        ctx.lineTo(x, FLAG_H - 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = c1;
+        ctx.fillRect(x, 2 + offset, 1, Math.max(1, FLAG_H - 4));
+      }
+      ctx.fillStyle = c1;
+      for (let y = 2; y < FLAG_H - 2; y++) {
+        for (let x = 2; x < FLAG_W - 2; x++) {
+          const o = wave(x);
+          const yy = y - 2 - o;
+          const stripe = Math.floor((yy / (FLAG_H - 4)) * 3) % 3;
+          ctx.fillStyle = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    function drawFlagFrameSimple(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const amp = 3;
+      for (let x = 2; x < FLAG_W - 2; x++) {
+        const t = (x / FLAG_W) * Math.PI * 2 + (frame / TOTAL_FRAMES) * Math.PI * 2;
+        const offset = Math.round(Math.sin(t) * amp);
+        const stripe = Math.floor((x / (FLAG_W - 4)) * 3) % 3;
+        ctx.fillStyle = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+        for (let y = 2; y < FLAG_H - 2; y++) {
+          const waveY = y + offset + Math.sin((y / FLAG_H) * Math.PI) * 2;
+          if (waveY >= 2 && waveY < FLAG_H - 2) ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      ctx.fillStyle = c1;
+      ctx.fillRect(2, 2, FLAG_W - 4, FLAG_H - 4);
+      const stripes = 3;
+      for (let s = 0; s < stripes; s++) {
+        ctx.fillStyle = s === 0 ? c1 : s === 1 ? c2 : c3;
+        const sy = 2 + (s * (FLAG_H - 4)) / stripes;
+        const sh = (FLAG_H - 4) / stripes;
+        for (let x = 2; x < FLAG_W - 2; x++) {
+          const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (x / FLAG_W) * Math.PI * 2;
+          const dx = Math.round(Math.sin(t) * 2);
+          ctx.fillRect(x + dx, sy, 1, Math.ceil(sh));
+        }
+      }
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    function drawFlagFrameV2(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const innerW = FLAG_W - 4;
+      const innerH = FLAG_H - 4;
+      for (let fy = 0; fy < innerH; fy++) {
+        for (let fx = 0; fx < innerW; fx++) {
+          const x = fx + 2;
+          const y = fy + 2;
+          const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (fx / innerW) * Math.PI * 3;
+          const wave = Math.sin(t) * 2.5;
+          const stripe = Math.floor((fx / innerW) * 3) % 3;
+          ctx.fillStyle = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      for (let fx = 0; fx < innerW; fx++) {
+        const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (fx / innerW) * Math.PI * 3;
+        const wave = Math.round(Math.sin(t) * 3);
+        const stripe = Math.floor((fx / innerW) * 3) % 3;
+        ctx.fillStyle = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+        for (let fy = 0; fy < innerH; fy++) {
+          const x = fx + 2;
+          const y = fy + 2 + (wave * (fy / innerH));
+          if (y >= 2 && y < FLAG_H - 2) ctx.fillRect(x, Math.round(y), 1, 1);
+        }
+      }
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    function drawFlagFrameFinal(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const innerW = FLAG_W - 4;
+      const innerH = FLAG_H - 4;
+      for (let fy = 0; fy < innerH; fy++) {
+        for (let fx = 0; fx < innerW; fx++) {
+          const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (fx / innerW) * Math.PI * 2.5;
+          const wave = Math.sin(t) * 2;
+          const stripe = Math.floor((fx / innerW) * 3) % 3;
+          const shade = 1 - (wave / 10);
+          const r = (s) => Math.min(255, Math.max(0, s));
+          let fill = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+          ctx.fillStyle = fill;
+          ctx.fillRect(fx + 2, fy + 2, 1, 1);
+        }
+      }
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    function drawWavingFlag(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const innerW = FLAG_W - 4;
+      const innerH = FLAG_H - 4;
+      const imageData = ctx.getImageData(2, 2, innerW, innerH);
+      const data = imageData.data;
+      for (let fy = 0; fy < innerH; fy++) {
+        for (let fx = 0; fx < innerW; fx++) {
+          const stripe = Math.floor((fx / innerW) * 3) % 3;
+          const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (fx / innerW) * Math.PI * 2;
+          const waveOffset = Math.round(Math.sin(t) * 2.5);
+          const sy = fy - waveOffset;
+          const idx = (fy * innerW + fx) * 4;
+          let hex = stripe === 0 ? c1 : stripe === 1 ? c2 : c3;
+          const h = hex.replace('#', '');
+          data[idx] = parseInt(h.substr(0, 2), 16);
+          data[idx + 1] = parseInt(h.substr(2, 2), 16);
+          data[idx + 2] = parseInt(h.substr(4, 2), 16);
+          data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 2, 2);
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    function drawWavingFlagV2(frame, colors) {
+      const [c1, c2, c3, cBorder] = colors;
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, FLAG_H);
+      const innerW = FLAG_W - 4;
+      const innerH = FLAG_H - 4;
+      const parseHex = (hex) => {
+        const h = hex.replace('#', '');
+        return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+      };
+      for (let fy = 0; fy < innerH; fy++) {
+        for (let fx = 0; fx < innerW; fx++) {
+          const t = (frame / TOTAL_FRAMES) * Math.PI * 2 + (fx / innerW) * Math.PI * 2;
+          const waveX = Math.sin(t) * 2.5;
+          const stripe = Math.floor(((fx + waveX) / innerW) * 3) % 3;
+          const [r, g, b] = parseHex(stripe === 0 ? c1 : stripe === 1 ? c2 : c3);
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(fx + 2, fy + 2, 1, 1);
+        }
+      }
+      ctx.fillStyle = cBorder;
+      ctx.fillRect(0, 0, FLAG_W, 2);
+      ctx.fillRect(0, FLAG_H - 2, FLAG_W, 2);
+      ctx.fillRect(0, 0, 2, FLAG_H);
+      ctx.fillRect(FLAG_W - 2, 0, 2, FLAG_H);
+    }
+
+    async function generateOne(modeIndex) {
+      const { GIFEncoder, quantize, applyPalette } = await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
+      const gif = GIFEncoder();
+      const colors = MODES[modeIndex].colors;
+      for (let frame = 0; frame < TOTAL_FRAMES; frame++) {
+        drawWavingFlagV2(frame, colors);
+        const imageData = ctx.getImageData(0, 0, FLAG_W, FLAG_H);
+        const pal = quantize(imageData.data, 256);
+        const index = applyPalette(imageData.data, pal);
+        gif.writeFrame(index, FLAG_W, FLAG_H, { palette: pal, delay: DELAY_MS });
+      }
+      gif.finish();
+      return new Uint8Array(gif.bytes());
+    }
+
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(new Blob([blob], { type: 'image/gif' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    const status = document.getElementById('status');
+    const preview = document.getElementById('preview');
+
+    document.getElementById('btnAll').addEventListener('click', async () => {
+      const btn = document.getElementById('btnAll');
+      btn.disabled = true;
+      status.textContent = 'Caricamento encoder…';
+      const { GIFEncoder, quantize, applyPalette } = await import('https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js');
+      for (let i = 0; i < MODES.length; i++) {
+        status.textContent = `Generazione bandiera ${i + 1}/7 (${MODES[i].name})…`;
+        const gif = GIFEncoder();
+        const colors = MODES[i].colors;
+        for (let frame = 0; frame < TOTAL_FRAMES; frame++) {
+          drawWavingFlagV2(frame, colors);
+          const imageData = ctx.getImageData(0, 0, FLAG_W, FLAG_H);
+          const pal = quantize(imageData.data, 256);
+          const index = applyPalette(imageData.data, pal);
+          gif.writeFrame(index, FLAG_W, FLAG_H, { palette: pal, delay: DELAY_MS });
+        }
+        gif.finish();
+        const blob = new Blob([gif.bytes()], { type: 'image/gif' });
+        downloadBlob(blob, `flag-mode-${i + 1}.gif`);
+        await new Promise(r => setTimeout(r, 200));
+      }
+      status.textContent = 'Fatto. Sposta i 7 file flag-mode-1.gif … flag-mode-7.gif in public/.';
+      btn.disabled = false;
+    });
+
+    MODES.forEach((m, i) => {
+      drawWavingFlagV2(0, m.colors);
+      const c = document.createElement('canvas');
+      c.width = FLAG_W;
+      c.height = FLAG_H;
+      c.getContext('2d').drawImage(canvas, 0, 0);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div style="font-size:0.7rem;margin-top:4px;">${m.name}</div>`;
+      wrap.insertBefore(c, wrap.firstChild);
+      preview.appendChild(wrap);
+    });
+  </script>
+</body>
+</html>

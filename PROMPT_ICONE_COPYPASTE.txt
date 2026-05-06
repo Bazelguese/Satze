@@ -1,0 +1,58 @@
+═══════════════════════════════════════════════════════════════
+PROMPT MIDJOURNEY - ICONE ARMATE SATZE
+Copia e incolla direttamente in Midjourney
+═══════════════════════════════════════════════════════════════
+
+1. FIGLI DELL'ORIZZONTE
+───────────────────────────────────────────────────────────────
+minimalist icon of a comet with trailing stardust, cosmic purple and indigo colors (#a78bfa), dark silhouette with glowing stellar core, simple geometric shapes, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+2. KETHRAN
+───────────────────────────────────────────────────────────────
+minimalist icon of ancient temple or ziggurat, golden amber colors (#fbbf24), geometric columns and steps, simple architectural silhouette, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+3. CORTE ROSSA
+───────────────────────────────────────────────────────────────
+minimalist icon of stylized flame, red and rose colors (#f43f5e), dynamic fire shape, simple geometric design, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+4. CALIBRI PESANTI
+───────────────────────────────────────────────────────────────
+minimalist icon of mechanical gear or cogwheel, slate gray and zinc colors (#94a3b8), industrial design, simple geometric shapes, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+5. ORATHAI
+───────────────────────────────────────────────────────────────
+minimalist icon of crescent moon or full moon, emerald and teal colors (#2dd4bf), mystical glow, simple geometric shape, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+6. NATI DALLA BOCCA
+───────────────────────────────────────────────────────────────
+minimalist icon of virus or organic cell, lime green and yellow colors (#a3e635), biological structure, simple geometric shapes with organic curves, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+7. L'ENCLAVE DELLE SCAGLIE
+───────────────────────────────────────────────────────────────
+minimalist icon of dragon head or scales, orange and amber colors (#f59e0b), reptilian silhouette, simple geometric design, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+───────────────────────────────────────────────────────────────
+
+8. RATTI DELLA MEGERA
+───────────────────────────────────────────────────────────────
+minimalist icon of rat or rodent silhouette, green and emerald colors (#10b981), simple animal shape, clean lines, vector art style, game icon, 24x24 viewBox, centered composition --style raw --ar 1:1 --v 6.2 --stylize 100
+
+═══════════════════════════════════════════════════════════════
+NOTE:
+- Genera 4 varianti per ogni prompt
+- Scegli la migliore e fai upscale
+- Converti in SVG se possibile
+- Testa a 16px, 24px, 48px per verificare leggibilità
+═══════════════════════════════════════════════════════════════

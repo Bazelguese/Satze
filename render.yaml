@@ -1,0 +1,12 @@
+# Render.com — Web Service da Dockerfile (piano gratuito disponibile con limiti)
+# Dashboard: New > Web Service > collega repo > Root Directory vuoto > Dockerfile path: Dockerfile
+services:
+  - type: web
+    name: satze-multiplayer
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production

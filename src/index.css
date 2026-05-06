@@ -1,0 +1,2008 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset e stili base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0c0814;
+  background-image:
+    radial-gradient(ellipse 125% 90% at 28% -16%, rgba(107, 61, 158, 0.2), transparent 50%),
+    radial-gradient(ellipse 100% 75% at 92% 6%, rgba(216, 94, 184, 0.1), transparent 46%),
+    radial-gradient(ellipse 80% 55% at 50% 100%, rgba(90, 124, 189, 0.08), transparent 52%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+  color: #eae4f2;
+  overflow-x: hidden;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+/* Miglioramento tipografia per numeri */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Spacing consistente */
+.space-y-consistent > * + * {
+  margin-top: 1rem;
+}
+
+.space-x-consistent > * + * {
+  margin-left: 1rem;
+}
+
+/* Pulsanti migliorati - stati più chiari */
+button {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Evita “schermata bianca” se il browser non applica subito lo sfondo del body */
+  background-color: #0c0814;
+}
+
+/* ============================================
+   ANIMAZIONI DUELLO
+   ============================================ */
+
+/* Animazione entrata carta da sinistra (IA) - con movimento dalla mano - MIGLIORATA */
+@keyframes cardEnterLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-400px) translateY(200px) scale(0.6) rotate(-10deg);
+    filter: blur(4px);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translateX(-150px) translateY(50px) scale(0.85) rotate(-5deg);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(10px) translateY(0) scale(1.05) rotate(0deg);
+    filter: blur(0px);
+  }
+  80% {
+    transform: translateX(-3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Animazione spostamento agente verso sinistra */
+@keyframes slideLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-80px);
+  }
+}
+
+/* Animazione entrata carta da destra (Player) - con movimento dalla mano - MIGLIORATA */
+@keyframes cardEnterRight {
+  0% {
+    opacity: 0;
+    transform: translateX(400px) translateY(200px) scale(0.6) rotate(10deg);
+    filter: blur(4px);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translateX(150px) translateY(50px) scale(0.85) rotate(5deg);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-10px) translateY(0) scale(1.05) rotate(0deg);
+    filter: blur(0px);
+  }
+  80% {
+    transform: translateX(3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Animazione spostamento agente verso destra */
+@keyframes slideRight {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(80px);
+  }
+}
+
+/* Animazione zoom campo di battaglia */
+@keyframes zoomIn {
+  0% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animazione zoom progressivo campo di battaglia durante schieramento - MIGLIORATA */
+@keyframes battlefieldZoom {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(0.9);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    filter: brightness(1.05);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    filter: brightness(1.1);
+  }
+}
+
+/* Animazione zoom progressivo più fluida per campo di battaglia */
+@keyframes battlefieldZoomSmooth {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.95;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Variante con pannello alzato durante la fase duello */
+@keyframes battlefieldZoomSmoothRaised {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.95;
+  }
+  30% {
+    transform: translate(-50%, -65%) scale(1.05);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -75%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -80%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Transizione immagine campo - effetti per tema armata */
+
+/* Default: reveal radiale dal centro */
+@keyframes battlefieldRevealDefault {
+  0% { clip-path: circle(0% at 50% 50%); opacity: 0.3; }
+  100% { clip-path: circle(150% at 50% 50%); opacity: 1; }
+}
+
+/* Kethran: frammentato - 4 pezzi che si espandono dal centro */
+@keyframes battlefieldRevealFragmented {
+  0% {
+    clip-path: inset(50% 50% 50% 50%);
+    opacity: 0.4;
+  }
+  40% {
+    clip-path: inset(30% 30% 30% 30%);
+    opacity: 0.8;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* Figli dell'Orizzonte: swirl - spirale che si espande dal centro (immagine ferma) */
+/* Circle reveal: interpolazione fluida, effetto simile a spirale che si apre */
+@keyframes battlefieldRevealSwirl {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0.3;
+  }
+  100% {
+    clip-path: circle(150% at 50% 50%);
+    opacity: 1;
+  }
+}
+
+/* Corte Rossa: fiamme - reveal dal basso con bordo ondulato */
+@keyframes battlefieldRevealFlames {
+  0% {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    opacity: 0.4;
+  }
+  35% {
+    clip-path: polygon(0 100%, 100% 100%, 100% 65%, 85% 67%, 70% 63%, 55% 67%, 40% 63%, 25% 67%, 10% 63%, 0 65%);
+    opacity: 0.75;
+  }
+  70% {
+    clip-path: polygon(0 100%, 100% 100%, 100% 30%, 85% 32%, 70% 28%, 55% 32%, 40% 28%, 25% 32%, 10% 28%, 0 30%);
+    opacity: 0.95;
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+}
+
+/* Calibri Pesanti: scan - linee orizzontali che si rivelano (effetto CRT) */
+@keyframes battlefieldRevealScan {
+  0% {
+    clip-path: inset(100% 0 0 0);
+    opacity: 0.5;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* Orathai: magia - reveal con glow pulsante */
+@keyframes battlefieldRevealMagic {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    filter: brightness(0.2) blur(12px);
+    opacity: 0.2;
+  }
+  50% {
+    filter: brightness(0.8) blur(4px);
+    opacity: 0.7;
+  }
+  80% {
+    filter: brightness(1.15) blur(0px);
+  }
+  100% {
+    clip-path: circle(150% at 50% 50%);
+    filter: brightness(1) blur(0px);
+    opacity: 1;
+  }
+}
+
+/* Mounthborn: crescita organica - blob che si espande */
+@keyframes battlefieldRevealOrganic {
+  0% {
+    clip-path: ellipse(0% 0% at 50% 50%);
+    opacity: 0.3;
+  }
+  60% {
+    clip-path: ellipse(80% 80% at 50% 50%);
+    opacity: 0.9;
+  }
+  100% {
+    clip-path: ellipse(150% 150% at 50% 50%);
+    opacity: 1;
+  }
+}
+
+.animate-battlefield-reveal-default {
+  animation: battlefieldRevealDefault 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-battlefield-reveal-fragmented {
+  animation: battlefieldRevealFragmented 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-battlefield-reveal-swirl {
+  animation: battlefieldRevealSwirl 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+.animate-battlefield-reveal-flames {
+  animation: battlefieldRevealFlames 1s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+.animate-battlefield-reveal-scan {
+  animation: battlefieldRevealScan 1s steps(12) forwards;
+}
+.animate-battlefield-reveal-magic {
+  animation: battlefieldRevealMagic 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-battlefield-reveal-organic {
+  animation: battlefieldRevealOrganic 1s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+/* Animazione sollevamento campo di battaglia */
+@keyframes liftBattlefield {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+/* Animazione Focus Coin che vola */
+@keyframes coinFly {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-60px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Animazione numero che cambia - MIGLIORATA */
+@keyframes numberPulse {
+  0% {
+    transform: scale(1);
+    color: inherit;
+    opacity: 0.8;
+  }
+  20% {
+    transform: scale(1.5) translateY(-8px);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.2) translateY(-4px);
+  }
+  60% {
+    transform: scale(1.1) translateY(0);
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+    opacity: 1;
+  }
+}
+
+/* Animazione numero che aumenta (positivo) */
+@keyframes numberIncrease {
+  0% {
+    transform: scale(0.8) translateY(5px);
+    opacity: 0;
+    color: #10b981;
+  }
+  30% {
+    transform: scale(1.5) translateY(-10px);
+    opacity: 1;
+    text-shadow: 0 0 20px rgba(16, 185, 129, 1);
+  }
+  60% {
+    transform: scale(1.2) translateY(-3px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    color: #10b981;
+  }
+}
+
+/* Animazione numero che diminuisce (negativo) */
+@keyframes numberDecrease {
+  0% {
+    transform: scale(0.8) translateY(5px);
+    opacity: 0;
+    color: #ef4444;
+  }
+  30% {
+    transform: scale(1.5) translateY(-10px);
+    opacity: 1;
+    text-shadow: 0 0 20px rgba(239, 68, 68, 1);
+  }
+  60% {
+    transform: scale(1.2) translateY(-3px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    color: #ef4444;
+  }
+}
+
+/* Animazione icona effetto che appare */
+@keyframes effectIconAppear {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Animazione numero che diminuisce (negativo) */
+@keyframes numberPulseNegative {
+  0% {
+    transform: scale(1);
+    color: inherit;
+  }
+  30% {
+    transform: scale(1.4) translateY(-5px);
+    color: #ef4444;
+    text-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+  }
+  60% {
+    transform: scale(1.1) translateY(0);
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
+/* Animazione icona effetto */
+@keyframes effectIcon {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  50% {
+    transform: scale(1.3) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Animazione valore che si aggiorna step-by-step */
+@keyframes valueStepUpdate {
+  0% {
+    opacity: 0.5;
+    transform: translateY(10px) scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Animazione effetto modificatore */
+@keyframes modifierFlash {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Evidenziazione POT/BON duello: solo luminosità, niente scale (più pulito del riquadro pieno) */
+@keyframes modifierHighlightShine {
+  0%,
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.08) saturate(1.06);
+  }
+}
+
+.animate-modifier-highlight-shine {
+  animation: modifierHighlightShine 2.2s ease-in-out infinite;
+}
+
+/* Entrata 3D: piastra che si alza dal basso (solo transform/opacity — compatibile con shine su filter) */
+@keyframes modifierHighlightAppear {
+  0% {
+    opacity: 0;
+    transform: perspective(640px) rotateX(-14deg) translateY(12px) scale(0.92);
+  }
+  58% {
+    opacity: 1;
+    transform: perspective(640px) rotateX(5deg) translateY(-4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(640px) rotateX(-3deg) translateY(0) scale(1);
+  }
+}
+
+/* Pannello evidenziazione: apparizione 3D + pulse luminosità (stagger sulla riga bonus) */
+.animate-modifier-highlight-panel {
+  transform-origin: center bottom;
+  backface-visibility: hidden;
+  animation:
+    modifierHighlightAppear 0.62s cubic-bezier(0.22, 1, 0.36, 1) both,
+    modifierHighlightShine 2.2s ease-in-out 0.58s infinite both;
+}
+
+.animate-modifier-highlight-panel-stagger {
+  transform-origin: center bottom;
+  backface-visibility: hidden;
+  animation:
+    modifierHighlightAppear 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both,
+    modifierHighlightShine 2.2s ease-in-out 0.72s infinite both;
+}
+
+/* Copia potere/bonus: “trasformazione” leggibile (snap + bagliore smeraldo) */
+@keyframes modifierCopyPanelReveal {
+  0% {
+    opacity: 0.65;
+    transform: perspective(520px) rotateX(-10deg) scale(0.92);
+    box-shadow:
+      inset 0 -12px 20px -10px rgba(0, 0, 0, 0.12),
+      0 0 0 0 rgba(52, 211, 153, 0);
+  }
+  42% {
+    opacity: 1;
+    transform: perspective(520px) rotateX(5deg) scale(1.04);
+    box-shadow:
+      inset 0 -12px 20px -10px rgba(0, 0, 0, 0.08),
+      0 0 28px 2px rgba(52, 211, 153, 0.45),
+      0 0 14px rgba(52, 211, 153, 0.25);
+  }
+  74% {
+    transform: perspective(520px) rotateX(-2deg) scale(0.99);
+    box-shadow:
+      inset 0 -12px 20px -10px rgba(0, 0, 0, 0.1),
+      0 0 16px rgba(52, 211, 153, 0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(520px) rotateX(0deg) scale(1);
+    box-shadow:
+      inset 0 -12px 20px -10px rgba(0, 0, 0, 0.1),
+      0 8px 20px -12px rgba(0, 0, 0, 0.12),
+      0 0 22px -8px rgba(52, 211, 153, 0.09);
+  }
+}
+
+.animate-modifier-copy-panel {
+  transform-origin: center bottom;
+  backface-visibility: hidden;
+  animation:
+    modifierCopyPanelReveal 0.88s cubic-bezier(0.22, 1, 0.4, 1) both,
+    modifierHighlightShine 2.2s ease-in-out 0.8s infinite both;
+}
+
+.animate-modifier-copy-panel-stagger {
+  transform-origin: center bottom;
+  backface-visibility: hidden;
+  animation:
+    modifierCopyPanelReveal 0.88s cubic-bezier(0.22, 1, 0.4, 1) 0.1s both,
+    modifierHighlightShine 2.2s ease-in-out 0.9s infinite both;
+}
+
+/* Animazione clash (scontro) - tema aurora cosmica */
+@keyframes clash {
+  0% {
+    transform: scale(1) translateX(0);
+    filter: brightness(1);
+  }
+  10% {
+    transform: scale(1.2) translateX(-8px);
+    filter: brightness(1.7) drop-shadow(0 0 22px rgba(79, 209, 197, 0.7));
+  }
+  20% {
+    transform: scale(0.85) translateX(8px);
+    filter: brightness(1.25) drop-shadow(0 0 25px rgba(255, 179, 71, 0.5));
+  }
+  30% {
+    transform: scale(1.15) translateX(-5px);
+    filter: brightness(1.5) drop-shadow(0 0 20px rgba(79, 209, 197, 0.6));
+  }
+  40% {
+    transform: scale(0.9) translateX(5px);
+    filter: brightness(1.15) drop-shadow(0 0 12px rgba(255, 179, 71, 0.4));
+  }
+  50% {
+    transform: scale(1.1) translateX(-3px);
+    filter: brightness(1.4) drop-shadow(0 0 18px rgba(79, 209, 197, 0.5));
+  }
+  60% {
+    transform: scale(0.95) translateX(3px);
+    filter: brightness(1.05) drop-shadow(0 0 8px rgba(79, 209, 197, 0.3));
+  }
+  70% {
+    transform: scale(1.05) translateX(-2px);
+    filter: brightness(1.25) drop-shadow(0 0 12px rgba(79, 209, 197, 0.4));
+  }
+  80% {
+    transform: scale(0.98) translateX(2px);
+    filter: brightness(1.05) drop-shadow(0 0 6px rgba(79, 209, 197, 0.25));
+  }
+  90% {
+    transform: scale(1.02) translateX(-1px);
+    filter: brightness(1.15) drop-shadow(0 0 8px rgba(79, 209, 197, 0.3));
+  }
+  100% {
+    transform: scale(1) translateX(0);
+    filter: brightness(1);
+  }
+}
+
+/* Animazione esplosione/celebrazione per vincitore - stile aurora cosmica */
+@keyframes victoryExplosion {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  20% {
+    transform: scale(1.25) rotate(4deg);
+    opacity: 1;
+    filter: brightness(1.4) drop-shadow(0 0 35px rgba(79, 209, 197, 0.8)) drop-shadow(0 0 10px rgba(255, 179, 71, 0.4));
+  }
+  40% {
+    transform: scale(1.08) rotate(-2deg);
+    opacity: 1;
+    filter: brightness(1.25) drop-shadow(0 0 25px rgba(79, 209, 197, 0.6));
+  }
+  60% {
+    transform: scale(1.15) rotate(1deg);
+    opacity: 1;
+    filter: brightness(1.3) drop-shadow(0 0 30px rgba(255, 179, 71, 0.5)) drop-shadow(0 0 15px rgba(79, 209, 197, 0.4));
+  }
+  80% {
+    transform: scale(1.03) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1.15) drop-shadow(0 0 18px rgba(79, 209, 197, 0.5));
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1.08) drop-shadow(0 0 12px rgba(79, 209, 197, 0.35));
+  }
+}
+
+/* Animazione particelle esplosione */
+@keyframes explosionParticles {
+  0% {
+    opacity: 1;
+    transform: scale(0) translate(0, 0);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.5) translate(var(--particle-x, 50px), var(--particle-y, -50px));
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) translate(var(--particle-x, 100px), var(--particle-y, -100px));
+  }
+}
+
+/* Animazione carta vincente - avanza con glow aurora (enemy vince) */
+@keyframes clashWinnerLeft {
+  0% {
+    transform: translateX(0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  30% {
+    transform: translateX(60px) scale(1.08) rotate(2deg);
+    filter: brightness(1.15) drop-shadow(0 0 25px rgba(79, 209, 197, 0.5));
+  }
+  60% {
+    transform: translateX(80px) scale(1.12) rotate(0deg);
+    filter: brightness(1.2) drop-shadow(0 0 35px rgba(255, 179, 71, 0.4));
+  }
+  100% {
+    transform: translateX(70px) scale(1.1) rotate(0deg);
+    filter: brightness(1.1) drop-shadow(0 0 20px rgba(79, 209, 197, 0.35));
+  }
+}
+
+/* Animazione carta vincente - avanza con glow aurora (player vince) */
+@keyframes clashWinnerRight {
+  0% {
+    transform: translateX(0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  30% {
+    transform: translateX(-60px) scale(1.08) rotate(-2deg);
+    filter: brightness(1.15) drop-shadow(0 0 25px rgba(79, 209, 197, 0.5));
+  }
+  60% {
+    transform: translateX(-80px) scale(1.12) rotate(0deg);
+    filter: brightness(1.2) drop-shadow(0 0 35px rgba(255, 179, 71, 0.4));
+  }
+  100% {
+    transform: translateX(-70px) scale(1.1) rotate(0deg);
+    filter: brightness(1.1) drop-shadow(0 0 20px rgba(79, 209, 197, 0.35));
+  }
+}
+
+/* Animazione carta perdente - dissolvenza nel vuoto (enemy perde) */
+@keyframes clashLoserLeft {
+  0% {
+    transform: translateX(0) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  25% {
+    transform: translateX(-25px) scale(0.97) rotate(-2deg);
+    opacity: 0.95;
+    filter: brightness(0.9);
+  }
+  50% {
+    transform: translateX(-55px) scale(0.92) rotate(-12deg);
+    opacity: 0.85;
+    filter: brightness(0.8);
+  }
+  75% {
+    transform: translateX(-85px) scale(0.85) rotate(-25deg) translateY(15px);
+    opacity: 0.7;
+    filter: brightness(0.7);
+  }
+  100% {
+    transform: translateX(-100px) scale(0.78) rotate(-35deg) translateY(35px);
+    opacity: 0.55;
+    filter: brightness(0.6);
+  }
+}
+
+/* Animazione carta perdente - dissolvenza nel vuoto (player perde) */
+@keyframes clashLoserRight {
+  0% {
+    transform: translateX(0) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  25% {
+    transform: translateX(25px) scale(0.97) rotate(2deg);
+    opacity: 0.95;
+    filter: brightness(0.9);
+  }
+  50% {
+    transform: translateX(55px) scale(0.92) rotate(12deg);
+    opacity: 0.85;
+    filter: brightness(0.8);
+  }
+  75% {
+    transform: translateX(85px) scale(0.85) rotate(25deg) translateY(15px);
+    opacity: 0.7;
+    filter: brightness(0.7);
+  }
+  100% {
+    transform: translateX(100px) scale(0.78) rotate(35deg) translateY(35px);
+    opacity: 0.55;
+    filter: brightness(0.6);
+  }
+}
+
+/* Animazione onda d'urto al centro */
+@keyframes shockwave {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Animazione scintille */
+@keyframes sparks {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Animazione vittoria - pulse aurora */
+@keyframes victory {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  30% {
+    transform: scale(1.06) rotate(-2deg);
+    filter: brightness(1.15);
+  }
+  70% {
+    transform: scale(1.06) rotate(2deg);
+    filter: brightness(1.15);
+  }
+}
+
+/* Animazione sconfitta - dissolvenza elegante */
+@keyframes defeat {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+}
+
+/* Animazione glow pulsante */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  }
+}
+
+/* Animazione barra progresso */
+@keyframes progressFill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+/* Classi utility per animazioni */
+.animate-card-enter-left {
+  animation: cardEnterLeft 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-card-enter-right {
+  animation: cardEnterRight 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Animazione highlight carta selezionata */
+@keyframes cardSelectHighlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7),
+                0 0 0 0 rgba(251, 191, 36, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(251, 191, 36, 0.8),
+                0 0 40px 8px rgba(251, 191, 36, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+.animate-card-select {
+  animation: cardSelectHighlight 1.5s ease-in-out infinite;
+}
+
+.animate-battlefield-zoom {
+  animation: battlefieldZoom 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-battlefield-zoom-smooth {
+  animation: battlefieldZoomSmooth 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-battlefield-zoom-smooth-raised {
+  animation: battlefieldZoomSmoothRaised 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.8s ease-out forwards;
+}
+
+.animate-slide-right {
+  animation: slideRight 0.8s ease-out forwards;
+}
+
+.animate-zoom-in {
+  animation: zoomIn 0.5s ease-out forwards;
+}
+
+.animate-lift-battlefield {
+  animation: liftBattlefield 1.2s ease-out forwards;
+}
+
+.animate-coin-fly {
+  animation: coinFly 0.8s ease-out forwards;
+}
+
+.animate-number-pulse {
+  animation: numberPulse 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-number-pulse-negative {
+  animation: numberPulseNegative 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-number-increase {
+  animation: numberIncrease 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-number-decrease {
+  animation: numberDecrease 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-effect-icon {
+  animation: effectIcon 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-effect-icon-appear {
+  animation: effectIconAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-value-step {
+  animation: valueStepUpdate 0.4s ease-out forwards;
+}
+
+.animate-modifier-flash {
+  animation: modifierFlash 0.5s ease-in-out;
+}
+
+.animate-clash {
+  animation: clash 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-victory-explosion {
+  animation: victoryExplosion 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-explosion-particles {
+  animation: explosionParticles 1s ease-out forwards;
+}
+
+.animate-clash-winner-left {
+  animation: clashWinnerLeft 1s ease-out forwards;
+}
+
+.animate-clash-winner-right {
+  animation: clashWinnerRight 1s ease-out forwards;
+}
+
+.animate-clash-loser-left {
+  animation: clashLoserLeft 1s ease-out forwards;
+}
+
+.animate-clash-loser-right {
+  animation: clashLoserRight 1s ease-out forwards;
+}
+
+.animate-shockwave {
+  animation: shockwave 0.6s ease-out;
+}
+
+.animate-sparks {
+  animation: sparks 0.5s ease-out;
+}
+
+.animate-victory {
+  animation: victory 0.8s ease-in-out infinite;
+}
+
+.animate-defeat {
+  animation: defeat 0.5s ease-out forwards;
+}
+
+/* ═══ Stile carte vittoria/sconfitta - oro/platino e grigio ═══ */
+.satze-card-winner {
+  border-color: rgba(212, 168, 71, 0.8);
+  box-shadow: 0 0 0 3px rgba(212, 168, 71, 0.3), 0 0 25px rgba(212, 168, 71, 0.3), 0 0 50px rgba(229, 228, 226, 0.15), inset 0 0 30px rgba(212, 168, 71, 0.08);
+}
+.satze-card-winner:hover {
+  box-shadow: 0 0 35px rgba(212, 168, 71, 0.4), 0 0 60px rgba(229, 228, 226, 0.2);
+}
+
+.satze-card-loser {
+  border-color: rgba(148, 163, 184, 0.5);
+  box-shadow: 0 0 15px rgba(100, 116, 139, 0.15), inset 0 0 20px rgba(10, 14, 26, 0.5);
+}
+
+.satze-glow-aurora {
+  animation: satzeGlowAurora 3s ease-in-out infinite;
+}
+@keyframes satzeGlowAurora {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Numero VA - bordo nero per distacco dallo sfondo */
+.satze-va-number {
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.9);
+  paint-order: stroke fill;
+  text-shadow: 
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95);
+}
+
+/* Bordo nero per testo Trionfo/Sconfitta */
+.satze-outcome-text-border {
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.95);
+  paint-order: stroke fill;
+}
+
+/* Glow sotto scritta Trionfo/Sconfitta - bianco/nero con animazione */
+.satze-outcome-glow-pulse {
+  animation: satzeOutcomeGlowPulse 2.5s ease-in-out infinite;
+}
+.satze-outcome-glow-white {
+  background: radial-gradient(ellipse 120% 80% at 50% 50%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%);
+}
+.satze-outcome-glow-black {
+  background: radial-gradient(ellipse 120% 80% at 50% 50%, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 40%, transparent 70%);
+}
+@keyframes satzeOutcomeGlowPulse {
+  0%, 100% { opacity: 0.7; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Triangolo mano attiva - illuminazione discreta */
+.satze-hand-active {
+  animation: satzeHandGlow 2s ease-in-out infinite;
+}
+@keyframes satzeHandGlow {
+  0%, 100% { 
+    box-shadow: inset 0 0 80px rgba(255, 255, 255, 0.12); 
+  }
+  50% { 
+    box-shadow: inset 0 0 120px rgba(255, 255, 255, 0.2); 
+  }
+}
+.satze-hand-particles {
+  overflow: hidden;
+}
+.satze-hand-particle {
+  animation: satzeHandParticleFloat 2.2s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+}
+@keyframes satzeHandParticleFloat {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 0.7; transform: scale(1.1) translateY(-4px); }
+}
+
+/* Etichette Il Nemico / L'eroe - leggibilità su sfondo */
+.satze-duel-label {
+  text-shadow: 0 0 8px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.9), 1px 1px 0 rgba(0, 0, 0, 0.95), -1px -1px 0 rgba(0, 0, 0, 0.95);
+}
+
+/* Pannello campo di battaglia - stile moderno minimale */
+.satze-battlefield-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.satze-battlefield-panel:hover {
+  border-color: rgba(212, 168, 71, 0.35);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.4);
+}
+.satze-battlefield-panel-zoomed {
+  border-color: rgba(212, 168, 71, 0.5);
+  box-shadow: 0 8px 40px rgba(212, 168, 71, 0.15), 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Animazione srotolamento riepilogo duello */
+.satze-riepilogo-unroll {
+  animation: satzeRiepilogoUnroll 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: top center;
+  clip-path: inset(0 0 100% 0);
+}
+@keyframes satzeRiepilogoUnroll {
+  0% {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0.6;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* Indicatori risultato duello/partita */
+.satze-result-victory {
+  color: #4FD1C5;
+  text-shadow: 0 0 20px rgba(79, 209, 197, 0.6), 0 0 8px rgba(255, 179, 71, 0.3);
+}
+.satze-result-defeat {
+  color: #D946EF;
+  text-shadow: 0 0 15px rgba(217, 70, 239, 0.5);
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Transizioni smooth per valori numerici */
+.value-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Delay per animazioni sequenziali */
+.animation-delay-100 { animation-delay: 0.1s; }
+.animation-delay-200 { animation-delay: 0.2s; }
+.animation-delay-300 { animation-delay: 0.3s; }
+.animation-delay-400 { animation-delay: 0.4s; }
+.animation-delay-500 { animation-delay: 0.5s; }
+
+/* Animazione nascondi mani e pannelli per effetto cinema */
+@keyframes fadeOutHands {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+}
+
+/* Animazione fade out per pannelli laterali */
+@keyframes fadeOutPanels {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85) translateX(-30px);
+  }
+}
+
+@keyframes fadeOutPanelsRight {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85) translateX(30px);
+  }
+}
+
+.animate-fade-out-hands {
+  animation: fadeOutHands 0.9s ease-in-out forwards;
+}
+
+.animate-fade-out-panels {
+  animation: fadeOutPanels 0.9s ease-in-out forwards;
+}
+
+.animate-fade-out-panels-right {
+  animation: fadeOutPanelsRight 0.9s ease-in-out forwards;
+}
+
+/* Tabellone Campi: tilt per attirare attenzione quando serve selezionare il campo */
+@keyframes satzeTabelloneTilt {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-4deg); }
+  40% { transform: rotate(4deg); }
+  60% { transform: rotate(-3deg); }
+  80% { transform: rotate(3deg); }
+}
+.animate-satze-tabellone-tilt {
+  animation: satzeTabelloneTilt 1.2s ease-in-out 2;
+}
+
+@keyframes satzeGuidedTwinkle {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+  }
+  50% {
+    filter: brightness(1.16) saturate(1.18);
+    box-shadow: 0 0 24px rgba(251, 191, 36, 0.65);
+  }
+}
+
+.animate-satze-guided-twinkle {
+  animation: satzeGuidedTwinkle 1200ms ease-in-out infinite;
+}
+
+/* Flip card: Log ↔ FC panel */
+.satze-panel-flip-container {
+  perspective: 1200px;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+  margin-top: -16px;
+}
+.satze-panel-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.satze-panel-flip-inner.satze-panel-flipped {
+  transform: rotateY(180deg);
+}
+.satze-panel-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+.satze-panel-flip-face-back {
+  transform: rotateY(180deg);
+}
+
+/* FC panel: niente blur, testo nitido */
+.satze-fc-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glossario: backdrop fade */
+@keyframes glossaryBackdropFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.satze-glossary-backdrop {
+  opacity: 0;
+  animation: glossaryBackdropFade 0.25s ease-out forwards;
+}
+
+/* Barre cinema */
+@keyframes cinemaBars {
+  0% {
+    height: 0;
+  }
+  100% {
+    height: 120px;
+  }
+}
+
+.cinema-bar-top,
+.cinema-bar-bottom {
+  animation: cinemaBars 0.8s ease-out forwards;
+}
+
+/* Animazione Round 5 - Annienta il nemico */
+@keyframes finalRoundEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  40% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes finalRoundPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 30px rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-final-round-enter {
+  animation: finalRoundEnter 1.5s ease-out forwards;
+}
+
+.animate-final-round-pulse {
+  animation: finalRoundPulse 2s ease-in-out infinite;
+}
+
+/* Animazioni Effetti Duello */
+@keyframes effect-glow {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5),
+                0 0 20px rgba(251, 191, 36, 0.3),
+                0 0 30px rgba(251, 191, 36, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.8),
+                0 0 40px rgba(251, 191, 36, 0.5),
+                0 0 60px rgba(251, 191, 36, 0.3);
+  }
+}
+
+@keyframes effect-glow-green {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5),
+                0 0 20px rgba(34, 197, 94, 0.3),
+                0 0 30px rgba(34, 197, 94, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.8),
+                0 0 40px rgba(34, 197, 94, 0.5),
+                0 0 60px rgba(34, 197, 94, 0.3);
+  }
+}
+
+@keyframes effect-glow-red {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5),
+                0 0 20px rgba(239, 68, 68, 0.3),
+                0 0 30px rgba(239, 68, 68, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8),
+                0 0 40px rgba(239, 68, 68, 0.5),
+                0 0 60px rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes effect-particles {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--particle-x, 50px), var(--particle-y, -50px)) scale(0);
+  }
+}
+
+@keyframes effect-ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-effect-glow {
+  animation: effect-glow 1.5s ease-in-out infinite;
+}
+
+.animate-effect-glow-green {
+  animation: effect-glow-green 1.5s ease-in-out infinite;
+}
+
+.animate-effect-glow-red {
+  animation: effect-glow-red 1.5s ease-in-out infinite;
+}
+
+.animate-effect-particles {
+  animation: effect-particles 1s ease-out forwards;
+}
+
+.animate-effect-ripple {
+  animation: effect-ripple 1s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Animazione barra confronto VA */
+@keyframes vaComparisonBar {
+  0% {
+    width: 0%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    width: var(--bar-width, 50%);
+    opacity: 1;
+  }
+}
+
+.animate-va-comparison {
+  animation: vaComparisonBar 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Animazione formula VA step-by-step */
+@keyframes formulaStep {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-formula-step {
+  animation: formulaStep 0.4s ease-out forwards;
+}
+
+@keyframes focus-coin-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-180deg);
+    filter: blur(8px);
+  }
+  40% {
+    opacity: 0.8;
+    transform: scale(1.2) rotate(0deg);
+    filter: blur(2px);
+  }
+  60% {
+    transform: scale(0.95) rotate(5deg);
+  }
+  80% {
+    transform: scale(1.05) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    filter: blur(0px);
+  }
+}
+
+/* Animazione focus coin che si sposta dalla mano */
+@keyframes focus-coin-fly {
+  0% {
+    opacity: 0;
+    transform: translateX(0) translateY(0) scale(0.5) rotate(0deg);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translateX(-30px) translateY(-20px) scale(0.8) rotate(90deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50px) translateY(-30px) scale(1.1) rotate(180deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1) rotate(360deg);
+  }
+}
+
+/* Animazione contatore FC che cambia */
+@keyframes focus-counter-update {
+  0% {
+    transform: scale(1);
+    color: inherit;
+  }
+  50% {
+    transform: scale(1.3);
+    color: #fbbf24;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
+/* Animazione effetto "spendere" focus coin */
+@keyframes focus-coin-spend {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  30% {
+    transform: scale(1.2) rotate(180deg);
+    filter: brightness(1.5);
+  }
+  60% {
+    transform: scale(0.9) rotate(270deg);
+    filter: brightness(1.2);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1) rotate(360deg);
+    filter: brightness(1.1);
+  }
+}
+
+.animate-focus-coin {
+  animation: focus-coin-glow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-focus-coin-fly {
+  animation: focus-coin-fly 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-focus-counter {
+  animation: focus-counter-update 0.5s ease-out;
+}
+
+.animate-focus-spend {
+  animation: focus-coin-spend 0.6s ease-in-out;
+}
+
+/* Gradiente radiale per glow effects */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Animazioni per gradienti dinamici dei campi */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(var(--particle-x, 100px), var(--particle-y, -100px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes particleRise {
+  0% {
+    transform: translateY(100px) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-100px) scale(1) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes particleFall {
+  0% {
+    transform: translateY(-100px) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(100px) scale(0.5) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes particleSparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5) rotate(180deg);
+  }
+}
+
+@keyframes particleSpiral {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(var(--spiral-x, 50px), var(--spiral-y, -50px)) rotate(180deg) scale(1);
+  }
+  100% {
+    transform: translate(var(--spiral-x2, 100px), var(--spiral-y2, -100px)) rotate(360deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes particleVortex {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--vortex-x, 0px), var(--vortex-y, 0px)) scale(0.3) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes particleMirror {
+  0% {
+    transform: translateX(0) scaleX(1);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(var(--mirror-x, 100px)) scaleX(-1);
+    opacity: 0;
+  }
+}
+
+.animate-particle-rise {
+  animation: particleRise 8s ease-in-out infinite;
+}
+
+.animate-particle-fall {
+  animation: particleFall 6s ease-in-out infinite;
+}
+
+.animate-particle-sparkle {
+  animation: particleSparkle 2s ease-in-out infinite;
+}
+
+.animate-particle-spiral {
+  animation: particleSpiral 10s ease-in-out infinite;
+}
+
+.animate-particle-vortex {
+  animation: particleVortex 5s ease-in-out infinite;
+}
+
+.animate-particle-mirror {
+  animation: particleMirror 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+.animate-particle-float {
+  animation: particleFloat 8s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Nome carta: scroll al passaggio del mouse o quando zoomata */
+@keyframes card-name-scroll {
+  0%, 8% { transform: translateX(0); }
+  40%, 60% { transform: translateX(-50%); }
+  92%, 100% { transform: translateX(0); }
+}
+.card-name-scroll-on-hover {
+  overflow: hidden;
+  min-width: 0;
+}
+.card-name-scroll-on-hover .card-name-inner {
+  display: inline-block;
+  white-space: nowrap;
+}
+.group:hover .card-name-scroll-on-hover .card-name-inner,
+.group:focus-within .card-name-scroll-on-hover .card-name-inner,
+.group.scale-105 .card-name-scroll-on-hover .card-name-inner,
+.group.scale-110 .card-name-scroll-on-hover .card-name-inner,
+.card-name-scroll-on-hover:hover .card-name-inner {
+  animation: card-name-scroll 12s ease-in-out forwards;
+}
+
+/* ---------- Focus Coin Slider orizzontale (tema menu SATZE) ---------- */
+.satze-fc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* Thumb stile moneta/bandiera - bordi neri come menu */
+.satze-fc-slider::-webkit-slider-thumb,
+.satze-fc-slider-menu::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fde68a, #fbbf24 35%, #f59e0b 65%, #d97706);
+  border: 2px solid #000;
+  box-shadow: 
+    3px 3px 0 #000,
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.satze-fc-slider::-webkit-slider-thumb:hover,
+.satze-fc-slider-menu::-webkit-slider-thumb:hover {
+  transform: scale(1.06) translateY(-1px);
+  box-shadow: 
+    4px 4px 0 #000,
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.satze-fc-slider::-webkit-slider-runnable-track,
+.satze-fc-slider-menu::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.satze-fc-slider::-moz-range-thumb,
+.satze-fc-slider-menu::-moz-range-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fde68a, #fbbf24 35%, #f59e0b 65%, #d97706);
+  border: 2px solid #000;
+  box-shadow: 
+    3px 3px 0 #000,
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.satze-fc-slider::-moz-range-thumb:hover,
+.satze-fc-slider-menu::-moz-range-thumb:hover {
+  transform: scale(1.06) translateY(-1px);
+  box-shadow: 
+    4px 4px 0 #000,
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.satze-fc-slider::-moz-range-track,
+.satze-fc-slider-menu::-moz-range-track {
+  background: transparent;
+}
+
+/* ─── Logo SATZE: rilievo 3D leggero + lampo (solo transform sull’overlay) ─── */
+.satze-brand-logo-wrap {
+  perspective: 1050px;
+  transform-style: preserve-3d;
+}
+.satze-brand-logo-inner-static {
+  transform-style: preserve-3d;
+  transform: rotateX(7deg) rotateY(-3deg);
+  transform-origin: center center;
+}
+.satze-brand-logo-pulse {
+  animation: satze-brand-logo-pulse 4.5s ease-in-out infinite;
+  transform-style: preserve-3d;
+  transform-origin: center center;
+}
+@keyframes satze-brand-logo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: rotateX(7deg) rotateY(-3deg) translateZ(0);
+  }
+  50% {
+    opacity: 0.98;
+    transform: rotateX(8deg) rotateY(-3.5deg) translateZ(6px);
+  }
+}
+/* Bagliore mascherato sul canale alpha del logo (stesso PNG in mask-image) */
+.satze-brand-logo-glare-host {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  vertical-align: top;
+}
+.satze-brand-logo-glare-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
+  background: linear-gradient(
+    102deg,
+    rgba(255, 255, 255, 0) 18%,
+    rgba(255, 248, 230, 0.42) 38%,
+    rgba(255, 255, 252, 0.95) 50%,
+    rgba(255, 248, 230, 0.42) 62%,
+    rgba(255, 255, 255, 0) 82%
+  );
+  background-size: 210% 100%;
+  background-position: 130% 50%;
+  /* Loop infinito, più visibile (fascio largo + overlay) */
+  animation: satze-brand-logo-glare-flow 18s linear infinite alternate;
+}
+@keyframes satze-brand-logo-glare-flow {
+  0% {
+    background-position: 130% 50%;
+  }
+  100% {
+    background-position: -30% 50%;
+  }
+}
+.satze-brand-logo {
+  display: block;
+  transform: translateZ(0);
+  filter:
+    brightness(1.035)
+    contrast(1.07)
+    drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.45))
+    drop-shadow(4px 8px 14px rgba(0, 0, 0, 0.28))
+    drop-shadow(1px 2px 4px rgba(124, 92, 184, 0.32))
+    drop-shadow(-1px -1px 2px rgba(240, 238, 228, 0.38));
+}
+@media (prefers-reduced-motion: reduce) {
+  .satze-brand-logo-pulse {
+    animation: none;
+    transform: rotateX(5deg) rotateY(-2deg) translateZ(0);
+  }
+  .satze-brand-logo-inner-static {
+    transform: rotateX(5deg) rotateY(-2deg);
+  }
+  .satze-brand-logo-glare-layer {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* Layout mobile verticale (base per UI dedicata) */
+html.satze-layout-mobile-portrait,
+body.satze-layout-mobile-portrait {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* --- Pagina tool / lab (ToolPageShell + variabili inline) --- */
+.satze-tool-page {
+  --st-border: #4a3f66;
+  --st-panel: rgba(20, 14, 36, 0.94);
+  --st-well: rgba(8, 6, 18, 0.88);
+  --st-text: #eae4f2;
+  --st-muted: #a89bc4;
+  --st-input-bg: rgba(12, 10, 22, 0.95);
+  --st-accent: #d4c4e8;
+  --st-border-hi: #7c5cb8;
+}
+
+.satze-tool-panel {
+  background: var(--st-panel);
+  border: 1px solid var(--st-border);
+  border-radius: 0.75rem;
+}
+
+.satze-tool-well {
+  background: var(--st-well);
+  border-radius: 0.5rem;
+}
+
+.satze-tool-btn-secondary {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: 1px solid var(--st-border);
+  background: rgba(74, 63, 102, 0.35);
+  color: var(--st-text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.satze-tool-btn-secondary:hover {
+  background: rgba(124, 92, 184, 0.22);
+  border-color: var(--st-border-hi);
+}
+
+.satze-tool-btn-primary {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(212, 176, 96, 0.55);
+  background: linear-gradient(180deg, #c9a060 0%, #8f6a2a 100%);
+  color: #0c0814;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.satze-tool-btn-primary:hover {
+  filter: brightness(1.07);
+}
+
+.satze-tool-input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--st-border);
+  background: var(--st-input-bg);
+  color: var(--st-text);
+  padding: 0.5rem 1rem;
+}
+
+.satze-tool-input:focus {
+  outline: none;
+  border-color: var(--st-border-hi);
+}

@@ -1,0 +1,23 @@
+Genera una schermata "Deck Builder - Khemet" usando i componenti della libreria Satze/Khemet.
+
+Layout richiesto:
+- Header con titolo, filtri trigger, ricerca.
+- Colonna sinistra: lista carte filtrabile (card compatte).
+- Centro: anteprima carta selezionata (Card/Base grande).
+- Colonna destra: deck corrente con 10 slot (Panel/DeckSlot).
+- Footer: KPI sintetici (lega totale, curva L2-L5, trigger distribuiti).
+
+Stile:
+- Dark fantasy pulito, leggibile, competitivo.
+- Usa token colore/tipografia/spacing definiti in libreria.
+- Evidenzia overdrive/resistenza con accenti visivi discreti.
+
+Interazioni da prototipo:
+- Click card -> aggiorna anteprima.
+- Aggiungi/rimuovi card nello slot.
+- Hover componenti principali.
+
+Vincoli:
+- No hardcoded color values se esistono token.
+- Spacing consistente su scala 4pt.
+- Contrasto testo AA.

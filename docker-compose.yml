@@ -1,0 +1,10 @@
+# Avvio locale: docker compose up --build
+# Utile per testare lo stesso setup che userai in produzione.
+services:
+  satze-ws:
+    build: .
+    ports:
+      - "3847:3847"
+    environment:
+      PORT: "3847"
+      HOST: "0.0.0.0"

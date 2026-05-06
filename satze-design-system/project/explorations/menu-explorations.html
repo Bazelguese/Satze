@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze — Menu Principale: 5 esplorazioni</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#050608; color:#e8eaed; font-family:'Chakra Petch', sans-serif; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+
+  /* shared keyframes for all variants */
+  @keyframes float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+  @keyframes drift-x { 0%,100% { transform: translateX(0) } 50% { transform: translateX(8px) } }
+  @keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
+  @keyframes scanline-move { from { background-position: 0 0 } to { background-position: 0 100px } }
+  @keyframes spin-slow { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+  @keyframes spin-rev { from { transform: rotate(0deg) } to { transform: rotate(-360deg) } }
+  @keyframes flicker { 0%,98%,100% { opacity: 1 } 99% { opacity: 0.4 } }
+  @keyframes embers-rise { from { transform: translateY(0); opacity: 0 } 10% { opacity: 1 } 90% { opacity: 1 } to { transform: translateY(-100vh); opacity: 0 } }
+  @keyframes runic-throb { 0%,100% { opacity: 0.6 } 50% { opacity: 1 } }
+  @keyframes shake-tiny { 0%,100% { transform: translate(0,0) } 25% { transform: translate(0.5px, -0.3px) } 75% { transform: translate(-0.5px, 0.3px) } }
+  @keyframes data-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+  @keyframes p5-slide-in { from { transform: translateX(-30px) skewX(-12deg); opacity: 0 } to { transform: translateX(0) skewX(-8deg); opacity: 1 } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="../ui_kits/menu/_design-canvas.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV1Cinematic.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV2Cyber.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV3Bellica.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV4Sacrale.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV5Persona.jsx"></script>
+<script type="text/babel" src="../ui_kits/menu/MenuV5PersonaCosmic.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="p5-style" title="Approccio Persona 5R / P3 Reload — più aggressivo, tipografia esplosa, hover dinamici">
+        <DCArtboard id="v5c" label="V5 COSMIC · con logo reale, palette viola/magenta" width={1280} height={840}>
+          <MenuV5PersonaCosmic/>
+        </DCArtboard>
+        <DCArtboard id="v5" label="V5 · STYLISH HEIST (gold) — versione originale" width={1280} height={840}>
+          <MenuV5Persona/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="cinematic" title="Atmosfera cinematica scura — polvere stellare, profondità">
+        <DCArtboard id="v1" label="V1 · ASCENSIONE — pannelli sliding, scena cosmica narrativa" width={1280} height={840}>
+          <MenuV1Cinematic/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="cyber" title="Tattico-cyber — HUD denso, telemetria militare">
+        <DCArtboard id="v2" label="V2 · COMANDO — terminale di guerra, telemetria, glitch" width={1280} height={840}>
+          <MenuV2Cyber/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="bellica" title="Bellica — fiamme, schegge, bandiere lacerate">
+        <DCArtboard id="v3" label="V3 · ROVINA — accampamento dopo battaglia, embers, banner di guerra" width={1280} height={840}>
+          <MenuV3Bellica/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="sacrale" title="Sacrale-rituale — cattedrale spaziale, runa centrale">
+        <DCArtboard id="v4" label="V4 · LITURGIA — runa cosmica al centro, sigilli orbitanti, lentezza" width={1280} height={840}>
+          <MenuV4Sacrale/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+html,body{margin:0;background:var(--bg-night);color:var(--fg1);font-family:var(--font-ui);}
+.wrap{padding:20px;display:flex;flex-direction:column;gap:18px;}
+.swatch{display:flex;align-items:center;gap:14px;}
+.chip{width:64px;height:64px;border:1.5px solid var(--accent-slate);flex-shrink:0;}
+.meta{font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
+.meta b{display:block;font-weight:600;font-size:13px;color:var(--fg1);letter-spacing:.1em;}
+.meta span{color:var(--fg2);}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+</style></head><body><div class="wrap">
+<div class="row">
+ <div class="swatch"><div class="chip" style="background:#000"></div><div class="meta"><b>Void</b><span>#000000</span><span>--bg-void</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#050608"></div><div class="meta"><b>Night</b><span>#050608</span><span>--bg-night</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#0a1628"></div><div class="meta"><b>Panel</b><span>#0a1628</span><span>--bg-panel</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#1a1410"></div><div class="meta"><b>Ember</b><span>#1a1410</span><span>--bg-ember</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#1e293b"></div><div class="meta"><b>Steel</b><span>#1e293b</span><span>--bg-steel</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#334155"></div><div class="meta"><b>Slate</b><span>#334155</span><span>--accent-slate</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#64748b"></div><div class="meta"><b>Dim</b><span>#64748b</span><span>--fg3</span></div></div>
+ <div class="swatch"><div class="chip" style="background:#e8eaed"></div><div class="meta"><b>Fore</b><span>#e8eaed</span><span>--fg1</span></div></div>
+</div>
+</div></body></html>

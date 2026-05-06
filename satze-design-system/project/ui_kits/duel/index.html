@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze — Duel UI Kit</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="StatOrb.jsx"></script>
+<script type="text/babel" src="DuelCard.jsx"></script>
+<script type="text/babel" src="HudPanel.jsx"></script>
+<script type="text/babel" src="TurnLog.jsx"></script>
+
+<script type="text/babel">
+
+const PLAYER_HAND = [
+  { id:'p1', name:'Sorethal',    army:'orizzonte',   armyName:'Orizzonte', league:5, va:14, dan:9, pot:'Vendetta +3', bon:'Copia nem.', portrait:'501'},
+  { id:'p2', name:'Keth il Muto',army:'kethran',     armyName:'Kethran',   league:4, va:11, dan:7, pot:'Coro +2 POT',  bon:'+1 FC',       portrait:'411'},
+  { id:'p3', name:'Orathai Nera',army:'orathai',     armyName:'Orathai',   league:3, va:9,  dan:6, pot:'Marea -1 VA', bon:'Velo',         portrait:'311'},
+  { id:'p4', name:'Bastioniere', army:'calibri-pesanti', armyName:'Calibri', league:4, va:13, dan:8, pot:'Scudo 3',     bon:'Difesa+',    portrait:'411'},
+  { id:'p5', name:'Lama Rossa',  army:'corte-rossa', armyName:'Corte',     league:3, va:10, dan:9, pot:'Debito +2',   bon:'Sangue',     portrait:'301'},
+];
+
+const ENEMY_HAND = [
+  { id:'e1', name:'???',  army:'ratti',       armyName:'Ratti',     league:5, va:12, dan:7, pot:'Peste',     bon:'Sciame',   portrait:'601'},
+  { id:'e2', name:'???',  army:'enclave',     armyName:'Enclave',   league:4, va:13, dan:8, pot:'Drago+2',   bon:'Fuoco',    portrait:'401'},
+  { id:'e3', name:'???',  army:'mounthborn',  armyName:'Mounthborn',league:3, va:9,  dan:5, pot:'Spora',     bon:'Germoglio',portrait:'211'},
+  { id:'e4', name:'???',  army:'corte-rossa', armyName:'Corte',     league:4, va:12, dan:10,pot:'Contratto', bon:'Riscossa', portrait:'211'},
+  { id:'e5', name:'???',  army:'orizzonte',   armyName:'Orizzonte', league:3, va:8,  dan:6, pot:'Cometa',    bon:'Scia',     portrait:'111'},
+];
+
+function Duel() {
+  const [turn, setTurn] = React.useState(4);
+  const [selected, setSelected] = React.useState(null);
+  const [usedIds, setUsedIds] = React.useState(new Set(['p5']));
+  const [pHP, setPHP] = React.useState(22);
+  const [eHP, setEHP] = React.useState(18);
+  const [pFC, setPFC] = React.useState(12);
+  const [log, setLog] = React.useState([
+    {turn:1, tone:'act',  text:'> Inizio Duello — Campo 12'},
+    {turn:1, tone:null,   text:'  Tu schieri Lama Rossa (L3).'},
+    {turn:1, tone:'pos',  text:'  +2 FC da Bonus Corte Rossa.'},
+    {turn:2, tone:null,   text:'  Nemico schiera Predatore (L4).'},
+    {turn:2, tone:'neg',  text:'  -3 PV da Fuoco Enclave.'},
+    {turn:3, tone:'act',  text:'  Potere: Debito +2 POT — attivo.'},
+    {turn:3, tone:'pos',  text:'  VA 12 > 10 — Conquista: +2 FC.'},
+    {turn:4, tone:null,   text:'> Turno attuale: in attesa della tua mossa.'},
+  ]);
+
+  const selectedCard = PLAYER_HAND.find(c => c.id === selected);
+
+  const endTurn = () => {
+    if (!selectedCard) return;
+    const newUsed = new Set(usedIds); newUsed.add(selectedCard.id); setUsedIds(newUsed);
+    const damage = Math.max(1, selectedCard.dan - 2);
+    setEHP(h => Math.max(0, h - damage));
+    setPFC(f => f + 1);
+    setLog(l => [...l,
+      {turn, tone:'act', text:`  Schiero ${selectedCard.name} (VA ${selectedCard.va}).`},
+      {turn, tone:'pos', text:`  +${damage} DAN al nemico.`},
+      {turn, tone:'pos', text:`  +1 FC da Conquista.`},
+      {turn: turn+1, tone:null, text:'> Turno nemico...'},
+    ]);
+    setTurn(t => t+1);
+    setSelected(null);
+    setTimeout(() => {
+      setPHP(h => Math.max(0, h - 3));
+      setLog(l => [...l,
+        {turn: turn+1, tone:'neg', text:'  Nemico colpisce per 3 DAN.'},
+        {turn: turn+2, tone:null, text:'> Turno tuo.'},
+      ]);
+      setTurn(t => t+1);
+    }, 900);
+  };
+
+  return (
+    <div style={{position:'relative', width:'100%', height:'100%',
+      background:`url('../../assets/battlefields/campo-12.png') center/cover`}}>
+      {/* dark protection overlay */}
+      <div style={{position:'absolute', inset:0,
+        background:'linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 30%, rgba(0,0,0,0.35) 70%, rgba(0,0,0,0.85) 100%)'}}/>
+      <div style={{position:'absolute', inset:0, background:'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.75) 100%)'}}/>
+      {/* scanline */}
+      <div style={{position:'absolute', inset:0, pointerEvents:'none',
+        background:'repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(56,189,248,0.015) 3px, rgba(56,189,248,0.015) 4px)'}}/>
+
+      {/* TOP BAR */}
+      <div style={{position:'absolute', top:16, left:16, right:16, display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:18, zIndex:10}}>
+        <HudPanel title="Nemico — Ratti" tag="L5 · SCIAME" tone="blood" style={{minWidth:240}}>
+          <div style={{display:'flex', gap:16, alignItems:'center'}}>
+            <StatOrb value={eHP} label="PV" tone="blood"/>
+            <div style={{flex:1}}>
+              <div style={{height:8, background:'rgba(220,38,38,0.15)', border:'1px solid #334155'}}>
+                <div style={{width:`${(eHP/25)*100}%`, height:'100%', background:'linear-gradient(90deg,#7f1d1d,#dc2626)', boxShadow:'0 0 8px #dc2626', transition:'width 0.5s'}}/>
+              </div>
+              <div style={{fontFamily:'Share Tech Mono', fontSize:10, color:'#94a3b8', letterSpacing:'0.15em', marginTop:4}}>
+                Carte in mano: {ENEMY_HAND.length}
+              </div>
+            </div>
+          </div>
+        </HudPanel>
+
+        <HudPanel title="Turno" tag={`CAMPO · 12`} tone="cyan" style={{minWidth:180, textAlign:'center'}}>
+          <div style={{fontFamily:'Share Tech Mono', fontSize:36, color:'#fbbf24', letterSpacing:'0.05em', lineHeight:1}}>{String(turn).padStart(2,'0')}<span style={{color:'#475569', fontSize:18}}>/12</span></div>
+          <div style={{fontFamily:'Chakra Petch', fontSize:10, color:'#94a3b8', letterSpacing:'0.2em', textTransform:'uppercase', marginTop:4}}>Turno attivo</div>
+        </HudPanel>
+
+        <HudPanel title="Tu — Corte Rossa" tag="L3 · DEBITO" tone="gold" style={{minWidth:240}}>
+          <div style={{display:'flex', gap:16, alignItems:'center'}}>
+            <StatOrb value={pHP} label="PV" tone="gold"/>
+            <div style={{flex:1}}>
+              <div style={{height:8, background:'rgba(212,175,55,0.12)', border:'1px solid #334155'}}>
+                <div style={{width:`${(pHP/25)*100}%`, height:'100%', background:'linear-gradient(90deg,#92400e,#d4af37)', boxShadow:'0 0 8px #d4af37', transition:'width 0.5s'}}/>
+              </div>
+              <div style={{fontFamily:'Share Tech Mono', fontSize:10, color:'#94a3b8', letterSpacing:'0.15em', marginTop:4}}>
+                FC {pFC} · Mano {PLAYER_HAND.length - usedIds.size}
+              </div>
+            </div>
+          </div>
+        </HudPanel>
+      </div>
+
+      {/* ENEMY HAND (face-down) */}
+      <div style={{position:'absolute', top:160, left:0, right:0, display:'flex', justifyContent:'center', gap:10, zIndex:5}}>
+        {ENEMY_HAND.map((c,i) => (
+          <div key={c.id} style={{width:90, height:130, borderRadius:8,
+            background:'linear-gradient(135deg, #1a0a0a, #3b1d1d)',
+            border:'1.5px solid #7f1d1d',
+            boxShadow:'0 4px 12px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.6)',
+            transform:`rotate(${(i-2)*3}deg) translateY(${Math.abs(i-2)*3}px)`,
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <div style={{fontFamily:'Cinzel, serif', fontSize:30, color:'#dc2626', fontWeight:900,
+              textShadow:'0 0 10px #dc2626', letterSpacing:'0.1em'}}>✕</div>
+          </div>
+        ))}
+      </div>
+
+      {/* CENTER STAGE */}
+      <div style={{position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:5,
+        display:'flex', gap:60, alignItems:'center'}}>
+        <HudPanel title="Preview Scontro" tone="cyan" style={{minWidth:360}}>
+          {selectedCard ? (
+            <div>
+              <div style={{fontFamily:'Cinzel, serif', fontSize:18, color:'#e8eaed', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:8}}>
+                {selectedCard.name}
+              </div>
+              <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:10}}>
+                <Stat k="VA" v={selectedCard.va} c="#dc2626"/>
+                <Stat k="DAN" v={selectedCard.dan} c="#fbbf24"/>
+                <Stat k="LEGA" v={`L${selectedCard.league}`} c="#38bdf8"/>
+              </div>
+              <div style={{fontFamily:'Chakra Petch', fontSize:12, color:'#94a3b8', letterSpacing:'0.08em'}}>
+                <div><span style={{color:'#38bdf8'}}>POT:</span> {selectedCard.pot}</div>
+                <div><span style={{color:'#38bdf8'}}>BON:</span> {selectedCard.bon}</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{fontFamily:'Cinzel, serif', fontStyle:'italic', fontSize:14, color:'#64748b', textAlign:'center', padding:'16px 0'}}>
+              Seleziona una carta dalla tua mano…
+            </div>
+          )}
+        </HudPanel>
+      </div>
+
+      {/* BOTTOM: log + hand + end turn */}
+      <div style={{position:'absolute', bottom:16, left:16, zIndex:10}}>
+        <HudPanel title="Registro" tag="TATTICO" tone="cyan" style={{width:340}}>
+          <TurnLog lines={log}/>
+        </HudPanel>
+      </div>
+
+      <div style={{position:'absolute', bottom:28, left:'50%', transform:'translateX(-50%)', zIndex:10,
+        display:'flex', gap:14, alignItems:'flex-end'}}>
+        {PLAYER_HAND.map((c,i) => (
+          <div key={c.id} style={{transform:`translateY(${Math.abs(i-2)*8}px) rotate(${(i-2)*2}deg)`}}>
+            <DuelCard agent={c} selected={selected===c.id} used={usedIds.has(c.id)}
+              onClick={()=>setSelected(c.id)}/>
+          </div>
+        ))}
+      </div>
+
+      <div style={{position:'absolute', bottom:20, right:16, zIndex:10, display:'flex', flexDirection:'column', gap:8}}>
+        <button onClick={endTurn} disabled={!selected}
+          style={{fontFamily:'Chakra Petch', fontWeight:700, fontSize:14, letterSpacing:'0.22em',
+            textTransform:'uppercase', padding:'14px 28px', color:'#fff',
+            background: selected ? 'rgba(249,115,22,0.18)' : 'rgba(56,189,248,0.06)',
+            border: `1.5px solid ${selected ? '#f97316' : '#334155'}`,
+            boxShadow: selected ? '0 0 16px #f9731688, 0 0 32px #f9731644' : 'none',
+            cursor: selected ? 'pointer' : 'not-allowed', opacity: selected ? 1 : 0.6,
+            transition:'all 0.25s cubic-bezier(0.4,0,0.2,1)'}}>
+          Fine Turno ▸
+        </button>
+        <button
+          style={{fontFamily:'Chakra Petch', fontWeight:600, fontSize:11, letterSpacing:'0.22em',
+            textTransform:'uppercase', padding:'8px 20px', color:'#94a3b8',
+            background:'rgba(5,6,8,0.7)', border:'1.5px solid #334155',
+            cursor:'pointer'}}>
+          Abbandona
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Stat({k, v, c}) {
+  return (
+    <div style={{border:`1px solid ${c}44`, background:`${c}10`, padding:'6px 8px'}}>
+      <div style={{fontFamily:'Chakra Petch', fontSize:9, color:'#94a3b8', letterSpacing:'0.15em', textTransform:'uppercase'}}>{k}</div>
+      <div style={{fontFamily:'Share Tech Mono', fontSize:20, color:c, letterSpacing:'0.05em'}}>{v}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Duel/>);
+</script>
+</body>
+</html>

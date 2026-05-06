@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze — Menu UI Kit</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#000; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="CosmicBackground.jsx"></script>
+<script type="text/babel" src="SatzeWordmark.jsx"></script>
+<script type="text/babel" src="BannerButton.jsx"></script>
+<script type="text/babel" src="ArmyTile.jsx"></script>
+<script type="text/babel" src="MissionCard.jsx"></script>
+<script type="text/babel" src="LoadingScreen.jsx"></script>
+
+<script type="text/babel">
+const MISSIONS = [
+  { id:1, name:'La Cometa Cadente',   tag:'ASS', flavor:'Orizzonte colpisce per primo — prima che la Fusione ricordi il suo nome.', enemy:'Orizzonte', enemyColor:'#a78bfa', status:'completed' },
+  { id:2, name:'Il Tempio Silente',   tag:'DIF', flavor:'Difendi l\u2019ultimo coro di Kethran. La pietra ricorda, tu no.', enemy:'Kethran', enemyColor:'#fbbf24', status:'completed' },
+  { id:3, name:'Debito di Sangue',    tag:'ANN', flavor:'La Corte Rossa non perdona. Neanche i contratti.', enemy:'Corte Rossa', enemyColor:'#dc2626', status:'active' },
+  { id:4, name:'Fronte d\u2019Acciaio',      tag:'DOM', flavor:'I Calibri avanzano. Il ferro non dimentica.', enemy:'Calibri Pesanti', enemyColor:'#94a3b8', status:'active' },
+  { id:5, name:'Marea Lunare',        tag:'SPC', flavor:'Orathai ascende nella nebbia. Le ombre hanno denti.', enemy:'Orathai', enemyColor:'#14b8a6', status:'locked' },
+  { id:6, name:'Spora della Notte',   tag:'ANN', flavor:'Mounthborn germoglia nel sonno. Non svegliarli.', enemy:'Mounthborn', enemyColor:'#84cc16', status:'locked' },
+];
+
+function App() {
+  const [screen, setScreen] = React.useState('splash'); // splash | main | campaign | army
+  const [selectedArmy, setSelectedArmy] = React.useState(null);
+  const [loadProgress, setLoadProgress] = React.useState(8);
+
+  React.useEffect(() => {
+    if (screen !== 'splash') return;
+    const h = setInterval(() => setLoadProgress(p => {
+      if (p >= 100) { clearInterval(h); setTimeout(() => setScreen('main'), 600); return 100; }
+      return p + 3 + Math.random()*5;
+    }), 140);
+    return () => clearInterval(h);
+  }, [screen]);
+
+  if (screen === 'splash') return <LoadingScreen progress={Math.min(loadProgress, 100)} />;
+
+  if (screen === 'campaign') return (
+    <CosmicBackground>
+      <div style={{padding:'60px 80px', height:'100%', overflow:'auto'}}>
+        <TopBar title="Campagna" subtitle="La Grande Guerra" onBack={()=>setScreen('main')}/>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px,1fr))', gap:18, maxWidth:1200, margin:'40px auto 0'}}>
+          {MISSIONS.map(m => <MissionCard key={m.id} mission={m} onClick={()=>alert('Missione: ' + m.name)}/>)}
+        </div>
+      </div>
+    </CosmicBackground>
+  );
+
+  if (screen === 'army') return (
+    <CosmicBackground>
+      <div style={{padding:'60px 80px', height:'100%', overflow:'auto'}}>
+        <TopBar title="Scegli la tua Armata" subtitle="Otto fazioni, otto verit\u00e0" onBack={()=>setScreen('main')}/>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 220px)', gap:18, maxWidth:940, margin:'40px auto 0', justifyContent:'center'}}>
+          {ARMIES.map(a => <ArmyTile key={a.id} army={a} selected={selectedArmy===a.id} onClick={()=>setSelectedArmy(a.id)}/>)}
+        </div>
+        <div style={{textAlign:'center', marginTop:40}}>
+          <BannerButton label={selectedArmy ? 'Conferma' : 'Seleziona un\u2019armata'} tone="gold" disabled={!selectedArmy}
+            tag="SCHIERAMENTO" onClick={()=>alert('Schierata: ' + selectedArmy)}/>
+        </div>
+      </div>
+    </CosmicBackground>
+  );
+
+  // MAIN MENU
+  return (
+    <CosmicBackground>
+      <div style={{height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:60, padding:60}}>
+        <SatzeWordmark size={96}/>
+        <div style={{display:'flex', flexDirection:'column', gap:14, alignItems:'center'}}>
+          <BannerButton label="Campagna"        tag="STORIA"       tone="gold" onClick={()=>setScreen('campaign')}/>
+          <BannerButton label="Scaramuccia"     tag="PARTITA LIBERA" tone="cyan" onClick={()=>setScreen('army')}/>
+          <BannerButton label="Multigiocatore"  tag="BETA"         tone="fire" disabled/>
+          <BannerButton label="Galleria Carte"  tag="ARCHIVIO"     tone="cyan" onClick={()=>alert('Galleria')}/>
+          <BannerButton label="Impostazioni"    tag="SISTEMA"      tone="cyan" onClick={()=>alert('Settings')}/>
+        </div>
+        <div style={{position:'absolute', bottom:20, fontFamily:'Share Tech Mono',
+          fontSize:10, color:'#475569', letterSpacing:'0.25em'}}>v0.1 ALPHA · NON DISTRIBUIRE</div>
+      </div>
+    </CosmicBackground>
+  );
+}
+
+function TopBar({ title, subtitle, onBack }) {
+  return (
+    <div style={{display:'flex', alignItems:'center', gap:24}}>
+      <button onClick={onBack} style={{
+        fontFamily:'Chakra Petch', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase',
+        color:'#e8eaed', background:'rgba(56,189,248,0.06)', border:'1.5px solid #334155',
+        padding:'10px 18px', cursor:'pointer'
+      }}>← Indietro</button>
+      <div>
+        <div style={{fontFamily:'Cinzel, serif', fontWeight:700, fontSize:26,
+          letterSpacing:'0.22em', textTransform:'uppercase', color:'#e8eaed'}}>{title}</div>
+        <div style={{fontFamily:'Cinzel, serif', fontStyle:'italic', fontSize:13,
+          color:'#94a3b8', letterSpacing:'0.2em', marginTop:4}}>{subtitle}</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

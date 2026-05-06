@@ -1,0 +1,288 @@
+// ============================================
+// SISTEMA TAG AGENTI - SATZE v2.0
+// Fonte: Documentazione/SISTEMA_TAG_AGENTI_v2.md
+// Tag visibili in deck builder (una riga) e modale galleria (click carta: righe grigi/ruolo), NON sulla carta in gioco né griglia galleria
+// ============================================
+
+/** Tag di Ruolo (Categoria 6) - badge rosso in UI */
+export const RUOLO_TAGS = new Set([
+  "Boss", "Finisher", "Pillar", "Ace", "Bomb", "Anchor", "Flex", "Tech",
+  "Engine", "Sacrifice", "Filler", "Tank", "Scaler"
+]);
+
+/** Mapping card ID -> array di tag (Corpo, Equilibrio, POT, DAN, Postura, Funzione, Ruolo) */
+export const CARD_TAGS = {
+  // FIGLI DELL'ORIZZONTE
+  101: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Steady", "Debuffer", "Boss", "Anchor"],
+  111: ["Imponente", "Equilibrato", "POT Alta", "DAN Letale", "Early Rush", "Buffer", "Boss", "Bomb"],
+  102: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "Momentum", "Engine", "Pillar"],
+  103: ["Solido", "Equilibrato", "POT Media", "DAN Alto", "Late Game", "Debuffer", "Pillar"],
+  116: ["Imponente", "Sbilanciato", "POT Media", "DAN Alto", "Late Game", "Buffer", "Ace"],
+  117: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Momentum", "Engine", "Pillar"],
+  118: ["Esile", "Sbilanciato", "POT Media", "DAN Basso", "Momentum", "Scaler", "Ace"],
+  119: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Late Game", "Debuffer", "Pillar"],
+  120: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "First Strike", "Debuffer", "Tech"],
+  105: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "Early Rush", "Closer", "Ace", "Finisher"],
+  112: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Late Game", "Controller", "Pillar", "Tech"],
+  104: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Punisher", "Engine", "Pillar"],
+  106: ["Esile", "Sbilanciato", "POT Bassa", "DAN Alto", "Steady", "Scaler", "Engine", "Anchor"],
+  113: ["Esile", "Sbilanciato", "POT Bassa", "DAN Alto", "Steady", "Mimic", "Anchor", "Tech"],
+  114: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "Momentum", "Buffer", "Pillar"],
+  107: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Steady", "Controller", "Anchor", "Tech"],
+  108: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Late Game", "Closer", "Ace", "Finisher"],
+  109: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Buffer", "Ace", "Bomb"],
+  110: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "First Strike", "Buffer", "Ace", "Bomb"],
+  115: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Momentum", "Engine", "Pillar"],
+
+  // KETHRAN
+  201: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Momentum", "Buffer", "Boss"],
+  211: ["Solido", "Sbilanciato", "POT Devastante", "DAN Medio", "Late Game", "Buffer", "Boss", "Finisher"],
+  202: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Comeback", "Buffer", "Pillar", "Finisher"],
+  203: ["Esile", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Closer", "Sacrifice", "Finisher"],
+  212: ["Solido", "Equilibrato", "POT Media", "DAN Alto", "Comeback", "Tank", "Ace", "Tech"],
+  213: ["Esile", "Sbilanciato", "POT Bassa", "DAN Alto", "Momentum", "Buffer", "Scaler", "Ace", "Scaler"],
+  204: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Steady", "Controller", "Anchor", "Tech"],
+  205: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Buffer", "Ace"],
+  206: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Buffer", "Pillar"],
+  214: ["Solido", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Kamikaze", "Sacrifice"],
+  207: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Momentum", "Buffer", "Ace", "Bomb"],
+  208: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Buffer", "Pillar"],
+  209: ["Imponente", "Equilibrato", "POT Bassa", "DAN Medio", "Momentum", "Engine", "Ace"],
+  210: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Closer", "Sacrifice", "Finisher"],
+  215: ["Imponente", "Sbilanciato", "POT Media", "DAN Basso", "Comeback", "Tank", "Sacrifice", "Tank"],
+  216: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Momentum", "Kamikaze", "Pillar"],
+  217: ["Esile", "Sbilanciato", "POT Media", "DAN Alto", "Steady", "Debuffer", "Pillar"],
+  218: ["Esile", "Sbilanciato", "POT Media", "DAN Medio", "Comeback", "Mimic", "Pillar"],
+  219: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Closer", "Flex"],
+  220: ["Solido", "Sbilanciato", "POT Media", "DAN Medio", "Late Game", "Engine", "Tech"],
+
+  // CALIBRI PESANTI
+  401: ["Imponente", "Equilibrato", "POT Alta", "DAN Letale", "Steady", "Tank", "Boss", "Finisher"],
+  411: ["Esile", "Equilibrato", "POT Media", "DAN Alto", "Momentum", "Closer", "Boss", "Finisher"],
+  402: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "All-in", "Buffer", "Pillar"],
+  403: ["Solido", "Equilibrato", "POT Media", "DAN Alto", "All-in", "Engine", "Pillar"],
+  412: ["Solido", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Buffer", "Ace"],
+  413: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "All-in", "Closer", "Pillar", "Finisher"],
+  404: ["Solido", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Tank", "Ace", "Tank"],
+  405: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Controller", "Ace", "Tech"],
+  406: ["Esile", "Equilibrato", "POT Bassa", "DAN Medio", "Steady", "Scaler", "Engine", "Anchor"],
+  414: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "Momentum", "Engine", "Ace"],
+  415: ["Esile", "Sbilanciato", "POT Media", "DAN Basso", "Comeback", "Buffer", "Pillar"],
+  407: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "First Strike", "Closer", "Ace", "Finisher"],
+  408: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Steady", "Debuffer", "Anchor"],
+  409: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Buffer", "Ace", "Bomb"],
+  410: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Engine", "Sacrifice"],
+  416: ["Imponente", "Sbilanciato", "POT Devastante", "DAN Basso", "Comeback", "Tank", "Pillar"],
+  417: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Buffer", "Flex"],
+  418: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Closer", "Flex"],
+  419: ["Solido", "Sbilanciato", "POT Media", "DAN Medio", "Late Game", "Buffer", "Tech"],
+  420: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Momentum", "Buffer", "Flex"],
+
+  // CORTE ROSSA
+  301: ["Solido", "Sbilanciato", "POT Devastante", "DAN Medio", "Momentum", "Closer", "Boss", "Finisher"],
+  311: ["Esile", "Equilibrato", "POT Alta", "DAN Alto", "Late Game", "Mimic", "Boss"],
+  302: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Counter", "Mimic", "Pillar"],
+  303: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Punisher", "Debuffer", "Pillar"],
+  312: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Comeback", "Closer", "Ace", "Finisher"],
+  304: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Steady", "Controller", "Anchor", "Tech"],
+  305: ["Imponente", "Sbilanciato", "POT Bassa", "DAN Alto", "First Strike", "Mimic", "Ace"],
+  306: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Late Game", "Controller", "Pillar", "Tech"],
+  313: ["Esile", "Equilibrato", "POT Bassa", "DAN Medio", "Counter", "Debuffer", "Pillar"],
+  314: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "Comeback", "Buffer", "Ace"],
+  307: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Counter", "Debuffer", "Pillar"],
+  308: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "First Strike", "Buffer", "Ace"],
+  309: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "First Strike", "Debuffer", "Pillar"],
+  310: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Buffer", "Ace"],
+  315: ["Solido", "Equilibrato", "POT Bassa", "DAN Medio", "Counter", "Buffer", "Pillar"],
+  316: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Steady", "Converter", "Ace"],
+  317: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Controller", "Pillar"],
+  318: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Late Game", "Closer", "Flex"],
+  319: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Counter", "Mimic", "Tech"],
+  320: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Counter", "Debuffer", "Tech"],
+
+  // ORATHAI
+  501: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Momentum", "Buffer", "Boss"],
+  511: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "All-in", "Buffer", "Boss", "Bomb"],
+  502: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "Momentum", "Engine", "Pillar"],
+  503: ["Imponente", "Sbilanciato", "POT Devastante", "DAN Basso", "Momentum", "Buffer", "Pillar", "Finisher"],
+  512: ["Solido", "Equilibrato", "POT Media", "DAN Alto", "Counter", "Mimic", "Ace"],
+  504: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "Steady", "Controller", "Anchor", "Tech"],
+  505: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Engine", "Pillar"],
+  506: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "First Strike", "Buffer", "Pillar"],
+  513: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Tank", "Pillar", "Tank"],
+  514: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Momentum", "Tank", "Pillar", "Tank"],
+  507: ["Imponente", "Sbilanciato", "POT Media", "DAN Basso", "Comeback", "Closer", "Ace"],
+  508: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Steady", "Tank", "Anchor", "Tank"],
+  509: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Engine", "Sacrifice"],
+  510: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Momentum", "Buffer", "Ace", "Bomb"],
+  515: ["Solido", "Equilibrato", "POT Bassa", "DAN Medio", "Momentum", "Buffer", "Pillar", "Bomb"],
+  516: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Comeback", "Tank", "Ace"],
+  517: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Late Game", "Closer", "Pillar"],
+  518: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Steady", "Controller", "Pillar"],
+  519: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "First Strike", "Buffer", "Tech"],
+  520: ["Solido", "Equilibrato", "POT Bassa", "DAN Bassa", "Steady", "Scaler", "Engine", "Pillar"],
+
+  // NATI DALLA BOCCA / MOUNTHBORN
+  601: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Late Game", "Tank", "Boss"],
+  611: ["Esile", "Sbilanciato", "POT Alta", "DAN Medio", "Early Rush", "Buffer", "Boss", "Bomb"],
+  602: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Momentum", "Scaler", "Pillar"],
+  603: ["Esile", "Equilibrato", "POT Media", "DAN Alto", "Counter", "Mimic", "Ace"],
+  612: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Debuffer", "Ace"],
+  604: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "First Strike", "Buffer", "Pillar"],
+  605: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Buffer", "Ace"],
+  606: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Closer", "Pillar", "Finisher"],
+  613: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Buffer", "Ace"],
+  614: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "First Strike", "Controller", "Pillar", "Tech"],
+  607: ["Imponente", "Sbilanciato", "POT Media", "DAN Basso", "First Strike", "Kamikaze", "Pillar"],
+  608: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Late Game", "Scaler", "Pillar", "Scaler"],
+  609: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Kamikaze", "Sacrifice"],
+  610: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "First Strike", "Buffer", "Pillar", "Bomb"],
+  615: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Closer", "Ace", "Finisher"],
+  616: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Counter", "Converter", "Ace"],
+  617: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Comeback", "Scaler", "Flex"],
+  618: ["Solido", "Sbilanciato", "POT Media", "DAN Medio", "First Strike", "Buffer", "Pillar"],
+  619: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Kamikaze", "Closer", "Flex"],
+  620: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Momentum", "Scaler", "Flex"],
+
+  // L'ENCLAVE DELLE SCAGLIE
+  701: ["Imponente", "Equilibrato", "POT Devastante", "DAN Alto", "Momentum", "Buffer", "Boss"],
+  711: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Comeback", "Tank", "Boss", "Tank"],
+  702: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "First Strike", "Scaler", "Pillar", "Scaler"],
+  703: ["Esile", "Equilibrato", "POT Alta", "DAN Medio", "Early Rush", "Buffer", "Ace"],
+  712: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "Momentum", "Closer", "Pillar", "Finisher"],
+  713: ["Esile", "Equilibrato", "POT Media", "DAN Medio", "All-in", "Buffer", "Ace", "Bomb"],
+  704: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Controller", "Ace", "Tech"],
+  705: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "First Strike", "Buffer", "Pillar"],
+  714: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Momentum", "Buffer", "Pillar"],
+  715: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "Momentum", "Buffer", "Pillar", "Bomb"],
+  706: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "All-in", "Buffer", "Pillar", "Bomb"],
+  707: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Late Game", "Buffer", "Ace"],
+  708: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Engine", "Sacrifice"],
+  709: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Late Game", "Buffer", "Pillar"],
+  710: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Late Game", "Buffer", "Ace", "Bomb"],
+  716: ["Imponente", "Sbilanciato", "POT Alta", "DAN Medio", "Counter", "Controller", "Ace"],
+  717: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Momentum", "Buffer", "Pillar"],
+  718: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Counter", "Debuffer", "Tech"],
+  719: ["Imponente", "Sbilanciato", "POT Media", "DAN Basso", "Kamikaze", "Closer", "Flex"],
+  720: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Steady", "Scaler", "Engine", "Flex"],
+
+  // RATTI DELLA MEGERA
+  801: ["Solido", "Equilibrato", "POT Alta", "DAN Alto", "Steady", "Controller", "Boss", "Anchor"],
+  811: ["Esile", "Sbilanciato", "POT Alta", "DAN Medio", "First Strike", "Debuffer", "Boss"],
+  802: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Debuffer", "Pillar"],
+  803: ["Esile", "Equilibrato", "POT Media", "DAN Medio", "Momentum", "Debuffer", "Ace"],
+  812: ["Solido", "Equilibrato", "POT Media", "DAN Alto", "Counter", "Debuffer", "Pillar"],
+  813: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Buffer", "Ace", "Bomb"],
+  804: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Punisher", "Closer", "Pillar"],
+  805: ["Esile", "Sbilanciato", "POT Media", "DAN Basso", "Counter", "Debuffer", "Pillar"],
+  814: ["Solido", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Closer", "Sacrifice"],
+  815: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Counter", "Controller", "Pillar", "Tech"],
+  806: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Late Game", "Closer", "Pillar"],
+  807: ["Imponente", "Sbilanciato", "POT Media", "DAN Basso", "First Strike", "Debuffer", "Pillar"],
+  808: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Closer", "Sacrifice", "Finisher"],
+  809: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Debuffer", "Sacrifice"],
+  810: ["Imponente", "Equilibrato", "POT Media", "DAN Basso", "Punisher", "Closer", "Pillar", "Finisher"],
+  816: ["Imponente", "Sbilanciato", "POT Devastante", "DAN Basso", "Counter", "Mimic", "Ace"],
+  817: ["Imponente", "Sbilanciato", "POT Alta", "DAN Basso", "Counter", "Debuffer", "Pillar"],
+  818: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Scaler", "Flex"],
+  819: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Late Game", "Debuffer", "Pillar"],
+  820: ["Solido", "Sbilanciato", "POT Media", "DAN Basso", "Early Rush", "Buffer", "Tech"],
+
+  // PATTO DEGLI INDOCILI
+  901: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "Momentum", "Buffer", "Pillar"],
+  902: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "All-in", "Tank", "Ace"],
+  903: ["Esile", "Equilibrato", "POT Media", "DAN Medio", "Early Rush", "Buffer", "Bomb"],
+  904: ["Solido", "Equilibrato", "POT Alta", "DAN Medio", "Late Game", "Debuffer", "Pillar"],
+  905: ["Imponente", "Equilibrato", "POT Alta", "DAN Alto", "Comeback", "Controller", "Pillar", "Tech"],
+  906: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "Counter", "Debuffer", "Pillar"],
+  907: ["Esile", "Sbilanciato", "POT Alta", "DAN Basso", "First Strike", "Debuffer", "Tech"],
+  908: ["Imponente", "Equilibrato", "POT Media", "DAN Medio", "Counter", "Engine", "Pillar"],
+  909: ["Solido", "Sbilanciato", "POT Alta", "DAN Basso", "Comeback", "Buffer", "Ace", "Finisher"],
+  910: ["Imponente", "Equilibrato", "POT Media", "DAN Alto", "Comeback", "Buffer", "Ace"],
+  911: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Comeback", "Debuffer", "Pillar"],
+  912: ["Solido", "Equilibrato", "POT Media", "DAN Medio", "Comeback", "Buffer", "Pillar"],
+  913: ["Esile", "Equilibrato", "POT Media", "DAN Basso", "Early Rush", "Buffer", "Bomb"],
+  914: ["Solido", "Equilibrato", "POT Bassa", "DAN Alto", "Counter", "Debuffer", "Tech"],
+  915: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Early Rush", "Buffer", "Pillar"],
+  916: ["Esile", "Equilibrato", "POT Bassa", "DAN Basso", "Late Game", "Buffer", "Bomb"],
+  917: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Steady", "Scaler", "Anchor", "Scaler"],
+  918: ["Imponente", "Equilibrato", "POT Bassa", "DAN Medio", "Comeback", "Buffer", "Ace"],
+  919: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Punisher", "Buffer", "Ace"],
+  920: ["Solido", "Equilibrato", "POT Media", "DAN Basso", "Counter", "Controller", "Tech"],
+  921: ["Solido", "Equilibrato", "POT Bassa", "DAN Basso", "Comeback", "Buffer", "Flex"],
+};
+
+/** Tooltip brevi per ogni tag (da SISTEMA_TAG_AGENTI_v2.md) */
+export const TAG_TOOLTIPS = {
+  // Corpo
+  Esile: "Corpo debole per la Lega. Il potere compensa.",
+  Solido: "Corpo nella norma. Equilibrio stat/potere.",
+  Imponente: "Corpo sopra la media. Potere debole o assente.",
+  // Equilibrio
+  Equilibrato: "Stat bilanciate. Versatile.",
+  Sbilanciato: "Una stat domina. Specialista.",
+  // POT
+  "POT Bassa": "Perde la maggior parte dei duelli senza buff",
+  "POT Media": "Competitiva con investimento FC",
+  "POT Alta": "Vince molti duelli anche con poco FC",
+  "POT Devastante": "Domina i duelli. Raro.",
+  // DAN
+  "DAN Basso": "Vittorie poco impattanti sui PV nemici",
+  "DAN Medio": "Danno standard",
+  "DAN Alto": "Vittorie dolorose per il nemico",
+  "DAN Letale": "Ogni vittoria è devastante. Raro.",
+  // Postura
+  "First Strike": "Colpisci per primo. Aggressione pura.",
+  Counter: "Reagisci al nemico. Informazione.",
+  Momentum: "Stai vincendo. Accelera il vantaggio.",
+  Comeback: "Stai perdendo. Recupera o resisti.",
+  "All-in": "Scommetti tutto su un turno.",
+  Punisher: "Punisci azioni specifiche del nemico.",
+  Steady: "Sempre attivo. Nessuna condizione.",
+  "Late Game": "Si sveglia nei turni tardi.",
+  "Early Rush": "Forte solo T1-2, poi solo corpo.",
+  // Funzione
+  Buffer: "Potenzia la propria carta.",
+  Debuffer: "Indebolisce la carta nemica.",
+  Closer: "Infligge danno diretto ai PV. Ignora il duello.",
+  Tank: "Assorbe o mitiga il danno subito.",
+  Controller: "Neutralizza le abilità del nemico.",
+  Mimic: "Ruba statistiche o abilità.",
+  Engine: "Genera risorse.",
+  Scaler: "Diventa più forte col passare dei turni.",
+  Converter: "Trasforma i modificatori. Anti-debuff.",
+  Kamikaze: "Si danneggia per attivare condizioni.",
+  Vanilla: "Solo corpo. Nessun effetto da attivare.",
+  // Ruolo
+  Boss: "La punta dell'esercito. Lega 5, sopra curva.",
+  Finisher: "Chiude la partita. DAN Alto o Danni dir.",
+  Pillar: "Cuore del gameplan. La carta che vuoi giocare.",
+  Ace: "Forte fuori piano. Piano B.",
+  Bomb: "Alto ceiling, basso floor. Grande varianza.",
+  Anchor: "Affidabile e costante. Bassa varianza.",
+  Flex: "Versatile, adattabile.",
+  Tech: "Risposta situazionale. Per matchup specifici.",
+  Sacrifice: "Si immola per valore.",
+  Filler: "Riempie lo slot. Corpo solido.",
+};
+
+/** Restituisce i tag per una carta (array vuoto se non trovata) */
+export function getCardTags(cardId) {
+  return CARD_TAGS[cardId] ?? [];
+}
+
+/** Verifica se un tag è di Ruolo (badge rosso) */
+export function isRuoloTag(tag) {
+  return RUOLO_TAGS.has(tag);
+}
+
+/**
+ * Se un tag appare sia in Funzione che in Ruolo, mostrarlo solo una volta (grigio).
+ * Restituisce true se il tag deve essere mostrato come Ruolo (rosso), false altrimenti.
+ * Quando il tag è duplicato, la prima occorrenza è da Funzione → non mostrare come Ruolo.
+ */
+export function shouldShowTagAsRole(tag, tagsArray) {
+  if (!RUOLO_TAGS.has(tag)) return false;
+  const count = tagsArray.filter((t) => t === tag).length;
+  return count === 1; // Solo se appare una volta: è Ruolo puro. Se duplicato: prima occorrenza è Funzione.
+}

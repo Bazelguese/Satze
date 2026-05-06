@@ -1,0 +1,32 @@
+---
+description: SATZE mechanics-first validation for card design
+alwaysApply: true
+---
+
+# SATZE Mechanics-First Validation
+
+Prima di giudicare una carta, applica sempre questo ordine:
+
+1. **Timing trigger**: pre-duello o post-duello.
+2. **Bersaglio effettivo**: cosa può ancora essere modificato in quella fase.
+3. **Spendibilità valore**: il valore è utilizzabile entro la partita attuale.
+4. **Solo dopo**: convergenza/asso, bilanciamento, flavour.
+
+## Regole hard (obbligatorie)
+
+- Se il trigger è post-duello (`conquest`, `lastWish`), non valutare come valide modifiche stat del duello appena finito (`enemyPower`, `enemyDamage`, `enemyAssault`) salvo persistenza esplicita.
+- Con `maxRounds: 5`, effetti economia su `ultimaChance` (`round >= 5`) sono in genere dead value se non spendibili nello stesso round.
+- Non dire mai "va bene" senza indicare **fase**, **impatto reale**, **vincolo round**.
+
+## Formato risposta minimo per nuove carte
+
+- `Validità tecnica`: valida / non valida (con motivo fase/timing).
+- `Utilità reale`: utile / dead value / situazionale.
+- `Coerenza armata`: convergente / situazionale / asso.
+- `Rischio`: win-more, non-fun, o mismatch meccanico.
+
+## Esempi rapidi
+
+- ❌ `Conquista: -2 POT avv.` -> post-duello, nessun impatto utile immediato.
+- ⚠️ `Ultima Chance: +3 FC` con 5 round -> tecnicamente valida ma spesso dead value.
+- ✅ `Intervento: -2 POT avv.` -> pre-duello, impatto reale sul confronto corrente.

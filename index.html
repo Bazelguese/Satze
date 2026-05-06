@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SATZE - Gioco di Carte Strategico</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body, #root {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: #0c0814;
+      color: #eae4f2;
+      overflow: hidden;
+    }
+    /* Loading iniziale — palette logo SATZE */
+    #loading-initial {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 90% 55% at 38% 32%, rgba(107, 61, 158, 0.28) 0%, transparent 58%),
+        radial-gradient(ellipse 75% 50% at 82% 24%, rgba(216, 94, 184, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 40% at 50% 88%, rgba(90, 124, 189, 0.1) 0%, transparent 50%),
+        linear-gradient(180deg, #0c0814 0%, #140f22 55%, #080612 100%);
+      font-family: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+    }
+    #loading-initial .logo-satze-wrap {
+      perspective: 1050px;
+      transform-style: preserve-3d;
+      margin-bottom: 0.35rem;
+    }
+    #loading-initial .logo-satze-inner {
+      transform-style: preserve-3d;
+      transform-origin: center center;
+      animation: loading-logo-init-pulse 4.5s ease-in-out infinite;
+    }
+    @keyframes loading-logo-init-pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: rotateX(7deg) rotateY(-3deg) translateZ(0);
+      }
+      50% {
+        opacity: 0.98;
+        transform: rotateX(8deg) rotateY(-3.5deg) translateZ(6px);
+      }
+    }
+    #loading-initial .logo-glare-host {
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+      vertical-align: top;
+    }
+    #loading-initial .logo-glare-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      mix-blend-mode: overlay;
+      -webkit-mask-image: url(./logo-satze.png);
+      mask-image: url(./logo-satze.png);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      -webkit-mask-mode: alpha;
+      mask-mode: alpha;
+      background: linear-gradient(
+        102deg,
+        rgba(255, 255, 255, 0) 18%,
+        rgba(255, 248, 230, 0.42) 38%,
+        rgba(255, 255, 252, 0.95) 50%,
+        rgba(255, 248, 230, 0.42) 62%,
+        rgba(255, 255, 255, 0) 82%
+      );
+      background-size: 210% 100%;
+      background-position: 130% 50%;
+      animation: loading-logo-glare-flow 18s linear infinite alternate;
+    }
+    @keyframes loading-logo-glare-flow {
+      0% {
+        background-position: 130% 50%;
+      }
+      100% {
+        background-position: -30% 50%;
+      }
+    }
+    #loading-initial .logo-satze {
+      display: block;
+      margin: 0 auto;
+      width: min(92vw, 720px);
+      height: auto;
+      max-height: clamp(120px, 38vh, 360px);
+      object-fit: contain;
+      transform: translateZ(0);
+      filter:
+        brightness(1.035)
+        contrast(1.07)
+        drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.45))
+        drop-shadow(4px 8px 14px rgba(0, 0, 0, 0.28))
+        drop-shadow(1px 2px 4px rgba(124, 92, 184, 0.32))
+        drop-shadow(-1px -1px 2px rgba(240, 238, 228, 0.38));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #loading-initial .logo-satze-inner {
+        animation: none;
+        transform: rotateX(5deg) rotateY(-2deg);
+      }
+      #loading-initial .logo-glare-layer {
+        animation: none !important;
+        opacity: 0 !important;
+      }
+    }
+    #loading-initial p {
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      color: #a89bc4;
+      opacity: 0.88;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading-initial" aria-hidden="true">
+    <div class="logo-satze-wrap">
+      <div class="logo-satze-inner">
+        <div class="logo-glare-host">
+          <img class="logo-satze" src="./logo-satze.png" alt="" width="1536" height="1024" decoding="async" fetchpriority="high" />
+          <div class="logo-glare-layer" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+    <p>LA GRANDE GUERRA</p>
+  </div>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

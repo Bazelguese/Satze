@@ -1,0 +1,37 @@
+Costruisci una libreria UI professionale per "Satze - Khemet" in Figma.
+
+Obiettivo:
+- Creare foundations + componenti riusabili per schermate di deck builder e match.
+- Mantenere uno stile dark fantasy leggibile e competitivo.
+
+Fondazioni richieste:
+- Variabili/tokens colore, tipografia, spacing, radius, border, shadow.
+- Nomi token con namespace: satze/color/*, satze/type/*, satze/space/*, satze/radius/*.
+- Riferimento contenuti: file "01_TOKENS_UI.md".
+
+Componenti richiesti (con varianti):
+1) Card/Base
+   - Varianti: league (L2-L5), rarity (common/rare/epic/mythic), state (default/hover/selected/disabled), bonus (none/overdrive/resistenza).
+2) Button
+   - Varianti: type (primary/secondary/ghost/danger), size (sm/md/lg), state (default/hover/pressed/disabled/loading).
+3) Badge e Tag
+   - Badge lega/rarita/stato, Tag trigger/ruolo.
+4) Input/Text + Input/Search + Input/Select
+   - Stati: default/focus/error/success/disabled.
+5) Panel/DeckSlot
+   - Varianti: empty/filled/locked.
+6) Match/StatusBar
+   - Varianti: early/mid/late/last-round.
+7) Modal
+   - Varianti: default/warning/danger.
+
+Vincoli:
+- Auto-layout su tutti i componenti principali.
+- Naming coerente: Satze/Khemet/<Categoria>/<Nome>.
+- Usare i token, evitare valori hardcoded.
+- Contrasto testo AA minimo.
+
+Output:
+- Pagina "Foundations"
+- Pagina "Components"
+- Pagina "Examples" con almeno 2 composizioni (Deck panel e Match HUD)
