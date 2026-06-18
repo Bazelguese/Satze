@@ -4,7 +4,7 @@ import {
   buildPhaseAdvanceDelaysMs,
   duelPhase3NeedsWork,
 } from './duelVisualTimeline.js';
-import { DUEL_VISUAL_DEFAULTS } from './duelVisualConfig.js';
+import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from './duelVisualConfig.js';
 
 const vfx = { ...DUEL_VISUAL_DEFAULTS };
 
@@ -63,4 +63,79 @@ test('buildPhaseAdvanceDelaysMs: fase 3 piena con mod', () => {
   const br = { playerAssaultMod: 1, enemyAssaultMod: 0 };
   const d = buildPhaseAdvanceDelaysMs(vfx, 1, 1, br);
   assert.equal(d[3], vfx.phaseMs3);
+});
+
+test('buildPhaseAdvanceDelaysMs: fase 4 dinamica accelera con gap alto', () => {
+  const br = {
+    playerAssault: 20,
+    enemyAssault: 5,
+    playerFocusUsed: 2,
+    enemyFocusUsed: 2,
+  };
+  const dyn = computeDynamicClashVfx(br);
+  const d = buildPhaseAdvanceDelaysMs(vfx, 2, 2, br);
+  const expected = Math.max(1200, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
+  assert.ok(dyn.clashSpeed > 1);
+  assert.equal(d[4], expected);
+  assert.ok(d[4] < vfx.phaseMs4);
+});
+
+test('buildPhaseAdvanceDelaysMs: fase 4 dinamica rallenta con gap nullo', () => {
+  const br = {
+    playerAssault: 10,
+    enemyAssault: 10,
+    playerFocusUsed: 1,
+    enemyFocusUsed: 1,
+  };
+  const dyn = computeDynamicClashVfx(br);
+  const d = buildPhaseAdvanceDelaysMs(vfx, 1, 1, br);
+  const expected = Math.max(1200, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
+  assert.ok(dyn.clashSpeed < 1);
+  assert.equal(d[4], expected);
+  assert.ok(d[4] > vfx.phaseMs4);
+});
+
+test('buildPhaseAdvanceDelaysMs: fallback robusto con dati non numerici', () => {
+  const br = {
+    playerAssault: 'n/a',
+    enemyAssault: undefined,
+    playerFocusUsed: null,
+    enemyFocusUsed: 'x',
+  };
+  const dyn = computeDynamicClashVfx(br);
+  const d = buildPhaseAdvanceDelaysMs(vfx, 0, 0, br);
+  assert.equal(dyn.clashSpeed, 0.7);
+  assert.equal(dyn.intensity, 0.3);
+  assert.ok(Number.isFinite(d[4]));
+  assert.ok(d[4] >= 1200);
+});
+
+test('buildPhaseAdvanceDelaysMs: usa fallback default se vfx corrotto', () => {
+  const badVfx = {
+    phaseMs0: 'abc',
+    phaseMs1: null,
+    focusCoinStepMs: 'x',
+    focusPhaseBufferMs: undefined,
+    phaseMs3: 'nan',
+    phaseMs3Empty: 'nan',
+    phaseMs4: 'nan',
+    phaseMs5: {},
+  };
+  const d = buildPhaseAdvanceDelaysMs(badVfx, 2, 1, {
+    playerAssault: 10,
+    enemyAssault: 10,
+    playerFocusUsed: 2,
+    enemyFocusUsed: 1,
+    playerAssaultMod: 0,
+    enemyAssaultMod: 0,
+    playerAssaultRaw: 10,
+    enemyAssaultRaw: 8,
+    playerAssaultMinFinal: 3,
+    enemyAssaultMinFinal: 2,
+  });
+  assert.equal(d[0], DUEL_VISUAL_DEFAULTS.phaseMs0);
+  assert.equal(d[1], DUEL_VISUAL_DEFAULTS.phaseMs1);
+  assert.equal(d[2], 2 * DUEL_VISUAL_DEFAULTS.focusCoinStepMs + DUEL_VISUAL_DEFAULTS.focusPhaseBufferMs);
+  assert.ok(d[4] >= 1200);
+  assert.equal(d[5], DUEL_VISUAL_DEFAULTS.phaseMs5);
 });

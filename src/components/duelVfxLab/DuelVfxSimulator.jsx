@@ -423,7 +423,9 @@ export function DuelVfxSimulator({ vfx }) {
                 transitionDelay: isZoomed ? `${vfx.zoomDelayMs}ms` : '0ms',
               }}
             >
-              <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+              {simPhase < 4 ? (
+                <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+              ) : null}
               <DuelResultEnemyResultBody
                 battleResult={battle}
                 duelPhase={simPhase}
@@ -456,7 +458,9 @@ export function DuelVfxSimulator({ vfx }) {
                 transitionDelay: isZoomed ? `${vfx.zoomDelayMs}ms` : '0ms',
               }}
             >
-              <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L&apos;eroe</div>
+              {simPhase < 4 ? (
+                <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L&apos;eroe</div>
+              ) : null}
               <DuelResultPlayerResultBody
                 battleResult={battle}
                 duelPhase={simPhase}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze — Mazzo: Costruzione + Scelta pre-duello</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body, #root { margin:0; padding:0; width:100%; height:100%; background:#06030a; color:#f5f3eb; font-family:'Chakra Petch', sans-serif; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+  @keyframes float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+  @keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
+  @keyframes data-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="../ui_kits/deck/design-canvas.jsx"></script>
+<script type="text/babel" src="../ui_kits/deck/DeckBuilderCosmic.jsx"></script>
+<script type="text/babel" src="../ui_kits/deck/DeckSelectCosmic.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="builder" title="Costruzione Mazzo — stile V5 Cosmic Magenta (ufficiale)">
+        <DCArtboard id="builder-1" label="Costruzione Mazzo · griglia carte + filtri + pannello mazzo" width={1480} height={920}>
+          <DeckBuilderCosmic/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="select" title="Scelta del Mazzo (pre-duello) — carosello mazzi salvati">
+        <DCArtboard id="select-1" label="Scelta Mazzo · carosello + dettagli + schiera" width={1480} height={920}>
+          <DeckSelectCosmic/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

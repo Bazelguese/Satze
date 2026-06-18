@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Satze · A0 Aurora Charge dinamico</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #050608; color: #e8eaed;
+    font-family: 'Chakra Petch', sans-serif; min-height: 100vh; }
+  * { box-sizing: border-box; }
+  .dc-artboard { background: #000; }
+
+  /* Code block styling */
+  .code-block {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; line-height: 1.55;
+    background: #050608; color: #cbd5e1;
+    border: 1px solid #1e293b; padding: 18px 22px;
+    overflow-x: auto; white-space: pre;
+    letter-spacing: 0.02em;
+  }
+  .code-block .k { color: #f97316; }       /* keyword */
+  .code-block .s { color: #10b981; }       /* string */
+  .code-block .n { color: #fbbf24; }       /* number */
+  .code-block .c { color: #475569; font-style: italic; }  /* comment */
+  .code-block .f { color: #38bdf8; }       /* function */
+  .code-block .p { color: #a78bfa; }       /* property */
+
+  .file-tag {
+    display: inline-block;
+    font-family: 'Share Tech Mono'; font-size: 10px;
+    color: #38bdf8; letterSpacing: 0.18em;
+    padding: 3px 10px; background: rgba(56,189,248,0.08);
+    border: 1px solid #38bdf8; margin-bottom: 8px;
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- shared -->
+<script type="text/babel" src="improvements/shared-data.jsx"></script>
+<script type="text/babel" src="improvements/shared-components.jsx"></script>
+<script type="text/babel" src="improvements/dynamic-vfx-formula.jsx"></script>
+
+<!-- variants -->
+<script type="text/babel" src="improvements/clash-variants.jsx"></script>
+<script type="text/babel" src="improvements/clash-aurora-family.jsx"></script>
+<script type="text/babel" src="improvements/duel-variants.jsx"></script>
+
+<!-- system -->
+<script type="text/babel" src="improvements/design-canvas.jsx"></script>
+<script type="text/babel" src="improvements/tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "clashSpeed": 1,
+  "intensity": 1,
+  "palette": "default",
+  "showHud": "showAll",
+  "showScanlines": true,
+  "showReadout": true
+}/*EDITMODE-END*/;
+
+const FRAME_W = 1280, FRAME_H = 720;
+
+function StageFrame({ children }) {
+  return (
+    <div style={{ width: FRAME_W, height: FRAME_H, position: 'relative', overflow: 'hidden', background: '#000' }}>
+      {children}
+    </div>
+  );
+}
+
+function ClashArtboard({ Component, tweaks, scenario, showReadout }) {
+  const [runId, setRunId] = useState(0);
+  useEffect(() => {
+    const speed = scenario._dynamic ? scenario._dynamic.clashSpeed : tweaks.clashSpeed;
+    const dur = 3000 / speed;
+    const id = setTimeout(() => setRunId(r => r + 1), dur + 1200);
+    return () => clearTimeout(id);
+  }, [runId, tweaks.clashSpeed, scenario]);
+  return (
+    <StageFrame>
+      <Component tweaks={tweaks} runId={runId} onReplay={() => setRunId(r => r + 1)} scenario={scenario} showReadout={showReadout}/>
+    </StageFrame>
+  );
+}
+
+// Live scenario: slider per gap + FC, mostra readout
+function LiveScenarioControls({ vaGap, totalFc, onGap, onFc }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 18, left: 18, right: 18, zIndex: 110,
+      display: 'flex', gap: 18, alignItems: 'center', padding: '14px 18px',
+      background: 'rgba(5,6,8,0.92)', border: '1px solid #38bdf8',
+      clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+    }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: 'Chakra Petch', fontSize: 10, color: '#94a3b8', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 4 }}>
+          Gap VA · <span style={{ color: '#fbbf24' }}>{vaGap}</span>
+        </div>
+        <input type="range" min="0" max="20" value={vaGap} onChange={e => onGap(Number(e.target.value))}
+          style={{ width: '100%', accentColor: '#38bdf8' }}/>
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: 'Chakra Petch', fontSize: 10, color: '#94a3b8', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 4 }}>
+          FC totali · <span style={{ color: '#fbbf24' }}>{totalFc}</span>
+        </div>
+        <input type="range" min="2" max="20" value={totalFc} onChange={e => onFc(Number(e.target.value))}
+          style={{ width: '100%', accentColor: '#38bdf8' }}/>
+      </div>
+    </div>
+  );
+}
+
+function LiveDynamicDemo({ tweaks }) {
+  const [vaGap, setVaGap] = useState(8);
+  const [totalFc, setTotalFc] = useState(10);
+  const [runId, setRunId] = useState(0);
+  const scenario = useMemo(() => {
+    const winnerVa = 12 + Math.floor(vaGap / 2);
+    const loserVa = winnerVa - vaGap;
+    const pFc = Math.ceil(totalFc / 2);
+    const eFc = totalFc - pFc;
+    return applyScenarioToBattle(CLASH_SCENARIO, {
+      pVa: winnerVa, eVa: loserVa, pFc, eFc, winner: 'player',
+      damage: 4 + Math.floor(vaGap / 4),
+    });
+  }, [vaGap, totalFc]);
+
+  // restart animation when scenario changes
+  useEffect(() => { setRunId(r => r + 1); }, [vaGap, totalFc]);
+  useEffect(() => {
+    const speed = scenario._dynamic.clashSpeed;
+    const dur = 3000 / speed;
+    const id = setTimeout(() => setRunId(r => r + 1), dur + 1200);
+    return () => clearTimeout(id);
+  }, [runId, scenario]);
+
+  return (
+    <StageFrame>
+      <ClashV1_AuroraCharge tweaks={tweaks} runId={runId} onReplay={() => setRunId(r => r + 1)} scenario={scenario} showReadout/>
+      <LiveScenarioControls vaGap={vaGap} totalFc={totalFc} onGap={setVaGap} onFc={setTotalFc}/>
+    </StageFrame>
+  );
+}
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dynamicScenarios = useMemo(
+    () => DYNAMIC_SCENARIOS.map(s => ({ scenario: applyScenarioToBattle(CLASH_SCENARIO, s), meta: s })),
+    []
+  );
+
+  return (
+    <div data-screen-label="A0 Aurora Charge Dynamic" style={{ minHeight: '100vh', padding: '24px 32px 80px', background: 'radial-gradient(ellipse at 50% 0%, #0a1628 0%, #050608 60%)' }}>
+      {/* Intro */}
+      <header style={{ maxWidth: 1320, margin: '0 auto 28px' }}>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#fbbf24', letterSpacing: '0.42em', textTransform: 'uppercase', marginBottom: 6 }}>Satze · A0 Aurora Charge</div>
+        <h1 style={{
+          fontFamily: 'Cinzel, serif', fontSize: 40, fontWeight: 800, color: '#fff',
+          letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0,
+          textShadow: '0 0 24px rgba(56,189,248,0.25)',
+        }}>VFX dinamici · gap VA → velocità · FC tot → intensità</h1>
+        <p style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#94a3b8', maxWidth: 880, marginTop: 12, lineHeight: 1.55 }}>
+          A0 (Aurora Charge originale) con formula dinamica. Lo scontro <strong style={{ color: '#fff' }}>cambia ritmo</strong> in base ai numeri del duello: più il gap di VA è alto più la sequenza è rapida (sensazione di dominazione), più FC sono stati investiti più gli effetti diventano intensi (sensazione di posta in gioco). Sotto, 4 scenari preset mostrano come la formula si comporta agli estremi. Il riquadro <em>Live</em> in alto ti lascia esplorare combinazioni arbitrarie. Più sotto trovi il codice da integrare in <code style={{color:'#38bdf8'}}>Satze/src/</code>.
+        </p>
+      </header>
+
+      <DesignCanvas height="auto" minArtboardHeight={FRAME_H * 0.6 + 40}>
+        <DCSection id="sec-live" title="Live · esplora la formula" subtitle="Trascina gli slider per vedere come gap VA e FC totali alterano clashSpeed e intensity in tempo reale">
+          <DCArtboard id="live-demo" label="Live · slider personalizzabili" width={FRAME_W} height={FRAME_H}>
+            <LiveDynamicDemo tweaks={tweaks}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="sec-preset" title="Scenari preset" subtitle="4 combinazioni agli estremi, ognuna mostra il proprio readout dinamico in alto a sinistra">
+          {dynamicScenarios.map(({ scenario, meta }) => (
+            <DCArtboard key={meta.id} id={`scen-${meta.id}`}
+              label={`${meta.label} · ${meta.sub} → speed ${scenario._dynamic.clashSpeed.toFixed(2)}× · int ${scenario._dynamic.intensity.toFixed(2)}×`}
+              width={FRAME_W} height={FRAME_H}>
+              <ClashArtboard Component={ClashV1_AuroraCharge} tweaks={tweaks} scenario={scenario} showReadout/>
+            </DCArtboard>
+          ))}
+        </DCSection>
+      </DesignCanvas>
+
+      {/* Sezione formula */}
+      <section style={{ maxWidth: 1320, margin: '52px auto 0', padding: '32px 0', borderTop: '1px solid #1e293b' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 36 }}>
+          <div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#fbbf24', letterSpacing: '0.32em', marginBottom: 12 }}>FORMULA</div>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#fff', letterSpacing: '0.14em', margin: '0 0 18px', textTransform: 'uppercase' }}>Mappatura lineare clamped</h2>
+            <ul style={{ fontFamily: 'Chakra Petch', fontSize: 13, color: '#cbd5e1', lineHeight: 1.7, paddingLeft: 18, margin: 0 }}>
+              <li><strong style={{color:'#fbbf24'}}>clashSpeed</strong>: gap VA <code>0 → 0.7×</code> ┄ <code>15+ → 1.5×</code></li>
+              <li><strong style={{color:'#fbbf24'}}>intensity</strong>: FC totali <code>2 → 0.3×</code> ┄ <code>16+ → 1.6×</code></li>
+              <li>Curva lineare clamped (i due assi sono indipendenti)</li>
+              <li>Le costanti sono in un unico oggetto <code>CLASH_VFX_RANGES</code> facile da tunare</li>
+            </ul>
+            <div style={{ marginTop: 22, padding: '12px 14px', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)' }}>
+              <div style={{ fontFamily: 'Share Tech Mono', fontSize: 10, color: '#38bdf8', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>Suggerimento di tuning</div>
+              <div style={{ fontFamily: 'Chakra Petch', fontSize: 12, color: '#94a3b8', lineHeight: 1.55 }}>
+                Se la fase 4 risulta troppo lenta nelle schermaglie, alza <code>speedMin</code> a 0.85.<br/>
+                Se gli effetti a basso FC sono troppo flebili, alza <code>intMin</code> a 0.5.
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="file-tag">📄 Satze/src/config/duelVisualConfig.js</div>
+            <pre className="code-block">
+<span className="c">// ─── Aggiungi in fondo al file ───────────────────────</span>
+
+<span className="k">export const</span> CLASH_VFX_RANGES = {`{`}
+  <span className="p">gap</span>: {`{`} <span className="p">min</span>: <span className="n">0</span>, <span className="p">max</span>: <span className="n">15</span>, <span className="p">speedMin</span>: <span className="n">0.7</span>, <span className="p">speedMax</span>: <span className="n">1.5</span> {`}`},
+  <span className="p">fc</span>:  {`{`} <span className="p">min</span>: <span className="n">2</span>,  <span className="p">max</span>: <span className="n">16</span>, <span className="p">intMin</span>:   <span className="n">0.3</span>, <span className="p">intMax</span>:   <span className="n">1.6</span> {`}`},
+{`}`};
+
+<span className="k">function</span> <span className="f">lerp</span>(a, b, t) {`{ `}<span className="k">return</span> a + (b - a) * t;{` }`}
+<span className="k">function</span> <span className="f">clamp01</span>(x) {`{ `}<span className="k">return</span> Math.<span className="f">max</span>(<span className="n">0</span>, Math.<span className="f">min</span>(<span className="n">1</span>, x));{` }`}
+
+<span className="c">/** Restituisce {`{ clashSpeed, intensity }`} dinamici per il clash di fase 4. */</span>
+<span className="k">export function</span> <span className="f">computeDynamicClashVfx</span>(battleResult) {`{`}
+  <span className="k">const</span> pVa = battleResult?.<span className="p">playerAssault</span> ?? <span className="n">0</span>;
+  <span className="k">const</span> eVa = battleResult?.<span className="p">enemyAssault</span> ?? <span className="n">0</span>;
+  <span className="k">const</span> pFc = battleResult?.<span className="p">playerFocusUsed</span> ?? <span className="n">0</span>;
+  <span className="k">const</span> eFc = battleResult?.<span className="p">enemyFocusUsed</span> ?? <span className="n">0</span>;
+  <span className="k">const</span> gap = Math.<span className="f">abs</span>(pVa - eVa);
+  <span className="k">const</span> totalFc = pFc + eFc;
+  <span className="k">const</span> {`{`} gap: g, fc: f {`}`} = CLASH_VFX_RANGES;
+  <span className="k">const</span> gapNorm = <span className="f">clamp01</span>((gap - g.min) / (g.max - g.min));
+  <span className="k">const</span> fcNorm  = <span className="f">clamp01</span>((totalFc - f.min) / (f.max - f.min));
+  <span className="k">return</span> {`{`}
+    <span className="p">clashSpeed</span>: <span className="f">lerp</span>(g.speedMin, g.speedMax, gapNorm),
+    <span className="p">intensity</span>:  <span className="f">lerp</span>(f.intMin,   f.intMax,   fcNorm),
+    <span className="p">gap</span>, <span className="p">totalFc</span>,
+  {`}`};
+{`}`}
+            </pre>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 36, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+          <div>
+            <div className="file-tag">📄 Satze/src/config/duelVisualTimeline.js</div>
+            <pre className="code-block">
+<span className="c">// ─── Modifica buildPhaseAdvanceDelaysMs ──────────────</span>
+
+<span className="k">import</span> {`{`} <span className="f">computeDynamicClashVfx</span> {`}`} <span className="k">from</span> <span className="s">'./duelVisualConfig.js'</span>;
+
+<span className="k">export function</span> <span className="f">buildPhaseAdvanceDelaysMs</span>(vfx, pFc, eFc, br) {`{`}
+  <span className="k">const</span> phase2 = <span className="f">computePhase2DurationMs</span>(vfx, pFc, eFc);
+  <span className="k">const</span> phase3 = <span className="f">computePhase3DurationMs</span>(vfx, br);
+
+  <span className="c">// ⇩ NUOVO: fase 4 dinamica</span>
+  <span className="k">const</span> {`{`} clashSpeed {`}`} = <span className="f">computeDynamicClashVfx</span>(br);
+  <span className="k">const</span> phase4 = vfx.<span className="p">phaseMs4</span> / clashSpeed;
+
+  <span className="k">return</span> [
+    vfx.<span className="p">phaseMs0</span>,
+    vfx.<span className="p">phaseMs1</span>,
+    phase2,
+    phase3,
+    phase4,           <span className="c">// ← era vfx.phaseMs4</span>
+    vfx.<span className="p">phaseMs5</span>,
+    <span className="n">0</span>,
+  ];
+{`}`}
+            </pre>
+          </div>
+          <div>
+            <div className="file-tag">📄 Satze/src/components/battle/DuelResultDuelBodies.jsx</div>
+            <pre className="code-block">
+<span className="c">// ─── Nella renderizzazione clash (fase 4) ────────────</span>
+
+<span className="k">import</span> {`{`} <span className="f">computeDynamicClashVfx</span> {`}`} <span className="k">from</span> <span className="s">'../../config/duelVisualConfig.js'</span>;
+
+<span className="c">// All'inizio del componente (es. DuelResultPlayerResultBody)</span>
+<span className="k">const</span> dyn = <span className="f">computeDynamicClashVfx</span>(battleResult);
+
+<span className="c">// Particelle (es. animate-explosion-particles)</span>
+<span className="c">// Numero particelle in base a intensity</span>
+<span className="k">const</span> particleCount = Math.<span className="f">round</span>(<span className="n">8</span> * dyn.<span className="p">intensity</span>);
+
+<span className="c">// Box-shadow / glow scalato con intensity</span>
+boxShadow: <span className="s">{"`0 0 ${20 * dyn.intensity}px ${color}`"}</span>,
+
+<span className="c">// Durata CSS animation override</span>
+animationDuration: <span className="s">{"`${1400 / dyn.clashSpeed}ms`"}</span>,
+            </pre>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 32, padding: '16px 20px', background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.25)' }}>
+          <div style={{ fontFamily: 'Share Tech Mono', fontSize: 10, color: '#fbbf24', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 8 }}>⚠ Punti d'attenzione integrazione</div>
+          <ul style={{ fontFamily: 'Chakra Petch', fontSize: 12.5, color: '#cbd5e1', lineHeight: 1.6, paddingLeft: 18, margin: 0 }}>
+            <li>
+              Le animazioni CSS attuali (<code>clash</code>, <code>victoryExplosion</code>, <code>clashWinner*</code>) hanno durate hardcoded — per renderle dinamiche, applica <code>{"style={{ animationDuration: `${1400/dyn.clashSpeed}ms` }}"}</code> in linea dove vengono usate le classi <code>animate-clash</code> / <code>animate-victory-explosion</code>.
+            </li>
+            <li>
+              Il numero di particelle in <code>vaParticleOffsets</code> è fisso a 8 — falla diventare <code>Math.round(8 * dyn.intensity)</code> per scalare con i FC.
+            </li>
+            <li>
+              <code>computeDynamicClashVfx</code> va chiamato <strong>una sola volta</strong> per duello (al momento della transizione a fase 4) e memorizzato — evita di ricalcolarlo a ogni render.
+            </li>
+            <li>
+              Il Duel VFX Lab (<code>DuelVfxSimulator.jsx</code>) può continuare a usare i valori fissi: il lab è uno strumento di tuning, non riflette i valori dinamici di partita.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {tweaksOpen && (
+        <TweaksPanel title="Tweaks · A0 dinamico" onClose={() => setTweaksOpen(false)}>
+          <TweakSection title="Override manuali (solo Live, ignorati per i preset)">
+            <TweakSlider label="clashSpeed (fallback)" value={tweaks.clashSpeed} onChange={v => setTweak('clashSpeed', v)} min={0.5} max={2} step={0.1} format={v => `${v.toFixed(1)}×`}/>
+            <TweakSlider label="intensity (fallback)" value={tweaks.intensity} onChange={v => setTweak('intensity', v)} min={0.3} max={1.6} step={0.1} format={v => `${v.toFixed(1)}×`}/>
+            <div style={{ fontFamily: 'Chakra Petch', fontSize: 10, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+              Negli scenari preset i valori sono calcolati dalla formula; questi slider valgono solo per scenari senza <code>_dynamic</code>.
+            </div>
+          </TweakSection>
+          <TweakSection title="Visualizzazione">
+            <TweakToggle label="Readout VFX dinamici" value={tweaks.showReadout} onChange={v => setTweak('showReadout', v)}/>
+            <TweakToggle label="Scanlines" value={tweaks.showScanlines} onChange={v => setTweak('showScanlines', v)}/>
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

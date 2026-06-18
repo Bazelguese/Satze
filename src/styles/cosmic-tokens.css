@@ -1,0 +1,101 @@
+/* Satze Design System — Colors & Type
+ * Source: Satze/src/theme/hudOratorioPalette.js
+ * Fonts: Chakra Petch, Cinzel, Share Tech Mono (Google Fonts)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg-void: #000000;
+  --bg-night: #050608;
+  --bg-panel: #0a1628;
+  --bg-panel-2: #0b0f1a;
+  --bg-ember: #1a1410;
+  --bg-steel: #1e293b;
+  --fg1: #e8eaed;
+  --fg2: #94a3b8;
+  --fg3: #64748b;
+  --fg-disabled: #475569;
+  --accent-cyan: #38bdf8;
+  --accent-cyan-d: #0891b2;
+  --accent-gold: #d4af37;
+  --accent-gold-l: #fbbf24;
+  --accent-fire: #f97316;
+  --accent-fire-d: #c2410c;
+  --accent-magenta: #d946ef;
+  --accent-blood: #dc2626;
+  --accent-slate: #334155;
+  --accent-ice: #60a5fa;
+  --fc-success: #10b981;
+  --fc-warning: #fbbf24;
+  --fc-danger: #dc2626;
+  --fc-info: #38bdf8;
+  --army-orizzonte: #a78bfa;
+  --army-kethran: #fbbf24;
+  --army-corte-rossa: #dc2626;
+  --army-calibri-pesanti: #64748b;
+  --army-orathai: #14b8a6;
+  --army-mounthborn: #84cc16;
+  --army-enclave: #ea580c;
+  --army-ratti: #10b981;
+  --camp-ass: #f97316;
+  --camp-dif: #38bdf8;
+  --camp-dom: #d4af37;
+  --camp-ann: #dc2626;
+  --camp-spc: #a78bfa;
+  --font-display: 'Cinzel', 'Times New Roman', serif;
+  --font-ui: 'Chakra Petch', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 17px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-2xl: 40px;
+  --fs-3xl: 56px;
+  --fs-4xl: 72px;
+  --fs-5xl: 96px;
+  --tracking-hud: 0.15em;
+  --tracking-wide: 0.22em;
+  --tracking-banner: 0.35em;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px currentColor);
+  }
+}
+
+@keyframes data-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes cosmic-schiera-flicker {
+  0%,
+  100% {
+    opacity: 0.82;
+    filter: drop-shadow(0 0 10px rgba(192, 38, 211, 0.42)) drop-shadow(0 0 20px rgba(236, 72, 153, 0.2));
+  }
+  34% {
+    opacity: 1;
+    filter: drop-shadow(0 0 22px rgba(236, 72, 153, 0.56)) drop-shadow(0 0 44px rgba(192, 38, 211, 0.46));
+  }
+  48% {
+    opacity: 0.86;
+    filter: drop-shadow(0 0 16px rgba(192, 38, 211, 0.46)) drop-shadow(0 0 30px rgba(236, 72, 153, 0.26));
+  }
+  66% {
+    opacity: 1;
+    filter: drop-shadow(0 0 26px rgba(236, 72, 153, 0.6)) drop-shadow(0 0 50px rgba(192, 38, 211, 0.5));
+  }
+}

@@ -5,7 +5,6 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { ARMY_SETS, ARMY_COLORS, ARMY_BONUSES } from "../../data";
 import { LEAGUE_TIER_COLORS as LEAGUE_COLORS } from "../../data/leagueColors";
 import { TRIGGER_NAMES } from "../../data/triggers";
@@ -157,12 +156,19 @@ const TriggerBadge = ({ trigger, compact }) => {
 };
 
 // Griglia di selezione - layout originale (LEGA | anteprima | info | POT DAN | +/-)
-const CatalogCardRow = ({ card, inDeck, onToggle, disabled }) => {
+const CatalogCardRow = ({ card, inDeck, onToggle, disabled, bgPositions }) => {
   const [hovered, setHovered] = useState(false);
   if (!card) return null;
   const ac = getArmyConfig(card.army).color || PALETTE.amber;
+  const spriteInfo = getCardSprite(card);
+  const cardImageUrl = getCardImageUrl(spriteInfo.type, spriteInfo.agentId);
+  const bgCfg = bgPositions?.[card.id] ?? bgPositions?.[String(card.id)];
+  const bgPosStr = typeof bgCfg === "object" && bgCfg != null
+    ? `${bgCfg.x ?? 50}% ${bgCfg.y ?? 25}% / ${(bgCfg.scale ?? 100) === 100 ? "cover" : `${bgCfg.scale}%`}`
+    : `center ${typeof bgCfg === "string" ? bgCfg : "25%"}/cover`;
   return (
     <div
+      className="cosmic-catalog-row"
       onClick={() => !disabled && onToggle(card)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -173,7 +179,13 @@ const CatalogCardRow = ({ card, inDeck, onToggle, disabled }) => {
         padding: "12px 14px",
         borderRadius: 0,
         cursor: disabled && !inDeck ? "not-allowed" : "pointer",
-        background: inDeck ? `linear-gradient(90deg, ${ac}25 0%, ${ac}08 100%)` : hovered ? `${PALETTE.slate}30` : "transparent",
+        background: cardImageUrl
+          ? `linear-gradient(90deg, rgba(10,14,26,0.92) 0%, rgba(10,14,26,0.78) 55%, rgba(10,14,26,0.68) 100%), url(${cardImageUrl}) ${bgPosStr}`
+          : inDeck
+            ? `linear-gradient(90deg, ${ac}25 0%, ${ac}08 100%)`
+            : hovered
+              ? `${PALETTE.slate}30`
+              : "transparent",
         border: inDeck ? `1.5px solid ${ac}` : `1px solid ${PALETTE.slate}`,
         opacity: disabled && !inDeck ? 0.35 : 1,
         transition: "all 0.15s ease",
@@ -229,6 +241,7 @@ const DeckSummaryCardRow = ({ card, onToggle, armyColor, bgPositions }) => {
     : `center ${typeof bgCfg === "string" ? bgCfg : "25%"}/cover`;
   return (
     <div
+      className="cosmic-deck-row"
       onClick={() => onToggle(card)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -474,6 +487,12 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
   );
 
   const clearDeck = () => setDeck([]);
+  const openCropTool = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("cropTool", "1");
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  }, []);
 
   const handleConfirmDeck = useCallback(() => {
     if (deck.length !== MAX_CARDS || totalLeague > MAX_LEAGUE) return;
@@ -518,33 +537,81 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
 
   return (
     <div
-      className="satze-hide-scrollbar"
+      className="satze-hide-scrollbar satze-deck-builder-root cosmic-builder"
       style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100vw",
-        height: "100vh",
-        minWidth: "100%",
-        minHeight: "100%",
-        zIndex: 9999,
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 50,
         display: "flex",
         flexDirection: "column",
         background: `linear-gradient(180deg, ${PALETTE.deepVoid} 0%, ${PALETTE.nebula} 50%, ${PALETTE.deepVoid} 100%)`,
       }}
     >
       {isDeckLoading && <DeckLoadingOverlay />}
-      {/* Titolo + pulsanti */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1.25rem", flexShrink: 0, borderBottom: `1px solid ${PALETTE.slate}`, gap: 16 }}>
-        <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontSize: "clamp(1.25rem, 3vw, 1.9rem)", fontWeight: 700, letterSpacing: "0.15em", color: PALETTE.textPrimary }}>
-            Costruzione Esercito
+      {/* Titolo + barra stats + pulsanti */}
+      <div className="cosmic-builder-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1.25rem", flexShrink: 0, borderBottom: `1px solid ${PALETTE.slate}`, gap: 16 }}>
+        <div style={{ minWidth: 0, flex: "0 1 auto" }}>
+          <h1 className="cosmic-builder-title" style={{ margin: 0, fontSize: "clamp(1.25rem, 3vw, 1.9rem)", fontWeight: 700, letterSpacing: "0.15em", color: PALETTE.textPrimary }}>
+            COSTRUZIONE ESERCITO
           </h1>
-          <p style={{ margin: "0.35rem 0 0", fontSize: "1.05rem", color: PALETTE.textSecondary }}>10 carte • Max 30 Lega</p>
+          <p className="cosmic-builder-subtitle" style={{ margin: "0.35rem 0 0", fontSize: "1.05rem", color: PALETTE.textSecondary }}>10 CARTE · MAX 30 LEGA · CAP III</p>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
+        <div className="cosmic-builder-header-stats" style={{ display: "flex", alignItems: "center", gap: 18, flex: "1 1 auto", minWidth: 260 }}>
+          <div style={{ flex: 1, maxWidth: 300 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, color: PALETTE.textSecondary, letterSpacing: 1 }}>
+                LEGA TOTALE
+              </span>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: leagueOverflow ? PALETTE.fire : totalLeague >= 25 ? PALETTE.amber : PALETTE.textSecondary,
+                }}
+              >
+                {totalLeague} / {MAX_LEAGUE}
+              </span>
+            </div>
+            <div
+              style={{
+                height: 6,
+                borderRadius: 0,
+                background: PALETTE.slate,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${leaguePercent}%`,
+                  background: leagueOverflow
+                    ? PALETTE.fire
+                    : totalLeague >= 25
+                    ? `linear-gradient(90deg, #22c55e, ${PALETTE.amber})`
+                    : `linear-gradient(90deg, #22c55e, ${PALETTE.cyan})`,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ textAlign: "center", minWidth: 78 }}>
+            <div style={{ fontSize: 12, color: PALETTE.textSecondary }}>CARTE</div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                color: deckFull ? "#22c55e" : PALETTE.textSecondary,
+                lineHeight: 1,
+              }}
+            >
+              {deck.length}
+              <span style={{ fontSize: 14, fontWeight: 400, color: PALETTE.textSecondary }}>/{MAX_CARDS}</span>
+            </div>
+          </div>
+        </div>
+        <div className="cosmic-builder-header-actions" style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
           <MenuCard
             accentColor={PALETTE.amber}
             onClick={() => setShowGlossary(true)}
@@ -552,12 +619,15 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
           >
             <span style={{ fontSize: 14, fontWeight: 700 }}>📖 GLOSSARIO</span>
           </MenuCard>
-          {onClose && <MenuBackButton onClick={onClose}>Chiudi</MenuBackButton>}
+          <MenuCard accentColor={PALETTE.fire} onClick={openCropTool} className="satze-deck-btn-small">
+            <span style={{ fontSize: 14, fontWeight: 700 }}>✂ RITAGLIO</span>
+          </MenuCard>
+          {onClose && <MenuBackButton onClick={onClose}>MENU PRINCIPALE</MenuBackButton>}
         </div>
       </div>
 
       <div
-        className="satze-hide-scrollbar"
+        className="satze-hide-scrollbar cosmic-builder-main"
         style={{
           flex: 1,
           display: "flex",
@@ -566,74 +636,11 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
           width: "100%",
         }}
       >
-          {/* Header bar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 28,
-              padding: "16px 20px",
-              borderBottom: `1.5px solid ${PALETTE.slate}`,
-              background: `${PALETTE.nebula}44`,
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ flex: 1, maxWidth: 340 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, color: PALETTE.textSecondary, letterSpacing: 1 }}>
-                  LEGA TOTALE
-                </span>
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: leagueOverflow ? PALETTE.fire : totalLeague >= 25 ? PALETTE.amber : PALETTE.textSecondary,
-                  }}
-                >
-                  {totalLeague} / {MAX_LEAGUE}
-                </span>
-              </div>
-              <div
-                style={{
-                  height: 8,
-                  borderRadius: 0,
-                  background: PALETTE.slate,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${leaguePercent}%`,
-                    background: leagueOverflow
-                      ? PALETTE.fire
-                      : totalLeague >= 25
-                      ? `linear-gradient(90deg, #22c55e, ${PALETTE.amber})`
-                      : `linear-gradient(90deg, #22c55e, ${PALETTE.cyan})`,
-                    transition: "width 0.3s ease",
-                  }}
-                />
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 13, color: PALETTE.textSecondary }}>CARTE</div>
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 900,
-                  color: deckFull ? "#22c55e" : PALETTE.textSecondary,
-                }}
-              >
-                {deck.length}
-                <span style={{ fontSize: 18, fontWeight: 400, color: PALETTE.textSecondary }}>/{MAX_CARDS}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Main content */}
           <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
             {/* Left: Catalog */}
             <div
+              className="cosmic-builder-catalog"
               style={{
                 flex: 1,
                 display: "flex",
@@ -644,13 +651,22 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
             >
               {/* Army selector */}
               <div
+                className="cosmic-builder-catalog-toolbar"
                 style={{
                   padding: "16px 20px",
                   borderBottom: `1px solid ${PALETTE.slate}`,
                   background: `${PALETTE.deepVoid}99`,
                 }}
               >
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <div
+                  className="cosmic-builder-armies"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${armies.length + 1}, minmax(0, 1fr))`,
+                    gap: 6,
+                    marginBottom: 12,
+                  }}
+                >
                   <MenuCard
                     accentColor={PALETTE.amber}
                     onClick={() => {
@@ -681,6 +697,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                         </span>
                         {count > 0 && (
                           <span
+                            className="cosmic-army-count"
                             style={{
                               fontSize: 11,
                               fontWeight: 800,
@@ -699,12 +716,13 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                   })}
                 </div>
 
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div className="cosmic-builder-filters" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 4 }}>LEGA:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 4 }}>LEGA:</span>
                     {[null, 2, 3, 4, 5].map((l) => (
                       <button
                         key={l ?? "all"}
+                        className="cosmic-filter-btn"
                         onClick={() => setLeagueFilter(l)}
                         style={{
                           width: 28,
@@ -727,7 +745,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                   </div>
                   <div style={{ width: 1, height: 20, background: PALETTE.slate }} />
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 4 }}>ORDINA:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 4 }}>ORDINA:</span>
                     {[
                       ["league", "Lega"],
                       ["pot", "POT"],
@@ -735,6 +753,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                     ].map(([key, label]) => (
                       <button
                         key={key}
+                        className="cosmic-sort-btn"
                         onClick={() => setSortBy(key)}
                         style={{
                           padding: "4px 12px",
@@ -754,12 +773,13 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                 </div>
 
                 <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: PALETTE.amber, marginRight: 8 }}>
+                  <span className="cosmic-cards-found" style={{ fontSize: 13, fontWeight: 700, color: PALETTE.amber, marginRight: 8 }}>
                     {catalogCards.length} {catalogCards.length === 1 ? "carta trovata" : "carte trovate"}
                   </span>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>TRIGGER:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>TRIGGER:</span>
                     <select
+                      className="cosmic-filter-select"
                       value={triggerFilter ?? ""}
                       onChange={(e) => setTriggerFilter(e.target.value || null)}
                       style={{
@@ -780,8 +800,9 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                     </select>
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>EFFETTO:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>EFFETTO:</span>
                     <select
+                      className="cosmic-filter-select"
                       value={effectFilter ?? ""}
                       onChange={(e) => setEffectFilter(e.target.value || null)}
                       style={{
@@ -802,8 +823,9 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                     </select>
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>TAG:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>TAG:</span>
                     <select
+                      className="cosmic-filter-select"
                       value={tagFilter ?? ""}
                       onChange={(e) => setTagFilter(e.target.value || null)}
                       style={{
@@ -873,6 +895,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
 
               {/* Card list - 3 carte per riga */}
               <div
+                className="cosmic-builder-grid"
                 style={{
                   flex: 1,
                   overflowY: "auto",
@@ -916,6 +939,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                       inDeck={!!deck.find((c) => c.id === card.id)}
                       onToggle={toggleCard}
                       disabled={!canAdd(card)}
+                      bgPositions={bgPositions}
                     />
                   ))
                 )}
@@ -924,6 +948,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
 
             {/* Right: Deck panel */}
             <div
+              className="cosmic-builder-deckpanel"
               style={{
                 width: 420,
                 flexShrink: 0,
@@ -934,6 +959,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
               }}
             >
               <div
+                className="cosmic-builder-deckheader"
                 style={{
                   padding: "16px 20px",
                   borderBottom: `1px solid ${PALETTE.slate}`,
@@ -954,6 +980,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
 
               {deck.length > 0 && (
                 <div
+                  className="cosmic-builder-deckstats"
                   style={{
                     padding: "14px 20px",
                     borderBottom: `1px solid ${PALETTE.slate}`,
@@ -1019,7 +1046,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                 </div>
               )}
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+              <div className="cosmic-builder-decklist" style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
                 {deck.length === 0 ? (
                   <div
                     style={{
@@ -1102,6 +1129,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
               </div>
 
               <div
+                className="cosmic-builder-confirmarea"
                 style={{
                   padding: "16px 20px",
                   borderTop: `1.5px solid ${PALETTE.slate}`,
@@ -1114,7 +1142,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                     onClick={handleConfirmDeck}
                     className="satze-deck-btn-confirm"
                   >
-                    <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: 2 }}>CONFERMA ESERCITO</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: 2 }}>CONFERMA ESERCITO ›</span>
                   </MenuCard>
                 ) : (
                   <div style={{ textAlign: "center" }}>
@@ -1134,17 +1162,14 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
             </div>
           </div>
         </div>
-      {showGlossary &&
-        createPortal(
-          <Glossary variant="menu" onClose={() => setShowGlossary(false)} zIndex={10000} />,
-          document.body
-        )}
+      {showGlossary && (
+        <Glossary variant="menu" onClose={() => setShowGlossary(false)} zIndex={10000} />
+      )}
 
-      {showSaveModal &&
-        createPortal(
+      {showSaveModal && (
           <div
             style={{
-              position: "fixed",
+              position: "absolute",
               inset: 0,
               zIndex: 10001,
               display: "flex",
@@ -1216,9 +1241,8 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                 </button>
               </div>
             </div>
-          </div>,
-          document.body
-        )}
+          </div>
+      )}
     </div>
   );
 }

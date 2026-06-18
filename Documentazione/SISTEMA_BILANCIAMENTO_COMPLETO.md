@@ -67,6 +67,7 @@ Per evitare ambiguita tra documentazione e implementazione:
 
 | Etichetta design | Chiave trigger nel codice |
 |------------------|---------------------------|
+| Sempre attivo | `null` (trigger assente) |
 | Imboscata | `imboscata` |
 | Intervento | `intervention` |
 | Gloria | `glory` |
@@ -94,8 +95,22 @@ Per evitare ambiguita tra documentazione e implementazione:
 | Blocchi | `blockAbility`, `blockBonus` |
 | Utility | `immune`, `focusCoin`, `heal`, `selfDamage`, `directDamage` |
 | Scaling / conversione | `escalation`, `attrition`, `inversion` |
-| Imposta | `imponiPower`, `imponiDamage` |
+| Imponi POT | `imponiPower` |
+| Imponi DAN | `imponiDamage` |
 | Tossina | `toxin` |
+
+| Armata | Trigger bonus (codice) | Effetto bonus (codice) | Descrizione bonus |
+|--------|-------------------------|------------------------|-------------------|
+| Figli dell'Orizzonte | `null` | `enemyAssault` | -5 VA nem. (min 6) |
+| Kethran | `rimonta` | `power` | Rimonta: +2 POT |
+| Corte Rossa | `null` | `copyBonus` | Copia Bonus nemico |
+| Calibri Pesanti | `null` | `enemyDamage` | -2 DAN nem. (min 2) |
+| Orathai | `reckoning` | `damage` | Resa dei conti: +2 DAN |
+| Mounthborn | `imboscata` | `power`, `damage` | Imboscata: +1 POT, +1 DAN |
+| L'Enclave delle Scaglie | `conquest` | `focusCoin` | Conquista: +2 FC |
+| Ratti della Megera | `conquest` | `toxin` | Conquista: Tossina 1 (min 10) |
+| Patto degli Indocili | `rinforzi` | `enemyPower`, `enemyDamage` | Rinforzi: -1 POT, -1 DAN nem. (min 2) |
+| Khemet | `overdrive` | `immune` | Overdrive: Immune |
 
 **Nota migrazione trigger (legacy -> attuale):**
 `turbo` -> `imboscata`, `ambush` -> `vendetta`, `vendetta` -> `rimonta`, `turboRound` -> `turbo`.

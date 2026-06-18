@@ -1,0 +1,1057 @@
+import React from 'react';
+import { GameCard } from '../cards/GameCard';
+import { Icon } from '../ui/Icon';
+import { ARMY_COLORS } from '../../data';
+import { ARMY_BONUSES } from '../../data/armies.js';
+import { computeDynamicClashVfx } from '../../config/duelVisualConfig.js';
+import { getFocusCoinGlowColor } from '../../utils/focusCoinGlow';
+
+function clamp(v, a, b) {
+  return Math.max(a, Math.min(b, v));
+}
+
+function smoothstep(a, b, x) {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function useClashTimeline(durationMs, runId) {
+  const [t, setT] = React.useState(0);
+  React.useEffect(() => {
+    let raf;
+    let start;
+    setT(0);
+    const tick = (ts) => {
+      if (start == null) start = ts;
+      const p = Math.min(1, (ts - start) / durationMs);
+      setT(p);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [durationMs, runId]);
+  return t;
+}
+
+function useGlobalOrbitClock(active) {
+  const [sec, setSec] = React.useState(0);
+  React.useEffect(() => {
+    if (!active) return undefined;
+    let raf = 0;
+    const tick = (ts) => {
+      setSec(ts / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active]);
+  return sec;
+}
+
+function useSequenceRun(duelPhase) {
+  const [runId, setRunId] = React.useState(0);
+  const [active, setActive] = React.useState(duelPhase >= 4);
+  const prevRef = React.useRef(duelPhase);
+  React.useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = duelPhase;
+    if (prev < 4 && duelPhase >= 4) {
+      setRunId((v) => v + 1);
+      setActive(true);
+    }
+    if (duelPhase < 4) {
+      setActive(false);
+    }
+  }, [duelPhase]);
+  return { runId, active, setActive };
+}
+
+function getArmyVisual(agent, fallback) {
+  const accent = ARMY_COLORS?.[agent?.army]?.accent || fallback;
+  return {
+    color: accent || '#38bdf8',
+    glow: `${accent || '#38bdf8'}88`,
+    name: (agent?.army || 'Armata').toUpperCase(),
+    key: agent?.army || 'army',
+  };
+}
+
+const VA_LAYER_EFFECTS = new Set(['assaultValue', 'enemyAssault']);
+
+function isPostDuelDeferredHighlightTrigger(trigger) {
+  return trigger === 'conquest' || trigger === 'lastWish';
+}
+
+function getAbilityHighlightStartPhase(ability) {
+  if (!ability) return 1;
+  if (isPostDuelDeferredHighlightTrigger(ability.trigger)) return 5;
+  if (VA_LAYER_EFFECTS.has(ability.effect)) return 3;
+  return 1;
+}
+
+function getBonusHighlightStartPhase(bonusDef) {
+  if (!bonusDef) return 1;
+  if (isPostDuelDeferredHighlightTrigger(bonusDef.trigger)) return 5;
+  const effects = Array.isArray(bonusDef.effects) ? bonusDef.effects : [];
+  if (effects.length > 0 && effects.every((eff) => VA_LAYER_EFFECTS.has(eff.effect))) return 3;
+  return 1;
+}
+
+function abilityHighlightForDuelPhase(duelPhase, abilityTriggered, ability) {
+  if (!abilityTriggered) return false;
+  return duelPhase >= getAbilityHighlightStartPhase(ability);
+}
+
+function bonusHighlightForDuelPhase(duelPhase, hasBonus, bonusBlocked, bonusDef) {
+  if (!hasBonus || bonusBlocked) return false;
+  return duelPhase >= getBonusHighlightStartPhase(bonusDef);
+}
+
+function duelBonusBaseInactive(agent, hasBonus, bonusNotTriggered, bonusBlocked, bonusCopied) {
+  if (!agent?.army || !ARMY_BONUSES[agent.army]) return false;
+  if (bonusCopied || bonusBlocked) return false;
+  return !hasBonus && !bonusNotTriggered;
+}
+
+function getClashAbilityCurrentValue(battleResult, isPlayer) {
+  if (!battleResult) return null;
+  if (isPlayer) {
+    return battleResult.playerAbilityCurrentValue ?? battleResult.playerAbilityValue ?? null;
+  }
+  return battleResult.enemyAbilityCurrentValue ?? battleResult.enemyAbilityValue ?? null;
+}
+
+function CinemaBars({ t, intensity = 1 }) {
+  const reveal = smoothstep(0, 0.12, t) - smoothstep(0.88, 1, t);
+  const h = 80 * intensity * reveal;
+  return (
+    <>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: h,
+          background: '#000',
+          zIndex: 90,
+          borderBottom: '1px solid rgba(56,189,248,0.15)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: h,
+          background: '#000',
+          zIndex: 90,
+          borderTop: '1px solid rgba(56,189,248,0.15)',
+        }}
+      />
+    </>
+  );
+}
+
+function FlashOverlay({ opacity, color = '#fff' }) {
+  return <div style={{ position: 'absolute', inset: 0, background: color, opacity, zIndex: 70, mixBlendMode: 'screen' }} />;
+}
+
+function Sigil({ armyVisual, size = 520 }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: `1px solid ${armyVisual.color}`,
+        boxShadow: `0 0 22px ${armyVisual.glow}`,
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <Icon name={armyVisual.key} type="army" size={Math.round(size * 0.42)} color={armyVisual.color} />
+    </div>
+  );
+}
+
+function ChargeRays({
+  x,
+  color,
+  secondaryColor = null,
+  strength,
+  count = 8,
+  spin = 0,
+  beamWidth = 3,
+  fade = 1,
+  offsetX = 0,
+  offsetY = 0,
+  zIndex = 120,
+}) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: `calc(50% + ${offsetY}px)`,
+        left: `calc(${x} + ${offsetX}px)`,
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none',
+        zIndex,
+      }}
+    >
+      {Array.from({ length: count }).map((_, i) => {
+        const a = (i / count) * Math.PI * 2 + strength * 0.5 + spin * (i % 2 === 0 ? 1 : -1) * 0.28;
+        const len = 90 + strength * 180;
+        // Inside -> outside reveal: rays start near core and expand outward.
+        const dist = 70 + strength * 120;
+        const x1 = Math.cos(a) * dist;
+        const y1 = Math.sin(a) * dist;
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: x1,
+              top: y1,
+              width: len,
+              height: beamWidth,
+              transformOrigin: '0 50%',
+              transform: `rotate(${(a * 180) / Math.PI}deg)`,
+              background: secondaryColor
+                ? `linear-gradient(90deg, ${secondaryColor}dd, ${color}cc 45%, transparent)`
+                : `linear-gradient(90deg, ${color}cc, transparent)`,
+              opacity: 0.8 * fade,
+              boxShadow: `0 0 10px ${color}, 0 0 16px ${secondaryColor || color}`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function AgentAura({ x, y, scale = 1, color, mode, intensity = 1, zIndex = 128 }) {
+  const size = 220 * scale;
+  if (mode === 'off') return null;
+  const auraOpacity = clamp(intensity, 0, 1);
+  if (auraOpacity <= 0.005) return null;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px))`,
+        zIndex,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        opacity: auraOpacity,
+        background:
+          mode === 'helix'
+            ? `conic-gradient(from ${y.t * 260}deg, transparent 0deg, ${color}99 60deg, transparent 130deg, ${color}66 190deg, transparent 360deg)`
+            : mode === 'arc'
+              ? `repeating-conic-gradient(from ${y.t * 200}deg, ${color}88 0deg 10deg, transparent 10deg 24deg)`
+              : `radial-gradient(circle, ${color}55 0%, ${color}22 45%, transparent 75%)`,
+        boxShadow: `0 0 ${28 + intensity * 18}px ${color}`,
+      }}
+    />
+  );
+}
+
+function FocusChargeAura({ x, y, scale = 1, glowColor, intensity = 1, zIndex = 126 }) {
+  const opacity = clamp(intensity, 0, 1);
+  if (!glowColor || opacity <= 0.01) return null;
+  const size = 250 * scale;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px))`,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity,
+        background: `radial-gradient(circle, ${glowColor.main}33 0%, ${glowColor.secondary}22 44%, transparent 72%)`,
+        boxShadow: `0 0 ${26 + opacity * 34}px ${glowColor.main}`,
+      }}
+    />
+  );
+}
+
+function VaTag({ x, value, winner, t, motion }) {
+  const reveal = smoothstep(0.3, 0.55, t);
+  const winPulse = winner ? 1 + Math.sin(t * 24) * 0.06 * smoothstep(0.6, 0.9, t) : 1;
+  if (reveal < 0.02) return null;
+  const mx = Number.isFinite(motion?.x) ? motion.x : 0;
+  const my = Number.isFinite(motion?.y) ? motion.y : 0;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${mx}px), calc(270px + ${my}px)) scale(${0.6 + reveal * 0.4 * winPulse})`,
+        opacity: reveal,
+        zIndex: 92,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: 'rgba(251, 191, 36, 0.95)',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            marginBottom: 8,
+            textShadow: '0 0 8px rgba(0,0,0,0.8)',
+          }}
+        >
+          Valore Assalto
+        </div>
+        <div
+          style={{
+            fontSize: winner ? 36 : 32,
+            fontWeight: 900,
+            color: winner ? '#4FD1C5' : '#64748b',
+            textShadow: winner ? '0 0 20px #4FD1C5, 0 0 12px rgba(255,179,71,0.5), 0 2px 4px #000' : '0 2px 4px #000',
+            WebkitTextStroke: '0px transparent',
+            lineHeight: 1,
+          }}
+        >
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VariantBadge({ text, color = '#38bdf8' }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 16,
+        left: 16,
+        zIndex: 150,
+        fontFamily: 'Share Tech Mono',
+        fontSize: 10,
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        color,
+        border: `1px solid ${color}`,
+        padding: '4px 8px',
+        background: 'rgba(5,6,8,0.7)',
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+const PLAYER_CLASH_ANCHOR = 'calc(50% + 330px)';
+const ENEMY_CLASH_ANCHOR = 'calc(50% - 330px)';
+
+function AgentOrbitSparks({ t, color, x, y, zIndex = 128 }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px))`,
+        zIndex,
+        pointerEvents: 'none',
+      }}
+    >
+      {Array.from({ length: 18 }).map((_, i) => {
+        const a = (i / 18) * Math.PI * 2 + t * 4.5;
+        const r = 56 + Math.sin(t * 10 + i) * 12 + smoothstep(0.1, 0.7, t) * 105;
+        const x = Math.cos(a) * r;
+        const y = Math.sin(a) * r;
+        const s = 3 + (i % 3);
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: x,
+              top: y,
+              width: s,
+              height: s,
+              borderRadius: '50%',
+              background: color,
+              opacity: 0.8 * (1 - t * 0.7),
+              boxShadow: `0 0 ${s * 4}px ${color}`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function AgentAfterImage({ t, x, y, rot, scale, color, zIndex = 126 }) {
+  const on = smoothstep(0.2, 0.6, t) * (1 - smoothstep(0.78, 0.99, t));
+  if (on <= 0.01) return null;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px)) rotate(${rot}deg) scale(${scale})`,
+        opacity: on,
+        zIndex,
+        pointerEvents: 'none',
+      }}
+    >
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            border: `1px solid ${color}`,
+            borderRadius: '0.55rem',
+            transform: `translate(${(i + 1) * -8}px, ${(i + 1) * 2}px) scale(${1 - i * 0.03})`,
+            opacity: on * (0.3 - i * 0.08),
+            boxShadow: `0 0 10px ${color}`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function focusColorForCount(focusCount, t) {
+  return getFocusCoinGlowColor(focusCount, 1, t * 180, {
+    rainbowHueMul12: 1.2,
+    rainbowHueMul13: 1.3,
+    rainbowHueMul14: 1.4,
+  });
+}
+
+function toSoftFill(mainColor) {
+  if (typeof mainColor !== 'string') return 'rgba(234, 179, 8, 0.2)';
+  if (mainColor.startsWith('rgba(')) {
+    return mainColor.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, 'rgba($1,$2,$3,0.2)');
+  }
+  if (mainColor.startsWith('rgb(')) {
+    return mainColor.replace('rgb(', 'rgba(').replace(')', ',0.2)');
+  }
+  return mainColor;
+}
+
+function FocusCoinToken({ x, y, size = 40, alpha = 1, glowColor, armyKey }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: x,
+        top: y,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: `1px solid ${glowColor?.main || 'rgba(234, 179, 8, 0.5)'}`,
+        backgroundColor: toSoftFill(glowColor?.main),
+        boxShadow: `0 0 8px ${glowColor?.main || 'rgba(234,179,8,0.8)'}`,
+        opacity: alpha,
+        transform: 'translate(-50%, -50%)',
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      {armyKey ? <Icon name={armyKey} type="army" size={24} /> : <Icon name="coin" type="cardIcon" size={24} />}
+    </div>
+  );
+}
+
+function FocusCoinFx({ x, y, t, color, armyKey, focusCount = 1, mode = 'orbit', side = 'right', winner = false, zIndex = 129, layer = 'both' }) {
+  const entry = smoothstep(0.08, 0.4, t);
+  const sustain = 1 - smoothstep(0.82, 1, t);
+  const visible = entry * sustain;
+  if (visible <= 0.01) return null;
+
+  const coins = mode === 'burst' ? 14 : mode === 'stream' ? 12 : 10;
+  const dir = side === 'right' ? -1 : 1;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px))`,
+        zIndex,
+        pointerEvents: 'none',
+      }}
+    >
+      {Array.from({ length: coins }).map((_, i) => {
+        if (layer === 'behind' && i % 2 !== 0) return null;
+        if (layer === 'front' && i % 2 === 0) return null;
+        const seed = i / coins;
+        const spin = t * (mode === 'orbit' ? 6.5 : mode === 'stream' ? 4.2 : 8.6) + i * 0.7;
+        const rBase = mode === 'burst' ? 42 + smoothstep(0.42, 0.7, t) * 74 : 58 + smoothstep(0.1, 0.55, t) * 36;
+        const streamX = mode === 'stream' ? dir * (24 + seed * 86) * smoothstep(0.18, 0.78, t) : 0;
+        const streamY = mode === 'stream' ? Math.sin(spin * 1.8 + i) * (10 + seed * 12) : 0;
+        const orbitX = Math.cos(spin + seed * Math.PI * 2) * rBase;
+        const orbitY = Math.sin(spin * 1.2 + seed * Math.PI * 2) * (rBase * 0.55);
+        const burstKick = mode === 'burst' ? smoothstep(0.5, 0.82, t) * (i % 2 === 0 ? 1 : -1) * 18 : 0;
+        const px = orbitX + streamX + burstKick;
+        const py = orbitY + streamY;
+        const size = mode === 'burst' ? 34 - (i % 3) * 3 : 30 - (i % 3) * 3;
+        const alpha = clamp((0.3 + visible * 0.9) * (winner ? 1.08 : 0.9) * (1 - seed * 0.35), 0, 1);
+        const glowColor = focusColorForCount(focusCount, t + seed * 0.1);
+        return (
+          <FocusCoinToken
+            key={`${mode}-${i}`}
+            x={px}
+            y={py}
+            size={size}
+            alpha={alpha}
+            glowColor={glowColor}
+            armyKey={armyKey}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function FocusCoinOrbitCollapseFx({
+  x,
+  y,
+  t,
+  orbitSec = 0,
+  focusCount = 0,
+  side = 'right',
+  armyVisual,
+  zIndexFront = 180,
+}) {
+  const count = clamp(Math.round(Number(focusCount) || 0), 0, 14);
+  if (count <= 0) return null;
+
+  const palette = focusColorForCount(count, t);
+  const orbitSpeed = 1.4 + count * 0.22; // More FC -> faster spin.
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: x,
+        transform: `translate(calc(-50% + ${y.x}px), calc(-50% + ${y.y}px))`,
+        zIndex: zIndexFront,
+        pointerEvents: 'none',
+      }}
+    >
+      {(() => {
+        const blast = smoothstep(0.41, 0.45, t) * (1 - smoothstep(0.49, 0.56, t));
+        if (blast <= 0.01) return null;
+        return (
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: 80 + blast * 420,
+                height: 80 + blast * 420,
+                transform: 'translate(-50%, -50%)',
+                borderRadius: '50%',
+                border: `${2.5 - blast * 1.6}px solid ${palette.main}`,
+                opacity: 0.9 - blast * 0.6,
+                boxShadow: `0 0 ${18 + blast * 28}px ${palette.main}, inset 0 0 ${14 + blast * 24}px ${palette.secondary}`,
+                zIndex: zIndexFront + 3,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: 48 + blast * 180,
+                height: 48 + blast * 180,
+                transform: 'translate(-50%, -50%)',
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${palette.main}cc 0%, ${palette.secondary}66 38%, transparent 72%)`,
+                opacity: 0.7 - blast * 0.5,
+                zIndex: zIndexFront + 4,
+              }}
+            />
+            {Array.from({ length: 10 }).map((_, i) => {
+              const a = (i / 10) * Math.PI * 2 + t * 12;
+              const d = 30 + blast * 130;
+              return (
+                <div
+                  key={`coin-blast-spark-${i}`}
+                  style={{
+                    position: 'absolute',
+                    left: Math.cos(a) * d,
+                    top: Math.sin(a) * d,
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: palette.main,
+                    boxShadow: `0 0 10px ${palette.main}`,
+                    opacity: 0.85 - blast * 0.5,
+                    zIndex: zIndexFront + 5,
+                  }}
+                />
+              );
+            })}
+          </>
+        );
+      })()}
+      {Array.from({ length: count }).map((_, i) => {
+        // Collapse completes just BEFORE lunge starts (~0.45).
+        const collapse = smoothstep(0.37, 0.445, t);
+        const vanish = smoothstep(0.44, 0.52, t);
+        // Stable slot per coin: no angular jitter during accumulation.
+        const slot = i / Math.max(1, count);
+        const direction = side === 'right' ? -1 : 1;
+        const angle = (orbitSec * orbitSpeed * direction + slot * Math.PI * 2) * (1 + collapse * 0.35);
+        // Strictly uniform ring during buildup: same radius for all coins.
+        const ringBreath = 1 + Math.sin(t * 4) * 0.025;
+        const orbitRadius = 240 * ringBreath * (1 - collapse) + 2;
+        const orbitCenterX = 0;
+        const orbitCenterY = 0;
+        const centerPull = smoothstep(0.395, 0.445, t);
+        const px = (orbitCenterX + Math.cos(angle) * orbitRadius) * (1 - centerPull);
+        const py = (orbitCenterY + Math.sin(angle) * orbitRadius) * (1 - centerPull);
+        const size = 40;
+        const alpha = (1 - vanish) * 0.9;
+        const glowColor = focusColorForCount(count, t);
+
+        return (
+          <FocusCoinToken
+            key={`orbit-collapse-${i}`}
+            x={px}
+            y={py}
+            size={size * (1 - collapse * 0.25)}
+            alpha={alpha}
+            glowColor={glowColor}
+            armyKey={armyVisual?.key}
+          />
+        );
+      })}
+      {armyVisual && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            transform: `translate(-50%, -50%) scale(${0.72 + smoothstep(0.39, 0.45, t) * 0.35})`,
+            opacity: smoothstep(0.38, 0.44, t) * (1 - smoothstep(0.5, 0.58, t)) * 0.5,
+            zIndex: zIndexFront + 2,
+            pointerEvents: 'none',
+            filter: `drop-shadow(0 0 10px ${armyVisual.color}) drop-shadow(0 0 22px ${armyVisual.color})`,
+            mixBlendMode: 'screen',
+          }}
+        >
+          <Icon name={armyVisual.key} type="army" size={128} color={armyVisual.color} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1', galleryCardLayout, getAbilityCurrentValue }) {
+  const { runId, active, setActive } = useSequenceRun(duelPhase);
+  const isN5 = variant === 'n5';
+  const dyn = React.useMemo(() => computeDynamicClashVfx(battleResult), [battleResult]);
+  const speed = Number.isFinite(dyn?.clashSpeed) && dyn.clashSpeed > 0 ? dyn.clashSpeed : 1;
+  const intensity = Number.isFinite(dyn?.intensity) && dyn.intensity > 0 ? dyn.intensity : 1;
+  const durationMs = (isN5 ? 3800 : 3000) / speed;
+  const t = useClashTimeline(durationMs, runId);
+  const orbitSec = useGlobalOrbitClock(active);
+
+  if (!battleResult || !active) return null;
+
+  const winner = battleResult.winner;
+  const playerArmy = getArmyVisual(battleResult.playerAgent, '#a78bfa');
+  const enemyArmy = getArmyVisual(battleResult.enemyAgent, '#fbbf24');
+  const winArmy = winner === 'player' ? playerArmy : enemyArmy;
+
+  const charge = smoothstep(0.15, 0.45, t);
+  const lunge = smoothstep(0.45, 0.55, t);
+  const impact = smoothstep(0.55, 0.62, t) * (1 - smoothstep(0.7, 0.9, t));
+  const aftermath = smoothstep(0.65, 1, t);
+  const flash = smoothstep(0.53, 0.58, t) * (1 - smoothstep(0.6, 0.72, t)) * intensity;
+  // Fade rays out when loser starts falling (aftermath begins).
+  const raysFade = 1 - smoothstep(0.05, 0.55, aftermath);
+  const isV1Like = variant === 'v1' || variant === 'n1';
+  const isN2 = variant === 'n2';
+  const isN3 = variant === 'n3';
+  const isN4 = variant === 'n4';
+  const variantAccent =
+    isN5 ? '#f59e0b' : isN2 ? '#10b981' : isN3 ? '#f97316' : isN4 ? '#e879f9' : variant === 'v2' ? '#10b981' : variant === 'v3' ? '#f97316' : '#38bdf8';
+  const clashRush = isN5 ? smoothstep(0.22, 0.56, t) : lunge;
+  const startDistance = isN5 ? 64 : 42;
+  const clashTravel = isN5 ? startDistance : 90;
+  const winnerRetreat = startDistance * 0.5;
+  const loserRetreat = startDistance;
+  const baseAgentScale = isN5 ? 1.05 : 1;
+
+  // Mirror of ClashV1_AuroraCharge positions: player fixed on right, enemy on left.
+  const pStartOffset = startDistance;
+  const eStartOffset = -startDistance;
+  const pX = pStartOffset - clashRush * clashTravel + aftermath * (winner === 'player' ? winnerRetreat : loserRetreat);
+  const pScale = baseAgentScale * (1 + charge * 0.08 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'player' ? -0.06 : 0.2));
+  const pRot = aftermath * (winner === 'player' ? 0 : 18);
+  const pOpacity = winner === 'player' ? 1 : 1 - aftermath * 0.3;
+
+  const eX = eStartOffset + clashRush * clashTravel + aftermath * (winner === 'enemy' ? -winnerRetreat : -loserRetreat);
+  const eScale = baseAgentScale * (1 + charge * 0.08 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'enemy' ? -0.06 : 0.2));
+  const eRot = aftermath * (winner === 'enemy' ? 0 : -18);
+  const eOpacity = winner === 'enemy' ? 1 : 1 - aftermath * 0.3;
+
+  const shake = impact * 8 * intensity;
+  const sx = Math.sin(t * 220) * shake;
+  const sy = Math.cos(t * 180) * shake;
+  const raySpin = isN2 ? t * 22 : isN3 ? t * 9 : isN4 ? t * 5 : t * 4;
+  const rayCount = isN2 ? 18 : isN3 ? 12 : isN4 ? 10 : 8;
+  const beamWidth = isN4 ? 2.5 : isN2 ? 4.5 : 3;
+  const pSecondary = isN2 ? '#22d3ee' : isN3 ? '#22d3ee' : isN4 ? '#fbbf24' : null;
+  const eSecondary = isN2 ? '#f472b6' : isN3 ? '#fbbf24' : isN4 ? '#fb7185' : null;
+  const playerAgentFx = isN2 ? 'helix' : isN3 ? 'arc' : isN4 ? 'pulse' : 'off';
+  const enemyAgentFx = isN2 ? 'helix' : isN3 ? 'arc' : isN4 ? 'pulse' : 'off';
+  const playerVariantRot = isN2 ? Math.sin(t * 20) * 6 : isN3 ? Math.sin(t * 13) * 3 : isN4 ? Math.sin(t * 26) * 8 : 0;
+  const enemyVariantRot = isN2 ? Math.cos(t * 18) * -6 : isN3 ? Math.cos(t * 12) * -3 : isN4 ? Math.cos(t * 24) * -8 : 0;
+  const playerVariantScale = isN2 ? 1 + smoothstep(0.2, 0.55, t) * 0.06 : isN3 ? 1 + impact * 0.08 : isN4 ? 1 + Math.sin(t * 30) * 0.02 : 1;
+  const enemyVariantScale = isN2 ? 1 + smoothstep(0.2, 0.55, t) * 0.06 : isN3 ? 1 + impact * 0.08 : isN4 ? 1 + Math.cos(t * 28) * 0.02 : 1;
+  const auraTailFade = 1 - smoothstep(0.82, 1, t);
+  const playerAuraIntensity = clamp((0.28 + charge * 0.62 + impact * 0.45) * auraTailFade, 0, 1);
+  const enemyAuraIntensity = clamp((0.28 + charge * 0.62 + impact * 0.45) * auraTailFade, 0, 1);
+  const playerFocusGlow = focusColorForCount(battleResult.playerFocusUsed || 1, orbitSec);
+  const enemyFocusGlow = focusColorForCount(battleResult.enemyFocusUsed || 1, orbitSec);
+  const playerFocusAura = isN5
+    ? clamp(winner === 'player' ? 1 + smoothstep(0.48, 0.82, t) * 0.9 : 1 - smoothstep(0.52, 0.92, t), 0, 2)
+    : 0;
+  const enemyFocusAura = isN5
+    ? clamp(winner === 'enemy' ? 1 + smoothstep(0.48, 0.82, t) * 0.9 : 1 - smoothstep(0.52, 0.92, t), 0, 2)
+    : 0;
+  const cardLayout = galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout;
+  const playerAbilityCurrentValue =
+    typeof getAbilityCurrentValue === 'function'
+      ? getAbilityCurrentValue(battleResult.playerAgent, true)
+      : getClashAbilityCurrentValue(battleResult, true);
+  const enemyAbilityCurrentValue =
+    typeof getAbilityCurrentValue === 'function'
+      ? getAbilityCurrentValue(battleResult.enemyAgent, false)
+      : getClashAbilityCurrentValue(battleResult, false);
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 58, pointerEvents: 'none', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%)' }} />
+      <VariantBadge text={variant.toUpperCase()} color={variantAccent} />
+      <CinemaBars t={t} intensity={intensity} />
+
+      {charge > 0 && !isN2 && !isN3 && !isN4 && !isN5 && (
+        <>
+          <ChargeRays
+            x={PLAYER_CLASH_ANCHOR}
+            color={playerArmy.color}
+            secondaryColor={pSecondary}
+            strength={charge * (1 - lunge)}
+            count={rayCount}
+            spin={raySpin}
+            beamWidth={beamWidth}
+            fade={raysFade}
+            offsetX={pX + sx}
+            offsetY={sy}
+          />
+          <ChargeRays
+            x={ENEMY_CLASH_ANCHOR}
+            color={enemyArmy.color}
+            secondaryColor={eSecondary}
+            strength={charge * (1 - lunge)}
+            count={rayCount}
+            spin={-raySpin}
+            beamWidth={beamWidth}
+            fade={raysFade}
+            offsetX={eX + sx}
+            offsetY={sy}
+          />
+        </>
+      )}
+
+      {impact > 0 && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 120 + impact * 1500,
+              height: 120 + impact * 1500,
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              border: `${4 - impact * 3}px solid rgba(79,209,197,${0.9 - impact * 0.8})`,
+              boxShadow: `0 0 ${80 * impact}px rgba(79,209,197,0.8), inset 0 0 ${60 * impact}px rgba(251,191,36,0.6)`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 70 + impact * 1000,
+              height: 70 + impact * 1000,
+              transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              border: `${3 - impact * 2.5}px solid rgba(251,179,71,${0.8 - impact * 0.7})`,
+            }}
+          />
+        </>
+      )}
+
+      {(variant === 'v2' || isN2) && (
+        <>
+          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={playerArmy.color} x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} />
+          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={enemyArmy.color} x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} />
+          <AgentAfterImage t={t} x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} rot={pRot + playerVariantRot} scale={pScale * playerVariantScale} color={playerArmy.color} />
+          <AgentAfterImage t={t} x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} rot={eRot + enemyVariantRot} scale={eScale * enemyVariantScale} color={enemyArmy.color} />
+        </>
+      )}
+      {isN2 && (
+        <>
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+        </>
+      )}
+      {isN3 && (
+        <>
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+        </>
+      )}
+      {isN4 && (
+        <>
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+        </>
+      )}
+      {(impact > 0 || aftermath > 0) && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: `translate(-50%, -50%) scale(${0.4 + (impact + aftermath * 0.5) * 1.4}) rotate(${(impact + aftermath * 0.3) * 25}deg)`,
+            opacity: (impact * 0.95 + aftermath * 0.35) * intensity * (1 - smoothstep(0.74, 1, t)),
+          }}
+        >
+          <Sigil armyVisual={winArmy} size={520} />
+        </div>
+      )}
+
+      <AgentAura
+        x={PLAYER_CLASH_ANCHOR}
+        y={{ x: pX + sx, y: sy, t }}
+        scale={pScale}
+        color={playerArmy.color}
+        mode={playerAgentFx}
+        intensity={playerAuraIntensity}
+      />
+      <AgentAura
+        x={ENEMY_CLASH_ANCHOR}
+        y={{ x: eX + sx, y: sy, t }}
+        scale={eScale}
+        color={enemyArmy.color}
+        mode={enemyAgentFx}
+        intensity={enemyAuraIntensity}
+      />
+      <FocusChargeAura
+        x={PLAYER_CLASH_ANCHOR}
+        y={{ x: pX + sx, y: sy }}
+        scale={pScale}
+        glowColor={playerFocusGlow}
+        intensity={playerFocusAura}
+        zIndex={125}
+      />
+      <FocusChargeAura
+        x={ENEMY_CLASH_ANCHOR}
+        y={{ x: eX + sx, y: sy }}
+        scale={eScale}
+        glowColor={enemyFocusGlow}
+        intensity={enemyFocusAura}
+        zIndex={125}
+      />
+
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: PLAYER_CLASH_ANCHOR,
+          transform: `translate(calc(-50% + ${pX + sx}px), calc(-50% + ${sy}px)) scale(${pScale * playerVariantScale}) rotate(${pRot + playerVariantRot}deg)`,
+          zIndex: winner === 'player' ? 140 : 130,
+          opacity: pOpacity,
+          filter:
+            winner === 'player'
+              ? `drop-shadow(0 0 ${20 + impact * 40}px ${playerArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #f472b6)` : ''}`
+              : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${-aftermath * 32}deg)` : ''}`,
+        }}
+      >
+        <GameCard
+          cardLayout={cardLayout}
+          agent={battleResult.playerAgent}
+          modifiedPower={battleResult.playerPower}
+          modifiedDamage={battleResult.playerDamage}
+          showOperators
+          showBonus={battleResult.playerHasBonus && !battleResult.playerBonusBlocked}
+          bonusBaseInactive={duelBonusBaseInactive(
+            battleResult.playerAgent,
+            battleResult.playerHasBonus,
+            battleResult.playerBonusNotTriggered,
+            battleResult.playerBonusBlocked,
+            battleResult.playerBonusCopied
+          )}
+          abilityCurrentValue={playerAbilityCurrentValue}
+          abilityBlocked={battleResult.playerAbilityBlocked}
+          bonusBlocked={battleResult.playerBonusBlocked}
+          highlightAbility={abilityHighlightForDuelPhase(
+            duelPhase,
+            battleResult.playerAbilityTriggered,
+            battleResult.playerAbilityCopied || battleResult.playerAgent?.ability
+          )}
+          highlightBonus={bonusHighlightForDuelPhase(
+            duelPhase,
+            battleResult.playerHasBonus,
+            battleResult.playerBonusBlocked,
+            battleResult.playerBonusCopied || (battleResult.playerAgent?.army ? ARMY_BONUSES[battleResult.playerAgent.army] : null)
+          )}
+          copiedAbility={battleResult.playerAbilityCopied}
+          copiedBonus={battleResult.playerBonusCopied}
+          abilityNotTriggered={battleResult.playerAbilityNotTriggered}
+          bonusNotTriggered={battleResult.playerBonusNotTriggered}
+        />
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: ENEMY_CLASH_ANCHOR,
+          transform: `translate(calc(-50% + ${eX + sx}px), calc(-50% + ${sy}px)) scale(${eScale * enemyVariantScale}) rotate(${eRot + enemyVariantRot}deg)`,
+          zIndex: winner === 'enemy' ? 140 : 130,
+          opacity: eOpacity,
+          filter:
+            winner === 'enemy'
+              ? `drop-shadow(0 0 ${20 + impact * 40}px ${enemyArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #fb7185)` : ''}`
+              : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${aftermath * 32}deg)` : ''}`,
+        }}
+      >
+        <GameCard
+          cardLayout={cardLayout}
+          agent={battleResult.enemyAgent}
+          modifiedPower={battleResult.enemyPower}
+          modifiedDamage={battleResult.enemyDamage}
+          showOperators
+          showBonus={battleResult.enemyHasBonus && !battleResult.enemyBonusBlocked}
+          bonusBaseInactive={duelBonusBaseInactive(
+            battleResult.enemyAgent,
+            battleResult.enemyHasBonus,
+            battleResult.enemyBonusNotTriggered,
+            battleResult.enemyBonusBlocked,
+            battleResult.enemyBonusCopied
+          )}
+          abilityCurrentValue={enemyAbilityCurrentValue}
+          abilityBlocked={battleResult.enemyAbilityBlocked}
+          bonusBlocked={battleResult.enemyBonusBlocked}
+          highlightAbility={abilityHighlightForDuelPhase(
+            duelPhase,
+            battleResult.enemyAbilityTriggered,
+            battleResult.enemyAbilityCopied || battleResult.enemyAgent?.ability
+          )}
+          highlightBonus={bonusHighlightForDuelPhase(
+            duelPhase,
+            battleResult.enemyHasBonus,
+            battleResult.enemyBonusBlocked,
+            battleResult.enemyBonusCopied || (battleResult.enemyAgent?.army ? ARMY_BONUSES[battleResult.enemyAgent.army] : null)
+          )}
+          copiedAbility={battleResult.enemyAbilityCopied}
+          copiedBonus={battleResult.enemyBonusCopied}
+          abilityNotTriggered={battleResult.enemyAbilityNotTriggered}
+          bonusNotTriggered={battleResult.enemyBonusNotTriggered}
+        />
+      </div>
+
+      {isN5 && (
+        <>
+          <FocusCoinOrbitCollapseFx
+            x={PLAYER_CLASH_ANCHOR}
+            y={{ x: pX + sx, y: sy }}
+            t={t}
+            orbitSec={orbitSec}
+            focusCount={battleResult.playerFocusUsed}
+            side="right"
+            armyVisual={playerArmy}
+          />
+          <FocusCoinOrbitCollapseFx
+            x={ENEMY_CLASH_ANCHOR}
+            y={{ x: eX + sx, y: sy }}
+            t={t}
+            orbitSec={orbitSec}
+            focusCount={battleResult.enemyFocusUsed}
+            side="left"
+            armyVisual={enemyArmy}
+          />
+        </>
+      )}
+
+      <VaTag x={PLAYER_CLASH_ANCHOR} value={battleResult.playerAssault} winner={winner === 'player'} t={t} motion={{ x: pX + sx, y: sy }} />
+      <VaTag x={ENEMY_CLASH_ANCHOR} value={battleResult.enemyAssault} winner={winner === 'enemy'} t={t} motion={{ x: eX + sx, y: sy }} />
+
+      <FlashOverlay opacity={flash * 0.7} />
+
+      {aftermath > 0.1 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 110,
+            left: '50%',
+            transform: `translateX(-50%) scale(${smoothstep(0.65, 0.85, t)})`,
+            opacity: smoothstep(0.65, 0.78, t),
+            zIndex: 70,
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'Chakra Petch',
+              fontSize: 46,
+              fontWeight: 800,
+              color: winner === 'player' ? '#fbbf24' : '#dc2626',
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+              textShadow: `0 0 24px ${winner === 'player' ? '#fbbf24' : '#dc2626'}, 0 0 48px ${winArmy.color}, 0 4px 12px #000`,
+              WebkitTextStroke: '1.5px rgba(0,0,0,0.8)',
+            }}
+          >
+            {winner === 'player' ? 'Trionfo' : 'Sconfitta'}
+          </div>
+          <div style={{ marginTop: 10, fontFamily: 'Share Tech Mono', fontSize: 14, color: '#fff', letterSpacing: '0.22em', textShadow: '0 0 8px #000' }}>
+            {(winner === 'player' ? battleResult.playerAgent?.name : battleResult.enemyAgent?.name || '').toUpperCase()} · VA {winner === 'player' ? battleResult.playerAssault : battleResult.enemyAssault} → −{battleResult.damageDealt} PV
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

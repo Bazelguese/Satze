@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { generateFieldParticles, FIELD_STYLES } from '../../utils';
 import { Icon } from '../ui/Icon';
 import { DUEL_PHASE_META } from '../../config/duelVisualTimeline.js';
@@ -221,36 +222,113 @@ export const BattlefieldPanel = ({
   // (ad esempio durante la fase selectField)
   const isDuelPhase = gamePhase === 'result' && battleResult;
   const [riepilogoOpen, setRiepilogoOpen] = useState(false);
+  const riepilogoAnchorRef = useRef(null);
+  const [riepilogoRect, setRiepilogoRect] = useState(null);
 
   useEffect(() => {
     setRiepilogoOpen(false);
   }, [duelPhase]);
 
-  /** Con HUD: pannello più alto solo quando il riepilogo è espanso (contenuto lungo) */
-  const tallHudRiepilogo =
-    gamePhase === 'result' && battleResult && duelPhase >= 6 && riepilogoOpen;
+  useEffect(() => {
+    if (!riepilogoOpen || !riepilogoAnchorRef.current) {
+      setRiepilogoRect(null);
+      return undefined;
+    }
+    const updateRect = () => {
+      const rect = riepilogoAnchorRef.current?.getBoundingClientRect();
+      if (rect) setRiepilogoRect({ left: rect.left, top: rect.bottom + 4, width: rect.width });
+    };
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [riepilogoOpen]);
+
+  const riepilogoContent = battleResult ? (
+    <div className="px-2 py-2 rounded-b-lg border-x border-b border-slate-600/40 bg-slate-900/95 satze-riepilogo-unroll">
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="bg-slate-800/60 rounded p-2">
+          <div className="text-red-400/90 font-medium mb-1 text-[10px]">IA</div>
+          <div className="text-[10px] space-y-1">
+            <div><span className="text-amber-400">FC:</span> {battleResult.enemyFocusUsed}</div>
+            {battleResult.enemyPower !== battleResult.enemyAgent.power && (
+              <div><span className="text-yellow-400">POT:</span> {battleResult.enemyAgent.power} → {battleResult.enemyPower}</div>
+            )}
+            {battleResult.enemyDamage !== battleResult.enemyAgent.damage && (
+              <div><span className="text-purple-400">DAN:</span> {battleResult.enemyAgent.damage} → {battleResult.enemyDamage}</div>
+            )}
+            {(() => {
+              const initialVA = battleResult.enemyPower * battleResult.enemyFocusUsed;
+              return battleResult.enemyAssault !== initialVA ? (
+                <div><span className="text-purple-400">VA:</span> {initialVA} → {battleResult.enemyAssault}</div>
+              ) : (
+                <div><span className="text-purple-400">VA:</span> {battleResult.enemyAssault}</div>
+              );
+            })()}
+            {battleResult.enemyPower === battleResult.enemyAgent.power &&
+              battleResult.enemyDamage === battleResult.enemyAgent.damage &&
+              battleResult.enemyAssault === (battleResult.enemyPower * battleResult.enemyFocusUsed) && (
+                <div className="text-slate-500 text-[9px] opacity-80">—</div>
+              )}
+          </div>
+        </div>
+        <div className="bg-slate-800/60 rounded p-2">
+          <div className="text-green-400/90 font-medium mb-1 text-[10px]">TU</div>
+          <div className="text-[10px] space-y-1">
+            <div><span className="text-amber-400">FC:</span> {battleResult.playerFocusUsed}</div>
+            {battleResult.playerPower !== battleResult.playerAgent.power && (
+              <div><span className="text-yellow-400">POT:</span> {battleResult.playerAgent.power} → {battleResult.playerPower}</div>
+            )}
+            {battleResult.playerDamage !== battleResult.playerAgent.damage && (
+              <div><span className="text-purple-400">DAN:</span> {battleResult.playerAgent.damage} → {battleResult.playerDamage}</div>
+            )}
+            {(() => {
+              const initialVA = battleResult.playerPower * battleResult.playerFocusUsed;
+              return battleResult.playerAssault !== initialVA ? (
+                <div><span className="text-purple-400">VA:</span> {initialVA} → {battleResult.playerAssault}</div>
+              ) : (
+                <div><span className="text-purple-400">VA:</span> {battleResult.playerAssault}</div>
+              );
+            })()}
+            {battleResult.playerPower === battleResult.playerAgent.power &&
+              battleResult.playerDamage === battleResult.playerAgent.damage &&
+              battleResult.playerAssault === (battleResult.playerPower * battleResult.playerFocusUsed) && (
+                <div className="text-slate-500 text-[9px] opacity-80">—</div>
+              )}
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-slate-600/40 pt-1.5 mt-1.5">
+        <div className="text-slate-500 text-[10px] space-y-1">
+          <div>FC investiti: IA {battleResult.enemyFocusUsed} · TU {battleResult.playerFocusUsed}</div>
+          <div>Danno: {battleResult.damageDealt} PV</div>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
+    <>
     <div
       className={`absolute flex flex-col items-center justify-center p-4 pointer-events-none satze-battlefield-panel satze-hud-panel ${
+        riepilogoOpen ? 'satze-battlefield-panel-riepilogo-open' : ''
+      } ${
         isZoomed 
           ? 'satze-battlefield-panel-zoomed animate-battlefield-zoom-smooth' 
           : ''
       }`}
       style={{
-        top: isDuelPhase ? '35%' : '50%', 
+        top: isDuelPhase ? 'calc(35% + 50px)' : '50%', 
         left: '50%', 
-        transform: isZoomed ? undefined : 'translate(-50%, -50%)', 
-        width: tallHudRiepilogo ? '220px' : '200px',
-        ...(tallHudRiepilogo
-          ? {
-              height: 'auto',
-              minHeight: '340px',
-              maxHeight: 'min(520px, calc(100vh - 140px))',
-            }
-          : { height: '280px' }),
+        transform: isZoomed ? undefined : 'translate(-50%, -50%)',
+        width: '200px',
+        height: isDuelPhase ? '320px' : '280px',
         zIndex: 10,
         transition: 'top 0.6s ease-out',
+        overflow: 'visible',
       }}
     >
       {gamePhase === 'selectField' && (
@@ -328,7 +406,7 @@ export const BattlefieldPanel = ({
                 {duelPhase >= 6 && (
                   <>
                     {/* Riepilogo Post-Duello (chiuso di default, si apre al clic) */}
-                    <div className="w-full mb-2 rounded-lg border border-slate-600/40 bg-slate-900/90 overflow-hidden text-[10px]">
+                    <div ref={riepilogoAnchorRef} className="w-full mb-2 rounded-lg border border-slate-600/40 bg-slate-900/90 overflow-visible text-[10px] relative z-20">
                       <button
                         type="button"
                         onClick={() => setRiepilogoOpen((o) => !o)}
@@ -340,14 +418,20 @@ export const BattlefieldPanel = ({
                           {riepilogoOpen ? '▼' : '▶'}
                         </span>
                       </button>
-                      {riepilogoOpen && (
-                    <div className="px-2 pb-2 max-h-40 overflow-y-auto satze-riepilogo-unroll">
+                      {false && riepilogoOpen && (
+                    <div
+                      className="absolute left-0 right-0 top-full mt-1 px-2 py-2 rounded-b-lg border-x border-b border-slate-600/40 bg-slate-900/95 overflow-y-auto satze-riepilogo-unroll"
+                      style={{ zIndex: 30, maxHeight: '128px' }}
+                    >
                       {/* Cambi alle Statistiche - IA a sinistra, TU a destra */}
                       <div className="grid grid-cols-2 gap-2 mb-2">
                         {/* IA */}
                         <div className="bg-slate-800/60 rounded p-2">
                           <div className="text-red-400/90 font-medium mb-1 text-[10px]">IA</div>
                           <div className="text-[10px] space-y-1">
+                            <div>
+                              <span className="text-amber-400">FC:</span> {battleResult.enemyFocusUsed}
+                            </div>
                             {/* POT modificato */}
                             {battleResult.enemyPower !== battleResult.enemyAgent.power && (
                               <div>
@@ -386,6 +470,9 @@ export const BattlefieldPanel = ({
                         <div className="bg-slate-800/60 rounded p-2">
                           <div className="text-green-400/90 font-medium mb-1 text-[10px]">TU</div>
                           <div className="text-[10px] space-y-1">
+                            <div>
+                              <span className="text-amber-400">FC:</span> {battleResult.playerFocusUsed}
+                            </div>
                             {/* POT modificato */}
                             {battleResult.playerPower !== battleResult.playerAgent.power && (
                               <div>
@@ -423,8 +510,13 @@ export const BattlefieldPanel = ({
                       
                       {/* Statistiche Duello */}
                       <div className="border-t border-slate-600/40 pt-1.5 mt-1.5">
-                        <div className="text-slate-500 text-[10px]">
-                          Danno: {battleResult.damageDealt} PV
+                        <div className="text-slate-500 text-[10px] space-y-1">
+                          <div>
+                            FC investiti: IA {battleResult.enemyFocusUsed} · TU {battleResult.playerFocusUsed}
+                          </div>
+                          <div>
+                            Danno: {battleResult.damageDealt} PV
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -432,7 +524,7 @@ export const BattlefieldPanel = ({
                     </div>
                     
                     {/* Pulsante CONTINUA */}
-                    <div className="w-full">
+                    <div className="w-full" style={riepilogoOpen ? { transform: 'translateY(132px)' } : undefined}>
                       <button
                         onClick={onContinue}
                         className="w-full py-2 px-4 bg-white/15 hover:bg-white/25 text-white text-xs font-medium rounded-lg
@@ -479,5 +571,23 @@ export const BattlefieldPanel = ({
         </div>
       )}
     </div>
+    {riepilogoOpen && riepilogoRect && riepilogoContent && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="pointer-events-auto text-[10px]"
+            style={{
+              position: 'fixed',
+              left: riepilogoRect.left,
+              top: riepilogoRect.top,
+              width: riepilogoRect.width,
+              zIndex: 9999,
+            }}
+          >
+            {riepilogoContent}
+          </div>,
+          document.body
+        )
+      : null}
+    </>
   );
 };

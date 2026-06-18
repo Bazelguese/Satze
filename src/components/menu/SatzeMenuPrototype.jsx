@@ -5,6 +5,7 @@ import {
   BRAND_LOGO_HEIGHT,
   injectSatzeUiFonts,
 } from "../../theme/hudOratorioPalette";
+import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
 
 /**
  * Menu principale — variante **V5 COSMIC** (handoff Claude Design: MenuV5PersonaCosmic).
@@ -293,6 +294,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
           mixBlendMode: "screen",
         }}
       />
+      <CosmicMenuOverlay />
 
       <div
         style={{

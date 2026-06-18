@@ -2,14 +2,24 @@
 // Timeline ms fasi duello (stessa logica di satze.jsx)
 // ============================================
 
-import { DUEL_VISUAL_DEFAULTS } from './duelVisualConfig.js';
+import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from './duelVisualConfig.js';
+
+function safeMs(value, fallback, min = 0) {
+  if (value == null) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.round(n));
+}
 
 /** @param {typeof DUEL_VISUAL_DEFAULTS} vfx */
 export function computePhase2DurationMs(vfx, playerFocusUsed, enemyFocusUsed) {
   const p = playerFocusUsed || 0;
   const e = enemyFocusUsed || 0;
   const maxTotal = Math.max(p, e);
-  return maxTotal * vfx.focusCoinStepMs + vfx.focusPhaseBufferMs;
+  const step = safeMs(vfx.focusCoinStepMs, DUEL_VISUAL_DEFAULTS.focusCoinStepMs, 0);
+  const buffer = safeMs(vfx.focusPhaseBufferMs, DUEL_VISUAL_DEFAULTS.focusPhaseBufferMs, 0);
+  return maxTotal * step + buffer;
 }
 
 /**
@@ -42,7 +52,9 @@ export function duelPhase3NeedsWork(battleResult) {
 
 /** Durata fase 3 in ms (piena se serve lavoro, altrimenti `phaseMs3Empty`). */
 export function computePhase3DurationMs(vfx, battleResult) {
-  return duelPhase3NeedsWork(battleResult) ? vfx.phaseMs3 : vfx.phaseMs3Empty ?? 240;
+  const full = safeMs(vfx.phaseMs3, DUEL_VISUAL_DEFAULTS.phaseMs3, 120);
+  const empty = safeMs(vfx.phaseMs3Empty ?? 240, DUEL_VISUAL_DEFAULTS.phaseMs3Empty ?? 240, 80);
+  return duelPhase3NeedsWork(battleResult) ? full : empty;
 }
 
 /**
@@ -54,13 +66,20 @@ export function computePhase3DurationMs(vfx, battleResult) {
 export function buildPhaseAdvanceDelaysMs(vfx, playerFocusUsed, enemyFocusUsed, battleResult) {
   const phase2 = computePhase2DurationMs(vfx, playerFocusUsed, enemyFocusUsed);
   const phase3 = computePhase3DurationMs(vfx, battleResult);
+  const { clashSpeed } = computeDynamicClashVfx(battleResult);
+  const safeClashSpeed = Number.isFinite(clashSpeed) && clashSpeed > 0 ? clashSpeed : 1;
+  const phase0 = safeMs(vfx.phaseMs0, DUEL_VISUAL_DEFAULTS.phaseMs0, 120);
+  const phase1 = safeMs(vfx.phaseMs1, DUEL_VISUAL_DEFAULTS.phaseMs1, 120);
+  const phase4Base = safeMs(vfx.phaseMs4, DUEL_VISUAL_DEFAULTS.phaseMs4, 300);
+  const phase4 = Math.max(1200, Math.round(phase4Base / safeClashSpeed));
+  const phase5 = safeMs(vfx.phaseMs5, DUEL_VISUAL_DEFAULTS.phaseMs5, 120);
   return [
-    vfx.phaseMs0,
-    vfx.phaseMs1,
+    phase0,
+    phase1,
     phase2,
     phase3,
-    vfx.phaseMs4,
-    vfx.phaseMs5,
+    phase4,
+    phase5,
     0,
   ];
 }

@@ -47,6 +47,11 @@ body.graphics-prova .satze-hud-panel {
   overflow: hidden;
 }
 
+body.graphics-prova .satze-hud-panel.satze-battlefield-panel-riepilogo-open {
+  overflow: visible;
+  clip-path: none;
+}
+
 body.graphics-prova .satze-hud-panel::before {
   content: '';
   position: absolute;

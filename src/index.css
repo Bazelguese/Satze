@@ -612,7 +612,54 @@ button:disabled {
     modifierHighlightShine 2.2s ease-in-out 0.9s infinite both;
 }
 
-/* Animazione clash (scontro) - tema aurora cosmica */
+/* Nuova animazione clash dinamica (fase 4). */
+@keyframes satzeClashDynamicPulse {
+  0% {
+    transform: scale(1) translateY(0);
+    filter: brightness(1) saturate(1);
+  }
+  18% {
+    transform: scale(1.18) translateY(-3px);
+    filter: brightness(1.28) saturate(1.15);
+  }
+  34% {
+    transform: scale(0.9) translateY(1px);
+    filter: brightness(1.05) saturate(1.05);
+  }
+  52% {
+    transform: scale(1.12) translateY(-2px);
+    filter: brightness(1.2) saturate(1.12);
+  }
+  72% {
+    transform: scale(0.96) translateY(0);
+    filter: brightness(1.08) saturate(1.06);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes satzeClashDynamicWinnerBurst {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  26% {
+    transform: scale(1.24) rotate(2deg);
+    opacity: 1;
+  }
+  52% {
+    transform: scale(1.09) rotate(-1deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.02) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Animazione clash legacy (mantenuta per retrocompatibilita'). */
 @keyframes clash {
   0% {
     transform: scale(1) translateX(0);
@@ -1121,6 +1168,11 @@ button:disabled {
 .satze-battlefield-panel-zoomed {
   border-color: rgba(212, 168, 71, 0.5);
   box-shadow: 0 8px 40px rgba(212, 168, 71, 0.15), 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.satze-battlefield-panel.satze-battlefield-panel-riepilogo-open {
+  overflow: visible;
+  clip-path: none;
 }
 
 /* Animazione srotolamento riepilogo duello */

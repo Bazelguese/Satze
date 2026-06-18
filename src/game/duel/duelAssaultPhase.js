@@ -13,8 +13,8 @@ export function runDuelAssaultCalculation(battleLog, {
 }) {
   const pAssaultRaw = pPower * pFocusUsed + pAssaultMod;
   const eAssaultRaw = ePower * eFocusUsed + eAssaultMod;
-  const pMinBase = pAgent.power;
-  const eMinBase = eAgent.power;
+  const pMinBase = pPower;
+  const eMinBase = ePower;
   const pMinFinal = pMinAssault !== null ? pMinAssault : pMinBase;
   const eMinFinal = eMinAssault !== null ? eMinAssault : eMinBase;
   const pAssault = Math.max(pMinFinal, pAssaultRaw);
@@ -32,12 +32,12 @@ export function runDuelAssaultCalculation(battleLog, {
 
   if (pAssaultRaw < pMinFinal) {
     battleLog.push(
-      `🐛¡️ Il tuo VA era ${pAssaultRaw}, ma non può scendere sotto ${pMinFinal}${pMinAssault !== null ? ` (minAssault ${pMinAssault})` : ` (POT base ${pAgent.power})`}`
+      `🐛¡️ Il tuo VA era ${pAssaultRaw}, ma non può scendere sotto ${pMinFinal}${pMinAssault !== null ? ` (minAssault ${pMinAssault})` : ` (POT corrente ${pPower})`}`
     );
   }
   if (eAssaultRaw < eMinFinal) {
     battleLog.push(
-      `🐛¡️ VA IA era ${eAssaultRaw}, ma non può scendere sotto ${eMinFinal}${eMinAssault !== null ? ` (minAssault ${eMinAssault})` : ` (POT base ${eAgent.power})`}`
+      `🐛¡️ VA IA era ${eAssaultRaw}, ma non può scendere sotto ${eMinFinal}${eMinAssault !== null ? ` (minAssault ${eMinAssault})` : ` (POT corrente ${ePower})`}`
     );
   }
 
@@ -45,8 +45,8 @@ export function runDuelAssaultCalculation(battleLog, {
   const eAssaultBase = eAgent.power;
   const pPowerAfterEffects = pPower;
   const ePowerAfterEffects = ePower;
-  const pAssaultAfterFocus = Math.max(pAgent.power, pPower * pFocusUsed);
-  const eAssaultAfterFocus = Math.max(eAgent.power, ePower * eFocusUsed);
+  const pAssaultAfterFocus = Math.max(pMinBase, pPower * pFocusUsed);
+  const eAssaultAfterFocus = Math.max(eMinBase, ePower * eFocusUsed);
 
   battleLog.push(`━━━ RISULTATO ━━━`);
   battleLog.push(`⚔️ VA FINALE: Tu ${pAssault} vs IA ${eAssault}`);

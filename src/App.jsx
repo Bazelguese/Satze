@@ -11,6 +11,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { preloadAllAssets } from './utils/preloadAssets';
 import { GameViewport } from './components/GameViewport';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CosmicTransitionProvider } from './components/cosmic/ScreenTransition';
 
 const SHOW_CARD_TEST = false; // true per pagina test carte
 
@@ -21,6 +22,7 @@ const DeckSummaryCropTool = lazy(() => import('./components/deck/DeckSummaryCrop
 const CardPrototypePage = lazy(() => import('./components/cards/CardPrototypePage').then((m) => ({ default: m.CardPrototypePage })));
 const StyleLabPage = lazy(() => import('./components/styleLab/StyleLabPage'));
 const DuelVfxLabPage = lazy(() => import('./components/duelVfxLab/DuelVfxLabPage').then((m) => ({ default: m.DuelVfxLabPage })));
+const DuelClashToolPage = lazy(() => import('./components/duelVfxLab/DuelClashToolPage').then((m) => ({ default: m.DuelClashToolPage })));
 
 const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
 const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
@@ -79,6 +81,7 @@ function AppContent() {
   const showCardPrototype = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardPrototype') === '1';
   const showStyleLab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('styleLab') === '1';
   const showDuelVfxLab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelVfxLab') === '1';
+  const showDuelClashTool = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelClashTool') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -104,6 +107,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeDuelClashTool = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('duelClashTool');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -112,13 +121,17 @@ function AppContent() {
         <StyleLabPage onClose={closeStyleLab} />
       ) : showDuelVfxLab ? (
         <DuelVfxLabPage onClose={closeDuelVfxLab} />
+      ) : showDuelClashTool ? (
+        <DuelClashToolPage onClose={closeDuelClashTool} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (
         <CardTest />
       ) : (
         <GameViewport>
-          <SatzeGame />
+          <CosmicTransitionProvider>
+            <SatzeGame />
+          </CosmicTransitionProvider>
         </GameViewport>
       )}
     </Suspense>

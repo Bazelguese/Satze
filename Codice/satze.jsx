@@ -7,6 +7,7 @@ import { CardTagsRow } from '../src/components/cards/CardTagBadges';
 import { getCardTags } from '../src/data/cardTags';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
+import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, markCampaignMissionStarted } from '../src/data';
 import { loadCampaignProgress } from '../src/data/campaign';
 import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLogic.js';
@@ -24,12 +25,21 @@ import {
 } from '../src/components/tutorial';
 import { Glossary } from '../src/components/Glossary';
 import { getAllDifficulties, DIFFICULTY_NAMES } from '../src/utils';
-import { DeckManagerListScreen, SatzeDeckBuilderPrototype } from '../src/components/deck';
 import { CampaignWarHub } from '../src/components/campaign/CampaignWarHub';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { buildCampaignDuelLaunchConfig } from '../src/game/campaign/campaignDuelAdapter.js';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, PALETTE, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
+import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
+import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
+import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
+import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
+import { CosmicScreenLayout } from '../src/components/menu/cosmic/CosmicScreenLayout';
+import ArmySelectCinematic from '../src/components/menu/cosmic/ArmySelectCinematic.jsx';
+import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCarousel';
+import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
+import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
+import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDeckBuilderWrapper';
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
@@ -191,7 +201,7 @@ export default function SatzeGame() {
   
   // Estrai gli stati dal gameState per compatibilità con il codice esistente
   const {
-    gamePhase, setGamePhase,
+    gamePhase, setGamePhase: setGamePhaseRaw,
     gameMode, setGameMode,
     playerHand, setPlayerHand,
     enemyHand, setEnemyHand,
@@ -254,6 +264,27 @@ export default function SatzeGame() {
   const useMenuCosmic = true;
   /** Schermata di gioco (tabellone, pannelli agente, glossario in duello): tema duello / PALETTE. Sempre attivo qui — non confonderlo con il cosmic dei menù. */
   const uiBattleHud = true;
+  const setGamePhaseAnimated = useTransitionedSetGamePhase(setGamePhaseRaw, gamePhase);
+  const setGamePhaseFromMainMenu = useCallback((nextPhase) => {
+    if (typeof nextPhase !== 'string') {
+      setGamePhaseRaw(nextPhase);
+      return;
+    }
+    // Regola richiesta: animazione quando clicchi i bottoni del menu principale.
+    setGamePhaseAnimated(nextPhase);
+  }, [setGamePhaseAnimated, setGamePhaseRaw]);
+  const setGamePhase = useCallback((nextPhase) => {
+    if (typeof nextPhase !== 'string') {
+      setGamePhaseRaw(nextPhase);
+      return;
+    }
+    // Regola richiesta: animazione quando si torna al menu principale.
+    if (nextPhase === 'menu' && gamePhase !== 'menu') {
+      setGamePhaseAnimated(nextPhase);
+      return;
+    }
+    setGamePhaseRaw(nextPhase);
+  }, [gamePhase, setGamePhaseAnimated, setGamePhaseRaw]);
 
   // Helper: valore attuale per Attrizione/Escalation (solo carte del proprietario per Attrizione)
   const getAbilityCurrentValue = useCallback((agent, isPlayer) => {
@@ -315,6 +346,7 @@ export default function SatzeGame() {
   
   // Stato per modal carta ingrandita nella galleria
   const [selectedCardForModal, setSelectedCardForModal] = useState(null);
+  const [previewDeckData, setPreviewDeckData] = useState(null);
   
   // Gestione chiusura modal con ESC
   useEffect(() => {
@@ -1575,7 +1607,7 @@ export default function SatzeGame() {
   // Schermata Campagna — hub dedicato (non popup sul menu)
   if (gamePhase === 'campaignHub') {
     return (
-      <>
+      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         <CampaignWarHub
           campaignSaveSlot={campaignSaveSlot}
           onOpenDeckManager={() => {
@@ -1595,9 +1627,8 @@ export default function SatzeGame() {
           }}
           onBack={() => setGamePhase('menu')}
         />
-        {showDeckManager && deckManagerView === 'list' &&
-          createPortal(
-            <DeckManagerListScreen
+        {showDeckManager && deckManagerView === 'list' && (
+            <CosmicDeckManagerList
               onEditDeck={(deckId) => {
                 setEditingDeckId(deckId);
                 setDeckManagerView('builder');
@@ -1610,12 +1641,10 @@ export default function SatzeGame() {
                 setShowDeckManager(false);
                 setEditingDeckId(null);
               }}
-            />,
-            document.body
+            />
           )}
-        {showDeckManager && deckManagerView === 'builder' &&
-          createPortal(
-            <SatzeDeckBuilderPrototype
+        {showDeckManager && deckManagerView === 'builder' && (
+            <CosmicDeckBuilderWrapper
               existingDeckId={editingDeckId}
               onClose={() => {
                 if (deckManagerSource === 'menu') {
@@ -1626,10 +1655,9 @@ export default function SatzeGame() {
                   setEditingDeckId(null);
                 }
               }}
-            />,
-            document.body
+            />
           )}
-      </>
+      </div>
     );
   }
 
@@ -1652,16 +1680,16 @@ export default function SatzeGame() {
         meta: 'CLIC · POI SCEGLI LA MODALITÀ',
         accent: '#ec4899',
         choices: [
-          { label: 'GIOCA VS IA', sub: 'VS IA', meta: 'CLASSIC', onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhase('selectArmy'); } },
-          { label: 'BARE HANDS', sub: 'MODALITÀ', meta: 'SENZA ESERCITO', onClick: () => { setSelectedMode('bareHands'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhase('selectArmy'); } },
+          { label: 'GIOCA VS IA', sub: 'VS IA', meta: 'CLASSIC', onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
+          { label: 'BARE HANDS', sub: 'MODALITÀ', meta: 'SENZA ESERCITO', onClick: () => { setSelectedMode('bareHands'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
         ],
       },
-      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', onClick: () => setGamePhase('campaignSlots') },
-      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhase('multiplayerLobby'); } },
-      { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(true); } },
-      { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhase('playtestHistory') },
+      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
+      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
+      { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
+      { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', onClick: openTutorialSelector },
-      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => startTransition(() => setGamePhase('gallery')) },
+      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => startTransition(() => setGamePhaseFromMainMenu('gallery')) },
       {
         label: 'STRUMENTI DEV',
         sub: 'LAB',
@@ -1675,7 +1703,7 @@ export default function SatzeGame() {
     ];
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
-        <SatzeMenuPrototype menuItems={menuItems} />
+        {!showDeckManager && <SatzeMenuPrototype menuItems={menuItems} />}
 
         <TutorialSelector
           isOpen={isTutorialSelectorOpen}
@@ -1697,18 +1725,15 @@ export default function SatzeGame() {
         />
         
         {/* Deck Manager: lista mazzi (da Gestione Mazzi) o costruttore */}
-        {showDeckManager && deckManagerView === 'list' &&
-          createPortal(
-            <DeckManagerListScreen
+        {showDeckManager && deckManagerView === 'list' && (
+            <CosmicDeckManagerList
               onEditDeck={(deckId) => { setEditingDeckId(deckId); setDeckManagerView('builder'); }}
               onCreateNew={() => { setEditingDeckId(null); setDeckManagerView('builder'); }}
-              onClose={() => { setShowDeckManager(false); setEditingDeckId(null); }}
-            />,
-            document.body
+              onClose={() => { setShowDeckManager(false); setEditingDeckId(null); setDeckManagerView('list'); }}
+            />
           )}
-        {showDeckManager && deckManagerView === 'builder' &&
-          createPortal(
-            <SatzeDeckBuilderPrototype
+        {showDeckManager && deckManagerView === 'builder' && (
+            <CosmicDeckBuilderWrapper
               existingDeckId={editingDeckId}
               onClose={() => {
                 if (deckManagerSource === 'menu') {
@@ -1719,8 +1744,7 @@ export default function SatzeGame() {
                   setEditingDeckId(null);
                 }
               }}
-            />,
-            document.body
+            />
           )}
         
       </div>
@@ -1730,6 +1754,49 @@ export default function SatzeGame() {
   if (gamePhase === 'playtestHistory') {
     return (
       <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />
+    );
+  }
+
+  if (gamePhase === 'deckManager') {
+    return (
+      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
+        {deckManagerView === 'list' && (
+          <CosmicDeckManagerList
+            onEditDeck={(deckId) => {
+              setEditingDeckId(deckId);
+              setDeckManagerView('builder');
+            }}
+            onCreateNew={() => {
+              setEditingDeckId(null);
+              setDeckManagerView('builder');
+            }}
+            onClose={() => {
+              setEditingDeckId(null);
+              setDeckManagerView('list');
+              setShowDeckManager(false);
+                if (deckManagerSource === 'selectDeck') {
+                  setGamePhase('selectDeck');
+                } else {
+                  setGamePhase('menu');
+                }
+            }}
+          />
+        )}
+        {deckManagerView === 'builder' && (
+          <CosmicDeckBuilderWrapper
+            existingDeckId={editingDeckId}
+            onClose={() => {
+              setEditingDeckId(null);
+              if (deckManagerSource === 'selectDeck') {
+                setDeckManagerView('list');
+                setGamePhase('selectDeck');
+              } else {
+                setDeckManagerView('list');
+              }
+            }}
+          />
+        )}
+      </div>
     );
   }
 
@@ -1787,52 +1854,22 @@ export default function SatzeGame() {
 
     if (useMenuCosmic) {
       return (
-        <MenuScreenLayout title={title} subtitle={subtitle}>
-          <div className="grid grid-cols-3 gap-2 w-full max-w-5xl px-4 flex-1 min-h-0 place-content-center">
-            {showMixedOption && (
-              <MenuCard
-                key={MIXED_DECKS_OPTION}
-                accentColor={MIXED_DECKS_COLOR}
-                onClick={() => { setSelectedArmy(MIXED_DECKS_OPTION); setGamePhase('selectDeck'); }}
-                className="!p-2"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="mb-1 w-14 h-14 flex items-center justify-center rounded-full" style={{ backgroundColor: MIXED_DECKS_COLOR + '30' }}>
-                    <span className="text-2xl">⚔</span>
-                  </div>
-                  <div className="font-bold text-sm mb-0.5 truncate w-full" style={{ color: MIXED_DECKS_COLOR }}>{MIXED_DECKS_OPTION}</div>
-                  <div className="text-[10px] text-slate-400 mb-0.5">Eserciti multi-armata</div>
-                </div>
-              </MenuCard>
-            )}
-            {availableArmies.map(army => {
-              const colors = ARMY_COLORS[army];
-              const bonus = ARMY_BONUSES[army];
-              return (
-                <MenuCard
-                  key={army}
-                  accentColor={colors.accent}
-                  onClick={() => selectArmyAndContinue(army)}
-                  className="!p-2"
-                >
-                  <div className="flex flex-col items-center text-center">
-                    <div className="mb-1">
-                      <Icon name={army} type="army" size={56} color={colors.accent} />
-                    </div>
-                    <div className="font-bold text-sm mb-0.5 truncate w-full" style={{ color: colors.accent }}>{army}</div>
-                    <div className="text-[10px] text-slate-400 mb-0.5">15 carte • 2 eserciti</div>
-                    <div className="text-[10px] py-0.5 px-1 truncate w-full" style={{ backgroundColor: colors.accent + '30', color: colors.accent }} title={bonus.description}>✦ {bonus.description}</div>
-                  </div>
-                </MenuCard>
-              );
-            })}
-          </div>
-          <div className="flex-shrink-0 mt-2">
-            <MenuBackButton onClick={() => { setCampaignLevel(null); setSelectedArmy(null); setSelectedDeckKey(null); setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu'); }}>
-              {selectedMode === 'campaign' ? 'Torna alla campagna' : 'Torna al Menu'}
-            </MenuBackButton>
-          </div>
-        </MenuScreenLayout>
+        <ArmySelectCinematic
+          onSelect={(armyName) => {
+            if (armyName == null) {
+              setSelectedArmy(MIXED_DECKS_OPTION);
+              setGamePhase('selectDeck');
+              return;
+            }
+            selectArmyAndContinue(armyName);
+          }}
+          onBack={() => {
+            setCampaignLevel(null);
+            setSelectedArmy(null);
+            setSelectedDeckKey(null);
+            setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
+          }}
+        />
       );
     }
 
@@ -1923,6 +1960,55 @@ export default function SatzeGame() {
       selectedArmy === "Figli dell'Orizzonte" &&
       !isMixedMode &&
       deckValidHub;
+    const deckOptions = [];
+    if (figliCampaignDeckOk) {
+      deckOptions.push({
+        key: 'campaign_figli',
+        name: 'Esercito campagna (Figli)',
+        armyLabel: 'Campagna',
+        description: 'Usa l\'esercito modificato nel segmento gestionale.',
+        meta: `${campDeckIds.length} carte • Lega ${totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30`,
+        accent: '#a78bfa',
+        onSelect: () => {
+          setSelectedDeckKey(campDeckIds);
+          goAfterDeckSelection();
+        },
+      });
+    }
+    if (!isMixedMode) {
+      Object.entries(predefinedDecks).forEach(([key, deck]) => {
+        const deckCards = ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
+        const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
+        deckOptions.push({
+          key,
+          name: `Esercito ${key} — ${deck.name}`,
+          armyLabel: selectedArmy,
+          description: deck.description,
+          meta: `${deckCards.length} carte • Lega ${totalLeague}`,
+          accent: colors.accent,
+          onSelect: () => {
+            setSelectedDeckKey(key);
+            goAfterDeckSelection();
+          },
+        });
+      });
+    }
+    customDecksForArmy.forEach(([deckId, deck]) => {
+      const deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
+      const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
+      deckOptions.push({
+        key: `custom_${deckId}`,
+        name: deck.name,
+        armyLabel: deck.army || (isMixedMode ? 'Misto' : selectedArmy),
+        description: deck.description || 'Esercito personalizzato',
+        meta: `${deck.cards.length} carte • Lega ${totalLeague}/30`,
+        accent: colors.accent,
+        onSelect: () => {
+          setSelectedDeckKey(`custom_${deckId}`);
+          goAfterDeckSelection();
+        },
+      });
+    });
 
     if (campaignHubDeckOnly && !deckValidHub) {
       const errBack = () => {
@@ -2013,93 +2099,233 @@ export default function SatzeGame() {
       );
     }
 
+    // === COSMIC DECK SELECT (DUELLO IMMINENTE) ===
+    const useCosmicDeckSelect = true;
+    if (useCosmicDeckSelect && deckOptions.length > 0 && !campaignHubDeckOnly) {
+      const hexToRgb = (hex) => {
+        if (!hex || typeof hex !== 'string') return null;
+        const clean = hex.replace('#', '');
+        if (clean.length !== 6) return null;
+        return {
+          r: parseInt(clean.slice(0, 2), 16),
+          g: parseInt(clean.slice(2, 4), 16),
+          b: parseInt(clean.slice(4, 6), 16),
+        };
+      };
+      const rgbToHex = ({ r, g, b }) =>
+        `#${[r, g, b]
+          .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+          .join('')}`;
+      const sumArmyColors = (armyNames) => {
+        const uniques = [...new Set((armyNames || []).filter(Boolean))];
+        if (!uniques.length) return { bgColor: '#c026d3', bgColorSecondary: '#a78bfa' };
+        const sum = uniques
+          .map((army) => ARMY_COLORS[army]?.accent || '#a78bfa')
+          .map(hexToRgb)
+          .filter(Boolean)
+          .reduce(
+            (acc, rgb) => ({ r: acc.r + rgb.r, g: acc.g + rgb.g, b: acc.b + rgb.b }),
+            { r: 0, g: 0, b: 0 }
+          );
+        const maxChannel = Math.max(sum.r, sum.g, sum.b, 1);
+        const norm = maxChannel > 255 ? 255 / maxChannel : 1;
+        const primary = { r: sum.r * norm, g: sum.g * norm, b: sum.b * norm };
+        const secondary = {
+          r: primary.r * 0.75 + 26,
+          g: primary.g * 0.75 + 20,
+          b: primary.b * 0.75 + 36,
+        };
+        return { bgColor: rgbToHex(primary), bgColorSecondary: rgbToHex(secondary) };
+      };
+      const resolveLeadImage = (card) => {
+        if (!card) return '';
+        return (
+          card.image ||
+          CARD_IMAGES?.[card.id] ||
+          AGENT_IMAGES?.[card.id] ||
+          ''
+        );
+      };
+
+      const cosmicDecks = deckOptions.map((opt) => {
+        let deckCards = [];
+        let totalLeague = 0;
+        let cardsCount = 0;
+        let leadImg = '';
+        let leadCardId = null;
+
+        if (opt.key === 'campaign_figli') {
+          deckCards = (ARMY_SETS[selectedArmy] || []).filter((c) => campDeckIds.includes(c.id));
+          cardsCount = campDeckIds.length;
+          totalLeague = totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte");
+          const leadCard = deckCards.slice().sort((a, b) => b.league - a.league)[0];
+          leadCardId = leadCard?.id ?? null;
+          leadImg = resolveLeadImage(leadCard);
+        } else if (opt.key.startsWith('custom_')) {
+          const id = opt.key.replace('custom_', '');
+          const deck = customDecks[id];
+          deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : (ARMY_SETS[selectedArmy] || []).filter((c) => deck.cards.includes(c.id));
+          totalLeague = deckCards.reduce((s, c) => s + (c.league || 0), 0);
+          cardsCount = deck.cards.length;
+          leadCardId = deckCards[0]?.id ?? null;
+          leadImg = resolveLeadImage(deckCards[0]);
+        } else {
+          const deck = predefinedDecks[opt.key];
+          deckCards = (ARMY_SETS[selectedArmy] || []).filter((c) => deck.cards.includes(c.id));
+          totalLeague = deckCards.reduce((s, c) => s + (c.league || 0), 0);
+          cardsCount = deckCards.length;
+          const leadCard = deckCards.slice().sort((a, b) => b.league - a.league)[0];
+          leadCardId = leadCard?.id ?? null;
+          leadImg = resolveLeadImage(leadCard);
+        }
+
+        const potAvg = deckCards.length ? deckCards.reduce((s, c) => s + (c.power || 0), 0) / deckCards.length : 0;
+        const danAvg = deckCards.length ? deckCards.reduce((s, c) => s + (c.damage || 0), 0) / deckCards.length : 0;
+
+        const curve = [0, 0, 0, 0, 0];
+        deckCards.forEach((c) => {
+          const idx = Math.min(Math.max((c.league || 1) - 1, 0), 4);
+          curve[idx]++;
+        });
+
+        const triggerMap = new Map();
+        deckCards.forEach((c) => {
+          const triggerName = c?.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || 'Sempre') : 'Sempre';
+          triggerMap.set(triggerName, (triggerMap.get(triggerName) || 0) + 1);
+        });
+        const triggers = [...triggerMap.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([n, v]) => ({ n, v }));
+
+        const warning =
+          cardsCount < 10
+            ? `${10 - cardsCount} carte mancanti`
+            : cardsCount > 10
+              ? `${cardsCount - 10} carte in eccesso`
+              : totalLeague > 30
+                ? `Lega ${totalLeague}/30 superata`
+                : null;
+        const armies = [...new Set(deckCards.map((c) => c.army || selectedArmy).filter(Boolean))];
+        const { bgColor, bgColorSecondary } = sumArmyColors(deckCards.map((c) => c.army || selectedArmy));
+        const leadBgPosCfg = DECK_SUMMARY_BG_POSITION?.[leadCardId] ?? DECK_SUMMARY_BG_POSITION?.[String(leadCardId)];
+        const leadObjectPosition =
+          leadBgPosCfg && typeof leadBgPosCfg === 'object'
+            ? `${leadBgPosCfg.x ?? 50}% ${leadBgPosCfg.y ?? 25}%`
+            : '50% 25%';
+        const previewCards = deckCards.slice(0, 10).map((card) => {
+          const cardArmy = card.army || selectedArmy;
+          const formattedAbility = formatAbilityHelper(card.ability);
+          return {
+            ...card,
+            army: cardArmy,
+            powerDesc: formattedAbility || card.description || '—',
+            bonusDesc: ARMY_BONUSES?.[cardArmy]?.description || '—',
+            tags: getCardTags(card.id),
+          };
+        });
+
+        return {
+          id: opt.key,
+          name: opt.name,
+          description: opt.description || 'Nessuna descrizione disponibile.',
+          army: deckCards[0]?.army || selectedArmy,
+          accentColor: bgColor,
+          fac: (opt.armyLabel || selectedArmy || '').toUpperCase(),
+          sigil: '◈',
+          cards: cardsCount,
+          lega: totalLeague,
+          pot: Number(potAvg.toFixed(1)),
+          dan: Number(danAvg.toFixed(1)),
+          win: 0,
+          lead: leadImg,
+          leadObjectPosition,
+          armies,
+          previewCards,
+          curve,
+          triggers,
+          bgColor,
+          bgColorSecondary,
+          warning,
+          _opt: opt,
+        };
+      });
+
+      const opponent = campaignLevel
+        ? {
+            name: campaignLevel.enemyName || 'AVVERSARIO',
+            faction: campaignLevel.enemyArmy || '',
+            level: campaignLevel.level || '—',
+            sigil: 'X',
+          }
+        : { name: 'IA', faction: 'AVVERSARIO', level: '—', sigil: 'X' };
+
+      return (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#06030a' }}>
+          <DeckSelectCosmic
+            decks={cosmicDecks}
+            opponent={opponent}
+            mapName={campaignLevel?.mapName || 'PIANE DEL DEBITO'}
+            mode={selectedMode === 'campaign' ? 'CAMPAGNA' : selectedMode === 'multiplayer' ? 'MULTIPLAYER' : 'DUELLO 1v1'}
+            onBack={() => {
+              setSelectedArmy(null);
+              setGamePhase('selectArmy');
+            }}
+            onSelectDeck={(deck) => deck._opt.onSelect()}
+            onPreviewDeck={(deck) => {
+              const previewPayload = {
+                id: deck.id,
+                name: deck.name,
+                army: deck.army || selectedArmy,
+                accentColor: deck.bgColor || colors.accent,
+                cards: (deck.previewCards || []).slice(0, 10),
+                _opt: deck._opt,
+              };
+              setPreviewDeckData(previewPayload);
+              setGamePhase('previewDeck');
+            }}
+            onEditDeck={(deck) => {
+              if (deck.id.startsWith('custom_')) {
+                setEditingDeckId(deck.id.replace('custom_', ''));
+                setDeckManagerSource('selectDeck');
+                setDeckManagerView('builder');
+                setShowDeckManager(false);
+                setGamePhase('deckManager');
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
     if (useMenuCosmic) {
       return (
-        <MenuScreenLayout
+        <CosmicScreenLayout
           title={selectedArmy}
           subtitle={campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
+          footer={(
+            <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>
+              Cambia armata
+            </CosmicBannerButton>
+          )}
         >
-          <div className="flex items-center justify-center mb-4">
-            {isMixedMode ? (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full" style={{ backgroundColor: colors.accent + '30' }}>
-                <span className="text-3xl">⚔</span>
-              </div>
-            ) : (
-              <Icon name={selectedArmy} type="army" size={64} color={colors.accent} />
-            )}
-          </div>
-          {figliCampaignDeckOk && (
-            <div className="w-full max-w-4xl px-4 mb-6">
-              <MenuCard
-                accentColor="#a78bfa"
-                onClick={() => {
-                  setSelectedDeckKey(campDeckIds);
-                  goAfterDeckSelection();
-                }}
-                className="border-2 border-purple-500/50"
-              >
-                <div className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-2">Campagna</div>
-                <div className="text-xl font-black text-white mb-1">Esercito campagna (Figli)</div>
-                <p className="text-slate-400 text-sm mb-3">
-                  {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
-                </p>
-                <p className="text-xs text-slate-500">Usa l'esercito modificato nel segmento gestionale.</p>
-              </MenuCard>
-            </div>
-          )}
-          <div className="flex flex-col md:flex-row gap-6 max-w-4xl w-full px-4 mb-6">
-            {!isMixedMode && Object.entries(predefinedDecks).map(([key, deck]) => {
-              const deckCards = ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
-              const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
-              return (
-                <MenuCard key={key} accentColor={colors.accent} onClick={() => { setSelectedDeckKey(key); goAfterDeckSelection(); }} className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-xl font-black" style={{ color: colors.accent }}>Esercito {key}</span>
-                    <span className="text-slate-500 text-sm">• Lega {totalLeague}</span>
-                  </div>
-                  <div className="text-lg font-bold text-white mb-2">"{deck.name}"</div>
-                  <p className="text-slate-400 text-sm mb-4">{deck.description}</p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {deckCards.sort((a, b) => b.league - a.league).slice(0, 5).map(card => (
-                      <div key={card.id} className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: colors.accent + '30' }} title={`${card.name} (L${card.league})`}>
-                        <Icon name={card.icon} type="cardIcon" size={20} />
-                      </div>
-                    ))}
-                    <div className="w-8 h-8 flex items-center justify-center text-xs text-slate-500">+5</div>
-                  </div>
-                  <div className="text-xs text-slate-500">10 carte • POT {(deckCards.reduce((s, c) => s + c.power, 0) / deckCards.length).toFixed(1)} • DAN {(deckCards.reduce((s, c) => s + c.damage, 0) / deckCards.length).toFixed(1)}</div>
-                </MenuCard>
-              );
-            })}
-          </div>
-          {customDecksForArmy.length > 0 && (
-            <div className="w-full max-w-4xl px-4 mb-6">
-              <h2 className="text-lg font-bold mb-4" style={{ color: colors.accent }}>{isMixedMode ? 'Eserciti Misti' : 'Eserciti Personalizzati'}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {customDecksForArmy.map(([deckId, deck]) => {
-                  const deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
-                  const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
-                  return (
-                    <MenuCard key={deckId} accentColor={colors.accent} onClick={() => { setSelectedDeckKey(`custom_${deckId}`); goAfterDeckSelection(); }}>
-                      <div className="font-bold text-white mb-1">{deck.name}</div>
-                      {deck.description && <p className="text-slate-400 text-xs mb-2">{deck.description}</p>}
-                      <div className="text-xs text-slate-500">Lega: {totalLeague}/30 • {deck.cards.length} carte</div>
-                    </MenuCard>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {deckOptions.length > 0 ? (
+            <CosmicDeckCarousel
+              decks={deckOptions}
+              onChooseDeck={(deckChoice) => deckChoice.onSelect()}
+            />
+          ) : null}
           {campaignLevel && customDecksForArmy.length === 0 && (
-            <p className="text-center text-slate-500 text-sm mb-6 max-w-lg mx-auto">
+            <p className="text-center text-slate-400 text-sm mb-2 max-w-lg mx-auto">
               Nessun esercito salvato: puoi usare gli eserciti precostruiti sopra oppure crearne uno in Gestione eserciti.
             </p>
           )}
           {isMixedMode && customDecksForArmy.length === 0 && (
-            <div className="text-center text-slate-400 mb-6">Nessun esercito misto. Crea un esercito da &quot;Gestione Eserciti&quot; selezionando carte da armate diverse.</div>
+            <div className="text-center text-slate-400 mb-2">
+              Nessun esercito misto. Crea un esercito da &quot;Gestione Eserciti&quot; selezionando carte da armate diverse.
+            </div>
           )}
-          <MenuBackButton onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>Cambia Armata</MenuBackButton>
-        </MenuScreenLayout>
+        </CosmicScreenLayout>
       );
     }
     
@@ -2270,6 +2496,34 @@ export default function SatzeGame() {
     );
   }
 
+  if (gamePhase === 'previewDeck' && previewDeckData) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#06030a' }}>
+        <DeckPreviewCosmic
+          deck={previewDeckData}
+          onBack={() => {
+            setPreviewDeckData(null);
+            setGamePhase('selectDeck');
+          }}
+          onEdit={(d) => {
+            if (d?.id && d.id.startsWith('custom_')) {
+              setPreviewDeckData(null);
+              setEditingDeckId(d.id.replace('custom_', ''));
+              setDeckManagerSource('selectDeck');
+              setDeckManagerView('builder');
+              setShowDeckManager(false);
+              setGamePhase('deckManager');
+            }
+          }}
+          onConfirm={(d) => {
+            setPreviewDeckData(null);
+            d?._opt?.onSelect?.();
+          }}
+        />
+      </div>
+    );
+  }
+
   // Schermata pronti per match online (dopo scelta deck)
   if (gamePhase === 'onlineDeckReady' && selectedArmy && selectedDeckKey && multiplayerSession) {
     const deck = selectedDeckKey.startsWith('custom_')
@@ -2417,39 +2671,53 @@ export default function SatzeGame() {
 
     if (useMenuCosmic) {
       return (
-        <MenuScreenLayout
+        <CosmicScreenLayout
           title={selectedArmy}
           subtitle={`"${deck.name}" — Scegli il livello di difficoltà dell'IA`}
+          footer={(
+            <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }}>
+              Cambia esercito
+            </CosmicBannerButton>
+          )}
         >
-          <div className="flex items-center justify-center mb-4">
-            {isMixedMode ? (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full" style={{ backgroundColor: colors.accent + '30' }}>
-                <span className="text-3xl">⚔</span>
-              </div>
-            ) : (
-              <Icon name={selectedArmy} type="army" size={64} color={colors.accent} />
-            )}
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full px-4">
             {difficulties.map((diff) => (
-              <MenuCard
+              <button
+                type="button"
                 key={diff.id}
-                accentColor={diff.color}
                 onClick={() => startStandardGame(selectedArmy, selectedDeckKey, selectedMode, diff.id, ALL_BATTLEFIELDS)}
+                style={{
+                  border: `1.5px solid ${diff.color}`,
+                  background: 'linear-gradient(180deg, rgba(20,8,28,0.95) 0%, rgba(8,7,13,0.95) 100%)',
+                  padding: '16px',
+                  color: '#f5f3eb',
+                  textAlign: 'left',
+                  minHeight: '164px',
+                  boxShadow: `0 0 20px ${diff.color}2f`,
+                  cursor: 'pointer',
+                }}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <Icon name={diff.icon} type="cardIcon" size={32} />
+                  <Icon name={diff.icon} type="cardIcon" size={30} />
                   <div>
-                    <div className="text-xl font-black text-white">{diff.name}</div>
-                    <div className="text-sm text-slate-400">{diff.description}</div>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{diff.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#b9b2c8' }}>{diff.description}</div>
                   </div>
                 </div>
-                <p className="text-slate-300 text-sm">{diff.longDescription}</p>
-              </MenuCard>
+                <p style={{ margin: 0, fontSize: '0.86rem', color: '#d2cce0' }}>{diff.longDescription}</p>
+              </button>
             ))}
           </div>
-          <MenuBackButton onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }}>Cambia Esercito</MenuBackButton>
-        </MenuScreenLayout>
+          {isMixedMode ? (
+            <div style={{ color: '#b9b2c8', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
+              Armata mista selezionata.
+            </div>
+          ) : (
+            <div style={{ color: colors.accent, fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
+              Preparazione duello: {selectedArmy}
+            </div>
+          )}
+        </CosmicScreenLayout>
       );
     }
     
@@ -2733,12 +3001,14 @@ export default function SatzeGame() {
       </div>
     );
 
-    return useMenuCosmic ? (
-      <MenuScreenLayout centered={false}>{galleryInner}</MenuScreenLayout>
-    ) : (
-      <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col overflow-hidden" style={{ minHeight: '100%' }}>
-        {galleryInner}
-      </div>
+    return (
+      useMenuCosmic ? (
+        <MenuScreenLayout centered={false}>{galleryInner}</MenuScreenLayout>
+      ) : (
+        <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col overflow-hidden" style={{ minHeight: '100%' }}>
+          {galleryInner}
+        </div>
+      )
     );
   }
 
@@ -3460,7 +3730,9 @@ export default function SatzeGame() {
           transitionDelay: isZoomed ? `${duelVfx.zoomDelayMs}ms` : '0ms',
         }}
       >
-        <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+        {gamePhase !== 'result' && (
+          <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+        )}
         {gamePhase === 'selectAgent' && enemyAgent && (
           <div className="flex-shrink-0">
             <GameCard
@@ -3477,7 +3749,7 @@ export default function SatzeGame() {
           <div className="text-slate-500 text-sm text-center">In attesa...</div>
         )}
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}
-        {gamePhase === 'result' && battleResult && (
+        {gamePhase === 'result' && battleResult && duelPhase < 4 && (
           <DuelResultEnemyResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -3512,7 +3784,9 @@ export default function SatzeGame() {
           transitionDelay: isZoomed ? `${duelVfx.zoomDelayMs}ms` : '0ms',
         }}
       >
-        <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
+        {gamePhase !== 'result' && (
+          <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
+        )}
         {gamePhase === 'selectAgent' && selectedAgent && (
           <div ref={playerCardZoneRef} className="relative flex items-center justify-center pointer-events-auto flex-shrink-0">
             <GameCard
@@ -3546,7 +3820,7 @@ export default function SatzeGame() {
             </div>
           </div>
         )}
-        {gamePhase === 'result' && battleResult && (
+        {gamePhase === 'result' && battleResult && duelPhase < 4 && (
           <DuelResultPlayerResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -3562,6 +3836,16 @@ export default function SatzeGame() {
           />
         )}
       </div>
+
+      {gamePhase === 'result' && battleResult && duelPhase >= 4 && (
+        <DuelClashAuroraSequence
+          battleResult={battleResult}
+          duelPhase={duelPhase}
+          variant="n5"
+          galleryCardLayout={galleryCardLayout}
+          getAbilityCurrentValue={getAbilityCurrentValue}
+        />
+      )}
 
       {/* ============================================ */}
       {/* Centro alto: Round, SATZE; sopra il pannello campo: Replay/Skip (fuori da BattlefieldPanel) */}
@@ -3637,26 +3921,29 @@ export default function SatzeGame() {
             >
               {uiBattleHud ? 'Replay' : '🔄 Replay'}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDuelPhase(6);
-                if (battleResult) {
-                  setPlayerFocusCoinsShown(battleResult.playerFocusUsed || 0);
-                  setEnemyFocusCoinsShown(battleResult.enemyFocusUsed || 0);
-                  setPlayerCardGlow(1);
-                  setEnemyCardGlow(1);
-                  setCardGlowIntensity(1);
-                }
-              }}
-              className={
-                uiBattleHud
-                  ? 'satze-hud-duel-btn satze-hud-duel-btn--skip'
-                  : 'px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30 active:scale-95'
-              }
-            >
-              {uiBattleHud ? 'Skip' : '⏩ Skip'}
-            </button>
+            {typeof window !== 'undefined' &&
+              new URLSearchParams(window.location.search).get('duelDebug') === '1' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDuelPhase(6);
+                    if (battleResult) {
+                      setPlayerFocusCoinsShown(battleResult.playerFocusUsed || 0);
+                      setEnemyFocusCoinsShown(battleResult.enemyFocusUsed || 0);
+                      setPlayerCardGlow(1);
+                      setEnemyCardGlow(1);
+                      setCardGlowIntensity(1);
+                    }
+                  }}
+                  className={
+                    uiBattleHud
+                      ? 'satze-hud-duel-btn satze-hud-duel-btn--skip'
+                      : 'px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30 active:scale-95'
+                  }
+                >
+                  {uiBattleHud ? 'Skip' : '⏩ Skip'}
+                </button>
+              )}
           </div>
         )}
       </div>

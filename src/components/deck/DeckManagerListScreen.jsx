@@ -11,7 +11,7 @@ import { ARMY_SETS, ARMY_DECKS, ARMY_COLORS } from '../../data';
 import { Icon } from '../ui';
 import { MenuScreenLayout, MenuCard, MenuBackButton } from '../menu';
 
-export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
+export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose, renderInPortal = true }) {
   const customDecks = loadCustomDecks();
   const deckEntries = Object.entries(customDecks);
   const [previewDeck, setPreviewDeck] = useState(null);
@@ -24,15 +24,15 @@ export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
     }))
   );
 
-  return createPortal(
+  const content = (
     <div
-      className="satze-hide-scrollbar"
+      className="satze-hide-scrollbar deck-manager-list-root"
       style={{
-        position: 'fixed',
+        position: renderInPortal ? 'fixed' : 'absolute',
         inset: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 9999,
+        width: '100%',
+        height: '100%',
+        zIndex: renderInPortal ? 9999 : 1,
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(180deg, #0a0e1a 0%, #1a0f3a 50%, #0a0e1a 100%)',
@@ -60,7 +60,7 @@ export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
                     key={deckId}
                     accentColor={accentColor}
                     onClick={() => onEditDeck(deckId)}
-                    className="relative"
+                    className="relative cosmic-dm-card cosmic-dm-edit"
                   >
                     <div className="font-bold text-white mb-1">{deck.name}</div>
                     {deck.description && <p className="text-slate-400 text-xs mb-2">{deck.description}</p>}
@@ -101,6 +101,7 @@ export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
                   key={deck.id}
                   type="button"
                   onClick={() => setPreviewDeck({ ...deck, deckCards, totalLeague })}
+                  className="cosmic-dm-card cosmic-dm-preview"
                   style={{
                     position: 'relative',
                     textAlign: 'left',
@@ -130,13 +131,15 @@ export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
           </div>
         </div>
 
-        <MenuCard accentColor="#FFB347" onClick={onCreateNew} className="w-full max-w-4xl">
+        <MenuCard accentColor="#FFB347" onClick={onCreateNew} className="w-full max-w-4xl cosmic-dm-card cosmic-dm-create">
           <span className="text-lg font-bold" style={{ color: '#FFB347' }}>
             + Crea Nuovo Esercito
           </span>
         </MenuCard>
 
-        <MenuBackButton onClick={onClose}>Chiudi</MenuBackButton>
+        <div className="cosmic-dm-footer">
+          <MenuBackButton onClick={onClose}>Chiudi</MenuBackButton>
+        </div>
 
         {previewDeck && (
           <div
@@ -210,7 +213,7 @@ export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose }) {
           </div>
         )}
       </MenuScreenLayout>
-    </div>,
-    document.body
+    </div>
   );
+  return renderInPortal ? createPortal(content, document.body) : content;
 }

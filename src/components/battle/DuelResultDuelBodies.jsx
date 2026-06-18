@@ -7,7 +7,7 @@ import React from 'react';
 import { GameCard } from '../cards/GameCard';
 import { Icon } from '../ui/Icon';
 import { computePhase3DurationMs } from '../../config/duelVisualTimeline.js';
-import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
+import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from '../../config/duelVisualConfig.js';
 import { ARMY_BONUSES } from '../../data/armies.js';
 
 /** Armata con bonus in dati ma regola mazzo non soddisfatta (non trigger, non copia, non blocco). */
@@ -52,10 +52,10 @@ function bonusHighlightForDuelPhase(duelPhase, hasBonus, bonusBlocked, bonusDef)
 }
 
 /** Particelle VA: offset fissi da seed per evitare salti a ogni render (es. VFX Lab). */
-function vaParticleOffsets(seed) {
+function vaParticleOffsets(seed, count = 8) {
   const out = [];
   let s = seed >>> 0;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < count; i++) {
     s = (s * 1103515245 + 12345) >>> 0;
     const x = ((s % 200) - 100) / 100 * 50;
     s = (s * 1103515245 + 12345) >>> 0;
@@ -63,6 +63,57 @@ function vaParticleOffsets(seed) {
     out.push({ x, y });
   }
   return out;
+}
+
+const DEFAULT_DYNAMIC_CLASH = { clashSpeed: 1, intensity: 1, gap: 0, totalFc: 0 };
+const CLASH_START_OFFSET_PX = 64;
+
+function getDuelClashKey(battleResult) {
+  if (!battleResult) return 'none';
+  return [
+    battleResult.playerAssault ?? 0,
+    battleResult.enemyAssault ?? 0,
+    battleResult.playerFocusUsed ?? 0,
+    battleResult.enemyFocusUsed ?? 0,
+    battleResult.winner ?? 'draw',
+  ].join('|');
+}
+
+/**
+ * Congela i valori dinamici del clash quando il duello entra in fase 4.
+ * Evita ricalcoli ad ogni render durante la stessa animazione.
+ */
+function useClashDynamicSnapshot(battleResult, duelPhase) {
+  const snapshotRef = React.useRef({ key: 'none', value: DEFAULT_DYNAMIC_CLASH });
+  if (duelPhase >= 4 && battleResult) {
+    const key = getDuelClashKey(battleResult);
+    if (snapshotRef.current.key !== key) {
+      snapshotRef.current = { key, value: computeDynamicClashVfx(battleResult) };
+    }
+  }
+  return snapshotRef.current.value;
+}
+
+function normalizeClashDyn(dyn) {
+  const clashSpeed = Number.isFinite(dyn?.clashSpeed) && dyn.clashSpeed > 0 ? dyn.clashSpeed : 1;
+  const intensity = Number.isFinite(dyn?.intensity) && dyn.intensity > 0 ? dyn.intensity : 1;
+  return { clashSpeed, intensity };
+}
+
+function useClashSequenceWindow(duelPhase, clashSpeed) {
+  const [active, setActive] = React.useState(false);
+  const prevPhaseRef = React.useRef(duelPhase);
+  React.useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = duelPhase;
+    const entered = prev < 4 && duelPhase >= 4;
+    if (!entered) return undefined;
+    setActive(true);
+    const holdMs = Math.max(1200, Math.round(1600 / Math.max(0.1, clashSpeed)));
+    const id = setTimeout(() => setActive(false), holdMs);
+    return () => clearTimeout(id);
+  }, [duelPhase, clashSpeed]);
+  return active;
 }
 
 /** Dati VA per animazione fase 3 (con fallback se mancano campi su battleResult legacy). */
@@ -152,6 +203,85 @@ function DuelVaPhase2LiveBlock({ power, focusUsed, coinsShown }) {
   );
 }
 
+function toSoftFill(mainColor, alpha = 0.2) {
+  if (typeof mainColor !== 'string') return `rgba(234, 179, 8, ${alpha})`;
+  if (mainColor.startsWith('rgba(')) {
+    return mainColor.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+  }
+  if (mainColor.startsWith('rgb(')) {
+    return mainColor.replace('rgb(', 'rgba(').replace(')', `,${alpha})`);
+  }
+  return mainColor;
+}
+
+function useGlobalOrbitClock(active) {
+  const [sec, setSec] = React.useState(0);
+  React.useEffect(() => {
+    if (!active) return undefined;
+    let raf = 0;
+    const tick = (ts) => {
+      setSec(ts / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active]);
+  return sec;
+}
+
+function FocusCoinOrbitCountRing({
+  duelPhase,
+  focusUsed,
+  coinsShown,
+  cardGlow,
+  getFocusCoinGlowColor,
+  armyName,
+  direction = 1,
+}) {
+  const isActive = duelPhase >= 2 && duelPhase < 4 && focusUsed > 0;
+  const timeSec = useGlobalOrbitClock(isActive);
+  if (!isActive) return null;
+  const shown = Math.max(0, Math.min(focusUsed, coinsShown));
+  if (shown <= 0) return null;
+  const glowColor = getFocusCoinGlowColor(focusUsed, cardGlow);
+  const radius = 240;
+  const spinSpeed = (1.4 + focusUsed * 0.22) * direction;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-20">
+      {Array.from({ length: focusUsed }).map((_, index) => {
+        const isVisible = index < shown;
+        if (!isVisible) return null;
+        const slot = index / Math.max(1, focusUsed);
+        const angle = -Math.PI / 2 + slot * Math.PI * 2 + timeSec * spinSpeed;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        return (
+          <div
+            key={`phase2-ring-${index}`}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+              border: `1px solid ${glowColor?.main || 'rgba(234, 179, 8, 0.5)'}`,
+              backgroundColor: toSoftFill(glowColor?.main, 0.2),
+              boxShadow: `0 0 10px ${glowColor?.main || 'rgba(234, 179, 8, 0.8)'}`,
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            {armyName ? <Icon name={armyName} type="army" size={24} /> : <Icon name="coin" type="cardIcon" size={24} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function useVaPhase3LineReveal(duelPhase, phaseMs3, lineCount, duelStamp) {
   const [visible, setVisible] = React.useState(0);
   React.useEffect(() => {
@@ -209,7 +339,6 @@ export function DuelResultEnemyResultBody({
   battleResult,
   duelPhase,
   duelVfx,
-  showClashAnimation,
   enemyFocusCoinsShown,
   enemyCardGlow,
   getFocusCoinGlowColor,
@@ -218,58 +347,25 @@ export function DuelResultEnemyResultBody({
   onCardHover,
   particleSeed = 1,
 }) {
-  const particles = React.useMemo(() => vaParticleOffsets(particleSeed), [particleSeed]);
+  const dyn = normalizeClashDyn(useClashDynamicSnapshot(battleResult, duelPhase));
+  const clashMs = Math.round(1400 / Math.max(0.1, dyn.clashSpeed));
+  const victoryMs = Math.round(1500 / Math.max(0.1, dyn.clashSpeed));
+  const particlesMs = Math.round(1000 / Math.max(0.1, dyn.clashSpeed));
+  const clashSequenceActive = useClashSequenceWindow(duelPhase, dyn.clashSpeed);
+  const particleCount = Math.max(1, Math.round(8 * dyn.intensity));
+  const particles = React.useMemo(
+    () => vaParticleOffsets(particleSeed, particleCount),
+    [particleSeed, particleCount]
+  );
 
   return (
     <div className="relative w-full h-full flex flex-col items-center">
       <div className="relative flex items-center">
-        {battleResult.enemyFocusUsed > 0 && (
-          <div className="absolute -left-20 top-1/2 -translate-y-1/2 z-10">
-            <div className="flex flex-col items-center gap-1.5" style={{ width: '48px' }}>
-              {Array.from({ length: battleResult.enemyFocusUsed }).map((_, index) => {
-                const isVisible =
-                  enemyFocusCoinsShown > index || enemyFocusCoinsShown >= battleResult.enemyFocusUsed;
-                const coinIntensity = enemyCardGlow;
-                const glowColor = getFocusCoinGlowColor(battleResult.enemyFocusUsed, coinIntensity);
-                return (
-                  <div
-                    key={index}
-                    className={`${isVisible && duelPhase === 2 ? 'animate-focus-coin' : ''} rounded-full border flex items-center justify-center`}
-                    style={{
-                      animationDelay:
-                        isVisible && duelPhase === 2 ? `${index * duelVfx.focusCoinStepMs}ms` : '0ms',
-                      width: '40px',
-                      height: '40px',
-                      opacity: isVisible ? 1 : 0,
-                      backgroundColor: glowColor
-                        ? `${glowColor.main.replace('1)', '0.2)')}`
-                        : 'rgba(234, 179, 8, 0.2)',
-                      borderColor: glowColor ? glowColor.main : 'rgba(234, 179, 8, 0.5)',
-                      transition: 'background-color 0.5s ease-out, border-color 0.5s ease-out, opacity 0.3s ease-out',
-                    }}
-                  >
-                    {battleResult.enemyAgent?.army ? (
-                      <Icon name={battleResult.enemyAgent.army} type="army" size={24} />
-                    ) : (
-                      <Icon name="coin" type="cardIcon" size={24} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <div
-          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-left' : 'opacity-0'} ${
-            showClashAnimation && battleResult
-              ? battleResult.winner === 'enemy'
-                ? 'animate-clash-winner-left'
-                : 'animate-clash-loser-left'
-              : ''
-          }`}
+          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-left' : 'opacity-0'}`}
           style={{
             marginTop: '0',
+            left: `${-CLASH_START_OFFSET_PX}px`,
             ...(duelPhase >= 2 && battleResult && enemyCardGlow > 0
               ? (() => {
                   const glowColor = getFocusCoinGlowColor(battleResult.enemyFocusUsed, enemyCardGlow);
@@ -333,10 +429,19 @@ export function DuelResultEnemyResultBody({
             bonusNotTriggered={battleResult.enemyBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
           />
+          <FocusCoinOrbitCountRing
+            duelPhase={duelPhase}
+            focusUsed={battleResult.enemyFocusUsed}
+            coinsShown={enemyFocusCoinsShown}
+            cardGlow={enemyCardGlow}
+            getFocusCoinGlowColor={getFocusCoinGlowColor}
+            armyName={battleResult.enemyAgent?.army}
+            direction={1}
+          />
         </div>
       </div>
 
-      <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px' }}>
+      <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px', transform: `translateX(${-CLASH_START_OFFSET_PX}px)` }}>
         {duelPhase === 2 && battleResult && (
           <DuelVaPhase2LiveBlock
             power={battleResult.enemyPower}
@@ -359,7 +464,7 @@ export function DuelResultEnemyResultBody({
             }`}
             data-clash-container
           >
-            {duelPhase === 4 && battleResult.winner === 'enemy' && (
+            {clashSequenceActive && battleResult.winner === 'enemy' && (
               <div className="absolute inset-0 pointer-events-none">
                 {particles.map((off, i) => (
                   <div
@@ -372,6 +477,8 @@ export function DuelResultEnemyResultBody({
                       '--particle-x': `${off.x}px`,
                       '--particle-y': `${off.y}px`,
                       animationDelay: `${i * 0.1}s`,
+                      animationDuration: `${particlesMs}ms`,
+                      transform: `scale(${Math.min(1.9, 0.8 + dyn.intensity * 0.45)})`,
                     }}
                   />
                 ))}
@@ -380,20 +487,29 @@ export function DuelResultEnemyResultBody({
             <div className="text-amber-400/95 text-sm font-bold uppercase tracking-widest mb-2">Valore Assalto</div>
             <div
               className={`text-4xl font-black value-transition satze-va-number ${
-                battleResult.winner === 'enemy' ? 'animate-victory-explosion' : 'text-slate-500'
-              } ${duelPhase === 4 ? 'animate-clash' : ''}`}
+                battleResult.winner === 'enemy' ? '' : 'text-slate-500'
+              } ${clashSequenceActive ? 'animate-clash' : ''}`}
               style={{
+                animationDuration: clashSequenceActive ? `${clashMs}ms` : undefined,
                 ...(battleResult.winner === 'enemy' ? { color: '#4FD1C5' } : {}),
-                ...(duelPhase === 4 && battleResult.winner === 'enemy'
+                ...(clashSequenceActive && battleResult.winner === 'enemy'
                   ? {
                       textShadow:
-                        '1px 1px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.95), 1px -1px 0 rgba(0,0,0,0.95), -1px 1px 0 rgba(0,0,0,0.95), 0 0 25px rgba(79, 209, 197, 0.9), 0 0 15px rgba(255, 179, 71, 0.5)',
+                        `1px 1px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.95), 1px -1px 0 rgba(0,0,0,0.95), -1px 1px 0 rgba(0,0,0,0.95), 0 0 ${25 * dyn.intensity}px rgba(79, 209, 197, 0.9), 0 0 ${15 * dyn.intensity}px rgba(255, 179, 71, 0.5)`,
                       filter: 'brightness(1.2)',
                     }
                   : {}),
               }}
             >
-              {battleResult.enemyAssault}
+              <span
+                className={clashSequenceActive && battleResult.winner === 'enemy' ? 'inline-block animate-victory-explosion' : 'inline-block'}
+                style={{
+                  animationDuration:
+                    clashSequenceActive && battleResult.winner === 'enemy' ? `${victoryMs}ms` : undefined,
+                }}
+              >
+                {battleResult.enemyAssault}
+              </span>
             </div>
             <DuelWinnerDamageUnderVa battleResult={battleResult} duelPhase={duelPhase} winnerSide="enemy" />
           </div>
@@ -407,7 +523,6 @@ export function DuelResultPlayerResultBody({
   battleResult,
   duelPhase,
   duelVfx,
-  showClashAnimation,
   playerFocusCoinsShown,
   playerCardGlow,
   getFocusCoinGlowColor,
@@ -416,21 +531,25 @@ export function DuelResultPlayerResultBody({
   onCardHover,
   particleSeed = 2,
 }) {
-  const particles = React.useMemo(() => vaParticleOffsets(particleSeed), [particleSeed]);
+  const dyn = normalizeClashDyn(useClashDynamicSnapshot(battleResult, duelPhase));
+  const clashMs = Math.round(1400 / Math.max(0.1, dyn.clashSpeed));
+  const victoryMs = Math.round(1500 / Math.max(0.1, dyn.clashSpeed));
+  const particlesMs = Math.round(1000 / Math.max(0.1, dyn.clashSpeed));
+  const clashSequenceActive = useClashSequenceWindow(duelPhase, dyn.clashSpeed);
+  const particleCount = Math.max(1, Math.round(8 * dyn.intensity));
+  const particles = React.useMemo(
+    () => vaParticleOffsets(particleSeed, particleCount),
+    [particleSeed, particleCount]
+  );
 
   return (
     <div className="relative w-full h-full flex flex-col items-center pointer-events-auto">
       <div className="relative flex items-center">
         <div
-          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-right' : 'opacity-0'} ${
-            showClashAnimation && battleResult
-              ? battleResult.winner === 'player'
-                ? 'animate-clash-winner-right'
-                : 'animate-clash-loser-right'
-              : ''
-          }`}
+          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-right' : 'opacity-0'}`}
           style={{
             marginTop: '0',
+            left: `${CLASH_START_OFFSET_PX}px`,
             ...(duelPhase >= 2 && battleResult && playerCardGlow > 0
               ? (() => {
                   const glowColor = getFocusCoinGlowColor(battleResult.playerFocusUsed, playerCardGlow);
@@ -494,47 +613,19 @@ export function DuelResultPlayerResultBody({
             bonusNotTriggered={battleResult.playerBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}
           />
+          <FocusCoinOrbitCountRing
+            duelPhase={duelPhase}
+            focusUsed={battleResult.playerFocusUsed}
+            coinsShown={playerFocusCoinsShown}
+            cardGlow={playerCardGlow}
+            getFocusCoinGlowColor={getFocusCoinGlowColor}
+            armyName={battleResult.playerAgent?.army}
+            direction={-1}
+          />
         </div>
-
-        {battleResult.playerFocusUsed > 0 && (
-          <div className="absolute -right-20 top-1/2 -translate-y-1/2 z-10">
-            <div className="flex flex-col items-center gap-1.5" style={{ width: '48px' }}>
-              {Array.from({ length: battleResult.playerFocusUsed }).map((_, index) => {
-                const isVisible =
-                  playerFocusCoinsShown > index || playerFocusCoinsShown >= battleResult.playerFocusUsed;
-                const coinIntensity = playerCardGlow;
-                const glowColor = getFocusCoinGlowColor(battleResult.playerFocusUsed, coinIntensity);
-                return (
-                  <div
-                    key={index}
-                    className={`${isVisible && duelPhase === 2 ? 'animate-focus-coin' : ''} rounded-full border flex items-center justify-center`}
-                    style={{
-                      animationDelay:
-                        isVisible && duelPhase === 2 ? `${index * duelVfx.focusCoinStepMs}ms` : '0ms',
-                      width: '40px',
-                      height: '40px',
-                      opacity: isVisible ? 1 : 0,
-                      backgroundColor: glowColor
-                        ? `${glowColor.main.replace('1)', '0.2)')}`
-                        : 'rgba(234, 179, 8, 0.2)',
-                      borderColor: glowColor ? glowColor.main : 'rgba(234, 179, 8, 0.5)',
-                      transition: 'background-color 0.5s ease-out, border-color 0.5s ease-out, opacity 0.3s ease-out',
-                    }}
-                  >
-                    {battleResult.playerAgent?.army ? (
-                      <Icon name={battleResult.playerAgent.army} type="army" size={24} />
-                    ) : (
-                      <Icon name="coin" type="cardIcon" size={24} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px' }}>
+      <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px', transform: `translateX(${CLASH_START_OFFSET_PX}px)` }}>
         {duelPhase === 2 && battleResult && (
           <DuelVaPhase2LiveBlock
             power={battleResult.playerPower}
@@ -557,7 +648,7 @@ export function DuelResultPlayerResultBody({
             }`}
             data-clash-container
           >
-            {duelPhase === 4 && battleResult.winner === 'player' && (
+            {clashSequenceActive && battleResult.winner === 'player' && (
               <div className="absolute inset-0 pointer-events-none">
                 {particles.map((off, i) => (
                   <div
@@ -570,6 +661,8 @@ export function DuelResultPlayerResultBody({
                       '--particle-x': `${off.x}px`,
                       '--particle-y': `${off.y}px`,
                       animationDelay: `${i * 0.1}s`,
+                      animationDuration: `${particlesMs}ms`,
+                      transform: `scale(${Math.min(1.9, 0.8 + dyn.intensity * 0.45)})`,
                     }}
                   />
                 ))}
@@ -578,20 +671,29 @@ export function DuelResultPlayerResultBody({
             <div className="text-amber-400/95 text-sm font-bold uppercase tracking-widest mb-2">Valore Assalto</div>
             <div
               className={`text-4xl font-black value-transition satze-va-number ${
-                battleResult.winner === 'player' ? 'animate-victory-explosion' : 'text-slate-500'
-              } ${duelPhase === 4 ? 'animate-clash' : ''}`}
+                battleResult.winner === 'player' ? '' : 'text-slate-500'
+              } ${clashSequenceActive ? 'animate-clash' : ''}`}
               style={{
+                animationDuration: clashSequenceActive ? `${clashMs}ms` : undefined,
                 ...(battleResult.winner === 'player' ? { color: '#4FD1C5' } : {}),
-                ...(duelPhase === 4 && battleResult.winner === 'player'
+                ...(clashSequenceActive && battleResult.winner === 'player'
                   ? {
                       textShadow:
-                        '1px 1px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.95), 1px -1px 0 rgba(0,0,0,0.95), -1px 1px 0 rgba(0,0,0,0.95), 0 0 25px rgba(79, 209, 197, 0.9), 0 0 15px rgba(255, 179, 71, 0.5)',
+                        `1px 1px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.95), 1px -1px 0 rgba(0,0,0,0.95), -1px 1px 0 rgba(0,0,0,0.95), 0 0 ${25 * dyn.intensity}px rgba(79, 209, 197, 0.9), 0 0 ${15 * dyn.intensity}px rgba(255, 179, 71, 0.5)`,
                       filter: 'brightness(1.2)',
                     }
                   : {}),
               }}
             >
-              {battleResult.playerAssault}
+              <span
+                className={clashSequenceActive && battleResult.winner === 'player' ? 'inline-block animate-victory-explosion' : 'inline-block'}
+                style={{
+                  animationDuration:
+                    clashSequenceActive && battleResult.winner === 'player' ? `${victoryMs}ms` : undefined,
+                }}
+              >
+                {battleResult.playerAssault}
+              </span>
             </div>
             <DuelWinnerDamageUnderVa battleResult={battleResult} duelPhase={duelPhase} winnerSide="player" />
           </div>
