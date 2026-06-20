@@ -628,6 +628,7 @@ export function CardReworkP4({
   bonusNotTriggered = false,
   bonusBaseInactive = false,
   abilityCurrentValue = null,
+  suppressAnimations = false,
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
@@ -808,7 +809,7 @@ export function CardReworkP4({
               <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em', color: CARD_LABEL_MUTED }}>POT</span>
               <span
                 className={
-                  showOperators && powerDiff !== 0
+                  showOperators && powerDiff !== 0 && !suppressAnimations
                     ? powerDiff > 0
                       ? 'animate-number-increase'
                       : 'animate-number-decrease'
@@ -828,7 +829,7 @@ export function CardReworkP4({
               <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em', color: CARD_LABEL_MUTED }}>DAN</span>
               <span
                 className={
-                  showOperators && damageDiff !== 0
+                  showOperators && damageDiff !== 0 && !suppressAnimations
                     ? damageDiff > 0
                       ? 'animate-number-increase'
                       : 'animate-number-decrease'
@@ -851,13 +852,13 @@ export function CardReworkP4({
             abilityBlocked ? 'opacity-60' : ''
           } ${
             copiedAbility
-              ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel'
+              ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-copy-panel'}`
               : abilityBlocked
-                ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu animate-modifier-highlight-panel'
+                ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
                 : abilityNotTriggered
                   ? P4_FOOTER_INACTIVE_PANEL
                   : highlightAbility
-                    ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-orange-950/40 via-orange-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(251,146,60,0.09)] origin-bottom transform-gpu animate-modifier-highlight-panel'
+                    ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-orange-950/40 via-orange-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(251,146,60,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
                     : 'rounded px-1.5 py-1'
           }`}
         >
@@ -940,13 +941,13 @@ export function CardReworkP4({
         <div
           className={`relative transition-[opacity,background-color,box-shadow] duration-300 border-t border-transparent ${
             copiedBonus
-              ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel-stagger'
+              ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-copy-panel-stagger'}`
               : bonusBlocked
-                ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu animate-modifier-highlight-panel-stagger'
+                ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
                 : bonusNotTriggered || bonusBaseInactive
                   ? P4_FOOTER_INACTIVE_PANEL
                   : highlightBonus && !copiedBonus
-                    ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-sky-950/40 via-sky-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(56,189,248,0.09)] origin-bottom transform-gpu animate-modifier-highlight-panel-stagger'
+                    ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-sky-950/40 via-sky-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(56,189,248,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
                     : showBonus && !bonusBlocked
                       ? 'rounded px-1.5 py-1 bg-sky-500/8'
                       : 'rounded px-1.5 py-1'

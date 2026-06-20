@@ -30,6 +30,7 @@ export function GameCard({ agent, ...rest }) {
     bonusNotTriggered = false,
     bonusBaseInactive = false,
     abilityCurrentValue = null,
+    suppressAnimations = false,
   } = rest;
 
   const isUsed = usedCards.includes(agent?.id);
@@ -83,6 +84,7 @@ export function GameCard({ agent, ...rest }) {
           bonusNotTriggered={bonusNotTriggered}
           bonusBaseInactive={bonusBaseInactive}
           abilityCurrentValue={abilityCurrentValue}
+          suppressAnimations={suppressAnimations}
         />
       </div>
     </div>

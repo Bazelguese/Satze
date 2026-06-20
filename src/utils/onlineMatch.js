@@ -1,5 +1,5 @@
 import { ARMY_SETS } from '../data';
-import { pickBattlefieldsWithShuffle } from '../game/fieldLogic';
+import { selectBattlefields } from '../game/fieldLogic';
 import { countArmies } from './cardUtils';
 import { mulberry32, shuffleArraySeeded } from './seededRandom';
 import { resolveDeckCardsForArmy } from './deckResolve';
@@ -20,9 +20,7 @@ export function buildOnlineMatchPayload(hostArmy, hostDeckKey, guestArmy, guestD
   const hostPlayerHand = hostShuffled.slice(0, 5).map((c) => ({ ...c, army: c.army || hostArmy }));
   const guestAsEnemyHand = guestShuffled.slice(0, 5).map((c) => ({ ...c, army: c.army || guestArmy }));
 
-  const battlefields = pickBattlefieldsWithShuffle(mode, allBattlefields, (arr) =>
-    shuffleArraySeeded(arr, rng)
-  );
+  const battlefields = selectBattlefields(mode, allBattlefields, { rng });
 
   const playerLeague = hostPlayerHand.reduce((s, c) => s + c.league, 0);
   const enemyLeague = guestAsEnemyHand.reduce((s, c) => s + c.league, 0);

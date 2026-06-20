@@ -3,6 +3,7 @@
 // ============================================
 
 import { ARMY_SETS, ARMY_DECKS, ALL_BATTLEFIELDS } from '../data';
+import { selectBattlefields } from '../game/fieldLogic';
 
 /**
  * Genera un avversario casuale per la modalità roguelike
@@ -32,10 +33,8 @@ export function generateRoguelikeEnemy(level) {
 /**
  * Genera campi di battaglia casuali per roguelike
  */
-export function generateRoguelikeBattlefields(level) {
-  // Usa tutti i campi disponibili
-  const shuffled = [...ALL_BATTLEFIELDS].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 5); // 5 campi come nella modalità classica
+export function generateRoguelikeBattlefields(_level) {
+  return selectBattlefields('classic', ALL_BATTLEFIELDS);
 }
 
 /**

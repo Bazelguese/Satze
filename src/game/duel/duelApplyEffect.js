@@ -1,4 +1,8 @@
 import { TRIGGER_NAMES } from '../../data/triggers.js';
+import {
+  applyCopiedBonusEffectsIfReady,
+  registerCopiedBonus,
+} from './duelCopyBonus.js';
 
 export function applyDuelPowerEffect(effect, value, target, source, log, options = {}, state, ctx) {
   const {
@@ -13,7 +17,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
   
   // Specchio dell'Anima: annulla modificatori POT/DAN
   if (modDisabled && ['power', 'damage', 'enemyPower', 'enemyDamage', 'enemyPowerAndDamage', 'powerAndDamage', 'imponiPower', 'imponiDamage'].includes(effect)) {
-    log.push(`🐛¡️ ${source}: BLOCCATO da Specchio dell'Anima`);
+    log.push(`🐛¡️ ${source}: BLOCCATO da Radura dell'Anima`);
     return;
   }
   
@@ -275,33 +279,32 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         log.push(`🐛¡️ Fossa dei Traditori: Copia Bonus BLOCCATA`);
         break;
       }
-      // Copia il bonus armata dell'avversario (incluso il trigger)
-      const enemyBonusToCopy = target === 'player' ? ctx.eArmyBonus : ctx.pArmyBonus;
-      const enemyHasBonusActive = target === 'player' ? ctx.eHasBonus : ctx.pHasBonus;
-      if (enemyHasBonusActive && enemyBonusToCopy && enemyBonusToCopy.effects) {
-        // Verifica se il trigger del bonus copiato è soddisfatto
-        const copiedTrigger = enemyBonusToCopy.trigger;
-        const triggerSatisfied = copiedTrigger ? ctx.checkTrigger(copiedTrigger, target === 'player' ? ctx.playerContext : ctx.enemyContext) : true;
-        
-        if (triggerSatisfied) {
+      {
+        const enemyBonusToCopy = target === 'player' ? ctx.eArmyBonus : ctx.pArmyBonus;
+        const enemyHasBonusActive = target === 'player' ? ctx.eHasBonus : ctx.pHasBonus;
+        const copyContext = target === 'player' ? ctx.playerContext : ctx.enemyContext;
+        if (enemyHasBonusActive && enemyBonusToCopy?.effects) {
           log.push(`🔮 ${source}: ${targetName} copia Bonus nem. (${enemyBonusToCopy.description})`);
-          // Traccia il bonus copiato
-          if (target === 'player') {
-            state.pBonusCopied = enemyBonusToCopy;
-          } else {
-            state.eBonusCopied = enemyBonusToCopy;
-          }
-          enemyBonusToCopy.effects.forEach(eff => {
-            if (eff.effect !== 'copyBonus') { // Evita ricorsione infinita
-              applyDuelPowerEffect(eff.effect, eff.value, target, source + " (copiato)", log, { minDamage: eff.minDamage, minPower: eff.minPower, minAssault: eff.minAssault, minHealth: eff.minHealth }, state, ctx);
-            }
-          });
+          registerCopiedBonus(state, target, enemyBonusToCopy);
+          applyCopiedBonusEffectsIfReady(
+            enemyBonusToCopy,
+            target,
+            copyContext,
+            source,
+            log,
+            (eff, val, tgt, src, lg, opt) =>
+              applyDuelPowerEffect(eff, val, tgt, src, lg, opt, state, ctx),
+            {
+              copyDisabled,
+              modifiersDisabled: modDisabled,
+              directDamageDisabled,
+              directDamageBonus,
+            },
+            ctx.checkTrigger
+          );
         } else {
-          const triggerName = TRIGGER_NAMES[copiedTrigger] || copiedTrigger;
-          log.push(`⚠️ ${source}: Copia Bonus (${triggerName} non attivo)`);
+          log.push(`⚠️ ${source}: Copia Bonus (nessun bonus attivo)`);
         }
-      } else {
-        log.push(`⚠️ ${source}: Copia Bonus (nessun bonus attivo)`);
       }
       break;
     case 'blockAbility':

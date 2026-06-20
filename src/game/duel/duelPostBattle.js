@@ -1,4 +1,7 @@
 // Ultimo desiderio / Conquista: poteri e bonus post-esito VA.
+import { isPostBattleTrigger } from '../triggerLogic.js';
+import { scaleConquestEffectValue } from '../battlefieldDeepEffects.js';
+
 export function applyDuelPostBattleEffects({
   pAbilityBlocked,
   eAbilityBlocked,
@@ -17,11 +20,30 @@ export function applyDuelPostBattleEffects({
   playerContextPost,
   enemyContextPost,
   battleLog,
+  state,
 }) {
   let pPostAbilityTriggered = false;
   let ePostAbilityTriggered = false;
   let pPostBonusTriggered = false;
   let ePostBonusTriggered = false;
+
+  const applyPostAbility = (agent, target, source, contextPost) => {
+    const opts = {
+      minDamage: agent.ability.minDamage,
+      minPower: agent.ability.minPower,
+      minAssault: agent.ability.minAssault,
+      minHealth: agent.ability.minHealth,
+      ...fieldOptions,
+    };
+    const value =
+      agent.ability.trigger === 'conquest'
+        ? scaleConquestEffectValue(agent.ability.value, fieldOptions)
+        : agent.ability.value;
+    applyEffect(agent.ability.effect, value, target, source, battleLog, opts);
+    if (agent.ability.trigger === 'lastWish' && fieldOptions?.lastWishDouble) {
+      applyEffect(agent.ability.effect, value, target, `${source} (2×)`, battleLog, opts);
+    }
+  };
 
   if (
     !pAbilityBlocked &&
@@ -30,13 +52,7 @@ export function applyDuelPostBattleEffects({
     (pAgent.ability.trigger === 'lastWish' || pAgent.ability.trigger === 'conquest')
   ) {
     pPostAbilityTriggered = true;
-    applyEffect(pAgent.ability.effect, pAgent.ability.value, 'player', 'Tuo Potere (post)', battleLog, {
-      minDamage: pAgent.ability.minDamage,
-      minPower: pAgent.ability.minPower,
-      minAssault: pAgent.ability.minAssault,
-      minHealth: pAgent.ability.minHealth,
-      ...fieldOptions,
-    });
+    applyPostAbility(pAgent, 'player', 'Tuo Potere (post)', playerContextPost);
   }
   if (
     !eAbilityBlocked &&
@@ -45,20 +61,14 @@ export function applyDuelPostBattleEffects({
     (eAgent.ability.trigger === 'lastWish' || eAgent.ability.trigger === 'conquest')
   ) {
     ePostAbilityTriggered = true;
-    applyEffect(eAgent.ability.effect, eAgent.ability.value, 'enemy', 'Potere IA (post)', battleLog, {
-      minDamage: eAgent.ability.minDamage,
-      minPower: eAgent.ability.minPower,
-      minAssault: eAgent.ability.minAssault,
-      minHealth: eAgent.ability.minHealth,
-      ...fieldOptions,
-    });
+    applyPostAbility(eAgent, 'enemy', 'Potere IA (post)', enemyContextPost);
   }
 
   if (
     pHasBonus &&
     !pBonusBlocked &&
     pArmyBonus &&
-    (pArmyBonus.trigger === 'lastWish' || pArmyBonus.trigger === 'conquest')
+    isPostBattleTrigger(pArmyBonus.trigger)
   ) {
     if (checkTrigger(pArmyBonus.trigger, playerContextPost)) {
       pPostBonusTriggered = true;
@@ -69,11 +79,43 @@ export function applyDuelPostBattleEffects({
     eHasBonus &&
     !eBonusBlocked &&
     eArmyBonus &&
-    (eArmyBonus.trigger === 'lastWish' || eArmyBonus.trigger === 'conquest')
+    isPostBattleTrigger(eArmyBonus.trigger)
   ) {
     if (checkTrigger(eArmyBonus.trigger, enemyContextPost)) {
       ePostBonusTriggered = true;
       applyBonusEffects(eArmyBonus, 'enemy', enemyContextPost, `Bonus ${eAgent.army} (post)`, battleLog);
+    }
+  }
+
+  const resolveCopiedPostBonus = (copiedBonus, target, contextPost, label) => {
+    if (!copiedBonus || !isPostBattleTrigger(copiedBonus.trigger)) return false;
+    if (!checkTrigger(copiedBonus.trigger, contextPost)) return false;
+    applyBonusEffects(copiedBonus, target, contextPost, label, battleLog);
+    return true;
+  };
+
+  if (!pBonusBlocked && state?.pBonusCopied) {
+    if (
+      resolveCopiedPostBonus(
+        state.pBonusCopied,
+        'player',
+        playerContextPost,
+        `Bonus copiato ${pAgent.army} (post)`
+      )
+    ) {
+      pPostBonusTriggered = true;
+    }
+  }
+  if (!eBonusBlocked && state?.eBonusCopied) {
+    if (
+      resolveCopiedPostBonus(
+        state.eBonusCopied,
+        'enemy',
+        enemyContextPost,
+        `Bonus copiato ${eAgent.army} (post)`
+      )
+    ) {
+      ePostBonusTriggered = true;
     }
   }
 

@@ -53,6 +53,11 @@ export function BattlefieldGallery() {
           >
             <p className="text-fuchsia-400 font-bold text-sm">{selectedField.name}</p>
             <p className="text-slate-400 text-xs">{selectedField.effect}</p>
+            {selectedField.rarita && (
+              <p className="text-slate-500 text-[10px] mt-1">
+                {selectedField.rarita} · {selectedField.tema} · turno {selectedField.minTurn}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -98,7 +103,10 @@ export function BattlefieldGallery() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-white font-bold text-base mb-0.5 drop-shadow-md truncate">{field.name}</h3>
-                  <p className="text-amber-300 text-xs mb-2 drop-shadow-sm">{field.effect}</p>
+                  <p className="text-amber-300 text-xs mb-1 drop-shadow-sm">{field.effect}</p>
+                  {field.rarita && (
+                    <p className="text-slate-500 text-[10px] mb-1">{field.rarita} · {field.tema}</p>
+                  )}
                   {field.flavour && (
                     <p className="text-slate-300 text-[10px] italic line-clamp-2">"{field.flavour}"</p>
                   )}

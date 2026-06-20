@@ -333,31 +333,8 @@ function VaTag({ x, value, winner, t, motion }) {
   );
 }
 
-function VariantBadge({ text, color = '#38bdf8' }) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 16,
-        left: 16,
-        zIndex: 150,
-        fontFamily: 'Share Tech Mono',
-        fontSize: 10,
-        letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color,
-        border: `1px solid ${color}`,
-        padding: '4px 8px',
-        background: 'rgba(5,6,8,0.7)',
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
-const PLAYER_CLASH_ANCHOR = 'calc(50% + 330px)';
-const ENEMY_CLASH_ANCHOR = 'calc(50% - 330px)';
+const getPlayerClashAnchor = (isZoomed) => `calc(50% + ${isZoomed ? 330 : 260}px)`;
+const getEnemyClashAnchor = (isZoomed) => `calc(50% - ${isZoomed ? 330 : 260}px)`;
 
 function AgentOrbitSparks({ t, color, x, y, zIndex = 128 }) {
   return (
@@ -619,7 +596,7 @@ function FocusCoinOrbitCollapseFx({
         // Stable slot per coin: no angular jitter during accumulation.
         const slot = i / Math.max(1, count);
         const direction = side === 'right' ? -1 : 1;
-        const angle = (orbitSec * orbitSpeed * direction + slot * Math.PI * 2) * (1 + collapse * 0.35);
+        const angle = (-Math.PI / 2 + orbitSec * orbitSpeed * direction + slot * Math.PI * 2) * (1 + collapse * 0.35);
         // Strictly uniform ring during buildup: same radius for all coins.
         const ringBreath = 1 + Math.sin(t * 4) * 0.025;
         const orbitRadius = 240 * ringBreath * (1 - collapse) + 2;
@@ -665,7 +642,7 @@ function FocusCoinOrbitCollapseFx({
   );
 }
 
-export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1', galleryCardLayout, getAbilityCurrentValue }) {
+export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1', galleryCardLayout, getAbilityCurrentValue, isZoomed = true }) {
   const { runId, active, setActive } = useSequenceRun(duelPhase);
   const isN5 = variant === 'n5';
   const dyn = React.useMemo(() => computeDynamicClashVfx(battleResult), [battleResult]);
@@ -693,25 +670,24 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
   const isN2 = variant === 'n2';
   const isN3 = variant === 'n3';
   const isN4 = variant === 'n4';
-  const variantAccent =
-    isN5 ? '#f59e0b' : isN2 ? '#10b981' : isN3 ? '#f97316' : isN4 ? '#e879f9' : variant === 'v2' ? '#10b981' : variant === 'v3' ? '#f97316' : '#38bdf8';
+  const baseAgentScale = isZoomed ? 1.05 : 1;
   const clashRush = isN5 ? smoothstep(0.22, 0.56, t) : lunge;
   const startDistance = isN5 ? 64 : 42;
-  const clashTravel = isN5 ? startDistance : 90;
-  const winnerRetreat = startDistance * 0.5;
-  const loserRetreat = startDistance;
-  const baseAgentScale = isN5 ? 1.05 : 1;
+  const scaledStartDistance = startDistance * baseAgentScale;
+  const clashTravel = isN5 ? scaledStartDistance : 90;
+  const winnerRetreat = scaledStartDistance * 0.5;
+  const loserRetreat = scaledStartDistance;
 
   // Mirror of ClashV1_AuroraCharge positions: player fixed on right, enemy on left.
-  const pStartOffset = startDistance;
-  const eStartOffset = -startDistance;
+  const pStartOffset = scaledStartDistance;
+  const eStartOffset = -scaledStartDistance;
   const pX = pStartOffset - clashRush * clashTravel + aftermath * (winner === 'player' ? winnerRetreat : loserRetreat);
-  const pScale = baseAgentScale * (1 + charge * 0.08 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'player' ? -0.06 : 0.2));
+  const pScale = baseAgentScale * (1 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'player' ? -0.06 : 0.2));
   const pRot = aftermath * (winner === 'player' ? 0 : 18);
   const pOpacity = winner === 'player' ? 1 : 1 - aftermath * 0.3;
 
   const eX = eStartOffset + clashRush * clashTravel + aftermath * (winner === 'enemy' ? -winnerRetreat : -loserRetreat);
-  const eScale = baseAgentScale * (1 + charge * 0.08 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'enemy' ? -0.06 : 0.2));
+  const eScale = baseAgentScale * (1 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'enemy' ? -0.06 : 0.2));
   const eRot = aftermath * (winner === 'enemy' ? 0 : -18);
   const eOpacity = winner === 'enemy' ? 1 : 1 - aftermath * 0.3;
 
@@ -749,17 +725,15 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
     typeof getAbilityCurrentValue === 'function'
       ? getAbilityCurrentValue(battleResult.enemyAgent, false)
       : getClashAbilityCurrentValue(battleResult, false);
+  const playerClashAnchor = getPlayerClashAnchor(isZoomed);
+  const enemyClashAnchor = getEnemyClashAnchor(isZoomed);
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 58, pointerEvents: 'none', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%)' }} />
-      <VariantBadge text={variant.toUpperCase()} color={variantAccent} />
-      <CinemaBars t={t} intensity={intensity} />
-
       {charge > 0 && !isN2 && !isN3 && !isN4 && !isN5 && (
         <>
           <ChargeRays
-            x={PLAYER_CLASH_ANCHOR}
+            x={playerClashAnchor}
             color={playerArmy.color}
             secondaryColor={pSecondary}
             strength={charge * (1 - lunge)}
@@ -771,7 +745,7 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
             offsetY={sy}
           />
           <ChargeRays
-            x={ENEMY_CLASH_ANCHOR}
+            x={enemyClashAnchor}
             color={enemyArmy.color}
             secondaryColor={eSecondary}
             strength={charge * (1 - lunge)}
@@ -817,34 +791,34 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
 
       {(variant === 'v2' || isN2) && (
         <>
-          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={playerArmy.color} x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} />
-          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={enemyArmy.color} x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} />
-          <AgentAfterImage t={t} x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} rot={pRot + playerVariantRot} scale={pScale * playerVariantScale} color={playerArmy.color} />
-          <AgentAfterImage t={t} x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} rot={eRot + enemyVariantRot} scale={eScale * enemyVariantScale} color={enemyArmy.color} />
+          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={playerArmy.color} x={playerClashAnchor} y={{ x: pX + sx, y: sy }} />
+          <AgentOrbitSparks t={Math.min(1, lunge + impact + aftermath * 0.5)} color={enemyArmy.color} x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} />
+          <AgentAfterImage t={t} x={playerClashAnchor} y={{ x: pX + sx, y: sy }} rot={pRot + playerVariantRot} scale={pScale * playerVariantScale} color={playerArmy.color} />
+          <AgentAfterImage t={t} x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} rot={eRot + enemyVariantRot} scale={eScale * enemyVariantScale} color={enemyArmy.color} />
         </>
       )}
       {isN2 && (
         <>
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="orbit" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="orbit" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
         </>
       )}
       {isN3 && (
         <>
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="stream" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="stream" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
         </>
       )}
       {isN4 && (
         <>
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
-          <FocusCoinFx x={PLAYER_CLASH_ANCHOR} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
-          <FocusCoinFx x={ENEMY_CLASH_ANCHOR} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={126} layer="behind" />
+          <FocusCoinFx x={playerClashAnchor} y={{ x: pX + sx, y: sy }} t={t} color={playerArmy.color} mode="burst" side="right" winner={winner === 'player'} zIndex={142} layer="front" />
+          <FocusCoinFx x={enemyClashAnchor} y={{ x: eX + sx, y: sy }} t={t} color={enemyArmy.color} mode="burst" side="left" winner={winner === 'enemy'} zIndex={142} layer="front" />
         </>
       )}
       {(impact > 0 || aftermath > 0) && (
@@ -862,7 +836,7 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
       )}
 
       <AgentAura
-        x={PLAYER_CLASH_ANCHOR}
+        x={playerClashAnchor}
         y={{ x: pX + sx, y: sy, t }}
         scale={pScale}
         color={playerArmy.color}
@@ -870,7 +844,7 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
         intensity={playerAuraIntensity}
       />
       <AgentAura
-        x={ENEMY_CLASH_ANCHOR}
+        x={enemyClashAnchor}
         y={{ x: eX + sx, y: sy, t }}
         scale={eScale}
         color={enemyArmy.color}
@@ -878,19 +852,19 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
         intensity={enemyAuraIntensity}
       />
       <FocusChargeAura
-        x={PLAYER_CLASH_ANCHOR}
+        x={playerClashAnchor}
         y={{ x: pX + sx, y: sy }}
         scale={pScale}
         glowColor={playerFocusGlow}
-        intensity={playerFocusAura}
+        intensity={Math.max(0, playerFocusAura - 1)}
         zIndex={125}
       />
       <FocusChargeAura
-        x={ENEMY_CLASH_ANCHOR}
+        x={enemyClashAnchor}
         y={{ x: eX + sx, y: sy }}
         scale={eScale}
         glowColor={enemyFocusGlow}
-        intensity={enemyFocusAura}
+        intensity={Math.max(0, enemyFocusAura - 1)}
         zIndex={125}
       />
 
@@ -898,14 +872,22 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
         style={{
           position: 'absolute',
           top: '50%',
-          left: PLAYER_CLASH_ANCHOR,
+          left: playerClashAnchor,
           transform: `translate(calc(-50% + ${pX + sx}px), calc(-50% + ${sy}px)) scale(${pScale * playerVariantScale}) rotate(${pRot + playerVariantRot}deg)`,
           zIndex: winner === 'player' ? 140 : 130,
           opacity: pOpacity,
+          display: 'inline-flex',
+          borderRadius: '0.75rem',
+          boxShadow:
+            playerFocusAura > 0
+              ? `0 0 ${10 + playerFocusAura * 30}px ${playerFocusGlow.main}, 0 0 ${5 + playerFocusAura * 15}px ${playerFocusGlow.secondary} inset, 0 0 ${20 + playerFocusAura * 40}px ${playerFocusGlow.main}`
+              : undefined,
           filter:
-            winner === 'player'
-              ? `drop-shadow(0 0 ${20 + impact * 40}px ${playerArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #f472b6)` : ''}`
-              : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${-aftermath * 32}deg)` : ''}`,
+            impact > 0 || aftermath > 0
+              ? winner === 'player'
+                ? `drop-shadow(0 0 ${20 + impact * 40}px ${playerArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #f472b6)` : ''}`
+                : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${-aftermath * 32}deg)` : ''}`
+              : undefined,
         }}
       >
         <GameCard
@@ -940,6 +922,7 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
           copiedBonus={battleResult.playerBonusCopied}
           abilityNotTriggered={battleResult.playerAbilityNotTriggered}
           bonusNotTriggered={battleResult.playerBonusNotTriggered}
+          suppressAnimations
         />
       </div>
 
@@ -947,14 +930,22 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
         style={{
           position: 'absolute',
           top: '50%',
-          left: ENEMY_CLASH_ANCHOR,
+          left: enemyClashAnchor,
           transform: `translate(calc(-50% + ${eX + sx}px), calc(-50% + ${sy}px)) scale(${eScale * enemyVariantScale}) rotate(${eRot + enemyVariantRot}deg)`,
           zIndex: winner === 'enemy' ? 140 : 130,
           opacity: eOpacity,
+          display: 'inline-flex',
+          borderRadius: '0.75rem',
+          boxShadow:
+            enemyFocusAura > 0
+              ? `0 0 ${10 + enemyFocusAura * 30}px ${enemyFocusGlow.main}, 0 0 ${5 + enemyFocusAura * 15}px ${enemyFocusGlow.secondary} inset, 0 0 ${20 + enemyFocusAura * 40}px ${enemyFocusGlow.main}`
+              : undefined,
           filter:
-            winner === 'enemy'
-              ? `drop-shadow(0 0 ${20 + impact * 40}px ${enemyArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #fb7185)` : ''}`
-              : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${aftermath * 32}deg)` : ''}`,
+            impact > 0 || aftermath > 0
+              ? winner === 'enemy'
+                ? `drop-shadow(0 0 ${20 + impact * 40}px ${enemyArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #fb7185)` : ''}`
+                : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${aftermath * 32}deg)` : ''}`
+              : undefined,
         }}
       >
         <GameCard
@@ -989,13 +980,14 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
           copiedBonus={battleResult.enemyBonusCopied}
           abilityNotTriggered={battleResult.enemyAbilityNotTriggered}
           bonusNotTriggered={battleResult.enemyBonusNotTriggered}
+          suppressAnimations
         />
       </div>
 
       {isN5 && (
         <>
           <FocusCoinOrbitCollapseFx
-            x={PLAYER_CLASH_ANCHOR}
+            x={playerClashAnchor}
             y={{ x: pX + sx, y: sy }}
             t={t}
             orbitSec={orbitSec}
@@ -1004,7 +996,7 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
             armyVisual={playerArmy}
           />
           <FocusCoinOrbitCollapseFx
-            x={ENEMY_CLASH_ANCHOR}
+            x={enemyClashAnchor}
             y={{ x: eX + sx, y: sy }}
             t={t}
             orbitSec={orbitSec}
@@ -1015,8 +1007,8 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, variant = 'v1
         </>
       )}
 
-      <VaTag x={PLAYER_CLASH_ANCHOR} value={battleResult.playerAssault} winner={winner === 'player'} t={t} motion={{ x: pX + sx, y: sy }} />
-      <VaTag x={ENEMY_CLASH_ANCHOR} value={battleResult.enemyAssault} winner={winner === 'enemy'} t={t} motion={{ x: eX + sx, y: sy }} />
+      <VaTag x={playerClashAnchor} value={battleResult.playerAssault} winner={winner === 'player'} t={t} motion={{ x: pX + sx, y: sy }} />
+      <VaTag x={enemyClashAnchor} value={battleResult.enemyAssault} winner={winner === 'enemy'} t={t} motion={{ x: eX + sx, y: sy }} />
 
       <FlashOverlay opacity={flash * 0.7} />
 

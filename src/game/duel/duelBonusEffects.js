@@ -1,3 +1,8 @@
+import {
+  applyCopiedBonusEffectsIfReady,
+  registerCopiedBonus,
+} from './duelCopyBonus.js';
+
 // Factory: applica effetti bonus armata (fasi own / enemy / legacy, copyBonus).
 export function createApplyBonusEffects({
   applyEffect,
@@ -30,35 +35,32 @@ export function createApplyBonusEffects({
       const enemyBonus = target === 'player' ? eArmyBonus : pArmyBonus;
       const enemyHasBonusActive = target === 'player' ? eHasBonus : pHasBonus;
       if (enemyHasBonusActive && enemyBonus) {
-        if (!checkTrigger(enemyBonus.trigger, context)) {
-          log.push(`🔮 ${source}: Bonus nemico copiato (${enemyBonus.description}) ma trigger non soddisfatto`);
-          return;
-        }
         log.push(`🔮 ${source}: Copia Bonus nemico (${enemyBonus.description})`);
-        if (target === 'player') {
-          state.pBonusCopied = enemyBonus;
-        } else {
-          state.eBonusCopied = enemyBonus;
-        }
-        enemyBonus.effects.forEach((eff) => {
-          applyEffect(eff.effect, eff.value, target, source + ' (copiato)', log, {
-            minDamage: eff.minDamage,
-            minPower: eff.minPower,
-            minAssault: eff.minAssault,
-            minHealth: eff.minHealth,
-            ...fieldOptions,
-          });
-        });
+        registerCopiedBonus(state, target, enemyBonus);
+        applyCopiedBonusEffectsIfReady(
+          enemyBonus,
+          target,
+          context,
+          source,
+          log,
+          applyEffect,
+          fieldOptions,
+          checkTrigger
+        );
       }
       return;
     }
 
-    bonus.effects.forEach((eff) => {
+    const applyBonusEffect = (eff) => {
       const isOwnEffect = ['power', 'damage', 'assaultValue', 'focusCoin', 'heal', 'immune', 'powerAndDamage'].includes(
         eff.effect
       );
       const isEnemyEffect = ['enemyPower', 'enemyDamage', 'enemyAssault'].includes(eff.effect);
       const isSpecialEffect = ['toxin'].includes(eff.effect);
+      const value =
+        bonus.trigger === 'conquest' && fieldOptions?.conquestDouble && eff.value != null
+          ? eff.value * 2
+          : eff.value;
 
       const opt = {
         minDamage: eff.minDamage,
@@ -69,14 +71,19 @@ export function createApplyBonusEffects({
       };
 
       if (onlyOwnEffects && isOwnEffect) {
-        applyEffect(eff.effect, eff.value, target, source, log, opt);
+        applyEffect(eff.effect, value, target, source, log, opt);
       } else if (onlyEnemyEffects && isEnemyEffect) {
-        applyEffect(eff.effect, eff.value, target, source, log, opt);
+        applyEffect(eff.effect, value, target, source, log, opt);
       } else if (isSpecialEffect) {
-        applyEffect(eff.effect, eff.value, target, source, log, opt);
+        applyEffect(eff.effect, value, target, source, log, opt);
       } else if (!onlyOwnEffects && !onlyEnemyEffects) {
-        applyEffect(eff.effect, eff.value, target, source, log, opt);
+        applyEffect(eff.effect, value, target, source, log, opt);
       }
-    });
+    };
+
+    bonus.effects.forEach(applyBonusEffect);
+    if (bonus.trigger === 'lastWish' && fieldOptions?.lastWishDouble) {
+      bonus.effects.forEach(applyBonusEffect);
+    }
   };
 }

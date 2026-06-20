@@ -53,11 +53,11 @@ Note curate su ruoli tipici e sinergie per armata: [`carte/CARTE_ANALISI.md`](./
 | # | Nome | Lega | POT | DAN | Potere | Flavour |
 |---|------|------|-----|-----|--------|---------|
 | 201 | **Ur-Nammu il Conquistatore** | 5 | 6 | 5 | Magnanimo: +2 POT | Era re prima della caduta. Nel buio, rifiutò di morire — prese i pezzi migliori dei suoi sudditi caduti, uno per uno. 'Un re porta il suo popolo' disse. Ora li porta letteralmente. E loro combattono ancora per lui. |
-| 202 | **Profeta delle Rovine** | 4 | 5 | 4 | Rimonta: +2 DAN | Prima dell'Inversione leggeva le stelle. Ora legge i frammenti — ossa, pietre, pezzi di chi non c'è più. Ogni rovina racconta una storia. La sua storia preferita è quella della vendetta che verrà. |
+| 202 | **Profeta delle Rovine** | 4 | 5 | 4 | Vendetta: +2 DAN | Prima dell'Inversione leggeva le stelle. Ora legge i frammenti — ossa, pietre, pezzi di chi non c'è più. Ogni rovina racconta una storia. La sua storia preferita è quella della vendetta che verrà. |
 | 203 | **Araldo della Fine** | 4 | 4 | 3 | Ultimo desiderio: 2 Danni dir. | Il suo corno è fatto delle gole di dodici cantori, fuse insieme. Suona una sola nota — la nota che udirono quando la Spira sprofondò. Chi la sente ricorda cosa significa cadere. |
 | 204 | **Custode della Ziqqurat** | 3 | 4 | 2 | Blocca Bonus | Sorvegliava i gradini che salivano al cielo. Ora sorveglia quelli che scendono nel buio. Ogni passo verso la Spira passa davanti a lui — e lui decide chi è degno di entrare. |
 | 205 | **Sacerdote della Ricomposizione** | 3 | 3 | 3 | Sfida: +2 POT | L'ordine è l'illusione di chi non è mai stato spezzato. Lui insegna la verità: i pezzi si trovano, si uniscono, diventano qualcosa di nuovo. E quel qualcosa è sempre più forte. |
-| 206 | **Berserker della Spira** | 3 | 4 | 3 | Rimonta: +1 POT, +1 DAN | Non ricorda chi era prima della caduta. Non ricorda i nomi dei pezzi che porta. Ricorda solo la rabbia — e la rabbia è abbastanza. Quando lo colpisci, ricorda anche di più. |
+| 206 | **Berserker della Spira** | 3 | 4 | 3 | Vendetta: +1 POT, +1 DAN | Non ricorda chi era prima della caduta. Non ricorda i nomi dei pezzi che porta. Ricorda solo la rabbia — e la rabbia è abbastanza. Quando lo colpisci, ricorda anche di più. |
 | 207 | **Seguace Fanatico** | 2 | 3 | 1 | Gloria: +2 POT | Morirà mille volte se questo significa vedere la Spira risalire. E ogni volta che vince, crede di essere più vicino. Non lo è — ma la fede lo rende più forte. |
 | 208 | **Costruttore Maledetto** | 2 | 2 | 1 | Resistenza: +1 POT | Le sue mani costruirono la Spira — livello dopo livello, pietra dopo pietra. Dopo l'Inversione, quelle mani non erano più le sue. Ma ricordano ancora come smontare ciò che toccano. |
 | 209 | **Ombra della Spira** | 2 | 2 | 3 | Resistenza: -6 VA nem. (min 5) | I Kethran lo mandano avanti, dove la luce non arriva. Torna sempre con qualcosa — informazioni, pezzi, nemici silenziati. Ogni vittoria significa che il buio è ancora suo alleato. |
@@ -136,7 +136,7 @@ Note curate su ruoli tipici e sinergie per armata: [`carte/CARTE_ANALISI.md`](./
 | 406 | **Analista da Combattimento** | 3 | 2 | 3 | Attrizione 1 POT | Analizza. Replica. Supera. Tre secondi. È tutto il tempo di cui ha bisogno. |
 | 407 | **Drone Cacciatore X-9** | 2 | 3 | 1 | Imboscata: 2 Danni dir. | Progettato per la ricognizione. Riprogrammato per l'intercettazione. Perfezionato per l'eliminazione. |
 | 408 | **Operaio Meccanico** | 2 | 2 | 2 | -2 DAN nem. (min 2) | Costruisce armi giorno e notte. Non perché gli sia ordinato, ma perché ha dimenticato come costruire qualsiasi altra cosa. |
-| 409 | **Occhio del Fronte Est** | 2 | 2 | 1 | Rimonta: +3 POT | Vede tutto. Colpisce da lontano. Ma quando il nemico arriva vicino — quando il primo colpo lo trova — qualcosa si sveglia. Qualcosa di meno preciso. E molto più letale. |
+| 409 | **Occhio del Fronte Est** | 2 | 2 | 1 | Vendetta: +3 POT | Vede tutto. Colpisce da lontano. Ma quando il nemico arriva vicino — quando il primo colpo lo trova — qualcosa si sveglia. Qualcosa di meno preciso. E molto più letale. |
 | 410 | **Orecchio del Fronte Sud** | 2 | 3 | 2 | Ultimo desiderio: +2 FC | Decisero di usare parti del corpo per identificare i propri ruoli, una tradizione che divenne un terribile memento. |
 | 411 | **Protocollo Cenere** | 5 | 4 | 4 | Sopraffare: 4 Danni dir. | Attivato solo quando tutto fallisce. Quando i piani sono cenere — come Kyrath. Quando resta solo la resistenza. Allora lui si sveglia. E ricomincia da zero. |
 | 412 | **Pugno del Fronte Ovest** | 4 | 6 | 2 | Magnanimo: +1 POT, +1 DAN | Nord comanda. Est vede. Sud ascolta. Ovest colpisce. Quando arriva il momento, non serve strategia — serve forza. E Ovest è tutta la forza di Kyrath in un solo pugno. |
@@ -178,7 +178,7 @@ Note curate su ruoli tipici e sinergie per armata: [`carte/CARTE_ANALISI.md`](./
 | 510 | **La Guida del Bosco** | 2 | 2 | 1 | Gloria: +3 POT | Canta piano, un richiamo che solo gli Orathai sentono. Li guida attraverso il buio, oltre il pericolo, fino alla vittoria. Poi canta più forte — e il bosco risponde. |
 | 511 | **La Tempesta Cava** | 5 | 6 | 2 | Overdrive: +12 VA | Si è svuotato per diventare strumento. Legno, aria, risonanza — nient'altro. Il suo canto non ha limite perché lui non ha più limiti. |
 | 512 | **Il Parassita Armonico** | 4 | 3 | 5 | Intervento: Copia POT nem. | Si avvolge al nemico e ascolta. Sente la frequenza, la impara, la ruba. Quando lascia andare, la vittima è vuota — e lui canta con una voce nuova. |
-| 513 | **Il Canto della Cenere** | 3 | 5 | 2 | Rimonta: Cura 2 | Non teme il fuoco. Non teme la fine. Sa che la cenere è fertile — e il suo canto la trasforma. Dove altri vedono distruzione, lui vede opportunità. |
+| 513 | **Il Canto della Cenere** | 3 | 5 | 2 | Vendetta: Cura 2 | Non teme il fuoco. Non teme la fine. Sa che la cenere è fertile — e il suo canto la trasforma. Dove altri vedono distruzione, lui vede opportunità. |
 | 514 | **L'Albero dei Trofei** | 3 | 4 | 3 | Invasione: +2 FC | Il bosco ricicla tutto. Lui più di tutti — i vinti diventano parte di lui. Le loro forme, i loro canti, le loro forze. Non è crudeltà. È onore. |
 | 515 | **Il Fiore della Vittoria** | 2 | 1 | 3 | Magnanimo: +3 POT | Lo vedono solo i vincitori. Per i perdenti, resta chiuso, invisibile, inesistente. Fiorisce solo per chi merita di vederlo. |
 | 516 | **Il Coro** | 5 | 6 | 3 | Vendetta: Cura 3 | Non è un canto di vittoria. È un canto di resistenza — quello che rimane quando tutto il resto tace. Quando lo colpisci, risuona. Quando risuona, ricorda. E ciò che ricorda, guarisce. |
@@ -222,7 +222,7 @@ Note curate su ruoli tipici e sinergie per armata: [`carte/CARTE_ANALISI.md`](./
 | 616 | **Guardia Reale della Guglia** | 5 | 6 | 3 | Intervento: Inversione | Prima di trovare il proprio nome trovò la prima vittima, prima di trovare il suo posto trovò un ordine, divorare. |
 | 617 | **Scolopendra Ossea** | 4 | 5 | 3 | Rimonta: +1 POT, +1 DAN | La colonia la tollera perché pulisce ciò che resta. La teme perché non si ferma quando finiscono i cadaveri. Non distingue tra alleato e nemico — distingue tra morto e ancora in piedi. La Fame non conosce lutto. È paziente. |
 | 618 | **Il Flagello Chitinoso** | 4 | 4 | 3 | Imboscata: +6 VA | La coda non è un'arma. È un avvertimento. L'arma sono le chele — veloci, precise, già attorno al tuo collo prima che tu veda la coda muoversi. |
-| 619 | **Il Bombardiere della Colonia** | 3 | 3 | 2 | Rimonta: 2 Danni dir. | Porta il veleno nel ventre. Quando cade, lo rilascia. Non è una sconfitta — è la consegna. |
+| 619 | **Il Bombardiere della Colonia** | 3 | 3 | 2 | Vendetta: 2 Danni dir. | Porta il veleno nel ventre. Quando cade, lo rilascia. Non è una sconfitta — è la consegna. |
 | 620 | **Mangiaossa** | 2 | 3 | 1 | Invasione: +1 POT, +1 DAN | Alcuni di loro nascono conoscendo la fame prima del sole. Molti il secondo, non lo vedranno mai. |
 
 ### Statistiche armata

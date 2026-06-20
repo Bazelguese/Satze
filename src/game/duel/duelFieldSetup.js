@@ -2,55 +2,45 @@
 // Effetti campo prima di poteri / bonus (duello)
 // ============================================
 
-/**
- * Muta `duel` e i context; imposta flag su playerContext/enemyContext.fieldModifiers.
- *
- * @param {Object} duel - stato mutabile (pImmune, pPower, pFocusUsed, …)
- * @param {Object} field
- * @param {string[]} battleLog
- * @param {Object} pAgent
- * @param {Object} eAgent
- * @param {Object} playerContext
- * @param {Object} enemyContext
- * @returns {Object} flag effetti campo per applyEffect
- */
+import { applyFieldMinFloor, getFieldModifiers, getFieldSetupFlags } from '../battlefieldEffects.js';
+
 export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext) {
-  const immuneDisabled = field.name === 'Mura EMP';
-  if (immuneDisabled) {
+  const id = field?.id ?? 0;
+  const flags = getFieldSetupFlags(field);
+  const fn = field.name;
+
+  if (flags.immuneDisabled) {
     duel.pImmune = false;
     duel.eImmune = false;
     battleLog.push('⚡ Mura EMP: Immune disabilitato!');
   }
 
-  const gloriaAlwaysActive = field.name === 'Fondamenta della Torre';
-  const vendettaAlwaysActive = field.name === 'Fondamenta della Torre';
-  const rimontaAlwaysActive = field.name === 'Mura della Sfida';
-  const imboscataAlwaysActive = field.name === 'Alveare Abbandonato';
-  const interventoAlwaysActive = field.name === 'Cerchio di Evocazione';
-  const magnanimoAlwaysActive = field.name === 'Convergenza delle Ley';
-  const triggersIgnored = field.name === 'Crocevia dei Patti';
-  const overdriveThreshold = field.name === 'Nucleo del Reattore' ? 4 : 5;
+  if (flags.forceBothImmune) {
+    duel.pImmune = true;
+    duel.eImmune = true;
+    battleLog.push(`🛡️ ${fn}: Entrambi Immune`);
+  }
 
+  const baseMods = getFieldModifiers(field);
   const fieldModifiers = {
-    gloriaAlwaysActive,
-    vendettaAlwaysActive,
-    rimontaAlwaysActive,
-    imboscataAlwaysActive,
-    interventoAlwaysActive,
-    magnanimoAlwaysActive,
-    triggersIgnored,
-    overdriveThreshold,
+    ...baseMods,
+    triggersIgnored: baseMods.allTriggersAlwaysActive === true,
+    overdriveThreshold: baseMods.overdriveThreshold || 5,
   };
   playerContext.fieldModifiers = fieldModifiers;
   enemyContext.fieldModifiers = fieldModifiers;
 
-  const blockDisabled = field.name === 'Biblioteca delle Lingue Perdute';
-  const copyDisabled = field.name === 'Fossa dei Traditori';
-  const directDamageDisabled = field.name === 'Firewall Centrale';
-  const modifiersDisabled = field.name === "Specchio dell'Anima";
-  const maxDamage = field.name === 'Nexus Arcano' ? 4 : null;
-  const maxFC = field.name === 'Anomalia Gravitazionale' ? 3 : null;
-  const directDamageBonus = field.name === 'Nido della Regina' ? 1 : 0;
+  const {
+    blockDisabled,
+    copyDisabled,
+    directDamageDisabled,
+    modifiersDisabled,
+    maxDamage,
+    maxFC,
+    directDamageBonus,
+  } = flags;
+  const overdriveThreshold = fieldModifiers.overdriveThreshold;
+  const triggersIgnored = fieldModifiers.triggersIgnored;
 
   if (maxFC !== null) {
     const pFCBefore = duel.pFocusUsed;
@@ -59,10 +49,10 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     if (duel.eFocusUsed > maxFC) duel.eFocusUsed = maxFC;
     if (pFCBefore > maxFC || eFCBefore > maxFC) {
       battleLog.push(
-        `🌀 ${field.name}: FC max ${maxFC} | TU ${pFCBefore} → ${duel.pFocusUsed} | IA ${eFCBefore} → ${duel.eFocusUsed}`
+        `🌀 ${fn}: FC max ${maxFC} | TU ${pFCBefore} → ${duel.pFocusUsed} | IA ${eFCBefore} → ${duel.eFocusUsed}`
       );
     } else {
-      battleLog.push(`🌀 ${field.name}: FC max ${maxFC} (nessun cambio)`);
+      battleLog.push(`🌀 ${fn}: FC max ${maxFC} (nessun cambio)`);
     }
   }
 
@@ -80,119 +70,63 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
   let pBonusBlocked = duel.pBonusBlocked;
   let eBonusBlocked = duel.eBonusBlocked;
 
-  if (field.category === 'values' || field.name === 'Terza Luna') {
-    if (field.name === 'Gran Corno') {
-      const pBefore = pPower;
-      const eBefore = ePower;
+  const minRed = flags.minFloorReduction || 0;
+
+  if (flags.maxPower != null) {
+    pPower = Math.min(pPower, flags.maxPower);
+    ePower = Math.min(ePower, flags.maxPower);
+    battleLog.push(`🐉 ${fn}: POT max ${flags.maxPower}`);
+  }
+
+  if (field.category === 'values' || id === 2) {
+    if (id === 1) {
       pPower += 4;
       ePower += 4;
-      battleLog.push(`⛰️ Gran Corno: TU POT ${pBefore} → ${pPower} | IA POT ${eBefore} → ${ePower}`);
-    } else if (field.name === 'Terza Luna') {
-      const pPowBefore = pPower;
-      const pDanBefore = pDamage;
-      const ePowBefore = ePower;
-      const eDanBefore = eDamage;
+      battleLog.push(`⛰️ ${fn}: +4 POT a entrambi`);
+    } else if (id === 2) {
       if (!pImmune) pPower -= 1;
       pDamage += 1;
       if (!eImmune) ePower -= 1;
       eDamage += 1;
-      battleLog.push(
-        `🌙 Terza Luna: TU POT ${pPowBefore} → ${pPower}${pImmune ? ' (Immune)' : ''}, DAN ${pDanBefore} → ${pDamage}`
-      );
-      battleLog.push(
-        `🌙 Terza Luna: IA POT ${ePowBefore} → ${ePower}${eImmune ? ' (Immune)' : ''}, DAN ${eDanBefore} → ${eDamage}`
-      );
-    } else if (field.name === "Nido dell'Antico") {
-      const pBefore = pDamage;
-      const eBefore = eDamage;
+      battleLog.push(`🌙 ${fn}: -1 POT, +1 DAN a entrambi`);
+    } else if (id === 5) {
       if (!pImmune) pDamage = Math.max(0, pDamage - 2);
       if (!eImmune) eDamage = Math.max(0, eDamage - 2);
-      battleLog.push(
-        `🪺 Nido dell'Antico: TU DAN ${pBefore} → ${pDamage}${pImmune ? ' (Immune)' : ''} | IA DAN ${eBefore} → ${eDamage}${eImmune ? ' (Immune)' : ''}`
-      );
-    } else if (field.name === 'Dimensione Specchiata') {
-      const originalPPower = pPower;
-      const originalEPower = ePower;
+      battleLog.push(`🪺 ${fn}: -2 DAN a entrambi`);
+    } else if (id === 7) {
       if (!pImmune && !eImmune) {
-        pPower = originalEPower;
-        ePower = originalPPower;
-        battleLog.push(
-          `🪞 Dimensione Specchiata: POT scambiate! TU ${originalPPower} → ${pPower} | IA ${originalEPower} → ${ePower}`
-        );
-      } else if (!pImmune && eImmune) {
-        pPower = originalEPower;
-        battleLog.push(`🪞 Dimensione Specchiata: TU POT ${originalPPower} → ${pPower} (IA immune)`);
-      } else if (pImmune && !eImmune) {
-        ePower = originalPPower;
-        battleLog.push(`🪞 Dimensione Specchiata: IA POT ${originalEPower} → ${ePower} (Tu immune)`);
-      } else {
-        battleLog.push('🐛¡️ Dimensione Specchiata: Bloccato da Immunità!');
+        [pPower, ePower] = [ePower, pPower];
+        battleLog.push(`🪞 ${fn}: POT scambiate`);
       }
-    } else if (field.name === 'Fossa dei Leoni' || field.name === 'Terreno di Caccia') {
-      const pBefore = pDamage;
-      const eBefore = eDamage;
+    } else if (id === 13 || id === 50) {
       pDamage += 2;
       eDamage += 2;
-      battleLog.push(`🦁 ${field.name}: TU DAN ${pBefore} → ${pDamage} | IA DAN ${eBefore} → ${eDamage}`);
-    } else if (field.name === 'Trono di Cenere') {
-      const pBefore = pDamage;
-      const eBefore = eDamage;
+      battleLog.push(`🦁 ${fn}: +2 DAN a entrambi`);
+    } else if (id === 26) {
       pDamage += 1;
       eDamage += 1;
-      battleLog.push(`🔥 Trono di Cenere: TU DAN ${pBefore} → ${pDamage} | IA DAN ${eBefore} → ${eDamage}`);
-    } else if (field.name === 'Nebulosa dei Ricordi') {
-      const pBefore = pPower;
-      const eBefore = ePower;
+      battleLog.push(`🔥 ${fn}: +1 DAN a entrambi`);
+    } else if (id === 19) {
       pPower += 1;
       ePower += 1;
-      battleLog.push(`🌌 Nebulosa dei Ricordi: TU POT ${pBefore} → ${pPower} | IA POT ${eBefore} → ${ePower}`);
-    } else if (field.name === 'Orlo del Buco Nero') {
-      const pPowBefore = pPower;
-      const pDanBefore = pDamage;
-      const ePowBefore = ePower;
-      const eDanBefore = eDamage;
-      pPower = pDanBefore;
-      pDamage = pPowBefore;
-      ePower = eDanBefore;
-      eDamage = ePowBefore;
-      battleLog.push('⚫ Orlo del Buco Nero: POT ↔ DAN invertiti!');
-      battleLog.push(`   TU: POT ${pPowBefore} → ${pPower}, DAN ${pDanBefore} → ${pDamage}`);
-      battleLog.push(`   IA: POT ${ePowBefore} → ${ePower}, DAN ${eDanBefore} → ${eDamage}`);
-    } else if (field.name === 'Cimitero di Stelle') {
-      const pVABefore = pAssaultMod;
-      const eVABefore = eAssaultMod;
+      battleLog.push(`🌌 ${fn}: +1 POT a entrambi`);
+    } else if (id === 20) {
+      [pPower, pDamage] = [pDamage, pPower];
+      [ePower, eDamage] = [eDamage, ePower];
+      battleLog.push(`⚫ ${fn}: POT ↔ DAN invertiti`);
+    } else if (id === 21) {
       if (!pImmune) pAssaultMod -= 2;
       if (!eImmune) eAssaultMod -= 2;
-      battleLog.push(
-        `✨ Cimitero di Stelle: TU VA mod ${pVABefore} → ${pAssaultMod}${pImmune ? ' (Immune)' : ''} | IA VA mod ${eVABefore} → ${eAssaultMod}${eImmune ? ' (Immune)' : ''}`
-      );
-    } else if (field.name === 'Mercato delle Anime') {
-      const pBefore = pPower;
-      const eBefore = ePower;
-      if (!pImmune) pPower = Math.max(1, pPower - 3);
-      if (!eImmune) ePower = Math.max(1, ePower - 3);
-      battleLog.push(
-        `💀 Mercato delle Anime: TU POT ${pBefore} → ${pPower}${pImmune ? ' (Immune)' : ''} | IA POT ${eBefore} → ${ePower}${eImmune ? ' (Immune)' : ''}`
-      );
-    } else if (field.name === "Sanctum dell'Equilibrio") {
-      if (pAgent.league > eAgent.league && !pImmune) {
-        pAssaultMod -= 5;
-        battleLog.push(`⚖️ Sanctum: TU -5 VA (Lega ${pAgent.league} > ${eAgent.league})`);
-      } else if (pAgent.league > eAgent.league && pImmune) {
-        battleLog.push(`⚖️ Sanctum: TU Immune (Lega ${pAgent.league} > ${eAgent.league})`);
-      } else if (eAgent.league > pAgent.league && !eImmune) {
-        eAssaultMod -= 5;
-        battleLog.push(`⚖️ Sanctum: IA -5 VA (Lega ${eAgent.league} > ${pAgent.league})`);
-      } else if (eAgent.league > pAgent.league && eImmune) {
-        battleLog.push(`⚖️ Sanctum: IA Immune (Lega ${eAgent.league} > ${pAgent.league})`);
-      } else {
-        battleLog.push(`⚖️ Sanctum: Nessun malus (Leghe pari: ${pAgent.league})`);
-      }
-    } else if (field.name === 'Eclissi Totale') {
-      const pPowBefore = pPower;
-      const pDanBefore = pDamage;
-      const ePowBefore = ePower;
-      const eDanBefore = eDamage;
+      battleLog.push(`✨ ${fn}: -2 VA a entrambi`);
+    } else if (id === 42) {
+      if (!pImmune) pPower = applyFieldMinFloor(pPower - 3, 1, minRed);
+      if (!eImmune) ePower = applyFieldMinFloor(ePower - 3, 1, minRed);
+      battleLog.push(`💀 ${fn}: -3 POT (min ridotto)`);
+    } else if (id === 47) {
+      if (pAgent.league > eAgent.league && !pImmune) pAssaultMod -= 5;
+      else if (eAgent.league > pAgent.league && !eImmune) eAssaultMod -= 5;
+      battleLog.push(`⚖️ ${fn}: -5 VA a Lega più alta`);
+    } else if (id === 35) {
       if (!pImmune) {
         pPower = Math.max(1, pPower - 2);
         pDamage = Math.max(0, pDamage - 2);
@@ -201,80 +135,107 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
         ePower = Math.max(1, ePower - 2);
         eDamage = Math.max(0, eDamage - 2);
       }
-      battleLog.push(
-        `🌑 Eclissi Totale: TU POT ${pPowBefore} → ${pPower}, DAN ${pDanBefore} → ${pDamage}${pImmune ? ' (Immune)' : ''}`
-      );
-      battleLog.push(
-        `🌑 Eclissi Totale: IA POT ${ePowBefore} → ${ePower}, DAN ${eDanBefore} → ${eDamage}${eImmune ? ' (Immune)' : ''}`
-      );
-    }
-  } else if (field.category === 'focus') {
-    if (field.name === 'Porte di Atlantide') {
-      const pFCBefore = pFocusUsed;
-      const eFCBefore = eFocusUsed;
-      pFocusUsed *= 2;
-      eFocusUsed *= 2;
-      battleLog.push(
-        `🌊 Porte di Atlantide: FC raddoppiati! TU ${pFCBefore} → ${pFocusUsed} | IA ${eFCBefore} → ${eFocusUsed}`
-      );
-    }
-  } else if (field.category === 'limit') {
-    if (field.name === 'Arena degli Gnomi') {
-      pAbilityBlocked = true;
-      eAbilityBlocked = true;
-      battleLog.push('🎪 Arena degli Gnomi: Poteri annullati');
-    } else if (field.name === 'Tempio del Monaco Pazzo') {
-      pBonusBlocked = true;
-      eBonusBlocked = true;
-      battleLog.push('🛕 Tempio del Monaco Pazzo: Bonus annullati');
-    } else if (field.name === 'Santuario del Silenzio') {
-      pAbilityBlocked = true;
-      eAbilityBlocked = true;
-      pBonusBlocked = true;
-      eBonusBlocked = true;
-      battleLog.push('🤫 Santuario del Silenzio: Poteri E Bonus annullati!');
-    } else if (field.name === 'Nexus Arcano') {
-      battleLog.push('🔮 Nexus Arcano: DAN massimo = 4');
-    } else if (field.name === 'Biblioteca delle Lingue Perdute') {
-      battleLog.push('📜 Biblioteca Lingue Perdute: Blocca Potere/Bonus non funzionano');
-    } else if (field.name === 'Fossa dei Traditori') {
-      battleLog.push('🕳️ Fossa dei Traditori: Effetti Copia annullati');
-    } else if (field.name === 'Firewall Centrale') {
-      battleLog.push('🛡️ Firewall Centrale: DAN diretti annullati');
-    } else if (field.name === "Specchio dell'Anima") {
-      battleLog.push("🪞 Specchio dell'Anima: Modificatori POT/DAN annullati");
-    }
-  } else if (field.category === 'trigger') {
-    if (field.name === 'Fondamenta della Torre') {
-      battleLog.push('🧱 Fondamenta della Torre: Gloria e Vendetta sempre attivi!');
-    } else if (field.name === 'Mura della Sfida') {
-      battleLog.push('🧱 Mura della Sfida: Rimonta sempre attiva!');
-    } else if (field.name === 'Crocevia dei Patti') {
-      battleLog.push('🔀 Crocevia dei Patti: Poteri si attivano senza trigger!');
-    } else if (field.name === 'Nucleo del Reattore') {
-      battleLog.push('☢️ Nucleo del Reattore: Overdrive si attiva con 4 FC!');
-    } else if (field.name === 'Cerchio di Evocazione') {
-      battleLog.push('⭐• Cerchio di Evocazione: Intervento sempre attivo!');
-    } else if (field.name === 'Alveare Abbandonato') {
-      battleLog.push('🍯 Alveare Abbandonato: Imboscata sempre attiva!');
-    } else if (field.name === 'Convergenza delle Ley') {
-      battleLog.push('✴️ Convergenza delle Ley: Magnanimo sempre attivo!');
+      battleLog.push(`🌑 ${fn}: -2 POT e -2 DAN`);
+    } else if (id === 69) {
+      if (pPower > ePower && !pImmune) pPower -= 1;
+      else if (ePower > pPower && !eImmune) ePower -= 1;
+      battleLog.push(`🌫️ ${fn}: -1 POT al più forte`);
+    } else if (id === 75) {
+      if (!pImmune) pPower -= 1;
+      if (!eImmune) ePower -= 1;
+      if (!pImmune) pAssaultMod -= 3;
+      if (!eImmune) eAssaultMod -= 3;
+      battleLog.push(`🚗 ${fn}: -1 POT, -3 VA a entrambi`);
+    } else if (id === 78) {
+      pAssaultMod += 4;
+      eAssaultMod += 4;
+      battleLog.push(`🔷 ${fn}: +4 VA a entrambi`);
+    } else if (id === 71) {
+      if (pAgent.power < eAgent.power) pAssaultMod += 5;
+      else if (eAgent.power < pAgent.power) eAssaultMod += 5;
+      battleLog.push(`🦴 ${fn}: +5 VA alla carta con meno POT`);
     }
   }
 
-  if (field.name === 'Biblioteca Proibita') {
-    battleLog.push(`📚 Biblioteca Proibita: Tu ${pFocusUsed} FC vs IA ${eFocusUsed} FC`);
-    if (pFocusUsed < eFocusUsed) {
-      const before = pAssaultMod;
-      pAssaultMod += 5;
-      battleLog.push(`📚 Biblioteca Proibita: TU VA mod ${before} → ${pAssaultMod} (meno FC)`);
-    } else if (eFocusUsed < pFocusUsed) {
-      const before = eAssaultMod;
-      eAssaultMod += 5;
-      battleLog.push(`📚 Biblioteca Proibita: IA VA mod ${before} → ${eAssaultMod} (meno FC)`);
-    } else {
-      battleLog.push('📚 Biblioteca Proibita: Nessun bonus (FC pari)');
+  if (id === 9) {
+    pFocusUsed *= 2;
+    eFocusUsed *= 2;
+    battleLog.push(`🌊 ${fn}: FC raddoppiati nel calcolo VA`);
+  }
+
+  if (id === 76) {
+    pDamage += Math.floor(pFocusUsed / 3);
+    eDamage += Math.floor(eFocusUsed / 3);
+    battleLog.push(`⛽ ${fn}: +1 DAN ogni 3 FC investiti`);
+  }
+
+  if (field.category === 'limit' || field.category === 'trigger') {
+    if (id === 3) {
+      pAbilityBlocked = true;
+      eAbilityBlocked = true;
+      battleLog.push(`🎪 ${fn}: Poteri annullati`);
+    } else if (id === 6) {
+      pBonusBlocked = true;
+      eBonusBlocked = true;
+      battleLog.push(`🛕 ${fn}: Bonus annullati`);
+    } else if (id === 14) {
+      pAbilityBlocked = eAbilityBlocked = pBonusBlocked = eBonusBlocked = true;
+      battleLog.push(`🤫 ${fn}: Poteri e Bonus annullati`);
+    } else if (id === 15) battleLog.push(`🔮 ${fn}: DAN massimo = 4`);
+    else if (id === 24) battleLog.push(`📜 ${fn}: Blocca Potere/Bonus non funzionano`);
+    else if (id === 27) battleLog.push(`🕳️ ${fn}: Effetti Copia annullati`);
+    else if (id === 43) battleLog.push(`🛡️ ${fn}: DAN diretti annullati`);
+    else if (id === 32) battleLog.push(`🪞 ${fn}: Modificatori POT/DAN annullati`);
+    else if (id === 22) battleLog.push(`🧱 ${fn}: Gloria e Vendetta sempre attivi`);
+    else if (id === 39) battleLog.push(`🧱 ${fn}: Rimonta sempre attiva`);
+    else if (id === 41) battleLog.push(`🔀 ${fn}: Poteri senza trigger`);
+    else if (id === 29) battleLog.push(`☢️ ${fn}: Overdrive a 4 FC`);
+    else if (id === 45) battleLog.push(`⭐ ${fn}: Intervento sempre attivo`);
+    else if (id === 49) battleLog.push(`🍯 ${fn}: Imboscata sempre attiva`);
+    else if (id === 31) battleLog.push(`✴️ ${fn}: Magnanimo sempre attivo`);
+    else if (id === 58) battleLog.push(`🌳 ${fn}: Resa dei conti sempre attiva`);
+    else if (id === 72) battleLog.push(`🛣️ ${fn}: Turbo sempre attivo`);
+    else if (id === 83) battleLog.push(`📜 ${fn}: Resistenza sempre attiva`);
+    else if (id === 59) battleLog.push(`🦷 ${fn}: Imboscata/Intervento invertiti`);
+    else if (id === 73) battleLog.push(`🌉 ${fn}: Turbo/Ultima Chance invertiti`);
+    else if (id === 74) battleLog.push(`🏁 ${fn}: Circuito Sfida/Sopraffare`);
+    else if (id === 77 && !playerContext.isFirst) {
+      pAbilityBlocked = true;
+      battleLog.push(`🚧 ${fn}: Tu perdi il Potere (secondo)`);
+    } else if (id === 77 && playerContext.isFirst) {
+      eAbilityBlocked = true;
+      battleLog.push(`🚧 ${fn}: IA perde il Potere (secondo)`);
     }
+  }
+
+  if (id === 56) {
+    const pHP = duel.pHPCurrent ?? 25;
+    const eHP = duel.eHPCurrent ?? 25;
+    if (pHP < eHP) pAssaultMod += 3;
+    else if (eHP < pHP) eAssaultMod += 3;
+    battleLog.push(`👑 ${fn}: +3 VA a chi è sotto nei PV`);
+  }
+
+  if (playerContext.isFirst) {
+    if (id === 64) {
+      if (!pImmune) pPower += 1;
+      battleLog.push(`🥚 ${fn}: +1 POT al primo giocatore (Tu)`);
+    }
+  } else if (id === 64) {
+    if (!eImmune) ePower += 1;
+    battleLog.push(`🥚 ${fn}: +1 POT al primo giocatore (IA)`);
+  }
+
+  if (id === 18) {
+    if (pFocusUsed < eFocusUsed) pAssaultMod += 5;
+    else if (eFocusUsed < pFocusUsed) eAssaultMod += 5;
+    battleLog.push(`📚 ${fn}: +5 VA a chi investe meno FC`);
+  }
+
+  if (flags.imposeDamageFromPower) {
+    pDamage = pPower;
+    eDamage = ePower;
+    battleLog.push(`⚱️ ${fn}: DAN imposto = POT`);
   }
 
   Object.assign(duel, {
@@ -302,5 +263,9 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     directDamageBonus,
     overdriveThreshold,
     triggersIgnored,
+    winnerByFocusNotVa: flags.winnerByFocusNotVa,
+    focusHalvedInVa: flags.focusHalvedInVa,
+    conquestDouble: flags.conquestDouble === true,
+    lastWishDouble: flags.lastWishDouble === true,
   };
 }

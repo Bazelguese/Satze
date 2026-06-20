@@ -362,7 +362,7 @@ export function DuelResultEnemyResultBody({
     <div className="relative w-full h-full flex flex-col items-center">
       <div className="relative flex items-center">
         <div
-          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-left' : 'opacity-0'}`}
+          className={`relative inline-flex ${duelPhase >= 0 ? 'animate-card-enter-left' : 'opacity-0'}`}
           style={{
             marginTop: '0',
             left: `${-CLASH_START_OFFSET_PX}px`,
@@ -374,8 +374,7 @@ export function DuelResultEnemyResultBody({
                     boxShadow: `0 0 ${10 + enemyCardGlow * 30}px ${glowColor.main}, 
                                  0 0 ${5 + enemyCardGlow * 15}px ${glowColor.secondary} inset,
                                  0 0 ${20 + enemyCardGlow * 40}px ${glowColor.main}`,
-                    border: `${1 + (enemyCardGlow >= 1 ? 3 : enemyCardGlow * 2)}px solid ${glowColor.main}`,
-                    transition: 'box-shadow 0.3s ease-out, border 0.3s ease-out',
+                    transition: 'box-shadow 0.3s ease-out',
                     borderRadius: '0.75rem',
                   };
                 })()
@@ -387,8 +386,7 @@ export function DuelResultEnemyResultBody({
                       boxShadow: `0 0 ${40}px ${glowColor.main}, 
                                  0 0 ${20}px ${glowColor.secondary} inset,
                                  0 0 ${60}px ${glowColor.main}`,
-                      border: `3px solid ${glowColor.main}`,
-                      transition: 'box-shadow 0.3s ease-out, border 0.3s ease-out',
+                      transition: 'box-shadow 0.3s ease-out',
                       borderRadius: '0.75rem',
                     };
                   })()
@@ -546,7 +544,7 @@ export function DuelResultPlayerResultBody({
     <div className="relative w-full h-full flex flex-col items-center pointer-events-auto">
       <div className="relative flex items-center">
         <div
-          className={`relative ${duelPhase >= 0 ? 'animate-card-enter-right' : 'opacity-0'}`}
+          className={`relative inline-flex ${duelPhase >= 0 ? 'animate-card-enter-right' : 'opacity-0'}`}
           style={{
             marginTop: '0',
             left: `${CLASH_START_OFFSET_PX}px`,
@@ -558,8 +556,7 @@ export function DuelResultPlayerResultBody({
                     boxShadow: `0 0 ${10 + playerCardGlow * 30}px ${glowColor.main}, 
                                  0 0 ${5 + playerCardGlow * 15}px ${glowColor.secondary} inset,
                                  0 0 ${20 + playerCardGlow * 40}px ${glowColor.main}`,
-                    border: `${1 + (playerCardGlow >= 1 ? 3 : playerCardGlow * 2)}px solid ${glowColor.main}`,
-                    transition: 'box-shadow 0.3s ease-out, border 0.3s ease-out',
+                    transition: 'box-shadow 0.3s ease-out',
                     borderRadius: '0.75rem',
                   };
                 })()
@@ -571,8 +568,7 @@ export function DuelResultPlayerResultBody({
                       boxShadow: `0 0 ${40}px ${glowColor.main}, 
                                  0 0 ${20}px ${glowColor.secondary} inset,
                                  0 0 ${60}px ${glowColor.main}`,
-                      border: `3px solid ${glowColor.main}`,
-                      transition: 'box-shadow 0.3s ease-out, border 0.3s ease-out',
+                      transition: 'box-shadow 0.3s ease-out',
                       borderRadius: '0.75rem',
                     };
                   })()

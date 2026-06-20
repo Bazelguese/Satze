@@ -31,6 +31,7 @@ test('conquista: applica potere post-battaglia al giocatore se vince', () => {
     playerContextPost: { won: true, lost: false },
     enemyContextPost: { won: false, lost: true },
     battleLog,
+    state: { pBonusCopied: null, eBonusCopied: null },
   });
   assert.ok(effects.some((e) => e.effect === 'power' && e.target === 'player'));
 });
@@ -59,6 +60,42 @@ test('conquista: non applica potere post se il giocatore perde', () => {
     playerContextPost: { won: false, lost: true },
     enemyContextPost: { won: true, lost: false },
     battleLog: [],
+    state: { pBonusCopied: null, eBonusCopied: null },
   });
   assert.equal(effects.length, 0);
+});
+
+test('bonus copiato Conquista: applica effetti post se il copiatore vince', () => {
+  const bonusCalls = [];
+  const applyBonusEffects = (bonus, target, context, source, log) => {
+    bonusCalls.push({ effect: bonus.effects[0].effect, target, won: context.won });
+  };
+  const copiedBonus = {
+    trigger: 'conquest',
+    description: 'Conquista: +2 FC',
+    effects: [{ effect: 'focusCoin', value: 2 }],
+  };
+  applyDuelPostBattleEffects({
+    pAbilityBlocked: false,
+    eAbilityBlocked: false,
+    pBonusBlocked: false,
+    eBonusBlocked: false,
+    pHasBonus: true,
+    eHasBonus: false,
+    pArmyBonus: { trigger: null, effects: [{ effect: 'copyBonus' }] },
+    eArmyBonus: null,
+    pAgent: { name: 'P', army: "Corte Rossa" },
+    eAgent: { name: 'E', army: "L'Enclave delle Scaglie" },
+    applyEffect: () => {},
+    applyBonusEffects,
+    checkTrigger,
+    fieldOptions: {},
+    playerContextPost: { won: true, lost: false },
+    enemyContextPost: { won: false, lost: true },
+    battleLog: [],
+    state: { pBonusCopied: copiedBonus, eBonusCopied: null },
+  });
+  assert.equal(bonusCalls.length, 1);
+  assert.equal(bonusCalls[0].effect, 'focusCoin');
+  assert.equal(bonusCalls[0].won, true);
 });

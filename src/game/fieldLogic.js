@@ -1,85 +1,123 @@
 // ============================================
-// LOGICA CAMPI DI BATTAGLIA
+// LOGICA CAMPI DI BATTAGLIA — motore rarità v2
 // ============================================
 
-import { ALL_BATTLEFIELDS } from '../data';
+import { ALL_BATTLEFIELDS } from '../data/battlefields';
+import {
+  BATTLEFIELD_RARITA,
+  BATTLEFIELD_SELECTION_DEFAULTS,
+  declassRarita,
+  getFieldRarita,
+} from '../data/battlefieldMeta';
 import { shuffleArray } from '../utils/shuffle';
 
+const CLASSIC_FIELD_COUNT = 5;
+
 /**
- * Seleziona i campi di battaglia usando una funzione di mescolamento iniettata
- * (random locale, RNG deterministico per multiplayer, test).
+ * @param {number} slot
+ * @param {number} raresPlaced
+ * @param {boolean} specialPlaced
+ * @param {typeof BATTLEFIELD_SELECTION_DEFAULTS} config
+ * @param {() => number} rng
+ */
+export function rollBattlefieldRaritaTier(slot, raresPlaced, specialPlaced, config, rng) {
+  const pS =
+    slot >= config.SPECIAL_SLOT_MIN && !specialPlaced ? config.pS_base : 0;
+  const pR = Math.max(config.f_R, config.pR_base * config.d ** raresPlaced);
+  const roll = rng();
+
+  if (roll < pS) return BATTLEFIELD_RARITA.SPECIAL;
+  if (roll < pS + pR) return BATTLEFIELD_RARITA.RARO;
+  return BATTLEFIELD_RARITA.COMUNE;
+}
+
+/**
+ * Pesca uniforme da bucket; declassa se vuoto.
+ * @returns {Object|null}
+ */
+export function pickFromRaritaBucket(eligible, tier, rng) {
+  let currentTier = tier;
+  const tried = new Set();
+
+  while (currentTier && !tried.has(currentTier)) {
+    tried.add(currentTier);
+    const bucket = eligible.filter((f) => getFieldRarita(f) === currentTier);
+    if (bucket.length) {
+      return bucket[Math.floor(rng() * bucket.length)];
+    }
+    currentTier = declassRarita(currentTier);
+  }
+
+  if (!eligible.length) return null;
+  return eligible[Math.floor(rng() * eligible.length)];
+}
+
+/**
+ * Motore v2: 5 slot, rarità, vincolo minTurn su primi REVEAL_START slot.
  *
- * @param {string} mode - 'classic' | 'bareHands'
- * @param {Array} allBattlefields - Pool di definizioni campo
- * @param {(arr: Array) => Array} shuffle - deve restituire una copia mescolata
+ * @param {string} mode
+ * @param {Array} allBattlefields
+ * @param {() => number} rng
+ * @param {typeof BATTLEFIELD_SELECTION_DEFAULTS} [config]
  * @returns {Array}
  */
-export const pickBattlefieldsWithShuffle = (mode, allBattlefields, shuffle) => {
+export function pickBattlefieldsByRarity(
+  mode,
+  allBattlefields,
+  rng = Math.random,
+  config = BATTLEFIELD_SELECTION_DEFAULTS
+) {
+  const random = typeof rng === 'function' ? rng : () => Math.random();
+
   if (mode === 'bareHands') {
-    const neutralFields = allBattlefields.filter((b) => b.category === 'neutral');
-    return shuffle(neutralFields);
+    const neutral = allBattlefields.filter((b) => b.category === 'neutral');
+    return shuffleArray(neutral).slice(0, CLASSIC_FIELD_COUNT);
   }
 
-  const classicFields = allBattlefields.filter((b) => b.category !== 'neutral');
-  const turn1Fields = classicFields.filter((b) => b.minTurn === 1);
-  const turn2Fields = classicFields.filter((b) => b.minTurn >= 2);
-
-  const shuffledT1 = shuffle(turn1Fields);
-  const shuffledT2 = shuffle(turn2Fields);
+  const pool = allBattlefields.filter((b) => b.category !== 'neutral');
   const selected = [];
-  selected.push(shuffledT1.shift());
+  let raresPlaced = 0;
+  let specialPlaced = false;
 
-  const remaining = shuffle([...shuffledT1, ...shuffledT2]);
-  selected.push(...remaining.slice(0, 4));
+  for (let slot = 0; slot < CLASSIC_FIELD_COUNT; slot++) {
+    let eligible = pool.filter((f) => !selected.some((s) => s.id === f.id));
+    if (slot < config.REVEAL_START) {
+      eligible = eligible.filter((f) => f.minTurn === 1);
+    }
+
+    const tier = rollBattlefieldRaritaTier(slot, raresPlaced, specialPlaced, config, random);
+    const pick = pickFromRaritaBucket(eligible, tier, random);
+    if (!pick) break;
+
+    selected.push(pick);
+    const r = getFieldRarita(pick);
+    if (r === BATTLEFIELD_RARITA.SPECIAL) specialPlaced = true;
+    if (r === BATTLEFIELD_RARITA.RARO || r === BATTLEFIELD_RARITA.SPECIAL) raresPlaced += 1;
+  }
 
   return selected;
+}
+
+/** @deprecated Usa pickBattlefieldsByRarity — wrapper per compat seed shuffle */
+export function pickBattlefieldsWithPool(mode, allBattlefields, _poolConfig, rng) {
+  return pickBattlefieldsByRarity(mode, allBattlefields, rng);
+}
+
+export const pickBattlefieldsWithShuffle = (mode, allBattlefields, shuffle, _poolConfig = null) => {
+  const randomBag = shuffle(Array.from({ length: 64 }, (_, i) => (i + 0.5) / 64));
+  let bagIndex = 0;
+  const rng = () => randomBag[bagIndex++ % randomBag.length];
+  return pickBattlefieldsByRarity(mode, allBattlefields, rng);
 };
 
-/**
- * Seleziona i campi di battaglia per la partita (RNG globale Math.random via shuffleArray).
- *
- * @param {string} mode - Modalità di gioco ('classic' | 'bareHands')
- * @param {Array} [allBattlefields=ALL_BATTLEFIELDS] - Pool (es. da satze.jsx)
- * @returns {Array} - Array di 5 campi selezionati
- */
-export const selectBattlefields = (mode = 'classic', allBattlefields = ALL_BATTLEFIELDS) =>
-  pickBattlefieldsWithShuffle(mode, allBattlefields, shuffleArray);
-
-/**
- * Estrae i modificatori di un campo di battaglia
- * @param {Object} field - Campo di battaglia
- * @returns {Object} - Modificatori del campo
- */
-export const getFieldModifiers = (field) => {
-  if (!field) return {};
-  
-  const modifiers = {};
-  
-  // Trigger sempre attivi
-  if (field.effect.includes('Gloria e Vendetta sempre attivi')) {
-    modifiers.gloriaAlwaysActive = true;
-    modifiers.vendettaAlwaysActive = true;
-  }
-  if (field.effect.includes('Rimonta sempre attiva')) {
-    modifiers.rimontaAlwaysActive = true;
-  }
-  if (field.effect.includes('Imboscata sempre attiva')) {
-    modifiers.imboscataAlwaysActive = true;
-  }
-  if (field.effect.includes('Intervento sempre attivo')) {
-    modifiers.interventoAlwaysActive = true;
-  }
-  if (field.effect.includes('Magnanimo si attiva sempre')) {
-    modifiers.magnanimoAlwaysActive = true;
-  }
-  if (field.effect.includes('Poteri si attivano senza trigger')) {
-    modifiers.allTriggersAlwaysActive = true;
-  }
-  
-  // Overdrive threshold modificato
-  if (field.effect.includes('Overdrive si attiva con 4 FC')) {
-    modifiers.overdriveThreshold = 4;
-  }
-  
-  return modifiers;
+export const selectBattlefields = (
+  mode = 'classic',
+  allBattlefields = ALL_BATTLEFIELDS,
+  options = {}
+) => {
+  const rng = options.rng ?? (() => Math.random());
+  const config = { ...BATTLEFIELD_SELECTION_DEFAULTS, ...options.selectionConfig };
+  return pickBattlefieldsByRarity(mode, allBattlefields, rng, config);
 };
+
+export { getFieldModifiers } from './battlefieldEffects.js';

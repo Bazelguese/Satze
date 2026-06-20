@@ -107,15 +107,15 @@ export function applyBattlefieldRoundAftermath({
     }
   }
 
-  if (field.name === 'Corona Solare') {
+  if (field.id === 37 || field.name === 'Trono Solare') {
     if (winner === 'player') {
       const before = pHP;
       pHP = Math.min(25, pHP + 1);
-      battleLog.push(`☀️ Corona Solare: +1 PV (${before} → ${pHP})`);
+      battleLog.push(`☀️ Trono Solare: +1 PV (${before} → ${pHP})`);
     } else {
       const before = eHP;
       eHP = Math.min(25, eHP + 1);
-      battleLog.push(`☀️ Corona Solare: IA +1 PV (${before} → ${eHP})`);
+      battleLog.push(`☀️ Trono Solare: IA +1 PV (${before} → ${eHP})`);
     }
   }
 
@@ -189,6 +189,48 @@ export function applyBattlefieldRoundAftermath({
     pFC += 1;
     eFC += 1;
     battleLog.push(`💧 Fonte del Mana: Tu ${pBefore} → ${pFC} FC | IA ${eBefore} → ${eFC} FC`);
+  }
+
+  if (field.id === 60) {
+    pFC += 2;
+    eFC += 2;
+    battleLog.push(`💰 Volta del Tesoro: +2 FC a entrambi (${pFC - 2}→${pFC}, ${eFC - 2}→${eFC})`);
+  }
+
+  if (field.id === 57) {
+    if (pHP < eHP) {
+      pHP = Math.min(25, pHP + 1);
+      battleLog.push(`🔧 La Grande Forgia: Tu +1 PV (meno PV)`);
+    } else if (eHP < pHP) {
+      eHP = Math.min(25, eHP + 1);
+      battleLog.push(`🔧 La Grande Forgia: IA +1 PV (meno PV)`);
+    } else {
+      pHP = Math.min(25, pHP + 1);
+      eHP = Math.min(25, eHP + 1);
+      battleLog.push(`🔧 La Grande Forgia: pari PV, +1 a entrambi`);
+    }
+  }
+
+  if (field.id === 65) {
+    if (winner === 'player') {
+      pFC += 1;
+      pHP = Math.max(0, pHP - 2);
+      battleLog.push(`🐉 Picco del Drago Caduto: Tu +1 FC, -2 PV`);
+    } else {
+      eFC += 1;
+      eHP = Math.max(0, eHP - 2);
+      battleLog.push(`🐉 Picco del Drago Caduto: IA +1 FC, -2 PV`);
+    }
+  }
+
+  if (field.id === 82) {
+    if (winner === 'player') {
+      pHP = Math.min(25, pHP + 1);
+      battleLog.push(`🏛️ Necropoli Dorata: Tu +1 PV`);
+    } else {
+      eHP = Math.min(25, eHP + 1);
+      battleLog.push(`🏛️ Necropoli Dorata: IA +1 PV`);
+    }
   }
 
   return {

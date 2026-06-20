@@ -6,10 +6,15 @@ import { describe, it, expect } from 'vitest';
 import { computeDuelResolution } from './duelResolve.js';
 import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 
-const neutralField = ALL_BATTLEFIELDS.find((f) => f.name === 'Passo delle Termopili');
+const neutralField = ALL_BATTLEFIELDS.find((f) => f.id === 51);
 const nexusField = ALL_BATTLEFIELDS.find((f) => f.name === 'Nexus Arcano');
 const canyonField = ALL_BATTLEFIELDS.find((f) => f.name === 'Canyon delle Lame');
 const paludeField = ALL_BATTLEFIELDS.find((f) => f.name === 'Palude Tossica');
+const ossidianaField = ALL_BATTLEFIELDS.find((f) => f.id === 61);
+const megeraThroneField = ALL_BATTLEFIELDS.find((f) => f.id === 68);
+const cattedraleField = ALL_BATTLEFIELDS.find((f) => f.id === 70);
+const circuitoField = ALL_BATTLEFIELDS.find((f) => f.id === 74);
+const cameraRitualeField = ALL_BATTLEFIELDS.find((f) => f.id === 79);
 
 function agent(name, army, overrides = {}) {
   return {
@@ -104,7 +109,7 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.winner).toBe('player');
     expect(battleResult.enemyToxinActivated).toEqual(
-      expect.objectContaining({ value: 2, minHealth: 4 })
+      expect.objectContaining({ value: 1, minHealth: 10 })
     );
     expect(battleResult.logs.some((l) => l.includes('Tossina') && l.includes('IA'))).toBe(true);
   });
@@ -119,5 +124,81 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.winner).toBe('player');
     expect(battleResult.finalPlayerHP).toBe(19);
     expect(battleResult.logs.some((l) => l.includes('Palude Tossica'))).toBe(true);
+  });
+
+  it('Trono d\'Ossidiana raddoppia gli effetti Conquista', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: ossidianaField,
+      selectedAgent: agent('Tu', 'Ratti della Megera', { power: 9, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1 }),
+      playerArmyBonuses: { 'Ratti della Megera': true },
+    });
+    expect(battleResult.winner).toBe('player');
+    expect(battleResult.enemyToxinActivated).toEqual(
+      expect.objectContaining({ value: 2, minHealth: 10 })
+    );
+  });
+
+  it('Trono della Megera attiva Ultimo Desiderio due volte', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: megeraThroneField,
+      selectedAgent: agent('Tu', 'Khemet', {
+        power: 1,
+        damage: 1,
+        ability: { trigger: 'lastWish', effect: 'focusCoin', value: 2 },
+      }),
+      enemyAgent: agent('IA', 'Kethran', { power: 9, damage: 4 }),
+    });
+    expect(battleResult.winner).toBe('enemy');
+    expect(battleResult.finalPlayerFC).toBe(8);
+    expect(battleResult.logs.filter((l) => l.includes('Ultimo Desiderio') || l.includes('(2×)')).length).toBeGreaterThan(0);
+  });
+
+  it('Cattedrale del Decadimento sostituisce il bonus armata con Tossina 2', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: cattedraleField,
+      selectedAgent: agent('Tu', "Figli dell'Orizzonte", { power: 9, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1 }),
+      playerArmyBonuses: { "Figli dell'Orizzonte": true },
+    });
+    expect(battleResult.winner).toBe('player');
+    expect(battleResult.enemyToxinActivated).toEqual(
+      expect.objectContaining({ value: 2, minHealth: 10 })
+    );
+  });
+
+  it('Il Circuito fa attivare il Potere del primo con trigger Sfida', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: circuitoField,
+      isPlayerFirst: true,
+      selectedAgent: agent('Tu', "Figli dell'Orizzonte", {
+        power: 5,
+        damage: 3,
+        league: 2,
+        ability: { trigger: 'intervention', effect: 'power', value: 3 },
+      }),
+      enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1, league: 4 }),
+    });
+    expect(battleResult.playerPower).toBe(8);
+    expect(battleResult.logs.some((l) => l.includes('TU (Tu)') && l.includes('+3 POT'))).toBe(true);
+  });
+
+  it('Camera Rituale aggiunge +1 POT e +1 DAN con Overdrive attivo', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: cameraRitualeField,
+      selectedFocus: 5,
+      enemySelectedFocus: 5,
+      selectedAgent: agent('Tu', "Figli dell'Orizzonte", { power: 5, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 5, damage: 3 }),
+    });
+    expect(battleResult.logs.some((l) => l.includes('Camera Rituale') && l.includes('Overdrive'))).toBe(true);
+    expect(battleResult.playerAssault).toBe(30);
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.playerDamage).toBe(4);
   });
 });

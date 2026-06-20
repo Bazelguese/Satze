@@ -22,7 +22,7 @@ test('vincitore player: danno al nemico poi Palude su entrambi', () => {
 test('campo neutro: solo danno al perdente', () => {
   const log = [];
   const r = applyBattlefieldRoundAftermath({
-    field: { name: 'Passo delle Termopili' },
+    field: { id: 51, name: 'La Piana della Torre Caduta' },
     winner: 'player',
     damageDealt: 4,
     pHPCurrent: 20,

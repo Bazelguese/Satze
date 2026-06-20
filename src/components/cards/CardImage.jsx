@@ -9,6 +9,8 @@ import { Icon } from '../ui/Icon';
 import { CARD_TYPE_ICONS } from '../../data/icons.jsx';
 import { normalizeContainCrop } from '../../utils/imageContainPan';
 
+const loadedImageUrls = new Set();
+
 export const CardImage = ({
   type,
   palette,
@@ -19,11 +21,10 @@ export const CardImage = ({
   containerLeft,
   containerTop,
 }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  
   // Se è un'immagine specifica per agente, usa AGENT_IMAGES
   const imageUrl = (type === 'specific' && agentId) ? AGENT_IMAGES[agentId] : CARD_IMAGES[type];
+  const [imageLoaded, setImageLoaded] = useState(() => Boolean(imageUrl && loadedImageUrls.has(imageUrl)));
+  const [imageError, setImageError] = useState(false);
   
   // Colori placeholder per armata
   const placeholderColors = {
@@ -86,7 +87,10 @@ export const CardImage = ({
           src={imageUrl}
           alt={type}
           referrerPolicy="no-referrer"
-          onLoad={() => setImageLoaded(true)}
+          onLoad={() => {
+            loadedImageUrls.add(imageUrl);
+            setImageLoaded(true);
+          }}
           onError={() => setImageError(true)}
           className="w-full h-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
           style={{

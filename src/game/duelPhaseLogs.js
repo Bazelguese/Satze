@@ -57,14 +57,14 @@ export function buildDuelPhaseLogs({
     phase4: [],
   };
 
-  if (field.name === 'Porte di Atlantide') {
+  if (field.id === 9 || field.name === 'Porte di Atlantide') {
     phaseLogs.phase1.push(`🌊 Porte di Atlantide: FC raddoppiati!`);
     phaseLogs.phase1.push(
       `   Tu: ${selectedFocus} → ${pFocusUsed} | IA: ${enemySelectedFocus} → ${eFocusUsed}`
     );
   }
-  if (field.name === 'Anomalia Gravitazionale') {
-    phaseLogs.phase1.push(`🌀 Anomalia Gravitazionale: FC max 3 applicato`);
+  if (field.id === 36 || field.name === 'Il Pozzo Gravitazionale') {
+    phaseLogs.phase1.push(`🌀 ${field.name}: FC max 3 applicato`);
   }
 
   if (phaseLogs.phase2.length === 1) {

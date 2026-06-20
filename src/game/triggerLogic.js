@@ -25,6 +25,13 @@
  * @property {Object} fieldModifiers - Modificatori del campo di battaglia
  */
 
+/** Trigger risolti solo dopo l'esito VA dello scontro corrente. */
+export const POST_BATTLE_TRIGGERS = ['conquest', 'lastWish'];
+
+export function isPostBattleTrigger(trigger) {
+  return POST_BATTLE_TRIGGERS.includes(trigger);
+}
+
 /**
  * Verifica se un trigger è soddisfatto
  * @param {string|null} trigger - Nome del trigger
@@ -40,10 +47,12 @@ export const checkTrigger = (trigger, context) => {
     switch (trigger) {
       case 'imboscata':
         if (fieldMods.imboscataAlwaysActive) return true;
+        if (fieldMods.swapImboscataIntervento) return !context.isFirst;
         return context.isFirst;
 
       case 'intervention':
         if (fieldMods.interventoAlwaysActive) return true;
+        if (fieldMods.swapImboscataIntervento) return context.isFirst;
         return !context.isFirst;
 
       case 'glory':
@@ -60,6 +69,7 @@ export const checkTrigger = (trigger, context) => {
       }
 
       case 'reckoning':
+        if (fieldMods.reckoningAlwaysActive) return true;
         return context.cardsPlayed >= 3 && context.enemyCardsPlayed >= 3;
 
       case 'rimonta':
@@ -90,12 +100,16 @@ export const checkTrigger = (trigger, context) => {
         return (context.playerFieldsConquered || 0) >= 1;
         
       case 'resistenza': // Resistenza - nemico ha conquistato 1+ campi
+        if (fieldMods.resistenzaAlwaysActive) return true;
         return (context.enemyFieldsConquered || 0) >= 1;
         
       case 'turbo':
+        if (fieldMods.turboAlwaysActive) return true;
+        if (fieldMods.invertTurboUltimaChance) return (context.roundNumber || 1) >= 5;
         return (context.roundNumber || 1) <= 2;
         
       case 'ultimaChance': // Ultima Chance - Round 5+
+        if (fieldMods.invertTurboUltimaChance) return (context.roundNumber || 1) <= 2;
         return (context.roundNumber || 1) >= 5;
 
       case 'rinforzi':

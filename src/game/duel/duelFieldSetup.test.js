@@ -29,7 +29,7 @@ test('Mura EMP azzera immune su duel', () => {
   const eCtx = {};
   applyDuelFieldSetup(
     duel,
-    { name: 'Mura EMP', category: 'values' },
+    { id: 28, name: 'Mura EMP', category: 'limit' },
     log,
     { name: 'P', league: 2 },
     { name: 'E', league: 2 },
@@ -43,14 +43,14 @@ test('Mura EMP azzera immune su duel', () => {
 
 test('Nexus Arcano espone maxDamage 4', () => {
   const duel = baseDuel();
-  const flags = applyDuelFieldSetup(duel, { name: 'Nexus Arcano', category: 'limit' }, [], {}, {}, {}, {});
+  const flags = applyDuelFieldSetup(duel, { id: 15, name: 'Nexus Arcano', category: 'limit' }, [], {}, {}, {}, {});
   assert.equal(flags.maxDamage, 4);
 });
 
 test('Anomalia Gravitazionale limita FC a 3', () => {
   const duel = baseDuel({ pFocusUsed: 6, eFocusUsed: 5 });
   const log = [];
-  applyDuelFieldSetup(duel, { name: 'Anomalia Gravitazionale', category: 'values' }, log, {}, {}, {}, {}, {});
+  applyDuelFieldSetup(duel, { id: 36, name: 'Il Pozzo Gravitazionale', category: 'limit' }, log, {}, {}, {}, {}, {});
   assert.equal(duel.pFocusUsed, 3);
   assert.equal(duel.eFocusUsed, 3);
 });
@@ -59,7 +59,7 @@ test('Crocevia dei Patti imposta triggersIgnored nei context', () => {
   const duel = baseDuel();
   const pCtx = {};
   const eCtx = {};
-  applyDuelFieldSetup(duel, { name: 'Crocevia dei Patti', category: 'trigger' }, [], {}, {}, pCtx, eCtx);
+  applyDuelFieldSetup(duel, { id: 41, name: 'Crocevia dei Patti', category: 'trigger' }, [], {}, {}, pCtx, eCtx);
   assert.equal(pCtx.fieldModifiers.triggersIgnored, true);
   assert.equal(eCtx.fieldModifiers.triggersIgnored, true);
 });

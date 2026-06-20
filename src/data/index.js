@@ -7,6 +7,7 @@ export * from './armies';
 export * from './triggers';
 export * from './gameMechanicsFramework';
 export * from './battlefields';
+export * from './battlefieldMeta';
 export * from './images';
 export * from './campaign';
 export * from './gameModes';

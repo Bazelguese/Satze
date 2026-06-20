@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  ALL_BATTLEFIELDS,
+  BATTLEFIELD_TEMA_TO_ANIMATION,
+  getBattlefieldAnimationType,
+  getBattlefieldEntranceTheme,
+} from './battlefields.js';
+
+test('campi generico usano animazione default', () => {
+  assert.equal(getBattlefieldAnimationType(1), 'default');
+  assert.equal(getBattlefieldAnimationType(51), 'default');
+  assert.equal(getBattlefieldEntranceTheme(1), 'default');
+});
+
+test('armate con mappa dedicata usano animazione tematica', () => {
+  for (const field of ALL_BATTLEFIELDS) {
+    const expected = BATTLEFIELD_TEMA_TO_ANIMATION[field.tema];
+    if (!expected) continue;
+    assert.equal(
+      getBattlefieldAnimationType(field.id),
+      expected,
+      `campo ${field.id} (${field.name}) tema "${field.tema}"`
+    );
+  }
+});
+
+test('Enclave, Ratti, Patto, Khemet → default (animazione custom non ancora pronta)', () => {
+  assert.equal(getBattlefieldAnimationType(60), 'default');
+  assert.equal(getBattlefieldAnimationType(70), 'default');
+  assert.equal(getBattlefieldAnimationType(74), 'default');
+  assert.equal(getBattlefieldAnimationType(79), 'default');
+});
+
+test('esempi armate con animazione attiva', () => {
+  assert.equal(getBattlefieldAnimationType(22), 'frammenti');
+  assert.equal(getBattlefieldAnimationType(19), 'swirl');
+  assert.equal(getBattlefieldAnimationType(25), 'sipario');
+  assert.equal(getBattlefieldAnimationType(44), 'hud');
+  assert.equal(getBattlefieldAnimationType(58), 'onda');
+  assert.equal(getBattlefieldAnimationType(49), 'morsi');
+});
+
+test('id inesistente → default', () => {
+  assert.equal(getBattlefieldAnimationType(999), 'default');
+});

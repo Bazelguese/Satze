@@ -3844,6 +3844,7 @@ export default function SatzeGame() {
           variant="n5"
           galleryCardLayout={galleryCardLayout}
           getAbilityCurrentValue={getAbilityCurrentValue}
+          isZoomed={isZoomed}
         />
       )}
 

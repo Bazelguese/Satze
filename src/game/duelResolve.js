@@ -5,7 +5,12 @@
 
 import { checkTrigger } from './triggerLogic.js';
 import { buildDuelPhaseLogs } from './duelPhaseLogs.js';
-import { countConqueredFields, checkImmunity, canTriggerAbility as duelCanTriggerAbility } from './duel/duelHelpers.js';
+import { countConqueredFields, checkImmunity } from './duel/duelHelpers.js';
+import {
+  createDuelCanTriggerAbility,
+  resolveFieldArmyBonuses,
+  applyFieldOverdriveBonuses,
+} from './battlefieldDeepEffects.js';
 import { applyDuelFieldSetup } from './duel/duelFieldSetup.js';
 import { applyDuelPowerEffect } from './duel/duelApplyEffect.js';
 import { createApplyBonusEffects } from './duel/duelBonusEffects.js';
@@ -88,10 +93,23 @@ export function computeDuelResolution({
       enemyInitialLeagueCount,
     });
 
-    const pHasBonus = playerArmyBonuses[pAgent.army] || false;
-    const eHasBonus = enemyArmyBonuses[eAgent.army] || false;
-    const pArmyBonus = ARMY_BONUSES[pAgent.army];
-    const eArmyBonus = ARMY_BONUSES[eAgent.army];
+    const pHasBonusRaw = playerArmyBonuses[pAgent.army] || false;
+    const eHasBonusRaw = enemyArmyBonuses[eAgent.army] || false;
+    const pArmyBonusRaw = ARMY_BONUSES[pAgent.army];
+    const eArmyBonusRaw = ARMY_BONUSES[eAgent.army];
+    const resolvedBonuses = resolveFieldArmyBonuses(
+      field,
+      pHasBonusRaw,
+      eHasBonusRaw,
+      pArmyBonusRaw,
+      eArmyBonusRaw
+    );
+    const pHasBonus = resolvedBonuses.pHasBonus;
+    const eHasBonus = resolvedBonuses.eHasBonus;
+    const pArmyBonus = resolvedBonuses.pArmyBonus;
+    const eArmyBonus = resolvedBonuses.eArmyBonus;
+
+    const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
 
     const duel = {
       pPower: pAgent.power,
@@ -165,6 +183,8 @@ export function computeDuelResolution({
       modifiersDisabled,
       directDamageDisabled,
       directDamageBonus,
+      conquestDouble: fieldFlags.conquestDouble === true,
+      lastWishDouble: fieldFlags.lastWishDouble === true,
     };
 
     const applyBonusEffects = createApplyBonusEffects({
@@ -274,13 +294,19 @@ export function computeDuelResolution({
     let playerToxinActivated = state.playerToxinActivated;
     let enemyToxinActivated = state.enemyToxinActivated;
 
+    applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
+    pPower = state.pPower;
+    ePower = state.ePower;
+    pDamage = state.pDamage;
+    eDamage = state.eDamage;
+
     const assault = runDuelAssaultCalculation(battleLog, {
       pAgent,
       eAgent,
       pPower,
       ePower,
-      pFocusUsed,
-      eFocusUsed,
+      pFocusUsed: fieldFlags.focusHalvedInVa ? Math.ceil(pFocusUsed / 2) : pFocusUsed,
+      eFocusUsed: fieldFlags.focusHalvedInVa ? Math.ceil(eFocusUsed / 2) : eFocusUsed,
       pAssaultMod,
       eAssaultMod,
       pMinAssault,
@@ -297,16 +323,38 @@ export function computeDuelResolution({
       eAssaultAfterFocus,
     } = assault;
 
-    const winner = resolveDuelWinnerByAssault({
-      pAssault,
-      eAssault,
-      pAgent,
-      eAgent,
-      pPower,
-      ePower,
-      isPlayerFirst,
-      battleLog,
-    });
+    let winner;
+    if (fieldFlags.winnerByFocusNotVa) {
+      if (pFocusUsed > eFocusUsed) {
+        battleLog.push(`⚔️ ${field.name}: più FC investiti → Vittoria Tu`);
+        winner = 'player';
+      } else if (eFocusUsed > pFocusUsed) {
+        battleLog.push(`⚔️ ${field.name}: più FC investiti → Vittoria IA`);
+        winner = 'enemy';
+      } else {
+        winner = resolveDuelWinnerByAssault({
+          pAssault,
+          eAssault,
+          pAgent,
+          eAgent,
+          pPower,
+          ePower,
+          isPlayerFirst,
+          battleLog,
+        });
+      }
+    } else {
+      winner = resolveDuelWinnerByAssault({
+        pAssault,
+        eAssault,
+        pAgent,
+        eAgent,
+        pPower,
+        ePower,
+        isPlayerFirst,
+        battleLog,
+      });
+    }
 
     const playerWon = winner === 'player';
     const playerContextPost = { ...playerContext, won: playerWon, lost: !playerWon };
@@ -335,6 +383,7 @@ export function computeDuelResolution({
       playerContextPost,
       enemyContextPost,
       battleLog,
+      state,
     });
 
     const pb = pickPostBattleFields(state);
