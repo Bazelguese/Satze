@@ -6,6 +6,7 @@
 
 > Nota: questo documento e un modello di bilanciamento (formule + euristiche operative).
 > Per la fotografia reale e aggiornata di trigger/effetti presenti nelle carte, usare `FRAMEWORK_IDENTITA_ARMATE_v2.md`.
+> Per fasi, tempistiche e attivazioni del duello (gameplay), vedere **[DUELLO_FASI.md](../DUELLO_FASI.md)** — Parte I per validazione carte, Parte II per il motore.
 > Se c'e divergenza, **vince il codice** (`src/data/cards.js`, `src/data/armies.js`, `src/game/triggerLogic.js`).
 
 ---

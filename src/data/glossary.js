@@ -39,6 +39,7 @@ export const GLOSSARY_TERMS = [
   { term: 'Resistenza', abbr: null, category: 'trigger', desc: "Il nemico ha conquistato 1+ campi", detail: "Si attiva quando l'avversario ha conquistato almeno un campo. Premiato chi deve rimontare." },
   { term: 'Turbo', abbr: null, category: 'trigger', desc: "Turno 1 o 2", detail: "Si attiva nei primi due turni. Effetti pensati per l'apertura di partita." },
   { term: 'Ultima Chance', abbr: null, category: 'trigger', desc: "Turno 5+", detail: "Si attiva dal turno 5 in poi. Effetti pensati per la fase finale, quando conta la Supremazia (PV)." },
+  { term: 'Rinforzi', abbr: null, category: 'trigger', desc: "2+ carte della stessa Lega della carta giocata in mano iniziale", detail: "Si attiva se, tra le 5 carte della tua mano iniziale, c'erano almeno 2 carte con la stessa Lega dell'Agente che stai giocando in questo scontro. Usato dal bonus armata del Patto degli Indocili." },
 
   // Effetti Buff
   { term: '+X POT', abbr: null, category: 'effetti', desc: "Aumenta la tua Potenza di X", detail: "Aggiunge X alla tua POT prima del calcolo del VA. Esempio: +2 POT con POT 5 e 3 FC → VA considera POT 7." },
@@ -70,7 +71,7 @@ export const GLOSSARY_TERMS = [
   { term: 'Blocca Bonus', abbr: null, category: 'effetti', desc: "Annulla il Bonus Armata nemico", detail: "Il Bonus Armata dell'avversario non si attiva. Utile quando l'avversario ha un bonus potente." },
   { term: 'Immune', abbr: null, category: 'effetti', desc: "Ignora le riduzioni statistiche (-POT, -DAN, -VA)", detail: "Le riduzioni a POT, DAN e VA non ti colpiscono. Non protegge da Blocca Potere e Blocca Bonus, né da danni diretti (X Danni dir.)." },
   { term: 'Inversione', abbr: null, category: 'effetti', desc: "I modificatori esterni sono invertiti: buff → debuff, debuff → buff", detail: "Gli effetti nemici e dei campi di battaglia che ti colpiscono si invertono: un -2 POT nem. diventa +2 POT per te, un +1 DAN da un campo diventa -1 DAN. Non protegge da Blocca Potere e Blocca Bonus." },
-  { term: 'Tossina X (min Y)', abbr: null, category: 'effetti', desc: "Danno passivo a fine turno finché avversario > Y PV", detail: "Quando Tossina viene attivata, l'avversario subisce X danni a fine di ogni turno successivo. Continua finché l'avversario non scende a Y PV o meno. Se riattivata mentre è già attiva, il valore aumenta di +1. Esempio: Tossina 2 (min 4) → avversario subisce 2 danni a fine turno finché ha più di 4 PV." },
+  { term: 'Tossina X (min Y)', abbr: null, category: 'effetti', desc: "Danno passivo a fine turno finché avversario > Y PV", detail: "Quando Tossina viene attivata, l'avversario subisce X danni a fine di ogni turno successivo. Continua finché l'avversario non scende a Y PV o meno. Se riattivata mentre è già attiva, il valore aumenta di +1. Esempio: bonus Ratti — Tossina 1 (min 10) → 1 danno a fine turno finché l'avversario ha più di 10 PV." },
 ];
 
 export const GLOSSARY_CATEGORIES = {

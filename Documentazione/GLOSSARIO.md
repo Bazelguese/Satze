@@ -60,6 +60,7 @@
 | **Resistenza** | Il nemico ha conquistato 1+ campi |
 | **Turbo** | Turno 1 o 2 |
 | **Ultima Chance** | Turno 5+ |
+| **Rinforzi** | Nella mano iniziale c'erano 2+ carte della stessa Lega della carta giocata |
 
 ---
 
@@ -129,11 +130,11 @@
 3. Se Tossina viene riattivata mentre è già attiva, il valore aumenta di +1
 
 **Esempio:**
-- Turno 1: Vinci con bonus Ratti → Tossina 2 (min 4) attiva
-- Fine Turno 2: Avversario subisce 2 danni
-- Turno 3: Vinci ancora → Tossina sale a 3
-- Fine Turno 3: Avversario subisce 3 danni
-- Turno 4+: Continua finché avversario > 4 PV
+- Turno 1: Vinci con bonus Ratti → Tossina 1 (min 10) attiva
+- Fine Turno 2: Avversario subisce 1 danno
+- Turno 3: Vinci ancora → Tossina sale a 2
+- Fine Turno 3: Avversario subisce 2 danni
+- Turno 4+: Continua finché avversario > 10 PV
 
 ### Controllo
 
@@ -157,7 +158,9 @@
 | **Orathai** | Resa dei conti: +2 DAN |
 | **Mounthborn** | Imboscata: +1 POT, +1 DAN |
 | **L'Enclave delle Scaglie** | Conquista: +2 FC |
-| **Ratti della Megera** | Conquista: Tossina 2 (min 4) |
+| **Ratti della Megera** | Conquista: Tossina 1 (min 10) |
+| **Patto degli Indocili** | Rinforzi: -1 POT, -1 DAN nem. (min 2) |
+| **Khemet** | Overdrive: Immune |
 
 ---
 
@@ -228,16 +231,20 @@
 
 ## ORDINE DI RISOLUZIONE
 
-1. **Potere Primo Giocatore** - Si attiva in base al trigger
-2. **Potere Secondo Giocatore** - Si attiva in base al trigger
-3. **Bonus Armata Primo Giocatore** - Se ha 2+ carte dell'armata nel Deck
-4. **Bonus Armata Secondo Giocatore** - Se ha 2+ carte dell'armata nel Deck
-5. **Calcolo VA** - POT x FC + modificatori
-6. **Risoluzione scontro** - VA piu alto vince (parita: Lega minore, poi POT minore)
-7. **Effetti post-scontro** - Conquista, Ultimo Desiderio, danni, cure
+Schema canonico completo: **[DUELLO_FASI.md](DUELLO_FASI.md)** — **Parte I** (5 blocchi logici, player/designer) + **Parte II** (appendice motore R0–R12).
 
-> **Nota:** Gli effetti Blocca (Blocca Potere, Blocca Bonus) annullano il Potere/Bonus bersaglio quando si tenta di risolverlo.
+Riassunto (5 blocchi — dettaglio in DUELLO_FASI Parte I):
+
+1. **Campo e regole globali**
+2. **Chi può agire** (block, immune) — 1° → 2°
+3. **Contesto scontro:** poteri 1° → 2°, poi bonus armata 1° → 2°
+4. **VA ed esito**
+5. **Conseguenze:** Conquista/UD carta, danni, campo post-scontro, FC
+
+Appendice motore R0–R12: DUELLO_FASI Parte II.
+
+> **Nota:** Gli effetti Blocca (Blocca Potere, Blocca Bonus) annullano il Potere/Bonus bersaglio quando si tenta di risolverlo. Poteri e bonus si risolvono **1° giocatore → 2° giocatore** (iniziativa del turno).
 
 ---
 
-*Ultimo aggiornamento: Gennaio 2026*
+*Ultimo aggiornamento: Giugno 2026*

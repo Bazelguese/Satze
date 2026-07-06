@@ -25,11 +25,11 @@ test('armate con mappa dedicata usano animazione tematica', () => {
   }
 });
 
-test('Enclave, Ratti, Patto, Khemet → default (animazione custom non ancora pronta)', () => {
-  assert.equal(getBattlefieldAnimationType(60), 'default');
-  assert.equal(getBattlefieldAnimationType(70), 'default');
-  assert.equal(getBattlefieldAnimationType(74), 'default');
-  assert.equal(getBattlefieldAnimationType(79), 'default');
+test('Enclave, Ratti, Patto, Khemet → animazioni dedicate', () => {
+  assert.equal(getBattlefieldAnimationType(60), 'occhio');
+  assert.equal(getBattlefieldAnimationType(70), 'sciame');
+  assert.equal(getBattlefieldAnimationType(74), 'rivolta');
+  assert.equal(getBattlefieldAnimationType(79), 'cerchi');
 });
 
 test('esempi armate con animazione attiva', () => {

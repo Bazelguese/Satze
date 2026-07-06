@@ -117,13 +117,12 @@ export function useGameState() {
   const [player2Toxin, setPlayer2Toxin] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState(1); // 1 o 2, chi sta giocando ora
   
-  // Campagna e Roguelike
+  // Campagna
   const [campaignLevel, setCampaignLevel] = useState(null);
   /** Slot salvataggio campagna attivo (0–2). */
   const [campaignSaveSlot, setCampaignSaveSlot] = useState(0);
   /** Modificatori duello da missione campagna (iniziativa, condizione vittoria). */
   const [campaignDuelMod, setCampaignDuelMod] = useState(null);
-  const [roguelikeLevel, setRoguelikeLevel] = useState(1);
   
   return {
     // Game phase
@@ -256,15 +255,13 @@ export function useGameState() {
     currentPlayer,
     setCurrentPlayer,
     
-    // Campagna e Roguelike
+    // Campagna
     campaignLevel,
     setCampaignLevel,
     campaignSaveSlot,
     setCampaignSaveSlot,
     campaignDuelMod,
     setCampaignDuelMod,
-    roguelikeLevel,
-    setRoguelikeLevel,
     
     // UI states aggiuntivi
     showDeckManager,
