@@ -1,6 +1,7 @@
 // Scelta slot salvataggio campagna (3 slot indipendenti).
 
 import React, { useCallback, useState } from 'react';
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import {
   CAMPAIGN_SLOT_COUNT,
   getCampaignSlotSummary,
@@ -60,7 +61,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
               key={idx}
               style={{
                 ...slotCardBase,
-                borderLeft: `3px solid ${empty ? CAMPAIGN_UI.textMuted : '#c026d3'}`,
+                borderLeft: `3px solid ${empty ? CAMPAIGN_UI.textMuted : MENU_ACCENTS.magenta}`,
                 boxShadow: empty ? undefined : '0 0 20px rgba(192, 38, 211, 0.08)',
               }}
             >
@@ -175,7 +176,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
               maxWidth: 400,
               width: '100%',
               background: 'linear-gradient(180deg, #140f22 0%, #0c0614 100%)',
-              border: '1.5px solid #c026d3',
+              border: `1.5px solid ${MENU_ACCENTS.magenta}`,
               boxShadow: '0 0 32px rgba(192, 38, 211, 0.25)',
               padding: 24,
               fontFamily: CAMPAIGN_FONTS.ui,

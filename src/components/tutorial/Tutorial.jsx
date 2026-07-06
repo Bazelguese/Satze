@@ -4,7 +4,7 @@
 // ============================================
 
 import { useEffect } from 'react';
-import { PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY } from '../../theme/hudOratorioPalette';
+import { MENU_ACCENTS, PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY } from '../../theme/hudOratorioPalette';
 
 export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, onComplete, onGoToStep, steps }) {
   if (!isActive) return null;
@@ -36,9 +36,9 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
     fontWeight: 600,
     padding: '10px 20px',
     borderRadius: '10px',
-    border: '1.5px solid #c026d3',
-    color: '#06030a',
-    background: 'linear-gradient(90deg, #c026d3 0%, #a855f7 50%, #ec4899 100%)',
+    border: `1.5px solid ${MENU_ACCENTS.magenta}`,
+    color: MENU_ACCENTS.void,
+    background: `linear-gradient(90deg, ${MENU_ACCENTS.magenta} 0%, #a855f7 50%, ${MENU_ACCENTS.pink} 100%)`,
     boxShadow: '0 0 20px rgba(192, 38, 211, 0.35)',
     cursor: 'pointer',
   };
@@ -66,7 +66,7 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'linear-gradient(180deg, #0c0614 0%, #140f22 48%, #080612 100%)',
-          borderColor: '#c026d3',
+          borderColor: MENU_ACCENTS.magenta,
           boxShadow: '0 0 36px rgba(192, 38, 211, 0.35), 0 0 72px rgba(88, 28, 135, 0.2)',
           fontFamily: HUD_ORATORIO_FONT_UI,
         }}
@@ -103,7 +103,7 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
                 className="h-full transition-all duration-300"
                 style={{
                   width: `${((currentStep + 1) / steps.length) * 100}%`,
-                  background: 'linear-gradient(90deg, #c026d3, #ec4899)',
+                  background: `linear-gradient(90deg, ${MENU_ACCENTS.magenta}, ${MENU_ACCENTS.pink})`,
                   boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)',
                 }}
               />
@@ -152,7 +152,7 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
                   height: 8,
                   background:
                     index === currentStep
-                      ? 'linear-gradient(90deg, #c026d3, #ec4899)'
+                      ? `linear-gradient(90deg, ${MENU_ACCENTS.magenta}, ${MENU_ACCENTS.pink})`
                       : index < currentStep
                         ? 'rgba(236, 72, 153, 0.45)'
                         : 'rgba(71, 85, 105, 0.6)',
@@ -177,7 +177,7 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
 
         <div
           className="px-4 py-2 text-center text-xs text-slate-500"
-          style={{ borderTop: `1px solid rgba(51, 65, 85, 0.45)`, background: '#06030a' }}
+          style={{ borderTop: `1px solid rgba(51, 65, 85, 0.45)`, background: MENU_ACCENTS.void }}
         >
           Usa ← → per navigare • ESC per chiudere
         </div>

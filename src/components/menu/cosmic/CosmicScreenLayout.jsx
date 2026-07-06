@@ -11,8 +11,8 @@ export function CosmicScreenLayout({ title, subtitle, children, footer }) {
         overflow: 'auto',
         background: '#08070d',
         zIndex: 50,
-        fontFamily: "'Chakra Petch', sans-serif",
-        color: '#f5f3eb',
+        fontFamily: 'var(--font-ui)',
+        color: 'var(--menu-text)',
       }}
     >
       <div
@@ -43,7 +43,7 @@ export function CosmicScreenLayout({ title, subtitle, children, footer }) {
               <h1
                 style={{
                   margin: 0,
-                  fontFamily: "'Cinzel', serif",
+                  fontFamily: 'var(--font-display)',
                   fontWeight: 900,
                   textTransform: 'uppercase',
                   letterSpacing: '0.28em',
@@ -59,7 +59,7 @@ export function CosmicScreenLayout({ title, subtitle, children, footer }) {
                 style={{
                   marginTop: '8px',
                   color: '#a9a4b8',
-                  fontFamily: "'Share Tech Mono', monospace",
+                  fontFamily: 'var(--font-mono)',
                   letterSpacing: '0.14em',
                   fontSize: '0.74rem',
                 }}

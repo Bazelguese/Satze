@@ -18,7 +18,7 @@ export function CosmicDeckBuilderWrapper(props) {
         }
         .satze-deck-builder-root.cosmic-builder {
           background:
-            radial-gradient(ellipse at 30% 20%, #2a0a3a 0%, #14051f 45%, #06030a 80%) !important;
+            radial-gradient(ellipse at 30% 20%, #2a0a3a 0%, #14051f 45%, var(--menu-void) 80%) !important;
           position: relative;
           isolation: isolate;
         }
@@ -73,7 +73,7 @@ export function CosmicDeckBuilderWrapper(props) {
         .satze-deck-builder-root .cosmic-builder-subtitle {
           font-family: 'Share Tech Mono', monospace !important;
           letter-spacing: 0.4em !important;
-          color: #ec4899 !important;
+          color: var(--menu-pink) !important;
           font-size: 10px !important;
           text-transform: uppercase;
         }
@@ -157,7 +157,7 @@ export function CosmicDeckBuilderWrapper(props) {
         .satze-deck-builder-root .cosmic-cards-found {
           font-family: 'Share Tech Mono', monospace !important;
           letter-spacing: 0.16em;
-          color: #ec4899 !important;
+          color: var(--menu-pink) !important;
           text-transform: uppercase;
         }
         .satze-deck-builder-root .cosmic-builder-grid {
@@ -218,10 +218,10 @@ export function CosmicDeckBuilderWrapper(props) {
           letter-spacing: 0.08em;
           border: 1px solid rgba(236,72,153,0.35);
           background: rgba(236,72,153,0.18) !important;
-          color: #ec4899 !important;
+          color: var(--menu-pink) !important;
         }
         .satze-deck-builder-root .cosmic-builder-deckpanel {
-          background: linear-gradient(180deg, #0e0518 0%, #06030a 100%) !important;
+          background: linear-gradient(180deg, #0e0518 0%, var(--menu-void) 100%) !important;
           border: 1px solid rgba(192,38,211,0.5) !important;
           box-shadow: 0 0 30px rgba(192,38,211,0.2), inset 0 0 40px rgba(0,0,0,0.45) !important;
           clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%) !important;
@@ -233,7 +233,7 @@ export function CosmicDeckBuilderWrapper(props) {
           border-bottom: 1px dashed rgba(192,38,211,0.3) !important;
         }
         .satze-deck-builder-root .cosmic-deck-row {
-          border-left: 3px solid #ec4899 !important;
+          border-left: 3px solid var(--menu-pink) !important;
           border-color: rgba(192,38,211,0.45) !important;
         }
         .satze-deck-builder-root .cosmic-builder-confirmarea {
@@ -259,7 +259,7 @@ export function CosmicDeckBuilderWrapper(props) {
         }
         .satze-deck-builder-root .satze-deck-btn-confirm:hover,
         .satze-deck-builder-root .satze-deck-btn-small:hover {
-          border-color: #ff2db8 !important;
+          border-color: var(--menu-hot-pink) !important;
           box-shadow: 0 0 24px rgba(255,45,184,0.3) !important;
         }
       `}</style>

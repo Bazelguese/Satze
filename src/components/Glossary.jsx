@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { GLOSSARY_TERMS, GLOSSARY_CATEGORIES } from '../data/glossary';
-import { PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY } from '../theme/hudOratorioPalette';
+import { MENU_ACCENTS, PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY } from '../theme/hudOratorioPalette';
 
 function normalize(str) {
   return (str || '')
@@ -84,14 +84,14 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 
   if (!originRect) return null;
 
-  const shellBorder = isMenu ? '2px solid #c026d3' : `2px solid ${PALETTE.panelEdge}`;
+  const shellBorder = isMenu ? `2px solid ${MENU_ACCENTS.magenta}` : `2px solid ${PALETTE.panelEdge}`;
   const shellBg = isMenu
     ? 'linear-gradient(180deg, #0c0614 0%, #140f22 45%, #080612 100%)'
     : `linear-gradient(180deg, ${PALETTE.deepVoid} 0%, ${PALETTE.nebula} 50%, ${PALETTE.deepVoid} 100%)`;
   const shellShadow = isMenu
     ? '0 0 32px rgba(192, 38, 211, 0.35), 0 0 60px rgba(236, 72, 153, 0.12)'
     : `0 0 28px ${PALETTE.magenta}33`;
-  const titleColor = isMenu ? '#ec4899' : PALETTE.amber;
+  const titleColor = isMenu ? MENU_ACCENTS.pink : PALETTE.amber;
   const inputRing = isMenu
     ? 'border-fuchsia-500/50 focus:border-fuchsia-400 focus:ring-1 focus:ring-fuchsia-500/40'
     : 'border-violet-500/40 focus:border-violet-300 focus:outline-none focus:ring-1 focus:ring-violet-500/35';
@@ -156,7 +156,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca termini (es. POT, Imboscata, VA...)"
-              className={`w-full rounded-lg border border-slate-600/50 bg-[#110b20]/95 px-4 py-3 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none ${inputRing}`}
+              className={`w-full rounded-lg border border-slate-600/50 bg-menu-panel/95 px-4 py-3 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none ${inputRing}`}
               autoFocus
             />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">

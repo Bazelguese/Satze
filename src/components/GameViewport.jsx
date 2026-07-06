@@ -4,30 +4,40 @@ import { PALETTE } from '../theme/hudOratorioPalette';
 
 const DESKTOP_W = 1920;
 const DESKTOP_H = 1080;
-/** Area logica verticale (9:16) — base per UI mobile futura */
-const MOBILE_PORTRAIT_W = 1080;
-const MOBILE_PORTRAIT_H = 1920;
 
 /**
- * Wrapper che scala il gioco a tutto schermo.
- * In mobile verticale usa un canvas 1080×1920 e classe `satze-layout-mobile-portrait` su body.
+ * Wrapper che scala il gioco a tutto schermo (scale-to-fit "contain").
+ *
+ * Il canvas logico è SEMPRE 1920×1080: in portrait il gioco appare
+ * letterboxato ma completo. (Il vecchio canvas 1080×1920 in portrait
+ * causava clipping orizzontale: il layout interno resta 1920×1080.)
+ * In mobile portrait viene comunque applicata la classe
+ * `satze-layout-mobile-portrait` per il padding safe-area.
+ *
+ * Espone `--satze-scale` sul wrapper per eventuali aggiustamenti CSS.
  */
 export function GameViewport({ children }) {
   const layout = useViewportLayout();
   const isMobilePortrait = layout === 'mobile-portrait';
   const [scale, setScale] = useState(1);
 
-  const gameW = isMobilePortrait ? MOBILE_PORTRAIT_W : DESKTOP_W;
-  const gameH = isMobilePortrait ? MOBILE_PORTRAIT_H : DESKTOP_H;
+  const gameW = DESKTOP_W;
+  const gameH = DESKTOP_H;
 
   useLayoutEffect(() => {
     const updateScale = () => {
-      const s = Math.min(window.innerWidth / gameW, window.innerHeight / gameH);
-      setScale(s);
+      // visualViewport tiene conto di barre browser mobile e pinch-zoom
+      const vw = window.visualViewport?.width ?? window.innerWidth;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setScale(Math.min(vw / gameW, vh / gameH));
     };
     updateScale();
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    window.visualViewport?.addEventListener('resize', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      window.visualViewport?.removeEventListener('resize', updateScale);
+    };
   }, [gameW, gameH]);
 
   useEffect(() => {
@@ -41,14 +51,10 @@ export function GameViewport({ children }) {
 
   return (
     <div
+      className="satze-viewport"
       style={{
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         background: PALETTE.deepVoid,
+        '--satze-scale': scale,
       }}
     >
       <div

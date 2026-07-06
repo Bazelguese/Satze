@@ -1,9 +1,17 @@
 /* Satze Design System — Colors & Type
  * Source: Satze/src/theme/hudOratorioPalette.js
  * Fonts: Chakra Petch, Cinzel, Share Tech Mono (Google Fonts)
+ *
+ * DECISIONE DI DESIGN (2026-07): il gioco ha DUE identità visive volute.
+ *  - Cosmic (viola/magenta, Cinzel, stendardi): menu, selezione armata/mazzo,
+ *    galleria, campagna → token `--menu-*` + PALETTE in hudOratorioPalette.js.
+ *  - Cyber HUD (ciano/oro, Chakra Petch, angoli tagliati): schermata duello
+ *    → token `--accent-*` / `--bg-*` + index-graphics-prova.css + duelAccents.js.
+ * Non unificarle: la cortina di transizione (ScreenTransition) è il confine
+ * dichiarato tra i due mondi. Elementi condivisi: font e toni scuri di base.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+/* Font caricati self-hosted da public/fonts/fonts.css (vedi index.html). */
 
 :root {
   --bg-void: #000000;
@@ -43,6 +51,15 @@
   --camp-dom: #d4af37;
   --camp-ann: #dc2626;
   --camp-spc: #a78bfa;
+  /* Identità cosmic del menu (viola/magenta) — valori usati da menu V5,
+     deck select e transizioni. Fonte: SatzeMenuPrototype / CosmicScreenLayout. */
+  --menu-void: #06030a;
+  --menu-panel: #110b20;
+  --menu-magenta: #c026d3;
+  --menu-pink: #ec4899;
+  --menu-hot-pink: #ff2db8;
+  --menu-text: #f5f3eb;
+
   --font-display: 'Cinzel', 'Times New Roman', serif;
   --font-ui: 'Chakra Petch', system-ui, sans-serif;
   --font-mono: 'Share Tech Mono', 'Courier New', monospace;
@@ -59,7 +76,143 @@
   --tracking-hud: 0.15em;
   --tracking-wide: 0.22em;
   --tracking-banner: 0.35em;
+
+  /* ─────────── Spacing (ritmo 4px) — dal DS handoff ─────────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  /* ─────────── Radii (flat-first HUD) ─────────── */
+  --r-0: 0px;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 8px;
+  --r-card: 12px;
+  --r-pill: 9999px;
+
+  /* ─────────── Bordi ─────────── */
+  --border-hair: 1px solid var(--accent-slate);
+  --border-std: 1.5px solid var(--accent-slate);
+  --border-bold: 2px solid var(--accent-slate);
+
+  /* ─────────── Ombre e glow ─────────── */
+  --sh-flat: 0 2px 8px rgba(0, 0, 0, 0.8);
+  --sh-drop: 0 4px 16px rgba(0, 0, 0, 0.9);
+  --sh-inset: inset 0 0 40px rgba(0, 0, 0, 0.45);
+  --glow-cyan: 0 0 12px rgba(56, 189, 248, 0.55), 0 0 24px rgba(56, 189, 248, 0.28);
+  --glow-gold: 0 0 12px rgba(212, 175, 55, 0.55), 0 0 24px rgba(212, 175, 55, 0.28);
+  --glow-fire: 0 0 12px rgba(249, 115, 22, 0.55), 0 0 24px rgba(249, 115, 22, 0.28);
+  --glow-blood: 0 0 12px rgba(220, 38, 38, 0.55), 0 0 24px rgba(220, 38, 38, 0.28);
+
+  /* ─────────── Easing ─────────── */
+  --ease-btn: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-ambient: ease-in-out;
+
+  /* ─────────── Z-index ─────────── */
+  --z-bg: 0;
+  --z-content: 10;
+  --z-hud: 20;
+  --z-overlay: 40;
+  --z-modal: 60;
 }
+
+/* ─────────── Classi semantiche del DS (handoff) ───────────
+   Tipografia e bottone baseline del tema Cyber HUD (duello).
+   Usarle nelle nuove schermate al posto degli inline styles. */
+
+.ds-h1, h1.ds {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-4xl);
+  letter-spacing: var(--tracking-banner);
+  color: var(--fg1);
+  text-transform: uppercase;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+}
+
+.ds-h2, h2.ds {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg1);
+  text-transform: uppercase;
+}
+
+.ds-h3, h3.ds {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-xl);
+  letter-spacing: var(--tracking-hud);
+  color: var(--fg1);
+}
+
+.ds-hud-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+
+.ds-body, p.ds {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--fg1);
+}
+
+.ds-flavor {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--fg2);
+  line-height: 1.4;
+}
+
+.ds-mono, code.ds {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-cyan);
+  letter-spacing: 0.06em;
+}
+
+.ds-stat {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  color: var(--accent-gold-l);
+  letter-spacing: 0.05em;
+}
+
+.ds-btn {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--fg1);
+  background: rgba(56, 189, 248, 0.06);
+  border: var(--border-std);
+  padding: 10px 20px;
+  transition: all 0.2s var(--ease-btn);
+  cursor: pointer;
+}
+.ds-btn:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: var(--glow-cyan);
+}
+.ds-btn:active { transform: scale(0.98); }
+.ds-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 @keyframes pulse-glow {
   0%,

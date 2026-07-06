@@ -52,7 +52,7 @@ export function IntroGuidedGameplay() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border p-3 bg-[#110b20]/70 border-fuchsia-500/30">
+      <div className="rounded-lg border p-3 bg-menu-panel/70 border-fuchsia-500/30">
         <p className="text-sm text-slate-300">
           Scenario: Round 2, campo neutro. Tu: POT 4 DAN 3. Nemico: POT 3. L’IA investe 3 FC.
         </p>
@@ -162,7 +162,7 @@ export function AdvancedGuidedGameplay() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border p-3 bg-[#110b20]/70 border-fuchsia-500/30">
+      <div className="rounded-lg border p-3 bg-menu-panel/70 border-fuchsia-500/30">
         <p className="text-sm text-slate-300">
           Scenario: Round 5, duello decisivo. Devi scegliere linea tattica.
         </p>

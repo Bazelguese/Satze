@@ -58,13 +58,13 @@ export function CosmicDeckManagerList(props) {
           clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
           background: linear-gradient(90deg, rgba(20,8,28,0.95) 0%, rgba(8,7,13,0.95) 100%) !important;
           border: 1.5px solid rgba(255,45,184,0.5) !important;
-          color: #f5f3eb !important;
+          color: var(--menu-text) !important;
           letter-spacing: 0.14em;
         }
         .deck-manager-list-root .cosmic-dm-footer button:hover {
-          background: linear-gradient(90deg, #c026d3 0%, #ff2db8 100%) !important;
-          color: #06030a !important;
-          border-color: #ff2db8 !important;
+          background: linear-gradient(90deg, var(--menu-magenta) 0%, var(--menu-hot-pink) 100%) !important;
+          color: var(--menu-void) !important;
+          border-color: var(--menu-hot-pink) !important;
         }
         .deck-manager-list-root .text-xs,
         .deck-manager-list-root .text-sm {

@@ -1,4 +1,4 @@
-import { HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, PALETTE } from '../../theme/hudOratorioPalette';
+import { MENU_ACCENTS, HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, PALETTE } from '../../theme/hudOratorioPalette';
 
 export function TutorialSelector({ isOpen, onClose, onSelect, tracks }) {
   if (!isOpen) return null;
@@ -11,7 +11,7 @@ export function TutorialSelector({ isOpen, onClose, onSelect, tracks }) {
         className="relative mx-4 max-w-4xl w-full border-2 rounded-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         style={{
-          borderColor: '#c026d3',
+          borderColor: MENU_ACCENTS.magenta,
           background: 'linear-gradient(180deg, #0c0614 0%, #140f22 48%, #080612 100%)',
           boxShadow: '0 0 36px rgba(192, 38, 211, 0.35), 0 0 72px rgba(88, 28, 135, 0.2)',
           fontFamily: HUD_ORATORIO_FONT_UI,

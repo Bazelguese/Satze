@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
+import { MENU_ACCENTS,
   BRAND_LOGO_SRC,
   BRAND_LOGO_WIDTH,
   BRAND_LOGO_HEIGHT,
@@ -43,15 +43,15 @@ export default function SatzeMenuPrototype({ menuItems }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [choicePicker]);
 
-  const ACCENT = "#c026d3";
-  const HEAT = "#ec4899";
+  const ACCENT = MENU_ACCENTS.magenta;
+  const HEAT = MENU_ACCENTS.pink;
 
   /** Centro luce viola/magenta (allineato al gradiente di sfondo) */
   const GLOW_X = "30%";
   const GLOW_Y = "40%";
 
   const accentCycle = useMemo(
-    () => ["#ec4899", "#c026d3", "#a78bfa", "#22d3ee", "#94a3b8", "#f472b6"],
+    () => [MENU_ACCENTS.pink, MENU_ACCENTS.magenta, "#a78bfa", "#22d3ee", "#94a3b8", "#f472b6"],
     [],
   );
 
@@ -145,7 +145,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
               bottom: 6,
               left: 50,
               right: 6,
-              border: `1.5px solid ${isHover ? "#06030a" : "#3a2a44"}`,
+              border: `1.5px solid ${isHover ? MENU_ACCENTS.void : "#3a2a44"}`,
               pointerEvents: "none",
             }}
           />
@@ -157,7 +157,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
               left: 0,
               width: 12,
               background: accent,
-              boxShadow: "inset -2px 0 0 #06030a",
+              boxShadow: `inset -2px 0 0 ${MENU_ACCENTS.void}`,
             }}
           />
         </div>
@@ -171,7 +171,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            color: isHover ? "#06030a" : "#f5f3eb",
+            color: isHover ? MENU_ACCENTS.void : MENU_ACCENTS.text,
             pointerEvents: "none",
           }}
         >
@@ -182,7 +182,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
                 fontWeight: 900,
                 fontSize: titleSize,
                 letterSpacing: "0.18em",
-                textShadow: isHover ? "2px 2px 0 #f5f3eb" : `2px 2px 0 ${accent}`,
+                textShadow: isHover ? `2px 2px 0 ${MENU_ACCENTS.text}` : `2px 2px 0 ${accent}`,
                 lineHeight: 1,
               }}
             >
@@ -195,7 +195,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
                   fontSize: 9,
                   letterSpacing: "0.35em",
                   marginTop: 5,
-                  color: isHover ? "#06030a" : "#94a3b8",
+                  color: isHover ? MENU_ACCENTS.void : "#94a3b8",
                 }}
               >
                 {subline}
@@ -207,7 +207,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
               fontFamily: "'Cinzel', Georgia, serif",
               fontWeight: 900,
               fontSize: height > 72 ? 30 : 26,
-              color: isHover ? "#06030a" : accent,
+              color: isHover ? MENU_ACCENTS.void : accent,
               transform: isHover ? "translateX(6px)" : "translateX(0)",
               transition: "transform 0.25s ease",
             }}
@@ -225,7 +225,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
               fontSize: 10,
               letterSpacing: "0.35em",
               color: accent,
-              background: "#06030a",
+              background: MENU_ACCENTS.void,
               padding: "4px 10px",
               transform: "skewX(-12deg)",
               border: `1px solid ${accent}`,
@@ -248,9 +248,9 @@ export default function SatzeMenuPrototype({ menuItems }) {
         height: "100%",
         minHeight: "100%",
         overflow: "hidden",
-        background: "#06030a",
+        background: MENU_ACCENTS.void,
         fontFamily: "'Chakra Petch', system-ui, sans-serif",
-        color: "#f5f3eb",
+        color: MENU_ACCENTS.text,
       }}
     >
       <style>{`
@@ -265,7 +265,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse at ${GLOW_X} ${GLOW_Y}, #2a0a3a 0%, #14051f 40%, #06030a 80%)`,
+          background: `radial-gradient(ellipse at ${GLOW_X} ${GLOW_Y}, #2a0a3a 0%, #14051f 40%, ${MENU_ACCENTS.void} 80%)`,
         }}
       />
       <div
@@ -526,7 +526,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
                 fontWeight: 900,
                 fontSize: 20,
                 letterSpacing: "0.2em",
-                color: "#f5f3eb",
+                color: MENU_ACCENTS.text,
                 margin: "0 0 6px",
                 textAlign: "center",
               }}
@@ -566,7 +566,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
                       opacity: opt.disabled ? 0.45 : 1,
                       background: "#140a1c",
                       border: "1.5px solid #3a2a44",
-                      color: "#f5f3eb",
+                      color: MENU_ACCENTS.text,
                       borderRadius: 2,
                       transition: "border-color 0.2s, background 0.2s",
                     }}
@@ -655,7 +655,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.3em",
-            color: "#06030a",
+            color: MENU_ACCENTS.void,
             padding: "0 24px",
             animation: "satze-v5-marquee 60s linear infinite",
           }}

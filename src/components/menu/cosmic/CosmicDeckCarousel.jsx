@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { CosmicBannerButton } from './CosmicBannerButton';
 
 function wrapIndex(index, length) {
@@ -44,9 +45,9 @@ export function CosmicDeckCarousel({ decks, onChooseDeck }) {
                 style={{
                   width: '240px',
                   minHeight: '300px',
-                  border: `1.5px solid ${isCenter ? '#ff2db8' : '#6f3c8e'}`,
+                  border: `1.5px solid ${isCenter ? MENU_ACCENTS.hotPink : '#6f3c8e'}`,
                   background: 'linear-gradient(180deg, rgba(20,8,28,0.98) 0%, rgba(8,7,13,0.98) 100%)',
-                  color: '#f5f3eb',
+                  color: MENU_ACCENTS.text,
                   padding: '14px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -82,7 +83,7 @@ export function CosmicDeckCarousel({ decks, onChooseDeck }) {
       </div>
 
       <CosmicBannerButton
-        accent={activeDeck.accent || '#c026d3'}
+        accent={activeDeck.accent || MENU_ACCENTS.magenta}
         disabled={activeDeck.disabled}
         onClick={() => onChooseDeck(activeDeck)}
         style={{ minWidth: '360px' }}
@@ -99,7 +100,7 @@ function arrowStyle(isRight) {
     height: '74px',
     border: '1.5px solid #7e3f9f',
     background: '#150b21',
-    color: '#ff2db8',
+    color: MENU_ACCENTS.hotPink,
     fontFamily: "'Cinzel', serif",
     fontSize: '2rem',
     cursor: 'pointer',

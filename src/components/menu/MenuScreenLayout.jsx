@@ -60,9 +60,9 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
         height: "100%",
         minHeight: "100%",
         overflow: "auto",
-        background: "#06030a",
+        background: "var(--menu-void)",
         fontFamily: HUD_ORATORIO_FONT_UI,
-        color: "#f5f3eb",
+        color: "var(--menu-text)",
       }}
     >
       <CosmicMenuBackground parallaxRef={glowRef} />
@@ -70,7 +70,7 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
         style={{
           position: "absolute",
           inset: 0,
-          background: "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 28%, #06030a 100%)",
+          background: "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 28%, var(--menu-void) 100%)",
           zIndex: 35,
           pointerEvents: "none",
           animation: "satze-vignette-pulse 36s ease-in-out infinite",

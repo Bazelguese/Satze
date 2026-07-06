@@ -123,6 +123,35 @@
   pointer-events: none; white-space: nowrap;
 }
 
+/* ============================================================
+   VARIANTE "DUELLO" — confine tra i due mondi visivi.
+   Entrando nel mondo duello (Cyber HUD) la cortina vira al
+   ciano/blu notte con dettagli oro, invece del magenta cosmic.
+   ============================================================ */
+.cosmic-transition--duel .sweep-panel--a {
+  background: linear-gradient(90deg, #38bdf8 0%, #0891b2 100%);
+  box-shadow: 0 0 80px rgba(56, 189, 248, 0.9);
+}
+.cosmic-transition--duel .sweep-panel--b {
+  background: linear-gradient(90deg, #0891b2 0%, #0a1628 100%);
+}
+.cosmic-transition--duel .flash-bloom {
+  background: radial-gradient(ellipse at center, rgba(56,189,248,0.85) 0%, rgba(8,145,178,0.4) 30%, transparent 70%);
+}
+.cosmic-transition--duel .glitch-line {
+  background: linear-gradient(90deg, transparent, #38bdf8, #D4A847, transparent);
+  box-shadow: 0 0 18px #38bdf8;
+}
+.cosmic-transition--duel .load-text {
+  color: #0a0e1a;
+  text-shadow: 2px 2px 0 #e8eaed;
+  font-family: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.4em;
+}
+.cosmic-transition--duel .load-sub {
+  color: #0a0e1a;
+}
+
 @keyframes press-pulse {
   0%   { transform: scale(1); filter: brightness(1); }
   40%  { transform: scale(1.04); filter: brightness(1.6) drop-shadow(0 0 30px #ec4899); }

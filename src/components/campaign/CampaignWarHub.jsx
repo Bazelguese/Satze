@@ -16,7 +16,7 @@ import { getAvailableCampaignMissions } from '../../game/campaign/campaignWarMis
 import { totalLeagueForCampaignDeck } from '../../game/campaign/campaignDeckLogic.js';
 import { getNextCampaignNarrative } from '../../data/campaignNarrative.js';
 import { injectCampaignFonts, CAMPAIGN_UI, CAMPAIGN_FONTS } from '../../campaign/campaignTheme.js';
-import {
+import { MENU_ACCENTS,
   PALETTE,
   HUD_ORATORIO_FONT_UI,
   HUD_ORATORIO_FONT_DISPLAY,
@@ -230,7 +230,7 @@ export function CampaignWarHub({ onStartMission, onBack, onClose, onOpenDeckMana
               fontFamily: CAMPAIGN_FONTS.ui,
             }}
           >
-            <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#ec4899', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.2em', color: MENU_ACCENTS.pink, marginBottom: 8 }}>
               RICOMPENSE
             </div>
             <h2 style={{ ...titleFont, fontSize: 22, color: CAMPAIGN_UI.textPri, marginBottom: 12 }}>Missione completata</h2>

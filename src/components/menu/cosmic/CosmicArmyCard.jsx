@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { ARMY_ICONS } from '../../../data/icons.jsx';
 
 export function CosmicArmyCard({
@@ -22,11 +23,11 @@ export function CosmicArmyCard({
         width: '100%',
         maxWidth: 'none',
         minHeight: '250px',
-        border: `1.5px solid ${hovered ? '#ff2db8' : `${accentColor}aa`}`,
+        border: `1.5px solid ${hovered ? MENU_ACCENTS.hotPink : `${accentColor}aa`}`,
         background: 'linear-gradient(180deg, rgba(20,8,28,0.96) 0%, rgba(8,7,13,0.96) 100%)',
         clipPath: 'polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)',
         boxShadow: hovered ? `0 0 28px ${accentColor}66` : '0 6px 20px rgba(0,0,0,0.55)',
-        color: '#f5f3eb',
+        color: MENU_ACCENTS.text,
         cursor: 'pointer',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
         transform: hovered ? 'translateY(-4px)' : 'none',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function CosmicBannerButton({ children, onClick, accent = '#c026d3', disabled = false, variant = 'primary', style }) {
+export function CosmicBannerButton({ children, onClick, accent = 'var(--menu-magenta)', disabled = false, variant = 'primary', style }) {
   const [hovered, setHovered] = useState(false);
   const isSmall = variant === 'small';
 
@@ -19,8 +19,8 @@ export function CosmicBannerButton({ children, onClick, accent = '#c026d3', disa
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
         background: 'transparent',
-        color: hovered ? '#06030a' : '#f5f3eb',
-        fontFamily: "'Cinzel', serif",
+        color: hovered ? 'var(--menu-void)' : 'var(--menu-text)',
+        fontFamily: 'var(--font-display)',
         fontWeight: 800,
         textTransform: 'uppercase',
         letterSpacing: '0.16em',
@@ -38,7 +38,7 @@ export function CosmicBannerButton({ children, onClick, accent = '#c026d3', disa
           zIndex: 0,
           border: `1.5px solid ${accent}`,
           background: hovered
-            ? `linear-gradient(90deg, ${accent} 0%, #ff2db8 100%)`
+            ? `linear-gradient(90deg, ${accent} 0%, var(--menu-hot-pink) 100%)`
             : 'linear-gradient(90deg, rgba(21,10,29,0.95) 0%, rgba(10,5,16,0.95) 100%)',
         }}
       />
@@ -47,7 +47,7 @@ export function CosmicBannerButton({ children, onClick, accent = '#c026d3', disa
           position: 'absolute',
           inset: '5px',
           zIndex: 0,
-          border: `1px solid ${hovered ? '#06030a' : '#4a2b61'}`,
+          border: `1px solid ${hovered ? 'var(--menu-void)' : '#4a2b61'}`,
           clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
         }}
       />

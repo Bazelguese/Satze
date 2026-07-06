@@ -1,6 +1,7 @@
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 /** Stesso linguaggio visivo del menù V5 (viola/magenta, senza tipografia gigante). */
 export function CosmicMenuBackground({ parallaxRef }) {
-  const ACCENT = "#c026d3";
+  const ACCENT = MENU_ACCENTS.magenta;
   const GLOW_X = "30%";
   const GLOW_Y = "38%";
 
@@ -14,7 +15,7 @@ export function CosmicMenuBackground({ parallaxRef }) {
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse at ${GLOW_X} ${GLOW_Y}, #2a0a3a 0%, #14051f 40%, #06030a 80%)`,
+          background: `radial-gradient(ellipse at ${GLOW_X} ${GLOW_Y}, #2a0a3a 0%, #14051f 40%, ${MENU_ACCENTS.void} 80%)`,
         }}
       />
       <div

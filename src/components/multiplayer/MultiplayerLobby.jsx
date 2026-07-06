@@ -10,7 +10,7 @@ import {
   reconnectToRoom,
   clearMpSession,
 } from '../../utils/multiplayerReconnect';
-import { PALETTE, HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
+import { MENU_ACCENTS, PALETTE, HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
 
 function waitForMessage(manager, predicate, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
@@ -34,8 +34,8 @@ function waitForMessage(manager, predicate, timeoutMs = 20000) {
   });
 }
 
-const ACCENT = '#c026d3';
-const ACCENT_TEXT = '#06030a';
+const ACCENT = MENU_ACCENTS.magenta;
+const ACCENT_TEXT = MENU_ACCENTS.void;
 
 const inputStyle = {
   width: '100%',

@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import { Icon } from '../ui/Icon';
 
 // DeckSelectCosmic — Scelta Mazzo pre-duello in stile V5 Cosmic
@@ -22,11 +23,11 @@ function DeckSelectCosmic({
   onPreviewDeck = null,
   onEditDeck = null,
 }) {
-  const ACCENT = '#c026d3';
-  const HEAT = '#ec4899';
+  const ACCENT = MENU_ACCENTS.magenta;
+  const HEAT = MENU_ACCENTS.pink;
   const VIOLET = '#a78bfa';
   const DEEP = '#581c87';
-  const BG = '#06030a';
+  const BG = MENU_ACCENTS.void;
 
   const safeDecks = decks.length
     ? decks
@@ -82,7 +83,7 @@ function DeckSelectCosmic({
         height: '100%',
         overflow: 'hidden',
         background: BG,
-        color: '#f5f3eb',
+        color: MENU_ACCENTS.text,
         fontFamily: 'Chakra Petch, sans-serif',
       }}
     >
@@ -91,7 +92,7 @@ function DeckSelectCosmic({
         style={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(ellipse at 50% 30%, ${bgPrimary}44 0%, ${bgSecondary}26 42%, #06030a 90%)`,
+          background: `radial-gradient(ellipse at 50% 30%, ${bgPrimary}44 0%, ${bgSecondary}26 42%, ${MENU_ACCENTS.void} 90%)`,
         }}
       />
       {/* Halftone */}
@@ -178,7 +179,7 @@ function DeckSelectCosmic({
               fontWeight: 900,
               fontSize: 30,
               letterSpacing: '0.32em',
-              color: '#f5f3eb',
+              color: MENU_ACCENTS.text,
               marginTop: 4,
               textShadow: `2px 2px 0 ${ACCENT}88`,
             }}
@@ -222,7 +223,7 @@ function DeckSelectCosmic({
                 fontFamily: 'Cinzel, serif',
                 fontWeight: 900,
                 fontSize: 12,
-                color: '#06030a',
+                color: MENU_ACCENTS.void,
               }}
             >
               {opponent.sigil || 'X'}
@@ -234,7 +235,7 @@ function DeckSelectCosmic({
                   fontWeight: 700,
                   fontSize: 14,
                   letterSpacing: '0.15em',
-                  color: '#f5f3eb',
+                  color: MENU_ACCENTS.text,
                 }}
               >
                 {(opponent.name || 'AVVERSARIO').toUpperCase()}
@@ -332,7 +333,7 @@ function DeckSelectCosmic({
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 24,
-                color: '#06030a',
+                color: MENU_ACCENTS.void,
                 boxShadow: `0 0 20px ${HEAT}88`,
               }}
             >
@@ -346,7 +347,7 @@ function DeckSelectCosmic({
                   fontWeight: 900,
                   fontSize: 24,
                   letterSpacing: '0.16em',
-                  color: '#f5f3eb',
+                  color: MENU_ACCENTS.text,
                   marginTop: 3,
                   textShadow: `1px 1px 0 ${ACCENT}99`,
                 }}
@@ -424,7 +425,7 @@ function DeckSelectCosmic({
                         }}
                       />
                     </div>
-                    <span style={{ color: '#f5f3eb', fontWeight: 700, minWidth: 18, textAlign: 'right' }}>{t.v}</span>
+                    <span style={{ color: MENU_ACCENTS.text, fontWeight: 700, minWidth: 18, textAlign: 'right' }}>{t.v}</span>
                   </div>
                 );
               })}
@@ -482,7 +483,7 @@ function DeckSelectCosmic({
               padding: '16px 0',
               background: cur.warning ? '#3a2030' : `linear-gradient(90deg, ${ACCENT} 0%, ${HEAT} 100%)`,
               border: 'none',
-              color: cur.warning ? '#94a3b8' : '#06030a',
+              color: cur.warning ? '#94a3b8' : MENU_ACCENTS.void,
               fontFamily: 'Cinzel, serif',
               fontWeight: 900,
               fontSize: 18,
@@ -490,7 +491,7 @@ function DeckSelectCosmic({
               cursor: cur.warning ? 'not-allowed' : 'pointer',
               clipPath: 'polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%)',
               boxShadow: cur.warning ? 'none' : `0 0 28px ${HEAT}aa, 0 4px 0 ${DEEP}`,
-              textShadow: cur.warning ? 'none' : `1px 1px 0 #f5f3eb`,
+              textShadow: cur.warning ? 'none' : `1px 1px 0 ${MENU_ACCENTS.text}`,
             }}
             disabled={!!cur.warning}
             onClick={() => !cur.warning && onSelectDeck(cur)}
@@ -524,7 +525,7 @@ function DeckSelectCosmic({
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.3em',
-            color: '#06030a',
+            color: MENU_ACCENTS.void,
             padding: '0 24px',
             animation: 'data-marquee 60s linear infinite',
           }}
@@ -587,7 +588,7 @@ function BigStat({ label, value, c }) {
     <div
       style={{
         padding: '8px 12px',
-        background: '#06030a',
+        background: MENU_ACCENTS.void,
         border: `1px solid ${c}55`,
         clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
       }}
@@ -668,7 +669,7 @@ function DeckCard({ deck, offset, active, onClick, ACCENT, HEAT, VIOLET, DEEP })
         style={{
           position: 'absolute',
           inset: 4,
-          background: '#06030a',
+          background: MENU_ACCENTS.void,
           clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
         }}
       />
@@ -707,7 +708,7 @@ function DeckCard({ deck, offset, active, onClick, ACCENT, HEAT, VIOLET, DEEP })
             left: 0,
             right: 0,
             height: 60,
-            background: 'linear-gradient(0deg, #06030a 0%, transparent 100%)',
+            background: `linear-gradient(0deg, ${MENU_ACCENTS.void} 0%, transparent 100%)`,
           }}
         />
         {/* faction sigil top-right */}
@@ -724,7 +725,7 @@ function DeckCard({ deck, offset, active, onClick, ACCENT, HEAT, VIOLET, DEEP })
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 11,
-            color: '#06030a',
+            color: MENU_ACCENTS.void,
             overflow: 'hidden',
           }}
         >
@@ -783,7 +784,7 @@ function DeckCard({ deck, offset, active, onClick, ACCENT, HEAT, VIOLET, DEEP })
               fontWeight: 900,
               fontSize: 17,
               letterSpacing: '0.14em',
-              color: '#f5f3eb',
+              color: MENU_ACCENTS.text,
               marginTop: 3,
               lineHeight: 1.1,
               textShadow: active ? `1px 1px 0 ${ACCENT}99` : 'none',

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { PALETTE } from "../../theme/hudOratorioPalette";
+import { MENU_ACCENTS, PALETTE } from "../../theme/hudOratorioPalette";
 
-const MENU_DEFAULT_ACCENT = "#c026d3";
+const MENU_DEFAULT_ACCENT = MENU_ACCENTS.magenta;
 
 /** Card stile cosmic (menù ufficiale) per griglie armate / deck / difficoltà */
 export function MenuCard({ children, onClick, accentColor, className = "" }) {
@@ -46,8 +46,8 @@ export function MenuBackButton({ children, onClick }) {
       style={{
         marginTop: "2rem",
         padding: "0.75rem 1.5rem",
-        background: hovered ? "#1a0d24" : "#110b20",
-        border: `1.5px solid ${hovered ? "#ec4899" : PALETTE.slate}`,
+        background: hovered ? "#1a0d24" : MENU_ACCENTS.panel,
+        border: `1.5px solid ${hovered ? MENU_ACCENTS.pink : PALETTE.slate}`,
         borderRadius: 0,
         color: hovered ? "#fdf4ff" : PALETTE.textSecondary,
         cursor: "pointer",

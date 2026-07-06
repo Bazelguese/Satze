@@ -33,6 +33,21 @@ export const PALETTE = {
   panelEdge: '#7c5cb8',
 };
 
+/**
+ * Accenti dell'identità cosmic del menu (viola/magenta) — stessi valori dei
+ * token CSS `--menu-*` in src/styles/cosmic-tokens.css. Usare queste costanti
+ * nei contesti dove `var(--...)` non funziona (canvas 2D, attributi SVG,
+ * concatenazioni con alpha tipo `${MENU_ACCENTS.magenta}44`).
+ */
+export const MENU_ACCENTS = {
+  void: '#06030a',
+  panel: '#110b20',
+  magenta: '#c026d3',
+  pink: '#ec4899',
+  hotPink: '#ff2db8',
+  text: '#f5f3eb',
+};
+
 /** UI principale */
 export const HUD_ORATORIO_FONT_UI = "'Chakra Petch', 'Segoe UI', system-ui, sans-serif";
 
@@ -56,14 +71,8 @@ export function buildSatzeCosmicBackgroundCSS() {
   `.trim();
 }
 
-/** Chakra (UI), Cinzel (titoli), Share Tech Mono — idempotente. */
-export function injectSatzeUiFonts() {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('satze-ui-fonts')) return;
-  const link = document.createElement('link');
-  link.id = 'satze-ui-fonts';
-  link.rel = 'stylesheet';
-  link.href =
-    'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap';
-  document.head.appendChild(link);
-}
+/**
+ * I font sono self-hosted e caricati globalmente da public/fonts/fonts.css
+ * (link in index.html): questa funzione resta solo per compatibilità API.
+ */
+export function injectSatzeUiFonts() {}

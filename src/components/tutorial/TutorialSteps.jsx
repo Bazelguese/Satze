@@ -66,15 +66,15 @@ const BRIEF_TUTORIAL_STEPS = [
     content: (
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3">
-          <div className="bg-[#110b20]/80 rounded-lg p-4 border border-fuchsia-500/25">
+          <div className="bg-menu-panel/80 rounded-lg p-4 border border-fuchsia-500/25">
             <h4 className="font-bold text-fuchsia-300 mb-1">🎴 Agenti</h4>
             <p className="text-sm text-slate-300">Carte da combattimento con <strong>POT</strong> (Potenza), <strong>DAN</strong> (Danno), <strong>Lega</strong> e un <strong>Potere</strong> speciale.</p>
           </div>
-          <div className="bg-[#110b20]/80 rounded-lg p-4 border border-fuchsia-500/25">
+          <div className="bg-menu-panel/80 rounded-lg p-4 border border-fuchsia-500/25">
             <h4 className="font-bold text-fuchsia-300 mb-1">💰 Focus Coin (FC)</h4>
             <p className="text-sm text-slate-300">Hai <strong>18 FC</strong> per tutta la partita. Li usi per potenziare gli Agenti durante gli scontri.</p>
           </div>
-          <div className="bg-[#110b20]/80 rounded-lg p-4 border border-fuchsia-500/25">
+          <div className="bg-menu-panel/80 rounded-lg p-4 border border-fuchsia-500/25">
             <h4 className="font-bold text-fuchsia-300 mb-1">❤️ Punti Vita (PV)</h4>
             <p className="text-sm text-slate-300">Inizi con <strong>25 PV</strong>. A 0 PV perdi la partita.</p>
           </div>
@@ -133,7 +133,7 @@ const BRIEF_TUTORIAL_STEPS = [
     content: (
       <div className="space-y-4">
         <p className="text-sm">Chi vince lo scontro? Chi ha <strong>VA</strong> più alto:</p>
-        <div className="bg-[#110b20]/80 p-4 rounded-lg border border-fuchsia-500/35 text-center">
+        <div className="bg-menu-panel/80 p-4 rounded-lg border border-fuchsia-500/35 text-center">
           <p className="font-mono text-lg text-fuchsia-200">
             VA = POT × FC + Modificatori
           </p>

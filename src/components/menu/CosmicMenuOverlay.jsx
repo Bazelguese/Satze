@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 
 const PARTICLE_COUNT = 100;
 
@@ -106,8 +107,8 @@ export function CosmicMenuOverlay() {
         }}
       />
       {(() => {
-        const HEAT = '#ec4899';
-        const ACCENT = '#c026d3';
+        const HEAT = MENU_ACCENTS.pink;
+        const ACCENT = MENU_ACCENTS.magenta;
         return (
           <div style={{
             position: 'absolute', bottom: 50, left: 36, zIndex: 2,

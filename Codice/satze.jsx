@@ -13,6 +13,7 @@ import { loadCampaignProgress } from '../src/data/campaign';
 import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLogic.js';
 import { applyToxin } from '../src/game/toxinLogic';
 import { checkTrigger } from '../src/game/triggerLogic';
+import { countAttritionPriorCards, countInitialLeagueCards } from '../src/game/duel/duelHelpers.js';
 import { useGameState, useAnimations, useBattle, useDragAndDrop, useGameFlow, useAI, useTutorial, useCampaignGameOutcome, useGuidedTutorialFlow, useTutorialOrchestrator } from '../src/hooks';
 import {
   Tutorial,
@@ -29,7 +30,7 @@ import { CampaignWarHub } from '../src/components/campaign/CampaignWarHub';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { buildCampaignDuelLaunchConfig } from '../src/game/campaign/campaignDuelAdapter.js';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
-import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, PALETTE, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
+import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
 import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
 import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
@@ -43,7 +44,6 @@ import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDe
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
-// import { AvatarCreator, RunManager } from '../src/components/roguelike'; // Disabilitato per l'eseguibile
 import { GAME_MODES } from '../src/data/gameModes';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor } from '../src/utils/deckManager';
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
@@ -53,7 +53,10 @@ import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
 import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
 import { getDuelVisualConfig } from '../src/config/duelVisualConfigStore.js';
 import { DUEL_VFX_CHANGED_EVENT } from '../src/config/duelVisualConfig.js';
-import { buildPhaseAdvanceDelaysMs } from '../src/config/duelVisualTimeline.js';
+import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps } from '../src/config/duelVisualTimeline.js';
+import { countDuelEffectSteps, countDuelPostEffectSteps } from '../src/game/duel/duelVisualSteps.js';
+import { DUEL_VISUAL_DEFAULTS } from '../src/config/duelVisualConfig.js';
+import { useSafeDuelEffectStep } from '../src/components/battle/useSafeDuelEffectStep.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils/focusCoinGlow.js';
 
 // ============================================
@@ -69,126 +72,6 @@ import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils
 // ============================================
 // LOGICA DI GIOCO
 // ============================================
-
-// ============================================
-// TUNNEL NEON ANIMATO (sfondo menu, stile 32-bit)
-// ============================================
-
-function TunnelBackground() {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    let animationId;
-    let time = 0;
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    const draw = () => {
-      const W = window.innerWidth;
-      const H = window.innerHeight;
-      const cx = W / 2;
-      const cy = H / 2;
-      const fov = 320;
-      const rings = 28;
-      const segments = 20;
-      const speed = 0.022;
-      const spiralTight = 0.2;
-
-      time += speed;
-
-      ctx.fillStyle = '#040508';
-      ctx.fillRect(0, 0, W, H);
-
-      for (let r = 0; r < rings; r++) {
-        const z = (r + time * 50) % (rings + 4);
-        const zNorm = z / (rings + 4);
-        const scale = (fov / (fov + z * 12)) * Math.min(W, H) * 0.48;
-        const radius = scale * (0.35 + (1 - zNorm) * 0.65);
-
-        for (let s = 0; s < segments; s++) {
-          const a1 = (s / segments) * Math.PI * 2 + z * spiralTight;
-          const a2 = ((s + 1) / segments) * Math.PI * 2 + z * spiralTight;
-          const isRed = (s + r) % 2 === 0;
-
-          const x1 = cx + Math.cos(a1) * radius;
-          const y1 = cy + Math.sin(a1) * radius * 0.55;
-          const x2 = cx + Math.cos(a2) * radius;
-          const y2 = cy + Math.sin(a2) * radius * 0.55;
-
-          const alpha = Math.max(0.15, 1 - zNorm * 1.1);
-          const color = isRed
-            ? `rgba(255, 55, 90, ${alpha})`
-            : `rgba(70, 190, 255, ${alpha})`;
-          const glow = isRed ? 'rgba(255, 90, 130, 0.5)' : 'rgba(90, 210, 255, 0.5)';
-
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2.2;
-          ctx.shadowColor = glow;
-          ctx.shadowBlur = 18;
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-        }
-      }
-
-      animationId = requestAnimationFrame(draw);
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-    draw();
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationId);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="menu-temple-bg menu-temple-bg-canvas"
-      aria-hidden
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
-    />
-  );
-}
-
-// ============================================
-// SFONDO GUERRA/STRATEGIA (GIF animata 32-bit)
-// Genera la GIF con: npm run generate-menu-gif
-// ============================================
-
-function WarBackground() {
-  const base = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL != null ? import.meta.env.BASE_URL : '/';
-  const gifUrl = `${base}menu-bg-war.gif`.replace(/\/+/g, '/');
-  return (
-    <div
-      className="menu-temple-bg menu-temple-bg-image"
-      aria-hidden
-      style={{
-        backgroundImage: `url(${gifUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        position: 'absolute',
-        inset: 0,
-      }}
-    />
-  );
-}
 
 // ============================================
 // COMPONENTE PRINCIPALE
@@ -248,7 +131,6 @@ export default function SatzeGame() {
     campaignLevel, setCampaignLevel,
     campaignSaveSlot,
     setCampaignSaveSlot,
-    roguelikeLevel, setRoguelikeLevel,
     showDeckManager, setShowDeckManager,
     deckManagerView, setDeckManagerView,
     deckManagerSource, setDeckManagerSource,
@@ -260,10 +142,6 @@ export default function SatzeGame() {
 
   useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot });
 
-  /** Menù principale + tutte le schermate pre-duello (stile cosmic ufficiale). */
-  const useMenuCosmic = true;
-  /** Schermata di gioco (tabellone, pannelli agente, glossario in duello): tema duello / PALETTE. Sempre attivo qui — non confonderlo con il cosmic dei menù. */
-  const uiBattleHud = true;
   const setGamePhaseAnimated = useTransitionedSetGamePhase(setGamePhaseRaw, gamePhase);
   const setGamePhaseFromMainMenu = useCallback((nextPhase) => {
     if (typeof nextPhase !== 'string') {
@@ -292,8 +170,7 @@ export default function SatzeGame() {
     const ab = agent.ability;
     if (ab.effect === 'attrition' && ab.value) {
       const used = isPlayer ? (playerUsedCards || []) : (enemyUsedCards || []);
-      const currentCardAlreadyIncluded = used.some((c) => c?.id === agent.id);
-      const alreadyPlayed = Math.max(0, used.length - (currentCardAlreadyIncluded ? 1 : 0));
+      const alreadyPlayed = countAttritionPriorCards(used, agent.id);
       return ab.value * alreadyPlayed;
     }
     if (ab.effect === 'escalation' && ab.value) {
@@ -339,14 +216,17 @@ export default function SatzeGame() {
   const [lastPreviewCard, setLastPreviewCard] = useState(null);
   // Tilt Tabellone: una volta che il cursore ci passa sopra, si ferma e non riparte
   const [tabelloneTiltDismissed, setTabelloneTiltDismissed] = useState(false);
-  // Stato per Roguelike - Creazione Avatar e Run (DISABILITATO per l'eseguibile)
-  // const [showAvatarCreator, setShowAvatarCreator] = useState(false);
-  // const [roguelikeAvatar, setRoguelikeAvatar] = useState(null);
-  // const [showRoguelikeRun, setShowRoguelikeRun] = useState(false);
   
   // Stato per modal carta ingrandita nella galleria
   const [selectedCardForModal, setSelectedCardForModal] = useState(null);
   const [previewDeckData, setPreviewDeckData] = useState(null);
+
+  // Galleria: numero di carte renderizzate (incrementale, evita 200+ carte nel DOM)
+  const GALLERY_PAGE_SIZE = 48;
+  const [galleryVisibleCount, setGalleryVisibleCount] = useState(GALLERY_PAGE_SIZE);
+  useEffect(() => {
+    setGalleryVisibleCount(GALLERY_PAGE_SIZE);
+  }, [selectedArmyFilter, galleryTab, gamePhase]);
   
   // Gestione chiusura modal con ESC
   useEffect(() => {
@@ -367,6 +247,7 @@ export default function SatzeGame() {
     playerCardGlow, setPlayerCardGlow,
     enemyCardGlow, setEnemyCardGlow,
     duelPhase, setDuelPhase,
+    duelEffectStep, setDuelEffectStep,
     isZoomed, setIsZoomed,
     showFinalRoundAnimation, setShowFinalRoundAnimation,
     showClashAnimation, setShowClashAnimation,
@@ -380,6 +261,12 @@ export default function SatzeGame() {
     return () => window.removeEventListener(DUEL_VFX_CHANGED_EVENT, on);
   }, []);
   const duelVfx = useMemo(() => getDuelVisualConfig(), [duelVfxRev]);
+
+  const { visualEffectStep, advanceEffectStep } = useSafeDuelEffectStep(
+    duelPhase,
+    duelEffectStep,
+    setDuelEffectStep
+  );
 
   // Hook per la logica di battaglia
   const { resolveBattle } = useBattle(gameState, animations);
@@ -878,23 +765,48 @@ export default function SatzeGame() {
   };
   
   // Helper per calcolare se il bonus armata sarà attivo (per preview durante selectAgent)
-  const isBonusTriggerSatisfied = useCallback((army, isPlayer) => {
+  const isBonusTriggerSatisfied = useCallback((army, isPlayer, agent = null) => {
     const bonus = ARMY_BONUSES[army];
     if (!bonus || !bonus.trigger) return true; // Nessun trigger = sempre attivo
-    
+
+    const sideAgent = agent ?? (isPlayer ? selectedAgent : enemyAgent);
+    const otherAgent = isPlayer ? enemyAgent : selectedAgent;
+    const sideUsed = isPlayer ? playerUsedCards : enemyUsedCards;
+    const otherUsed = isPlayer ? enemyUsedCards : playerUsedCards;
+    const sideHand = isPlayer ? playerHand : enemyHand;
+
     const context = {
       isFirst: isPlayer ? isPlayerFirst : !isPlayerFirst,
       wonPrevious: isPlayer ? (lastWinner === 'player') : (lastWinner === 'enemy'),
       lostPrevious: isPlayer ? (lastWinner === 'enemy') : (lastWinner === 'player'),
-      focusCoins: selectedFocus || 1, // Preview con FC selezionati
+      focusCoins: isPlayer ? (selectedFocus || 1) : (enemySelectedFocus || 1),
+      enemyFocusCoins: isPlayer ? (enemySelectedFocus || 0) : (selectedFocus || 0),
       playerHP: isPlayer ? playerHP : enemyHP,
       enemyHP: isPlayer ? enemyHP : playerHP,
-      cardsPlayed: isPlayer ? playerUsedCards.length : enemyUsedCards.length,
-      enemyCardsPlayed: isPlayer ? enemyUsedCards.length : playerUsedCards.length,
+      cardsPlayed: sideUsed.length + (sideAgent ? 1 : 0),
+      enemyCardsPlayed: otherUsed.length + (otherAgent ? 1 : 0),
+      roundNumber: roundNumber || 1,
+      playerInitialLeagueCount: sideAgent
+        ? countInitialLeagueCards(sideUsed, sideHand, sideAgent)
+        : 0,
     };
-    
+
     return checkTrigger(bonus.trigger, context);
-  }, [isPlayerFirst, lastWinner, selectedFocus, playerHP, enemyHP, playerUsedCards.length, enemyUsedCards.length]);
+  }, [
+    isPlayerFirst,
+    lastWinner,
+    selectedFocus,
+    enemySelectedFocus,
+    playerHP,
+    enemyHP,
+    playerUsedCards,
+    enemyUsedCards,
+    playerHand,
+    enemyHand,
+    selectedAgent,
+    enemyAgent,
+    roundNumber,
+  ]);
   
   // Auto-scroll del log
   useEffect(() => {
@@ -1181,10 +1093,9 @@ export default function SatzeGame() {
     }
   }, [gamePhase, selectedAgent, enemyAgent, resolveBattle]);
 
-  // Fasi: 0=Schieramento, 1=Poteri, 2=Focus+POT×FC live, 3=Mod/min VA, 4=Scontro, 5=Risultato, 6=Pulsante
+  // Fasi: 0=Schieramento, 1=Poteri/bonus (sub-step), 2=Focus+POT×FC, 3=Mod/min VA, 4=Scontro, 5=Risultato, 6=Pulsante
   useEffect(() => {
     if (gamePhase === 'result' && battleResult) {
-      // Aggiungi log per la fase corrente (solo fino alla fase 4)
       if (duelPhase <= 4 && battleResult.phaseLogs) {
         const phaseKey = `phase${duelPhase}`;
         const phaseLogs = battleResult.phaseLogs[phaseKey] || [];
@@ -1192,21 +1103,58 @@ export default function SatzeGame() {
           addLog(log);
         });
       }
-      
+
+      const effectCount = countDuelEffectSteps(battleResult.visualSteps);
+      const phase3SubCount = countDuelPhase3SubSteps(battleResult);
+      const postCount = countDuelPostEffectSteps(battleResult.visualSteps);
+      const stepMs = duelVfx.effectStepMs ?? DUEL_VISUAL_DEFAULTS.effectStepMs;
+      const bufferMs = duelVfx.effectPhaseBufferMs ?? DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs;
+
+      if (duelPhase === 1 && effectCount > 0) {
+        if (visualEffectStep < effectCount) {
+          const timer = setTimeout(() => advanceEffectStep(), stepMs);
+          return () => clearTimeout(timer);
+        }
+        const timer = setTimeout(() => setDuelPhase(2), bufferMs);
+        return () => clearTimeout(timer);
+      }
+
+      if (duelPhase === 3 && phase3SubCount > 1) {
+        if (visualEffectStep < phase3SubCount) {
+          const timer = setTimeout(() => advanceEffectStep(), stepMs);
+          return () => clearTimeout(timer);
+        }
+        const timer = setTimeout(() => setDuelPhase(4), bufferMs);
+        return () => clearTimeout(timer);
+      }
+
+      if (duelPhase === 5 && postCount > 0) {
+        if (visualEffectStep < postCount) {
+          const timer = setTimeout(() => advanceEffectStep(), stepMs);
+          return () => clearTimeout(timer);
+        }
+        const timer = setTimeout(() => setDuelPhase(6), bufferMs);
+        return () => clearTimeout(timer);
+      }
+
       const delays = buildPhaseAdvanceDelaysMs(
         duelVfx,
         battleResult.playerFocusUsed,
         battleResult.enemyFocusUsed,
         battleResult
       );
-      if (duelPhase < delays.length - 1) {
+      if (duelPhase === 1 && effectCount === 0) {
+        const timer = setTimeout(() => setDuelPhase(2), delays[1]);
+        return () => clearTimeout(timer);
+      }
+      if (duelPhase !== 1 && duelPhase < delays.length - 1) {
         const timer = setTimeout(() => {
           setDuelPhase(prev => prev + 1);
         }, delays[duelPhase]);
         return () => clearTimeout(timer);
       }
     }
-  }, [gamePhase, duelPhase, battleResult, duelVfx]);
+  }, [gamePhase, duelPhase, visualEffectStep, battleResult, duelVfx, advanceEffectStep]);
   
   const getFocusCoinGlowColor = (focusCount, intensity) =>
     computeFocusCoinGlowColor(focusCount, intensity, rainbowTime, {
@@ -1254,9 +1202,14 @@ export default function SatzeGame() {
     // Non resettare quando si esce dalla fase 2 - i focus coin devono rimanere visibili
   }, [gamePhase, duelPhase, battleResult, duelVfx.focusCoinStepMs]);
   
-  // Aggiorna continuamente i colori arcobaleno e diamante (per animazione)
+  // Aggiorna continuamente i colori arcobaleno e diamante (per animazione).
+  // I colori speciali esistono solo da 12 FC in su: sotto quella soglia
+  // l'interval non parte, evitando ~20 re-render/s inutili.
   useEffect(() => {
-    if (gamePhase === 'result' && battleResult && duelPhase >= 2) {
+    const needsRainbow =
+      battleResult &&
+      Math.max(battleResult.playerFocusUsed || 0, battleResult.enemyFocusUsed || 0) >= 12;
+    if (gamePhase === 'result' && needsRainbow && duelPhase >= 2) {
       const interval = setInterval(() => {
         setRainbowTime((prev) => prev + duelVfx.rainbowStep);
       }, duelVfx.rainbowIntervalMs);
@@ -1557,40 +1510,6 @@ export default function SatzeGame() {
   // RENDER
   // ============================================
 
-  // Avatar Creator - Roguelike Mode (DISABILITATO per l'eseguibile)
-  // if (showAvatarCreator) {
-  //   return (
-  //     <AvatarCreator
-  //       onComplete={(avatar) => {
-  //         setRoguelikeAvatar(avatar);
-  //         setShowAvatarCreator(false);
-  //         setShowRoguelikeRun(true);
-  //       }}
-  //     />
-  //   );
-  // }
-  
-  // Run Manager - Roguelike Mode (DISABILITATO per l'eseguibile)
-  // if (showRoguelikeRun && roguelikeAvatar) {
-  //   return (
-  //     <RunManager
-  //       avatar={roguelikeAvatar}
-  //       onRunComplete={(result) => {
-  //         alert(`Run completata!\n\nZone completate: ${result.zonesCompleted}\nPV finali: ${result.finalHP}`);
-  //         setShowRoguelikeRun(false);
-  //         setRoguelikeAvatar(null);
-  //         setGamePhase('menu');
-  //       }}
-  //       onRunAbandon={(result) => {
-  //         alert(`Run abbandonata alla Zona ${result.zone}, Nodo ${result.node + 1}\n\nMotivo: ${result.reason === 'hp' ? 'PV a zero' : 'Abbandonata dal giocatore'}`);
-  //         setShowRoguelikeRun(false);
-  //         setRoguelikeAvatar(null);
-  //         setGamePhase('menu');
-  //       }}
-  //     />
-  //   );
-  // }
-
   // Scelta slot salvataggio campagna
   if (gamePhase === 'campaignSlots') {
     return (
@@ -1678,7 +1597,7 @@ export default function SatzeGame() {
         label: 'PARTITA LOCALE',
         sub: 'AVVIO',
         meta: 'CLIC · POI SCEGLI LA MODALITÀ',
-        accent: '#ec4899',
+        accent: MENU_ACCENTS.pink,
         choices: [
           { label: 'GIOCA VS IA', sub: 'VS IA', meta: 'CLASSIC', onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
           { label: 'BARE HANDS', sub: 'MODALITÀ', meta: 'SENZA ESERCITO', onClick: () => { setSelectedMode('bareHands'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
@@ -1845,87 +1764,23 @@ export default function SatzeGame() {
     if (campaignLevel && campaignLevel.playerArmy) {
       availableArmies = [campaignLevel.playerArmy];
     }
-    const showMixedOption = !campaignLevel?.playerArmy;
-
-    const title = campaignLevel ? `CAMPAGNA: ${campaignLevel.name}` : 'SCEGLI LA TUA ARMATA';
-    const subtitle = campaignLevel
-      ? campaignLevel.playerArmy ? `Usa l'armata: ${campaignLevel.playerArmy}` : "Usa l'esercito fornito per questo livello"
-      : selectedMode === 'bareHands' ? 'Modalità Bare Hands — Campi senza effetti' : 'Seleziona il set con cui vuoi combattere';
-
-    if (useMenuCosmic) {
-      return (
-        <ArmySelectCinematic
-          onSelect={(armyName) => {
-            if (armyName == null) {
-              setSelectedArmy(MIXED_DECKS_OPTION);
-              setGamePhase('selectDeck');
-              return;
-            }
-            selectArmyAndContinue(armyName);
-          }}
-          onBack={() => {
-            setCampaignLevel(null);
-            setSelectedArmy(null);
-            setSelectedDeckKey(null);
-            setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
-          }}
-        />
-      );
-    }
-
     return (
-      <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4" style={{ minHeight: '100%' }}>
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 mb-2">{title}</h1>
-          <p className="text-slate-400 text-sm">{subtitle}</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl">
-          {showMixedOption && (
-            <button
-              key={MIXED_DECKS_OPTION}
-              onClick={() => { setSelectedArmy(MIXED_DECKS_OPTION); setGamePhase('selectDeck'); }}
-              className="relative p-4 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl group overflow-hidden"
-              style={{ borderColor: MIXED_DECKS_COLOR, backgroundColor: MIXED_DECKS_COLOR + '15', boxShadow: `0 4px 20px ${MIXED_DECKS_COLOR}30` }}
-            >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `radial-gradient(circle at center, ${MIXED_DECKS_COLOR}30 0%, transparent 70%)` }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-20 h-20 flex items-center justify-center rounded-full" style={{ backgroundColor: MIXED_DECKS_COLOR + '30' }}>
-                    <span className="text-4xl">⚔</span>
-                  </div>
-                </div>
-                <div className="font-bold text-lg mb-2" style={{ color: MIXED_DECKS_COLOR }}>{MIXED_DECKS_OPTION}</div>
-                <div className="text-xs text-slate-400 mb-2">Eserciti multi-armata</div>
-              </div>
-            </button>
-          )}
-          {availableArmies.map(army => {
-            const colors = ARMY_COLORS[army];
-            const bonus = ARMY_BONUSES[army];
-            return (
-              <button
-                key={army}
-                onClick={() => selectArmyAndContinue(army)}
-                className="relative p-4 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl group overflow-hidden"
-                style={{ borderColor: colors.accent, backgroundColor: colors.accent + '15', boxShadow: `0 4px 20px ${colors.accent}30` }}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `radial-gradient(circle at center, ${colors.accent}30 0%, transparent 70%)` }} />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-center mb-3">
-                    <Icon name={army} type="army" size={88} color={colors.accent} />
-                  </div>
-                  <div className="font-bold text-lg mb-2" style={{ color: colors.accent }}>{army}</div>
-                  <div className="text-xs text-slate-400 mb-2">15 carte • 2 eserciti</div>
-                  <div className="text-xs py-1 px-2 rounded-full inline-block" style={{ backgroundColor: colors.accent + '30', color: colors.accent }}>✦ {bonus.description}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <button onClick={() => { setCampaignLevel(null); setSelectedArmy(null); setSelectedDeckKey(null); setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu'); }} className="mt-8 px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-all flex items-center gap-2">
-          <span>←</span> {selectedMode === 'campaign' ? 'Torna alla campagna' : 'Torna al Menu'}
-        </button>
-      </div>
+      <ArmySelectCinematic
+        onSelect={(armyName) => {
+          if (armyName == null) {
+            setSelectedArmy(MIXED_DECKS_OPTION);
+            setGamePhase('selectDeck');
+            return;
+          }
+          selectArmyAndContinue(armyName);
+        }}
+        onBack={() => {
+          setCampaignLevel(null);
+          setSelectedArmy(null);
+          setSelectedDeckKey(null);
+          setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
+        }}
+      />
     );
   }
 
@@ -2016,86 +1871,37 @@ export default function SatzeGame() {
         setSelectedDeckKey(null);
         setGamePhase('campaignHub');
       };
-      if (useMenuCosmic) {
-        return (
-          <MenuScreenLayout title="Esercito campagna" subtitle="L'esercito nel comando non è valido (3–10 carte, Lega ≤30).">
-            <p className="text-slate-400 text-sm text-center max-w-md mb-6">
-              Modifica l&apos;esercito nel segmento gestionale dell&apos;hub campagna, poi riprova.
-            </p>
-            <MenuBackButton onClick={errBack}>Torna all&apos;hub campagna</MenuBackButton>
-          </MenuScreenLayout>
-        );
-      }
       return (
-        <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4" style={{ minHeight: '100%' }}>
-          <h2 className="text-xl font-bold text-amber-400 mb-4 text-center">Esercito campagna non valido</h2>
-          <p className="text-slate-400 text-sm text-center max-w-md mb-8">
-            Servono 3–10 carte e Lega ≤30. Modifica l&apos;esercito nel comando dell&apos;hub campagna.
+        <MenuScreenLayout title="Esercito campagna" subtitle="L'esercito nel comando non è valido (3–10 carte, Lega ≤30).">
+          <p className="text-slate-400 text-sm text-center max-w-md mb-6">
+            Modifica l&apos;esercito nel segmento gestionale dell&apos;hub campagna, poi riprova.
           </p>
-          <button
-            type="button"
-            onClick={errBack}
-            className="px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700"
-          >
-            ← Torna all&apos;hub campagna
-          </button>
-        </div>
+          <MenuBackButton onClick={errBack}>Torna all&apos;hub campagna</MenuBackButton>
+        </MenuScreenLayout>
       );
     }
 
     if (campaignHubDeckOnly && deckValidHub) {
-      if (useMenuCosmic) {
-        return (
-          <MenuScreenLayout title="Esercito campagna" subtitle="Esercito costruito nel comando (Figli dell&apos;Orizzonte).">
-            <div className="w-full max-w-4xl px-4 mb-6">
-              <MenuCard
-                accentColor="#a78bfa"
-                onClick={() => {
-                  setSelectedDeckKey(campDeckIds);
-                  goAfterDeckSelection();
-                }}
-                className="border-2 border-purple-500/50"
-              >
-                <div className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-2">Campagna</div>
-                <div className="text-xl font-black text-white mb-1">Esercito hub</div>
-                <p className="text-slate-400 text-sm mb-3">
-                  {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
-                </p>
-              </MenuCard>
-            </div>
-            <MenuBackButton onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>Cambia Armata</MenuBackButton>
-          </MenuScreenLayout>
-        );
-      }
       return (
-        <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4" style={{ minHeight: '100%' }}>
-          <h2 className="text-2xl font-black text-white mb-2">Esercito campagna</h2>
-          <p className="text-slate-400 text-sm mb-6 text-center">Esercito dal comando — Figli dell&apos;Orizzonte</p>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedDeckKey(campDeckIds);
-              goAfterDeckSelection();
-            }}
-            className="w-full max-w-md p-6 rounded-xl border-2 text-left mb-8"
-            style={{
-              borderColor: '#a78bfa',
-              backgroundColor: 'rgba(167, 139, 250, 0.12)',
-            }}
-          >
-            <div className="text-purple-300 text-sm font-bold uppercase mb-2">Esercito hub</div>
-            <div className="text-white text-xl font-black mb-1">
-              {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}
-            className="text-slate-400 hover:text-white"
-          >
-            ← Cambia Armata
-          </button>
-        </div>
+        <MenuScreenLayout title="Esercito campagna" subtitle="Esercito costruito nel comando (Figli dell&apos;Orizzonte).">
+          <div className="w-full max-w-4xl px-4 mb-6">
+            <MenuCard
+              accentColor="#a78bfa"
+              onClick={() => {
+                setSelectedDeckKey(campDeckIds);
+                goAfterDeckSelection();
+              }}
+              className="border-2 border-purple-500/50"
+            >
+              <div className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-2">Campagna</div>
+              <div className="text-xl font-black text-white mb-1">Esercito hub</div>
+              <p className="text-slate-400 text-sm mb-3">
+                {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
+              </p>
+            </MenuCard>
+          </div>
+          <MenuBackButton onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>Cambia Armata</MenuBackButton>
+        </MenuScreenLayout>
       );
     }
 
@@ -2118,7 +1924,7 @@ export default function SatzeGame() {
           .join('')}`;
       const sumArmyColors = (armyNames) => {
         const uniques = [...new Set((armyNames || []).filter(Boolean))];
-        if (!uniques.length) return { bgColor: '#c026d3', bgColorSecondary: '#a78bfa' };
+        if (!uniques.length) return { bgColor: MENU_ACCENTS.magenta, bgColorSecondary: '#a78bfa' };
         const sum = uniques
           .map((army) => ARMY_COLORS[army]?.accent || '#a78bfa')
           .map(hexToRgb)
@@ -2261,7 +2067,7 @@ export default function SatzeGame() {
         : { name: 'IA', faction: 'AVVERSARIO', level: '—', sigil: 'X' };
 
       return (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#06030a' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
           <DeckSelectCosmic
             decks={cosmicDecks}
             opponent={opponent}
@@ -2298,207 +2104,39 @@ export default function SatzeGame() {
       );
     }
 
-    if (useMenuCosmic) {
-      return (
-        <CosmicScreenLayout
-          title={selectedArmy}
-          subtitle={campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
-          footer={(
-            <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>
-              Cambia armata
-            </CosmicBannerButton>
-          )}
-        >
-          {deckOptions.length > 0 ? (
-            <CosmicDeckCarousel
-              decks={deckOptions}
-              onChooseDeck={(deckChoice) => deckChoice.onSelect()}
-            />
-          ) : null}
-          {campaignLevel && customDecksForArmy.length === 0 && (
-            <p className="text-center text-slate-400 text-sm mb-2 max-w-lg mx-auto">
-              Nessun esercito salvato: puoi usare gli eserciti precostruiti sopra oppure crearne uno in Gestione eserciti.
-            </p>
-          )}
-          {isMixedMode && customDecksForArmy.length === 0 && (
-            <div className="text-center text-slate-400 mb-2">
-              Nessun esercito misto. Crea un esercito da &quot;Gestione Eserciti&quot; selezionando carte da armate diverse.
-            </div>
-          )}
-        </CosmicScreenLayout>
-      );
-    }
-    
     return (
-      <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4" style={{ minHeight: '100%' }}>
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-2">
-            {isMixedMode ? (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full" style={{ backgroundColor: colors.accent + '30' }}>
-                <span className="text-3xl">⚔</span>
-              </div>
-            ) : (
-              <Icon name={selectedArmy} type="army" size={64} color={colors.accent} />
-            )}
-          </div>
-          <h1 className="text-3xl font-black mb-2" style={{ color: colors.accent }}>
-            {selectedArmy}
-          </h1>
-          <p className="text-slate-400 text-sm">
-            {campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
-          </p>
-        </div>
-
-        {figliCampaignDeckOk && (
-          <div className="w-full max-w-4xl px-4 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDeckKey(campDeckIds);
-                goAfterDeckSelection();
-              }}
-              className="w-full p-6 rounded-xl border-2 text-left transition-all duration-300 hover:scale-[1.02]"
-              style={{
-                borderColor: '#a78bfa',
-                backgroundColor: 'rgba(167, 139, 250, 0.12)',
-                boxShadow: '0 4px 24px rgba(167, 139, 250, 0.25)',
-              }}
-            >
-              <div className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-2">Campagna</div>
-              <div className="text-2xl font-black text-white mb-2">Esercito campagna (Figli)</div>
-              <p className="text-slate-400 text-sm mb-1">
-                {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
-              </p>
-              <p className="text-xs text-slate-500">Esercito modificabile nel segmento gestionale dell&apos;hub campagna.</p>
-            </button>
-          </div>
+      <CosmicScreenLayout
+        title={selectedArmy}
+        subtitle={campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
+        footer={(
+          <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>
+            Cambia armata
+          </CosmicBannerButton>
         )}
-        
-        {/* Deck precostruiti (classic / campagna; non per mazzi misti) */}
-        {!isMixedMode && (
-          <div className="flex flex-col md:flex-row gap-6 max-w-4xl w-full px-4 mb-6">
-            {Object.entries(predefinedDecks).map(([key, deck]) => {
-            const deckCards = ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
-            const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
-            
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  setSelectedDeckKey(key);
-                  goAfterDeckSelection();
-                }}
-                className="flex-1 p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
-                style={{
-                  borderColor: colors.accent,
-                  backgroundColor: colors.accent + '10',
-                  boxShadow: `0 4px 20px ${colors.accent}20`
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl font-black" style={{ color: colors.accent }}>
-                    Esercito {key}
-                  </span>
-                  <span className="text-slate-500 text-sm">• Lega {totalLeague}</span>
-                </div>
-                
-                <div className="text-lg font-bold text-white mb-2">
-                  "{deck.name}"
-                </div>
-                
-                <p className="text-slate-400 text-sm mb-4">
-                  {deck.description}
-                </p>
-                
-                {/* Preview carte */}
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {deckCards.sort((a, b) => b.league - a.league).slice(0, 5).map(card => (
-                    <div 
-                      key={card.id}
-                      className="w-8 h-8 rounded flex items-center justify-center"
-                      style={{ backgroundColor: colors.accent + '30' }}
-                      title={`${card.name} (L${card.league})`}
-                    >
-                      <Icon name={card.icon} type="cardIcon" size={20} />
-                    </div>
-                  ))}
-                  <div className="w-8 h-8 rounded flex items-center justify-center text-xs text-slate-500">
-                    +5
-                  </div>
-                </div>
-                
-                {/* Statistiche deck */}
-                <div className="text-xs text-slate-500">
-                  10 carte • POT media {(deckCards.reduce((s, c) => s + c.power, 0) / deckCards.length).toFixed(1)} • DAN media {(deckCards.reduce((s, c) => s + c.damage, 0) / deckCards.length).toFixed(1)}
-                </div>
-              </button>
-            );
-          })}
-          </div>
-        )}
-        
-        {/* Eserciti personalizzati */}
-        {customDecksForArmy.length > 0 && (
-          <div className="w-full max-w-4xl px-4 mb-6">
-            <h2 className="text-xl font-bold text-white mb-4">{isMixedMode ? 'Eserciti Misti' : 'Eserciti Personalizzati'}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {customDecksForArmy.map(([deckId, deck]) => {
-                const deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
-                const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
-                
-                return (
-                  <button
-                    key={deckId}
-                    onClick={() => {
-                      setSelectedDeckKey(`custom_${deckId}`);
-                      goAfterDeckSelection();
-                    }}
-                    className="p-4 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
-                    style={{
-                      borderColor: colors.accent,
-                      backgroundColor: colors.accent + '10',
-                      boxShadow: `0 4px 20px ${colors.accent}20`
-                    }}
-                  >
-                    <div className="font-bold text-white mb-1">{deck.name}</div>
-                    {deck.description && (
-                      <p className="text-slate-400 text-xs mb-2">{deck.description}</p>
-                    )}
-                    <div className="text-xs text-slate-500">Lega: {totalLeague}/30 • {deck.cards.length} carte</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        
+      >
+        {deckOptions.length > 0 ? (
+          <CosmicDeckCarousel
+            decks={deckOptions}
+            onChooseDeck={(deckChoice) => deckChoice.onSelect()}
+          />
+        ) : null}
         {campaignLevel && customDecksForArmy.length === 0 && (
-          <p className="text-center text-slate-500 text-sm mb-6 max-w-lg mx-auto">
+          <p className="text-center text-slate-400 text-sm mb-2 max-w-lg mx-auto">
             Nessun esercito salvato: puoi usare gli eserciti precostruiti sopra oppure crearne uno in Gestione eserciti.
           </p>
         )}
-
-        {/* Messaggio se non ci sono eserciti misti */}
         {isMixedMode && customDecksForArmy.length === 0 && (
-          <div className="text-center text-slate-400 mb-6">
+          <div className="text-center text-slate-400 mb-2">
             Nessun esercito misto. Crea un esercito da &quot;Gestione Eserciti&quot; selezionando carte da armate diverse.
           </div>
         )}
-        
-        {/* Pulsante torna indietro */}
-        <button
-          onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}
-          className="mt-8 px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-all flex items-center gap-2"
-        >
-          <span>←</span> Cambia Armata
-        </button>
-      </div>
+      </CosmicScreenLayout>
     );
   }
 
   if (gamePhase === 'previewDeck' && previewDeckData) {
     return (
-      <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: '#06030a' }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
         <DeckPreviewCosmic
           deck={previewDeckData}
           onBack={() => {
@@ -2556,82 +2194,47 @@ export default function SatzeGame() {
         ? 'Avvio partita…'
         : "In attesa dell'avversario…";
 
-    if (useMenuCosmic) {
-      return (
-        <MenuScreenLayout
-          title="Partita online"
-          subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
-        >
-          <div className="flex flex-col items-center gap-4 max-w-md w-full px-4">
-            <p className="text-slate-300 text-center text-sm">
-              Esercito: <span className="text-white font-bold">{deck.name}</span>
-            </p>
-            <p className="text-xs text-slate-500 text-center">
-              {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
-            </p>
-            {onlinePeerDeck && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
-            <button
-              type="button"
-              onClick={handleOnlineReady}
-              disabled={onlineLocalReady}
-              className="w-full px-8 py-4 font-bold rounded-lg disabled:opacity-50 transition-opacity"
-              style={{
-                fontFamily: HUD_ORATORIO_FONT_UI,
-                color: '#06030a',
-                border: '1.5px solid #c026d3',
-                background: 'linear-gradient(90deg, #c026d3 0%, #a855f7 55%, #ec4899 100%)',
-                boxShadow: '0 0 24px rgba(192, 38, 211, 0.35)',
-              }}
-            >
-              {onlineReadyButtonLabel}
-            </button>
-            <MenuBackButton
-              onClick={() => {
-                setSelectedDeckKey(null);
-                setOnlineLocalReady(false);
-                setOnlinePeerDeck(null);
-                onlineMatchStartedRef.current = false;
-                setGamePhase('selectDeck');
-              }}
-            >
-              Cambia esercito
-            </MenuBackButton>
-          </div>
-        </MenuScreenLayout>
-      );
-    }
-
     return (
-      <div
-        className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4"
-        style={{ minHeight: '100%' }}
+      <MenuScreenLayout
+        title="Partita online"
+        subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
       >
-        <h2 className="text-2xl font-bold text-amber-400 mb-2">Partita online</h2>
-        <p className="text-slate-400 mb-1 font-mono tracking-widest">{multiplayerSession.roomCode}</p>
-        <p className="text-white mb-6">{deck.name}</p>
-        {onlinePeerDeck && <p className="text-emerald-400 text-sm mb-4">Avversario pronto</p>}
-        <button
-          type="button"
-          onClick={handleOnlineReady}
-          disabled={onlineLocalReady}
-          className="px-8 py-4 bg-amber-500 text-black font-bold rounded-lg disabled:opacity-50 mb-6"
-        >
-          {onlineReadyButtonLabel}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedDeckKey(null);
-            setOnlineLocalReady(false);
-            setOnlinePeerDeck(null);
-            onlineMatchStartedRef.current = false;
-            setGamePhase('selectDeck');
-          }}
-          className="text-slate-400 hover:text-white"
-        >
-          ← Cambia esercito
-        </button>
-      </div>
+        <div className="flex flex-col items-center gap-4 max-w-md w-full px-4">
+          <p className="text-slate-300 text-center text-sm">
+            Esercito: <span className="text-white font-bold">{deck.name}</span>
+          </p>
+          <p className="text-xs text-slate-500 text-center">
+            {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
+          </p>
+          {onlinePeerDeck && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
+          <button
+            type="button"
+            onClick={handleOnlineReady}
+            disabled={onlineLocalReady}
+            className="w-full px-8 py-4 font-bold rounded-lg disabled:opacity-50 transition-opacity"
+            style={{
+              fontFamily: HUD_ORATORIO_FONT_UI,
+              color: MENU_ACCENTS.void,
+              border: `1.5px solid ${MENU_ACCENTS.magenta}`,
+              background: `linear-gradient(90deg, ${MENU_ACCENTS.magenta} 0%, #a855f7 55%, ${MENU_ACCENTS.pink} 100%)`,
+              boxShadow: '0 0 24px rgba(192, 38, 211, 0.35)',
+            }}
+          >
+            {onlineReadyButtonLabel}
+          </button>
+          <MenuBackButton
+            onClick={() => {
+              setSelectedDeckKey(null);
+              setOnlineLocalReady(false);
+              setOnlinePeerDeck(null);
+              onlineMatchStartedRef.current = false;
+              setGamePhase('selectDeck');
+            }}
+          >
+            Cambia esercito
+          </MenuBackButton>
+        </div>
+      </MenuScreenLayout>
     );
   }
   
@@ -2669,97 +2272,54 @@ export default function SatzeGame() {
       : (ARMY_DECKS[selectedArmy]?.[selectedDeckKey] || { name: 'Esercito' });
     const difficulties = getAllDifficulties();
 
-    if (useMenuCosmic) {
-      return (
-        <CosmicScreenLayout
-          title={selectedArmy}
-          subtitle={`"${deck.name}" — Scegli il livello di difficoltà dell'IA`}
-          footer={(
-            <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }}>
-              Cambia esercito
-            </CosmicBannerButton>
-          )}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full px-4">
-            {difficulties.map((diff) => (
-              <button
-                type="button"
-                key={diff.id}
-                onClick={() => startStandardGame(selectedArmy, selectedDeckKey, selectedMode, diff.id, ALL_BATTLEFIELDS)}
-                style={{
-                  border: `1.5px solid ${diff.color}`,
-                  background: 'linear-gradient(180deg, rgba(20,8,28,0.95) 0%, rgba(8,7,13,0.95) 100%)',
-                  padding: '16px',
-                  color: '#f5f3eb',
-                  textAlign: 'left',
-                  minHeight: '164px',
-                  boxShadow: `0 0 20px ${diff.color}2f`,
-                  cursor: 'pointer',
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <Icon name={diff.icon} type="cardIcon" size={30} />
-                  <div>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{diff.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#b9b2c8' }}>{diff.description}</div>
-                  </div>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.86rem', color: '#d2cce0' }}>{diff.longDescription}</p>
-              </button>
-            ))}
-          </div>
-          {isMixedMode ? (
-            <div style={{ color: '#b9b2c8', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
-              Armata mista selezionata.
-            </div>
-          ) : (
-            <div style={{ color: colors.accent, fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
-              Preparazione duello: {selectedArmy}
-            </div>
-          )}
-        </CosmicScreenLayout>
-      );
-    }
-    
     return (
-      <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4" style={{ minHeight: '100%' }}>
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-2">
-            {isMixedMode ? (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full" style={{ backgroundColor: colors.accent + '30' }}>
-                <span className="text-3xl">⚔</span>
-              </div>
-            ) : (
-              <Icon name={selectedArmy} type="army" size={64} color={colors.accent} />
-            )}
-          </div>
-          <h1 className="text-3xl font-black mb-2" style={{ color: colors.accent }}>{selectedArmy}</h1>
-          <div className="text-lg text-slate-300 mb-1">"{deck.name}"</div>
-          <p className="text-slate-400 text-sm">Scegli il livello di difficoltà dell'IA</p>
-        </div>
+      <CosmicScreenLayout
+        title={selectedArmy}
+        subtitle={`"${deck.name}" — Scegli il livello di difficoltà dell'IA`}
+        footer={(
+          <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }}>
+            Cambia esercito
+          </CosmicBannerButton>
+        )}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full px-4">
           {difficulties.map((diff) => (
             <button
+              type="button"
               key={diff.id}
               onClick={() => startStandardGame(selectedArmy, selectedDeckKey, selectedMode, diff.id, ALL_BATTLEFIELDS)}
-              className="p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
-              style={{ borderColor: diff.color, backgroundColor: diff.color + '10', boxShadow: `0 4px 20px ${diff.color}20` }}
+              style={{
+                border: `1.5px solid ${diff.color}`,
+                background: 'linear-gradient(180deg, rgba(20,8,28,0.95) 0%, rgba(8,7,13,0.95) 100%)',
+                padding: '16px',
+                color: MENU_ACCENTS.text,
+                textAlign: 'left',
+                minHeight: '164px',
+                boxShadow: `0 0 20px ${diff.color}2f`,
+                cursor: 'pointer',
+              }}
             >
               <div className="flex items-center gap-3 mb-3">
-                <Icon name={diff.icon} type="cardIcon" size={32} />
+                <Icon name={diff.icon} type="cardIcon" size={30} />
                 <div>
-                  <div className="text-xl font-black text-white">{diff.name}</div>
-                  <div className="text-sm text-slate-400">{diff.description}</div>
+                  <div style={{ fontFamily: "'Cinzel', serif", fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{diff.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#b9b2c8' }}>{diff.description}</div>
                 </div>
               </div>
-              <p className="text-slate-300 text-sm">{diff.longDescription}</p>
+              <p style={{ margin: 0, fontSize: '0.86rem', color: '#d2cce0' }}>{diff.longDescription}</p>
             </button>
           ))}
         </div>
-        <button onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }} className="mt-8 px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-all flex items-center gap-2">
-          <span>←</span> Cambia Esercito
-        </button>
-      </div>
+        {isMixedMode ? (
+          <div style={{ color: '#b9b2c8', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
+            Armata mista selezionata.
+          </div>
+        ) : (
+          <div style={{ color: colors.accent, fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
+            Preparazione duello: {selectedArmy}
+          </div>
+        )}
+      </CosmicScreenLayout>
     );
   }
 
@@ -2777,32 +2337,32 @@ export default function SatzeGame() {
     const galleryInner = (
       <div className="w-full flex flex-col overflow-hidden" style={{ flex: '1 1 0', minHeight: 0 }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b w-full" style={{ borderColor: useMenuCosmic ? '#334155' : undefined }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b w-full" style={{ borderColor: '#334155' }}>
           <button
             onClick={() => setGamePhase('menu')}
             className="px-4 py-2 flex items-center gap-2 transition-all font-semibold"
-            style={useMenuCosmic ? { background: '#110b20', border: '1.5px solid #334155', color: '#94A3B8' } : { background: '#1e293b', color: '#cbd5e1', borderRadius: '8px' }}
+            style={{ background: MENU_ACCENTS.panel, border: '1.5px solid #334155', color: '#94A3B8' }}
           >
             <span>←</span> Menu
           </button>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: useMenuCosmic ? '#ec4899' : '#f59e0b', fontFamily: useMenuCosmic ? HUD_ORATORIO_FONT_UI : undefined }}>
-            <Icon name="book" type="cardIcon" size={28} color={useMenuCosmic ? '#ec4899' : '#f59e0b'} /> GALLERIA
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: MENU_ACCENTS.pink, fontFamily: HUD_ORATORIO_FONT_UI }}>
+            <Icon name="book" type="cardIcon" size={28} color={MENU_ACCENTS.pink} /> GALLERIA
           </h1>
           <div className="w-24" />
         </div>
         {/* Tabs */}
-        <div className="flex justify-center gap-4 py-4 border-b w-full" style={{ borderColor: useMenuCosmic ? '#334155' : undefined }}>
+        <div className="flex justify-center gap-4 py-4 border-b w-full" style={{ borderColor: '#334155' }}>
           <button
             onClick={() => startTransition(() => setGalleryTab('agents'))}
-            className={`px-6 py-2 font-bold transition-all flex items-center gap-2 ${!useMenuCosmic ? 'rounded-lg' : ''}`}
-            style={useMenuCosmic ? (galleryTab === 'agents' ? { background: '#c026d3', color: '#06030a', border: '1.5px solid #c026d3' } : { background: '#110b20', color: '#94A3B8', border: '1.5px solid #334155' }) : (galleryTab === 'agents' ? { background: '#f59e0b', color: '#000' } : { background: '#1e293b', color: '#94a3b8' })}
+            className="px-6 py-2 font-bold transition-all flex items-center gap-2"
+            style={galleryTab === 'agents' ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` } : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
           >
             <Icon name="card" type="cardIcon" size={18} /> Agenti ({allAgentsList.length})
           </button>
           <button
             onClick={() => startTransition(() => setGalleryTab('battlefields'))}
-            className={`px-6 py-2 font-bold transition-all flex items-center gap-2 ${!useMenuCosmic ? 'rounded-lg' : ''}`}
-            style={useMenuCosmic ? (galleryTab === 'battlefields' ? { background: '#c026d3', color: '#06030a', border: '1.5px solid #c026d3' } : { background: '#110b20', color: '#94A3B8', border: '1.5px solid #334155' }) : (galleryTab === 'battlefields' ? { background: '#f59e0b', color: '#000' } : { background: '#1e293b', color: '#94a3b8' })}
+            className="px-6 py-2 font-bold transition-all flex items-center gap-2"
+            style={galleryTab === 'battlefields' ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` } : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
           >
             <Icon name="tower" type="cardIcon" size={18} /> Campi ({ALL_BATTLEFIELDS.length})
           </button>
@@ -2867,15 +2427,11 @@ export default function SatzeGame() {
                   <button
                     type="button"
                     onClick={() => startTransition(() => setGalleryCardLayout('reworkP4'))}
-                    className={`px-4 py-1.5 text-sm font-bold transition-all ${!useMenuCosmic ? 'rounded-lg' : ''}`}
+                    className="px-4 py-1.5 text-sm font-bold transition-all"
                     style={
-                      useMenuCosmic
-                        ? galleryCardLayout === 'reworkP4'
-                          ? { background: '#c026d3', color: '#06030a', border: '1.5px solid #c026d3' }
-                          : { background: '#110b20', color: '#94A3B8', border: '1.5px solid #334155' }
-                        : galleryCardLayout === 'reworkP4'
-                          ? { background: '#f59e0b', color: '#000' }
-                          : { background: '#1e293b', color: '#94a3b8' }
+                      galleryCardLayout === 'reworkP4'
+                        ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` }
+                        : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }
                     }
                   >
                     P4 React
@@ -2883,15 +2439,11 @@ export default function SatzeGame() {
                   <button
                     type="button"
                     onClick={() => startTransition(() => setGalleryCardLayout('reworkP4html'))}
-                    className={`px-4 py-1.5 text-sm font-bold transition-all ${!useMenuCosmic ? 'rounded-lg' : ''}`}
+                    className="px-4 py-1.5 text-sm font-bold transition-all"
                     style={
-                      useMenuCosmic
-                        ? galleryCardLayout === 'reworkP4html'
-                          ? { background: '#c026d3', color: '#06030a', border: '1.5px solid #c026d3' }
-                          : { background: '#110b20', color: '#94A3B8', border: '1.5px solid #334155' }
-                        : galleryCardLayout === 'reworkP4html'
-                          ? { background: '#f59e0b', color: '#000' }
-                          : { background: '#1e293b', color: '#94a3b8' }
+                      galleryCardLayout === 'reworkP4html'
+                        ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` }
+                        : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }
                     }
                   >
                     P4 (mock HTML)
@@ -2899,9 +2451,9 @@ export default function SatzeGame() {
                 </div>
               </div>
               
-              {/* Griglia Agenti */}
+              {/* Griglia Agenti (rendering incrementale) */}
               <div className="grid grid-cols-4 gap-6 justify-items-center">
-                {galleryAgentsSorted.map((agent) => (
+                {galleryAgentsSorted.slice(0, galleryVisibleCount).map((agent) => (
                   <div key={agent.id} className="flex flex-col items-center gap-2 group">
                     <div className="cursor-pointer">
                       {galleryCardLayout === 'reworkP4html' ? (
@@ -2927,6 +2479,18 @@ export default function SatzeGame() {
                   </div>
                 ))}
               </div>
+              {galleryVisibleCount < galleryAgentsSorted.length && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => setGalleryVisibleCount((n) => n + GALLERY_PAGE_SIZE))}
+                    className="px-6 py-2 font-bold transition-all"
+                    style={{ background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
+                  >
+                    Mostra altre carte ({galleryAgentsSorted.length - galleryVisibleCount} rimanenti)
+                  </button>
+                </div>
+              )}
               
               {/* Modal per carta ingrandita */}
               {selectedCardForModal && (
@@ -3001,31 +2565,8 @@ export default function SatzeGame() {
       </div>
     );
 
-    return (
-      useMenuCosmic ? (
-        <MenuScreenLayout centered={false}>{galleryInner}</MenuScreenLayout>
-      ) : (
-        <div className="w-full h-full min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col overflow-hidden" style={{ minHeight: '100%' }}>
-          {galleryInner}
-        </div>
-      )
-    );
+    return <MenuScreenLayout centered={false}>{galleryInner}</MenuScreenLayout>;
   }
-
-  
-  // Stile responsive
-  const responsiveStyle = {
-    container: {
-      minWidth: '320px',
-      maxWidth: '100vw',
-      overflowX: 'auto',
-      overflowY: 'auto',
-    },
-    scaleWrapper: {
-      transform: 'scale(var(--ui-scale, 1))',
-      transformOrigin: 'top center',
-    }
-  };
 
 // Schermata di gioco
 
@@ -3055,7 +2596,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-      className={`relative overflow-visible ${!uiBattleHud ? 'bg-slate-950' : ''}`}
+      className="relative overflow-visible"
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -3065,16 +2606,16 @@ export default function SatzeGame() {
         maxHeight: '1080px',
         margin: '0 auto',
         display: 'block',
-        ...(uiBattleHud ? { backgroundColor: PALETTE.deepVoid } : {})
+        backgroundColor: PALETTE.deepVoid,
       }}
     >
       {onlineOpponentLeft && (
         <div
           className="absolute inset-0 z-[300] flex items-center justify-center bg-black/75 pointer-events-auto px-4"
-          style={uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI } : undefined}
+          style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
           <div
-            className={`max-w-md w-full p-6 rounded-xl border-2 ${uiBattleHud ? 'bg-[#0a0e1a] border-[#D4A847]' : 'bg-slate-900 border-amber-500/50'}`}
+            className="max-w-md w-full p-6 rounded-xl border-2 bg-[#0a0e1a] border-[#D4A847]"
           >
             <h3 className="text-amber-400 font-bold text-lg mb-2 text-center">Avversario disconnesso</h3>
             <p className="text-slate-300 text-sm mb-4 text-center">La connessione con l&apos;altro giocatore si è interrotta in modo definitivo (tempo scaduto o uscita).</p>
@@ -3101,10 +2642,10 @@ export default function SatzeGame() {
       {mpConnectionLost && !onlineOpponentLeft && isMultiplayer && multiplayerSession?.reconnectSecret && (
         <div
           className="absolute inset-0 z-[299] flex items-center justify-center bg-black/80 pointer-events-auto px-4"
-          style={uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI } : undefined}
+          style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
           <div
-            className={`max-w-md w-full p-6 rounded-xl border-2 ${uiBattleHud ? 'bg-[#0a0e1a] border-[#D4A847]' : 'bg-slate-900 border-amber-500/50'}`}
+            className="max-w-md w-full p-6 rounded-xl border-2 bg-[#0a0e1a] border-[#D4A847]"
           >
             <h3 className="text-amber-400 font-bold text-lg mb-2 text-center">Connessione persa</h3>
             <p className="text-slate-300 text-sm mb-3 text-center">
@@ -3134,10 +2675,10 @@ export default function SatzeGame() {
       {mpOpponentAway && !mpConnectionLost && !onlineOpponentLeft && isMultiplayer && (
         <div
           className="absolute inset-0 z-[298] flex items-center justify-center bg-black/55 pointer-events-auto px-4"
-          style={uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI } : undefined}
+          style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
           <div
-            className={`max-w-lg w-full p-5 rounded-xl border ${uiBattleHud ? 'bg-[#0a0e1a]/95 border-[#D4A847]/60' : 'bg-slate-900/95 border-slate-600'}`}
+            className="max-w-lg w-full p-5 rounded-xl border bg-[#0a0e1a]/95 border-[#D4A847]/60"
           >
             <p className="text-amber-200 text-center text-sm font-semibold mb-1">In attesa dell&apos;avversario</p>
             <p className="text-slate-400 text-center text-xs">
@@ -3147,7 +2688,7 @@ export default function SatzeGame() {
         </div>
       )}
       {/* Immagine campo con animazione reveal (effetto per tema armata) - galleria e duello */}
-      {uiBattleHud && fieldBgImage && (
+      {fieldBgImage && (
         <div key={fieldBgImage} className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
           <BattlefieldReveal imageSrc={fieldBgImage} animationType={entranceAnimationType} />
         </div>
@@ -3157,7 +2698,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <div 
         className={`absolute top-0 left-0 flex flex-col p-4 gap-6 justify-end overflow-visible ${
-          uiBattleHud ? 'border-r border-slate-600/50' : 'bg-slate-800/30 border-r border-slate-700/50'
+          'border-r border-slate-600/50'
         } ${
           gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
         }`}
@@ -3165,28 +2706,27 @@ export default function SatzeGame() {
           width: '428px',
           height: '1080px',
           zIndex: 1,
-          ...(uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI, background: 'rgba(10, 14, 26, 0.4)' } : {})
+          fontFamily: HUD_ORATORIO_FONT_UI,
+          background: 'rgba(10, 14, 26, 0.4)',
         }}
       >
         {/* Anteprima Carta - inizia a metà colonna */}
         <div 
           className={`p-3 mb-4 flex flex-col overflow-hidden satze-hide-scrollbar ${
-            uiBattleHud ? 'satze-hud-panel' : 'rounded-lg bg-slate-900/50 border border-slate-700/50'
+            'satze-hud-panel'
           }`} 
           style={{
             height: '530px',
-            ...(uiBattleHud ? {
-              fontFamily: HUD_ORATORIO_FONT_UI,
-              position: 'relative',
-              zIndex: isGuidedIntroPreviewPhase ? 21 : undefined,
-              border: isGuidedIntroPreviewPhase ? '2px solid rgba(251, 191, 36, 0.95)' : undefined,
-              boxShadow: isGuidedIntroPreviewPhase ? '0 0 24px rgba(251, 191, 36, 0.45)' : undefined,
-            } : {})
+            fontFamily: HUD_ORATORIO_FONT_UI,
+            position: 'relative',
+            zIndex: isGuidedIntroPreviewPhase ? 21 : undefined,
+            border: isGuidedIntroPreviewPhase ? '2px solid rgba(251, 191, 36, 0.95)' : undefined,
+            boxShadow: isGuidedIntroPreviewPhase ? '0 0 24px rgba(251, 191, 36, 0.45)' : undefined,
           }}
         >
           <div 
-            className={`text-sm font-bold mb-2 ${uiBattleHud ? 'uppercase tracking-[0.15em]' : ''}`}
-            style={uiBattleHud ? { color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` } : { color: '#cbd5e1' }}
+            className="text-sm font-bold mb-2 uppercase tracking-[0.15em]"
+            style={{ color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` }}
           >
             ANTEPRIMA
           </div>
@@ -3203,7 +2743,8 @@ export default function SatzeGame() {
                         : enemyArmyBonuses)[(hoveredCard || lastPreviewCard).agent?.army] &&
                       isBonusTriggerSatisfied(
                         (hoveredCard || lastPreviewCard).agent?.army,
-                        (hoveredCard || lastPreviewCard).isPlayer !== false
+                        (hoveredCard || lastPreviewCard).isPlayer !== false,
+                        (hoveredCard || lastPreviewCard).agent
                       )}
                   bonusBaseInactive={(() => {
                     const p = hoveredCard || lastPreviewCard;
@@ -3218,8 +2759,8 @@ export default function SatzeGame() {
                 />
                 <div className="mt-3 w-full">
                   <div 
-                    className={`p-4 space-y-3 ${uiBattleHud ? 'rounded-xl' : 'rounded-lg bg-slate-900/80 border border-slate-700/50'}`}
-                    style={uiBattleHud ? { background: `${PALETTE.deepVoid}99`, border: `1px solid ${PALETTE.slate}` } : {}}
+                    className="p-4 space-y-3 rounded-xl"
+                    style={{ background: `${PALETTE.deepVoid}99`, border: `1px solid ${PALETTE.slate}` }}
                   >
                     {(hoveredCard || lastPreviewCard).agent?.ability && (() => {
                       const fullText = getAbilityExplanation((hoveredCard || lastPreviewCard).agent.ability);
@@ -3232,7 +2773,7 @@ export default function SatzeGame() {
                         <div>
                           <div 
                             className="text-xs font-bold uppercase tracking-[0.12em] mb-2 flex items-center gap-1.5"
-                            style={uiBattleHud ? { color: PALETTE.amber } : { color: '#a78bfa' }}
+                            style={{ color: PALETTE.amber }}
                           >
                             <Icon name="lightning" type="cardIcon" size={14} /> Potere
                           </div>
@@ -3240,15 +2781,11 @@ export default function SatzeGame() {
                             {triggerPart && (
                               <div 
                                 className="pl-3 py-1.5 rounded-r border-l-2"
-                                style={uiBattleHud ? { 
-                                  background: `${PALETTE.amber}18`, 
+                                style={{
+                                  background: `${PALETTE.amber}18`,
                                   borderColor: PALETTE.amber,
                                   color: PALETTE.amber,
                                   fontVariant: 'tabular-nums',
-                                } : { 
-                                  background: 'rgba(167, 139, 250, 0.15)', 
-                                  borderColor: '#a78bfa',
-                                  color: '#c4b5fd',
                                 }}
                               >
                                 <span className="text-sm font-semibold">{triggerPart}</span>
@@ -3256,7 +2793,7 @@ export default function SatzeGame() {
                             )}
                             <p 
                               className="text-sm leading-[1.7] tracking-wide" 
-                              style={uiBattleHud ? { color: PALETTE.textSecondary, fontVariant: 'tabular-nums' } : { color: '#cbd5e1' }}
+                              style={{ color: PALETTE.textSecondary, fontVariant: 'tabular-nums' }}
                             >
                               {effectPart}
                             </p>
@@ -3266,12 +2803,12 @@ export default function SatzeGame() {
                     })()}
                     {(hoveredCard || lastPreviewCard).agent?.flavour && (
                       <div
-                        className={`${(hoveredCard || lastPreviewCard).agent?.ability ? 'pt-3' : ''} ${!uiBattleHud ? 'border-t border-slate-700/50' : ''}`}
-                        style={uiBattleHud ? { borderTop: `1px solid ${PALETTE.slate}` } : {}}
+                        className={(hoveredCard || lastPreviewCard).agent?.ability ? 'pt-3' : ''}
+                        style={{ borderTop: `1px solid ${PALETTE.slate}` }}
                       >
                         <p 
                           className="text-sm italic leading-[1.75]" 
-                          style={uiBattleHud ? { color: PALETTE.textPrimary, opacity: 0.92 } : { color: '#cbd5e1' }}
+                          style={{ color: PALETTE.textPrimary, opacity: 0.92 }}
                         >
                           "{(hoveredCard || lastPreviewCard).agent.flavour}"
                         </p>
@@ -3284,21 +2821,21 @@ export default function SatzeGame() {
               <div className="flex flex-col items-center w-full">
                 <div 
                   className="rounded-xl p-4 shadow-lg w-full"
-                  style={uiBattleHud ? { background: `${PALETTE.deepVoid}cc`, border: `1.5px solid ${PALETTE.amber}88`, boxShadow: `0 0 20px ${PALETTE.amber}22` } : { background: 'linear-gradient(to bottom right, rgb(30 41 59), rgb(15 23 42))', border: '2px solid rgb(245 158 11 / 0.5)' }}
+                  style={{ background: `${PALETTE.deepVoid}cc`, border: `1.5px solid ${PALETTE.amber}88`, boxShadow: `0 0 20px ${PALETTE.amber}22` }}
                 >
                   <div className="text-center">
                     <div className="flex justify-center mb-2"><Icon name={hoveredField.icon} type="cardIcon" size={32} /></div>
-                    <div className="text-lg font-bold mb-1" style={uiBattleHud ? { color: PALETTE.textPrimary } : {}}>{hoveredField.name}</div>
-                    <div className="text-sm" style={uiBattleHud ? { color: PALETTE.amber } : { color: '#fcd34d' }}>{hoveredField.effect}</div>
+                    <div className="text-lg font-bold mb-1" style={{ color: PALETTE.textPrimary }}>{hoveredField.name}</div>
+                    <div className="text-sm" style={{ color: PALETTE.amber }}>{hoveredField.effect}</div>
                   </div>
                 </div>
                 {hoveredField.flavour && (
                   <div className="mt-2 w-full">
                     <div 
                       className="rounded-xl p-2"
-                      style={uiBattleHud ? { background: `${PALETTE.deepVoid}99`, border: `1px solid ${PALETTE.slate}` } : { background: 'rgb(15 23 42 / 0.8)', border: '1px solid rgb(180 83 9 / 0.3)' }}
+                      style={{ background: `${PALETTE.deepVoid}99`, border: `1px solid ${PALETTE.slate}` }}
                     >
-                      <p className="text-[10px] italic leading-relaxed" style={uiBattleHud ? { color: PALETTE.textSecondary } : { color: '#94a3b8' }}>
+                      <p className="text-[10px] italic leading-relaxed" style={{ color: PALETTE.textSecondary }}>
                         "{hoveredField.flavour}"
                       </p>
                     </div>
@@ -3306,7 +2843,7 @@ export default function SatzeGame() {
                 )}
               </div>
             ) : (
-              <div className="text-center text-xs py-8" style={uiBattleHud ? { color: PALETTE.textSecondary } : { color: '#475569' }}>
+              <div className="text-center text-xs py-8" style={{ color: PALETTE.textSecondary }}>
                 Clicca su una carta<br/>per vedere i dettagli
               </div>
             )}
@@ -3317,34 +2854,26 @@ export default function SatzeGame() {
         <button
           ref={glossaryButtonRef}
           onClick={handleGlossaryButtonClick}
-          className={`block w-full transition-all duration-250 overflow-hidden ${
-            uiBattleHud ? 'border rounded-2xl py-3' : 'rounded-lg bg-amber-600/80 hover:bg-amber-500 text-white py-3 px-4 font-bold'
-          }`}
-          style={uiBattleHud ? {
+          className="block w-full transition-all duration-250 overflow-hidden border rounded-2xl py-3"
+          style={{
             position: 'relative',
             zIndex: isGuidedIntroGlossaryPromptPhase || isGuidedIntroGlossaryOpenPhase ? 21 : undefined,
-            background: `url(/Immagini_bg/adam_samson_hardcover_book_spine_dark_leather_binding_gold_de_e0c822f3-c6e7-43d5-8296-0a58b1c0173f_1.png) center/cover no-repeat`,
+            background: `url(/Immagini_bg/adam_samson_hardcover_book_spine_dark_leather_binding_gold_de_e0c822f3-c6e7-43d5-8296-0a58b1c0173f_1.webp) center/cover no-repeat`,
             border: isGuidedIntroGlossaryPromptPhase || isGuidedIntroGlossaryOpenPhase
               ? '2px solid rgba(251, 191, 36, 0.95)'
               : `1.5px solid ${PALETTE.slate}`,
             boxShadow: isGuidedIntroGlossaryPromptPhase || isGuidedIntroGlossaryOpenPhase
               ? '0 0 24px rgba(251, 191, 36, 0.45)'
               : '0 2px 8px #000',
-          } : {}}
+          }}
           onMouseEnter={(e) => {
-            if (uiBattleHud) {
-              e.currentTarget.style.borderColor = PALETTE.gold;
-            }
+            e.currentTarget.style.borderColor = PALETTE.gold;
           }}
           onMouseLeave={(e) => {
-            if (uiBattleHud) {
-              e.currentTarget.style.borderColor = PALETTE.slate;
-            }
+            e.currentTarget.style.borderColor = PALETTE.slate;
           }}
           aria-label="Glossario"
-        >
-          {!uiBattleHud && 'GLOSSARIO'}
-        </button>
+        />
       </div>
 
       {/* ============================================ */}
@@ -3352,7 +2881,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <div 
         className={`absolute top-0 right-0 flex flex-col p-4 gap-6 overflow-visible ${
-          uiBattleHud ? 'border-l border-slate-600/50' : 'bg-slate-800/30 border-l border-slate-700/50'
+          'border-l border-slate-600/50'
         } ${
           gamePhase === 'result' ? 'animate-fade-out-panels-right pointer-events-none' : ''
         }`}
@@ -3360,17 +2889,13 @@ export default function SatzeGame() {
           width: '428px',
           height: '1080px',
           zIndex: 1,
-          ...(uiBattleHud ? { background: 'rgba(10, 14, 26, 0.4)' } : {}),
+          background: 'rgba(10, 14, 26, 0.4)',
         }}
       >
         {/* Round e Stato Partita - sopra il tabellone campi (grafica menù principale) */}
         <div 
-          className={`p-2 flex-shrink-0 ${
-            uiBattleHud ? 'satze-hud-panel' : 'rounded-lg bg-slate-800/50'
-          }`} 
-          style={uiBattleHud ? { 
-            fontFamily: HUD_ORATORIO_FONT_UI,
-          } : {}}
+          className="p-2 flex-shrink-0 satze-hud-panel"
+          style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
         {/* Campi conquistati: IA a sinistra, Tu a destra - colori dalle armate */}
           {(() => {
@@ -3393,20 +2918,15 @@ export default function SatzeGame() {
               const colors = army && ARMY_COLORS[army];
               const accent = colors?.accent || PALETTE.slate;
               const isFilled = filled && colors?.accent;
-              const strokeColor = isFilled ? accent : (uiBattleHud ? `${PALETTE.slate}66` : 'rgba(71,85,105,0.6)');
+              const strokeColor = isFilled ? accent : `${PALETTE.slate}66`;
               return (
                 <div 
                   className="flex-1 aspect-square min-w-[28px] max-w-[40px] flex items-center justify-center p-0.5"
-                  style={uiBattleHud ? { 
+                  style={{
                     background: isFilled ? `${accent}22` : 'transparent',
                     border: `1px solid ${strokeColor}`,
                     borderRadius: '4px',
                     boxShadow: isFilled ? `0 0 6px ${accent}44` : 'none',
-                  } : { 
-                    background: isFilled ? `${accent}20` : 'transparent',
-                    border: `1px solid ${strokeColor}`,
-                    borderRadius: '4px',
-                    boxShadow: isFilled ? `0 0 4px ${accent}50` : 'none',
                   }}
                 >
                   <BannerSilhouette filled={isFilled} color={isFilled ? accent : strokeColor} />
@@ -3433,17 +2953,15 @@ export default function SatzeGame() {
           })()}
           {/* Condizione di vittoria */}
           <div 
-            className={`px-3 py-2 text-center rounded-xl ${
-              uiBattleHud ? '' : 'rounded-lg bg-amber-900/30 border-amber-500/30'
-            }`} 
-            style={uiBattleHud ? { 
-              background: 'rgba(56, 189, 248, 0.08)', 
+            className="px-3 py-2 text-center rounded-xl"
+            style={{
+              background: 'rgba(56, 189, 248, 0.08)',
               border: '1px solid rgba(56, 189, 248, 0.28)',
               boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.35)',
-            } : {}}
+            }}
           >
-            <div className="text-[11px] uppercase tracking-wider mb-1" style={uiBattleHud ? { color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' } : {}}>Condizione di Vittoria</div>
-            <div className="text-sm font-bold leading-tight" style={uiBattleHud ? { color: PALETTE.amber, textShadow: `0 1px 3px #000, 0 0 12px ${PALETTE.amber}44` } : {}}>
+            <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>Condizione di Vittoria</div>
+            <div className="text-sm font-bold leading-tight" style={{ color: PALETTE.amber, textShadow: `0 1px 3px #000, 0 0 12px ${PALETTE.amber}44` }}>
               {gameMode === 'bareHands' 
                 ? 'Conquista 3 campi!'
                 : (roundNumber >= 5
@@ -3451,12 +2969,12 @@ export default function SatzeGame() {
                     : 'Conquista 3 campi!')}
             </div>
             {gameMode !== 'bareHands' && roundNumber < 5 && (
-              <div className="text-xs mt-1.5" style={uiBattleHud ? { color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' } : {}}>
+              <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
                 Cambierà tra {5 - roundNumber} turn{5 - roundNumber === 1 ? 'o' : 'i'}
               </div>
             )}
             {gameMode !== 'bareHands' && roundNumber >= 5 && (
-              <div className="text-xs mt-1.5" style={uiBattleHud ? { color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' } : {}}>
+              <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
                 (Vince chi alla fine del turno ha più PV)
               </div>
             )}
@@ -3465,21 +2983,19 @@ export default function SatzeGame() {
 
         {/* Tabellone Campi */}
         <div 
-          className={`p-2 -mt-4 flex flex-col h-[300px] ${
-            uiBattleHud ? 'satze-hud-panel' : 'rounded-lg bg-purple-500/20 border-purple-400/50'
-          } ${gamePhase === 'selectField' && isPlayerFirst && !tabelloneTiltDismissed && !guidedMatch.active ? 'animate-satze-tabellone-tilt' : ''} ${isGuidedIntroBattlefieldsPhase ? 'animate-satze-guided-twinkle' : ''}`} 
+          className={`p-2 -mt-4 flex flex-col h-[300px] satze-hud-panel ${gamePhase === 'selectField' && isPlayerFirst && !tabelloneTiltDismissed && !guidedMatch.active ? 'animate-satze-tabellone-tilt' : ''} ${isGuidedIntroBattlefieldsPhase ? 'animate-satze-guided-twinkle' : ''}`} 
           onMouseEnter={() => setTabelloneTiltDismissed(true)}
-          style={uiBattleHud ? {
+          style={{
             fontFamily: HUD_ORATORIO_FONT_UI,
             position: 'relative',
             zIndex: isGuidedIntroBattlefieldsPhase ? 21 : undefined,
             border: isGuidedIntroBattlefieldsPhase ? '2px solid rgba(251, 191, 36, 0.95)' : undefined,
             boxShadow: isGuidedIntroBattlefieldsPhase ? '0 0 24px rgba(251, 191, 36, 0.45)' : undefined,
-          } : {}}
+          }}
         >
           <div 
-            className={`text-sm font-bold mb-1 text-center ${uiBattleHud ? 'uppercase tracking-[0.15em]' : ''}`} 
-            style={uiBattleHud ? { color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` } : { color: '#c084fc' }}
+            className="text-sm font-bold mb-1 text-center uppercase tracking-[0.15em]"
+            style={{ color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` }}
           >
             Prossima conquista!
           </div>
@@ -3528,15 +3044,10 @@ export default function SatzeGame() {
             </div>
             {/* Retro: FC */}
             <div ref={fcPanelRef} className="satze-panel-flip-face satze-panel-flip-face-back p-2 flex flex-col overflow-hidden items-center justify-start pt-4 satze-hide-scrollbar satze-fc-panel rounded-3xl"
-              style={uiBattleHud ? {
-                background: `linear-gradient(135deg, rgba(10, 14, 26, 0.88) 0%, rgba(15, 23, 42, 0.85) 100%), url(/Immagini_bg/CampoFC_bg.png) center/cover no-repeat`,
+              style={{
+                background: `linear-gradient(135deg, rgba(10, 14, 26, 0.88) 0%, rgba(15, 23, 42, 0.85) 100%), url(/Immagini_bg/CampoFC_bg.webp) center/cover no-repeat`,
                 border: '2px solid #000',
                 boxShadow: '3px 3px 0 #000',
-                fontFamily: HUD_ORATORIO_FONT_UI
-              } : {
-                background: `linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 41, 59, 0.85) 100%), url(/Immagini_bg/CampoFC_bg.png) center/cover no-repeat`,
-                border: '2px solid #1e293b',
-                boxShadow: '3px 3px 0 #0f172a',
                 fontFamily: HUD_ORATORIO_FONT_UI
               }}>
               <div 
@@ -3547,8 +3058,8 @@ export default function SatzeGame() {
                     const reserved = Math.max(0, playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1);
                     const maxFC = Math.max(1, playerFocus - reserved);
                     const t = maxFC <= 1 ? 1 : Math.max(0, Math.min(1, (selectedFocus - 1) / (maxFC - 1)));
-                    const [r1, g1, b1] = uiBattleHud ? [148, 163, 184] : [161, 161, 170];
-                    const [r2, g2, b2] = uiBattleHud ? [255, 224, 130] : [254, 240, 138];
+                    const [r1, g1, b1] = [148, 163, 184];
+                    const [r2, g2, b2] = [255, 224, 130];
                     const r = Math.round(r1 + (r2 - r1) * t);
                     const g = Math.round(g1 + (g2 - g1) * t);
                     const b = Math.round(b1 + (b2 - b1) * t);
@@ -3558,7 +3069,7 @@ export default function SatzeGame() {
                     const reserved = Math.max(0, playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1);
                     const maxFC = Math.max(1, playerFocus - reserved);
                     const t = maxFC <= 1 ? 1 : Math.max(0, Math.min(1, (selectedFocus - 1) / (maxFC - 1)));
-                    const base = uiBattleHud ? '255, 224, 130' : '254, 240, 138';
+                    const base = '255, 224, 130';
                     const innerAlpha = 0.05 + t * 0.85;
                     const midBlur = 1 + t * 10;
                     const midAlpha = 0.02 + t * 0.58;
@@ -3738,7 +3249,7 @@ export default function SatzeGame() {
             <GameCard
               cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
               agent={enemyAgent}
-              showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false)}
+              showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
               bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
               abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
               onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
@@ -3753,6 +3264,7 @@ export default function SatzeGame() {
           <DuelResultEnemyResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
+            duelEffectStep={visualEffectStep}
             duelVfx={duelVfx}
             showClashAnimation={showClashAnimation}
             enemyFocusCoinsShown={enemyFocusCoinsShown}
@@ -3792,7 +3304,7 @@ export default function SatzeGame() {
             <GameCard
               cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
               agent={selectedAgent}
-              showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true)}
+              showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
               bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
               abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
               onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
@@ -3824,6 +3336,7 @@ export default function SatzeGame() {
           <DuelResultPlayerResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
+            duelEffectStep={visualEffectStep}
             duelVfx={duelVfx}
             showClashAnimation={showClashAnimation}
             playerFocusCoinsShown={playerFocusCoinsShown}
@@ -3841,6 +3354,7 @@ export default function SatzeGame() {
         <DuelClashAuroraSequence
           battleResult={battleResult}
           duelPhase={duelPhase}
+          duelEffectStep={visualEffectStep}
           variant="n5"
           galleryCardLayout={galleryCardLayout}
           getAbilityCurrentValue={getAbilityCurrentValue}
@@ -3857,21 +3371,17 @@ export default function SatzeGame() {
           transform: 'translateX(-50%)',
           zIndex: 10,
           /* Sotto la letterbox / bordo alto del viewport: evita che Round e tasti vengano tagliati */
-          top: uiBattleHud ? 56 : 48,
+          top: 56,
         }}
       >
         <div
-          className={`flex flex-col items-center justify-center gap-0.5 px-4 py-2 w-fit min-w-0 shrink-0 text-center ${
-            uiBattleHud ? 'satze-hud-panel' : 'rounded-lg bg-black/50'
-          } ${gamePhase === 'result' ? 'animate-fade-out-panels' : ''}`}
-          style={{
-            ...(uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI } : { background: 'rgba(0,0,0,0.5)' }),
-          }}
+          className={`flex flex-col items-center justify-center gap-0.5 px-4 py-2 w-fit min-w-0 shrink-0 text-center satze-hud-panel ${gamePhase === 'result' ? 'animate-fade-out-panels' : ''}`}
+          style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
-          <span className="font-bold text-sm uppercase tracking-wider" style={{ color: uiBattleHud ? PALETTE.amber : '#fbbf24' }}>
+          <span className="font-bold text-sm uppercase tracking-wider" style={{ color: PALETTE.amber }}>
             Round {roundNumber}/5
           </span>
-          <span className="text-xs leading-tight" style={{ color: uiBattleHud ? PALETTE.textSecondary : '#94a3b8' }}>
+          <span className="text-xs leading-tight" style={{ color: PALETTE.textSecondary }}>
             {isPlayerFirst ? 'Tu inizi' : isOnlinePvP ? 'Avversario inizia' : 'IA inizia'}
           </span>
         </div>
@@ -3914,13 +3424,9 @@ export default function SatzeGame() {
                 setEnemyCardGlow(0);
                 setCardGlowIntensity(0);
               }}
-              className={
-                uiBattleHud
-                  ? 'satze-hud-duel-btn'
-                  : 'px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xs font-bold rounded-lg hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-500/30 active:scale-95'
-              }
+              className="satze-hud-duel-btn"
             >
-              {uiBattleHud ? 'Replay' : '🔄 Replay'}
+              Replay
             </button>
             {typeof window !== 'undefined' &&
               new URLSearchParams(window.location.search).get('duelDebug') === '1' && (
@@ -3936,13 +3442,9 @@ export default function SatzeGame() {
                       setCardGlowIntensity(1);
                     }
                   }}
-                  className={
-                    uiBattleHud
-                      ? 'satze-hud-duel-btn satze-hud-duel-btn--skip'
-                      : 'px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/30 active:scale-95'
-                  }
+                  className="satze-hud-duel-btn satze-hud-duel-btn--skip"
                 >
-                  {uiBattleHud ? 'Skip' : '⏩ Skip'}
+                  Skip
                 </button>
               )}
           </div>
@@ -3978,12 +3480,12 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {showFinalRoundAnimation && (
         <div 
-          className={`fixed inset-0 flex items-center justify-center z-[100] ${uiBattleHud ? '' : 'bg-black/80'}`}
-          style={{ pointerEvents: 'auto', ...(uiBattleHud ? { background: 'rgba(10, 14, 26, 0.9)' } : {}) }}
+          className="fixed inset-0 flex items-center justify-center z-[100]"
+          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.9)' }}
         >
-          <div className="text-center animate-final-round-enter" style={uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI } : {}}>
+          <div className="text-center animate-final-round-enter" style={{ fontFamily: HUD_ORATORIO_FONT_UI }}>
             <div className="mb-8">
-              <div className={`text-8xl font-black mb-4 animate-final-round-pulse ${uiBattleHud ? '' : 'text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500'}`} style={uiBattleHud ? { color: '#FFB347', textShadow: '0 0 40px rgba(255, 179, 71, 0.8)' } : {}}>
+              <div className="text-8xl font-black mb-4 animate-final-round-pulse" style={{ color: '#FFB347', textShadow: '0 0 40px rgba(255, 179, 71, 0.8)' }}>
                 ROUND 5
               </div>
               <div className="text-4xl font-bold text-red-400 mb-2">
@@ -4005,16 +3507,14 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {showClaimVictoryChoice && showClaimVictoryChoice.winner === 'player' && (
         <div 
-          className={`fixed inset-0 flex items-center justify-center z-[100] ${uiBattleHud ? '' : 'bg-black/70'}`}
-          style={{ pointerEvents: 'auto', ...(uiBattleHud ? { background: 'rgba(10, 14, 26, 0.92)' } : {}) }}
+          className="fixed inset-0 flex items-center justify-center z-[100]"
+          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.92)' }}
         >
           <div 
-            className={`flex flex-col items-center gap-6 p-8 rounded-2xl max-w-md text-center ${
-              uiBattleHud ? 'border border-amber-500/50' : 'bg-slate-800/95 border border-amber-500/40'
-            }`}
-            style={uiBattleHud ? { fontFamily: HUD_ORATORIO_FONT_UI, boxShadow: '0 0 60px rgba(251, 191, 36, 0.2)' } : {}}
+            className="flex flex-col items-center gap-6 p-8 rounded-2xl max-w-md text-center border border-amber-500/50"
+            style={{ fontFamily: HUD_ORATORIO_FONT_UI, boxShadow: '0 0 60px rgba(251, 191, 36, 0.2)' }}
           >
-            <div className="text-2xl font-bold" style={{ color: uiBattleHud ? PALETTE.amber : '#fbbf24' }}>
+            <div className="text-2xl font-bold" style={{ color: PALETTE.amber }}>
               🏆 Hai conquistato 3 campi!
             </div>
             <div className="text-slate-300 text-sm">
@@ -4030,11 +3530,7 @@ export default function SatzeGame() {
                   setShowClaimVictoryChoice(null);
                   setGamePhase('gameOver');
                 }}
-                className={`flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
-                  uiBattleHud 
-                    ? 'bg-amber-600/90 hover:bg-amber-500 text-white border border-amber-400/50' 
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                }`}
+                className="flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-amber-600/90 hover:bg-amber-500 text-white border border-amber-400/50"
               >
                 <Icon name="star" type="cardIcon" size={18} color="#fff" />
                 Reclamare vittoria
@@ -4044,11 +3540,7 @@ export default function SatzeGame() {
                   setShowClaimVictoryChoice(null);
                   doResetAndNextRound(showClaimVictoryChoice.playerFields, showClaimVictoryChoice.enemyFields);
                 }}
-                className={`flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
-                  uiBattleHud 
-                    ? 'bg-slate-600/80 hover:bg-slate-500 text-slate-200 border border-slate-500/50' 
-                    : 'bg-slate-600 hover:bg-slate-500 text-white'
-                }`}
+                className="flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-slate-600/80 hover:bg-slate-500 text-slate-200 border border-slate-500/50"
               >
                 <Icon name="check" type="cardIcon" size={18} color="#fff" />
                 Continua a giocare
@@ -4076,7 +3568,7 @@ export default function SatzeGame() {
         >
           <GameCard
             agent={draggingCard}
-            showBonus={playerArmyBonuses[draggingCard.army] && isBonusTriggerSatisfied(draggingCard.army, true)}
+            showBonus={playerArmyBonuses[draggingCard.army] && isBonusTriggerSatisfied(draggingCard.army, true, draggingCard)}
             bonusBaseInactive={Boolean(ARMY_BONUSES[draggingCard.army]) && !playerArmyBonuses[draggingCard.army]}
           />
         </div>

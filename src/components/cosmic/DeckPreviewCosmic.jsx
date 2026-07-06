@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import { CardReworkP4 } from '../cards/CardReworkP4';
 import { Icon } from '../ui/Icon';
 import { getCardTags, shouldShowTagAsRole } from '../../data/cardTags';
@@ -170,11 +171,11 @@ function DeckPreviewCosmic({
   onConfirm = null,
   showActions = true,
 }) {
-  const ACCENT = '#c026d3';
-  const HEAT = '#ec4899';
+  const ACCENT = MENU_ACCENTS.magenta;
+  const HEAT = MENU_ACCENTS.pink;
   const VIOLET = '#a78bfa';
   const DEEP = '#581c87';
-  const BG = '#06030a';
+  const BG = MENU_ACCENTS.void;
 
   const fallbackDeck = useMemo(
     () => ({
@@ -224,7 +225,7 @@ function DeckPreviewCosmic({
         height: '100%',
         overflow: 'hidden',
         background: BG,
-        color: '#f5f3eb',
+        color: MENU_ACCENTS.text,
         fontFamily: 'Chakra Petch, sans-serif',
       }}
     >
@@ -232,7 +233,7 @@ function DeckPreviewCosmic({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(ellipse at 50% 30%, #2a0a3a 0%, #14051f 52%, #06030a 90%)',
+          background: `radial-gradient(ellipse at 50% 30%, #2a0a3a 0%, #14051f 52%, ${MENU_ACCENTS.void} 90%)`,
         }}
       />
       <div
@@ -419,7 +420,7 @@ function DeckPreviewCosmic({
                     fontFamily: 'Cinzel, serif',
                     fontWeight: 900,
                     fontSize: 13,
-                    color: '#06030a',
+                    color: MENU_ACCENTS.void,
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
@@ -448,7 +449,7 @@ function DeckPreviewCosmic({
           {selectedCard ? (
             <>
               <div style={{ minHeight: 0, overflow: 'auto' }}>
-                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, letterSpacing: '0.08em', fontSize: 20, color: '#f5f3eb' }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, letterSpacing: '0.08em', fontSize: 20, color: MENU_ACCENTS.text }}>
                   {selectedCard.name}
                 </div>
                 <div style={{ marginTop: 4, fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: '0.25em', color: '#94a3b8' }}>
@@ -579,7 +580,7 @@ function DeckPreviewCosmic({
                   padding: '12px 28px',
                   background: `linear-gradient(90deg, ${ACCENT} 0%, ${HEAT} 100%)`,
                   border: 'none',
-                  color: '#06030a',
+                  color: MENU_ACCENTS.void,
                   fontFamily: 'Cinzel, serif',
                   fontWeight: 900,
                   fontSize: 15,
@@ -604,7 +605,7 @@ function MiniStat({ label, value, c }) {
     <div
       style={{
         padding: '6px 12px',
-        background: '#06030a',
+        background: MENU_ACCENTS.void,
         border: `1px solid ${c}55`,
         clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
         minWidth: 94,
@@ -621,7 +622,7 @@ function BigStat({ label, value, c }) {
     <div
       style={{
         padding: '8px 10px',
-        background: '#06030a',
+        background: MENU_ACCENTS.void,
         border: `1px solid ${c}55`,
       }}
     >

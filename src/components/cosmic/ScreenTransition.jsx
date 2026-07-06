@@ -29,6 +29,12 @@ const SKIP_TRANSITION_PHASES = new Set([
   'selectAgent', 'battle', 'result',
 ]);
 
+// Fasi del "mondo duello" (tema Cyber HUD): entrandoci la cortina vira
+// al ciano/oro per dichiarare il cambio di identità visiva.
+const DUEL_WORLD_PHASES = new Set([
+  'selectField', 'selectAgent', 'battle', 'result', 'gameOver',
+]);
+
 const CosmicTransitionContext = createContext(null);
 
 export function useCosmicTransition() {
@@ -52,6 +58,7 @@ export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
     }
     ctx.requestPhaseChange({
       label: PHASE_LABELS[nextPhase] || '',
+      variant: DUEL_WORLD_PHASES.has(nextPhase) ? 'duel' : 'cosmic',
       onSwap: () => setGamePhase(nextPhase),
     });
   }, [ctx, setGamePhase, currentPhase]);
@@ -64,14 +71,14 @@ export function CosmicTransitionProvider({ children }) {
   const [transition, setTransition] = useState(null);
   const busyRef = useRef(false);
 
-  const requestPhaseChange = useCallback(({ label, onSwap }) => {
+  const requestPhaseChange = useCallback(({ label, variant = 'cosmic', onSwap }) => {
     if (busyRef.current) {
       // Richiesta sovrapposta: esegui swap immediato per non bloccare il gioco
       onSwap?.();
       return;
     }
     busyRef.current = true;
-    setTransition({ label, phase: 'covering' });
+    setTransition({ label, variant, phase: 'covering' });
 
     // T+280ms: la cortina copre tutto → fai lo swap della scena
     setTimeout(() => {
@@ -98,7 +105,10 @@ export function CosmicTransitionProvider({ children }) {
       {transition && (
         <React.Fragment>
           <div className="stage-backdrop" />
-          <div style={{ position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            className={transition.variant === 'duel' ? 'cosmic-transition--duel' : ''}
+            style={{ position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none', overflow: 'hidden' }}
+          >
             <div className="sweep-panel sweep-panel--a" />
             <div className="sweep-panel sweep-panel--b" />
             <div className="flash-bloom" />
