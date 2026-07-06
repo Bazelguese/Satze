@@ -37,6 +37,9 @@ import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
 import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
 import { CosmicScreenLayout } from '../src/components/menu/cosmic/CosmicScreenLayout';
 import ArmySelectCinematic from '../src/components/menu/cosmic/ArmySelectCinematic.jsx';
+import DeckSelectCinematic, { buildDeckPreviewPayload } from '../src/components/menu/cosmic/DeckSelectCinematic.jsx';
+import CardGallery from '../src/components/menu/gallery/CardGallery.jsx';
+import GalleryCinematic from '../src/components/menu/gallery/GalleryCinematic.jsx';
 import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCarousel';
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
@@ -1905,202 +1908,61 @@ export default function SatzeGame() {
       );
     }
 
-    // === COSMIC DECK SELECT (DUELLO IMMINENTE) ===
-    const useCosmicDeckSelect = true;
-    if (useCosmicDeckSelect && deckOptions.length > 0 && !campaignHubDeckOnly) {
-      const hexToRgb = (hex) => {
-        if (!hex || typeof hex !== 'string') return null;
-        const clean = hex.replace('#', '');
-        if (clean.length !== 6) return null;
-        return {
-          r: parseInt(clean.slice(0, 2), 16),
-          g: parseInt(clean.slice(2, 4), 16),
-          b: parseInt(clean.slice(4, 6), 16),
-        };
-      };
-      const rgbToHex = ({ r, g, b }) =>
-        `#${[r, g, b]
-          .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
-          .join('')}`;
-      const sumArmyColors = (armyNames) => {
-        const uniques = [...new Set((armyNames || []).filter(Boolean))];
-        if (!uniques.length) return { bgColor: MENU_ACCENTS.magenta, bgColorSecondary: '#a78bfa' };
-        const sum = uniques
-          .map((army) => ARMY_COLORS[army]?.accent || '#a78bfa')
-          .map(hexToRgb)
-          .filter(Boolean)
-          .reduce(
-            (acc, rgb) => ({ r: acc.r + rgb.r, g: acc.g + rgb.g, b: acc.b + rgb.b }),
-            { r: 0, g: 0, b: 0 }
-          );
-        const maxChannel = Math.max(sum.r, sum.g, sum.b, 1);
-        const norm = maxChannel > 255 ? 255 / maxChannel : 1;
-        const primary = { r: sum.r * norm, g: sum.g * norm, b: sum.b * norm };
-        const secondary = {
-          r: primary.r * 0.75 + 26,
-          g: primary.g * 0.75 + 20,
-          b: primary.b * 0.75 + 36,
-        };
-        return { bgColor: rgbToHex(primary), bgColorSecondary: rgbToHex(secondary) };
-      };
-      const resolveLeadImage = (card) => {
-        if (!card) return '';
-        return (
-          card.image ||
-          CARD_IMAGES?.[card.id] ||
-          AGENT_IMAGES?.[card.id] ||
-          ''
-        );
-      };
+    const resolveArmyFromDeckSlug = (armySlug) =>
+      Object.keys(ARMY_DECKS).find(
+        (army) =>
+          army
+            .toLowerCase()
+            .replace(/['’]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') === armySlug
+      );
 
-      const cosmicDecks = deckOptions.map((opt) => {
-        let deckCards = [];
-        let totalLeague = 0;
-        let cardsCount = 0;
-        let leadImg = '';
-        let leadCardId = null;
-
-        if (opt.key === 'campaign_figli') {
-          deckCards = (ARMY_SETS[selectedArmy] || []).filter((c) => campDeckIds.includes(c.id));
-          cardsCount = campDeckIds.length;
-          totalLeague = totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte");
-          const leadCard = deckCards.slice().sort((a, b) => b.league - a.league)[0];
-          leadCardId = leadCard?.id ?? null;
-          leadImg = resolveLeadImage(leadCard);
-        } else if (opt.key.startsWith('custom_')) {
-          const id = opt.key.replace('custom_', '');
-          const deck = customDecks[id];
-          deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : (ARMY_SETS[selectedArmy] || []).filter((c) => deck.cards.includes(c.id));
-          totalLeague = deckCards.reduce((s, c) => s + (c.league || 0), 0);
-          cardsCount = deck.cards.length;
-          leadCardId = deckCards[0]?.id ?? null;
-          leadImg = resolveLeadImage(deckCards[0]);
-        } else {
-          const deck = predefinedDecks[opt.key];
-          deckCards = (ARMY_SETS[selectedArmy] || []).filter((c) => deck.cards.includes(c.id));
-          totalLeague = deckCards.reduce((s, c) => s + (c.league || 0), 0);
-          cardsCount = deckCards.length;
-          const leadCard = deckCards.slice().sort((a, b) => b.league - a.league)[0];
-          leadCardId = leadCard?.id ?? null;
-          leadImg = resolveLeadImage(leadCard);
-        }
-
-        const potAvg = deckCards.length ? deckCards.reduce((s, c) => s + (c.power || 0), 0) / deckCards.length : 0;
-        const danAvg = deckCards.length ? deckCards.reduce((s, c) => s + (c.damage || 0), 0) / deckCards.length : 0;
-
-        const curve = [0, 0, 0, 0, 0];
-        deckCards.forEach((c) => {
-          const idx = Math.min(Math.max((c.league || 1) - 1, 0), 4);
-          curve[idx]++;
-        });
-
-        const triggerMap = new Map();
-        deckCards.forEach((c) => {
-          const triggerName = c?.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || 'Sempre') : 'Sempre';
-          triggerMap.set(triggerName, (triggerMap.get(triggerName) || 0) + 1);
-        });
-        const triggers = [...triggerMap.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 4)
-          .map(([n, v]) => ({ n, v }));
-
-        const warning =
-          cardsCount < 10
-            ? `${10 - cardsCount} carte mancanti`
-            : cardsCount > 10
-              ? `${cardsCount - 10} carte in eccesso`
-              : totalLeague > 30
-                ? `Lega ${totalLeague}/30 superata`
-                : null;
-        const armies = [...new Set(deckCards.map((c) => c.army || selectedArmy).filter(Boolean))];
-        const { bgColor, bgColorSecondary } = sumArmyColors(deckCards.map((c) => c.army || selectedArmy));
-        const leadBgPosCfg = DECK_SUMMARY_BG_POSITION?.[leadCardId] ?? DECK_SUMMARY_BG_POSITION?.[String(leadCardId)];
-        const leadObjectPosition =
-          leadBgPosCfg && typeof leadBgPosCfg === 'object'
-            ? `${leadBgPosCfg.x ?? 50}% ${leadBgPosCfg.y ?? 25}%`
-            : '50% 25%';
-        const previewCards = deckCards.slice(0, 10).map((card) => {
-          const cardArmy = card.army || selectedArmy;
-          const formattedAbility = formatAbilityHelper(card.ability);
-          return {
-            ...card,
-            army: cardArmy,
-            powerDesc: formattedAbility || card.description || '—',
-            bonusDesc: ARMY_BONUSES?.[cardArmy]?.description || '—',
-            tags: getCardTags(card.id),
-          };
-        });
-
-        return {
-          id: opt.key,
-          name: opt.name,
-          description: opt.description || 'Nessuna descrizione disponibile.',
-          army: deckCards[0]?.army || selectedArmy,
-          accentColor: bgColor,
-          fac: (opt.armyLabel || selectedArmy || '').toUpperCase(),
-          sigil: '◈',
-          cards: cardsCount,
-          lega: totalLeague,
-          pot: Number(potAvg.toFixed(1)),
-          dan: Number(danAvg.toFixed(1)),
-          win: 0,
-          lead: leadImg,
-          leadObjectPosition,
-          armies,
-          previewCards,
-          curve,
-          triggers,
-          bgColor,
-          bgColorSecondary,
-          warning,
-          _opt: opt,
-        };
-      });
-
-      const opponent = campaignLevel
-        ? {
-            name: campaignLevel.enemyName || 'AVVERSARIO',
-            faction: campaignLevel.enemyArmy || '',
-            level: campaignLevel.level || '—',
-            sigil: 'X',
-          }
-        : { name: 'IA', faction: 'AVVERSARIO', level: '—', sigil: 'X' };
-
+    if (deckOptions.length > 0) {
       return (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
-          <DeckSelectCosmic
-            decks={cosmicDecks}
-            opponent={opponent}
-            mapName={campaignLevel?.mapName || 'PIANE DEL DEBITO'}
-            mode={selectedMode === 'campaign' ? 'CAMPAGNA' : selectedMode === 'multiplayer' ? 'MULTIPLAYER' : 'DUELLO 1v1'}
-            onBack={() => {
-              setSelectedArmy(null);
-              setGamePhase('selectArmy');
-            }}
-            onSelectDeck={(deck) => deck._opt.onSelect()}
-            onPreviewDeck={(deck) => {
-              const previewPayload = {
-                id: deck.id,
-                name: deck.name,
-                army: deck.army || selectedArmy,
-                accentColor: deck.bgColor || colors.accent,
-                cards: (deck.previewCards || []).slice(0, 10),
-                _opt: deck._opt,
-              };
-              setPreviewDeckData(previewPayload);
-              setGamePhase('previewDeck');
-            }}
-            onEditDeck={(deck) => {
-              if (deck.id.startsWith('custom_')) {
-                setEditingDeckId(deck.id.replace('custom_', ''));
-                setDeckManagerSource('selectDeck');
-                setDeckManagerView('builder');
-                setShowDeckManager(false);
-                setGamePhase('deckManager');
-              }
-            }}
-          />
-        </div>
+        <DeckSelectCinematic
+          armyName={isMixedMode ? null : selectedArmy}
+          gameDeckOptions={deckOptions}
+          selectedArmy={selectedArmy}
+          isMixedMode={isMixedMode}
+          campaignDeckIds={Array.isArray(campDeckIds) ? campDeckIds : null}
+          onSelectDeck={(deckKey) => {
+            if (deckKey.includes('::')) {
+              const [armySlug, key] = deckKey.split('::');
+              const army = resolveArmyFromDeckSlug(armySlug);
+              if (army) setSelectedArmy(army);
+              setSelectedDeckKey(key);
+            } else {
+              setSelectedDeckKey(deckKey);
+            }
+            goAfterDeckSelection();
+          }}
+          onBack={() => {
+            setSelectedArmy(null);
+            setSelectedDeckKey(null);
+            setGamePhase('selectArmy');
+          }}
+          onPreviewDeck={(deck) => {
+            const payload = buildDeckPreviewPayload(deck, { selectedArmy });
+            setPreviewDeckData({
+              ...payload,
+              _opt: payload._opt || {
+                onSelect: () => {
+                  if (deck.deckKey.includes('::')) {
+                    const [armySlug, key] = deck.deckKey.split('::');
+                    const army = resolveArmyFromDeckSlug(armySlug);
+                    if (army) setSelectedArmy(army);
+                    setSelectedDeckKey(key);
+                  } else {
+                    setSelectedDeckKey(deck.deckKey);
+                  }
+                  goAfterDeckSelection();
+                },
+              },
+            });
+            setGamePhase('previewDeck');
+          }}
+        />
       );
     }
 
@@ -2323,249 +2185,28 @@ export default function SatzeGame() {
     );
   }
 
-  // Schermata Galleria
+  // Schermata Galleria (DS3 cinematic)
   if (gamePhase === 'gallery') {
-    const armies = Object.keys(ARMY_SETS);
-    const allAgentsList = ALL_AGENTS;
-    const filteredAgents = selectedArmyFilter ? allAgentsList.filter(a => a.army === selectedArmyFilter) : allAgentsList;
-    // Ordine griglia: per lega (alta → bassa), poi per ID — così le carte nuove in coda al dataset non finiscono dopo tutte le L2 pur essendo L5/L4.
-    const galleryAgentsSorted = [...filteredAgents].sort((a, b) => {
-      if (b.league !== a.league) return b.league - a.league;
-      return a.id - b.id;
-    });
+    const galleryTabProps = {
+      galleryTab,
+      onGalleryTabChange: (tab) => startTransition(() => setGalleryTab(tab)),
+      agentCount: ALL_AGENTS.length,
+      fieldCount: ALL_BATTLEFIELDS.length,
+    };
 
-    const galleryInner = (
-      <div className="w-full flex flex-col overflow-hidden" style={{ flex: '1 1 0', minHeight: 0 }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b w-full" style={{ borderColor: '#334155' }}>
-          <button
-            onClick={() => setGamePhase('menu')}
-            className="px-4 py-2 flex items-center gap-2 transition-all font-semibold"
-            style={{ background: MENU_ACCENTS.panel, border: '1.5px solid #334155', color: '#94A3B8' }}
-          >
-            <span>←</span> Menu
-          </button>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: MENU_ACCENTS.pink, fontFamily: HUD_ORATORIO_FONT_UI }}>
-            <Icon name="book" type="cardIcon" size={28} color={MENU_ACCENTS.pink} /> GALLERIA
-          </h1>
-          <div className="w-24" />
-        </div>
-        {/* Tabs */}
-        <div className="flex justify-center gap-4 py-4 border-b w-full" style={{ borderColor: '#334155' }}>
-          <button
-            onClick={() => startTransition(() => setGalleryTab('agents'))}
-            className="px-6 py-2 font-bold transition-all flex items-center gap-2"
-            style={galleryTab === 'agents' ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` } : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
-          >
-            <Icon name="card" type="cardIcon" size={18} /> Agenti ({allAgentsList.length})
-          </button>
-          <button
-            onClick={() => startTransition(() => setGalleryTab('battlefields'))}
-            className="px-6 py-2 font-bold transition-all flex items-center gap-2"
-            style={galleryTab === 'battlefields' ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` } : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
-          >
-            <Icon name="tower" type="cardIcon" size={18} /> Campi ({ALL_BATTLEFIELDS.length})
-          </button>
-        </div>
-        {/* Content - scroll nascosto, scrollabile con rotella/touch */}
-        <div
-          className="overflow-y-auto overflow-x-hidden p-4 satze-hide-scrollbar"
-          style={{ flex: '1 1 0', minHeight: 0 }}
-        >
-          {!galleryContentReady ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="flex flex-col items-center gap-3 text-slate-400">
-                <div className="w-8 h-8 border-2 border-amber-500/50 border-t-amber-400 rounded-full animate-spin" />
-                <p className="text-sm">Caricamento galleria...</p>
-              </div>
-            </div>
-          ) : galleryTab === 'agents' ? (
-            !agentsTabReady ? (
-              <div className="flex items-center justify-center py-24">
-                <div className="flex flex-col items-center gap-3 text-slate-400">
-                  <div className="w-8 h-8 border-2 border-amber-500/50 border-t-amber-400 rounded-full animate-spin" />
-                  <p className="text-sm">Caricamento agenti...</p>
-                </div>
-              </div>
-            ) : (
-            <>
-              {/* Filtro per armata */}
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <button
-                  onClick={() => setSelectedArmyFilter(null)}
-                  className={`px-3 py-1 rounded-full text-sm font-bold transition-all ${
-                    selectedArmyFilter === null 
-                      ? 'bg-white text-black' 
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  Tutte
-                </button>
-                {armies.map(army => (
-                  <button
-                    key={army}
-                    onClick={() => setSelectedArmyFilter(army)}
-                    className={`px-3 py-1 rounded-full text-sm font-bold transition-all ${
-                      selectedArmyFilter === army 
-                        ? 'text-black' 
-                        : 'text-white/70 hover:text-white'
-                    }`}
-                    style={{
-                      backgroundColor: selectedArmyFilter === army 
-                        ? ARMY_COLORS[army]?.accent 
-                        : 'rgba(51,65,85,0.5)'
-                    }}
-                  >
-                    {army}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap justify-center items-center gap-3 mb-6 px-2">
-                <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">Layout carte</span>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startTransition(() => setGalleryCardLayout('reworkP4'))}
-                    className="px-4 py-1.5 text-sm font-bold transition-all"
-                    style={
-                      galleryCardLayout === 'reworkP4'
-                        ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` }
-                        : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }
-                    }
-                  >
-                    P4 React
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startTransition(() => setGalleryCardLayout('reworkP4html'))}
-                    className="px-4 py-1.5 text-sm font-bold transition-all"
-                    style={
-                      galleryCardLayout === 'reworkP4html'
-                        ? { background: MENU_ACCENTS.magenta, color: MENU_ACCENTS.void, border: `1.5px solid ${MENU_ACCENTS.magenta}` }
-                        : { background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }
-                    }
-                  >
-                    P4 (mock HTML)
-                  </button>
-                </div>
-              </div>
-              
-              {/* Griglia Agenti (rendering incrementale) */}
-              <div className="grid grid-cols-4 gap-6 justify-items-center">
-                {galleryAgentsSorted.slice(0, galleryVisibleCount).map((agent) => (
-                  <div key={agent.id} className="flex flex-col items-center gap-2 group">
-                    <div className="cursor-pointer">
-                      {galleryCardLayout === 'reworkP4html' ? (
-                        <div onClick={() => setSelectedCardForModal(agent)}>
-                          <CardReworkP4AsHtml agent={agent} />
-                        </div>
-                      ) : (
-                        <GameCard
-                          cardLayout={galleryCardLayout}
-                          agent={agent}
-                          showBonus={false}
-                          onClick={() => setSelectedCardForModal(agent)}
-                        />
-                      )}
-                    </div>
-                    {agent.flavour && (
-                      <div className="bg-slate-800/50 rounded-lg p-2 mt-1 w-[230px]">
-                        <p className="text-slate-400 text-[10px] italic text-center leading-relaxed">
-                          "{agent.flavour}"
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {galleryVisibleCount < galleryAgentsSorted.length && (
-                <div className="flex justify-center mt-6">
-                  <button
-                    type="button"
-                    onClick={() => startTransition(() => setGalleryVisibleCount((n) => n + GALLERY_PAGE_SIZE))}
-                    className="px-6 py-2 font-bold transition-all"
-                    style={{ background: MENU_ACCENTS.panel, color: '#94A3B8', border: '1.5px solid #334155' }}
-                  >
-                    Mostra altre carte ({galleryAgentsSorted.length - galleryVisibleCount} rimanenti)
-                  </button>
-                </div>
-              )}
-              
-              {/* Modal per carta ingrandita */}
-              {selectedCardForModal && (
-                <div 
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in overflow-y-auto"
-                  onClick={() => setSelectedCardForModal(null)}
-                >
-                  <div 
-                    className="relative max-w-5xl w-full p-4 md:p-8 my-8"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Pulsante chiusura */}
-                    <button
-                      onClick={() => setSelectedCardForModal(null)}
-                      className="absolute top-2 right-2 md:top-4 md:right-4 z-10 w-10 h-10 bg-slate-800/90 hover:bg-slate-700 text-white rounded-full flex items-center justify-center transition-all shadow-lg hover:scale-110"
-                      aria-label="Chiudi"
-                    >
-                      <span className="text-2xl leading-none">×</span>
-                    </button>
-                    
-                    {/* Carta ingrandita */}
-                    <div className="flex justify-center mb-[124px]">
-                      <div className="transform scale-125 md:scale-150 origin-center transition-transform duration-300">
-                        {galleryCardLayout === 'reworkP4html' ? (
-                          <CardReworkP4AsHtml agent={selectedCardForModal} />
-                        ) : (
-                          <GameCard cardLayout={galleryCardLayout} agent={selectedCardForModal} showBonus />
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Descrizione e flavour */}
-                    <div className="bg-slate-800/90 rounded-xl p-4 md:p-6 max-w-3xl mx-auto backdrop-blur-sm">
-                      {selectedCardForModal.description && (() => {
-                        const raw = selectedCardForModal.description;
-                        const body = raw.replace(/^Potere:\s*/i, '');
-                        return (
-                          <p className="text-white text-base md:text-lg mb-4">
-                            <span className="text-amber-400 font-bold">Potere: </span>
-                            {body}
-                          </p>
-                        );
-                      })()}
-                      {getCardTags(selectedCardForModal.id).length > 0 && (
-                        <div className="mb-4">
-                          <CardTagsRow cardId={selectedCardForModal.id} compact={false} splitRoleRows />
-                        </div>
-                      )}
-                      {selectedCardForModal.flavour && (
-                        <p className="text-slate-300 text-sm md:text-base italic leading-relaxed border-t border-slate-700 pt-4">
-                          "{selectedCardForModal.flavour}"
-                        </p>
-                      )}
-                    </div>
-                    
-                    {/* Istruzione per chiudere */}
-                    <p className="text-center text-slate-500 text-xs mt-4">
-                      Clicca fuori o premi ESC per chiudere
-                    </p>
-                  </div>
-                </div>
-              )}
-            </>
-            )
-          ) : (
-            /* Campi di Battaglia: riempie il contenitore, scroll solo nella griglia */
-            <div className="h-full min-h-0 flex flex-col">
-              <BattlefieldGallery />
-            </div>
-          )}
-        </div>
-      </div>
+    return galleryTab === 'agents' ? (
+      <CardGallery
+        totalCards={ALL_AGENTS.length}
+        onBack={() => setGamePhase('menu')}
+        {...galleryTabProps}
+      />
+    ) : (
+      <GalleryCinematic
+        totalFields={ALL_BATTLEFIELDS.length}
+        onBack={() => setGamePhase('menu')}
+        {...galleryTabProps}
+      />
     );
-
-    return <MenuScreenLayout centered={false}>{galleryInner}</MenuScreenLayout>;
   }
 
 // Schermata di gioco

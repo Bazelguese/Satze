@@ -1,0 +1,192 @@
+// ============================================================
+// deckLore.js — Testi editabili per ogni esercito (mazzo)
+// ============================================================
+// UNICO file che il game designer modifica per la schermata
+// "Scegli l'esercito". I dati di gameplay (carte, bonus, colori)
+// restano in /data/.
+//
+// Struttura: DECK_LORE[<nome armata>][<chiave mazzo>] = { … }
+//   Le chiavi mazzo sono quelle di ARMY_DECKS (es. "kethran-aggro").
+//   __glyph (opzionale) imposta il glifo di fallback per l'armata.
+//
+// Campi per mazzo:
+//   code        etichetta breve ("K·I")
+//   name        nome esercito
+//   archetype   "RUOLO · TRIGGER"  (split su ·)
+//   flavor      una riga di lore (mostrata tra virgolette)
+//   keywords    fino a 3 tag
+//   stats       { pot, dan, vaImpact, fc }  (0–50 / 0–20 / 0–10)
+//   leader      { name, title, img, league, power, damage, ability }
+//               img = path public/ del ritratto, oppure null (usa glifo)
+export const DECK_LORE = {
+  "Figli dell'Orizzonte": {
+    __glyph: '☄',
+    "figli-dellorizzonte-aggro": {
+      code: 'O·I', name: 'Sole in Frantumi', archetype: 'TURBO · MOMENTUM',
+      flavor: 'Il sole di Vaelith morì, ma il suo ultimo respiro brucia ancora.',
+      keywords: ['Aggro', 'Momentum', 'VA+'],
+      stats: { pot: 34, dan: 28, vaImpact: 8, fc: 5 },
+      leader: { name: "L'Eco del Primo Sole", title: 'Eco del Sole Morto', img: null, league: 5, power: 5, damage: 6, ability: 'Turbo: +8 VA' },
+    },
+    "figli-dellorizzonte-controllo": {
+      code: 'O·II', name: 'Ancora del Primo', archetype: 'CONTROLLO · RITMO',
+      flavor: 'Sorethal rifiutò di svanire. Tu rifiuti di affrettare.',
+      keywords: ['Controllo', 'VA−', 'Tempo'],
+      stats: { pot: 35, dan: 25, vaImpact: 14, fc: 7 },
+      leader: { name: 'Sorethal, il Primo Ancorante', title: 'Il Primo Ancorante', img: null, league: 5, power: 6, damage: 4, ability: '−8 VA nem. (min 6)' },
+    },
+  },
+  "Kethran": {
+    __glyph: '☥',
+    "kethran-aggro": {
+      code: 'K·I', name: 'Ascesa del Conquistatore', archetype: 'AGGRO · MAGNANIMO',
+      flavor: '"Un re porta il suo popolo." Ora lo porta letteralmente.',
+      keywords: ['Aggro', 'POT+', 'Pressione'],
+      stats: { pot: 35, dan: 28, vaImpact: 6, fc: 4 },
+      leader: { name: 'Ur-Nammu il Conquistatore', title: 'Il Conquistatore', img: null, league: 5, power: 6, damage: 5, ability: 'Magnanimo: +2 POT' },
+    },
+    "kethran-controllo": {
+      code: 'K·II', name: 'Corona di Rovina', archetype: 'MID/LATE · VENDETTA',
+      flavor: 'Quando cercò vendetta, i Velessi erano già polvere.',
+      keywords: ['Comeback', 'DAN+', 'Tenuta'],
+      stats: { pot: 38, dan: 24, vaImpact: 8, fc: 5 },
+      leader: { name: 'Nimrod, il Primo Re', title: 'Il Primo Re', img: null, league: 5, power: 7, damage: 3, ability: 'Resa dei conti: +2 DAN' },
+    },
+  },
+  "Corte Rossa": {
+    __glyph: '🜂',
+    "corte-rossa-aggro": {
+      code: 'R·I', name: 'Debito di Sangue', archetype: 'PRESSIONE · CONQUISTA',
+      flavor: '"La scelta, tecnicamente, è tua."',
+      keywords: ['Pressione', 'Dir.', 'Negazione'],
+      stats: { pot: 33, dan: 24, vaImpact: 10, fc: 6 },
+      leader: { name: 'Vaelith Sorn, il Primo', title: 'Il Primo', img: null, league: 5, power: 7, damage: 3, ability: 'Conquista: 3 Danni dir.' },
+    },
+    "corte-rossa-controllo": {
+      code: 'R·II', name: 'Specchio Infernale', archetype: 'REATTIVO · MIRROR',
+      flavor: 'Era il più grande guerriero. Poi firmò.',
+      keywords: ['Copia', 'Adattivo', 'Lettura'],
+      stats: { pot: 28, dan: 22, vaImpact: 8, fc: 5 },
+      leader: { name: 'Generale Karthessi', title: 'Generale Firmata', img: null, league: 5, power: 5, damage: 4, ability: 'Resa dei conti: Copia Potere' },
+    },
+  },
+  "Calibri Pesanti": {
+    __glyph: '⚙',
+    "calibri-pesanti-aggro": {
+      code: 'C·I', name: 'Dottrina Cenere', archetype: 'OVERDRIVE · BURST',
+      flavor: 'Quando i piani sono cenere — come Kyrath — lui si sveglia.',
+      keywords: ['Burst', 'Dir.', 'Spike'],
+      stats: { pot: 28, dan: 26, vaImpact: 6, fc: 4 },
+      leader: { name: 'Protocollo Cenere', title: 'Protocollo Cenere', img: null, league: 5, power: 4, damage: 4, ability: 'Sopraffare: 4 Danni dir.' },
+    },
+    "calibri-pesanti-controllo": {
+      code: 'C·II', name: 'Muraglia MK-IV', archetype: 'TANK · CONTROL',
+      flavor: 'Il quarto modello imparò dagli errori dei primi tre.',
+      keywords: ['Tank', 'DAN−', 'Sustain'],
+      stats: { pot: 32, dan: 26, vaImpact: 14, fc: 6 },
+      leader: { name: 'Titano Corazzato MK-IV', title: 'Titano MK-IV', img: null, league: 5, power: 6, damage: 6, ability: 'Immune' },
+    },
+  },
+  "Orathai": {
+    __glyph: '🌙',
+    "orathai-aggro": {
+      code: 'A·I', name: 'Tempesta Armonica', archetype: 'OVERDRIVE · BURST',
+      flavor: "L'armonia è solo un'altra forma di onda d'urto.",
+      keywords: ['Burst', 'DAN+', 'Spike'],
+      stats: { pot: 30, dan: 30, vaImpact: 4, fc: 5 },
+      leader: { name: 'Tempesta Cava', title: 'La Tempesta Cava', img: null, league: 5, power: 5, damage: 6, ability: 'Overdrive: +4 DAN' },
+    },
+    "orathai-controllo": {
+      code: 'A·II', name: 'Canto di Gloria', archetype: 'MIDRANGE · PROGRESSIVO',
+      flavor: 'La marea torna sempre. È già troppo tardi per scappare.',
+      keywords: ['Midrange', 'DAN+', 'Tempo'],
+      stats: { pot: 33, dan: 26, vaImpact: 8, fc: 6 },
+      leader: { name: 'Voce della Fine', title: 'Voce della Fine', img: null, league: 5, power: 5, damage: 5, ability: 'Gloria: +3 DAN' },
+    },
+  },
+  "Mounthborn": {
+    __glyph: '◬',
+    "mounthborn-aggro": {
+      code: 'M·I', name: 'Predazione Finale', archetype: 'TURBO · AGGRESSIVO',
+      flavor: "L'ultima fioritura è anche l'ultima cosa che vedi.",
+      keywords: ['Aggro', 'Chiusura', 'Turbo'],
+      stats: { pot: 32, dan: 28, vaImpact: 4, fc: 4 },
+      leader: { name: 'Evoluzione Finale', title: 'Evoluzione Finale', img: null, league: 5, power: 6, damage: 5, ability: 'Turbo: +6 VA' },
+    },
+    "mounthborn-controllo": {
+      code: 'M·II', name: 'Fame della Regina', archetype: 'CONTROL · INCREMENTALE',
+      flavor: 'Quando guardi altrove, fioriscono. E diventano denti.',
+      keywords: ['Apertura', 'Swing', 'POT+'],
+      stats: { pot: 30, dan: 25, vaImpact: 7, fc: 5 },
+      leader: { name: 'Regina della Colonia', title: 'Regina della Colonia', img: null, league: 5, power: 6, damage: 4, ability: 'Imboscata: +1 POT, +1 DAN' },
+    },
+  },
+  "L'Enclave delle Scaglie": {
+    __glyph: '🐉',
+    "lenclave-delle-scaglie-aggro": {
+      code: 'E·I', name: 'Risveglio del Patriarca', archetype: 'TEMPO · CONQUISTA',
+      flavor: 'Ogni terra conquistata accende un poco di più la brace antica.',
+      keywords: ['Snowball', 'FC+', 'Tempo'],
+      stats: { pot: 33, dan: 27, vaImpact: 6, fc: 8 },
+      leader: { name: 'Patriarca delle Scaglie', title: 'Il Patriarca', img: null, league: 5, power: 6, damage: 5, ability: 'Conquista: +2 FC' },
+    },
+    "lenclave-delle-scaglie-controllo": {
+      code: 'E·II', name: 'Tesoro Sepolto', archetype: 'CONTROL · RISORSE',
+      flavor: 'Il vulcano è paziente. Lascia che il bottino venga a lui.',
+      keywords: ['Risorse', 'Difesa', 'Late'],
+      stats: { pot: 30, dan: 24, vaImpact: 10, fc: 9 },
+      leader: { name: 'Custode della Caldera', title: 'Custode', img: null, league: 5, power: 5, damage: 4, ability: 'Conquista: +2 FC · Difesa' },
+    },
+  },
+  "Ratti della Megera": {
+    __glyph: '⚗',
+    "ratti-della-megera-aggro": {
+      code: 'T·I', name: 'Marea Tossica', archetype: 'ATTRITO · TOSSINA',
+      flavor: 'Quando capisci di aver perso, hai già perso da molto.',
+      keywords: ['Veleno', 'Attrito', 'Lungo'],
+      stats: { pot: 28, dan: 22, vaImpact: 9, fc: 6 },
+      leader: { name: 'Megera dei Sussurri', title: 'La Megera', img: null, league: 5, power: 5, damage: 4, ability: 'Conquista: Tossina 1 (min 10)' },
+    },
+    "ratti-della-megera-controllo": {
+      code: 'T·II', name: 'Voto della Peste', archetype: 'CONTROL · LOGORAMENTO',
+      flavor: 'La peste ha molti nomi e tutti finiscono con un sussurro.',
+      keywords: ['Tossina', 'Tenuta', 'Subdolo'],
+      stats: { pot: 26, dan: 20, vaImpact: 12, fc: 7 },
+      leader: { name: 'Confessore Marcio', title: 'Il Confessore', img: null, league: 5, power: 4, damage: 4, ability: 'Tossina prolungata' },
+    },
+  },
+  "Patto degli Indocili": {
+    __glyph: '◈',
+    "patto-degli-indocili-aggro": {
+      code: 'P·I', name: 'Sussurro del Patto', archetype: 'TECNICO · DEBUFF',
+      flavor: 'Mai uniti, mai sconfitti. La debolezza altrui è la loro forza.',
+      keywords: ['Debuff', 'Reattivo', 'Tech'],
+      stats: { pot: 29, dan: 24, vaImpact: 9, fc: 5 },
+      leader: { name: 'Voce degli Indocili', title: 'La Voce', img: null, league: 5, power: 5, damage: 4, ability: 'Rinforzi: −1 POT, −1 DAN nem.' },
+    },
+    "patto-degli-indocili-controllo": {
+      code: 'P·II', name: 'Frantume della Rivolta', archetype: 'CONTROL · ANTI-META',
+      flavor: 'Sono gli appunti che il nemico ha lasciato dietro di sé.',
+      keywords: ['Anti-meta', 'Soppressione', 'Lettura'],
+      stats: { pot: 27, dan: 22, vaImpact: 11, fc: 6 },
+      leader: { name: 'Archivista Ribelle', title: "L'Archivista", img: null, league: 5, power: 4, damage: 5, ability: 'Soppressione doppia' },
+    },
+  },
+  "Khemet": {
+    __glyph: '𓂀',
+    "khemet-aggro": {
+      code: 'X·I', name: 'Sigillo Antico', archetype: 'SPIKE · OVERDRIVE',
+      flavor: 'Quando i riti si attivano, nulla nel deserto può fermarli.',
+      keywords: ['Spike', 'Immune', 'Burst'],
+      stats: { pot: 36, dan: 28, vaImpact: 5, fc: 5 },
+      leader: { name: "Sacerdote dell'Occhio", title: "L'Occhio", img: null, league: 5, power: 6, damage: 5, ability: 'Overdrive: Immune' },
+    },
+    "khemet-controllo": {
+      code: 'X·II', name: 'Crepa nel Reale', archetype: 'CONTROL · RITUALE',
+      flavor: 'Khemet ricorda quando il deserto era un mare.',
+      keywords: ['Rituale', 'Tech', 'Tenuta'],
+      stats: { pot: 30, dan: 24, vaImpact: 11, fc: 6 },
+      leader: { name: 'Custode delle Sabbie', title: 'Custode', img: null, league: 5, power: 5, damage: 4, ability: 'Overdrive prolungato' },
+    },
+  },
+};

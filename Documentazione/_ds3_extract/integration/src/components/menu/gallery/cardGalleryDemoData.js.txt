@@ -1,0 +1,26 @@
+// ============================================================
+// cardGalleryDemoData.js — dati DI ESEMPIO per CardGallery
+// ============================================================
+// QUESTO NON È src/data/cards.js (il tuo file reale con le ~120 carte
+// resta lì, invariato). È solo il campione (12 carte, con nome/POT/DAN
+// INVENTATI) con cui CardGallery è stato disegnato. Prima di integrare,
+// sostituisci buildCards() nel componente con un adapter sui tuoi dati
+// reali (ARMY_SETS / le tue carte vere), mappando
+// { id, army, name, pot, dan, ability, img } dal tuo schema.
+// Puoi cancellare questo file una volta scritto l'adapter.
+// ============================================================
+
+export const CARD_GALLERY_CARDS = [
+  { id: '111', army: "Figli dell'Orizzonte", name: 'Veggente dellʼAlba',  pot: 6, dan: 4, ability: 'Veggenza: guarda 2 carte' },
+  { id: '101', army: "Figli dell'Orizzonte", name: 'Sentinella del Cielo', pot: 5, dan: 5, ability: 'Vigilanza permanente' },
+  { id: '102', army: "Figli dell'Orizzonte", name: 'Custode dellʼOrizzonte', pot: 4, dan: 6, ability: 'Blocca il primo attacco' },
+  { id: '201', army: 'Kethran',              name: 'Cavaliere Risorto',    pot: 7, dan: 3, ability: 'Rinasce una volta per duello' },
+  { id: '211', army: 'Kethran',              name: 'Fanciullo Sacro',      pot: 3, dan: 7, ability: 'Cura 2 PV a fine turno' },
+  { id: '202', army: 'Kethran',              name: 'Guardia di Cenere',    pot: 5, dan: 5, ability: 'Rimonta se in svantaggio' },
+  { id: '301', army: 'Corte Rossa',          name: 'Cortigiano Specchio',  pot: 5, dan: 6, ability: 'Copia lʼultima abilità vista' },
+  { id: '311', army: 'Corte Rossa',          name: 'Lama Imitatrice',      pot: 6, dan: 4, ability: 'Duplica un bonus nemico' },
+  { id: '401', army: 'Calibri Pesanti',      name: 'Corazza Ambulante',    pot: 4, dan: 8, ability: 'Riduce il danno subito' },
+  { id: '411', army: 'Calibri Pesanti',      name: 'Torre Semovente',      pot: 3, dan: 9, ability: 'Immobile, quasi indistruttibile' },
+  { id: '501', army: 'Orathai',              name: 'Cacciatore Lunare',    pot: 8, dan: 4, ability: 'Bonus di danno negli ultimi turni' },
+  { id: '601', army: 'Mounthborn',           name: 'Predatore dʼOmbra',    pot: 7, dan: 5, ability: 'Imboscata al primo scontro' },
+];

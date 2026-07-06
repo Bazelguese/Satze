@@ -1,0 +1,44 @@
+// ============================================================
+// galleryDemoFields.js — dati DI ESEMPIO per GalleryCinematic
+// ============================================================
+// QUESTO NON È src/data/battlefields.js (il tuo file reale con gli 83
+// campi resta lì, invariato — vedi il pacchetto "reveal animations").
+// È solo il campione (10 voci, un campo per tema d'armata) con cui
+// GalleryCinematic è stato disegnato. Prima di integrare, sostituisci
+// buildFields() nel componente con un adapter sui tuoi dati reali:
+//
+//   import { ALL_BATTLEFIELDS, getBattlefieldAnimationType } from '.../data/battlefields.js';
+//   → per ogni campo reale: { id, army/tema, accent (da ARMY_COLORS),
+//     glyph (da ARMY_LORE), anim: getBattlefieldAnimationType(id),
+//     img: field.bgImage, category, catLabel, catDesc }
+//
+// Puoi cancellare questo file una volta scritto l'adapter.
+// ============================================================
+
+// Un campo per armata/tema → animazione reveal + categoria d'effetto.
+export const GALLERY_FIELDS = [
+  { army: "Figli dell'Orizzonte",   anim: 'swirl',     img: 'campo-1.png',  category: 'values' },
+  { army: 'Kethran',                anim: 'frammenti', img: 'campo-5.png',  category: 'limit' },
+  { army: 'Corte Rossa',            anim: 'sipario',   img: 'campo-12.png', category: 'conditional' },
+  { army: 'Calibri Pesanti',        anim: 'hud',       img: 'campo-20.png', category: 'focus' },
+  { army: 'Orathai',                anim: 'onda',      img: 'campo-1.png',  category: 'trigger' },
+  { army: 'Mounthborn',             anim: 'morsi',     img: 'campo-5.png',  category: 'neutral' },
+  { army: "L'Enclave delle Scaglie", anim: 'occhio',   img: 'campo-12.png', category: 'values' },
+  { army: 'Ratti della Megera',     anim: 'sciame',    img: 'campo-20.png', category: 'limit' },
+  { army: 'Patto degli Indocili',   anim: 'rivolta',   img: 'campo-1.png',  category: 'conditional' },
+  { army: 'Khemet',                 anim: 'cerchi',    img: 'campo-5.png',  category: 'focus' },
+];
+
+// Categorie d'effetto campo (rules-text sintetico, coerente con la voce di gioco).
+export const CATEGORY_LABEL = {
+  values: 'VALORI', limit: 'VINCOLO', conditional: 'CONDIZIONALE',
+  focus: 'FOCUS', trigger: 'INNESCO', neutral: 'NEUTRO',
+};
+export const CATEGORY_DESC = {
+  values: 'Altera POT o DAN in base allo stato della partita.',
+  limit: 'Impone un tetto rigido alle mosse disponibili.',
+  conditional: "Si attiva solo se una condizione è soddisfatta.",
+  focus: 'Il Focus Coin scorre a un ritmo diverso, qui.',
+  trigger: "Un evento innesca l'effetto una sola volta.",
+  neutral: 'Nessun effetto: resta solo lo scenario.',
+};

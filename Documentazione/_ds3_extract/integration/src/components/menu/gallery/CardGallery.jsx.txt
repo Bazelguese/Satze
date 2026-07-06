@@ -1,0 +1,344 @@
+// ============================================================
+// CardGallery.jsx — Schermata "Galleria delle Carte"
+// ============================================================
+// Terza schermata "Galleria" del design system, gemella di
+// GalleryCinematic (campi di battaglia) ma con chrome più semplice:
+// un indice/griglia da sfogliare, non un carosello cinematic — è pura
+// consultazione, senza fasi di intro/conferma.
+//
+// Mostra le carte nel layout ufficiale sashNameHud (CardReworkP4).
+//
+// ATTENZIONE — dati stub: cardGalleryDemoData.js è un campione di 12
+// carte con nome/POT/DAN INVENTATI. Prima di integrare, sostituisci
+// buildCards() con un adapter sui TUOI dati reali (src/data/cards.js
+// → ARMY_SETS / le tue ~120 carte con nome/POT/DAN/abilità veri),
+// mappando { id, army, name, pot, dan, ability, img } dal tuo schema.
+// Vedi CardGallery.README.md.
+//
+// Props:
+//   onBack()   torna al menu
+// ============================================================
+
+import React, { useState, useMemo } from 'react';
+import { ARMY_COLORS, ARMY_BONUSES } from '../../../data/armies.js';
+import { ARMY_LORE } from '../cosmic/armyLore.js';
+import { CARD_GALLERY_CARDS } from './cardGalleryDemoData.js';
+
+function buildCards(assetBase) {
+  const base = assetBase || '/card-images/'; // Vite serve public/card-images/ come /card-images/
+  return CARD_GALLERY_CARDS.map((c) => ({
+    ...c,
+    accent: (ARMY_COLORS[c.army] || {}).accent || '#94a3b8',
+    glyph: (ARMY_LORE[c.army] || {}).glyph || '◈',
+    bonus: ARMY_BONUSES[c.army] || '—',
+    img: `${base}${c.id}.png`,
+    league: Math.max(1, Math.min(5, Math.round((c.pot + c.dan) / 4))),
+  }));
+}
+
+function armyList(cards) {
+  const seen = [];
+  cards.forEach((c) => { if (!seen.includes(c.army)) seen.push(c.army); });
+  return seen;
+}
+
+export default function CardGallery({ onBack, assetBase }) {
+  const CARDS = useMemo(() => buildCards(assetBase), [assetBase]);
+  const ARMIES = useMemo(() => armyList(CARDS), [CARDS]);
+  const [filter, setFilter] = useState(null); // null = tutte
+  const [active, setActive] = useState(null); // carta in lightbox
+
+  const shown = filter ? CARDS.filter((c) => c.army === filter) : CARDS;
+  const headAccent = filter ? (ARMY_COLORS[filter] || {}).accent || '#f5f3eb' : '#f5f3eb';
+
+  return (
+    <div className="cgl" style={{ '--accent': headAccent }}>
+      <div className="cgl-bg">
+        <div className="cgl-bg-glow" />
+        <div className="cgl-stars" />
+        <div className="cgl-diag" />
+      </div>
+
+      <header className="cgl-top">
+        <button className="cgl-back" onClick={onBack}>
+          <span className="ar">←</span><span className="lbl">MENU</span>
+        </button>
+        <div className="cgl-title-block">
+          <div className="cgl-eyebrow">ARCHIVIO DI GUERRA</div>
+          <h1 className="cgl-title">GALLERIA DELLE CARTE</h1>
+          <div className="cgl-sub">{shown.length} DI 120 CARTE MOSTRATE · layout ufficiale sashNameHud</div>
+        </div>
+        <div className="cgl-counter">
+          <div className="ft-lbl">MOSTRATE</div>
+          <div className="ft-name">{String(shown.length).padStart(2, '0')}<span className="sep">/</span>120</div>
+        </div>
+      </header>
+
+      {/* Filtri armata */}
+      <div className="cgl-filters">
+        <button className={`cgl-chip ${!filter ? 'on' : ''}`} style={{ '--c': '#f5f3eb' }} onClick={() => setFilter(null)}>
+          <span className="dot" /><span>TUTTE</span>
+        </button>
+        {ARMIES.map((a) => (
+          <button key={a} className={`cgl-chip ${filter === a ? 'on' : ''}`} style={{ '--c': (ARMY_COLORS[a] || {}).accent || '#94a3b8' }} onClick={() => setFilter(a)}>
+            <span className="dot" /><span>{a}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Griglia carte */}
+      <div className="cgl-grid">
+        {shown.map((c) => (
+          <CardTile key={c.id} card={c} onClick={() => setActive(c)} />
+        ))}
+      </div>
+
+      {/* Lightbox */}
+      {active && <Lightbox card={active} onClose={() => setActive(null)} />}
+
+      <div className="cgl-scanlines" />
+      <CardGalleryStyles />
+    </div>
+  );
+}
+
+// ============================================================
+// TILE — sashNameHud in miniatura
+// ============================================================
+function CardTile({ card, onClick }) {
+  return (
+    <button className="cgl-tile" style={{ '--accent': card.accent }} onClick={onClick}>
+      <div className="cgl-card">
+        <div className="cgl-art"><img src={card.img} alt={card.name} draggable={false} /></div>
+        <div className="cgl-topgrad" />
+        <FasciaSvg accent={card.accent} />
+        <div className="cgl-fascia-row">
+          <div className="cgl-circ pot"><div className="lbl">POT</div><div className="num">{card.pot}</div></div>
+          <div className="cgl-nm">{card.name}</div>
+          <div className="cgl-circ dan"><div className="lbl">DAN</div><div className="num">{card.dan}</div></div>
+        </div>
+        <div className="cgl-armybar" style={{ background: card.accent }}>
+          <span className="an">{card.army}</span>
+          <span className="lg">L{card.league}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function FasciaSvg({ accent }) {
+  const marks = [
+    'M -3 -3 L 3 -3 L 0 3 Z', 'M -3 0 L 0 -3 L 3 0 L 0 3 Z', 'M -3 -3 L 3 3 M -3 3 L 3 -3',
+    'M -3 0 L 3 0 M 0 -3 L 0 3', 'M -3 -2 L 3 -2 M -3 2 L 3 2', 'M 0 -3 L 3 0 L 0 3 L -3 0 Z',
+  ];
+  return (
+    <svg className="cgl-fascia-svg" width="230" height="52" viewBox="0 0 220 52" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="cgl-g" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={accent} stopOpacity="0.4" /><stop offset="20%" stopColor={accent} />
+          <stop offset="80%" stopColor={accent} /><stop offset="100%" stopColor={accent} stopOpacity="0.4" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="15" width="220" height="22" fill="url(#cgl-g)" />
+      <line x1="0" y1="14" x2="220" y2="14" stroke={accent} strokeWidth="0.8" />
+      <line x1="0" y1="38" x2="220" y2="38" stroke={accent} strokeWidth="0.8" />
+      <g stroke={accent} strokeWidth="0.9" fill="none" opacity="0.9">
+        {[14, 41, 69, 96, 124, 151].map((x, i) => (
+          <path key={`t${i}`} d={marks[i % marks.length]} transform={`translate(${x} 7)`} />
+        ))}
+        {[14, 41, 69, 96, 124, 151].map((x, i) => (
+          <path key={`b${i}`} d={marks[(i + 3) % marks.length]} transform={`translate(${x} 45)`} />
+        ))}
+      </g>
+      <rect x="0" y="24" width="220" height="2" fill="rgba(248,250,252,0.2)" />
+    </svg>
+  );
+}
+
+// ============================================================
+// LIGHTBOX
+// ============================================================
+function Lightbox({ card, onClose }) {
+  return (
+    <div className="cgl-lb" onClick={onClose}>
+      <div className="cgl-lb-inner" style={{ '--accent': card.accent }} onClick={(e) => e.stopPropagation()}>
+        <button className="cgl-lb-close" onClick={onClose}>✕</button>
+        <div className="cgl-lb-card">
+          <div className="cgl-art"><img src={card.img} alt={card.name} draggable={false} /></div>
+          <div className="cgl-topgrad" />
+          <FasciaSvg accent={card.accent} />
+          <div className="cgl-fascia-row">
+            <div className="cgl-circ pot"><div className="lbl">POT</div><div className="num">{card.pot}</div></div>
+            <div className="cgl-nm">{card.name}</div>
+            <div className="cgl-circ dan"><div className="lbl">DAN</div><div className="num">{card.dan}</div></div>
+          </div>
+          <div className="cgl-footer">
+            <div className="frow"><span className="fkey pot"><span className="ic">★</span>POTERE</span><span className="fval">{card.ability}</span></div>
+            <div className="fdiv" />
+            <div className="frow"><span className="fkey bon"><span className="ic">✠</span>BONUS ARMATA</span><span className="fval">{card.bonus}</span></div>
+          </div>
+          <div className="cgl-armybar" style={{ background: card.accent }}>
+            <span className="an">{card.army}</span>
+            <span className="lg">L{card.league}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// STILI (scoped .cgl-)
+// ============================================================
+function CardGalleryStyles() {
+  return (
+    <style>{`
+      .cgl {
+        position: fixed; inset: 0;
+        background: #050608; color: #f5f3eb;
+        font-family: 'Chakra Petch', sans-serif;
+        overflow: hidden; isolation: isolate; z-index: 1000;
+      }
+      .cgl * { box-sizing: border-box; }
+
+      .cgl-bg { position: absolute; inset: 0; z-index: 0; }
+      .cgl-bg-glow {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 10%, #16161a) 0%, #0b0b0c 62%);
+        transition: background .5s;
+      }
+      .cgl-stars {
+        position: absolute; inset: 0; opacity: 0.4;
+        background-image:
+          radial-gradient(1px 1px at 18% 22%, #fff 0%, transparent 100%),
+          radial-gradient(1px 1px at 64% 14%, rgba(255,255,255,0.6), transparent 100%),
+          radial-gradient(1.5px 1.5px at 88% 38%, #fff 0%, transparent 100%),
+          radial-gradient(1px 1px at 12% 78%, rgba(255,255,255,0.5), transparent 100%),
+          radial-gradient(1.5px 1.5px at 38% 92%, rgba(255,255,255,0.7), transparent 100%);
+      }
+      .cgl-diag {
+        position: absolute; inset: 0; opacity: 0.035;
+        background-image: repeating-linear-gradient(115deg, var(--accent) 0 1px, transparent 1px 22px);
+        pointer-events: none;
+      }
+
+      /* Top */
+      .cgl-top {
+        position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+        padding: 28px 48px 0;
+        display: grid; grid-template-columns: 220px 1fr 220px; align-items: start; gap: 24px;
+      }
+      .cgl-back {
+        display: inline-flex; align-items: center; gap: 10px;
+        background: rgba(5,6,8,0.65); border: 1.5px solid rgba(245,243,236,0.3);
+        color: #f5f3eb; font-family: 'Share Tech Mono', monospace;
+        font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+        padding: 11px 18px; cursor: pointer; transition: all .2s;
+        clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+      }
+      .cgl-back:hover { border-color: var(--accent); color: var(--accent); }
+      .cgl-back .ar { font-size: 15px; }
+      .cgl-title-block { text-align: center; }
+      .cgl-eyebrow { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.5em; color: var(--accent); transition: color .3s; }
+      .cgl-title {
+        font-family: 'Cinzel', serif; font-weight: 700; font-size: 44px; letter-spacing: 0.28em;
+        margin: 6px 0 6px; text-shadow: 0 4px 24px rgba(0,0,0,0.9);
+      }
+      .cgl-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: rgba(255,255,255,0.6); text-transform: uppercase; }
+      .cgl-counter { text-align: right; }
+      .cgl-counter .ft-lbl { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 0.32em; color: #94a3b8; }
+      .cgl-counter .ft-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--accent); margin-top: 4px; }
+      .cgl-counter .ft-name .sep { color: rgba(255,255,255,0.3); margin: 0 4px; font-weight: 400; }
+
+      /* Filtri */
+      .cgl-filters {
+        position: absolute; top: 176px; left: 0; right: 0; z-index: 9;
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+        padding: 0 60px;
+      }
+      .cgl-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.14);
+        color: rgba(255,255,255,0.75); font-family: 'Share Tech Mono', monospace;
+        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        padding: 8px 14px; cursor: pointer; transition: all .18s;
+      }
+      .cgl-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex: none; }
+      .cgl-chip:hover { border-color: var(--c); color: #f5f3eb; }
+      .cgl-chip.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 30%, transparent); }
+
+      /* Griglia */
+      .cgl-grid {
+        position: absolute; top: 236px; left: 0; right: 0; bottom: 40px; z-index: 4;
+        display: grid; grid-template-columns: repeat(6, 210px); grid-auto-rows: 302px;
+        gap: 24px; justify-content: center; align-content: center;
+      }
+      .cgl-tile { background: none; border: none; padding: 0; cursor: pointer; display: block; }
+      .cgl-card {
+        position: relative; width: 210px; height: 302px;
+        background: #0a0a0d; border: 1.5px solid rgba(255,255,255,0.22);
+        border-radius: 0 0 12px 12px; overflow: hidden;
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 6px 18px rgba(0,0,0,0.75);
+        transition: transform .2s, box-shadow .2s, border-color .2s;
+      }
+      .cgl-tile:hover .cgl-card {
+        transform: translateY(-6px);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1.5px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 45%, transparent), 0 14px 26px rgba(0,0,0,0.8);
+      }
+      .cgl-art { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .cgl-art img { width: 100%; height: 100%; object-fit: cover; }
+      .cgl-topgrad { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, transparent 18%, transparent 100%); }
+      .cgl-fascia-svg { position: absolute; left: 0; right: 0; top: 4px; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,.75)); width: 100%; height: auto; }
+      .cgl-fascia-row { position: absolute; left: 0; right: 0; top: 4px; height: 52px; display: flex; align-items: stretch; justify-content: space-between; gap: 4px; padding: 2px 6px; }
+      .cgl-circ { width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; align-self: center; }
+      .cgl-circ.pot { border: 2px solid #fde047; box-shadow: 0 0 10px rgba(253,224,71,.65); }
+      .cgl-circ.dan { border: 2px solid #c084fc; box-shadow: 0 0 10px rgba(192,132,252,.65); }
+      .cgl-circ .lbl { font-size: 6px; font-weight: 700; letter-spacing: .1em; }
+      .cgl-circ.pot .lbl { color: #fde047; } .cgl-circ.dan .lbl { color: #c084fc; }
+      .cgl-circ .num { font-weight: 800; font-size: 15px; line-height: .9; color: #f8fafc; }
+      .cgl-nm { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; color: #f8fafc; font-weight: 800; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 0 2px #000, 0 1px 3px #000; line-height: 1.1; padding: 0 2px; }
+      .cgl-armybar { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border-radius: 0 0 10px 10px; color: #fff; }
+      .cgl-armybar .an { font-weight: 800; font-size: 7.5px; text-transform: uppercase; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 0 0 rgba(0,0,0,.9), -1px 0 0 rgba(0,0,0,.9), 0 1px 0 rgba(0,0,0,.9); }
+      .cgl-armybar .lg { font-weight: 800; font-size: 10px; color: #fde047; flex: none; }
+
+      /* Lightbox */
+      .cgl-lb { position: absolute; inset: 0; z-index: 100; background: rgba(3,4,6,0.88); backdrop-filter: blur(6px); display: grid; place-items: center; animation: cgl-lb-in .2s ease; }
+      @keyframes cgl-lb-in { from { opacity: 0; } }
+      .cgl-lb-inner { position: relative; }
+      .cgl-lb-close {
+        position: absolute; top: -46px; right: 0; z-index: 2;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.3);
+        color: #f5f3eb; font-family: 'Share Tech Mono', monospace; font-size: 14px;
+        width: 36px; height: 36px; cursor: pointer; transition: all .2s;
+      }
+      .cgl-lb-close:hover { border-color: var(--accent); color: var(--accent); }
+      .cgl-lb-card {
+        position: relative; width: 380px; height: 546px;
+        background: #0a0a0d; border: 2px solid var(--accent); border-radius: 0 0 18px 18px; overflow: hidden;
+        box-shadow: 0 0 0 1.5px var(--accent), 0 0 60px color-mix(in srgb, var(--accent) 40%, transparent), 0 40px 90px rgba(0,0,0,0.85);
+      }
+      .cgl-lb-card .cgl-fascia-svg { width: 380px; }
+      .cgl-lb-card .cgl-fascia-row { height: 86px; padding: 4px 12px; }
+      .cgl-lb-card .cgl-circ { width: 60px; height: 60px; }
+      .cgl-lb-card .cgl-circ .lbl { font-size: 10px; }
+      .cgl-lb-card .cgl-circ .num { font-size: 26px; }
+      .cgl-lb-card .cgl-nm { font-size: 15px; letter-spacing: .1em; }
+      .cgl-footer {
+        position: absolute; left: 0; right: 0; bottom: 22px;
+        background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+        padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.12);
+      }
+      .frow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+      .fkey { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 800; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; flex: none; }
+      .fkey .ic { font-size: 13px; }
+      .fkey.pot { color: #fb923c; } .fkey.bon { color: #38bdf8; }
+      .fval { font-size: 13px; font-weight: 600; text-align: right; line-height: 1.3; color: #fff; }
+      .fdiv { height: 1px; background: rgba(255,255,255,.12); margin: 8px 0; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cgl *, .cgl *::after, .cgl *::before { animation-duration: 0.001s !important; }
+      }
+    `}</style>
+  );
+}
