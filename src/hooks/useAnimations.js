@@ -20,6 +20,8 @@ export function useAnimations() {
   // Stati per animazione duello
   /** Fasi duello allineate a `DUEL_PHASE_META` (0…6). */
   const [duelPhase, setDuelPhase] = useState(0);
+  /** Sub-step fase 1 (poteri/bonus per iniziativa). */
+  const [duelEffectStep, setDuelEffectStep] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
   
   // Stato per animazione cambio condizione vittoria (round 5)
@@ -41,6 +43,7 @@ export function useAnimations() {
     setPlayerCardGlow(0);
     setEnemyCardGlow(0);
     setDuelPhase(0);
+    setDuelEffectStep(1);
     setIsZoomed(false);
     setShowFinalRoundAnimation(false);
     setShowClashAnimation(false);
@@ -132,6 +135,7 @@ export function useAnimations() {
     setPlayerCardGlow(0);
     setEnemyCardGlow(0);
     setDuelPhase(0);
+    setDuelEffectStep(1);
     setIsZoomed(false);
     setShowClashAnimation(false);
     setRainbowTime(0);
@@ -163,6 +167,8 @@ export function useAnimations() {
     // Duel animations
     duelPhase,
     setDuelPhase,
+    duelEffectStep,
+    setDuelEffectStep,
     isZoomed,
     setIsZoomed,
     

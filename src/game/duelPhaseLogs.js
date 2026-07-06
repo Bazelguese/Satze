@@ -47,28 +47,28 @@ export function buildDuelPhaseLogs({
       `📊 PV iniziali: Tu ${playerHP ?? '?'} | IA ${enemyHP ?? '?'}`,
       `💰 FC disponibili: Tu ${playerFocus ?? '?'} | IA ${enemyFocus ?? '?'}`,
     ],
-    phase1: [
+    phase1: [`━━━ EFFETTI ━━━`, ...phase2Logs],
+    phase2: [
       `━━━ FOCUS COIN ━━━`,
       `🟢 Tu investi: ${selectedFocus ?? '?'} FC`,
       `🔴 IA investe: ${enemySelectedFocus ?? '?'} FC`,
     ],
-    phase2: [`━━━ EFFETTI ━━━`, ...phase2Logs],
     phase3: [],
     phase4: [],
   };
 
   if (field.id === 9 || field.name === 'Porte di Atlantide') {
-    phaseLogs.phase1.push(`🌊 Porte di Atlantide: FC raddoppiati!`);
-    phaseLogs.phase1.push(
+    phaseLogs.phase2.push(`🌊 Porte di Atlantide: Calcolo VA · FC ×2`);
+    phaseLogs.phase2.push(
       `   Tu: ${selectedFocus} → ${pFocusUsed} | IA: ${enemySelectedFocus} → ${eFocusUsed}`
     );
   }
   if (field.id === 36 || field.name === 'Il Pozzo Gravitazionale') {
-    phaseLogs.phase1.push(`🌀 ${field.name}: FC max 3 applicato`);
+    phaseLogs.phase2.push(`🌀 ${field.name}: FC max 3 applicato`);
   }
 
-  if (phaseLogs.phase2.length === 1) {
-    phaseLogs.phase2.push(`   Nessun effetto attivato`);
+  if (phaseLogs.phase1.length === 1) {
+    phaseLogs.phase1.push(`   Nessun effetto attivato`);
   }
 
   const phase3Logs =

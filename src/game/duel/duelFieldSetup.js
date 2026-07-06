@@ -2,7 +2,7 @@
 // Effetti campo prima di poteri / bonus (duello)
 // ============================================
 
-import { applyFieldMinFloor, getFieldModifiers, getFieldSetupFlags } from '../battlefieldEffects.js';
+import { applyFieldMinFloor, attachFieldModifiersToContexts, getFieldSetupFlags } from '../battlefieldEffects.js';
 
 export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext) {
   const id = field?.id ?? 0;
@@ -21,14 +21,8 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     battleLog.push(`🛡️ ${fn}: Entrambi Immune`);
   }
 
-  const baseMods = getFieldModifiers(field);
-  const fieldModifiers = {
-    ...baseMods,
-    triggersIgnored: baseMods.allTriggersAlwaysActive === true,
-    overdriveThreshold: baseMods.overdriveThreshold || 5,
-  };
-  playerContext.fieldModifiers = fieldModifiers;
-  enemyContext.fieldModifiers = fieldModifiers;
+  attachFieldModifiersToContexts(field, playerContext, enemyContext);
+  const fieldModifiers = playerContext.fieldModifiers || {};
 
   const {
     blockDisabled,
@@ -160,13 +154,13 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
   if (id === 9) {
     pFocusUsed *= 2;
     eFocusUsed *= 2;
-    battleLog.push(`🌊 ${fn}: FC raddoppiati nel calcolo VA`);
+    battleLog.push(`🌊 ${fn}: Calcolo VA · FC ×2`);
   }
 
   if (id === 76) {
     pDamage += Math.floor(pFocusUsed / 3);
     eDamage += Math.floor(eFocusUsed / 3);
-    battleLog.push(`⛽ ${fn}: +1 DAN ogni 3 FC investiti`);
+    battleLog.push(`⛽ ${fn}: +1 DAN ogni 3 FC propri`);
   }
 
   if (field.category === 'limit' || field.category === 'trigger') {
@@ -186,16 +180,17 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     else if (id === 27) battleLog.push(`🕳️ ${fn}: Effetti Copia annullati`);
     else if (id === 43) battleLog.push(`🛡️ ${fn}: DAN diretti annullati`);
     else if (id === 32) battleLog.push(`🪞 ${fn}: Modificatori POT/DAN annullati`);
-    else if (id === 22) battleLog.push(`🧱 ${fn}: Gloria e Vendetta sempre attivi`);
-    else if (id === 39) battleLog.push(`🧱 ${fn}: Rimonta sempre attiva`);
-    else if (id === 41) battleLog.push(`🔀 ${fn}: Poteri senza trigger`);
-    else if (id === 29) battleLog.push(`☢️ ${fn}: Overdrive a 4 FC`);
-    else if (id === 45) battleLog.push(`⭐ ${fn}: Intervento sempre attivo`);
-    else if (id === 49) battleLog.push(`🍯 ${fn}: Imboscata sempre attiva`);
-    else if (id === 31) battleLog.push(`✴️ ${fn}: Magnanimo sempre attivo`);
-    else if (id === 58) battleLog.push(`🌳 ${fn}: Resa dei conti sempre attiva`);
-    else if (id === 72) battleLog.push(`🛣️ ${fn}: Turbo sempre attivo`);
-    else if (id === 83) battleLog.push(`📜 ${fn}: Resistenza sempre attiva`);
+    else if (id === 22) battleLog.push(`🧱 ${fn}: Gloria, Vendetta sempre attivo`);
+    else if (id === 39) battleLog.push(`🧱 ${fn}: Regola · Rimonta · sempre attivo`);
+    else if (id === 41) battleLog.push(`🔀 ${fn}: Regola · Poteri · sempre attivi`);
+    else if (id === 29) battleLog.push(`☢️ ${fn}: Regola · Overdrive · 4 FC necessari`);
+    else if (id === 45) battleLog.push(`⭐ ${fn}: Regola · Intervento · sempre attivo`);
+    else if (id === 49) battleLog.push(`🍯 ${fn}: Regola · Imboscata · sempre attivo`);
+    else if (id === 31) battleLog.push(`✴️ ${fn}: Regola · Magnanimo · sempre attivo`);
+    else if (id === 58) battleLog.push(`🌳 ${fn}: Regola · Resa dei conti · sempre attivo`);
+    else if (id === 72) battleLog.push(`🛣️ ${fn}: Regola · Turbo · sempre attivo`);
+    else if (id === 83) battleLog.push(`📜 ${fn}: Regola · Resistenza · sempre attivo`);
+    else if (id === 68) battleLog.push(`👑 ${fn}: Regola · Ultimo Desiderio · ×2`);
     else if (id === 59) battleLog.push(`🦷 ${fn}: Imboscata/Intervento invertiti`);
     else if (id === 73) battleLog.push(`🌉 ${fn}: Turbo/Ultima Chance invertiti`);
     else if (id === 74) battleLog.push(`🏁 ${fn}: Circuito Sfida/Sopraffare`);
@@ -213,17 +208,17 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     const eHP = duel.eHPCurrent ?? 25;
     if (pHP < eHP) pAssaultMod += 3;
     else if (eHP < pHP) eAssaultMod += 3;
-    battleLog.push(`👑 ${fn}: +3 VA a chi è sotto nei PV`);
+    battleLog.push(`👑 ${fn}: Rimonta · +3 VA`);
   }
 
   if (playerContext.isFirst) {
     if (id === 64) {
       if (!pImmune) pPower += 1;
-      battleLog.push(`🥚 ${fn}: +1 POT al primo giocatore (Tu)`);
+      battleLog.push(`🥚 ${fn}: Imboscata · +1 POT (Tu)`);
     }
   } else if (id === 64) {
     if (!eImmune) ePower += 1;
-    battleLog.push(`🥚 ${fn}: +1 POT al primo giocatore (IA)`);
+    battleLog.push(`🥚 ${fn}: Imboscata · +1 POT (IA)`);
   }
 
   if (id === 18) {
@@ -267,5 +262,6 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     focusHalvedInVa: flags.focusHalvedInVa,
     conquestDouble: flags.conquestDouble === true,
     lastWishDouble: flags.lastWishDouble === true,
+    minFloorReduction: flags.minFloorReduction || 0,
   };
 }

@@ -1,4 +1,8 @@
 // Applica poteri carta (dopo pre-scan block), esclusi blockAbility/blockBonus già gestiti.
+import { canTriggerPreBattle } from './duelHelpers.js';
+import { scaleConquestEffectValue } from '../battlefieldDeepEffects.js';
+import { getInitiativeSideOrder, getDuelSideBundle } from './duelInitiativeOrder.js';
+
 export function applyDuelMainAbilities({
   state,
   pAgent,
@@ -9,11 +13,18 @@ export function applyDuelMainAbilities({
   enemyContext,
   triggersIgnored,
   duelCanTriggerAbility,
-  copyDisabled,
-  modifiersDisabled,
-  directDamageDisabled,
-  directDamageBonus,
+  fieldOptions = {},
+  isPlayerFirst = true,
+  visualRecorder = null,
 }) {
+  const {
+    copyDisabled = false,
+    modifiersDisabled = false,
+    directDamageDisabled = false,
+    directDamageBonus = 0,
+    minFloorReduction = 0,
+  } = fieldOptions;
+
   const opt = (a) => ({
     minDamage: a.minDamage,
     minPower: a.minPower,
@@ -24,59 +35,86 @@ export function applyDuelMainAbilities({
     modifiersDisabled,
     directDamageDisabled,
     directDamageBonus,
+    minFloorReduction,
   });
 
-  // Inversione: attiva il flag prima che gli altri poteri (incluso il nemico) applichino modificatori
-  if (
-    !state.pAbilityBlocked &&
-    pAgent?.ability?.effect === 'inversion' &&
-    duelCanTriggerAbility(pAgent.ability.trigger, playerContext, triggersIgnored)
-  ) {
-    state.pModifierInversion = true;
-    battleLog.push(`🔄 TU (${pAgent.name}): Inversione attiva`);
-  }
-  if (
-    !state.eAbilityBlocked &&
-    eAgent?.ability?.effect === 'inversion' &&
-    duelCanTriggerAbility(eAgent.ability.trigger, enemyContext, triggersIgnored)
-  ) {
-    state.eModifierInversion = true;
-    battleLog.push(`🔄 IA (${eAgent.name}): Inversione attiva`);
+  const canTriggerPreBattleAbility = (agent, context) =>
+    canTriggerPreBattle(agent?.ability?.trigger, context, {
+      triggersIgnored,
+      resolveTrigger: (trigger, ctx) => duelCanTriggerAbility(trigger, ctx, false),
+    });
+
+  const sides = getInitiativeSideOrder(isPlayerFirst);
+  const bundleArgs = {
+    pAgent,
+    eAgent,
+    playerContext,
+    enemyContext,
+    pHasBonus: false,
+    eHasBonus: false,
+    pArmyBonus: null,
+    eArmyBonus: null,
+  };
+
+  // Inversione: 1° giocatore → 2° giocatore, prima degli altri poteri
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const agent = side.agent;
+    if (
+      !state[side.abilityBlocked] &&
+      agent?.ability?.effect === 'inversion' &&
+      canTriggerPreBattleAbility(agent, side.context)
+    ) {
+      if (sideKey === 'player') {
+        state.pModifierInversion = true;
+      } else {
+        state.eModifierInversion = true;
+      }
+      battleLog.push(`🔄 ${side.labelSelf} (${agent.name}): Inversione attiva`);
+      visualRecorder?.pushInversion(sideKey, state);
+    }
   }
 
-  if (
-    !state.pAbilityBlocked &&
-    pAgent.ability &&
-    pAgent.ability.effect !== 'blockAbility' &&
-    pAgent.ability.effect !== 'blockBonus' &&
-    pAgent.ability.effect !== 'inversion' &&
-    duelCanTriggerAbility(pAgent.ability.trigger, playerContext, triggersIgnored)
-  ) {
-    applyEffect(pAgent.ability.effect, pAgent.ability.value, 'player', `TU (${pAgent.name})`, battleLog, opt(pAgent.ability));
-  } else if (
-    state.pAbilityBlocked &&
-    pAgent.ability &&
-    pAgent.ability.effect !== 'blockAbility' &&
-    pAgent.ability.effect !== 'blockBonus'
-  ) {
-    battleLog.push(`🐛¡️ TU: Potere BLOCCATO dall'avversario!`);
-  }
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const agent = side.agent;
+    const ability = agent?.ability;
 
-  if (
-    !state.eAbilityBlocked &&
-    eAgent.ability &&
-    eAgent.ability.effect !== 'blockAbility' &&
-    eAgent.ability.effect !== 'blockBonus' &&
-    eAgent.ability.effect !== 'inversion' &&
-    duelCanTriggerAbility(eAgent.ability.trigger, enemyContext, triggersIgnored)
-  ) {
-    applyEffect(eAgent.ability.effect, eAgent.ability.value, 'enemy', `IA (${eAgent.name})`, battleLog, opt(eAgent.ability));
-  } else if (
-    state.eAbilityBlocked &&
-    eAgent.ability &&
-    eAgent.ability.effect !== 'blockAbility' &&
-    eAgent.ability.effect !== 'blockBonus'
-  ) {
-    battleLog.push(`🐛¡️ IA: Potere BLOCCATO da te!`);
+    if (
+      !state[side.abilityBlocked] &&
+      ability &&
+      ability.effect !== 'blockAbility' &&
+      ability.effect !== 'blockBonus' &&
+      ability.effect !== 'inversion' &&
+      canTriggerPreBattleAbility(agent, side.context)
+    ) {
+      const abilityValue =
+        ability.trigger === 'conquest'
+          ? scaleConquestEffectValue(ability.value, fieldOptions)
+          : ability.value;
+      const abilitySource = `${side.labelSelf} (${agent.name})`;
+      applyEffect(ability.effect, abilityValue, sideKey, abilitySource, battleLog, opt(ability));
+      if (ability.trigger === 'lastWish' && fieldOptions?.lastWishDouble) {
+        applyEffect(ability.effect, abilityValue, sideKey, `${abilitySource} (2×)`, battleLog, opt(ability));
+      }
+      if (ability.effect === 'copyAbility') {
+        visualRecorder?.pushCopyAbility(sideKey, state);
+      } else if (ability.effect === 'copyBonus') {
+        visualRecorder?.pushCopyBonus(sideKey, state);
+      }
+      visualRecorder?.pushPower(sideKey, state);
+    } else if (
+      state[side.abilityBlocked] &&
+      ability &&
+      ability.effect !== 'blockAbility' &&
+      ability.effect !== 'blockBonus'
+    ) {
+      battleLog.push(
+        sideKey === 'player'
+          ? `🐛¡️ TU: Potere BLOCCATO dall'avversario!`
+          : `🐛¡️ IA: Potere BLOCCATO da te!`
+      );
+      visualRecorder?.pushPowerBlocked(sideKey, state);
+    }
   }
 }

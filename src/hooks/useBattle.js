@@ -47,6 +47,7 @@ export function useBattle(gameState, animations) {
 
   const {
     setDuelPhase,
+    setDuelEffectStep,
     setPlayerCardGlow,
     setEnemyCardGlow,
     setPlayerFocusCoinsShown,
@@ -98,6 +99,7 @@ export function useBattle(gameState, animations) {
     setBattleResult(battleResult);
 
     setDuelPhase(0);
+    setDuelEffectStep(1);
     setPlayerCardGlow(0);
     setEnemyCardGlow(0);
     setPlayerFocusCoinsShown(0);
@@ -136,6 +138,7 @@ export function useBattle(gameState, animations) {
     setLastWinner,
     setGamePhase,
     setDuelPhase,
+    setDuelEffectStep,
     setPlayerCardGlow,
     setEnemyCardGlow,
     setPlayerFocusCoinsShown,

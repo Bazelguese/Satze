@@ -27,11 +27,11 @@ test('runDuelDamageAftermathAndFcAdjust: vincitore player, danno e FC finali', (
   assert.equal(r.finalEnemyFC, 6);
 });
 
-test('runDuelDamageAftermathAndFcAdjust: Canyon aumenta damageDealt', () => {
+test('runDuelDamageAftermathAndFcAdjust: Canyon · Ultimo Desiderio −2 PV al perdente', () => {
   const log = [];
   const r = runDuelDamageAftermathAndFcAdjust({
     battleLog: log,
-    field: { name: 'Canyon delle Lame' },
+    field: { id: 11, name: 'Canyon delle Lame' },
     winner: 'player',
     maxDamage: null,
     overdriveThreshold: 5,
@@ -46,7 +46,9 @@ test('runDuelDamageAftermathAndFcAdjust: Canyon aumenta damageDealt', () => {
     selectedFocus: 0,
     enemySelectedFocus: 0,
   });
-  assert.equal(r.damageDealt, 5);
+  assert.equal(r.damageDealt, 3);
+  assert.equal(r.finalEnemyHP, 5);
+  assert.ok(log.some((l) => l.includes('Ultimo Desiderio')));
 });
 
 test('buildDuelBattleResult: shape minimo', () => {
@@ -79,6 +81,8 @@ test('buildDuelBattleResult: shape minimo', () => {
     eFocusUsed: 2,
     finalPHasBonus: true,
     finalEHasBonus: false,
+    pArmyBonusActive: true,
+    eArmyBonusActive: false,
     finalPAbilityTriggered: false,
     finalEAbilityTriggered: false,
     pAbilityBlocked: false,
@@ -87,6 +91,8 @@ test('buildDuelBattleResult: shape minimo', () => {
     eBonusBlocked: false,
     pAbilityCopied: null,
     eAbilityCopied: null,
+    pCopiedAbilityNotTriggered: false,
+    eCopiedAbilityNotTriggered: false,
     pBonusCopied: null,
     eBonusCopied: null,
     pAbilityNotTriggered: false,
@@ -111,4 +117,6 @@ test('buildDuelBattleResult: shape minimo', () => {
   assert.equal(br.playerAssaultRaw, 10);
   assert.equal(br.playerAssaultMinFinal, 3);
   assert.equal(br.enemyAssaultRaw, 5);
+  assert.equal(br.playerArmyBonusActive, true);
+  assert.equal(br.enemyArmyBonusActive, false);
 });

@@ -1,4 +1,7 @@
 // Flag per UI: trigger bonus/poteri soddisfatti e "non attivati" (pre-VA).
+import { canTriggerPreBattle } from './duelHelpers.js';
+import { isPostBattleTrigger } from '../triggerLogic.js';
+
 export function computeDuelTriggerUiFlags({
   state,
   pAgent,
@@ -13,8 +16,14 @@ export function computeDuelTriggerUiFlags({
   duelCanTriggerAbility,
   checkTrigger,
 }) {
-  const pBonusTriggerSatisfied = pHasBonus && pArmyBonus && checkTrigger(pArmyBonus.trigger, playerContext);
-  const eBonusTriggerSatisfied = eHasBonus && eArmyBonus && checkTrigger(eArmyBonus.trigger, enemyContext);
+  const pBonusTriggerSatisfied =
+    pHasBonus &&
+    pArmyBonus &&
+    canTriggerPreBattle(pArmyBonus.trigger, playerContext, { triggersIgnored, resolveTrigger: checkTrigger });
+  const eBonusTriggerSatisfied =
+    eHasBonus &&
+    eArmyBonus &&
+    canTriggerPreBattle(eArmyBonus.trigger, enemyContext, { triggersIgnored, resolveTrigger: checkTrigger });
 
   let pAbilityNotTriggered = false;
   let eAbilityNotTriggered = false;
@@ -30,9 +39,11 @@ export function computeDuelTriggerUiFlags({
     pAgent.ability &&
     !state.pAbilityBlocked &&
     pAgent.ability.effect !== 'copyAbility' &&
-    pAgent.ability.trigger !== 'conquest' &&
-    pAgent.ability.trigger !== 'lastWish' &&
-    !duelCanTriggerAbility(pAgent.ability.trigger, playerContext, triggersIgnored)
+    !isPostBattleTrigger(pAgent.ability.trigger) &&
+    !canTriggerPreBattle(pAgent.ability.trigger, playerContext, {
+      triggersIgnored,
+      resolveTrigger: (trigger, ctx) => duelCanTriggerAbility(trigger, ctx, false),
+    })
   ) {
     pAbilityNotTriggered = true;
   }
@@ -40,9 +51,11 @@ export function computeDuelTriggerUiFlags({
     eAgent.ability &&
     !state.eAbilityBlocked &&
     eAgent.ability.effect !== 'copyAbility' &&
-    eAgent.ability.trigger !== 'conquest' &&
-    eAgent.ability.trigger !== 'lastWish' &&
-    !duelCanTriggerAbility(eAgent.ability.trigger, enemyContext, triggersIgnored)
+    !isPostBattleTrigger(eAgent.ability.trigger) &&
+    !canTriggerPreBattle(eAgent.ability.trigger, enemyContext, {
+      triggersIgnored,
+      resolveTrigger: (trigger, ctx) => duelCanTriggerAbility(trigger, ctx, false),
+    })
   ) {
     eAbilityNotTriggered = true;
   }
@@ -51,9 +64,8 @@ export function computeDuelTriggerUiFlags({
     pArmyBonus &&
     !state.pBonusBlocked &&
     pArmyBonus.effects[0]?.effect !== 'copyBonus' &&
-    pArmyBonus.trigger !== 'conquest' &&
-    pArmyBonus.trigger !== 'lastWish' &&
-    !checkTrigger(pArmyBonus.trigger, playerContext)
+    !isPostBattleTrigger(pArmyBonus.trigger) &&
+    !canTriggerPreBattle(pArmyBonus.trigger, playerContext, { triggersIgnored, resolveTrigger: checkTrigger })
   ) {
     pBonusNotTriggered = true;
   }
@@ -62,9 +74,8 @@ export function computeDuelTriggerUiFlags({
     eArmyBonus &&
     !state.eBonusBlocked &&
     eArmyBonus.effects[0]?.effect !== 'copyBonus' &&
-    eArmyBonus.trigger !== 'conquest' &&
-    eArmyBonus.trigger !== 'lastWish' &&
-    !checkTrigger(eArmyBonus.trigger, enemyContext)
+    !isPostBattleTrigger(eArmyBonus.trigger) &&
+    !canTriggerPreBattle(eArmyBonus.trigger, enemyContext, { triggersIgnored, resolveTrigger: checkTrigger })
   ) {
     eBonusNotTriggered = true;
   }

@@ -7,7 +7,7 @@ export * from './fieldLogic';
 export * from './toxinLogic';
 export { computeDuelResolution } from './duelResolve.js';
 export { buildDuelPhaseLogs } from './duelPhaseLogs.js';
-export { countConqueredFields, checkImmunity, canTriggerAbility } from './duel/duelHelpers.js';
+export { countConqueredFields, checkImmunity, canTriggerAbility, countAttritionPriorCards, countInitialLeagueCards, resolveUsedCardId } from './duel/duelHelpers.js';
 export { applyDuelFieldSetup } from './duel/duelFieldSetup.js';
 export { applyDuelPowerEffect } from './duel/duelApplyEffect.js';
 export { createApplyBonusEffects } from './duel/duelBonusEffects.js';
@@ -24,7 +24,6 @@ export { applyDuelPostBattleEffects } from './duel/duelPostBattle.js';
 export {
   applyDuelNexusMaxDamage,
   applyCentraleOverdriveDamage,
-  applyCanyonWinnerDamageBonus,
 } from './duel/duelDamagePipeline.js';
 export { runDuelDamageAftermathAndFcAdjust, buildDuelBattleResult } from './duel/duelResolutionFinish.js';
 export * from './campaign/index.js';

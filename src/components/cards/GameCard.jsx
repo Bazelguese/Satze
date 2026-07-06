@@ -4,8 +4,10 @@ import { CardReworkP4 } from './CardReworkP4';
 /**
  * Carta in partita / anteprima: layout ufficiale P4 (HUD fascia + cerchi POT/DAN).
  * La prop `cardLayout` è ignorata (resta per compatibilità con chiamate esistenti).
+ * Memoizzata: evita di ridisegnare la carta quando le props non cambiano
+ * (es. re-render per-frame della sequenza clash).
  */
-export function GameCard({ agent, ...rest }) {
+export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
   if (!agent) return null;
 
   const {
@@ -26,11 +28,17 @@ export function GameCard({ agent, ...rest }) {
     highlightBonus = false,
     copiedAbility = null,
     copiedBonus = null,
+    copiedAbilityNotTriggered = false,
     abilityNotTriggered = false,
     bonusNotTriggered = false,
     bonusBaseInactive = false,
     abilityCurrentValue = null,
     suppressAnimations = false,
+    visualStepKind = null,
+    visualStepIndex = 0,
+    copyAbilityAnim = false,
+    copyBonusAnim = false,
+    fieldMinFloorReduction = 0,
   } = rest;
 
   const isUsed = usedCards.includes(agent?.id);
@@ -80,13 +88,19 @@ export function GameCard({ agent, ...rest }) {
           highlightBonus={highlightBonus}
           copiedAbility={copiedAbility}
           copiedBonus={copiedBonus}
+          copiedAbilityNotTriggered={copiedAbilityNotTriggered}
           abilityNotTriggered={abilityNotTriggered}
           bonusNotTriggered={bonusNotTriggered}
           bonusBaseInactive={bonusBaseInactive}
           abilityCurrentValue={abilityCurrentValue}
           suppressAnimations={suppressAnimations}
+          visualStepKind={visualStepKind}
+          visualStepIndex={visualStepIndex}
+          copyAbilityAnim={copyAbilityAnim}
+          copyBonusAnim={copyBonusAnim}
+          fieldMinFloorReduction={fieldMinFloorReduction}
         />
       </div>
     </div>
   );
-}
+});

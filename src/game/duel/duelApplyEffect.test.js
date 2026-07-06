@@ -122,3 +122,39 @@ test('toxin stacka quando ctx.enemyToxin è già attivo', () => {
   applyDuelPowerEffect('toxin', 1, 'player', 'Test', log, { minHealth: 2 }, state, ctx);
   assert.equal(state.enemyToxinActivated.value, 3);
 });
+
+test('copyAbility: registra testo copiato anche se trigger del potere nemico non attivo', () => {
+  const state = minimalState({ pPower: 4 });
+  const log = [];
+  const enemyAbility = { trigger: 'imboscata', effect: 'power', value: 2 };
+  const ctx = {
+    eAgent: { name: 'Nemico', ability: enemyAbility },
+    pAgent: { name: 'Tu' },
+    checkTrigger: (trigger) => trigger !== 'imboscata',
+    playerContext: { isPlayerFirst: false },
+    enemyContext: {},
+  };
+  applyDuelPowerEffect('copyAbility', null, 'player', 'Tu', log, {}, state, ctx);
+  assert.deepEqual(state.pAbilityCopied, enemyAbility);
+  assert.equal(state.pCopiedAbilityNotTriggered, true);
+  assert.equal(state.pPower, 4);
+  assert.ok(log.some((l) => l.includes('copia Potere')));
+  assert.ok(log.some((l) => l.includes('non attivo')));
+});
+
+test('copyAbility: applica effetto se trigger del potere nemico attivo', () => {
+  const state = minimalState({ pPower: 4 });
+  const log = [];
+  const enemyAbility = { trigger: null, effect: 'power', value: 2 };
+  const ctx = {
+    eAgent: { name: 'Nemico', ability: enemyAbility },
+    pAgent: { name: 'Tu' },
+    checkTrigger: () => true,
+    playerContext: {},
+    enemyContext: {},
+  };
+  applyDuelPowerEffect('copyAbility', null, 'player', 'Tu', log, {}, state, ctx);
+  assert.deepEqual(state.pAbilityCopied, enemyAbility);
+  assert.equal(state.pCopiedAbilityNotTriggered, false);
+  assert.equal(state.pPower, 6);
+});

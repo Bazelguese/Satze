@@ -1,4 +1,7 @@
-// Fase 1: bonus sulle proprie stat; fase 2: sulle stat nemiche.
+// Bonus armata pre-VA: per ogni giocatore in ordine di iniziativa, own stat poi enemy stat.
+import { canTriggerPreBattle } from './duelHelpers.js';
+import { getInitiativeSideOrder, getDuelSideBundle } from './duelInitiativeOrder.js';
+
 export function applyDuelArmyBonusPhases({
   state,
   pHasBonus,
@@ -12,24 +15,33 @@ export function applyDuelArmyBonusPhases({
   battleLog,
   applyBonusEffects,
   checkTrigger,
+  triggersIgnored = false,
+  isPlayerFirst = true,
+  visualRecorder = null,
 }) {
-  if (pHasBonus && !state.pBonusBlocked) {
-    const bonusTriggered = pArmyBonus && checkTrigger(pArmyBonus.trigger, playerContext);
-    if (bonusTriggered) {
-      applyBonusEffects(pArmyBonus, 'player', playerContext, `Bonus ${pAgent.army}`, battleLog, true, false);
-    }
-  }
-  if (eHasBonus && !state.eBonusBlocked) {
-    const bonusTriggered = eArmyBonus && checkTrigger(eArmyBonus.trigger, enemyContext);
-    if (bonusTriggered) {
-      applyBonusEffects(eArmyBonus, 'enemy', enemyContext, `Bonus ${eAgent.army}`, battleLog, true, false);
-    }
-  }
+  const canTriggerPreBattleBonus = (bonus, context) =>
+    canTriggerPreBattle(bonus?.trigger, context, { triggersIgnored, resolveTrigger: checkTrigger });
 
-  if (pHasBonus && !state.pBonusBlocked && pArmyBonus && checkTrigger(pArmyBonus.trigger, playerContext)) {
-    applyBonusEffects(pArmyBonus, 'player', playerContext, `Bonus ${pAgent.army}`, battleLog, false, true);
-  }
-  if (eHasBonus && !state.eBonusBlocked && eArmyBonus && checkTrigger(eArmyBonus.trigger, enemyContext)) {
-    applyBonusEffects(eArmyBonus, 'enemy', enemyContext, `Bonus ${eAgent.army}`, battleLog, false, true);
+  const sides = getInitiativeSideOrder(isPlayerFirst);
+  const bundleArgs = {
+    pAgent,
+    eAgent,
+    playerContext,
+    enemyContext,
+    pHasBonus,
+    eHasBonus,
+    pArmyBonus,
+    eArmyBonus,
+  };
+
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    if (!side.hasBonus || state[side.bonusBlocked] || !side.armyBonus) continue;
+    if (!canTriggerPreBattleBonus(side.armyBonus, side.context)) continue;
+
+    const source = `Bonus ${side.agent.army}`;
+    applyBonusEffects(side.armyBonus, sideKey, side.context, source, battleLog, true, false);
+    applyBonusEffects(side.armyBonus, sideKey, side.context, source, battleLog, false, true);
+    visualRecorder?.pushBonus(sideKey, state);
   }
 }

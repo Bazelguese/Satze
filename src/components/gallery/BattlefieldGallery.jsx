@@ -22,7 +22,7 @@ export function BattlefieldGallery() {
       {/* Anteprima in alto - fissa, non scrolla */}
       <div
         key={`preview-${selectedFieldId ?? 'none'}`}
-        className="flex-shrink-0 w-full max-w-md mx-auto rounded-xl overflow-hidden border-2 transition-all duration-300 bg-[#110b20]"
+        className="flex-shrink-0 w-full max-w-md mx-auto rounded-xl overflow-hidden border-2 transition-all duration-300 bg-menu-panel"
         style={{
           borderColor: selectedField ? 'rgba(192, 38, 211, 0.65)' : 'rgba(74, 63, 102, 0.55)',
           aspectRatio: '16/9',

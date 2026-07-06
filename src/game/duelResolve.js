@@ -5,7 +5,7 @@
 
 import { checkTrigger } from './triggerLogic.js';
 import { buildDuelPhaseLogs } from './duelPhaseLogs.js';
-import { countConqueredFields, checkImmunity } from './duel/duelHelpers.js';
+import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
 import {
   createDuelCanTriggerAbility,
   resolveFieldArmyBonuses,
@@ -25,7 +25,20 @@ import { computeDuelTriggerUiFlags } from './duel/duelTriggerUiFlags.js';
 import { applyDuelPostBattleEffects } from './duel/duelPostBattle.js';
 import { runDuelDamageAftermathAndFcAdjust, buildDuelBattleResult } from './duel/duelResolutionFinish.js';
 import { ARMY_BONUSES } from '../data/index.js';
+import { attachFieldModifiersToContexts } from './battlefieldEffects.js';
 import { buildDuelTurnContexts } from './duel/duelTurnContexts.js';
+import { createDuelVisualRecorder } from './duel/duelVisualSteps.js';
+
+function combatStartDiffersFromDeploy(pAgent, eAgent, state) {
+  return (
+    state.pPower !== pAgent.power ||
+    state.ePower !== eAgent.power ||
+    state.pDamage !== pAgent.damage ||
+    state.eDamage !== eAgent.damage ||
+    (state.pAssaultMod ?? 0) !== 0 ||
+    (state.eAssaultMod ?? 0) !== 0
+  );
+}
 
 /**
  * Calcola l'esito completo di un duello (stesso comportamento dell'ex useBattle inline).
@@ -54,18 +67,6 @@ export function computeDuelResolution({
   enemyHand,
   currentFieldIndex,
 }) {
-    const countInitialLeagueCards = (usedCards, currentHand, selectedAgent) => {
-      const byId = new Map();
-      [...(usedCards || []), ...(currentHand || []), selectedAgent]
-        .filter(Boolean)
-        .forEach((card) => byId.set(card.id, card));
-      let count = 0;
-      byId.forEach((card) => {
-        if (card.league === selectedAgent.league) count += 1;
-      });
-      return count;
-    };
-
     const playerInitialLeagueCount = countInitialLeagueCards(playerUsedCards, playerHand, pAgent);
     const enemyInitialLeagueCount = countInitialLeagueCards(enemyUsedCards, enemyHand, eAgent);
 
@@ -92,6 +93,8 @@ export function computeDuelResolution({
       playerInitialLeagueCount,
       enemyInitialLeagueCount,
     });
+
+    attachFieldModifiersToContexts(field, playerContext, enemyContext);
 
     const pHasBonusRaw = playerArmyBonuses[pAgent.army] || false;
     const eHasBonusRaw = enemyArmyBonuses[eAgent.army] || false;
@@ -153,9 +156,15 @@ export function computeDuelResolution({
       directDamageBonus,
       overdriveThreshold,
       triggersIgnored,
+      minFloorReduction,
     } = fieldFlags;
 
     const state = createDuelCombatState(duel);
+    const visualRecorder = createDuelVisualRecorder(pAgent, eAgent);
+    visualRecorder.syncDeployAssaultMods(state);
+    if (combatStartDiffersFromDeploy(pAgent, eAgent, state)) {
+      visualRecorder.pushFieldSetup(state);
+    }
 
     const ctx = createDuelEffectContext({
       checkTrigger,
@@ -183,8 +192,10 @@ export function computeDuelResolution({
       modifiersDisabled,
       directDamageDisabled,
       directDamageBonus,
+      minFloorReduction: minFloorReduction || 0,
       conquestDouble: fieldFlags.conquestDouble === true,
       lastWishDouble: fieldFlags.lastWishDouble === true,
+      triggersIgnored: triggersIgnored === true,
     };
 
     const applyBonusEffects = createApplyBonusEffects({
@@ -197,6 +208,7 @@ export function computeDuelResolution({
       eArmyBonus,
       pHasBonus,
       eHasBonus,
+      visualRecorder,
     });
 
     applyDuelBlockPrescan({
@@ -210,6 +222,8 @@ export function computeDuelResolution({
       enemyContext,
       triggersIgnored,
       duelCanTriggerAbility,
+      isPlayerFirst,
+      visualRecorder,
     });
 
     applyDuelMainAbilities({
@@ -222,10 +236,9 @@ export function computeDuelResolution({
       enemyContext,
       triggersIgnored,
       duelCanTriggerAbility,
-      copyDisabled,
-      modifiersDisabled,
-      directDamageDisabled,
-      directDamageBonus,
+      fieldOptions,
+      isPlayerFirst,
+      visualRecorder,
     });
 
     const {
@@ -265,6 +278,9 @@ export function computeDuelResolution({
       battleLog,
       applyBonusEffects,
       checkTrigger,
+      triggersIgnored,
+      isPlayerFirst,
+      visualRecorder,
     });
 
     let pPower = state.pPower;
@@ -289,12 +305,25 @@ export function computeDuelResolution({
     let eMinAssault = state.eMinAssault;
     let pAbilityCopied = state.pAbilityCopied;
     let eAbilityCopied = state.eAbilityCopied;
+    let pCopiedAbilityNotTriggered = state.pCopiedAbilityNotTriggered;
+    let eCopiedAbilityNotTriggered = state.eCopiedAbilityNotTriggered;
     let pBonusCopied = state.pBonusCopied;
     let eBonusCopied = state.eBonusCopied;
     let playerToxinActivated = state.playerToxinActivated;
     let enemyToxinActivated = state.enemyToxinActivated;
 
+    const statsBeforeField = visualRecorder.readStats(state);
     applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
+    const statsAfterField = visualRecorder.readStats(state);
+    if (
+      statsBeforeField.playerPower !== statsAfterField.playerPower ||
+      statsBeforeField.enemyPower !== statsAfterField.enemyPower ||
+      statsBeforeField.playerDamage !== statsAfterField.playerDamage ||
+      statsBeforeField.enemyDamage !== statsAfterField.enemyDamage
+    ) {
+      visualRecorder.pushField(state);
+    }
+    visualRecorder.pushPreVa(state);
     pPower = state.pPower;
     ePower = state.ePower;
     pDamage = state.pDamage;
@@ -380,10 +409,13 @@ export function computeDuelResolution({
       applyBonusEffects,
       checkTrigger,
       fieldOptions,
+      triggersIgnored,
       playerContextPost,
       enemyContextPost,
       battleLog,
       state,
+      isPlayerFirst,
+      visualRecorder,
     });
 
     const pb = pickPostBattleFields(state);
@@ -403,6 +435,8 @@ export function computeDuelResolution({
     eImmune = pb.eImmune;
     pAbilityCopied = pb.pAbilityCopied;
     eAbilityCopied = pb.eAbilityCopied;
+    pCopiedAbilityNotTriggered = pb.pCopiedAbilityNotTriggered;
+    eCopiedAbilityNotTriggered = pb.eCopiedAbilityNotTriggered;
     pBonusCopied = pb.pBonusCopied;
     eBonusCopied = pb.eBonusCopied;
     playerToxinActivated = pb.playerToxinActivated;
@@ -468,6 +502,8 @@ export function computeDuelResolution({
       eDamage: outcome.eDamage,
       pFocusUsed,
       eFocusUsed,
+      pArmyBonusActive: pHasBonus,
+      eArmyBonusActive: eHasBonus,
       finalPHasBonus,
       finalEHasBonus,
       finalPAbilityTriggered,
@@ -478,6 +514,8 @@ export function computeDuelResolution({
       eBonusBlocked,
       pAbilityCopied,
       eAbilityCopied,
+      pCopiedAbilityNotTriggered,
+      eCopiedAbilityNotTriggered,
       pBonusCopied,
       eBonusCopied,
       pAbilityNotTriggered,
@@ -495,6 +533,8 @@ export function computeDuelResolution({
       currentFieldIndex,
       playerToxinActivated,
       enemyToxinActivated,
+      visualSteps: visualRecorder.steps,
+      isPlayerFirst,
     });
     return { battleResult };
 

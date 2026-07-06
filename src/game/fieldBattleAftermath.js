@@ -10,7 +10,7 @@
  * @param {Object} p
  * @param {Object} p.field - Campo di battaglia corrente
  * @param {'player'|'enemy'} p.winner
- * @param {number} p.damageDealt - DAN inflitto al perdente (già modificato da Canyon delle Lame se applicabile)
+ * @param {number} p.damageDealt - DAN inflitto al perdente (prima degli effetti post-scontro del campo)
  * @param {number} p.pHPCurrent
  * @param {number} p.eHPCurrent
  * @param {number} p.pFCCurrent
@@ -53,6 +53,11 @@ export function applyBattlefieldRoundAftermath({
       pFC += 1;
       battleLog.push(`🏰 Torre d'Avorio: +1 FC (${fcBefore} → ${pFC})`);
     }
+    if (field.id === 17 || field.name === 'Altare del Sacrificio') {
+      const pBefore = pHP;
+      pHP = Math.max(0, pHP - 2);
+      battleLog.push(`⛩️ Altare del Sacrificio: Conquista · −2 PV (${pBefore} → ${pHP})`);
+    }
   } else {
     const before = pHP;
     pHP = Math.max(0, pHP - damageDealt);
@@ -72,6 +77,23 @@ export function applyBattlefieldRoundAftermath({
       const fcBefore = eFC;
       eFC += 1;
       battleLog.push(`🏰 Torre d'Avorio: IA +1 FC (${fcBefore} → ${eFC})`);
+    }
+    if (field.id === 17 || field.name === 'Altare del Sacrificio') {
+      const eBefore = eHP;
+      eHP = Math.max(0, eHP - 2);
+      battleLog.push(`⛩️ Altare del Sacrificio: Conquista · −2 PV (IA ${eBefore} → ${eHP})`);
+    }
+  }
+
+  if (field.id === 11 || field.name === 'Canyon delle Lame') {
+    if (winner === 'player') {
+      const before = eHP;
+      eHP = Math.max(0, eHP - 2);
+      battleLog.push(`🗡️ Canyon delle Lame: Ultimo Desiderio · −2 PV (IA ${before} → ${eHP})`);
+    } else {
+      const before = pHP;
+      pHP = Math.max(0, pHP - 2);
+      battleLog.push(`🗡️ Canyon delle Lame: Ultimo Desiderio · −2 PV (Tu ${before} → ${pHP})`);
     }
   }
 
@@ -93,18 +115,6 @@ export function applyBattlefieldRoundAftermath({
     pHP = Math.max(0, pHP - 3);
     eHP = Math.max(0, eHP - 3);
     battleLog.push(`🕳️ Voragine Infinita: Tu ${pBefore} → ${pHP} | IA ${eBefore} → ${eHP} PV`);
-  }
-
-  if (field.name === 'Altare del Sacrificio') {
-    if (winner === 'player') {
-      const before = eHP;
-      eHP = Math.max(0, eHP - 2);
-      battleLog.push(`⛩️ Altare del Sacrificio: IA -2 PV extra (${before} → ${eHP})`);
-    } else {
-      const before = pHP;
-      pHP = Math.max(0, pHP - 2);
-      battleLog.push(`⛩️ Altare del Sacrificio: Tu -2 PV extra (${before} → ${pHP})`);
-    }
   }
 
   if (field.id === 37 || field.name === 'Trono Solare') {
@@ -155,15 +165,33 @@ export function applyBattlefieldRoundAftermath({
     }
   }
 
-  if (field.name === 'Ziqqurat Spezzata' || field.name === 'Deposito di Rottami') {
+  if (field.name === 'Ziqqurat Spezzata' || field.id === 23) {
+    if (winner === 'player') {
+      const eFcBefore = eFC;
+      eFC += 1;
+      battleLog.push(`🏛️ Ziqqurat Spezzata: IA +1 FC sconfitta (${eFcBefore} → ${eFC})`);
+      const pFcBefore = pFC;
+      pFC = Math.max(0, pFC - 1);
+      battleLog.push(`🏛️ Ziqqurat Spezzata: Tu −1 FC vittoria (${pFcBefore} → ${pFC})`);
+    } else {
+      const pFcBefore = pFC;
+      pFC += 1;
+      battleLog.push(`🏛️ Ziqqurat Spezzata: +1 FC sconfitta (${pFcBefore} → ${pFC})`);
+      const eFcBefore = eFC;
+      eFC = Math.max(0, eFC - 1);
+      battleLog.push(`🏛️ Ziqqurat Spezzata: IA −1 FC vittoria (${eFcBefore} → ${eFC})`);
+    }
+  }
+
+  if (field.name === 'Deposito di Rottami' || field.id === 30) {
     if (winner === 'player') {
       const before = eFC;
-      eFC += 1;
-      battleLog.push(`🏛️ ${field.name}: IA +1 FC sconfitta (${before} → ${eFC})`);
+      eFC += 2;
+      battleLog.push(`🏛️ Deposito di Rottami: IA +2 FC sconfitta (${before} → ${eFC})`);
     } else {
       const before = pFC;
-      pFC += 1;
-      battleLog.push(`🏛️ ${field.name}: +1 FC sconfitta (${before} → ${pFC})`);
+      pFC += 2;
+      battleLog.push(`🏛️ Deposito di Rottami: +2 FC sconfitta (${before} → ${pFC})`);
     }
   }
 

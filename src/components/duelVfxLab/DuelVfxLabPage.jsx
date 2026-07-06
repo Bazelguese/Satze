@@ -17,7 +17,9 @@ import {
 
 const LABELS = {
   phaseMs0: 'Fase 0 — Schieramento (ms)',
-  phaseMs1: 'Fase 1 — Poteri (ms)',
+  phaseMs1: 'Fase 1 — Poteri (ms, se nessun effetto)',
+  effectStepMs: 'Fase 1 — durata ogni potere/bonus (ms)',
+  effectPhaseBufferMs: 'Fase 1 — pausa dopo l’ultimo effetto (ms)',
   focusCoinStepMs: 'Focus coin — passo tra una moneta e l’altra (ms)',
   focusPhaseBufferMs: 'Focus coin — buffer dopo l’ultima moneta (ms)',
   phaseMs3: 'Fase 3 — Mod / minimo VA (ms, se serve)',

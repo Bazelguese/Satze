@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/*.integration.test.js'],
+    include: ['src/**/*.integration.test.js', 'src/components/**/*.integration.test.js'],
     passWithNoTests: false,
   },
   resolve: {

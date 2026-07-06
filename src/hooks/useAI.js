@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 import { checkTrigger } from '../game/triggerLogic';
 import { getFieldModifiers } from '../game/fieldLogic';
+import { countInitialLeagueCards } from '../game/duel/duelHelpers.js';
 
 /**
  * Hook per gestire la logica dell'IA
@@ -53,16 +54,9 @@ export function useAI(gameState) {
     return getFieldModifiers(field);
   }, [battlefields, currentFieldIndex]);
 
-  const countInitialLeagueCards = useCallback((card) => {
+  const countInitialLeagueCardsForEnemy = useCallback((card) => {
     if (!card) return 0;
-    const all = [...(enemyUsedCards || []), ...(enemyHand || []), card].filter(Boolean);
-    const byId = new Map();
-    all.forEach((c) => byId.set(c.id, c));
-    let count = 0;
-    byId.forEach((c) => {
-      if (c.league === card.league) count += 1;
-    });
-    return count;
+    return countInitialLeagueCards(enemyUsedCards, enemyHand, card);
   }, [enemyUsedCards, enemyHand]);
 
   const buildEnemyTriggerContext = useCallback((card, projectedFocus) => {
@@ -84,7 +78,7 @@ export function useAI(gameState) {
       playerFieldsConquered: enemyFieldsConquered,
       enemyFieldsConquered: playerFieldsConquered,
       roundNumber: roundNumber || 1,
-      playerInitialLeagueCount: countInitialLeagueCards(card),
+      playerInitialLeagueCount: countInitialLeagueCardsForEnemy(card),
       fieldModifiers,
     };
   }, [
@@ -98,7 +92,7 @@ export function useAI(gameState) {
     enemyHP,
     playerHP,
     roundNumber,
-    countInitialLeagueCards,
+    countInitialLeagueCardsForEnemy,
     aiIsFirst,
   ]);
 

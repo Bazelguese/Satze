@@ -15,6 +15,10 @@ const megeraThroneField = ALL_BATTLEFIELDS.find((f) => f.id === 68);
 const cattedraleField = ALL_BATTLEFIELDS.find((f) => f.id === 70);
 const circuitoField = ALL_BATTLEFIELDS.find((f) => f.id === 74);
 const cameraRitualeField = ALL_BATTLEFIELDS.find((f) => f.id === 79);
+const muraSfidaField = ALL_BATTLEFIELDS.find((f) => f.id === 39);
+const fognaMaestraField = ALL_BATTLEFIELDS.find((f) => f.id === 66);
+const fondamentaField = ALL_BATTLEFIELDS.find((f) => f.id === 22);
+const croceviaField = ALL_BATTLEFIELDS.find((f) => f.id === 41);
 
 function agent(name, army, overrides = {}) {
   return {
@@ -87,7 +91,7 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.logs.some((l) => l.includes('Nexus Arcano') && l.includes('max'))).toBe(true);
   });
 
-  it('Canyon delle Lame aggiunge +2 al DAN inflitto al perdente', () => {
+  it('Canyon delle Lame · Ultimo Desiderio −2 PV al perdente', () => {
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       field: canyonField,
@@ -96,8 +100,35 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.winner).toBe('player');
     expect(battleResult.playerDamage).toBe(3);
-    expect(battleResult.damageDealt).toBe(5);
-    expect(battleResult.logs.some((l) => l.includes('Canyon delle Lame') && l.includes('+2'))).toBe(true);
+    expect(battleResult.damageDealt).toBe(3);
+    expect(battleResult.finalEnemyHP).toBe(15);
+    expect(battleResult.logs.some((l) => l.includes('Ultimo Desiderio') && l.includes('−2 PV'))).toBe(true);
+  });
+
+  it('bonus Conquista Enclave: playerArmyBonusActive distinto da playerHasBonus', () => {
+    const enclave = "L'Enclave delle Scaglie";
+    const { battleResult: win } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: agent('Servo del Tesoro', enclave, { power: 9, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1 }),
+      playerArmyBonuses: { [enclave]: true },
+    });
+    expect(win.winner).toBe('player');
+    expect(win.playerArmyBonusActive).toBe(true);
+    expect(win.playerHasBonus).toBe(true);
+    expect(win.playerBonusNotTriggered).toBe(false);
+    expect(win.logs.some((l) => l.includes('Conquista') || l.includes('+2 FC'))).toBe(true);
+
+    const { battleResult: loss } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: agent('Servo del Tesoro', enclave, { power: 1, damage: 1 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 9, damage: 4 }),
+      playerArmyBonuses: { [enclave]: true },
+    });
+    expect(loss.winner).toBe('enemy');
+    expect(loss.playerArmyBonusActive).toBe(true);
+    expect(loss.playerHasBonus).toBe(false);
+    expect(loss.playerBonusNotTriggered).toBe(false);
   });
 
   it('bonus Conquista (Ratti della Megera) attiva tossina sull\'IA a vittoria', () => {
@@ -200,5 +231,134 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.playerAssault).toBe(30);
     expect(battleResult.playerPower).toBe(6);
     expect(battleResult.playerDamage).toBe(4);
+  });
+
+  it('Mura della Sfida forza Rimonta anche a pari PV (bonus Kethran)', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: muraSfidaField,
+      playerHP: 20,
+      enemyHP: 20,
+      selectedAgent: agent('Tu', 'Kethran', { power: 5, damage: 3 }),
+      enemyAgent: agent('IA', "Figli dell'Orizzonte", { power: 5, damage: 3 }),
+      playerArmyBonuses: { Kethran: true },
+    });
+    expect(battleResult.playerPower).toBe(7);
+    expect(battleResult.logs.some((l) => l.includes('Bonus Kethran') && l.includes('+2 POT'))).toBe(true);
+  });
+
+  it('Fogna Maestra abbassa i minimi degli effetti Potere/Bonus', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: fognaMaestraField,
+      selectedAgent: agent('Tu', 'Calibri Pesanti', { power: 5, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 5, damage: 3 }),
+      playerArmyBonuses: { 'Calibri Pesanti': true },
+    });
+    expect(battleResult.enemyDamage).toBe(1);
+    expect(battleResult.logs.some((l) => l.includes('min 1'))).toBe(true);
+  });
+
+  it('Fogna Maestra + Nobili Viola (Gloria): min 3 diventa 2, nemico POT 3 → 2', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: fognaMaestraField,
+      lastWinner: 'player',
+      selectedFocus: 6,
+      enemySelectedFocus: 2,
+      selectedAgent: agent('Nobili Viola', "L'Enclave delle Scaglie", {
+        power: 3,
+        damage: 2,
+        league: 3,
+        ability: { trigger: 'glory', effect: 'enemyPower', value: -3, minPower: 3 },
+      }),
+      enemyAgent: agent('Mounthborn', 'Mounthborn', { power: 3, damage: 3, league: 2 }),
+    });
+    expect(battleResult.enemyPower).toBe(2);
+    expect(battleResult.enemyAssault).toBe(4);
+  });
+
+  it('Nobili Viola senza Gloria attiva: nemico resta POT 3 anche su Fogna', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: fognaMaestraField,
+      lastWinner: null,
+      selectedAgent: agent('Nobili Viola', "L'Enclave delle Scaglie", {
+        power: 3,
+        damage: 2,
+        league: 3,
+        ability: { trigger: 'glory', effect: 'enemyPower', value: -3, minPower: 3 },
+      }),
+      enemyAgent: agent('Mounthborn', 'Mounthborn', { power: 3, damage: 3, league: 2 }),
+    });
+    expect(battleResult.enemyPower).toBe(3);
+    expect(battleResult.enemyAssault).toBe(6);
+  });
+
+  it('Fondamenta forza Gloria: stesso effetto −3 POT nem. subito in pre-VA', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: fondamentaField,
+      lastWinner: null,
+      selectedFocus: 6,
+      enemySelectedFocus: 2,
+      selectedAgent: agent('Nobili Viola', "L'Enclave delle Scaglie", {
+        power: 3,
+        damage: 2,
+        league: 3,
+        ability: { trigger: 'glory', effect: 'enemyPower', value: -3, minPower: 3 },
+      }),
+      enemyAgent: agent('Mounthborn', 'Mounthborn', { power: 3, damage: 3, league: 2 }),
+    });
+    expect(battleResult.enemyPower).toBe(3);
+    expect(battleResult.logs.some((l) => l.includes('Nobili Viola') && l.includes('POT'))).toBe(true);
+  });
+
+  it('Crocevia: bonus Conquista Enclave in pre-VA senza attendere la vittoria', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: croceviaField,
+      lastWinner: null,
+      selectedAgent: agent('Tu', "L'Enclave delle Scaglie", { power: 9, damage: 3 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1 }),
+      playerArmyBonuses: { "L'Enclave delle Scaglie": true },
+    });
+    expect(battleResult.logs.some((l) => l.includes('Bonus') && l.includes('+2 FC'))).toBe(true);
+    expect(battleResult.finalPlayerFC).toBeGreaterThan(baseInput.playerFocus - baseInput.selectedFocus);
+  });
+
+  it('isPlayerFirst false: il 1° giocatore (IA) risolve il potere prima del 2° (Copia POT)', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      isPlayerFirst: false,
+      selectedAgent: agent('Tu', "Figli dell'Orizzonte", {
+        ability: { trigger: 'intervention', effect: 'power', value: 3 },
+      }),
+      enemyAgent: agent('IA', 'Kethran', {
+        ability: { trigger: null, effect: 'copyPower' },
+      }),
+    });
+    expect(battleResult.playerPower).toBe(8);
+    expect(battleResult.enemyPower).toBe(5);
+    const kinds = battleResult.visualSteps.map((s) => `${s.kind}:${s.side ?? ''}`);
+    const powerIdx = kinds.indexOf('power:enemy');
+    const playerPowerIdx = kinds.indexOf('power:player');
+    expect(powerIdx).toBeGreaterThanOrEqual(0);
+    expect(playerPowerIdx).toBeGreaterThan(powerIdx);
+  });
+
+  it('isPlayerFirst false: block del 1° giocatore (IA) annulla il potere del 2°', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      isPlayerFirst: false,
+      selectedAgent: agent('Tu', "Figli dell'Orizzonte", {
+        ability: { trigger: 'intervention', effect: 'power', value: 3 },
+      }),
+      enemyAgent: agent('IA', 'Kethran', {
+        ability: { trigger: null, effect: 'blockAbility' },
+      }),
+    });
+    expect(battleResult.playerPower).toBe(5);
+    expect(battleResult.logs.some((l) => l.includes('Potere BLOCCATO'))).toBe(true);
   });
 });

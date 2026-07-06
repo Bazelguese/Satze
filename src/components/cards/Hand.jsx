@@ -176,14 +176,19 @@ export const Hand = ({
         </div>
         
         {!hideCards && hand.map((agent, idx) => {
+          const outcome = battleOutcomes[agent.id] || null;
+          const outcomeLowerOffset = outcome ? 20 : 0;
           const cardStyle = position === 'top-left' 
-            ? { left: `${cardPositions[idx]?.left || 0}px`, top: `${cardPositions[idx]?.top || 0}px` }
+            ? {
+                left: `${cardPositions[idx]?.left || 0}px`,
+                top: `${(cardPositions[idx]?.top || 0) + outcomeLowerOffset}px`,
+              }
             : { 
                 right: `${cardPositions[idx]?.right || 0}px`, 
-                bottom: `${cardPositions[idx]?.bottom || 0}px`,
+                bottom: `${(cardPositions[idx]?.bottom || 0) - outcomeLowerOffset}px`,
                 willChange: 'transform',
                 transform: 'translateZ(0)',
-                backfaceVisibility: 'hidden'
+                backfaceVisibility: 'hidden',
               };
           
           const isSelected = selectedAgent?.id === agent.id;
@@ -205,8 +210,8 @@ export const Hand = ({
                 disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent) || disabled}
                 usedCards={usedCards}
                 onPreviewClick={onPreviewClick}
-                showBonus={armyBonuses[agent?.army] && isBonusTriggerSatisfied 
-                  ? isBonusTriggerSatisfied(agent?.army, position === 'bottom-right')
+                showBonus={armyBonuses[agent?.army] && isBonusTriggerSatisfied
+                  ? isBonusTriggerSatisfied(agent?.army, position === 'bottom-right', agent)
                   : false}
                 bonusBaseInactive={
                   Boolean(ARMY_BONUSES[agent?.army]) && !armyBonuses?.[agent?.army]

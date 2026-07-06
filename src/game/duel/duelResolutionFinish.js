@@ -1,9 +1,8 @@
-// Pipeline post-VA: danni (Nexus, Centrale, Canyon), aftermath campo, sottrazione FC, oggetto battleResult.
+// Pipeline post-VA: danni (Nexus, Centrale), aftermath campo, sottrazione FC, oggetto battleResult.
 import { applyBattlefieldRoundAftermath } from '../fieldBattleAftermath.js';
 import {
   applyDuelNexusMaxDamage,
   applyCentraleOverdriveDamage,
-  applyCanyonWinnerDamageBonus,
 } from './duelDamagePipeline.js';
 
 export function runDuelDamageAftermathAndFcAdjust({
@@ -39,7 +38,6 @@ export function runDuelDamageAftermathAndFcAdjust({
   eD = dm.eDamage;
 
   let damageDealt = winner === 'player' ? pD : eD;
-  damageDealt = applyCanyonWinnerDamageBonus(battleLog, field.name, damageDealt);
 
   const aftermath = applyBattlefieldRoundAftermath({
     field,
@@ -80,6 +78,8 @@ export function buildDuelBattleResult({
   eDamage,
   pFocusUsed,
   eFocusUsed,
+  pArmyBonusActive,
+  eArmyBonusActive,
   finalPHasBonus,
   finalEHasBonus,
   finalPAbilityTriggered,
@@ -90,6 +90,8 @@ export function buildDuelBattleResult({
   eBonusBlocked,
   pAbilityCopied,
   eAbilityCopied,
+  pCopiedAbilityNotTriggered,
+  eCopiedAbilityNotTriggered,
   pBonusCopied,
   eBonusCopied,
   pAbilityNotTriggered,
@@ -107,6 +109,8 @@ export function buildDuelBattleResult({
   currentFieldIndex,
   playerToxinActivated,
   enemyToxinActivated,
+  visualSteps = [],
+  isPlayerFirst = true,
 }) {
   const {
     pAssault,
@@ -147,6 +151,8 @@ export function buildDuelBattleResult({
     enemyDamage: eDamage,
     playerFocusUsed: pFocusUsed,
     enemyFocusUsed: eFocusUsed,
+    playerArmyBonusActive: pArmyBonusActive,
+    enemyArmyBonusActive: eArmyBonusActive,
     playerHasBonus: finalPHasBonus,
     enemyHasBonus: finalEHasBonus,
     playerAbilityTriggered: finalPAbilityTriggered,
@@ -157,6 +163,8 @@ export function buildDuelBattleResult({
     enemyBonusBlocked: eBonusBlocked,
     playerAbilityCopied: pAbilityCopied,
     enemyAbilityCopied: eAbilityCopied,
+    playerCopiedAbilityNotTriggered: pCopiedAbilityNotTriggered,
+    enemyCopiedAbilityNotTriggered: eCopiedAbilityNotTriggered,
     playerBonusCopied: pBonusCopied,
     enemyBonusCopied: eBonusCopied,
     playerAbilityNotTriggered: pAbilityNotTriggered,
@@ -175,5 +183,7 @@ export function buildDuelBattleResult({
     winnerArmy: winner === 'player' ? pAgent.army : eAgent.army,
     playerToxinActivated,
     enemyToxinActivated,
+    visualSteps,
+    isPlayerFirst,
   };
 }

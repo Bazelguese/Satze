@@ -1,8 +1,10 @@
 import { TRIGGER_NAMES } from '../../data/triggers.js';
+import { countAttritionPriorCards } from './duelHelpers.js';
 import {
   applyCopiedBonusEffectsIfReady,
   registerCopiedBonus,
 } from './duelCopyBonus.js';
+import { getEffectiveMinFloor } from '../battlefieldEffects.js';
 
 export function applyDuelPowerEffect(effect, value, target, source, log, options = {}, state, ctx) {
   const {
@@ -13,6 +15,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     modifiersDisabled: modDisabled = false,
     directDamageDisabled = false,
     directDamageBonus = 0,
+    minFloorReduction = 0,
   } = options;
   
   // Specchio dell'Anima: annulla modificatori POT/DAN
@@ -45,7 +48,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       // target='player' → player riduce potenza IA → bloccato se IA immune
       // target='enemy' → IA riduce potenza player → bloccato se player immune
       // Inversione: un debuff POT subito dal bersaglio diventa +POT (solo valori negativi / riduzione)
-      const minPow = options.minPower;
+      const minPow = getEffectiveMinFloor(minPower, minFloorReduction, 1);
       if (target === 'player') {
         if (!state.eImmune) {
           const powerReduction = Math.abs(value);
@@ -83,7 +86,9 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       }
       break;
     case 'enemyDamage':
-      const minDmg = minDamage || 0;
+      const minDmg = minDamage != null
+        ? getEffectiveMinFloor(minDamage, minFloorReduction, 0)
+        : 0;
       if (target === 'player') {
         if (state.eImmune) {
           log.push(`🐛¡️ ${source}: ${value} DAN nem. BLOCCATO (Immune)`);
@@ -116,8 +121,8 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       break;
     case 'enemyPowerAndDamage':
       // Debuff combinato al nemico: applica POT e DAN in sequenza, rispettando minimi e immunità
-      applyDuelPowerEffect('enemyPower', value, target, source, log, { minPower }, state, ctx);
-      applyDuelPowerEffect('enemyDamage', value, target, source, log, { minDamage }, state, ctx);
+      applyDuelPowerEffect('enemyPower', value, target, source, log, { minPower, minFloorReduction }, state, ctx);
+      applyDuelPowerEffect('enemyDamage', value, target, source, log, { minDamage, minFloorReduction }, state, ctx);
       break;
     case 'imponiPower':
       // Imposta la POT nemica uguale alla POT corrente dell'utilizzatore (bloccabile da immune, non invertibile)
@@ -162,7 +167,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     case 'enemyAssault':
       // VA È protetto da immunità (modifiche negative)
       // Il minimo significa: "può scendere FINO AL minimo" - se già sotto il minimo, non applicare
-      const minAssault = options.minAssault;
+      const minAssault = getEffectiveMinFloor(options.minAssault, minFloorReduction, undefined);
       const invertAssaultPlayer = target === 'player' && state.eModifierInversion && value < 0;
       const invertAssaultEnemy = target === 'enemy' && state.pModifierInversion && value < 0;
       if (minAssault !== undefined && !invertAssaultPlayer && !invertAssaultEnemy) {
@@ -249,28 +254,48 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         log.push(`🐛¡️ Fossa dei Traditori: Copia Potere BLOCCATA`);
         break;
       }
-      // Copia il potere dell'avversario (incluso il trigger)
+      // Copia il potere dell'avversario (testo sempre; effetto solo se trigger copiato attivo)
       const sourceAgent = target === 'player' ? ctx.eAgent : ctx.pAgent;
-      if (sourceAgent.ability && sourceAgent.ability.effect) {
-        // Verifica se il trigger del potere copiato è soddisfatto
+      if (sourceAgent?.ability?.effect) {
         const copiedAbilityTrigger = sourceAgent.ability.trigger;
-        const abilityTriggerSatisfied = copiedAbilityTrigger ? ctx.checkTrigger(copiedAbilityTrigger, target === 'player' ? ctx.playerContext : ctx.enemyContext) : true;
-        
+        const copyContext =
+          target === 'player' ? ctx.playerContext : ctx.enemyContext;
+        const abilityTriggerSatisfied = copiedAbilityTrigger
+          ? ctx.checkTrigger(copiedAbilityTrigger, copyContext)
+          : true;
+
+        log.push(`🔮 ${source}: ${targetName} copia Potere di ${sourceAgent.name}`);
+        if (target === 'player') {
+          state.pAbilityCopied = sourceAgent.ability;
+          state.pCopiedAbilityNotTriggered = !abilityTriggerSatisfied;
+        } else {
+          state.eAbilityCopied = sourceAgent.ability;
+          state.eCopiedAbilityNotTriggered = !abilityTriggerSatisfied;
+        }
+
         if (abilityTriggerSatisfied) {
-          log.push(`🔮 ${source}: ${targetName} copia Potere di ${sourceAgent.name}`);
-          // Traccia il potere copiato
-          if (target === 'player') {
-            state.pAbilityCopied = sourceAgent.ability;
-          } else {
-            state.eAbilityCopied = sourceAgent.ability;
-          }
-          // Applica l'effetto copiato (ricorsione controllata)
           if (sourceAgent.ability.effect !== 'copyAbility') {
-            applyDuelPowerEffect(sourceAgent.ability.effect, sourceAgent.ability.value, target, source + " (copiato)", log, { minDamage: sourceAgent.ability.minDamage, minPower: sourceAgent.ability.minPower, minAssault: sourceAgent.ability.minAssault, minHealth: sourceAgent.ability.minHealth, stat: sourceAgent.ability.stat }, state, ctx);
+            applyDuelPowerEffect(
+              sourceAgent.ability.effect,
+              sourceAgent.ability.value,
+              target,
+              `${source} (copiato)`,
+              log,
+              {
+                minDamage: sourceAgent.ability.minDamage,
+                minPower: sourceAgent.ability.minPower,
+                minAssault: sourceAgent.ability.minAssault,
+                minHealth: sourceAgent.ability.minHealth,
+                stat: sourceAgent.ability.stat,
+                minFloorReduction,
+              },
+              state,
+              ctx
+            );
           }
         } else {
           const triggerName = TRIGGER_NAMES[copiedAbilityTrigger] || copiedAbilityTrigger;
-          log.push(`⚠️ ${source}: Copia Potere (${triggerName} non attivo)`);
+          log.push(`⚠️ ${source}: Potere copiato (${triggerName} non attivo, effetto non applicato)`);
         }
       }
       break;
@@ -299,6 +324,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
               modifiersDisabled: modDisabled,
               directDamageDisabled,
               directDamageBonus,
+              minFloorReduction,
             },
             ctx.checkTrigger
           );
@@ -394,9 +420,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       const attritionStat = options.stat || 'power';
       const usedCards = target === 'player' ? (ctx.playerUsedCards || []) : (ctx.enemyUsedCards || []);
       const currentAgentId = target === 'player' ? ctx.pAgent?.id : ctx.eAgent?.id;
-      const currentCardAlreadyIncluded = currentAgentId != null && usedCards.some((c) => c?.id === currentAgentId);
-      // Conta solo le carte giocate PRIMA di quella corrente.
-      const attritionCards = Math.max(0, usedCards.length - (currentCardAlreadyIncluded ? 1 : 0));
+      const attritionCards = countAttritionPriorCards(usedCards, currentAgentId);
       const attritionBonus = value * attritionCards;
       if (attritionBonus > 0) {
         if (attritionStat === 'power') {

@@ -1,7 +1,7 @@
 // Flag e modificatori campo per id (CAMPI_MASTER + note implementazione)
 
 /** @param {{ id?: number }} field */
-export function getFieldModifiers(field) {
+export function buildFieldModifiers(field) {
   if (!field?.id) return {};
   const id = field.id;
   const m = {};
@@ -32,7 +32,24 @@ export function getFieldModifiers(field) {
   if (id === 63) m.maxPower = 5;
   if (id === 77) m.secondPlayerAbilityBlocked = true;
 
-  return m;
+  return {
+    ...m,
+    triggersIgnored: m.allTriggersAlwaysActive === true,
+    overdriveThreshold: m.overdriveThreshold || 5,
+  };
+}
+
+/** @param {{ id?: number }} field @param {Object} playerContext @param {Object} enemyContext */
+export function attachFieldModifiersToContexts(field, playerContext, enemyContext) {
+  const fieldModifiers = buildFieldModifiers(field);
+  playerContext.fieldModifiers = fieldModifiers;
+  enemyContext.fieldModifiers = fieldModifiers;
+  return fieldModifiers;
+}
+
+/** @param {{ id?: number }} field */
+export function getFieldModifiers(field) {
+  return buildFieldModifiers(field);
 }
 
 /** @param {{ id?: number }} field */
@@ -66,4 +83,36 @@ export function applyFieldMinFloor(value, min, reduction = 0) {
   if (min == null || reduction <= 0) return Math.max(min ?? value, value);
   const adjustedMin = Math.max(1, min - reduction);
   return Math.max(adjustedMin, value);
+}
+
+/** Floor minimo effettivo per Poteri/Bonus (es. Fogna Maestra id 66). */
+export function getEffectiveMinFloor(baseMin, minFloorReduction, fallbackWhenUndefined) {
+  const raw = baseMin !== undefined ? baseMin : fallbackWhenUndefined;
+  if (!minFloorReduction || minFloorReduction <= 0 || raw == null) return raw;
+  return Math.max(1, raw - minFloorReduction);
+}
+
+export function getFieldMinFloorReduction(field) {
+  return getFieldSetupFlags(field).minFloorReduction || 0;
+}
+
+/** Copia ability con min POT/DAN/VA ridotti dal campo (solo display o risoluzione). */
+export function applyMinFloorReductionToAbility(ability, minFloorReduction = 0) {
+  if (!ability || !minFloorReduction) return ability;
+  const adj = (n) => getEffectiveMinFloor(n, minFloorReduction, undefined);
+  return {
+    ...ability,
+    ...(ability.minPower != null ? { minPower: adj(ability.minPower) } : {}),
+    ...(ability.minDamage != null ? { minDamage: adj(ability.minDamage) } : {}),
+    ...(ability.minAssault != null ? { minAssault: adj(ability.minAssault) } : {}),
+  };
+}
+
+/** Aggiorna `(min N)` nel testo bonus/descrizione come in risoluzione duello. */
+export function applyMinFloorReductionToEffectText(text, minFloorReduction = 0) {
+  if (!text || !minFloorReduction) return text;
+  return String(text).replace(/\(min (\d+)\)/g, (_, n) => {
+    const adjusted = Math.max(1, parseInt(n, 10) - minFloorReduction);
+    return `(min ${adjusted})`;
+  });
 }

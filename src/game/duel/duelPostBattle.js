@@ -1,6 +1,7 @@
 // Ultimo desiderio / Conquista: poteri e bonus post-esito VA.
 import { isPostBattleTrigger } from '../triggerLogic.js';
 import { scaleConquestEffectValue } from '../battlefieldDeepEffects.js';
+import { getInitiativeSideOrder, getDuelSideBundle } from './duelInitiativeOrder.js';
 
 export function applyDuelPostBattleEffects({
   pAbilityBlocked,
@@ -17,11 +18,23 @@ export function applyDuelPostBattleEffects({
   applyBonusEffects,
   checkTrigger,
   fieldOptions,
+  triggersIgnored = false,
   playerContextPost,
   enemyContextPost,
   battleLog,
   state,
+  isPlayerFirst = true,
+  visualRecorder = null,
 }) {
+  if (triggersIgnored) {
+    return {
+      pPostAbilityTriggered: false,
+      ePostAbilityTriggered: false,
+      pPostBonusTriggered: false,
+      ePostBonusTriggered: false,
+    };
+  }
+
   let pPostAbilityTriggered = false;
   let ePostAbilityTriggered = false;
   let pPostBonusTriggered = false;
@@ -45,77 +58,96 @@ export function applyDuelPostBattleEffects({
     }
   };
 
-  if (
-    !pAbilityBlocked &&
-    pAgent.ability &&
-    checkTrigger(pAgent.ability.trigger, playerContextPost) &&
-    (pAgent.ability.trigger === 'lastWish' || pAgent.ability.trigger === 'conquest')
-  ) {
-    pPostAbilityTriggered = true;
-    applyPostAbility(pAgent, 'player', 'Tuo Potere (post)', playerContextPost);
-  }
-  if (
-    !eAbilityBlocked &&
-    eAgent.ability &&
-    checkTrigger(eAgent.ability.trigger, enemyContextPost) &&
-    (eAgent.ability.trigger === 'lastWish' || eAgent.ability.trigger === 'conquest')
-  ) {
-    ePostAbilityTriggered = true;
-    applyPostAbility(eAgent, 'enemy', 'Potere IA (post)', enemyContextPost);
-  }
+  const sides = getInitiativeSideOrder(isPlayerFirst);
+  const bundleArgs = {
+    pAgent,
+    eAgent,
+    playerContext: playerContextPost,
+    enemyContext: enemyContextPost,
+    pHasBonus,
+    eHasBonus,
+    pArmyBonus,
+    eArmyBonus,
+  };
 
-  if (
-    pHasBonus &&
-    !pBonusBlocked &&
-    pArmyBonus &&
-    isPostBattleTrigger(pArmyBonus.trigger)
-  ) {
-    if (checkTrigger(pArmyBonus.trigger, playerContextPost)) {
-      pPostBonusTriggered = true;
-      applyBonusEffects(pArmyBonus, 'player', playerContextPost, `Bonus ${pAgent.army} (post)`, battleLog);
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const agent = side.agent;
+    const contextPost = sideKey === 'player' ? playerContextPost : enemyContextPost;
+    const abilityBlocked = sideKey === 'player' ? pAbilityBlocked : eAbilityBlocked;
+
+    if (
+      !abilityBlocked &&
+      agent?.ability &&
+      checkTrigger(agent.ability.trigger, contextPost) &&
+      (agent.ability.trigger === 'lastWish' || agent.ability.trigger === 'conquest')
+    ) {
+      if (sideKey === 'player') pPostAbilityTriggered = true;
+      else ePostAbilityTriggered = true;
+      applyPostAbility(
+        agent,
+        sideKey,
+        sideKey === 'player' ? 'Tuo Potere (post)' : 'Potere IA (post)',
+        contextPost
+      );
+      visualRecorder?.pushPostPower(sideKey, state);
     }
   }
-  if (
-    eHasBonus &&
-    !eBonusBlocked &&
-    eArmyBonus &&
-    isPostBattleTrigger(eArmyBonus.trigger)
-  ) {
-    if (checkTrigger(eArmyBonus.trigger, enemyContextPost)) {
-      ePostBonusTriggered = true;
-      applyBonusEffects(eArmyBonus, 'enemy', enemyContextPost, `Bonus ${eAgent.army} (post)`, battleLog);
+
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const contextPost = sideKey === 'player' ? playerContextPost : enemyContextPost;
+    const bonusBlocked = sideKey === 'player' ? pBonusBlocked : eBonusBlocked;
+
+    if (
+      side.hasBonus &&
+      !bonusBlocked &&
+      side.armyBonus &&
+      isPostBattleTrigger(side.armyBonus.trigger) &&
+      checkTrigger(side.armyBonus.trigger, contextPost)
+    ) {
+      if (sideKey === 'player') pPostBonusTriggered = true;
+      else ePostBonusTriggered = true;
+      applyBonusEffects(
+        side.armyBonus,
+        sideKey,
+        contextPost,
+        `Bonus ${side.agent.army} (post)`,
+        battleLog,
+        false,
+        false,
+        true
+      );
+      visualRecorder?.pushPostBonus(sideKey, state);
     }
   }
 
   const resolveCopiedPostBonus = (copiedBonus, target, contextPost, label) => {
     if (!copiedBonus || !isPostBattleTrigger(copiedBonus.trigger)) return false;
     if (!checkTrigger(copiedBonus.trigger, contextPost)) return false;
-    applyBonusEffects(copiedBonus, target, contextPost, label, battleLog);
+    applyBonusEffects(copiedBonus, target, contextPost, label, battleLog, false, false, true);
     return true;
   };
 
-  if (!pBonusBlocked && state?.pBonusCopied) {
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const contextPost = sideKey === 'player' ? playerContextPost : enemyContextPost;
+    const bonusBlocked = sideKey === 'player' ? pBonusBlocked : eBonusBlocked;
+    const copiedKey = sideKey === 'player' ? 'pBonusCopied' : 'eBonusCopied';
+
+    if (bonusBlocked || !state?.[copiedKey]) continue;
+
     if (
       resolveCopiedPostBonus(
-        state.pBonusCopied,
-        'player',
-        playerContextPost,
-        `Bonus copiato ${pAgent.army} (post)`
+        state[copiedKey],
+        sideKey,
+        contextPost,
+        `Bonus copiato ${side.agent.army} (post)`
       )
     ) {
-      pPostBonusTriggered = true;
-    }
-  }
-  if (!eBonusBlocked && state?.eBonusCopied) {
-    if (
-      resolveCopiedPostBonus(
-        state.eBonusCopied,
-        'enemy',
-        enemyContextPost,
-        `Bonus copiato ${eAgent.army} (post)`
-      )
-    ) {
-      ePostBonusTriggered = true;
+      if (sideKey === 'player') pPostBonusTriggered = true;
+      else ePostBonusTriggered = true;
+      visualRecorder?.pushPostBonus(sideKey, state);
     }
   }
 

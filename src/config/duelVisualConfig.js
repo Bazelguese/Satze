@@ -7,9 +7,13 @@
 
 export const DUEL_VISUAL_DEFAULTS = {
   /** Durata fase 0 — Schieramento (ms) */
-  phaseMs0: 2000,
-  /** Durata fase 1 — Poteri (ms) */
-  phaseMs1: 2500,
+  phaseMs0: 2800,
+  /** Durata fase 1 — Poteri (ms) se nessun effetto da animare */
+  phaseMs1: 3800,
+  /** Durata di ogni sub-step potere/bonus in fase 1 (ms) */
+  effectStepMs: 1300,
+  /** Buffer dopo l'ultimo sub-step effetti prima della fase 2 (ms) */
+  effectPhaseBufferMs: 700,
   /** Intervallo tra ogni focus coin in fase 2 (ms) */
   focusCoinStepMs: 500,
   /** Buffer aggiunto dopo l’ultimo focus coin prima della fase 3 (ms) */

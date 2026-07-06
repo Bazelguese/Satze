@@ -3,7 +3,7 @@
 // Visualizza l'immagine di una carta con fallback placeholder
 // ============================================
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { CARD_IMAGES, AGENT_IMAGES } from '../../data/images';
 import { Icon } from '../ui/Icon';
 import { CARD_TYPE_ICONS } from '../../data/icons.jsx';
@@ -11,7 +11,7 @@ import { normalizeContainCrop } from '../../utils/imageContainPan';
 
 const loadedImageUrls = new Set();
 
-export const CardImage = ({
+export const CardImage = memo(({
   type,
   palette,
   size = 64,
@@ -82,10 +82,14 @@ export const CardImage = ({
   return (
     <div className="relative overflow-hidden rounded-lg" style={{ width: size, height: containerHeight }}>
       <div className="w-full h-full" style={panTransform ? { transform: panTransform } : undefined}>
-        {/* Immagine nascosta finché non carica */}
+        {/* Invisibile (ma con layout box) finché non carica: con display:none
+            il lazy loading non partirebbe mai, perché il browser non può
+            calcolare l'intersezione con il viewport. */}
         <img
           src={imageUrl}
           alt={type}
+          loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onLoad={() => {
             loadedImageUrls.add(imageUrl);
@@ -95,7 +99,7 @@ export const CardImage = ({
           className="w-full h-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
           style={{
             imageRendering: 'auto',
-            display: imageLoaded ? 'block' : 'none',
+            opacity: imageLoaded ? 1 : 0,
             objectFit: 'contain',
             objectPosition: imgObjectPosition,
             transform: scaleFactor !== 1 ? `scale(${scaleFactor})` : undefined,
@@ -103,8 +107,12 @@ export const CardImage = ({
           }}
         />
       </div>
-      {/* Mostra placeholder mentre carica */}
-      {!imageLoaded && <Placeholder />}
+      {/* Placeholder in overlay mentre carica */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Placeholder />
+        </div>
+      )}
     </div>
   );
-};
+});

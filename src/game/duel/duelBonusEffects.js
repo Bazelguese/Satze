@@ -2,6 +2,8 @@ import {
   applyCopiedBonusEffectsIfReady,
   registerCopiedBonus,
 } from './duelCopyBonus.js';
+import { canTriggerPreBattle } from './duelHelpers.js';
+import { isPostBattleTrigger } from '../triggerLogic.js';
 
 // Factory: applica effetti bonus armata (fasi own / enemy / legacy, copyBonus).
 export function createApplyBonusEffects({
@@ -14,6 +16,7 @@ export function createApplyBonusEffects({
   eArmyBonus,
   pHasBonus,
   eHasBonus,
+  visualRecorder = null,
 }) {
   return function applyBonusEffects(
     bonus,
@@ -22,9 +25,19 @@ export function createApplyBonusEffects({
     source,
     log,
     onlyOwnEffects = false,
-    onlyEnemyEffects = false
+    onlyEnemyEffects = false,
+    postBattlePhase = false
   ) {
-    if (!bonus || !checkTrigger(bonus.trigger, context)) return;
+    const triggerSatisfied = postBattlePhase
+      ? bonus &&
+        isPostBattleTrigger(bonus.trigger) &&
+        checkTrigger(bonus.trigger, context)
+      : bonus &&
+        canTriggerPreBattle(bonus.trigger, context, {
+          triggersIgnored: fieldOptions?.triggersIgnored === true,
+          resolveTrigger: checkTrigger,
+        });
+    if (!triggerSatisfied) return;
 
     if (bonus.effects[0].effect === 'copyBonus') {
       if (onlyOwnEffects) return;
@@ -37,6 +50,7 @@ export function createApplyBonusEffects({
       if (enemyHasBonusActive && enemyBonus) {
         log.push(`🔮 ${source}: Copia Bonus nemico (${enemyBonus.description})`);
         registerCopiedBonus(state, target, enemyBonus);
+        visualRecorder?.pushCopyBonus(target, state);
         applyCopiedBonusEffectsIfReady(
           enemyBonus,
           target,

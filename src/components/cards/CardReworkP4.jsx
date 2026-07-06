@@ -1,7 +1,7 @@
 // Layout alternativo P4 (Rework Carte) — galleria + Style Lab.
 // POT stat (potenza): giallo; etichette ★ POTERE / ✠ BONUS: arancio/cielo; box evidenziazione duello solo con highlight*.
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARMY_COLORS, ARMY_BONUSES } from '../../data';
 import { leagueTierColorHex } from '../../data/leagueColors';
 import { getCardSprite } from '../../utils';
@@ -45,7 +45,6 @@ const P4_FOOTER_WHITE_OUTLINE = '0 0 2px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0
 /**
  * Piastra footer “non attivo” — stesso formato delle evidenziazioni (gradiente orizzontale,
  * px-0, overflow, ombre), tinta ardesia invece di arancio/sky/smeraldo.
- * Nessuna animazione d’ingresso così non compete con highlight duello.
  */
 const P4_FOOTER_INACTIVE_PANEL =
   'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-slate-950/42 via-slate-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(148,163,184,0.11)] origin-bottom transform-gpu';
@@ -281,6 +280,39 @@ function duelStatNumberColor(statKind, value, baseValue) {
   return CARD_STAT_DAMAGE;
 }
 
+/** Animazione ad ogni variazione del valore (non solo vs base iniziale). */
+function useIncrementalStatAnimation(value, active, baseValue = null) {
+  const prevRef = useRef(value);
+  const [state, setState] = useState({ animClass: '', animKey: 0 });
+
+  useEffect(() => {
+    if (!active) {
+      prevRef.current = value;
+      setState({ animClass: '', animKey: 0 });
+      return;
+    }
+    let prev = prevRef.current;
+    // Evita decrease spurio se un frame ha mostrato il valore finale prima del sub-step corretto.
+    if (baseValue != null && prev === value && value !== baseValue) {
+      prev = baseValue;
+    }
+    if (prev !== value) {
+      const animClass = value > prev ? 'animate-number-increase' : 'animate-number-decrease';
+      setState((s) => ({ animClass, animKey: s.animKey + 1 }));
+      prevRef.current = value;
+    }
+  }, [value, active, baseValue]);
+
+  return state;
+}
+
+const COPY_PANEL_IDLE =
+  'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu';
+
+function isDuelStatModified(showOperators, baseValue, value) {
+  return Boolean(showOperators && baseValue != null && value !== baseValue);
+}
+
 /** Cerchio POT/DAN in fascia HUD; in duello fase ≥1: colore valore e pulse sul numero (nessun box ± accanto al POT). */
 function SashHudStatCircle({
   label,
@@ -290,12 +322,17 @@ function SashHudStatCircle({
   showOperators = false,
   baseValue = null,
   statKind = 'power',
+  suppressAnimations = false,
 }) {
   const numSize = size >= 36 ? 16 : 13;
-  const diff = baseValue != null && showOperators ? value - baseValue : 0;
-  const numColor = duelStatNumberColor(statKind, value, baseValue);
-  const pulse =
-    showOperators && diff !== 0 ? (diff > 0 ? 'animate-number-increase' : 'animate-number-decrease') : '';
+  const modified = isDuelStatModified(showOperators, baseValue, value);
+  const numColor = modified
+    ? duelStatNumberColor(statKind, value, baseValue)
+    : statKind === 'power'
+      ? CARD_STAT_POWER
+      : CARD_STAT_DAMAGE;
+  const active = modified && !suppressAnimations;
+  const { animClass, animKey } = useIncrementalStatAnimation(value, active, baseValue);
 
   return (
     <div className="relative flex flex-shrink-0 flex-col items-center justify-center pointer-events-none">
@@ -312,7 +349,8 @@ function SashHudStatCircle({
       >
         <div style={{ fontSize: 6, color: borderColor, letterSpacing: '0.12em', fontWeight: 700 }}>{label}</div>
         <div
-          className={pulse}
+          key={animKey}
+          className={active && animClass ? animClass : ''}
           style={{
             fontWeight: 800,
             fontSize: numSize,
@@ -330,7 +368,7 @@ function SashHudStatCircle({
 }
 
 /** POT/DAN in cerchi ai lati del nome (nome sempre intero, a capo + font adattivo). */
-function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBaseDamage }) {
+function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBaseDamage, suppressAnimations = false }) {
   return (
     <div
       className="pointer-events-none absolute inset-0 flex items-stretch justify-between gap-1 px-1.5 py-0.5"
@@ -345,6 +383,7 @@ function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBas
           showOperators={showOperators}
           baseValue={duelBasePower}
           statKind="power"
+          suppressAnimations={suppressAnimations}
         />
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 justify-center px-0.5">
@@ -359,6 +398,7 @@ function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBas
           showOperators={showOperators}
           baseValue={duelBaseDamage}
           statKind="damage"
+          suppressAnimations={suppressAnimations}
         />
       </div>
     </div>
@@ -444,7 +484,7 @@ function P4ArmyBarNameFit({ name }) {
 }
 
 /** Nome (anche su due righe se serve), sotto cerchi POT/DAN. */
-function SashHudStackedRow({ agent, accent, showOperators, duelBasePower, duelBaseDamage }) {
+function SashHudStackedRow({ agent, accent, showOperators, duelBasePower, duelBaseDamage, suppressAnimations = false }) {
   return (
     <div
       className="pointer-events-none absolute inset-0 flex flex-col items-stretch justify-center px-6 py-0.5"
@@ -462,6 +502,7 @@ function SashHudStackedRow({ agent, accent, showOperators, duelBasePower, duelBa
           showOperators={showOperators}
           baseValue={duelBasePower}
           statKind="power"
+          suppressAnimations={suppressAnimations}
         />
         <SashHudStatCircle
           label="DAN"
@@ -471,6 +512,7 @@ function SashHudStackedRow({ agent, accent, showOperators, duelBasePower, duelBa
           showOperators={showOperators}
           baseValue={duelBaseDamage}
           statKind="damage"
+          suppressAnimations={suppressAnimations}
         />
       </div>
     </div>
@@ -610,7 +652,8 @@ function P4FloatingStats({ layout, agent }) {
   );
 }
 
-export function CardReworkP4({
+// Memoizzata: componente pesante (~60 blocchi di stile), evita ridisegni inutili
+export const CardReworkP4 = React.memo(function CardReworkP4({
   agent,
   positioningOverride,
   statLayout = CARD_REWORK_P4_DEFAULT_STAT_LAYOUT,
@@ -624,11 +667,16 @@ export function CardReworkP4({
   highlightBonus = false,
   copiedAbility = null,
   copiedBonus = null,
+  copiedAbilityNotTriggered = false,
   abilityNotTriggered = false,
   bonusNotTriggered = false,
   bonusBaseInactive = false,
   abilityCurrentValue = null,
   suppressAnimations = false,
+  visualStepKind = null,
+  visualStepIndex = 0,
+  copyAbilityAnim = false,
+  copyBonusAnim = false,
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
@@ -659,8 +707,28 @@ export function CardReworkP4({
   const leagueTierColor = leagueTierColorHex(agent.league);
   const armyBarHeight = sashNameHud ? ARMY_BADGE_H_SASH : ARMY_BADGE_H;
 
-  const powerDiff = duelBasePower != null ? agent.power - duelBasePower : 0;
-  const damageDiff = duelBaseDamage != null ? agent.damage - duelBaseDamage : 0;
+  const powerModified = isDuelStatModified(showOperators, duelBasePower, agent.power);
+  const damageModified = isDuelStatModified(showOperators, duelBaseDamage, agent.damage);
+  const powerAnimActive = powerModified && !suppressAnimations;
+  const damageAnimActive = damageModified && !suppressAnimations;
+  const powerAnim = useIncrementalStatAnimation(agent.power, powerAnimActive, duelBasePower);
+  const damageAnim = useIncrementalStatAnimation(agent.damage, damageAnimActive, duelBaseDamage);
+
+  const abilityCopyAnim = copyAbilityAnim && Boolean(copiedAbility);
+  const bonusCopyAnim = copyBonusAnim && Boolean(copiedBonus);
+  const copiedAbilityInactive = Boolean(copiedAbility && copiedAbilityNotTriggered);
+  const abilityFooterInactive =
+    (abilityNotTriggered && !copiedAbility) || copiedAbilityInactive;
+  const abilityFooterHighlight =
+    highlightAbility && !abilityBlocked && !abilityFooterInactive;
+  const abilityCopyPanelKey =
+    abilityCopyAnim && !suppressAnimations
+      ? `ability-copy-${visualStepKind}-${visualStepIndex}`
+      : undefined;
+  const bonusCopyPanelKey =
+    bonusCopyAnim && !suppressAnimations
+      ? `bonus-copy-${visualStepKind}-${visualStepIndex}`
+      : undefined;
 
   const COUNT = 15;
   const STEP = 220 / (COUNT + 1);
@@ -740,6 +808,7 @@ export function CardReworkP4({
                 showOperators={showOperators}
                 duelBasePower={duelBasePower}
                 duelBaseDamage={duelBaseDamage}
+                suppressAnimations={suppressAnimations}
               />
             ) : (
               <SashHudInlineRow
@@ -748,6 +817,7 @@ export function CardReworkP4({
                 showOperators={showOperators}
                 duelBasePower={duelBasePower}
                 duelBaseDamage={duelBaseDamage}
+                suppressAnimations={suppressAnimations}
               />
             )
           ) : (
@@ -808,17 +878,14 @@ export function CardReworkP4({
             <div className="relative flex items-baseline gap-2 min-w-0">
               <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em', color: CARD_LABEL_MUTED }}>POT</span>
               <span
-                className={
-                  showOperators && powerDiff !== 0 && !suppressAnimations
-                    ? powerDiff > 0
-                      ? 'animate-number-increase'
-                      : 'animate-number-decrease'
-                    : ''
-                }
+                key={powerAnim.animKey}
+                className={powerAnimActive && powerAnim.animClass ? powerAnim.animClass : ''}
                 style={{
                   fontSize: 22,
                   fontWeight: 800,
-                  color: duelStatNumberColor('power', agent.power, duelBasePower),
+                  color: powerModified
+                    ? duelStatNumberColor('power', agent.power, duelBasePower)
+                    : CARD_STAT_POWER,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -828,17 +895,14 @@ export function CardReworkP4({
             <div className="relative flex items-baseline gap-2 min-w-0 text-right">
               <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em', color: CARD_LABEL_MUTED }}>DAN</span>
               <span
-                className={
-                  showOperators && damageDiff !== 0 && !suppressAnimations
-                    ? damageDiff > 0
-                      ? 'animate-number-increase'
-                      : 'animate-number-decrease'
-                    : ''
-                }
+                key={damageAnim.animKey}
+                className={damageAnimActive && damageAnim.animClass ? damageAnim.animClass : ''}
                 style={{
                   fontSize: 22,
                   fontWeight: 800,
-                  color: duelStatNumberColor('damage', agent.damage, duelBaseDamage),
+                  color: damageModified
+                    ? duelStatNumberColor('damage', agent.damage, duelBaseDamage)
+                    : CARD_STAT_DAMAGE,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -848,37 +912,42 @@ export function CardReworkP4({
           </div>
         )}
         <div
-          className={`relative mb-0 transition-[opacity,background-color,box-shadow] duration-300 ${
+          key={abilityCopyPanelKey}
+          className={`relative mb-0 transition-[opacity,background-color,box-shadow] duration-500 ${
             abilityBlocked ? 'opacity-60' : ''
           } ${
-            copiedAbility
-              ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-copy-panel'}`
+            copiedAbility && abilityCopyAnim
+              ? `${COPY_PANEL_IDLE} ${!suppressAnimations ? 'animate-modifier-copy-panel' : ''}`
               : abilityBlocked
                 ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
-                : abilityNotTriggered
+                : abilityFooterInactive
                   ? P4_FOOTER_INACTIVE_PANEL
-                  : highlightAbility
+                  : abilityFooterHighlight
                     ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-orange-950/40 via-orange-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(251,146,60,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
-                    : 'rounded px-1.5 py-1'
+                    : copiedAbility
+                      ? COPY_PANEL_IDLE
+                      : 'rounded px-1.5 py-1'
           }`}
         >
           <div className="flex justify-between items-baseline gap-2">
             <span
               className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 flex-shrink-0 ${
-                copiedAbility
+                copiedAbility && abilityCopyAnim
                   ? 'text-green-300'
                   : abilityBlocked
                     ? 'text-red-400'
-                    : abilityNotTriggered
+                    : abilityFooterInactive
                       ? 'text-slate-500'
-                      : highlightAbility
+                      : abilityFooterHighlight
                         ? 'text-orange-300'
-                        : ''
+                        : copiedAbility
+                          ? 'text-green-300'
+                          : ''
               }`}
               style={{
                 letterSpacing: '0.1em',
                 color:
-                  copiedAbility || abilityBlocked || abilityNotTriggered || highlightAbility
+                  copiedAbility || abilityBlocked || abilityFooterInactive || abilityFooterHighlight
                     ? undefined
                     : CARD_ABILITY_LABEL,
                 display: 'inline-flex',
@@ -886,7 +955,7 @@ export function CardReworkP4({
                 gap: 3,
               }}
             >
-              {copiedAbility && <Icon name="copy" type="cardIcon" size={10} color="#86efac" />}
+              {copiedAbility && abilityCopyAnim && <Icon name="copy" type="cardIcon" size={10} color="#86efac" />}
               {!copiedAbility && (
                 <span
                   className="inline-flex shrink-0 items-center justify-center"
@@ -902,24 +971,26 @@ export function CardReworkP4({
             </span>
             <span
               className={`text-[11px] font-semibold text-right leading-snug ${
-                copiedAbility
+                copiedAbility && abilityCopyAnim
                   ? 'text-green-200'
                   : abilityBlocked
                     ? 'text-red-300 line-through'
-                    : abilityNotTriggered
+                    : abilityFooterInactive
                       ? 'text-slate-500'
-                      : highlightAbility
+                      : abilityFooterHighlight
                         ? 'text-orange-200'
-                        : 'text-white'
+                        : copiedAbility
+                          ? 'text-green-200'
+                          : 'text-white'
               }`}
               style={{
-                textShadow: abilityNotTriggered ? undefined : P4_FOOTER_WHITE_OUTLINE,
+                textShadow: abilityFooterInactive ? undefined : P4_FOOTER_WHITE_OUTLINE,
               }}
             >
               <AbilityFormatted
                 ability={copiedAbility || agent.ability}
                 minClassName={
-                  !copiedAbility && abilityNotTriggered ? FOOTER_MUTED_MIN_CLASS : DEFAULT_MIN_CLASS
+                  abilityFooterInactive ? FOOTER_MUTED_MIN_CLASS : DEFAULT_MIN_CLASS
                 }
                 options={
                   copiedAbility
@@ -939,24 +1010,27 @@ export function CardReworkP4({
         </div>
         <div style={{ height: 1, background: CARD_FOOTER_DIVIDER, margin: '5px 0' }} />
         <div
-          className={`relative transition-[opacity,background-color,box-shadow] duration-300 border-t border-transparent ${
-            copiedBonus
-              ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-copy-panel-stagger'}`
+          key={bonusCopyPanelKey}
+          className={`relative transition-[opacity,background-color,box-shadow] duration-500 border-t border-transparent ${
+            copiedBonus && bonusCopyAnim
+              ? `${COPY_PANEL_IDLE} ${!suppressAnimations ? 'animate-modifier-copy-panel-stagger' : ''}`
               : bonusBlocked
                 ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
                 : bonusNotTriggered || bonusBaseInactive
                   ? P4_FOOTER_INACTIVE_PANEL
-                  : highlightBonus && !copiedBonus
+                  : highlightBonus
                     ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-sky-950/40 via-sky-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(56,189,248,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
-                    : showBonus && !bonusBlocked
-                      ? 'rounded px-1.5 py-1 bg-sky-500/8'
-                      : 'rounded px-1.5 py-1'
+                    : copiedBonus
+                      ? COPY_PANEL_IDLE
+                      : showBonus && !bonusBlocked
+                        ? 'rounded px-1.5 py-1 bg-sky-500/8'
+                        : 'rounded px-1.5 py-1'
           } ${bonusBlocked ? 'opacity-60' : ''}`}
         >
           <div className="flex justify-between items-baseline gap-2">
             <span
               className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 flex-shrink-0 ${
-                copiedBonus
+                copiedBonus && bonusCopyAnim
                   ? 'text-green-300'
                   : bonusBlocked
                     ? 'text-red-400'
@@ -964,7 +1038,9 @@ export function CardReworkP4({
                       ? 'text-slate-500'
                       : highlightBonus
                         ? 'text-sky-300'
-                        : ''
+                        : copiedBonus
+                          ? 'text-green-300'
+                          : ''
               }`}
               style={{
                 letterSpacing: '0.1em',
@@ -990,7 +1066,7 @@ export function CardReworkP4({
             </span>
             <span
               className={`text-[11px] font-semibold text-right leading-snug ${
-                copiedBonus
+                copiedBonus && bonusCopyAnim
                   ? 'text-green-200'
                   : bonusBlocked
                     ? 'text-red-300 line-through'
@@ -998,7 +1074,9 @@ export function CardReworkP4({
                       ? 'text-slate-500'
                       : highlightBonus
                         ? 'text-sky-200'
-                        : 'text-white'
+                        : copiedBonus
+                          ? 'text-green-200'
+                          : 'text-white'
               }`}
               style={{
                 textShadow:
@@ -1009,7 +1087,7 @@ export function CardReworkP4({
                 <BonusFormattedFromString
                   text={copiedBonus ? copiedBonus.description : armyBonus?.description || '—'}
                   minClassName={
-                    copiedBonus
+                    copiedBonus && bonusCopyAnim
                       ? DEFAULT_MIN_CLASS
                       : bonusNotTriggered || bonusBaseInactive
                         ? FOOTER_MUTED_MIN_CLASS
@@ -1095,7 +1173,7 @@ export function CardReworkP4({
       </div>
     </div>
   );
-}
+});
 
 /** CardReworkP4 ridimensionata (rapporto 230×330). Utile per liste e anteprime compatte. */
 export function CardReworkP4Scaled({ agent, width = 176, ...p4rest }) {

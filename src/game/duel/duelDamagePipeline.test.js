@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   applyDuelNexusMaxDamage,
   applyCentraleOverdriveDamage,
-  applyCanyonWinnerDamageBonus,
 } from './duelDamagePipeline.js';
 
 test('applyDuelNexusMaxDamage: nessun cap se maxDamage null', () => {
@@ -32,11 +31,4 @@ test('applyCentraleOverdriveDamage: overdrive su Centrale Energetica', () => {
   const r = applyCentraleOverdriveDamage(log, 'Centrale Energetica', 5, 5, 5, 2, 2);
   assert.deepEqual(r, { pDamage: 3, eDamage: 3 });
   assert.ok(log.some((l) => l.includes('Overdrive')));
-});
-
-test('applyCanyonWinnerDamageBonus: solo Canyon', () => {
-  const log = [];
-  assert.equal(applyCanyonWinnerDamageBonus(log, 'Neutro', 4), 4);
-  assert.equal(applyCanyonWinnerDamageBonus(log, 'Canyon delle Lame', 3), 5);
-  assert.ok(log.some((l) => l.includes('Canyon delle Lame')));
 });

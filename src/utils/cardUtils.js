@@ -84,33 +84,45 @@ export function splitAbilityMinSuffix(text) {
  */
 export const formatAbilityHelper = (ability, options = {}) => {
   if (!ability) return "—";
-  const trigger = ability.trigger ? `${TRIGGER_NAMES[ability.trigger]}: ` : "";
+  const minFloorReduction = options.minFloorReduction || 0;
+  const adjMin = (n) =>
+    n != null && minFloorReduction > 0 ? Math.max(1, n - minFloorReduction) : n;
+  const abilityForFormat =
+    minFloorReduction > 0
+      ? {
+          ...ability,
+          ...(ability.minPower != null ? { minPower: adjMin(ability.minPower) } : {}),
+          ...(ability.minDamage != null ? { minDamage: adjMin(ability.minDamage) } : {}),
+          ...(ability.minAssault != null ? { minAssault: adjMin(ability.minAssault) } : {}),
+        }
+      : ability;
+  const trigger = abilityForFormat.trigger ? `${TRIGGER_NAMES[abilityForFormat.trigger]}: ` : "";
   const { currentValue } = options;
   let effect = "";
-  switch (ability.effect) {
-    case 'power': effect = `+${ability.value} POT`; break;
-    case 'enemyPower': effect = `${ability.value} POT nem.${ability.minPower ? ` (min ${ability.minPower})` : ''}`; break;
-    case 'damage': effect = `+${ability.value} DAN`; break;
-    case 'enemyDamage': effect = `${ability.value} DAN nem.${ability.minDamage ? ` (min ${ability.minDamage})` : ''}`; break;
+  switch (abilityForFormat.effect) {
+    case 'power': effect = `+${abilityForFormat.value} POT`; break;
+    case 'enemyPower': effect = `${abilityForFormat.value} POT nem.${abilityForFormat.minPower ? ` (min ${abilityForFormat.minPower})` : ''}`; break;
+    case 'damage': effect = `+${abilityForFormat.value} DAN`; break;
+    case 'enemyDamage': effect = `${abilityForFormat.value} DAN nem.${abilityForFormat.minDamage ? ` (min ${abilityForFormat.minDamage})` : ''}`; break;
     case 'enemyPowerAndDamage': {
       let minSuffix = '';
-      if (ability.minPower != null || ability.minDamage != null) {
-        if (ability.minPower != null && ability.minDamage != null && ability.minPower === ability.minDamage) {
-          minSuffix = ` (min ${ability.minPower})`;
+      if (abilityForFormat.minPower != null || abilityForFormat.minDamage != null) {
+        if (abilityForFormat.minPower != null && abilityForFormat.minDamage != null && abilityForFormat.minPower === abilityForFormat.minDamage) {
+          minSuffix = ` (min ${abilityForFormat.minPower})`;
         } else {
           const parts = [];
-          if (ability.minPower != null) parts.push(`POT min ${ability.minPower}`);
-          if (ability.minDamage != null) parts.push(`DAN min ${ability.minDamage}`);
+          if (abilityForFormat.minPower != null) parts.push(`POT min ${abilityForFormat.minPower}`);
+          if (abilityForFormat.minDamage != null) parts.push(`DAN min ${abilityForFormat.minDamage}`);
           minSuffix = ` (${parts.join(', ')})`;
         }
       }
-      effect = `${ability.value} POT, ${ability.value} DAN nem.${minSuffix}`;
+      effect = `${abilityForFormat.value} POT, ${abilityForFormat.value} DAN nem.${minSuffix}`;
       break;
     }
     case 'imponiPower': effect = "Imponi POT"; break;
     case 'imponiDamage': effect = "Imponi DAN"; break;
-    case 'assaultValue': effect = `+${ability.value} VA`; break;
-    case 'enemyAssault': effect = `${ability.value} VA nem.${ability.minAssault ? ` (min ${ability.minAssault})` : ''}`; break;
+    case 'assaultValue': effect = `+${abilityForFormat.value} VA`; break;
+    case 'enemyAssault': effect = `${abilityForFormat.value} VA nem.${abilityForFormat.minAssault ? ` (min ${abilityForFormat.minAssault})` : ''}`; break;
     case 'copyPower': effect = "Copia POT"; break;
     case 'copyDamage': effect = "Copia DAN"; break;
     case 'copyAbility': effect = "Copia Potere"; break;

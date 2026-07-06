@@ -35,6 +35,64 @@ function makeMockBattle(playerFc, enemyFc, winner) {
   const playerDamage = 4;
   const enemyDamage = 3;
   const damageDealt = winner === 'player' ? playerDamage : winner === 'enemy' ? enemyDamage : 0;
+  const visualSteps = [
+    {
+      kind: 'deploy',
+      side: null,
+      playerPower: playerAgent.power,
+      enemyPower: enemyAgent.power,
+      playerDamage: playerAgent.damage,
+      enemyDamage: enemyAgent.damage,
+      playerAssaultMod: 0,
+      enemyAssaultMod: 0,
+      highlightPlayerAbility: false,
+      highlightEnemyAbility: false,
+      highlightPlayerBonus: false,
+      highlightEnemyBonus: false,
+    },
+    {
+      kind: 'power',
+      side: 'player',
+      playerPower,
+      enemyPower,
+      playerDamage,
+      enemyDamage,
+      playerAssaultMod: 0,
+      enemyAssaultMod: 0,
+      highlightPlayerAbility: true,
+      highlightEnemyAbility: false,
+      highlightPlayerBonus: false,
+      highlightEnemyBonus: false,
+    },
+    {
+      kind: 'bonus',
+      side: 'player',
+      playerPower,
+      enemyPower,
+      playerDamage,
+      enemyDamage,
+      playerAssaultMod: 0,
+      enemyAssaultMod: 0,
+      highlightPlayerAbility: false,
+      highlightEnemyAbility: false,
+      highlightPlayerBonus: true,
+      highlightEnemyBonus: false,
+    },
+    {
+      kind: 'preVa',
+      side: null,
+      playerPower,
+      enemyPower,
+      playerDamage,
+      enemyDamage,
+      playerAssaultMod,
+      enemyAssaultMod,
+      highlightPlayerAbility: false,
+      highlightEnemyAbility: false,
+      highlightPlayerBonus: false,
+      highlightEnemyBonus: false,
+    },
+  ];
   return {
     field,
     playerAgent,
@@ -71,6 +129,7 @@ function makeMockBattle(playerFc, enemyFc, winner) {
     enemyAbilityNotTriggered: false,
     playerBonusNotTriggered: false,
     enemyBonusNotTriggered: false,
+    visualSteps,
   };
 }
 

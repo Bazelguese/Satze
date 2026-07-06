@@ -1,4 +1,4 @@
-// Nexus Arcano (max DAN), Overdrive Centrale Energetica, Canyon delle Lame (+2 DAN vincitore).
+// Nexus Arcano (max DAN), Overdrive Centrale Energetica.
 export function applyDuelNexusMaxDamage(battleLog, maxDamage, pDamage, eDamage) {
   let pd = pDamage;
   let ed = eDamage;
@@ -29,12 +29,4 @@ export function applyCentraleOverdriveDamage(battleLog, fieldName, overdriveThre
     battleLog.push(`🔋 Centrale Energetica: IA Overdrive attivo! DAN ${before} → ${ed}`);
   }
   return { pDamage: pd, eDamage: ed };
-}
-
-export function applyCanyonWinnerDamageBonus(battleLog, fieldName, damageDealt) {
-  if (fieldName !== 'Canyon delle Lame') return damageDealt;
-  const danBefore = damageDealt;
-  const next = damageDealt + 2;
-  battleLog.push(`🗡️ Canyon delle Lame: DAN ${danBefore} → ${next} (+2 extra)`);
-  return next;
 }

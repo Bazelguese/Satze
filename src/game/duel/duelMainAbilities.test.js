@@ -5,7 +5,7 @@ import { canTriggerAbility } from './duelHelpers.js';
 
 const baseCtx = { roundNumber: 1, fieldModifiers: {} };
 
-function runMain(state, pAgent, eAgent, playerContext = baseCtx, enemyContext = baseCtx) {
+function runMain(state, pAgent, eAgent, playerContext = baseCtx, enemyContext = baseCtx, isPlayerFirst = true) {
   const calls = [];
   const applyEffect = (effect, value, target, source, log, opt) => {
     calls.push({ effect, value, target });
@@ -20,10 +20,8 @@ function runMain(state, pAgent, eAgent, playerContext = baseCtx, enemyContext = 
     enemyContext,
     triggersIgnored: false,
     duelCanTriggerAbility: canTriggerAbility,
-    copyDisabled: false,
-    modifiersDisabled: false,
-    directDamageDisabled: false,
-    directDamageBonus: 0,
+    fieldOptions: {},
+    isPlayerFirst,
   });
   return calls;
 }

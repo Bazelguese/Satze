@@ -1,4 +1,7 @@
 // PRE-SCAN blockAbility/blockBonus prima degli altri poteri (Biblioteca: blockDisabled).
+import { canTriggerPreBattle } from './duelHelpers.js';
+import { getInitiativeSideOrder, getDuelSideBundle } from './duelInitiativeOrder.js';
+
 export function applyDuelBlockPrescan({
   blockDisabled,
   fieldName,
@@ -10,26 +13,54 @@ export function applyDuelBlockPrescan({
   enemyContext,
   triggersIgnored,
   duelCanTriggerAbility,
+  isPlayerFirst = true,
+  visualRecorder = null,
 }) {
-  if (!blockDisabled && pAgent.ability && duelCanTriggerAbility(pAgent.ability.trigger, playerContext, triggersIgnored)) {
-    if (pAgent.ability.effect === 'blockAbility') {
-      state.eAbilityBlocked = true;
-      battleLog.push(`🚫 TU: Blocca Potere → Il Potere di ${eAgent.name} è disattivato!`);
-    } else if (pAgent.ability.effect === 'blockBonus') {
-      state.eBonusBlocked = true;
-      battleLog.push(`🚫 TU: Blocca Bonus → Il Bonus di ${eAgent.army} è disattivato!`);
-    }
-  } else if (blockDisabled && pAgent.ability && (pAgent.ability.effect === 'blockAbility' || pAgent.ability.effect === 'blockBonus')) {
-    battleLog.push(`🐛¡️ ${fieldName}: Il tuo Blocco non funziona qui!`);
-  }
+  const canTriggerPreBattleBlock = (agent, context) =>
+    canTriggerPreBattle(agent?.ability?.trigger, context, {
+      triggersIgnored,
+      resolveTrigger: (trigger, ctx) => duelCanTriggerAbility(trigger, ctx, false),
+    });
 
-  if (!blockDisabled && eAgent.ability && duelCanTriggerAbility(eAgent.ability.trigger, enemyContext, triggersIgnored)) {
-    if (eAgent.ability.effect === 'blockAbility') {
-      state.pAbilityBlocked = true;
-      battleLog.push(`🚫 IA: Blocca Potere → Il Potere di ${pAgent.name} è disattivato!`);
-    } else if (eAgent.ability.effect === 'blockBonus') {
-      state.pBonusBlocked = true;
-      battleLog.push(`🚫 IA: Blocca Bonus → Il Bonus di ${pAgent.army} è disattivato!`);
+  const sides = getInitiativeSideOrder(isPlayerFirst);
+  const bundleArgs = {
+    pAgent,
+    eAgent,
+    playerContext,
+    enemyContext,
+    pHasBonus: false,
+    eHasBonus: false,
+    pArmyBonus: null,
+    eArmyBonus: null,
+  };
+
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const agent = side.agent;
+
+    if (!agent?.ability || !canTriggerPreBattleBlock(agent, side.context)) continue;
+
+    if (blockDisabled && (agent.ability.effect === 'blockAbility' || agent.ability.effect === 'blockBonus')) {
+      if (sideKey === 'player') {
+        battleLog.push(`🐛¡️ ${fieldName}: Il tuo Blocco non funziona qui!`);
+      }
+      continue;
+    }
+
+    if (blockDisabled) continue;
+
+    if (agent.ability.effect === 'blockAbility') {
+      state[side.opponentAbilityBlocked] = true;
+      battleLog.push(
+        `🚫 ${side.labelSelf}: Blocca Potere → Il Potere di ${side.opponentAgent.name} è disattivato!`
+      );
+      visualRecorder?.pushBlock(sideKey, state);
+    } else if (agent.ability.effect === 'blockBonus') {
+      state[side.opponentBonusBlocked] = true;
+      battleLog.push(
+        `🚫 ${side.labelSelf}: Blocca Bonus → Il Bonus di ${side.opponentAgent.army} è disattivato!`
+      );
+      visualRecorder?.pushBlock(sideKey, state);
     }
   }
 }

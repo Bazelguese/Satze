@@ -167,7 +167,7 @@ export const Card = ({
       {/* Footer con Potere e Bonus */}
       <div className="relative z-10 bg-black/40 p-2">
         {/* Potere */}
-        <div className={`mb-1 relative transition-[opacity,background-color,box-shadow] duration-300 ${
+        <div className={`mb-1 relative transition-[opacity,background-color,box-shadow] duration-500 ${
           abilityBlocked ? 'opacity-50' : ''
         } ${
           copiedAbility ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel' :
@@ -210,7 +210,7 @@ export const Card = ({
         </div>
         
         {/* Bonus Armata */}
-        <div className={`pt-1 border-t transition-[opacity,background-color,box-shadow,border-color] duration-300 group relative ${
+        <div className={`pt-1 border-t transition-[opacity,background-color,box-shadow,border-color] duration-500 group relative ${
           copiedBonus ? 'rounded px-0 py-1 overflow-hidden border-transparent bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel-stagger' :
           bonusBlocked ? 'rounded px-0 py-1 overflow-hidden border-transparent bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu animate-modifier-highlight-panel-stagger' :
           bonusNotTriggered ? LEGACY_CARD_FOOTER_INACTIVE_PANEL :

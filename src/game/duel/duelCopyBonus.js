@@ -21,8 +21,8 @@ export function applyCopiedBonusEffectsIfReady(
   checkTriggerFn = checkTrigger
 ) {
   if (!enemyBonus?.effects?.length) return;
-  if (isPostBattleTrigger(enemyBonus.trigger)) return;
-  if (!checkTriggerFn(enemyBonus.trigger, context)) return;
+  if (isPostBattleTrigger(enemyBonus.trigger) && !fieldOptions?.triggersIgnored) return;
+  if (!fieldOptions?.triggersIgnored && !checkTriggerFn(enemyBonus.trigger, context)) return;
 
   enemyBonus.effects.forEach((eff) => {
     if (eff.effect === 'copyBonus') return;
