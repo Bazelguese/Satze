@@ -1,10 +1,8 @@
 /**
  * Bootstrap dell'app: loading + preload + gioco
  * Mostra una schermata di caricamento invece dello schermo nero
- * e precarica tutte le risorse per evitare rallentamenti tra sezioni
- *
- * SatzeGame è caricato con lazy() per evitare di bloccare l'avvio:
- * il modulo satze.jsx importa images.js (~123MB) che bloccherebbe il parsing.
+ * e precarica solo gli asset essenziali del menu; gli sfondi campo
+ * vengono caricati on-demand a inizio partita (vedi preloadAssets.js).
  */
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { LoadingScreen } from './components/LoadingScreen';

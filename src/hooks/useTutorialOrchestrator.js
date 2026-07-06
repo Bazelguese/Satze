@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { calcInitialBonuses } from '../utils/onlineMatch';
+import { preloadBattlefieldImages } from '../utils/preloadAssets';
 
 export function useTutorialOrchestrator({
   tutorial,
@@ -118,6 +119,7 @@ export function useTutorialOrchestrator({
     setPlayerArmyBonuses(calcInitialBonuses(playerGuidedHand));
     setEnemyArmyBonuses(calcInitialBonuses(enemyGuidedHand));
     setBattlefields(guidedFields);
+    preloadBattlefieldImages(guidedFields);
     setConqueredFields({});
     setPlayerHP(25);
     setEnemyHP(25);

@@ -9,6 +9,7 @@ import { selectBattlefields } from '../game/fieldLogic';
 import { DIFFICULTY_NAMES, shuffleArray } from '../utils';
 import { loadCustomDeck } from '../utils/deckManager';
 import { calcInitialBonuses } from '../utils/onlineMatch';
+import { preloadBattlefieldImages } from '../utils/preloadAssets';
 
 /**
  * Hook per gestire il flusso del gioco
@@ -147,6 +148,7 @@ export function useGameFlow(gameState, animations = null) {
     
     const fields = selectBattlefields(mode, allBattlefields);
     setBattlefields(fields);
+    preloadBattlefieldImages(fields);
     setConqueredFields({});
     
     setPlayerHP(25);
@@ -296,6 +298,7 @@ export function useGameFlow(gameState, animations = null) {
       setEnemyHand(enemyHand);
 
       setBattlefields(battlefields);
+      preloadBattlefieldImages(battlefields);
       setConqueredFields({});
 
       setPlayerHP(25);

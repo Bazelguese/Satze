@@ -8,6 +8,9 @@ dist/
 build/
 release/
 release-new/
+
+# Backup PNG originali (pre-conversione WebP)
+originals_png/
 *.rar
 *.asar
 *.backup

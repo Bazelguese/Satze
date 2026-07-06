@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Copia le immagini delle carte da carte/Immagini/ a public/card-images/agents/.
+ * Converte le immagini delle carte da carte/Immagini/ in WebP ottimizzato
+ * (max 512px, q80) in public/card-images/agents/.
  * Il file src/data/images.js usa solo i path: non viene più modificato.
  *
  * Uso: node scripts/update-card-images.js
@@ -10,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -22,8 +24,8 @@ function extractCardId(filename) {
   return match ? match[1] : null;
 }
 
-function main() {
-  console.log('🖼️  Aggiornamento immagini carte (copia in public/card-images/agents/)\n');
+async function main() {
+  console.log('🖼️  Aggiornamento immagini carte (WebP in public/card-images/agents/)\n');
 
   if (!fs.existsSync(IMAGES_DIR)) {
     console.error(`❌ La cartella ${IMAGES_DIR} non esiste!`);
@@ -53,18 +55,21 @@ function main() {
     }
 
     const srcPath = path.join(IMAGES_DIR, file);
-    const destPath = path.join(AGENTS_DIR, `${id}.png`);
+    const destPath = path.join(AGENTS_DIR, `${id}.webp`);
 
     try {
-      fs.copyFileSync(srcPath, destPath);
+      await sharp(srcPath)
+        .resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toFile(destPath);
       copied++;
-      if (copied <= 5) console.log(`  ${file} → agents/${id}.png`);
+      if (copied <= 5) console.log(`  ${file} → agents/${id}.webp`);
     } catch (err) {
-      console.error(`❌ Errore copiando ${file}:`, err.message);
+      console.error(`❌ Errore convertendo ${file}:`, err.message);
     }
   }
 
-  console.log(`\n✅ Copiati ${copied} file in public/card-images/agents/`);
+  console.log(`\n✅ Convertiti ${copied} file in public/card-images/agents/`);
 }
 
 main();

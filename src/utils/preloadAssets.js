@@ -1,8 +1,9 @@
 /**
- * Precarica tutte le risorse grafiche del gioco all'avvio.
- * Evita rallentamenti quando si passa da una sezione all'altra.
+ * Precarica le risorse grafiche essenziali del menu all'avvio.
+ * Gli sfondi dei campi di battaglia (public/campi_bg/, ~260MB) NON vengono
+ * precaricati qui: si caricano on-demand a inizio partita con
+ * preloadBattlefieldImages(), che riceve solo i campi estratti.
  */
-import { ALL_BATTLEFIELDS } from '../data/battlefields';
 import { ARMY_GIFS } from '../data/armies';
 
 function getBaseUrl() {
@@ -38,34 +39,35 @@ function preloadImage(url) {
 }
 
 /**
- * Restituisce l'array di tutti gli URL da precaricare
+ * Restituisce l'array degli URL essenziali da precaricare all'avvio (solo menu).
  */
 export function getAssetUrls() {
   const urls = new Set();
 
-  // GIF menu principale (path relativi per Electron)
-  urls.add(resolveUrl('./menu-bg-war.gif'));
-
-  // Immagini campi di battaglia
-  ALL_BATTLEFIELDS.forEach((f) => {
-    if (f.bgImage) urls.add(resolveUrl(f.bgImage));
-  });
-
-  // Sfondi armate
+  // Sfondi armate (usati nel menu di selezione armata e nella mano)
   Object.values(ARMY_GIFS).forEach((path) => {
     if (path) urls.add(resolveUrl(path));
   });
 
-  // Bandiere menu (path relativi per Electron)
-  for (let i = 1; i <= 7; i++) {
-    urls.add(resolveUrl(`./flag-mode-${i}.gif`));
-  }
-
   // Sfondi pannelli Log e FC
-  urls.add(resolveUrl('/Immagini_bg/CampoLOG_bg.png'));
-  urls.add(resolveUrl('/Immagini_bg/CampoFC_bg.png'));
+  urls.add(resolveUrl('/Immagini_bg/CampoLOG_bg.webp'));
+  urls.add(resolveUrl('/Immagini_bg/CampoFC_bg.webp'));
 
   return [...urls].filter(Boolean);
+}
+
+/**
+ * Precarica gli sfondi dei campi passati (tipicamente i campi estratti
+ * per la partita corrente). Fire-and-forget: non blocca il flusso di gioco.
+ */
+export function preloadBattlefieldImages(fields) {
+  if (!Array.isArray(fields)) return Promise.resolve();
+  const urls = [...new Set(
+    fields
+      .map((f) => resolveUrl(f?.bgImage))
+      .filter(Boolean)
+  )];
+  return Promise.all(urls.map(preloadImage));
 }
 
 /**

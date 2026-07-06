@@ -4,7 +4,7 @@
 // ============================================
 
 // Importa le icone personalizzate (PNG/SVG)
-import cometIcon from '../assets/icons/icon_orizzonte.png';
+import cometIcon from '../assets/icons/icon_orizzonte.webp';
 
 // Importa le icone SVG (verranno create come componenti React)
 // Per ora usiamo placeholder - sostituisci con le tue icone personalizzate
@@ -100,17 +100,17 @@ const iconPublic = (filename) => `${import.meta.env.BASE_URL}icons/${filename}`;
 
 // Mappa delle icone per armate
 export const ARMY_ICONS = {
-  'Figli dell\'Orizzonte': iconPublic('Orizzonte-nobg.png'),
-  'Kethran': iconPublic('ketrhan-nobg.png'),
-  'Corte Rossa': iconPublic('corte-nobg.png'),
-  'Calibri Pesanti': iconPublic('calibri-nobg.png'),
-  'Orathai': iconPublic('orethai-nobg.png'),
-  'Nati dalla Bocca': iconPublic('Mounthborn-nobg.png'),
-  'Mounthborn': iconPublic('Mounthborn-nobg.png'), // chiave usata in campaign/cards/armies
-  'L\'Enclave delle Scaglie': iconPublic('enclave-nobg.png'),
-  'Ratti della Megera': iconPublic('ratti-nobg.png'),
-  'Patto degli Indocili': iconPublic('patto-indocili-icon.png'),
-  'Khemet': iconPublic('Khetan-nobg.png'),
+  'Figli dell\'Orizzonte': iconPublic('Orizzonte-nobg.webp'),
+  'Kethran': iconPublic('ketrhan-nobg.webp'),
+  'Corte Rossa': iconPublic('corte-nobg.webp'),
+  'Calibri Pesanti': iconPublic('calibri-nobg.webp'),
+  'Orathai': iconPublic('orethai-nobg.webp'),
+  'Nati dalla Bocca': iconPublic('Mounthborn-nobg.webp'),
+  'Mounthborn': iconPublic('Mounthborn-nobg.webp'), // chiave usata in campaign/cards/armies
+  'L\'Enclave delle Scaglie': iconPublic('enclave-nobg.webp'),
+  'Ratti della Megera': iconPublic('ratti-nobg.webp'),
+  'Patto degli Indocili': iconPublic('patto-indocili-icon.webp'),
+  'Khemet': iconPublic('Khetan-nobg.webp'),
 };
 
 // ============================================

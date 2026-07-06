@@ -10,7 +10,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-1.png"
+    "bgImage": "./campi_bg/campo-1.webp"
   },
   {
     "id": 2,
@@ -22,7 +22,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-2.png"
+    "bgImage": "./campi_bg/campo-2.webp"
   },
   {
     "id": 3,
@@ -34,19 +34,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-3.png"
+    "bgImage": "./campi_bg/campo-3.webp"
   },
   {
     "id": 4,
     "name": "Miniera di Lacrime",
     "icon": "crystal",
-    "effect": "Vincitore: +2 PV",
+    "effect": "Conquista · +2 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-4.png"
+    "bgImage": "./campi_bg/campo-4.webp"
   },
   {
     "id": 5,
@@ -58,7 +58,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-5.png"
+    "bgImage": "./campi_bg/campo-5.webp"
   },
   {
     "id": 6,
@@ -70,7 +70,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-6.png"
+    "bgImage": "./campi_bg/campo-6.webp"
   },
   {
     "id": 7,
@@ -82,67 +82,67 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-7.png"
+    "bgImage": "./campi_bg/campo-7.webp"
   },
   {
     "id": 8,
     "name": "Cripta dei Sussurri",
     "icon": "ghost",
-    "effect": "Perdente: +1 FC",
+    "effect": "Post-scontro · Perdente · +1 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-8.png"
+    "bgImage": "./campi_bg/campo-8.webp"
   },
   {
     "id": 9,
     "name": "Porte di Atlantide",
     "icon": "wave",
-    "effect": "FC raddoppiati nel calcolo VA",
+    "effect": "Calcolo VA · Entrambi · FC ×2",
     "category": "focus",
     "rarita": "special",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-9.png"
+    "bgImage": "./campi_bg/campo-9.webp"
   },
   {
     "id": 10,
     "name": "Nido di Spine",
     "icon": "tower",
-    "effect": "Vincitore: -5 PV",
+    "effect": "Conquista · −5 PV",
     "category": "conditional",
     "rarita": "raro",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-10.png"
+    "bgImage": "./campi_bg/campo-10.webp"
   },
   {
     "id": 11,
     "name": "Canyon delle Lame",
     "icon": "sword",
-    "effect": "Vincitore: +2 DAN extra",
+    "effect": "Ultimo Desiderio · −2 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-11.png"
+    "bgImage": "./campi_bg/campo-11.webp"
   },
   {
     "id": 12,
     "name": "Torre d'Avorio",
     "icon": "castle",
-    "effect": "Vincitore: +1 FC",
+    "effect": "Conquista · +1 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-12.png"
+    "bgImage": "./campi_bg/campo-12.webp"
   },
   {
     "id": 13,
@@ -154,7 +154,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-13.png"
+    "bgImage": "./campi_bg/campo-13.webp"
   },
   {
     "id": 14,
@@ -166,7 +166,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-14.png"
+    "bgImage": "./campi_bg/campo-14.webp"
   },
   {
     "id": 15,
@@ -178,31 +178,31 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-15.png"
+    "bgImage": "./campi_bg/campo-15.webp"
   },
   {
     "id": 16,
     "name": "Voragine Infinita",
     "icon": "hole",
-    "effect": "Entrambi: -3 PV dopo lo scontro",
+    "effect": "Post-scontro · Entrambi · −3 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-16.png"
+    "bgImage": "./campi_bg/campo-16.webp"
   },
   {
     "id": 17,
     "name": "Altare del Sacrificio",
     "icon": "temple",
-    "effect": "Perdente: 2 Danni dir. extra",
+    "effect": "Conquista · −2 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-17.png"
+    "bgImage": "./campi_bg/campo-17.webp"
   },
   {
     "id": 18,
@@ -214,7 +214,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-18.png"
+    "bgImage": "./campi_bg/campo-18.webp"
   },
   {
     "id": 19,
@@ -226,7 +226,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Figli dell'Orizzonte",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-19.png"
+    "bgImage": "./campi_bg/campo-19.webp"
   },
   {
     "id": 20,
@@ -238,7 +238,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Figli dell'Orizzonte",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-20.png"
+    "bgImage": "./campi_bg/campo-20.webp"
   },
   {
     "id": 21,
@@ -250,31 +250,31 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Figli dell'Orizzonte",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-21.png"
+    "bgImage": "./campi_bg/campo-21.webp"
   },
   {
     "id": 22,
     "name": "Fondamenta della Torre",
     "icon": "brick",
-    "effect": "Gloria e Vendetta sempre attivi",
+    "effect": "Gloria, Vendetta sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Kethran",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-22.png"
+    "bgImage": "./campi_bg/campo-22.webp"
   },
   {
     "id": 23,
     "name": "Ziqqurat Spezzata",
     "icon": "temple",
-    "effect": "Perdente: +1 FC",
+    "effect": "Post-scontro · Perdente · +1 FC · Conquista · −1 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Kethran",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-23.png"
+    "bgImage": "./campi_bg/campo-23.webp"
   },
   {
     "id": 24,
@@ -286,19 +286,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Kethran",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-24.png"
+    "bgImage": "./campi_bg/campo-24.webp"
   },
   {
     "id": 25,
     "name": "Sala dei Contratti",
     "icon": "imp",
-    "effect": "Vincitore: -2 FC",
+    "effect": "Conquista · −2 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-25.png"
+    "bgImage": "./campi_bg/campo-25.webp"
   },
   {
     "id": 26,
@@ -310,7 +310,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-26.png"
+    "bgImage": "./campi_bg/campo-26.webp"
   },
   {
     "id": 27,
@@ -322,7 +322,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-27.png"
+    "bgImage": "./campi_bg/campo-27.webp"
   },
   {
     "id": 28,
@@ -334,43 +334,43 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Calibri Pesanti",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-28.png"
+    "bgImage": "./campi_bg/campo-28.webp"
   },
   {
     "id": 29,
     "name": "Nucleo del Reattore",
     "icon": "warning",
-    "effect": "Overdrive si attiva con 4 FC",
+    "effect": "Regola · Overdrive · 4 FC necessari",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Calibri Pesanti",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-29.png"
+    "bgImage": "./campi_bg/campo-29.webp"
   },
   {
     "id": 30,
     "name": "Deposito di Rottami",
     "icon": "copy",
-    "effect": "Perdente: +1 FC",
+    "effect": "Post-scontro · Perdente · +2 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Calibri Pesanti",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-30.png"
+    "bgImage": "./campi_bg/campo-30.webp"
   },
   {
     "id": 31,
     "name": "Convergenza delle Ley",
     "icon": "sparkle",
-    "effect": "Magnanimo sempre attivo per entrambi",
+    "effect": "Regola · Magnanimo · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Orathai",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-31.png"
+    "bgImage": "./campi_bg/campo-31.webp"
   },
   {
     "id": 32,
@@ -382,7 +382,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Orathai",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-32.png"
+    "bgImage": "./campi_bg/campo-32.webp"
   },
   {
     "id": 33,
@@ -394,19 +394,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Nati dalla Bocca",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-33.png"
+    "bgImage": "./campi_bg/campo-33.webp"
   },
   {
     "id": 34,
     "name": "Pianura Divorata",
     "icon": "circle",
-    "effect": "Cura 1 PV a entrambi dopo lo scontro",
+    "effect": "Post-scontro · Entrambi · +1 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Nati dalla Bocca",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-34.png"
+    "bgImage": "./campi_bg/campo-34.webp"
   },
   {
     "id": 35,
@@ -418,7 +418,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Figli dell'Orizzonte",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-35.png"
+    "bgImage": "./campi_bg/campo-35.webp"
   },
   {
     "id": 36,
@@ -430,67 +430,67 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Figli dell'Orizzonte",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-36.png"
+    "bgImage": "./campi_bg/campo-36.webp"
   },
   {
     "id": 37,
     "name": "Trono Solare",
     "icon": "star",
-    "effect": "Vincitore: +1 PV",
+    "effect": "Conquista · +1 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Figli dell'Orizzonte",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-37.png"
+    "bgImage": "./campi_bg/campo-37.webp"
   },
   {
     "id": 38,
     "name": "Trono dei Re Caduti",
     "icon": "crown",
-    "effect": "Vincitore: 1 Danni dir. a sé",
+    "effect": "Conquista · −1 PV (DAN dir.)",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Kethran",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-38.png"
+    "bgImage": "./campi_bg/campo-38.webp"
   },
   {
     "id": 39,
     "name": "Mura della Sfida",
     "icon": "brick",
-    "effect": "Rimonta sempre attiva per entrambi",
+    "effect": "Regola · Rimonta · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Kethran",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-39.png"
+    "bgImage": "./campi_bg/campo-39.webp"
   },
   {
     "id": 40,
     "name": "Tribunale dell'Anima",
     "icon": "scales",
-    "effect": "Perdente: -1 FC",
+    "effect": "Post-scontro · Perdente · −1 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-40.png"
+    "bgImage": "./campi_bg/campo-40.webp"
   },
   {
     "id": 41,
     "name": "Crocevia dei Patti",
     "icon": "vortex",
-    "effect": "Poteri si attivano senza trigger",
+    "effect": "Regola · Poteri · sempre attivi (senza trigger)",
     "category": "trigger",
     "rarita": "special",
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-41.png"
+    "bgImage": "./campi_bg/campo-41.webp"
   },
   {
     "id": 42,
@@ -502,7 +502,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Corte Rossa",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-42.png"
+    "bgImage": "./campi_bg/campo-42.webp"
   },
   {
     "id": 43,
@@ -514,43 +514,43 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Calibri Pesanti",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-43.png"
+    "bgImage": "./campi_bg/campo-43.webp"
   },
   {
     "id": 44,
     "name": "Centrale Energetica",
     "icon": "lightning",
-    "effect": "Overdrive: +1 DAN extra",
+    "effect": "Overdrive · +1 DAN",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Calibri Pesanti",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-44.png"
+    "bgImage": "./campi_bg/campo-44.webp"
   },
   {
     "id": 45,
     "name": "Cerchio di Evocazione",
     "icon": "star",
-    "effect": "Intervento sempre attivo per entrambi",
+    "effect": "Regola · Intervento · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Orathai",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-45.png"
+    "bgImage": "./campi_bg/campo-45.webp"
   },
   {
     "id": 46,
     "name": "Fonte del Mana",
     "icon": "wave",
-    "effect": "+1 FC a entrambi dopo lo scontro",
+    "effect": "Post-scontro · Entrambi · +1 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Orathai",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-46.png"
+    "bgImage": "./campi_bg/campo-46.webp"
   },
   {
     "id": 47,
@@ -562,31 +562,31 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Orathai",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-47.png"
+    "bgImage": "./campi_bg/campo-47.webp"
   },
   {
     "id": 48,
     "name": "Palude Tossica",
     "icon": "insect",
-    "effect": "Entrambi: -1 PV dopo lo scontro",
+    "effect": "Post-scontro · Entrambi · −1 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Nati dalla Bocca",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-48.png"
+    "bgImage": "./campi_bg/campo-48.webp"
   },
   {
     "id": 49,
     "name": "Alveare Abbandonato",
     "icon": "circle",
-    "effect": "Imboscata sempre attiva per entrambi",
+    "effect": "Regola · Imboscata · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Nati dalla Bocca",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-49.png"
+    "bgImage": "./campi_bg/campo-49.webp"
   },
   {
     "id": 50,
@@ -598,7 +598,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Nati dalla Bocca",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-50.png"
+    "bgImage": "./campi_bg/campo-50.webp"
   },
   {
     "id": 51,
@@ -609,7 +609,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-51.png"
+    "bgImage": "./campi_bg/campo-51.webp"
   },
   {
     "id": 52,
@@ -620,7 +620,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-52.png"
+    "bgImage": "./campi_bg/campo-52.webp"
   },
   {
     "id": 53,
@@ -631,7 +631,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-53.png"
+    "bgImage": "./campi_bg/campo-53.webp"
   },
   {
     "id": 54,
@@ -642,7 +642,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-54.png"
+    "bgImage": "./campi_bg/campo-54.webp"
   },
   {
     "id": 55,
@@ -653,43 +653,43 @@ export const RAW_BATTLEFIELDS = [
     "tema": "generico",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-55.png"
+    "bgImage": "./campi_bg/campo-55.webp"
   },
   {
     "id": 56,
     "name": "Falso idolo",
     "icon": "crown",
-    "effect": "Chi è sotto nei PV: +3 VA",
+    "effect": "Rimonta · +3 VA",
     "category": "conditional",
     "rarita": "raro",
     "tema": "Kethran",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-56.png"
+    "bgImage": "./campi_bg/campo-56.webp"
   },
   {
     "id": 57,
     "name": "La Grande Forgia",
     "icon": "flame",
-    "effect": "Cura 1 PV a chi ha meno PV dopo lo scontro",
+    "effect": "Post-scontro · Chi ha meno PV · +1 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Calibri Pesanti",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-57.png"
+    "bgImage": "./campi_bg/campo-57.webp"
   },
   {
     "id": 58,
     "name": "L'Albero del Giudizio",
     "icon": "tree",
-    "effect": "Resa dei conti sempre attiva per entrambi",
+    "effect": "Regola · Resa dei conti · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Orathai",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-58.png"
+    "bgImage": "./campi_bg/campo-58.webp"
   },
   {
     "id": 59,
@@ -701,43 +701,43 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Nati dalla Bocca",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-59.png"
+    "bgImage": "./campi_bg/campo-59.webp"
   },
   {
     "id": 60,
     "name": "Volta del Tesoro",
     "icon": "crystal",
-    "effect": "+2 FC a entrambi dopo lo scontro",
+    "effect": "Post-scontro · Entrambi · +2 FC",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Enclave delle Scaglie",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-60.png"
+    "bgImage": "./campi_bg/campo-60.webp"
   },
   {
     "id": 61,
     "name": "Trono d'Ossidiana",
     "icon": "crown",
-    "effect": "Gli effetti con trigger Conquista valgono doppio (entrambi)",
+    "effect": "Regola · Conquista · valore ×2",
     "category": "conditional",
     "rarita": "raro",
     "tema": "Enclave delle Scaglie",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-61.png"
+    "bgImage": "./campi_bg/campo-61.webp"
   },
   {
     "id": 62,
     "name": "Arena delle Scaglie",
     "icon": "sword",
-    "effect": "Vince il duello chi ha investito più FC (ignora il VA)",
+    "effect": "Regola · Vincitore · più FC investiti (ignora VA)",
     "category": "focus",
     "rarita": "special",
     "tema": "Enclave delle Scaglie",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-62.png"
+    "bgImage": "./campi_bg/campo-62.webp"
   },
   {
     "id": 63,
@@ -749,31 +749,31 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Enclave delle Scaglie",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-63.png"
+    "bgImage": "./campi_bg/campo-63.webp"
   },
   {
     "id": 64,
     "name": "Cova di Scaglie",
     "icon": "egg",
-    "effect": "L'agente giocato per primo: +1 POT",
+    "effect": "Imboscata · +1 POT",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Enclave delle Scaglie",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-64.png"
+    "bgImage": "./campi_bg/campo-64.webp"
   },
   {
     "id": 65,
     "name": "Picco del Drago Caduto",
     "icon": "tower",
-    "effect": "Vincitore: +1 FC e -2 PV",
+    "effect": "Conquista · +1 FC, −2 PV",
     "category": "conditional",
     "rarita": "raro",
     "tema": "Enclave delle Scaglie",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-65.png"
+    "bgImage": "./campi_bg/campo-65.webp"
   },
   {
     "id": 66,
@@ -785,31 +785,31 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-66.png"
+    "bgImage": "./campi_bg/campo-66.webp"
   },
   {
     "id": 67,
     "name": "Reggia del Custode",
     "icon": "castle",
-    "effect": "FC dimezzati (per eccesso) nel calcolo VA",
+    "effect": "Calcolo VA · Entrambi · FC ÷2 (per eccesso)",
     "category": "focus",
     "rarita": "special",
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-67.png"
+    "bgImage": "./campi_bg/campo-67.webp"
   },
   {
     "id": 68,
     "name": "Trono della Megera",
     "icon": "crown",
-    "effect": "Ultimo Desiderio si attiva 2 volte (entrambi)",
+    "effect": "Regola · Ultimo Desiderio · ×2",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-68.png"
+    "bgImage": "./campi_bg/campo-68.webp"
   },
   {
     "id": 69,
@@ -821,7 +821,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-69.png"
+    "bgImage": "./campi_bg/campo-69.webp"
   },
   {
     "id": 70,
@@ -833,7 +833,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-70.png"
+    "bgImage": "./campi_bg/campo-70.webp"
   },
   {
     "id": 71,
@@ -845,19 +845,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Ratti della Megera",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-71.png"
+    "bgImage": "./campi_bg/campo-71.webp"
   },
   {
     "id": 72,
     "name": "L'Ultrastrada",
     "icon": "road",
-    "effect": "Turbo sempre attivo per entrambi",
+    "effect": "Regola · Turbo · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-72.png"
+    "bgImage": "./campi_bg/campo-72.webp"
   },
   {
     "id": 73,
@@ -869,7 +869,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-73.png"
+    "bgImage": "./campi_bg/campo-73.webp"
   },
   {
     "id": 74,
@@ -881,7 +881,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-74.png"
+    "bgImage": "./campi_bg/campo-74.webp"
   },
   {
     "id": 75,
@@ -893,19 +893,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-75.png"
+    "bgImage": "./campi_bg/campo-75.webp"
   },
   {
     "id": 76,
     "name": "L'Ultimo Distributore",
     "icon": "coin",
-    "effect": "Ogni 3 FC investiti: +1 DAN",
+    "effect": "In scontro · Entrambi · +1 DAN ogni 3 FC propri",
     "category": "focus",
     "rarita": "comune",
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-76.png"
+    "bgImage": "./campi_bg/campo-76.webp"
   },
   {
     "id": 77,
@@ -917,7 +917,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Patto degli Indocili",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-77.png"
+    "bgImage": "./campi_bg/campo-77.webp"
   },
   {
     "id": 78,
@@ -929,19 +929,19 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Khemet",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-78.png"
+    "bgImage": "./campi_bg/campo-78.webp"
   },
   {
     "id": 79,
     "name": "Camera Rituale",
     "icon": "star",
-    "effect": "Overdrive: +1 POT e +1 DAN extra a entrambi",
+    "effect": "Overdrive · +1 POT, +1 DAN",
     "category": "conditional",
     "rarita": "raro",
     "tema": "Khemet",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-79.png"
+    "bgImage": "./campi_bg/campo-79.webp"
   },
   {
     "id": 80,
@@ -953,7 +953,7 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Khemet",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-80.png"
+    "bgImage": "./campi_bg/campo-80.webp"
   },
   {
     "id": 81,
@@ -965,30 +965,30 @@ export const RAW_BATTLEFIELDS = [
     "tema": "Khemet",
     "minTurn": 1,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-81.png"
+    "bgImage": "./campi_bg/campo-81.webp"
   },
   {
     "id": 82,
     "name": "Necropoli Dorata",
     "icon": "ghost",
-    "effect": "Vincitore: cura 1 PV",
+    "effect": "Conquista · +1 PV",
     "category": "conditional",
     "rarita": "comune",
     "tema": "Khemet",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-82.png"
+    "bgImage": "./campi_bg/campo-82.webp"
   },
   {
     "id": 83,
     "name": "Cripta dei Re-Maghi",
     "icon": "scroll",
-    "effect": "Resistenza sempre attiva per entrambi",
+    "effect": "Regola · Resistenza · sempre attivo",
     "category": "trigger",
     "rarita": "raro",
     "tema": "Khemet",
     "minTurn": 2,
     "flavour": "",
-    "bgImage": "./campi_bg/campo-83.png"
+    "bgImage": "./campi_bg/campo-83.webp"
   }
 ];

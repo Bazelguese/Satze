@@ -11,8 +11,8 @@ const typesDir = `${BASE}card-images/types/`;
 const agentsDir = `${BASE}card-images/agents/`;
 const AGENT_IMAGE_OVERRIDES = {
   // Swap richiesto: John l'Idraulico <-> Mr. Cavalca Via
-  '904': agentsDir + '920.png',
-  '920': agentsDir + '904.png',
+  '904': agentsDir + '920.webp',
+  '920': agentsDir + '904.webp',
 };
 
 const CARD_TYPE_KEYS = [
@@ -43,7 +43,7 @@ function buildAgentImagePaths() {
   const out = {};
   for (const [start, end] of AGENT_ID_RANGES) {
     for (let id = start; id <= end; id++) {
-      out[String(id)] = agentsDir + id + '.png';
+      out[String(id)] = agentsDir + id + '.webp';
     }
   }
   Object.assign(out, AGENT_IMAGE_OVERRIDES);

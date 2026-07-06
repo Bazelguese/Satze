@@ -42,16 +42,16 @@ export { ARMY_ICONS };
   // Immagini armate - percorsi in public/Immagini_bg per gli sfondi sotto i triangoli delle mani
   // Immagini statiche (PNG) - meno distrazioni visive delle GIF
   export const ARMY_GIFS = {
-    "Figli dell'Orizzonte": './Immagini_bg/Orizzonte_bg1.png',
-    "Kethran": './Immagini_bg/kethran_bg1.png',
-    "Corte Rossa": './Immagini_bg/CorteRossa_bg1.png',
-    "Calibri Pesanti": './Immagini_bg/Calibri_bg1.png',
-    "Orathai": './Immagini_bg/Orethai_bg1.png',
-    "Mounthborn": './Immagini_bg/Mounthborn_bg1.png',
-    "L'Enclave delle Scaglie": './Immagini_bg/Enclave_bg1.png',
-    "Ratti della Megera": './Immagini_bg/Ratti_bg1.png',
-    "Patto degli Indocili": './Immagini_bg/indocili-bg1.png',
-    "Khemet": './Immagini_bg/Khemet_bg1.png'
+    "Figli dell'Orizzonte": './Immagini_bg/Orizzonte_bg1.webp',
+    "Kethran": './Immagini_bg/kethran_bg1.webp',
+    "Corte Rossa": './Immagini_bg/CorteRossa_bg1.webp',
+    "Calibri Pesanti": './Immagini_bg/Calibri_bg1.webp',
+    "Orathai": './Immagini_bg/Orethai_bg1.webp',
+    "Mounthborn": './Immagini_bg/Mounthborn_bg1.webp',
+    "L'Enclave delle Scaglie": './Immagini_bg/Enclave_bg1.webp',
+    "Ratti della Megera": './Immagini_bg/Ratti_bg1.webp',
+    "Patto degli Indocili": './Immagini_bg/indocili-bg1.webp',
+    "Khemet": './Immagini_bg/Khemet_bg1.webp'
   };
 
   // BONUS ARMATE (unico per ogni armata)
