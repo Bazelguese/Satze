@@ -6,6 +6,22 @@ import { MENU_ACCENTS,
   injectSatzeUiFonts,
 } from "../../theme/hudOratorioPalette";
 import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
+import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
+
+/**
+ * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
+ */
+function normalizeChoiceOption(c) {
+  const nested = c.choices?.map((child) => normalizeChoiceOption(child)) ?? null;
+  return {
+    label: c.label,
+    sub: c.sub ?? "",
+    meta: c.meta ?? "",
+    onClick: c.onClick,
+    disabled: c.disabled,
+    choices: nested?.length ? nested : null,
+  };
+}
 
 /**
  * Menu principale — variante **V5 COSMIC** (handoff Claude Design: MenuV5PersonaCosmic).
@@ -21,14 +37,21 @@ import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
  *   meta?: string,
  *   accent?: string,
  *   disabled?: boolean,
- *   choices?: Array<{ label: string, onClick: () => void, sub?: string, meta?: string, disabled?: boolean }>,
- *   children?: Array<{ label: string, onClick: () => void, sub?: string, meta?: string, disabled?: boolean }>,
+ *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
+ *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
+ *   marqueeText?: string,
  * }> }} props
  */
-export default function SatzeMenuPrototype({ menuItems }) {
+export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
   const [hover, setHover] = useState(null);
-  /** @type {null | { accent: string, title: string, options: Array<{ label: string, sub?: string, meta?: string, onClick: () => void, disabled?: boolean }> }} */
-  const [choicePicker, setChoicePicker] = useState(null);
+  /** @type {Array<{ accent: string, title: string, options: ReturnType<typeof normalizeChoiceOption>[] }>} */
+  const [choicePickerStack, setChoicePickerStack] = useState([]);
+
+  const choicePicker = choicePickerStack[choicePickerStack.length - 1] ?? null;
+
+  const closeAllPickers = () => setChoicePickerStack([]);
+  const closeTopPicker = () => setChoicePickerStack((s) => s.slice(0, -1));
+  const openPicker = (picker) => setChoicePickerStack((s) => [...s, picker]);
 
   useEffect(() => {
     injectSatzeUiFonts();
@@ -37,11 +60,14 @@ export default function SatzeMenuPrototype({ menuItems }) {
   useEffect(() => {
     if (!choicePicker) return;
     const onKey = (e) => {
-      if (e.key === "Escape") setChoicePicker(null);
+      if (e.key === "Escape") {
+        if (choicePickerStack.length > 1) closeTopPicker();
+        else closeAllPickers();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [choicePicker]);
+  }, [choicePicker, choicePickerStack.length]);
 
   const ACCENT = MENU_ACCENTS.magenta;
   const HEAT = MENU_ACCENTS.pink;
@@ -59,13 +85,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
     return menuItems.map((item, i) => {
       const raw = item.choices ?? item.children;
       const options =
-        raw?.map((c) => ({
-          label: c.label,
-          sub: c.sub ?? "",
-          meta: c.meta ?? "",
-          onClick: c.onClick,
-          disabled: c.disabled,
-        })) ?? null;
+        raw?.map((c) => normalizeChoiceOption(c)) ?? null;
       const accent = item.accent ?? accentCycle[i % accentCycle.length];
       const hasPicker = Boolean(options?.length);
       return {
@@ -82,8 +102,8 @@ export default function SatzeMenuPrototype({ menuItems }) {
     });
   }, [menuItems, accentCycle]);
 
-  const marqueeText =
-    "v0.1 ALPHA · NON DISTRIBUIRE · LA GRANDE GUERRA · SATZE · ";
+  const marqueeTextResolved =
+    marqueeText ?? "v0.1 ALPHA · NON DISTRIBUIRE · LA GRANDE GUERRA · SATZE · ";
 
   const renderTrapButton = (
     row,
@@ -473,7 +493,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
             disabled: item.disabled,
             onClick: item.hasPicker
               ? () =>
-                  setChoicePicker({
+                  openPicker({
                     accent: item.accent,
                     title: item.label,
                     options: item.options,
@@ -502,7 +522,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
             background: "rgba(6,3,10,0.82)",
             backdropFilter: "blur(6px)",
           }}
-          onClick={() => setChoicePicker(null)}
+          onClick={() => closeAllPickers()}
         >
           <div
             role="dialog"
@@ -554,8 +574,25 @@ export default function SatzeMenuPrototype({ menuItems }) {
                     disabled={opt.disabled}
                     onClick={() => {
                       if (opt.disabled) return;
-                      opt.onClick();
-                      setChoicePicker(null);
+                      if (opt.choices?.length) {
+                        openPicker({
+                          accent: choicePicker.accent,
+                          title: opt.label,
+                          options: opt.choices,
+                        });
+                        return;
+                      }
+                      const followUp = opt.onClick?.();
+                      if (isMenuFollowUpPicker(followUp)) {
+                        closeAllPickers();
+                        openPicker({
+                          accent: followUp.accent ?? choicePicker.accent,
+                          title: followUp.title ?? opt.label,
+                          options: followUp.options.map((c) => normalizeChoiceOption(c)),
+                        });
+                        return;
+                      }
+                      closeAllPickers();
                     }}
                     style={{
                       display: "block",
@@ -606,13 +643,30 @@ export default function SatzeMenuPrototype({ menuItems }) {
                         {line}
                       </span>
                     ) : null}
+                    {opt.choices?.length ? (
+                      <span
+                        style={{
+                          fontFamily: "'Share Tech Mono', monospace",
+                          fontSize: 9,
+                          letterSpacing: "0.22em",
+                          color: choicePicker.accent,
+                          marginTop: 4,
+                          display: "block",
+                        }}
+                      >
+                        › SCEGLI
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
             <button
               type="button"
-              onClick={() => setChoicePicker(null)}
+              onClick={() => {
+                if (choicePickerStack.length > 1) closeTopPicker();
+                else closeAllPickers();
+              }}
               style={{
                 marginTop: 18,
                 width: "100%",
@@ -626,7 +680,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
                 borderRadius: 2,
               }}
             >
-              ANNULLA
+              {choicePickerStack.length > 1 ? "INDIETRO" : "ANNULLA"}
             </button>
           </div>
         </div>
@@ -662,7 +716,7 @@ export default function SatzeMenuPrototype({ menuItems }) {
         >
           {[0, 1].map((idx) => (
             <span key={idx}>
-              {marqueeText}
+              {marqueeTextResolved}
               BUILD {new Date().toISOString().slice(0, 10).replace(/-/g, ".")} ·{" "}
             </span>
           ))}

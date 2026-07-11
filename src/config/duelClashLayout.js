@@ -32,6 +32,32 @@ export function getEnemyClashAnchorX(isZoomed) {
   return `calc(50% - ${isZoomed ? 330 : 260}px)`;
 }
 
+export const DUEL_AGENT_PANEL_OFFSET_X = {
+  enemy: { normal: -380, zoomed: -450 },
+  player: { normal: 140, zoomed: 210 },
+};
+
+/**
+ * Centro carta agente nel viewport (stesso punto di GameCard in selectAgent).
+ * @param {'enemy'|'player'} side
+ * @param {number} [viewportWidth]
+ * @param {number} [viewportHeight]
+ * @param {boolean} [isZoomed]
+ */
+export function getDuelAgentCardCenter(
+  side,
+  viewportWidth = 1920,
+  viewportHeight = 1080,
+  isZoomed = false
+) {
+  const cx = viewportWidth / 2;
+  const cy = viewportHeight / 2;
+  const tx = DUEL_AGENT_PANEL_OFFSET_X[side][isZoomed ? 'zoomed' : 'normal'];
+  const x = cx + tx + DUEL_PANEL_LAYOUT.width / 2;
+  const y = cy + getDuelAgentCenterYOffset(isZoomed);
+  return { x, y, rot: 0 };
+}
+
 export function getDuelAgentBaseScale(isZoomed) {
   return isZoomed ? DUEL_PANEL_LAYOUT.zoomScale : 1;
 }

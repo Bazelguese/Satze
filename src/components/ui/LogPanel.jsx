@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { PALETTE, HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
+import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
 
 /** Rimuove emoji dal testo - preserva cifre (\\p{Emoji} può matchare digits in alcuni engine) */
 const stripEmoji = (str, keep = false) => {
@@ -145,7 +146,7 @@ export const LogPanel = ({ logs = [], gamePhase, className = '', playerColor = '
       } ${className}`}
       style={{
         ...(gamePhase === 'result' ? { pointerEvents: 'auto' } : {}),
-        background: `linear-gradient(135deg, ${PALETTE.deepVoid}dd 0%, ${PALETTE.nebula}cc 100%), url(/Immagini_bg/CampoLOG_bg.webp) center/cover no-repeat`,
+        background: `linear-gradient(135deg, ${PALETTE.deepVoid}dd 0%, ${PALETTE.nebula}cc 100%), url(${resolvePublicAssetUrl('/Immagini_bg/CampoLOG_bg.webp')}) center/cover no-repeat`,
         border: `1.5px solid ${PALETTE.slate}`,
         boxShadow: `0 2px 8px #000`,
         fontFamily: HUD_ORATORIO_FONT_UI,

@@ -310,7 +310,17 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         const copyContext = target === 'player' ? ctx.playerContext : ctx.enemyContext;
         if (enemyHasBonusActive && enemyBonusToCopy?.effects) {
           log.push(`🔮 ${source}: ${targetName} copia Bonus nem. (${enemyBonusToCopy.description})`);
-          registerCopiedBonus(state, target, enemyBonusToCopy);
+          registerCopiedBonus(state, target, enemyBonusToCopy, {
+            context: copyContext,
+            fieldOptions: {
+              copyDisabled,
+              modifiersDisabled: modDisabled,
+              directDamageDisabled,
+              directDamageBonus,
+              minFloorReduction,
+            },
+            checkTriggerFn: ctx.checkTrigger,
+          });
           applyCopiedBonusEffectsIfReady(
             enemyBonusToCopy,
             target,

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Mischia e Distribuzione Carte" description="Mazzo di 10 carte mischiato a ventaglio, poi 5 distribuite al giocatore" -->
+<helmet>
+<script src="./ds-base.js"></script>
+</helmet>
+<div style="width:100vw;height:100vh;background:var(--bg-night);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;font-family:var(--font-ui);">
+  <div style="position:relative;width:1000px;height:600px;perspective:1600px;">
+    <sc-for list="{{ cards }}" as="c" hint-placeholder-count="10">
+      <div style="{{ c.wrapStyle }}">
+        <div style="{{ c.innerStyle }}">
+          <div style="position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;background:linear-gradient(160deg,#17171a,#0b0b0c 70%);border:1.5px solid var(--accent-slate);box-shadow:var(--sh-drop);display:flex;align-items:center;justify-content:center;">
+            <img src="../../src/assets/logo-satze.png" style="width:58%;opacity:.85;filter:grayscale(1) brightness(1.4);pointer-events:none;" />
+          </div>
+          <div style="{{ c.frontStyle }}">
+            <img src="{{ c.img }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.62) 0%,transparent 22%,transparent 68%,rgba(0,0,0,.6) 100%);"></div>
+            <div style="{{ c.sashStyle }}">
+              <div style="width:26px;height:26px;flex:none;border-radius:50%;background:rgba(0,0,0,.85);border:1.5px solid #fde047;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fde047;font-family:var(--font-mono);">{{ c.pot }}</div>
+              <div style="flex:1;text-align:center;color:#fff;font-weight:800;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;text-shadow:0 1px 3px #000;padding:0 3px;">{{ c.name }}</div>
+              <div style="width:26px;height:26px;flex:none;border-radius:50%;background:rgba(0,0,0,.85);border:1.5px solid #c084fc;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#c084fc;font-family:var(--font-mono);">{{ c.dan }}</div>
+            </div>
+            <div style="{{ c.armyBarStyle }}">{{ c.army }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ showReplay }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ onReplay }}" style="position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-family:var(--font-ui);font-weight:600;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:var(--fg1);background:rgba(245,243,236,0.06);border:1.5px solid var(--accent-slate);padding:11px 26px;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);" style-hover="border-color:var(--accent-light);background:rgba(245,243,236,0.14);box-shadow:var(--glow-light);">Rigioca</button>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CARD_W = 150, CARD_H = 214;
+const STAGE_CX = 500, STAGE_CY = 300;
+const DECK_POS = { x: 330, y: 300 };
+const REMAIN_POS = { x: 150, y: 300 };
+const HAND_Y = 522;
+
+const CARD_DATA = [
+  { name: "Veggente dell'Alba", pot: 7, dan: 5, army: "Figli dell'Orizzonte", armyColor: '#a78bfa', img: '../../assets/cards/101.png' },
+  { name: 'Custode Astrale', pot: 5, dan: 6, army: "Figli dell'Orizzonte", armyColor: '#a78bfa', img: '../../assets/cards/102.png' },
+  { name: 'Ombra Cometa', pot: 6, dan: 4, army: "Figli dell'Orizzonte", armyColor: '#a78bfa', img: '../../assets/cards/111.png' },
+  { name: 'Sacerdote del Tempio', pot: 8, dan: 3, army: 'Kethran', armyColor: '#fbbf24', img: '../../assets/cards/201.png' },
+  { name: "Guardiano d'Ambra", pot: 4, dan: 7, army: 'Kethran', armyColor: '#fbbf24', img: '../../assets/cards/202.png' },
+  { name: 'Araldo Dorato', pot: 6, dan: 6, army: 'Kethran', armyColor: '#fbbf24', img: '../../assets/cards/211.png' },
+  { name: 'Lama Scarlatta', pot: 9, dan: 2, army: 'Corte Rossa', armyColor: '#f43f5e', img: '../../assets/cards/301.png' },
+  { name: 'Boia della Corte', pot: 5, dan: 8, army: 'Corte Rossa', armyColor: '#f43f5e', img: '../../assets/cards/311.png' },
+  { name: 'Fante Corazzato', pot: 4, dan: 9, army: 'Calibri Pesanti', armyColor: '#94a3b8', img: '../../assets/cards/401.png' },
+  { name: "Colosso d'Acciaio", pot: 7, dan: 5, army: 'Calibri Pesanti', armyColor: '#94a3b8', img: '../../assets/cards/411.png' },
+];
+
+function fanSlot(i, n) {
+  const t = n === 1 ? 0.5 : i / (n - 1);
+  return {
+    x: STAGE_CX + (t - 0.5) * 620,
+    y: STAGE_CY - Math.sin(t * Math.PI) * 36,
+    rot: (t - 0.5) * 56,
+  };
+}
+
+function handSlot(i, n) {
+  const t = n === 1 ? 0.5 : i / (n - 1);
+  return {
+    x: STAGE_CX + (t - 0.5) * 480,
+    y: HAND_Y - Math.sin(t * Math.PI) * 22,
+    rot: (t - 0.5) * 44,
+  };
+}
+
+function shuffleArr(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+class Component extends DCLogic {
+  state = { cards: this.initialCards(), showReplay: false };
+  timers = [];
+
+  initialCards() {
+    return CARD_DATA.map((d, i) => ({
+      id: i,
+      ...d,
+      x: DECK_POS.x + i * 0.6,
+      y: DECK_POS.y + i * 1.4,
+      rot: (i - 4.5) * 0.8,
+      scale: 1,
+      z: i,
+      flipped: false,
+    }));
+  }
+
+  componentDidMount() {
+    this.play();
+  }
+
+  componentWillUnmount() {
+    this.clearTimers();
+  }
+
+  clearTimers() {
+    this.timers.forEach(id => clearTimeout(id));
+    this.timers = [];
+  }
+
+  after(ms, fn) {
+    this.timers.push(setTimeout(fn, ms));
+  }
+
+  setCard(idx, patch) {
+    this.setState(s => {
+      const cards = s.cards.slice();
+      cards[idx] = { ...cards[idx], ...patch };
+      return { cards };
+    });
+  }
+
+  play() {
+    this.clearTimers();
+    this.setState({ cards: this.initialCards(), showReplay: false });
+
+    this.after(500, () => {
+      CARD_DATA.forEach((_, i) => {
+        const slot = fanSlot(i, 10);
+        this.setCard(i, { x: slot.x, y: slot.y, rot: slot.rot, z: 10 + i });
+      });
+    });
+
+    let slotOrder = CARD_DATA.map((_, i) => i);
+    const applyOrder = (order, delay) => {
+      this.after(delay, () => {
+        order.forEach((cardIdx, slotIdx) => {
+          const slot = fanSlot(slotIdx, 10);
+          this.setCard(cardIdx, { x: slot.x, y: slot.y, rot: slot.rot, z: 30 + slotIdx });
+        });
+      });
+    };
+
+    let t = 1350;
+    for (let round = 0; round < 2; round++) {
+      slotOrder = shuffleArr(slotOrder);
+      applyOrder(slotOrder, t);
+      t += 620;
+    }
+    const finalOrder = slotOrder;
+
+    this.after(t, () => {
+      finalOrder.forEach((cardIdx, pos) => {
+        this.setCard(cardIdx, {
+          x: DECK_POS.x + pos * 0.6,
+          y: DECK_POS.y + pos * 1.4,
+          rot: (pos - 4.5) * 0.8,
+          z: 10 - pos,
+        });
+      });
+    });
+    t += 900;
+
+    for (let k = 0; k < 5; k++) {
+      const cardIdx = finalOrder[k];
+      this.after(t + k * 300, () => {
+        const slot = handSlot(k, 5);
+        this.setCard(cardIdx, { x: slot.x, y: slot.y, rot: slot.rot, z: 50 + k, flipped: true, scale: 1.06 });
+      });
+    }
+    this.after(t, () => {
+      finalOrder.slice(5).forEach((cardIdx, pos) => {
+        this.setCard(cardIdx, {
+          x: REMAIN_POS.x + pos * 0.6,
+          y: REMAIN_POS.y + pos * 1.4,
+          rot: (pos - 2) * 1.2,
+          z: 5 - pos,
+        });
+      });
+    });
+    t += 5 * 300 + 750;
+
+    this.after(t, () => this.setState({ showReplay: true }));
+  }
+
+  replay = () => this.play();
+
+  renderVals() {
+    const cards = this.state.cards.map(c => {
+      const wrapStyle = `position:absolute;left:${c.x}px;top:${c.y}px;width:${CARD_W}px;height:${CARD_H}px;transform:translate(-50%,-50%) rotate(${c.rot}deg) scale(${c.scale});transition:left .7s cubic-bezier(.4,0,.2,1), top .7s cubic-bezier(.4,0,.2,1), transform .7s cubic-bezier(.4,0,.2,1);z-index:${c.z};`;
+      const innerStyle = `position:absolute;inset:0;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1);transform:rotateY(${c.flipped ? 180 : 0}deg);`;
+      const frontStyle = `position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);border-radius:10px;overflow:hidden;background:#0a0a0d;border:2px solid rgba(255,255,255,.28);box-shadow:0 0 0 1px ${c.armyColor}66, var(--sh-drop);`;
+      const sashStyle = `position:absolute;left:0;right:0;top:6px;height:34px;background:${c.armyColor}cc;display:flex;align-items:center;justify-content:space-between;padding:0 7px;box-shadow:0 2px 6px rgba(0,0,0,.6);`;
+      const armyBarStyle = `position:absolute;left:0;right:0;bottom:0;height:16px;background:${c.armyColor};display:flex;align-items:center;justify-content:center;color:#fff;font-size:6.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.8);`;
+      return Object.assign({}, c, { wrapStyle, innerStyle, frontStyle, sashStyle, armyBarStyle });
+    });
+    return {
+      cards,
+      onReplay: this.replay,
+      showReplay: this.state.showReplay,
+    };
+  }
+}
+</script>
+</body>
+</html>

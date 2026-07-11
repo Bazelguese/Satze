@@ -76,7 +76,7 @@ export function useGameState() {
   
   // Galleria
   const [galleryTab, setGalleryTab] = useState('agents'); // 'agents' | 'battlefields'
-  const [selectedArmyFilter, setSelectedArmyFilter] = useState(null);
+  const [selectedArmyFilter, setSelectedArmyFilter] = useState("Figli dell'Orizzonte");
   const [galleryCardLayout, setGalleryCardLayout] = useState(readGalleryCardLayout);
 
   useEffect(() => {
@@ -121,8 +121,14 @@ export function useGameState() {
   const [campaignLevel, setCampaignLevel] = useState(null);
   /** Slot salvataggio campagna attivo (0–2). */
   const [campaignSaveSlot, setCampaignSaveSlot] = useState(0);
-  /** Modificatori duello da missione campagna (iniziativa, condizione vittoria). */
+  /** Campagna: modificatori duello da missione. */
   const [campaignDuelMod, setCampaignDuelMod] = useState(null);
+
+  /** Setup animazione mischia & deal (fase shuffleDeal). */
+  const [shuffleDealSetup, setShuffleDealSetup] = useState(null);
+  /** Identità visiva mazzo (accent + armate dal deck da 10) — persiste per tutta la partita. */
+  const [playerDeckVisual, setPlayerDeckVisual] = useState(null);
+  const [enemyDeckVisual, setEnemyDeckVisual] = useState(null);
   
   return {
     // Game phase
@@ -262,6 +268,12 @@ export function useGameState() {
     setCampaignSaveSlot,
     campaignDuelMod,
     setCampaignDuelMod,
+    shuffleDealSetup,
+    setShuffleDealSetup,
+    playerDeckVisual,
+    setPlayerDeckVisual,
+    enemyDeckVisual,
+    setEnemyDeckVisual,
     
     // UI states aggiuntivi
     showDeckManager,

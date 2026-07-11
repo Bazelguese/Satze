@@ -6,10 +6,16 @@ import { CardImage } from './CardImage';
 import { CardName } from './CardName';
 import { Icon } from '../ui/Icon';
 import { AbilityFormatted, BonusFormattedFromString } from './AbilityFormatted';
-
-/** Stesso schema piastra delle altre evidenziazioni footer, tinta ardesia (non attivo). */
-const LEGACY_CARD_FOOTER_INACTIVE_PANEL =
-  'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-slate-950/42 via-slate-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(148,163,184,0.11)] origin-bottom transform-gpu';
+import {
+  CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
+  CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
+  CARD_FOOTER_ROW_DIVIDER_STYLE,
+  CARD_FOOTER_ROW_SHELL_CLASS,
+  CardFooterTintLayer,
+  CardFooterBlockIconOverlay,
+  getBlockedFooterFxClasses,
+  resolveCardFooterPanelVisual,
+} from './cardFooterPanelVisual';
 
 /**
  * Componente carta principale per il duello
@@ -84,6 +90,41 @@ export const Card = ({
     onClick?.(agent);
     if (onHover && agent) onHover({ agent, showBonus: showBonus });
   };
+
+  const abilityFooterInactive = abilityNotTriggered;
+  const abilityFooterHighlight =
+    highlightAbility && !abilityBlocked && !abilityFooterInactive;
+  const bonusFooterInactive = bonusNotTriggered;
+  const bonusFooterHighlight =
+    highlightBonus && !bonusBlocked && !bonusFooterInactive;
+  const duelFooterPanelFx =
+    highlightAbility ||
+    highlightBonus ||
+    abilityBlocked ||
+    bonusBlocked ||
+    abilityNotTriggered ||
+    bonusNotTriggered ||
+    Boolean(copiedAbility) ||
+    Boolean(copiedBonus);
+  const abilityPanelVisual = resolveCardFooterPanelVisual({
+    blocked: duelFooterPanelFx && abilityBlocked,
+    inactive: duelFooterPanelFx && abilityFooterInactive,
+    highlight: abilityFooterHighlight,
+    highlightTint: CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
+  });
+  const bonusPanelVisual = resolveCardFooterPanelVisual({
+    blocked: duelFooterPanelFx && bonusBlocked,
+    inactive: duelFooterPanelFx && bonusFooterInactive,
+    highlight: bonusFooterHighlight,
+    highlightTint: CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
+    stagger: true,
+  });
+  const abilityBlockedFx = abilityBlocked
+    ? getBlockedFooterFxClasses(false, false, 'ability')
+    : null;
+  const bonusBlockedFx = bonusBlocked
+    ? getBlockedFooterFxClasses(false, true, 'bonus')
+    : null;
 
   return (
     <div
@@ -165,31 +206,43 @@ export const Card = ({
       </div>
       
       {/* Footer con Potere e Bonus */}
-      <div className="relative z-10 bg-black/40 p-2">
+      <div className="relative z-10 bg-black/40 px-2 py-1.5">
         {/* Potere */}
-        <div className={`mb-1 relative transition-[opacity,background-color,box-shadow] duration-500 ${
-          abilityBlocked ? 'opacity-50' : ''
-        } ${
-          copiedAbility ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel' :
-          abilityBlocked ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu animate-modifier-highlight-panel' :
-          abilityNotTriggered ? LEGACY_CARD_FOOTER_INACTIVE_PANEL :
-          highlightAbility ? 'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-orange-950/40 via-orange-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(251,146,60,0.09)] origin-bottom transform-gpu animate-modifier-highlight-panel' : 'rounded px-1.5 py-1'
-        }`}>
+        <div
+          className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2 px-2 ${abilityPanelVisual.shellPadding}`}
+        >
+          <CardFooterTintLayer
+            state={abilityPanelVisual.state}
+            tintClass={abilityPanelVisual.tintClass}
+            animClass={abilityPanelVisual.animClass}
+            blockedPanel={abilityPanelVisual.blockedPanel}
+          />
+          <div className={`relative z-[1] ${abilityBlocked ? abilityBlockedFx?.dim ?? 'opacity-60' : ''}`}>
           <div className={`text-[8px] uppercase font-bold flex items-center gap-1 ${
-            copiedAbility ? 'text-green-300' :
-            abilityBlocked ? 'text-red-400' : 
-            abilityNotTriggered ? 'text-slate-500' :
-            highlightAbility ? 'text-orange-300' : 'text-orange-400'
+            abilityBlocked
+              ? abilityBlockedFx?.label ?? 'text-red-400'
+              : copiedAbility
+                ? 'text-green-300'
+                : abilityFooterInactive
+                  ? 'text-slate-500'
+                  : abilityFooterHighlight
+                    ? 'text-orange-300'
+                    : 'text-orange-400'
           }`}>
             {copiedAbility && <Icon name="copy" type="cardIcon" size={10} />}
             {!copiedAbility && !abilityBlocked && <Icon name="lightning" type="cardIcon" size={10} />}
             {abilityBlocked ? ' Potere Bloccato' : copiedAbility ? ' Potere Copiato' : ' Potere'}
           </div>
-          <div className={`${small ? 'text-[9px]' : 'text-[10px]'} leading-tight ${
-            copiedAbility ? 'text-green-200 font-semibold' :
-            abilityBlocked ? 'text-red-300 line-through' : 
-            abilityNotTriggered ? 'text-slate-500 font-semibold' :
-            highlightAbility ? 'text-orange-200 font-semibold' : 'text-white'
+          <div className={`${small ? 'text-[9px]' : 'text-[10px]'} leading-tight font-semibold ${
+            abilityBlocked
+              ? abilityBlockedFx?.text ?? 'text-red-300 line-through'
+              : copiedAbility
+                ? 'text-green-200'
+                : abilityFooterInactive
+                  ? 'text-slate-500'
+                  : abilityFooterHighlight
+                    ? 'text-orange-200'
+                    : 'text-white'
           }`}>
             <AbilityFormatted
               ability={copiedAbility || agent.ability}
@@ -202,45 +255,66 @@ export const Card = ({
               }
             />
           </div>
+          </div>
           {abilityBlocked && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Icon name="block" type="cardIcon" size={28} color="#ef4444" className="opacity-30" style={{ transform: 'rotate(-15deg)' }} />
-            </div>
+            <CardFooterBlockIconOverlay
+              animClass={abilityBlockedFx?.icon ?? abilityPanelVisual.animClass}
+              iconSize={28}
+            />
           )}
         </div>
-        
+
+        <div
+          className="-mx-2"
+          style={{ height: 1, background: 'rgba(255,255,255,0.1)', ...CARD_FOOTER_ROW_DIVIDER_STYLE }}
+        />
+
         {/* Bonus Armata */}
-        <div className={`pt-1 border-t transition-[opacity,background-color,box-shadow,border-color] duration-500 group relative ${
-          copiedBonus ? 'rounded px-0 py-1 overflow-hidden border-transparent bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu animate-modifier-copy-panel-stagger' :
-          bonusBlocked ? 'rounded px-0 py-1 overflow-hidden border-transparent bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu animate-modifier-highlight-panel-stagger' :
-          bonusNotTriggered ? LEGACY_CARD_FOOTER_INACTIVE_PANEL :
-          highlightBonus && !copiedBonus
-            ? 'border-transparent rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-sky-950/40 via-sky-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(56,189,248,0.09)] origin-bottom transform-gpu animate-modifier-highlight-panel-stagger'
-            : showBonus && !bonusBlocked ? 'rounded px-1.5 py-1 bg-sky-500/8' : 'rounded px-1.5 py-1 border-white/10'
-        } ${bonusBlocked ? 'opacity-50' : ''}`}>
+        <div
+          className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2 px-2 ${bonusPanelVisual.shellPadding}`}
+        >
+          <CardFooterTintLayer
+            state={bonusPanelVisual.state}
+            tintClass={bonusPanelVisual.tintClass}
+            animClass={bonusPanelVisual.animClass}
+            blockedPanel={bonusPanelVisual.blockedPanel}
+          />
+          <div className={`relative z-[1] ${bonusBlocked ? bonusBlockedFx?.dim ?? 'opacity-60' : ''}`}>
           <div className={`text-[8px] uppercase font-bold flex items-center gap-1 ${
-            copiedBonus ? 'text-green-300' :
-            bonusBlocked ? 'text-red-400' : 
-            bonusNotTriggered ? 'text-slate-500' :
-            highlightBonus ? 'text-sky-300' : 'text-sky-400'
+            bonusBlocked
+              ? bonusBlockedFx?.label ?? 'text-red-400'
+              : copiedBonus
+                ? 'text-green-300'
+                : bonusFooterInactive
+                  ? 'text-slate-500'
+                  : bonusFooterHighlight
+                    ? 'text-sky-300'
+                    : 'text-sky-400'
           }`}>
-            {(showBonus || copiedBonus || highlightBonus) && !bonusBlocked && !bonusNotTriggered && <Icon name="check" type="cardIcon" size={10} />}
+            {(showBonus || copiedBonus || bonusFooterHighlight) && !bonusBlocked && !bonusFooterInactive && <Icon name="check" type="cardIcon" size={10} />}
             {bonusBlocked ? ' Bonus Bloccato' : bonusNotTriggered ? ' Bonus' : showBonus ? ' Bonus' : ' Bonus'}
           </div>
-          <div className={`${small ? 'text-[9px]' : 'text-[10px]'} leading-tight ${
-            copiedBonus ? 'text-green-200 font-semibold' :
-            bonusBlocked ? 'text-red-300 line-through' : 
-            bonusNotTriggered ? 'text-slate-500 font-semibold' :
-            highlightBonus ? 'text-sky-200 font-semibold' : 'text-white'
+          <div className={`${small ? 'text-[9px]' : 'text-[10px]'} leading-tight font-semibold ${
+            bonusBlocked
+              ? bonusBlockedFx?.text ?? 'text-red-300 line-through'
+              : copiedBonus
+                ? 'text-green-200'
+                : bonusFooterInactive
+                  ? 'text-slate-500'
+                  : bonusFooterHighlight
+                    ? 'text-sky-200'
+                    : 'text-white'
           }`}>
             <BonusFormattedFromString
               text={copiedBonus ? copiedBonus.description : armyBonus?.description || '—'}
             />
           </div>
+          </div>
           {bonusBlocked && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Icon name="block" type="cardIcon" size={28} color="#ef4444" className="opacity-30" style={{ transform: 'rotate(-15deg)' }} />
-            </div>
+            <CardFooterBlockIconOverlay
+              animClass={bonusBlockedFx?.icon ?? bonusPanelVisual.animClass}
+              iconSize={28}
+            />
           )}
         </div>
       </div>

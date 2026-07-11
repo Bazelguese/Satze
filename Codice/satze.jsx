@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { createPortal } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../src/utils';
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
@@ -8,13 +9,32 @@ import { getCardTags } from '../src/data/cardTags';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
+import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, markCampaignMissionStarted } from '../src/data';
 import { loadCampaignProgress } from '../src/data/campaign';
 import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLogic.js';
 import { applyToxin } from '../src/game/toxinLogic';
 import { checkTrigger } from '../src/game/triggerLogic';
+import { getFieldModifiers, fieldGrantsOverdriveBonus } from '../src/game/fieldLogic';
 import { countAttritionPriorCards, countInitialLeagueCards } from '../src/game/duel/duelHelpers.js';
+import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
+import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
+import { DuelRevealHudStyles } from '../src/components/shuffle/DuelRevealVeil';
+import { prepareDuelShuffleHands, prepareRandomDuelShuffleHands } from '../src/components/shuffle/prepareDuelShuffleHands';
+import { SHUFFLE_STYLE_OPTIONS, setShuffleStyle } from '../src/utils/shuffleStylePreference';
+import {
+  armyMenuLabel,
+  buildDialogueDuelArmyChoices,
+} from '../src/utils/devDialogueDuelMenu';
+import { IA_CARD_POSITIONS, PLAYER_CARD_POSITIONS } from '../src/config/battlefieldHandLayout';
 import { useGameState, useAnimations, useBattle, useDragAndDrop, useGameFlow, useAI, useTutorial, useCampaignGameOutcome, useGuidedTutorialFlow, useTutorialOrchestrator } from '../src/hooks';
+import {
+  ADV_STAGE_EPILOGUE,
+  ADV_STAGE_TRIGGERS,
+  INTRO_STAGE_EPILOGUE,
+  INTRO_STAGE_FREE_PLAY_FINAL,
+  INTRO_STAGE_PLAY,
+} from '../src/data/tutorialGuidedContent';
 import {
   Tutorial,
   TutorialSelector,
@@ -25,7 +45,7 @@ import {
   TUTORIAL_TRACKS,
 } from '../src/components/tutorial';
 import { Glossary } from '../src/components/Glossary';
-import { getAllDifficulties, DIFFICULTY_NAMES } from '../src/utils';
+import { DIFFICULTY_NAMES } from '../src/utils';
 import { CampaignWarHub } from '../src/components/campaign/CampaignWarHub';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { buildCampaignDuelLaunchConfig } from '../src/game/campaign/campaignDuelAdapter.js';
@@ -42,25 +62,34 @@ import CardGallery from '../src/components/menu/gallery/CardGallery.jsx';
 import GalleryCinematic from '../src/components/menu/gallery/GalleryCinematic.jsx';
 import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCarousel';
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
+import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
+import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
 import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDeckBuilderWrapper';
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
 import { GAME_MODES } from '../src/data/gameModes';
-import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor } from '../src/utils/deckManager';
+import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
+import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
+import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
 import { clearMpSession, persistMpSession, reconnectToRoom } from '../src/utils/multiplayerReconnect';
 import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
 import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
 import { getDuelVisualConfig } from '../src/config/duelVisualConfigStore.js';
 import { DUEL_VFX_CHANGED_EVENT } from '../src/config/duelVisualConfig.js';
-import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps } from '../src/config/duelVisualTimeline.js';
+import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps, computeFocusCoinAppearDelayMs, getNextDuelPhase, syncDuelVisualsForPhase } from '../src/config/duelVisualTimeline.js';
 import { countDuelEffectSteps, countDuelPostEffectSteps } from '../src/game/duel/duelVisualSteps.js';
 import { DUEL_VISUAL_DEFAULTS } from '../src/config/duelVisualConfig.js';
 import { useSafeDuelEffectStep } from '../src/components/battle/useSafeDuelEffectStep.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils/focusCoinGlow.js';
+import {
+  IS_PUBLIC_PLAYTEST_BUILD,
+  PUBLIC_BUILD_MARQUEE,
+  filterMenuItemsForBuild,
+} from '../src/config/buildProfile.js';
 
 // ============================================
 // SATZE - Componente principale del gioco
@@ -75,6 +104,11 @@ import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils
 // ============================================
 // LOGICA DI GIOCO
 // ============================================
+
+/** Ritardo naturale prima che il nemico mostri la carta nel tutorial guidato (0,5–1 s). */
+function getGuidedEnemyDeployDelayMs() {
+  return 500 + Math.floor(Math.random() * 501);
+}
 
 // ============================================
 // COMPONENTE PRINCIPALE
@@ -141,7 +175,25 @@ export default function SatzeGame() {
     showClaimVictoryChoice, setShowClaimVictoryChoice,
     campaignDuelMod,
     setCampaignDuelMod,
+    shuffleDealSetup,
+    setShuffleDealSetup,
+    playerDeckVisual,
+    enemyDeckVisual,
   } = gameState;
+
+  /** Solo STRUMENTI DEV → DIALOGUE DUELLO: fumetti durante il duello di test. */
+  const [devDialogueDuelActive, setDevDialogueDuelActive] = useState(false);
+
+  const playerIdentityColor = useMemo(
+    () => playerDeckVisual?.accent
+      ?? getHandAccentColor(playerHand, ARMY_COLORS, '#4FD1C5'),
+    [playerHand, playerDeckVisual?.accent],
+  );
+  const enemyIdentityColor = useMemo(
+    () => enemyDeckVisual?.accent
+      ?? getHandAccentColor(enemyHand, ARMY_COLORS, '#D946EF'),
+    [enemyHand, enemyDeckVisual?.accent],
+  );
 
   useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot });
 
@@ -161,11 +213,23 @@ export default function SatzeGame() {
     }
     // Regola richiesta: animazione quando si torna al menu principale.
     if (nextPhase === 'menu' && gamePhase !== 'menu') {
+      setDevDialogueDuelActive(false);
       setGamePhaseAnimated(nextPhase);
       return;
     }
     setGamePhaseRaw(nextPhase);
   }, [gamePhase, setGamePhaseAnimated, setGamePhaseRaw]);
+
+  useEffect(() => {
+    if (!IS_PUBLIC_PLAYTEST_BUILD) return;
+    if (
+      gamePhase === 'playtestHistory' ||
+      gamePhase === 'campaignSlots' ||
+      gamePhase === 'campaignHub'
+    ) {
+      setGamePhaseRaw('menu');
+    }
+  }, [gamePhase, setGamePhaseRaw]);
 
   // Helper: valore attuale per Attrizione/Escalation (solo carte del proprietario per Attrizione)
   const getAbilityCurrentValue = useCallback((agent, isPlayer) => {
@@ -217,12 +281,33 @@ export default function SatzeGame() {
   const [agentsTabReady, setAgentsTabReady] = useState(false);
   // Ultima carta mostrata nell'anteprima (rimane visibile quando il mouse esce)
   const [lastPreviewCard, setLastPreviewCard] = useState(null);
+  const clearCardPreview = useCallback(() => {
+    setLastPreviewCard(null);
+    setHoveredCard(null);
+    setHoveredField(null);
+  }, [setHoveredCard, setHoveredField]);
   // Tilt Tabellone: una volta che il cursore ci passa sopra, si ferma e non riparte
   const [tabelloneTiltDismissed, setTabelloneTiltDismissed] = useState(false);
   
   // Stato per modal carta ingrandita nella galleria
   const [selectedCardForModal, setSelectedCardForModal] = useState(null);
   const [previewDeckData, setPreviewDeckData] = useState(null);
+  const [showDifficultyPopup, setShowDifficultyPopup] = useState(false);
+  const [pendingGameLaunch, setPendingGameLaunch] = useState(null);
+  const [launchVisualPhase, setLaunchVisualPhase] = useState(null);
+  const [launchShowText, setLaunchShowText] = useState(false);
+  const launchStartedRef = useRef(null);
+  const launchSessionRef = useRef(null);
+  const pendingGameLaunchRef = useRef(null);
+  const launchOverlayRootRef = useRef(null);
+  const launchOverlayContainerRef = useRef(null);
+  const shuffleLaunchHoldMsRef = useRef(null);
+  const [duelRevealPhase, setDuelRevealPhase] = useState('idle');
+  pendingGameLaunchRef.current = pendingGameLaunch;
+
+  useEffect(() => {
+    if (gamePhase !== 'shuffleDeal') setDuelRevealPhase('idle');
+  }, [gamePhase]);
 
   // Galleria: numero di carte renderizzate (incrementale, evita 200+ carte nel DOM)
   const GALLERY_PAGE_SIZE = 48;
@@ -237,10 +322,13 @@ export default function SatzeGame() {
       if (e.key === 'Escape' && selectedCardForModal) {
         setSelectedCardForModal(null);
       }
+      if (e.key === 'Escape' && showDifficultyPopup) {
+        setShowDifficultyPopup(false);
+      }
     };
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [selectedCardForModal]);
+  }, [selectedCardForModal, showDifficultyPopup]);
   
   // Estrai gli stati delle animazioni
   const {
@@ -282,15 +370,22 @@ export default function SatzeGame() {
 
   const [onlineLocalReady, setOnlineLocalReady] = useState(false);
   const [onlinePeerDeck, setOnlinePeerDeck] = useState(null);
+  const [onlinePeerName, setOnlinePeerName] = useState(null);
   const [pendingGuestMatch, setPendingGuestMatch] = useState(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
+  /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
+  const [opponentClaimPending, setOpponentClaimPending] = useState(null);
+  const [incomingClaimDecision, setIncomingClaimDecision] = useState(null);
+  const forceContinueAfterClaimRef = useRef(false);
+  const focusCoinTimersRef = useRef([]);
   const [onlineOpponentLeft, setOnlineOpponentLeft] = useState(false);
   /** Connessione WebSocket persa (rete / refresh): mostra pulsante Riconnetti */
   const [mpConnectionLost, setMpConnectionLost] = useState(false);
   /** L'avversario è temporaneamente offline ma può tornare */
   const [mpOpponentAway, setMpOpponentAway] = useState(false);
   const [mpReconnecting, setMpReconnecting] = useState(false);
+  const mpAutoReconnectTriedRef = useRef(false);
   const [mpReconnectError, setMpReconnectError] = useState('');
   const onlineMatchStartedRef = useRef(false);
   const playtestAutoSavedRef = useRef(false);
@@ -298,46 +393,6 @@ export default function SatzeGame() {
   useEffect(() => {
     multiplayerSessionRef.current = multiplayerSession;
   }, [multiplayerSession]);
-
-  const goAfterDeckSelection = useCallback(() => {
-    if (isMultiplayer && selectedMode === 'multiplayer') {
-      setOnlineLocalReady(false);
-      setOnlinePeerDeck(null);
-      onlineMatchStartedRef.current = false;
-      setPendingGuestMatch(null);
-      setIncomingPeerMoveQueue([]);
-      setGamePhase('onlineDeckReady');
-    } else {
-      setGamePhase('selectDifficulty');
-    }
-  }, [isMultiplayer, selectedMode, setGamePhase]);
-
-  /** Campagna Figli: dopo armata si salta la selezione deck se il mazzo hub è valido. */
-  const selectArmyAndContinue = useCallback(
-    (army) => {
-      setSelectedArmy(army);
-      if (
-        selectedMode === 'campaign' &&
-        campaignLevel?.playerArmy === "Figli dell'Orizzonte" &&
-        army === "Figli dell'Orizzonte"
-      ) {
-        const prog = loadCampaignProgress(campaignSaveSlot);
-        const ids = prog.meta?.activeDeckCardIds;
-        const ok =
-          Array.isArray(ids) &&
-          ids.length >= 3 &&
-          ids.length <= 10 &&
-          totalLeagueForCampaignDeck(ids, "Figli dell'Orizzonte") <= 30;
-        if (ok) {
-          setSelectedDeckKey(ids);
-          setGamePhase('selectDifficulty');
-          return;
-        }
-      }
-      setGamePhase('selectDeck');
-    },
-    [selectedMode, campaignLevel, campaignSaveSlot, setSelectedArmy, setSelectedDeckKey, setGamePhase]
-  );
 
   useEffect(() => {
     if (!multiplayerSession?.roomCode) return;
@@ -371,7 +426,8 @@ export default function SatzeGame() {
         const s = multiplayerSessionRef.current;
         if (s?.reconnectSecret && s?.roomCode) {
           setMpConnectionLost(true);
-          setLogs((prev) => [...prev.slice(-200), '[!] Connessione al server persa. Puoi riconnetterti.']);
+          mpAutoReconnectTriedRef.current = false;
+          setLogs((prev) => [...prev.slice(-200), '[!] Connessione al server persa. Riconnessione automatica…']);
         }
         return;
       }
@@ -381,11 +437,16 @@ export default function SatzeGame() {
         setOnlinePeerDeck({
           army: p.army,
           deckKey: p.deckKey,
+          ...(p.playerName ? { playerName: p.playerName } : {}),
           ...(Array.isArray(p.deckCardIds) && p.deckCardIds.length ? { deckCardIds: p.deckCardIds } : {}),
         });
+        if (p.playerName) setOnlinePeerName(p.playerName);
       }
       if (p.type === 'match_start' && p.match) {
         setPendingGuestMatch(p.match);
+      }
+      if (p.type === 'claim_decision') {
+        setIncomingClaimDecision(p);
       }
       if (p.type === 'peer_move') {
         setIncomingPeerMoveQueue((prev) => [...prev.slice(-49), p]);
@@ -407,6 +468,7 @@ export default function SatzeGame() {
     try {
       await reconnectToRoom(s);
       setMpConnectionLost(false);
+      mpAutoReconnectTriedRef.current = false;
       persistMpSession(s);
     } catch (e) {
       const msgText = e?.message || 'Errore di riconnessione';
@@ -419,6 +481,15 @@ export default function SatzeGame() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!mpConnectionLost || mpReconnecting || mpAutoReconnectTriedRef.current) return;
+    mpAutoReconnectTriedRef.current = true;
+    const t = setTimeout(() => {
+      attemptMpSelfReconnect();
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [mpConnectionLost, mpReconnecting, attemptMpSelfReconnect]);
+
   const abandonMultiplayerSession = useCallback(() => {
     setMpConnectionLost(false);
     setMpOpponentAway(false);
@@ -427,6 +498,9 @@ export default function SatzeGame() {
     onlineMatchStartedRef.current = false;
     setPendingGuestMatch(null);
     setIncomingPeerMoveQueue([]);
+    setOpponentClaimPending(null);
+    setIncomingClaimDecision(null);
+    forceContinueAfterClaimRef.current = false;
     setMultiplayerSession(null);
     setIsMultiplayer(false);
     clearMpSession();
@@ -437,9 +511,15 @@ export default function SatzeGame() {
   useEffect(() => {
     if (!pendingGuestMatch || multiplayerSession?.role !== 'guest') return;
     if (gamePhase !== 'onlineDeckReady') return;
-    startOnlineMatch('guest', pendingGuestMatch);
-    setPendingGuestMatch(null);
-    setGamePhase('selectField');
+    try {
+      startOnlineMatch('guest', pendingGuestMatch);
+      setPendingGuestMatch(null);
+    } catch (e) {
+      console.error('[multiplayer] avvio partita guest:', e);
+      alert(
+        `Errore sincronizzazione partita: ${e?.message || e}\n\nChiedi all'host di uscire e ricreare la stanza, oppure aggiorna entrambi i client alla stessa versione.`
+      );
+    }
   }, [pendingGuestMatch, gamePhase, multiplayerSession?.role, startOnlineMatch, setGamePhase]);
 
   useEffect(() => {
@@ -468,7 +548,6 @@ export default function SatzeGame() {
       );
       startOnlineMatch('host', match);
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: 'match_start', match });
-      setGamePhase('selectField');
     } catch (e) {
       console.error('[multiplayer] avvio partita host:', e);
       onlineMatchStartedRef.current = false;
@@ -497,6 +576,8 @@ export default function SatzeGame() {
   
   // Ref per tracciare se l'IA ha già selezionato l'agente in questo round
   const aiHasSelectedAgent = useRef(false);
+  const guidedEnemyDeployTimerRef = useRef(null);
+  const guidedEnemyDeployScheduledRef = useRef(false);
   const fcPanelRef = useRef(null);
   const playerCardZoneRef = useRef(null);
   const selectedCardInHandRef = useRef(null);
@@ -507,13 +588,17 @@ export default function SatzeGame() {
     guidedMatch,
     guidedHint,
     guidedIntroStage,
+    guidedPause,
     setGuidedHint,
     setGuidedIntroStage,
+    setGuidedPause,
     openTutorialSelector,
     closeTutorialSelector,
     handleTutorialTrackSelect,
     startStandardGame,
     resetGuidedTutorial,
+    enableGuidedFreePlay,
+    finishGuidedTutorial,
   } = useTutorialOrchestrator({
     tutorial,
     gameFlow,
@@ -563,6 +648,228 @@ export default function SatzeGame() {
     },
   });
 
+  const handleTutorialTrackSelectWithPreviewReset = useCallback((mode) => {
+    clearCardPreview();
+    handleTutorialTrackSelect(mode);
+  }, [clearCardPreview, handleTutorialTrackSelect]);
+
+  const startStandardGameRef = useRef(startStandardGame);
+  startStandardGameRef.current = startStandardGame;
+
+  const launchDialogueDuelTest = useCallback((playerArmy, shuffleKind) => {
+    setDevDialogueDuelActive(true);
+    setShuffleStyle(shuffleKind);
+    try {
+      const duel = prepareDuelShuffleHands({ playerArmy });
+      startStandardGame(
+        duel.playerArmy,
+        duel.playerDeckKey,
+        'classic',
+        'medium',
+        ALL_BATTLEFIELDS,
+        duel.enemyArmy,
+        duel.enemyDeckKey
+      );
+    } catch (err) {
+      console.error('[Dialogue duel] avvio fallito:', err);
+    }
+  }, [startStandardGame]);
+
+  const dialogueDuelArmyMenuChoices = useMemo(
+    () => buildDialogueDuelArmyChoices(Object.keys(ARMY_SETS), launchDialogueDuelTest),
+    [launchDialogueDuelTest]
+  );
+
+  const startCampaignGame = useCallback((army, deckKey) => {
+    if (!campaignLevel || !army || !deckKey) return;
+    const launch = buildCampaignDuelLaunchConfig(campaignLevel, null);
+    startStandardGame(
+      army,
+      deckKey,
+      'campaign',
+      campaignLevel.difficulty,
+      ALL_BATTLEFIELDS,
+      campaignLevel.enemyArmy,
+      campaignLevel.enemyDeck,
+      launch.campaignDuelMod
+    );
+  }, [campaignLevel, startStandardGame]);
+
+  const goAfterDeckSelection = useCallback((deckKeyOverride) => {
+    const deckKey = deckKeyOverride ?? selectedDeckKey;
+    if (isMultiplayer && selectedMode === 'multiplayer') {
+      setOnlineLocalReady(false);
+      setOnlinePeerDeck(null);
+      setOnlinePeerName(null);
+      onlineMatchStartedRef.current = false;
+      // Non azzerare pendingGuestMatch: match_start può arrivare mentre si è ancora su selectDeck.
+      setIncomingPeerMoveQueue([]);
+      setGamePhase('onlineDeckReady');
+      return;
+    }
+    if (campaignLevel && deckKey) {
+      startCampaignGame(selectedArmy, deckKey);
+      return;
+    }
+    setPreviewDeckData(null);
+    setGamePhase('selectDeck');
+    setShowDifficultyPopup(true);
+  }, [
+    selectedDeckKey,
+    selectedArmy,
+    isMultiplayer,
+    selectedMode,
+    campaignLevel,
+    startCampaignGame,
+    setGamePhase,
+  ]);
+
+  /** Campagna Figli: dopo armata si salta la selezione deck se il mazzo hub è valido. */
+  const selectArmyAndContinue = useCallback(
+    (army) => {
+      setSelectedArmy(army);
+      if (
+        selectedMode === 'campaign' &&
+        campaignLevel?.playerArmy === "Figli dell'Orizzonte" &&
+        army === "Figli dell'Orizzonte"
+      ) {
+        const prog = loadCampaignProgress(campaignSaveSlot);
+        const ids = prog.meta?.activeDeckCardIds;
+        const ok =
+          Array.isArray(ids) &&
+          ids.length >= 3 &&
+          ids.length <= 10 &&
+          totalLeagueForCampaignDeck(ids, "Figli dell'Orizzonte") <= 30;
+        if (ok) {
+          setSelectedDeckKey(ids);
+          startCampaignGame(army, ids);
+          return;
+        }
+      }
+      setGamePhase('selectDeck');
+    },
+    [selectedMode, campaignLevel, campaignSaveSlot, setSelectedArmy, setSelectedDeckKey, setGamePhase, startCampaignGame]
+  );
+
+  useEffect(() => {
+    const sessionId = pendingGameLaunch?.sessionId;
+    if (!sessionId) {
+      launchSessionRef.current = null;
+      launchStartedRef.current = null;
+      return undefined;
+    }
+
+    const payload = pendingGameLaunchRef.current;
+    if (!payload || payload.sessionId !== sessionId) return undefined;
+
+    if (launchSessionRef.current !== sessionId) {
+      launchSessionRef.current = sessionId;
+      launchStartedRef.current = null;
+    }
+
+    const textTimer = setTimeout(() => {
+      setLaunchShowText(false);
+    }, LAUNCH_TRANSITION.TEXT_HIDE_AT_MS);
+
+    const launchTimer = setTimeout(() => {
+      if (launchStartedRef.current === sessionId) return;
+      launchStartedRef.current = sessionId;
+      clearCardPreview();
+      startStandardGameRef.current(
+        payload.army,
+        payload.deckKey,
+        payload.mode,
+        payload.difficulty,
+        ALL_BATTLEFIELDS
+      );
+      setLaunchVisualPhase('hold');
+    }, LAUNCH_TRANSITION.LAUNCH_AT_MS);
+
+    const fadeTimer = setTimeout(() => {
+      setLaunchVisualPhase('fadeOut');
+    }, LAUNCH_TRANSITION.FADE_OUT_AT_MS);
+
+    const completeTimer = setTimeout(() => {
+      setPendingGameLaunch((current) => (current?.sessionId === sessionId ? null : current));
+      setLaunchVisualPhase(null);
+      setLaunchShowText(false);
+      if (launchSessionRef.current === sessionId) launchSessionRef.current = null;
+    }, LAUNCH_TRANSITION.COMPLETE_AT_MS);
+
+    return () => {
+      clearTimeout(textTimer);
+      clearTimeout(launchTimer);
+      clearTimeout(fadeTimer);
+      clearTimeout(completeTimer);
+    };
+  }, [pendingGameLaunch?.sessionId, clearCardPreview]);
+
+  useLayoutEffect(() => {
+    if (pendingGameLaunch?.sessionId) {
+      clearCardPreview();
+    }
+  }, [pendingGameLaunch?.sessionId, clearCardPreview]);
+
+  useLayoutEffect(() => {
+    const sessionId = pendingGameLaunch?.sessionId;
+    const phase = launchVisualPhase;
+
+    if (!sessionId || !phase) {
+      if (launchOverlayRootRef.current) {
+        launchOverlayRootRef.current.unmount();
+        launchOverlayContainerRef.current?.remove();
+        launchOverlayRootRef.current = null;
+        launchOverlayContainerRef.current = null;
+      }
+      return undefined;
+    }
+
+    if (!launchOverlayRootRef.current) {
+      const container = document.createElement('div');
+      container.id = 'satze-launch-overlay';
+      document.body.appendChild(container);
+      launchOverlayContainerRef.current = container;
+      launchOverlayRootRef.current = createRoot(container);
+    }
+
+    const payload = pendingGameLaunchRef.current;
+    launchOverlayRootRef.current.render(
+      <DeckConfirmTransition
+        accent={payload?.accent}
+        deckName={payload?.deckName}
+        showText={launchShowText}
+        visualPhase={phase}
+      />
+    );
+
+    return undefined;
+  }, [pendingGameLaunch?.sessionId, launchVisualPhase, launchShowText]);
+
+  useEffect(() => () => {
+    launchOverlayRootRef.current?.unmount();
+    launchOverlayContainerRef.current?.remove();
+    launchOverlayRootRef.current = null;
+    launchOverlayContainerRef.current = null;
+  }, []);
+
+  const completeShuffleDeal = useCallback(() => {
+    if (!shuffleDealSetup) return;
+    setPlayerHand(shuffleDealSetup.playerHand);
+    setEnemyHand(shuffleDealSetup.enemyHand);
+    setPlayerArmyBonuses(shuffleDealSetup.playerBonuses);
+    setEnemyArmyBonuses(shuffleDealSetup.enemyBonuses);
+    setShuffleDealSetup(null);
+    setGamePhase('selectField');
+  }, [
+    shuffleDealSetup,
+    setPlayerHand,
+    setEnemyHand,
+    setPlayerArmyBonuses,
+    setEnemyArmyBonuses,
+    setShuffleDealSetup,
+    setGamePhase,
+  ]);
+
   const {
     currentGuidedRound,
     isGuidedIntroWelcomePhase,
@@ -572,6 +879,16 @@ export default function SatzeGame() {
     isGuidedIntroGlossaryPromptPhase,
     isGuidedIntroGlossaryOpenPhase,
     isGuidedIntroBattlefieldsPhase,
+    isGuidedIntroVictoryPhase,
+    isGuidedIntroFcBudgetPhase,
+    isGuidedIntroEpiloguePhase,
+    isGuidedIntroFreePlayFinalPhase,
+    isGuidedAdvancedGoalPhase,
+    isGuidedAdvancedTriggersPhase,
+    isGuidedAdvancedEpiloguePhase,
+    isGuidedOkContinuePhase,
+    isGuidedEnemyAckPause,
+    isGuidedDuelPause,
     shouldHideHandsForGuidedSetup,
     guidedIntroTargetCardId,
     guidedIntroTargetCardName,
@@ -579,9 +896,13 @@ export default function SatzeGame() {
     guidedInstruction,
     guidedCallouts,
     handleGuidedIntroContinue,
+    validateFocusForRound,
+    guidedOverlayMode,
+    shouldPlayerPickField,
   } = useGuidedTutorialFlow({
     guidedMatch,
     guidedIntroStage,
+    guidedPause,
     setGuidedIntroStage,
     setGuidedHint,
     gamePhase,
@@ -592,7 +913,197 @@ export default function SatzeGame() {
     selectedAgent,
     selectedFocus,
     battleResult,
+    conqueredFields,
+    playerHP,
+    enemyHP,
+    playerFocus,
+    enemyFocus,
+    gameResult,
+    isPlayerFirst,
+    duelPhase,
+    enemyAgent,
   });
+
+  const clearFocusCoinTimers = useCallback(() => {
+    focusCoinTimersRef.current.forEach(clearTimeout);
+    focusCoinTimersRef.current = [];
+  }, []);
+
+  const applyDuelVisualSync = useCallback(
+    (phase) => {
+      if (!battleResult) return;
+      syncDuelVisualsForPhase(phase, battleResult, {
+        setEffectStep: setDuelEffectStep,
+        setFocusCoins: (pFc, eFc) => {
+          setPlayerFocusCoinsShown(pFc);
+          setEnemyFocusCoinsShown(eFc);
+        },
+        setCardGlow: () => {
+          setPlayerCardGlow(1);
+          setEnemyCardGlow(1);
+          setCardGlowIntensity(1);
+        },
+      });
+    },
+    [battleResult, setDuelEffectStep, setPlayerFocusCoinsShown, setEnemyFocusCoinsShown, setPlayerCardGlow, setEnemyCardGlow, setCardGlowIntensity]
+  );
+
+  const advanceDuelPhase = useCallback(() => {
+    if (!battleResult) return;
+    setDuelPhase((prev) => {
+      const next = getNextDuelPhase(prev, battleResult);
+      return next;
+    });
+  }, [battleResult, setDuelPhase]);
+
+  useLayoutEffect(() => {
+    if (gamePhase === 'result' && battleResult) {
+      applyDuelVisualSync(duelPhase);
+    }
+  }, [gamePhase, battleResult, duelPhase, applyDuelVisualSync]);
+
+  const skipDuelAnimation = useCallback(() => {
+    if (!battleResult || duelPhase >= 6) return;
+    clearFocusCoinTimers();
+    const effectCount = countDuelEffectSteps(battleResult.visualSteps);
+    const phase3SubCount = countDuelPhase3SubSteps(battleResult);
+    const postCount = countDuelPostEffectSteps(battleResult.visualSteps);
+    const maxStep = Math.max(effectCount, phase3SubCount, postCount, 1);
+    setDuelEffectStep(maxStep);
+    setPlayerFocusCoinsShown(battleResult.playerFocusUsed || 0);
+    setEnemyFocusCoinsShown(battleResult.enemyFocusUsed || 0);
+    setPlayerCardGlow(1);
+    setEnemyCardGlow(1);
+    setCardGlowIntensity(1);
+    setRainbowTime(0);
+    setDuelPhase(6);
+    if (guidedPause === 'duel') {
+      setGuidedPause(null);
+    }
+  }, [
+    battleResult,
+    duelPhase,
+    clearFocusCoinTimers,
+    setDuelEffectStep,
+    setPlayerFocusCoinsShown,
+    setEnemyFocusCoinsShown,
+    setPlayerCardGlow,
+    setEnemyCardGlow,
+    setCardGlowIntensity,
+    setRainbowTime,
+    setDuelPhase,
+    guidedPause,
+    setGuidedPause,
+  ]);
+
+  const replayDuelAnimation = useCallback(() => {
+    clearFocusCoinTimers();
+    setDuelPhase(0);
+    setDuelEffectStep(1);
+    setPlayerFocusCoinsShown(0);
+    setEnemyFocusCoinsShown(0);
+    setPlayerCardGlow(0);
+    setEnemyCardGlow(0);
+    setCardGlowIntensity(0);
+    setRainbowTime(0);
+  }, [
+    clearFocusCoinTimers,
+    setDuelPhase,
+    setDuelEffectStep,
+    setPlayerFocusCoinsShown,
+    setEnemyFocusCoinsShown,
+    setPlayerCardGlow,
+    setEnemyCardGlow,
+    setCardGlowIntensity,
+    setRainbowTime,
+  ]);
+
+  const deployScriptedGuidedEnemy = useCallback(() => {
+    if (!currentGuidedRound) return;
+    const scriptedEnemy =
+      enemyHand.find((c) => c.id === currentGuidedRound.enemyAgentId) || enemyHand[0];
+    if (!scriptedEnemy) return;
+    const enemyFocusScripted = currentGuidedRound.enemyFocusAllIn
+      ? Math.max(1, enemyFocus)
+      : currentGuidedRound.enemyFocus;
+    setEnemyAgent(scriptedEnemy);
+    setEnemySelectedFocus(enemyFocusScripted);
+    setLogs((prev) => [
+      ...prev.slice(-80),
+      `[R${roundNumber}] Guida: il nemico schiera ${scriptedEnemy.name} (${enemyFocusScripted} FC).`,
+    ]);
+  }, [
+    currentGuidedRound,
+    enemyHand,
+    enemyFocus,
+    roundNumber,
+    setEnemyAgent,
+    setEnemySelectedFocus,
+    setLogs,
+  ]);
+
+  const scheduleGuidedEnemyDeploy = useCallback(() => {
+    if (guidedEnemyDeployTimerRef.current) {
+      clearTimeout(guidedEnemyDeployTimerRef.current);
+    }
+    guidedEnemyDeployTimerRef.current = setTimeout(() => {
+      guidedEnemyDeployTimerRef.current = null;
+      deployScriptedGuidedEnemy();
+    }, getGuidedEnemyDeployDelayMs());
+  }, [deployScriptedGuidedEnemy]);
+
+  const handleGuidedContinue = useCallback(() => {
+    if (guidedPause === 'enemyField' && currentGuidedRound) {
+      const fieldIdx = currentGuidedRound.fieldIndex;
+      const fieldName = battlefields[fieldIdx]?.name || `Campo ${fieldIdx + 1}`;
+      setCurrentFieldIndex(fieldIdx);
+      setLogs((prev) => [...prev.slice(-20), `[R${roundNumber}] L'IA sceglie: ${fieldName}`]);
+      setGuidedPause(null);
+      setGamePhase('selectAgent');
+      return;
+    }
+    if (guidedPause === 'enemyAgent' && currentGuidedRound) {
+      setGuidedPause(null);
+      scheduleGuidedEnemyDeploy();
+      return;
+    }
+    if (guidedPause === 'duel') {
+      if (gamePhase === 'battle') {
+        resolveBattle();
+        return;
+      }
+      if (gamePhase === 'result' && battleResult) {
+        const next = getNextDuelPhase(duelPhase, battleResult);
+        setDuelPhase(next);
+        if (next >= 6) setGuidedPause(null);
+        return;
+      }
+    }
+    handleGuidedIntroContinue();
+  }, [
+    guidedPause,
+    currentGuidedRound,
+    battlefields,
+    roundNumber,
+    gamePhase,
+    battleResult,
+    duelPhase,
+    resolveBattle,
+    advanceDuelPhase,
+    setDuelPhase,
+    setCurrentFieldIndex,
+    setLogs,
+    setGuidedPause,
+    setGamePhase,
+    scheduleGuidedEnemyDeploy,
+    handleGuidedIntroContinue,
+  ]);
+
+  useEffect(() => () => {
+    if (guidedEnemyDeployTimerRef.current) {
+      clearTimeout(guidedEnemyDeployTimerRef.current);
+    }
+  }, []);
 
   // Preview solo al click (toggle: stesso click = nascondi)
   const handleCardPreviewClick = useCallback((data) => {
@@ -635,6 +1146,10 @@ export default function SatzeGame() {
         setGuidedHint('Prima completa i passaggi precedenti.');
         return;
       }
+      if (guidedIntroStage >= 6 && guidedIntroStage < INTRO_STAGE_PLAY) {
+        setGuidedHint('Premi OK per continuare.');
+        return;
+      }
       if (guidedIntroStage === 4) {
         setShowGlossary(true);
         setGuidedIntroStage(5);
@@ -656,8 +1171,19 @@ export default function SatzeGame() {
     }
   }, [setShowGlossary, guidedMatch.active, guidedMatch.trackId, gamePhase, guidedIntroStage, setGuidedIntroStage, setGuidedHint]);
 
-  // Auto-save singolo per ogni fine partita.
   useEffect(() => {
+    if (gamePhase !== 'gameOver' || !guidedMatch.active) return;
+    if (guidedMatch.trackId === 'intro' && guidedMatch.freePlay) {
+      setGuidedIntroStage(INTRO_STAGE_FREE_PLAY_FINAL);
+    }
+    if (guidedMatch.trackId === 'advanced') {
+      setGuidedIntroStage(ADV_STAGE_EPILOGUE);
+    }
+  }, [gamePhase, guidedMatch.active, guidedMatch.freePlay, guidedMatch.trackId, setGuidedIntroStage]);
+
+  // Auto-save singolo per ogni fine partita (solo build interna / playtest dev).
+  useEffect(() => {
+    if (IS_PUBLIC_PLAYTEST_BUILD) return;
     if (gamePhase !== 'gameOver') {
       playtestAutoSavedRef.current = false;
       return;
@@ -720,14 +1246,19 @@ export default function SatzeGame() {
 
   // Hook per drag and drop
   const handleAgentSelect = useCallback((agent) => {
-    if (guidedMatch.active && currentGuidedRound?.playerAgentId && agent?.id !== currentGuidedRound.playerAgentId) {
+    if (
+      guidedMatch.active &&
+      !guidedMatch.freePlay &&
+      currentGuidedRound?.playerAgentId &&
+      agent?.id !== currentGuidedRound.playerAgentId
+    ) {
       const expectedName = playerHand.find((c) => c.id === currentGuidedRound.playerAgentId)?.name || 'la carta indicata';
       setGuidedHint(`Per questo step devi schierare: ${expectedName}.`);
       return;
     }
     setGuidedHint('');
     setSelectedAgent((prev) => (prev?.id === agent?.id ? null : agent));
-  }, [guidedMatch.active, currentGuidedRound, playerHand, setSelectedAgent]);
+  }, [guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, setSelectedAgent, setGuidedHint]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
@@ -810,6 +1341,26 @@ export default function SatzeGame() {
     enemyAgent,
     roundNumber,
   ]);
+
+  const playerOverdrivePreview = useMemo(() => {
+    if (gamePhase !== 'selectAgent' || !selectedAgent) return false;
+    const field = currentFieldIndex != null ? battlefields[currentFieldIndex] : null;
+    const fieldModifiers = getFieldModifiers(field);
+    const overdriveActive = checkTrigger('overdrive', {
+      focusCoins: selectedFocus || 1,
+      fieldModifiers,
+    });
+    if (!overdriveActive) return false;
+
+    const abilityHasOverdrive = selectedAgent.ability?.trigger === 'overdrive';
+    const armyBonus = ARMY_BONUSES[selectedAgent.army];
+    const bonusHasOverdrive =
+      Boolean(playerArmyBonuses[selectedAgent.army]) &&
+      armyBonus?.trigger === 'overdrive';
+    const fieldHasOverdrive = fieldGrantsOverdriveBonus(field);
+
+    return abilityHasOverdrive || bonusHasOverdrive || fieldHasOverdrive;
+  }, [gamePhase, selectedAgent, selectedFocus, currentFieldIndex, battlefields, playerArmyBonuses]);
   
   // Auto-scroll del log
   useEffect(() => {
@@ -835,6 +1386,10 @@ export default function SatzeGame() {
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
   useEffect(() => {
     if (isOnlinePvP) return;
+    const isGuidedScripted = guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound;
+
+    if (isGuidedScripted) return;
+
     if (gamePhase === 'selectField' && !isPlayerFirst && battlefields.length > 0) {
       const delay = ai.getThinkingTime?.() ?? 2000;
       const timer = setTimeout(() => {
@@ -848,12 +1403,34 @@ export default function SatzeGame() {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [gamePhase, isPlayerFirst, battlefields, conqueredFields, revealedFields, roundNumber, ai.getThinkingTime, isOnlinePvP]);
+  }, [
+    gamePhase,
+    isPlayerFirst,
+    battlefields,
+    conqueredFields,
+    revealedFields,
+    roundNumber,
+    ai.getThinkingTime,
+    isOnlinePvP,
+    guidedMatch.active,
+    guidedMatch.freePlay,
+    currentGuidedRound,
+    setCurrentFieldIndex,
+    setLogs,
+    setGamePhase,
+  ]);
 
   // Reset tilt Tabellone quando si esce da selectField (per il prossimo round)
   useEffect(() => {
     if (gamePhase !== 'selectField') setTabelloneTiltDismissed(false);
   }, [gamePhase]);
+
+  // Anteprima vuota all'apertura di ogni nuovo duello / round / mischia iniziale
+  useLayoutEffect(() => {
+    if (gamePhase === 'selectField' || gamePhase === 'shuffleDeal') {
+      clearCardPreview();
+    }
+  }, [gamePhase, clearCardPreview]);
 
   // Reset ref quando si passa a selectAgent (nuovo round/giro)
   useEffect(() => {
@@ -869,6 +1446,7 @@ export default function SatzeGame() {
   // IMPORTANTE: Usa un ref per evitare selezioni multiple
   useEffect(() => {
     if (isOnlinePvP) return;
+    if (guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound) return;
     if (gamePhase === 'selectAgent' && !isPlayerFirst && enemyHand.length > 0 && !aiHasSelectedAgent.current) {
       aiHasSelectedAgent.current = true;
       const delay = ai.getThinkingTime?.() ?? 2000;
@@ -879,35 +1457,86 @@ export default function SatzeGame() {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [gamePhase, isPlayerFirst, enemyHand.length, enemyAgent, ai.selectEnemyAgentAndFocus, ai.getThinkingTime, isOnlinePvP]);
+  }, [gamePhase, isPlayerFirst, enemyHand.length, enemyAgent, ai.selectEnemyAgentAndFocus, ai.getThinkingTime, isOnlinePvP, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound]);
 
   useEffect(() => {
-    if (!guidedMatch.active || !currentGuidedRound) return;
-    if (gamePhase !== 'selectAgent') return;
-    if (enemyAgent) return;
-    const scriptedEnemy = enemyHand.find((c) => c.id === currentGuidedRound.enemyAgentId) || enemyHand[0];
-    if (!scriptedEnemy) return;
-    setEnemyAgent(scriptedEnemy);
-    setEnemySelectedFocus(currentGuidedRound.enemyFocus);
-    setLogs((prev) => [
-      ...prev.slice(-80),
-      `[R${roundNumber}] Guida: il nemico schiera ${scriptedEnemy.name} (${currentGuidedRound.enemyFocus} FC).`,
-    ]);
+    if (!guidedMatch.active || guidedMatch.freePlay || !currentGuidedRound) return;
+    if (guidedIntroStage < INTRO_STAGE_PLAY) return;
+    if (gamePhase === 'selectField' && !isPlayerFirst && guidedPause === null && currentFieldIndex === null) {
+      setGuidedPause('enemyField');
+    }
   }, [
     guidedMatch.active,
+    guidedMatch.freePlay,
+    currentGuidedRound,
+    guidedIntroStage,
+    gamePhase,
+    isPlayerFirst,
+    guidedPause,
+    currentFieldIndex,
+    setGuidedPause,
+  ]);
+
+  useEffect(() => {
+    if (!guidedMatch.active || guidedMatch.freePlay || !currentGuidedRound) return;
+    if (guidedIntroStage < INTRO_STAGE_PLAY) return;
+    if (gamePhase === 'selectAgent' && !isPlayerFirst && guidedPause === null && !enemyAgent) {
+      setGuidedPause('enemyAgent');
+    }
+  }, [
+    guidedMatch.active,
+    guidedMatch.freePlay,
+    currentGuidedRound,
+    guidedIntroStage,
+    gamePhase,
+    isPlayerFirst,
+    guidedPause,
+    enemyAgent,
+    setGuidedPause,
+  ]);
+
+  useEffect(() => {
+    if (!guidedMatch.active || !currentGuidedRound || guidedMatch.freePlay) return;
+    if (gamePhase !== 'selectAgent') return;
+    if (enemyAgent) return;
+    // Con iniziativa giocatore: il nemico si rivela solo dopo la scelta del tuo agente
+    if (isPlayerFirst && !selectedAgent) return;
+    // Con iniziativa nemica: rivelazione solo dopo conferma lettura (handleGuidedContinue)
+    if (!isPlayerFirst) return;
+
+    if (guidedEnemyDeployScheduledRef.current) return;
+    guidedEnemyDeployScheduledRef.current = true;
+
+    const timer = setTimeout(() => {
+      deployScriptedGuidedEnemy();
+    }, getGuidedEnemyDeployDelayMs());
+
+    return () => clearTimeout(timer);
+  }, [
+    guidedMatch.active,
+    guidedMatch.freePlay,
     currentGuidedRound,
     gamePhase,
     enemyAgent,
-    enemyHand,
-    roundNumber,
-    setEnemyAgent,
-    setEnemySelectedFocus,
-    setLogs,
+    isPlayerFirst,
+    selectedAgent,
+    deployScriptedGuidedEnemy,
   ]);
 
   // Selezione campo giocatore
   const handleFieldSelect = (field) => {
-    if (isGuidedIntroWelcomePhase || isGuidedIntroHandsPhase || isGuidedIntroPreviewPhase) {
+    if (isGuidedIntroEpiloguePhase || isGuidedAdvancedEpiloguePhase || isGuidedIntroFreePlayFinalPhase) {
+      return;
+    }
+    if (
+      isGuidedIntroWelcomePhase ||
+      isGuidedIntroHandsPhase ||
+      isGuidedIntroPreviewPhase ||
+      isGuidedIntroVictoryPhase ||
+      isGuidedIntroFcBudgetPhase ||
+      isGuidedAdvancedGoalPhase ||
+      isGuidedAdvancedTriggersPhase
+    ) {
       setGuidedHint('Premi OK per continuare.');
       return;
     }
@@ -924,7 +1553,17 @@ export default function SatzeGame() {
       return;
     }
     const idx = battlefields.indexOf(field);
-    if (guidedMatch.active && currentGuidedRound && idx !== currentGuidedRound.fieldIndex) {
+    if (
+      guidedMatch.active &&
+      currentGuidedRound &&
+      !guidedMatch.freePlay &&
+      gamePhase === 'selectField' &&
+      !isPlayerFirst
+    ) {
+      setGuidedHint('Il nemico ha l\'iniziativa: sceglierà lui il campo.');
+      return;
+    }
+    if (guidedMatch.active && currentGuidedRound && !guidedMatch.freePlay && idx !== currentGuidedRound.fieldIndex) {
       const expectedField = battlefields[currentGuidedRound.fieldIndex]?.name || `Campo ${currentGuidedRound.fieldIndex + 1}`;
       setGuidedHint(`Step guidato: seleziona "${expectedField}".`);
       return;
@@ -937,28 +1576,35 @@ export default function SatzeGame() {
       addLog(`Hai scelto: ${field.name}`);
     }
     setCurrentFieldIndex(idx);
+    if (isOnlinePvP && multiplayerSession?.roomCode && isPlayerFirst) {
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
+        type: 'peer_move',
+        roundNumber,
+        phase: 'field',
+        fieldIndex: idx,
+      });
+    }
     // Passa alla fase selectAgent solo se non siamo già lì
     if (gamePhase === 'selectField') {
-      if (isOnlinePvP && multiplayerSession?.roomCode && isPlayerFirst) {
-        getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
-          type: 'peer_move',
-          roundNumber,
-          phase: 'field',
-          fieldIndex: idx,
-        });
-      }
       setGamePhase('selectAgent');
     }
   };
 
   const handleFocusChange = useCallback((focusValue) => {
     setSelectedFocus(focusValue);
-    if (guidedMatch.active && currentGuidedRound && focusValue !== currentGuidedRound.focus) {
-      setGuidedHint(`Step guidato: imposta ${currentGuidedRound.focus} FC.`);
-    } else {
-      setGuidedHint('');
+    if (guidedMatch.active && currentGuidedRound && !guidedMatch.freePlay) {
+      const { ok, feedback } = validateFocusForRound(currentGuidedRound, focusValue);
+      if (!ok) {
+        setGuidedHint(feedback || `FC non validi per questo step.`);
+        return;
+      }
+      if (feedback && currentGuidedRound.focusPolicy === 'range') {
+        setGuidedHint(feedback);
+        return;
+      }
     }
-  }, [guidedMatch.active, currentGuidedRound, setSelectedFocus]);
+    setGuidedHint('');
+  }, [guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, validateFocusForRound, setSelectedFocus, setGuidedHint]);
 
   useEffect(() => {
     if (!isOnlinePvP || incomingPeerMoveQueue.length === 0) return;
@@ -979,13 +1625,22 @@ export default function SatzeGame() {
       return;
     }
 
-    if (p.phase === 'field' && gamePhase === 'selectField' && !isPlayerFirst) {
+    if (
+      p.phase === 'field' &&
+      !isPlayerFirst &&
+      (gamePhase === 'selectField' || gamePhase === 'selectAgent')
+    ) {
       setCurrentFieldIndex(p.fieldIndex);
+      const fieldName = battlefields[p.fieldIndex]?.name || `Campo ${p.fieldIndex + 1}`;
       setLogs((prev) => [
         ...prev.slice(-20),
-        `[R${roundNumber}] L'avversario sceglie: ${battlefields[p.fieldIndex]?.name}`,
+        gamePhase === 'selectField'
+          ? `[R${roundNumber}] L'avversario sceglie: ${fieldName}`
+          : `[R${roundNumber}] L'avversario cambia campo: ${fieldName}`,
       ]);
-      setGamePhase('selectAgent');
+      if (gamePhase === 'selectField') {
+        setGamePhase('selectAgent');
+      }
       setIncomingPeerMoveQueue((q) => q.slice(1));
       return;
     }
@@ -1017,22 +1672,40 @@ export default function SatzeGame() {
 
   // Conferma scelta giocatore
   const confirmPlayerChoice = () => {
-    if (guidedMatch.active && currentGuidedRound) {
+    if (guidedMatch.active && currentGuidedRound && !guidedMatch.freePlay) {
       const expectedFieldName = battlefields[currentGuidedRound.fieldIndex]?.name || `Campo ${currentGuidedRound.fieldIndex + 1}`;
       const expectedAgentName = playerHand.find((c) => c.id === currentGuidedRound.playerAgentId)?.name || 'agente richiesto';
       if (currentFieldIndex !== currentGuidedRound.fieldIndex) {
-        setGuidedHint(`Prima scegli il campo corretto: "${expectedFieldName}".`);
+        if (!isPlayerFirst && gamePhase === 'selectField') {
+          setGuidedHint('Attendi che il nemico scelga il campo.');
+        } else {
+          setGuidedHint(`Prima scegli il campo corretto: "${expectedFieldName}".`);
+        }
         return;
       }
       if (!selectedAgent || selectedAgent.id !== currentGuidedRound.playerAgentId) {
         setGuidedHint(`Per questo step devi schierare "${expectedAgentName}".`);
         return;
       }
-      if (selectedFocus !== currentGuidedRound.focus) {
-        setGuidedHint(`Per questo step devi investire ${currentGuidedRound.focus} FC.`);
+      const focusCheck = validateFocusForRound(currentGuidedRound, selectedFocus);
+      if (!focusCheck.ok) {
+        setGuidedHint(focusCheck.feedback || `FC non validi per questo step.`);
         return;
       }
-      setGuidedHint('');
+      if (focusCheck.feedback && currentGuidedRound.focusPolicy === 'range') {
+        setGuidedHint(focusCheck.feedback);
+      } else {
+        setGuidedHint('');
+      }
+      if (!selectedAgent || selectedFocus < 1) return;
+      if (enemyAgent) {
+        setGamePhase('battle');
+        return;
+      }
+      if (isPlayerFirst) {
+        setPlayerConfirmedAwaitingAI(true);
+        return;
+      }
     }
 
     if (!selectedAgent || selectedFocus < 1) return;
@@ -1092,13 +1765,40 @@ export default function SatzeGame() {
   // Trigger risoluzione battaglia (deve rieseguire quando enemyAgent viene impostato dopo il delay)
   useEffect(() => {
     if (gamePhase === 'battle' && selectedAgent && enemyAgent) {
+      const isGuidedDuelPaused =
+        guidedMatch.active &&
+        !guidedMatch.freePlay &&
+        guidedIntroStage >= INTRO_STAGE_PLAY &&
+        guidedPause === 'duel';
+      if (isGuidedDuelPaused) return;
       resolveBattle();
     }
-  }, [gamePhase, selectedAgent, enemyAgent, resolveBattle]);
+  }, [gamePhase, selectedAgent, enemyAgent, resolveBattle, guidedMatch.active, guidedMatch.freePlay, guidedIntroStage, guidedPause]);
+
+  // Pausa guidata: attende OK prima di avviare il duello
+  useEffect(() => {
+    if (!guidedMatch.active || guidedMatch.freePlay || guidedIntroStage < INTRO_STAGE_PLAY) return;
+    if (gamePhase === 'battle' && guidedPause === null) {
+      setGuidedPause('duel');
+    }
+  }, [
+    guidedMatch.active,
+    guidedMatch.freePlay,
+    guidedIntroStage,
+    gamePhase,
+    guidedPause,
+    setGuidedPause,
+  ]);
 
   // Fasi: 0=Schieramento, 1=Poteri/bonus (sub-step), 2=Focus+POT×FC, 3=Mod/min VA, 4=Scontro, 5=Risultato, 6=Pulsante
   useEffect(() => {
     if (gamePhase === 'result' && battleResult) {
+      const isGuidedDuelPaused =
+        guidedMatch.active &&
+        !guidedMatch.freePlay &&
+        guidedIntroStage >= INTRO_STAGE_PLAY &&
+        guidedPause === 'duel';
+      if (isGuidedDuelPaused) return;
       if (duelPhase <= 4 && battleResult.phaseLogs) {
         const phaseKey = `phase${duelPhase}`;
         const phaseLogs = battleResult.phaseLogs[phaseKey] || [];
@@ -1118,7 +1818,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => setDuelPhase(2), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -1127,7 +1827,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => setDuelPhase(4), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -1136,7 +1836,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => setDuelPhase(6), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -1146,18 +1846,27 @@ export default function SatzeGame() {
         battleResult.enemyFocusUsed,
         battleResult
       );
-      if (duelPhase === 1 && effectCount === 0) {
-        const timer = setTimeout(() => setDuelPhase(2), delays[1]);
-        return () => clearTimeout(timer);
-      }
-      if (duelPhase !== 1 && duelPhase < delays.length - 1) {
+      if (duelPhase < delays.length - 1) {
+        const delay = delays[duelPhase];
         const timer = setTimeout(() => {
-          setDuelPhase(prev => prev + 1);
-        }, delays[duelPhase]);
+          advanceDuelPhase();
+        }, delay);
         return () => clearTimeout(timer);
       }
     }
-  }, [gamePhase, duelPhase, visualEffectStep, battleResult, duelVfx, advanceEffectStep]);
+  }, [
+    gamePhase,
+    duelPhase,
+    visualEffectStep,
+    battleResult,
+    duelVfx,
+    advanceEffectStep,
+    advanceDuelPhase,
+    guidedMatch.active,
+    guidedMatch.freePlay,
+    guidedIntroStage,
+    guidedPause,
+  ]);
   
   const getFocusCoinGlowColor = (focusCount, intensity) =>
     computeFocusCoinGlowColor(focusCount, intensity, rainbowTime, {
@@ -1170,6 +1879,7 @@ export default function SatzeGame() {
   // Animazione focus coin sequenziali (fase 2)
   useEffect(() => {
     if (gamePhase === 'result' && battleResult && duelPhase === 2) {
+      clearFocusCoinTimers();
       // Reset quando entra nella fase 2
       setPlayerFocusCoinsShown(0);
       setEnemyFocusCoinsShown(0);
@@ -1181,9 +1891,10 @@ export default function SatzeGame() {
       const enemyTotal = battleResult.enemyFocusUsed;
       const maxTotal = Math.max(playerTotal, enemyTotal);
       
-      // Anima l'apparizione sequenziale
+      // Anima l'apparizione sequenziale (lento all'inizio, veloce verso la fine)
       for (let i = 0; i < maxTotal; i++) {
-        setTimeout(() => {
+        const appearMs = computeFocusCoinAppearDelayMs(i, maxTotal, duelVfx);
+        const timer = setTimeout(() => {
           if (i < playerTotal) {
             setPlayerFocusCoinsShown(prev => prev + 1);
             // Aumenta il glow del bordo della carta del player progressivamente
@@ -1199,11 +1910,13 @@ export default function SatzeGame() {
           // Aumenta l'intensità del glow generale progressivamente
           const intensity = (i + 1) / maxTotal;
           setCardGlowIntensity(intensity);
-        }, i * duelVfx.focusCoinStepMs);
+        }, appearMs);
+        focusCoinTimersRef.current.push(timer);
       }
     }
+    return () => clearFocusCoinTimers();
     // Non resettare quando si esce dalla fase 2 - i focus coin devono rimanere visibili
-  }, [gamePhase, duelPhase, battleResult, duelVfx.focusCoinStepMs]);
+  }, [gamePhase, duelPhase, battleResult, duelVfx, clearFocusCoinTimers]);
   
   // Aggiorna continuamente i colori arcobaleno e diamante (per animazione).
   // I colori speciali esistono solo da 12 FC in su: sotto quella soglia
@@ -1212,7 +1925,8 @@ export default function SatzeGame() {
     const needsRainbow =
       battleResult &&
       Math.max(battleResult.playerFocusUsed || 0, battleResult.enemyFocusUsed || 0) >= 12;
-    if (gamePhase === 'result' && needsRainbow && duelPhase >= 2) {
+    // Fase 4: il clash ha il proprio loop rAF — evitare ~20 re-render/s del root in parallelo.
+    if (gamePhase === 'result' && needsRainbow && duelPhase >= 2 && duelPhase < 4) {
       const interval = setInterval(() => {
         setRainbowTime((prev) => prev + duelVfx.rainbowStep);
       }, duelVfx.rainbowIntervalMs);
@@ -1355,13 +2069,17 @@ export default function SatzeGame() {
     const newEnemyHP = battleResult ? battleResult.finalEnemyHP : enemyHP;
     const annihilationOnly = gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only';
     const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
+    const suspendGuidedTerritorialWin = guidedMatch.active && !guidedMatch.freePlay;
     
     // Check vittoria per campi conquistati (3 campi)
     // In modalità classica: SOLO nei round 1-4 (al round 5+ cambia in "Supremazia")
     // In modalità Bare Hands: SEMPRE attiva
     // REKLAMAZIONE: ai round 3 o 4, chi vince per campi può reclamare la vittoria o continuare a giocare
-    const canReclaim = (roundNumber === 3 || roundNumber === 4);
-    if (gameMode === 'bareHands') {
+    const canReclaim = (roundNumber === 3 || roundNumber === 4) && !suspendGuidedTerritorialWin;
+    const skipTerritorialWin = forceContinueAfterClaimRef.current;
+    if (skipTerritorialWin) {
+      forceContinueAfterClaimRef.current = false;
+    } else if (!suspendGuidedTerritorialWin && gameMode === 'bareHands') {
       // Bare Hands: sempre controlla vittoria per campi
       if (playerFields >= 3 && !blockTerritorialPlayerWin) {
         if (canReclaim) {
@@ -1374,7 +2092,10 @@ export default function SatzeGame() {
       }
       if (enemyFields >= 3) {
         if (canReclaim) {
-          // IA reclama la vittoria
+          if (isOnlinePvP) {
+            setOpponentClaimPending({ playerFields, enemyFields });
+            return;
+          }
           setGameResult({ winner: 'enemy', reason: 'fields', playerFields, enemyFields });
           setGamePhase('gameOver');
           return;
@@ -1383,7 +2104,7 @@ export default function SatzeGame() {
         setGamePhase('gameOver');
         return;
       }
-    } else if (roundNumber < 5) {
+    } else if (!suspendGuidedTerritorialWin && roundNumber < 5) {
       // Classic mode: controlla vittoria per campi SOLO nei round 1-4
       if (playerFields >= 3 && !blockTerritorialPlayerWin) {
         if (canReclaim) {
@@ -1396,7 +2117,10 @@ export default function SatzeGame() {
       }
       if (enemyFields >= 3) {
         if (canReclaim) {
-          // IA reclama la vittoria
+          if (isOnlinePvP) {
+            setOpponentClaimPending({ playerFields, enemyFields });
+            return;
+          }
           setGameResult({ winner: 'enemy', reason: 'fields', playerFields, enemyFields });
           setGamePhase('gameOver');
           return;
@@ -1458,8 +2182,7 @@ export default function SatzeGame() {
     doResetAndNextRound(playerFields, enemyFields);
   };
 
-  // Reset e passaggio al prossimo round (usato anche da "Continua a giocare" nella reclamazione)
-  const doResetAndNextRound = (playerFields, enemyFields) => {
+  const advanceGuidedRoundState = (playerFields, enemyFields) => {
     setSelectedAgent(null);
     setSelectedFocus(1);
     setEnemyAgent(null);
@@ -1469,35 +2192,28 @@ export default function SatzeGame() {
     setShowClashAnimation(false);
     aiHasSelectedAgent.current = false;
     setPlayerConfirmedAwaitingAI(false);
-    // Non cancellare un relay già arrivato per il prossimo round: se l'avversario ha
-    // cliccato Continua prima, il messaggio field/agent ha roundNumber === round+1
-    // mentre noi siamo ancora al round corrente; azzerarlo qui causerebbe soft-lock
-    // (secondo giocatore in attesa campo / agente perso).
+    guidedEnemyDeployScheduledRef.current = false;
+    if (guidedEnemyDeployTimerRef.current) {
+      clearTimeout(guidedEnemyDeployTimerRef.current);
+      guidedEnemyDeployTimerRef.current = null;
+    }
+    setGuidedPause(null);
     setIncomingPeerMoveQueue((prev) =>
       prev.filter((msg) => typeof msg.roundNumber === 'number' && msg.roundNumber > roundNumber)
     );
     setGuidedHint('');
 
     const nextRoundNum = roundNumber + 1;
-    if (guidedMatch.active && nextRoundNum > guidedMatch.rounds.length) {
-      resetGuidedTutorial();
-      setLogs((prev) => [
-        ...prev.slice(-80),
-        `[R${roundNumber}] ✅ Partita guidata completata. Puoi avviare una nuova guida dal menu.`,
-      ]);
-      setGamePhase('menu');
-      return;
-    }
     setRoundNumber(nextRoundNum);
-    
+
     if (campaignDuelMod?.initiativeProfile === 'assault' && nextRoundNum === 2) {
       setIsPlayerFirst(true);
     } else if (campaignDuelMod?.initiativeProfile === 'defense' && nextRoundNum === 2) {
       setIsPlayerFirst(false);
     } else {
-      setIsPlayerFirst(prev => !prev);
+      setIsPlayerFirst((prev) => !prev);
     }
-    
+
     if (nextRoundNum === 5 && playerFields < 3 && enemyFields < 3 && gameMode === 'classic') {
       setShowFinalRoundAnimation(true);
       setTimeout(() => {
@@ -1508,6 +2224,130 @@ export default function SatzeGame() {
       setGamePhase('selectField');
     }
   };
+
+  const handleIntroEpiloguePlay = () => {
+    enableGuidedFreePlay();
+    const playerFields = Object.values(conqueredFields).filter((f) =>
+      (typeof f === 'object' && f?.winner === 'player') || (typeof f === 'string' && playerHand.some((c) => c.army === f))
+    ).length;
+    const enemyFields = Object.values(conqueredFields).filter((f) =>
+      (typeof f === 'object' && f?.winner === 'enemy') || (typeof f === 'string' && enemyHand.some((c) => c.army === f))
+    ).length;
+    advanceGuidedRoundState(playerFields, enemyFields);
+  };
+
+  // Reset e passaggio al prossimo round (usato anche da "Continua a giocare" nella reclamazione)
+  const doResetAndNextRound = (playerFields, enemyFields) => {
+    if (
+      guidedMatch.active &&
+      guidedMatch.trackId === 'intro' &&
+      !guidedMatch.freePlay &&
+      roundNumber === 3
+    ) {
+      setGuidedIntroStage(INTRO_STAGE_EPILOGUE);
+      setGuidedHint('');
+      return;
+    }
+
+    if (
+      guidedMatch.active &&
+      guidedMatch.trackId === 'advanced' &&
+      roundNumber === 5
+    ) {
+      setGuidedIntroStage(ADV_STAGE_EPILOGUE);
+      setGuidedHint('');
+      return;
+    }
+
+    if (
+      guidedMatch.active &&
+      guidedMatch.trackId === 'advanced' &&
+      roundNumber === 1
+    ) {
+      setGuidedIntroStage(ADV_STAGE_TRIGGERS);
+    }
+
+    advanceGuidedRoundState(playerFields, enemyFields);
+  };
+
+  const sendClaimDecisionRelay = useCallback(
+    (decision, playerFields, enemyFields) => {
+      if (!isOnlinePvP || !multiplayerSession?.roomCode) return;
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
+        type: 'claim_decision',
+        decision,
+        roundNumber,
+        playerFields,
+        enemyFields,
+      });
+    },
+    [isOnlinePvP, multiplayerSession?.roomCode, roundNumber]
+  );
+
+  useEffect(() => {
+    if (!isOnlinePvP || !incomingClaimDecision) return;
+    const p = incomingClaimDecision;
+    if (typeof p.roundNumber !== 'number') {
+      setIncomingClaimDecision(null);
+      return;
+    }
+    if (p.roundNumber < roundNumber) {
+      setIncomingClaimDecision(null);
+      return;
+    }
+    if (p.roundNumber !== roundNumber) return;
+
+    const countLocalFields = () => {
+      const pf = Object.values(conqueredFields).filter((f) =>
+        (typeof f === 'object' && f?.winner === 'player') ||
+        (typeof f === 'string' && playerHand.some((c) => c.army === f))
+      ).length;
+      const ef = Object.values(conqueredFields).filter((f) =>
+        (typeof f === 'object' && f?.winner === 'enemy') ||
+        (typeof f === 'string' && enemyHand.some((c) => c.army === f))
+      ).length;
+      return { pf, ef };
+    };
+
+    if (p.decision === 'victory') {
+      const { pf, ef } = countLocalFields();
+      setOpponentClaimPending(null);
+      setShowClaimVictoryChoice(null);
+      setGameResult({ winner: 'enemy', reason: 'fields', playerFields: pf, enemyFields: ef });
+      setGamePhase('gameOver');
+      setIncomingClaimDecision(null);
+      return;
+    }
+
+    if (p.decision === 'continue') {
+      const wasWaiting = opponentClaimPending != null;
+      setOpponentClaimPending(null);
+      setShowClaimVictoryChoice(null);
+      const { pf, ef } = countLocalFields();
+      if (wasWaiting) {
+        doResetAndNextRound(pf, ef);
+      } else {
+        forceContinueAfterClaimRef.current = true;
+      }
+      setIncomingClaimDecision(null);
+    }
+  }, [
+    isOnlinePvP,
+    incomingClaimDecision,
+    roundNumber,
+    conqueredFields,
+    playerHand,
+    enemyHand,
+    opponentClaimPending,
+    setGameResult,
+    setGamePhase,
+    setShowClaimVictoryChoice,
+  ]);
+
+  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'TU';
+  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'IA';
+  const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
+  const mpEnemyHandLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'Mano Avversario';
 
   // ============================================
   // RENDER
@@ -1595,7 +2435,26 @@ export default function SatzeGame() {
       url.searchParams.set('styleLab', '1');
       window.location.href = url.toString();
     };
-    const menuItems = [
+    const openOverdriveLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('overdriveLab', '1');
+      window.location.href = url.toString();
+    };
+    const launchShuffleDuelTest = (shuffleKind) => {
+      setDevDialogueDuelActive(false);
+      setShuffleStyle(shuffleKind);
+      const duel = prepareRandomDuelShuffleHands();
+      startStandardGame(
+        duel.playerArmy,
+        duel.playerDeckKey,
+        'classic',
+        'medium',
+        ALL_BATTLEFIELDS,
+        duel.enemyArmy,
+        duel.enemyDeckKey
+      );
+    };
+    const menuItems = filterMenuItemsForBuild([
       {
         label: 'PARTITA LOCALE',
         sub: 'AVVIO',
@@ -1619,19 +2478,43 @@ export default function SatzeGame() {
         accent: '#94a3b8',
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
+          { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
+          {
+            label: 'DIALOGUE DUELLO',
+            sub: 'TEST',
+            meta: 'ARMATA · MISCHIA',
+            choices: dialogueDuelArmyMenuChoices,
+          },
+          {
+            label: 'SHUFFLE DUELLO',
+            sub: 'TEST',
+            meta: 'SCEGLI MISCHIA',
+            choices: SHUFFLE_STYLE_OPTIONS.map((opt) => ({
+              label: opt.title.toUpperCase(),
+              sub: opt.sub,
+              meta: 'DUELLO CASUALE',
+              onClick: () => launchShuffleDuelTest(opt.key),
+            })),
+          },
           { label: 'TOOL RITAGLIO', sub: 'ASSET', meta: 'SPRITE CROP', onClick: openCropTool },
         ],
       },
-    ];
+    ]);
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
-        {!showDeckManager && <SatzeMenuPrototype menuItems={menuItems} />}
+        {!showDeckManager && (
+          <SatzeMenuPrototype
+            menuItems={menuItems}
+            marqueeText={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
+          />
+        )}
 
         <TutorialSelector
           isOpen={isTutorialSelectorOpen}
           onClose={closeTutorialSelector}
-          onSelect={handleTutorialTrackSelect}
+          onSelect={handleTutorialTrackSelectWithPreviewReset}
           tracks={TUTORIAL_TRACKS}
+          wasIntroCompleted={tutorial.wasCompleted('intro')}
         />
 
         {/* Tutorial */}
@@ -1734,6 +2617,10 @@ export default function SatzeGame() {
           onlineMatchStartedRef.current = false;
           setPendingGuestMatch(null);
           setIncomingPeerMoveQueue([]);
+          setOnlinePeerName(null);
+          setOpponentClaimPending(null);
+          setIncomingClaimDecision(null);
+          forceContinueAfterClaimRef.current = false;
           setMultiplayerSession({
             roomCode: gameData.roomCode,
             role: gameData.role,
@@ -1757,9 +2644,32 @@ export default function SatzeGame() {
     );
   }
 
-  // Opzione Mazzi misti (usata in selectArmy, selectDeck, selectDifficulty)
+  // Opzione Mazzi misti (usata in selectArmy, selectDeck)
   const MIXED_DECKS_OPTION = 'Eserciti misti';
   const MIXED_DECKS_COLOR = '#a78bfa'; // violet-400
+
+  const buildDeckConfirmDisplay = (army, deckKey, accent) => {
+    if (!deckKey) return { accent, deckName: 'Esercito', armyLabel: army || '' };
+    if (Array.isArray(deckKey)) {
+      return { accent, deckName: 'Esercito hub', armyLabel: army || '' };
+    }
+    if (deckKey.startsWith('custom_')) {
+      const decks = loadCustomDecks();
+      const id = deckKey.replace('custom_', '');
+      return {
+        accent,
+        deckName: decks[id]?.name || 'Esercito personalizzato',
+        armyLabel: decks[id]?.army || army || '',
+      };
+    }
+    return {
+      accent,
+      deckName: ARMY_DECKS[army]?.[deckKey]?.name || 'Esercito',
+      armyLabel: army || '',
+    };
+  };
+
+  // Durante la transizione post-difficoltà resta visibile la schermata esercito sotto l'iris (portal).
 
   // Schermata Selezione Armata
   if (gamePhase === 'selectArmy') {
@@ -1791,6 +2701,43 @@ export default function SatzeGame() {
   if (gamePhase === 'selectDeck' && selectedArmy) {
     const isMixedMode = selectedArmy === MIXED_DECKS_OPTION;
     const colors = isMixedMode ? { accent: MIXED_DECKS_COLOR } : ARMY_COLORS[selectedArmy];
+    const resolveSelectedDeckName = () => {
+      if (!selectedDeckKey) return null;
+      if (Array.isArray(selectedDeckKey)) return 'Esercito hub';
+      if (selectedDeckKey.startsWith('custom_')) {
+        const decks = loadCustomDecks();
+        const id = selectedDeckKey.replace('custom_', '');
+        return decks[id]?.name || 'Esercito personalizzato';
+      }
+      return ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.name || 'Esercito';
+    };
+    const difficultyPopupEl = showDifficultyPopup && typeof document !== 'undefined'
+      ? createPortal(
+          <DifficultySelectPopup
+            isOpen
+            armyName={selectedArmy}
+            deckName={resolveSelectedDeckName()}
+            accentColor={colors.accent}
+            onClose={() => setShowDifficultyPopup(false)}
+            onSelect={(diffId) => {
+              setShowDifficultyPopup(false);
+              clearCardPreview();
+              const display = buildDeckConfirmDisplay(selectedArmy, selectedDeckKey, colors.accent);
+              setLaunchShowText(true);
+              setLaunchVisualPhase('animate');
+              setPendingGameLaunch({
+                sessionId: Date.now(),
+                army: selectedArmy,
+                deckKey: selectedDeckKey,
+                mode: selectedMode,
+                difficulty: diffId,
+                ...display,
+              });
+            }}
+          />,
+          document.body
+        )
+      : null;
     const customDecks = loadCustomDecks();
     const customDecksForArmy = isMixedMode
       ? Object.entries(customDecks).filter(([_, deck]) => isMixedDeck(deck, ARMY_SETS))
@@ -1829,24 +2776,24 @@ export default function SatzeGame() {
         accent: '#a78bfa',
         onSelect: () => {
           setSelectedDeckKey(campDeckIds);
-          goAfterDeckSelection();
+          goAfterDeckSelection(campDeckIds);
         },
       });
     }
     if (!isMixedMode) {
       Object.entries(predefinedDecks).forEach(([key, deck]) => {
-        const deckCards = ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
+        const deckCards = resolveDeckCards(deck, ARMY_SETS);
         const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
         deckOptions.push({
           key,
           name: `Esercito ${key} — ${deck.name}`,
           armyLabel: selectedArmy,
           description: deck.description,
-          meta: `${deckCards.length} carte • Lega ${totalLeague}`,
+          meta: `${deckCards.length} carte • Lega ${totalLeague}/30`,
           accent: colors.accent,
           onSelect: () => {
             setSelectedDeckKey(key);
-            goAfterDeckSelection();
+            goAfterDeckSelection(key);
           },
         });
       });
@@ -1854,16 +2801,24 @@ export default function SatzeGame() {
     customDecksForArmy.forEach(([deckId, deck]) => {
       const deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
       const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
+      const deckMixed = isMixedMode || isMixedDeck(deck, ARMY_SETS);
+      const { accent: deckAccent, armies: deckArmies } = getDeckVisualMeta(deckCards, {
+        fallbackArmy: deck.army || selectedArmy,
+        armyColors: ARMY_COLORS,
+        fallbackAccent: deckMixed ? MIXED_DECKS_COLOR : colors.accent,
+      });
       deckOptions.push({
         key: `custom_${deckId}`,
         name: deck.name,
-        armyLabel: deck.army || (isMixedMode ? 'Misto' : selectedArmy),
+        armyLabel: deckMixed && deckArmies.length >= 2
+          ? deckArmies.join(' · ')
+          : (deck.army || (isMixedMode ? 'Misto' : selectedArmy)),
         description: deck.description || 'Esercito personalizzato',
         meta: `${deck.cards.length} carte • Lega ${totalLeague}/30`,
-        accent: colors.accent,
+        accent: deckAccent,
         onSelect: () => {
           setSelectedDeckKey(`custom_${deckId}`);
-          goAfterDeckSelection();
+          goAfterDeckSelection(`custom_${deckId}`);
         },
       });
     });
@@ -1892,7 +2847,7 @@ export default function SatzeGame() {
               accentColor="#a78bfa"
               onClick={() => {
                 setSelectedDeckKey(campDeckIds);
-                goAfterDeckSelection();
+                goAfterDeckSelection(campDeckIds);
               }}
               className="border-2 border-purple-500/50"
             >
@@ -1920,24 +2875,29 @@ export default function SatzeGame() {
 
     if (deckOptions.length > 0) {
       return (
-        <DeckSelectCinematic
+        <>
+          {difficultyPopupEl}
+          <DeckSelectCinematic
           armyName={isMixedMode ? null : selectedArmy}
           gameDeckOptions={deckOptions}
           selectedArmy={selectedArmy}
           isMixedMode={isMixedMode}
           campaignDeckIds={Array.isArray(campDeckIds) ? campDeckIds : null}
           onSelectDeck={(deckKey) => {
+            let resolvedKey = deckKey;
             if (deckKey.includes('::')) {
               const [armySlug, key] = deckKey.split('::');
               const army = resolveArmyFromDeckSlug(armySlug);
               if (army) setSelectedArmy(army);
+              resolvedKey = key;
               setSelectedDeckKey(key);
             } else {
               setSelectedDeckKey(deckKey);
             }
-            goAfterDeckSelection();
+            goAfterDeckSelection(resolvedKey);
           }}
           onBack={() => {
+            setShowDifficultyPopup(false);
             setSelectedArmy(null);
             setSelectedDeckKey(null);
             setGamePhase('selectArmy');
@@ -1948,26 +2908,31 @@ export default function SatzeGame() {
               ...payload,
               _opt: payload._opt || {
                 onSelect: () => {
+                  let resolvedKey = deck.deckKey;
                   if (deck.deckKey.includes('::')) {
                     const [armySlug, key] = deck.deckKey.split('::');
                     const army = resolveArmyFromDeckSlug(armySlug);
                     if (army) setSelectedArmy(army);
+                    resolvedKey = key;
                     setSelectedDeckKey(key);
                   } else {
                     setSelectedDeckKey(deck.deckKey);
                   }
-                  goAfterDeckSelection();
+                  goAfterDeckSelection(resolvedKey);
                 },
               },
             });
             setGamePhase('previewDeck');
           }}
         />
+        </>
       );
     }
 
     return (
-      <CosmicScreenLayout
+      <>
+        {difficultyPopupEl}
+        <CosmicScreenLayout
         title={selectedArmy}
         subtitle={campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
         footer={(
@@ -1993,6 +2958,7 @@ export default function SatzeGame() {
           </div>
         )}
       </CosmicScreenLayout>
+      </>
     );
   }
 
@@ -2043,6 +3009,7 @@ export default function SatzeGame() {
         type: 'deck_ready',
         army: selectedArmy,
         deckKey: selectedDeckKey,
+        playerName: multiplayerSession.playerName || 'Giocatore',
         ...(deckCardIds.length ? { deckCardIds } : {}),
       };
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, relayPayload);
@@ -2068,6 +3035,9 @@ export default function SatzeGame() {
           <p className="text-xs text-slate-500 text-center">
             {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
           </p>
+          <p className="text-[10px] text-slate-600 text-center font-mono break-all">
+            Server: {getMultiplayerWsUrl()}
+          </p>
           {onlinePeerDeck && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
           <button
             type="button"
@@ -2089,6 +3059,7 @@ export default function SatzeGame() {
               setSelectedDeckKey(null);
               setOnlineLocalReady(false);
               setOnlinePeerDeck(null);
+              setOnlinePeerName(null);
               onlineMatchStartedRef.current = false;
               setGamePhase('selectDeck');
             }}
@@ -2097,91 +3068,6 @@ export default function SatzeGame() {
           </MenuBackButton>
         </div>
       </MenuScreenLayout>
-    );
-  }
-  
-  // Schermata Selezione Difficoltà
-  if (gamePhase === 'selectDifficulty') {
-    // In campagna, usa la difficoltà del livello e avvia direttamente
-    if (campaignLevel) {
-      // Avvia il gioco con la difficoltà del livello
-      if (selectedArmy && selectedDeckKey) {
-        const launch = buildCampaignDuelLaunchConfig(campaignLevel, null);
-        startStandardGame(
-          selectedArmy, 
-          selectedDeckKey, 
-          'campaign', 
-          campaignLevel.difficulty, 
-          ALL_BATTLEFIELDS,
-          campaignLevel.enemyArmy,
-          campaignLevel.enemyDeck,
-          launch.campaignDuelMod
-        );
-      }
-      // Non renderizzare nulla, la partita partirà automaticamente
-      return null;
-    }
-    
-    // Modalità normale: mostra selezione difficoltà
-    if (!selectedArmy || !selectedDeckKey) {
-      return null;
-    }
-    
-    const isMixedMode = selectedArmy === MIXED_DECKS_OPTION;
-    const colors = isMixedMode ? { accent: MIXED_DECKS_COLOR } : ARMY_COLORS[selectedArmy];
-    const deck = selectedDeckKey.startsWith('custom_')
-      ? (() => { const decks = loadCustomDecks(); const id = selectedDeckKey.replace('custom_', ''); return decks[id] || { name: 'Esercito personalizzato' }; })()
-      : (ARMY_DECKS[selectedArmy]?.[selectedDeckKey] || { name: 'Esercito' });
-    const difficulties = getAllDifficulties();
-
-    return (
-      <CosmicScreenLayout
-        title={selectedArmy}
-        subtitle={`"${deck.name}" — Scegli il livello di difficoltà dell'IA`}
-        footer={(
-          <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedDeckKey(null); setGamePhase('selectDeck'); }}>
-            Cambia esercito
-          </CosmicBannerButton>
-        )}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full px-4">
-          {difficulties.map((diff) => (
-            <button
-              type="button"
-              key={diff.id}
-              onClick={() => startStandardGame(selectedArmy, selectedDeckKey, selectedMode, diff.id, ALL_BATTLEFIELDS)}
-              style={{
-                border: `1.5px solid ${diff.color}`,
-                background: 'linear-gradient(180deg, rgba(20,8,28,0.95) 0%, rgba(8,7,13,0.95) 100%)',
-                padding: '16px',
-                color: MENU_ACCENTS.text,
-                textAlign: 'left',
-                minHeight: '164px',
-                boxShadow: `0 0 20px ${diff.color}2f`,
-                cursor: 'pointer',
-              }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Icon name={diff.icon} type="cardIcon" size={30} />
-                <div>
-                  <div style={{ fontFamily: "'Cinzel', serif", fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{diff.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#b9b2c8' }}>{diff.description}</div>
-                </div>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.86rem', color: '#d2cce0' }}>{diff.longDescription}</p>
-            </button>
-          ))}
-        </div>
-        {isMixedMode ? (
-          <div style={{ color: '#b9b2c8', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
-            Armata mista selezionata.
-          </div>
-        ) : (
-          <div style={{ color: colors.accent, fontFamily: "'Share Tech Mono', monospace", fontSize: '0.72rem', letterSpacing: '0.1em' }}>
-            Preparazione duello: {selectedArmy}
-          </div>
-        )}
-      </CosmicScreenLayout>
     );
   }
 
@@ -2211,22 +3097,23 @@ export default function SatzeGame() {
 
 // Schermata di gioco
 
-  // Posizioni fisse per le carte nelle mani (diagonale)
-  const iaCardPositions = [
-    { left: 667, top: 30 },
-    { left: 507, top: 60 },
-    { left: 347, top: 90 },
-    { left: 187, top: 120 },
-    { left: 27, top: 150 },
-  ];
-  
-  const playerCardPositions = [
-    { right: 667, bottom: 30 },
-    { right: 507, bottom: 60 },
-    { right: 347, bottom: 90 },
-    { right: 187, bottom: 120 },
-    { right: 27, bottom: 150 },
-  ];
+  const iaCardPositions = IA_CARD_POSITIONS;
+  const playerCardPositions = PLAYER_CARD_POSITIONS;
+  const isShuffleDealPhase = gamePhase === 'shuffleDeal' && !!shuffleDealSetup;
+  const isPreviewEntranceBlocked =
+    Boolean(pendingGameLaunch) ||
+    isShuffleDealPhase;
+  const displayPreviewCard = isPreviewEntranceBlocked ? null : (hoveredCard || lastPreviewCard);
+
+  if (isShuffleDealPhase && shuffleLaunchHoldMsRef.current === null) {
+    shuffleLaunchHoldMsRef.current = pendingGameLaunch ? getLaunchRevealHoldMs() : 0;
+  }
+  if (!isShuffleDealPhase) {
+    shuffleLaunchHoldMsRef.current = null;
+  }
+
+  const duelHudDiscovering =
+    isShuffleDealPhase && duelRevealPhase === 'reveal';
 
   // Sfondo duello: immagine specifica per ogni campo di battaglia (nessun gradiente)
   const activeFieldForBg = (currentFieldIndex !== null && battlefields[currentFieldIndex])
@@ -2237,7 +3124,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-      className="relative overflow-visible"
+      className={`relative overflow-visible${duelHudDiscovering ? ' duel-hud--discovering' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -2248,8 +3135,11 @@ export default function SatzeGame() {
         margin: '0 auto',
         display: 'block',
         backgroundColor: PALETTE.deepVoid,
+        '--duel-reveal-ms': `${DUEL_REVEAL_MS}ms`,
+        '--duel-reveal-delay': '0ms',
       }}
     >
+      <DuelRevealHudStyles />
       {onlineOpponentLeft && (
         <div
           className="absolute inset-0 z-[300] flex items-center justify-center bg-black/75 pointer-events-auto px-4"
@@ -2293,7 +3183,14 @@ export default function SatzeGame() {
               Il collegamento con il server multiplayer si è interrotto. Puoi riconnetterti alla stessa stanza con il tuo token.
             </p>
             {mpReconnectError && (
-              <p className="text-red-400 text-xs mb-3 text-center">{mpReconnectError}</p>
+              <p className="text-red-400 text-xs mb-3 text-center">
+                {mpReconnectError}
+                {/non trovata/i.test(mpReconnectError) && (
+                  <span className="block mt-2 text-slate-400">
+                    La stanza non esiste più sul server (riavvio o timeout). Dovete creare una nuova partita.
+                  </span>
+                )}
+              </p>
             )}
             <button
               type="button"
@@ -2372,30 +3269,30 @@ export default function SatzeGame() {
             ANTEPRIMA
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col items-center">
-            {(hoveredCard || lastPreviewCard) ? (
+            {displayPreviewCard ? (
               <div className="flex flex-col items-center w-full">
                 <GameCard
                   cardLayout={galleryCardLayout}
-                  agent={(hoveredCard || lastPreviewCard).agent}
-                  showBonus={(hoveredCard || lastPreviewCard).showBonus !== undefined
-                    ? (hoveredCard || lastPreviewCard).showBonus
-                    : ((hoveredCard || lastPreviewCard).isPlayer !== false
+                  agent={displayPreviewCard.agent}
+                  showBonus={displayPreviewCard.showBonus !== undefined
+                    ? displayPreviewCard.showBonus
+                    : (displayPreviewCard.isPlayer !== false
                         ? playerArmyBonuses
-                        : enemyArmyBonuses)[(hoveredCard || lastPreviewCard).agent?.army] &&
+                        : enemyArmyBonuses)[displayPreviewCard.agent?.army] &&
                       isBonusTriggerSatisfied(
-                        (hoveredCard || lastPreviewCard).agent?.army,
-                        (hoveredCard || lastPreviewCard).isPlayer !== false,
-                        (hoveredCard || lastPreviewCard).agent
+                        displayPreviewCard.agent?.army,
+                        displayPreviewCard.isPlayer !== false,
+                        displayPreviewCard.agent
                       )}
                   bonusBaseInactive={(() => {
-                    const p = hoveredCard || lastPreviewCard;
+                    const p = displayPreviewCard;
                     const a = p.agent;
                     const map = p.isPlayer !== false ? playerArmyBonuses : enemyArmyBonuses;
                     return Boolean(ARMY_BONUSES[a?.army]) && !map?.[a?.army];
                   })()}
-                  modifiedPower={(hoveredCard || lastPreviewCard).modifiedPower}
-                  modifiedDamage={(hoveredCard || lastPreviewCard).modifiedDamage}
-                  abilityCurrentValue={getAbilityCurrentValue((hoveredCard || lastPreviewCard).agent, (hoveredCard || lastPreviewCard).isPlayer !== false)}
+                  modifiedPower={displayPreviewCard.modifiedPower}
+                  modifiedDamage={displayPreviewCard.modifiedDamage}
+                  abilityCurrentValue={getAbilityCurrentValue(displayPreviewCard.agent, displayPreviewCard.isPlayer !== false)}
                   disabled
                 />
                 <div className="mt-3 w-full">
@@ -2403,8 +3300,8 @@ export default function SatzeGame() {
                     className="p-4 space-y-3 rounded-xl"
                     style={{ background: `${PALETTE.deepVoid}99`, border: `1px solid ${PALETTE.slate}` }}
                   >
-                    {(hoveredCard || lastPreviewCard).agent?.ability && (() => {
-                      const fullText = getAbilityExplanation((hoveredCard || lastPreviewCard).agent.ability);
+                    {displayPreviewCard.agent?.ability && (() => {
+                      const fullText = getAbilityExplanation(displayPreviewCard.agent.ability);
                       if (!fullText) return null;
                       const colonIdx = fullText.indexOf(': ');
                       const hasTrigger = colonIdx !== undefined && colonIdx >= 0;
@@ -2442,16 +3339,16 @@ export default function SatzeGame() {
                         </div>
                       );
                     })()}
-                    {(hoveredCard || lastPreviewCard).agent?.flavour && (
+                    {displayPreviewCard.agent?.flavour && (
                       <div
-                        className={(hoveredCard || lastPreviewCard).agent?.ability ? 'pt-3' : ''}
+                        className={displayPreviewCard.agent?.ability ? 'pt-3' : ''}
                         style={{ borderTop: `1px solid ${PALETTE.slate}` }}
                       >
                         <p 
                           className="text-sm italic leading-[1.75]" 
                           style={{ color: PALETTE.textPrimary, opacity: 0.92 }}
                         >
-                          "{(hoveredCard || lastPreviewCard).agent.flavour}"
+                          "{displayPreviewCard.agent.flavour}"
                         </p>
                       </div>
                     )}
@@ -2499,7 +3396,7 @@ export default function SatzeGame() {
           style={{
             position: 'relative',
             zIndex: isGuidedIntroGlossaryPromptPhase || isGuidedIntroGlossaryOpenPhase ? 21 : undefined,
-            background: `url(/Immagini_bg/adam_samson_hardcover_book_spine_dark_leather_binding_gold_de_e0c822f3-c6e7-43d5-8296-0a58b1c0173f_1.webp) center/cover no-repeat`,
+            background: `url(${resolvePublicAssetUrl('/Immagini_bg/adam_samson_hardcover_book_spine_dark_leather_binding_gold_de_e0c822f3-c6e7-43d5-8296-0a58b1c0173f_1.webp')}) center/cover no-repeat`,
             border: isGuidedIntroGlossaryPromptPhase || isGuidedIntroGlossaryOpenPhase
               ? '2px solid rgba(251, 191, 36, 0.95)'
               : `1.5px solid ${PALETTE.slate}`,
@@ -2538,14 +3435,13 @@ export default function SatzeGame() {
           className="p-2 flex-shrink-0 satze-hud-panel"
           style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
-        {/* Campi conquistati: IA a sinistra, Tu a destra - colori dalle armate */}
+        {/* Campi conquistati: IA a sinistra, Tu a destra - colore identità esercito (fusione) */}
           {(() => {
-            const getArmies = (winner) => Object.entries(conqueredFields)
+            const getConqueredCount = (winner) => Object.entries(conqueredFields)
               .filter(([, v]) => (typeof v === 'object' && v?.winner === winner) || (typeof v === 'string' && (winner === 'player' ? playerHand : enemyHand).some(c => c.army === v)))
-              .sort(([a], [b]) => Number(a) - Number(b))
-              .map(([, v]) => typeof v === 'object' ? v.army : v);
-            const playerArmies = getArmies('player');
-            const enemyArmies = getArmies('enemy');
+              .length;
+            const playerConqueredCount = getConqueredCount('player');
+            const enemyConqueredCount = getConqueredCount('enemy');
             /* Stendardo verticale medievale: gonfalone con code */
             const BannerSilhouette = ({ filled, color }) => {
               const c = color || PALETTE.slate;
@@ -2555,10 +3451,8 @@ export default function SatzeGame() {
                 </svg>
               );
             };
-            const Slot = ({ filled, army }) => {
-              const colors = army && ARMY_COLORS[army];
-              const accent = colors?.accent || PALETTE.slate;
-              const isFilled = filled && colors?.accent;
+            const Slot = ({ filled, accent }) => {
+              const isFilled = filled && accent;
               const strokeColor = isFilled ? accent : `${PALETTE.slate}66`;
               return (
                 <div 
@@ -2574,20 +3468,20 @@ export default function SatzeGame() {
                 </div>
               );
             };
-            const Row = ({ armies }) => (
+            const Row = ({ count, accent }) => (
               <div className="flex items-center justify-center gap-2 py-0.5">
                 <div className="flex gap-2 flex-1 min-w-0 justify-center">
-                  {[0,1,2].map(i => <Slot key={i} filled={i < armies.length} army={armies[i]} />)}
+                  {[0, 1, 2].map((i) => <Slot key={i} filled={i < count} accent={accent} />)}
                 </div>
               </div>
             );
             return (
               <div className="flex justify-between gap-4 mb-1">
                 <div className="flex-1 min-w-0">
-                  <Row armies={enemyArmies} />
+                  <Row count={enemyConqueredCount} accent={enemyIdentityColor} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <Row armies={playerArmies} />
+                  <Row count={playerConqueredCount} accent={playerIdentityColor} />
                 </div>
               </div>
             );
@@ -2660,6 +3554,15 @@ export default function SatzeGame() {
                   selected={currentFieldIndex === idx}
                   conquered={idx in conqueredFields}
                   conqueredBy={typeof conqueredFields[idx] === 'object' ? conqueredFields[idx]?.army : conqueredFields[idx]}
+                  conqueredAccent={
+                    idx in conqueredFields
+                      ? (typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'player'
+                          ? playerIdentityColor
+                          : typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'enemy'
+                            ? enemyIdentityColor
+                            : null)
+                      : null
+                  }
                   hidden={idx >= revealedFields}
                   turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
                   onClick={canSelectField ? () => handleFieldSelect(field) : undefined}
@@ -2679,14 +3582,14 @@ export default function SatzeGame() {
               <LogPanel
                 logs={logs}
                 gamePhase={gamePhase}
-                playerColor={getHandAccentColor(playerHand, ARMY_COLORS, '#4FD1C5')}
-                enemyColor={getHandAccentColor(enemyHand, ARMY_COLORS, '#D946EF')}
+                playerColor={playerIdentityColor}
+                enemyColor={enemyIdentityColor}
               />
             </div>
             {/* Retro: FC */}
             <div ref={fcPanelRef} className="satze-panel-flip-face satze-panel-flip-face-back p-2 flex flex-col overflow-hidden items-center justify-start pt-4 satze-hide-scrollbar satze-fc-panel rounded-3xl"
               style={{
-                background: `linear-gradient(135deg, rgba(10, 14, 26, 0.88) 0%, rgba(15, 23, 42, 0.85) 100%), url(/Immagini_bg/CampoFC_bg.webp) center/cover no-repeat`,
+                background: `linear-gradient(135deg, rgba(10, 14, 26, 0.88) 0%, rgba(15, 23, 42, 0.85) 100%), url(${resolvePublicAssetUrl('/Immagini_bg/CampoFC_bg.webp')}) center/cover no-repeat`,
                 border: '2px solid #000',
                 boxShadow: '3px 3px 0 #000',
                 fontFamily: HUD_ORATORIO_FONT_UI
@@ -2730,6 +3633,7 @@ export default function SatzeGame() {
                 max={playerFocus}
                 reserved={playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1}
                 agent={selectedAgent}
+                accentColor={playerIdentityColor}
               />
             </div>
           </div>
@@ -2747,7 +3651,7 @@ export default function SatzeGame() {
         battleOutcomes={cardBattleOutcomes}
         cardPositions={iaCardPositions}
         position="top-left"
-        label="Mano Avversario"
+        label={mpEnemyHandLabel}
         gamePhase={gamePhase}
         disabled={true}
         armyBonuses={enemyArmyBonuses}
@@ -2756,6 +3660,10 @@ export default function SatzeGame() {
         handCardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
         hideCards={shouldHideHandsForGuidedSetup}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
+        showZoneShell={isShuffleDealPhase}
+        zoneArmy={shuffleDealSetup?.enemyArmy}
+        zoneColorHand={enemyDeckVisual?.deckCards}
+        zoneArmies={enemyDeckVisual?.armies}
       />
 
       {/* ============================================ */}
@@ -2770,7 +3678,7 @@ export default function SatzeGame() {
         battleOutcomes={cardBattleOutcomes}
         cardPositions={playerCardPositions}
         position="bottom-right"
-        label="La Tua Mano"
+        label={mpSelfHandLabel}
         gamePhase={gamePhase}
         disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent)}
         onDragStart={handleDragStart}
@@ -2785,7 +3693,23 @@ export default function SatzeGame() {
         hideCards={shouldHideHandsForGuidedSetup}
         highlightedAgentId={isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : null}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
+        showZoneShell={isShuffleDealPhase}
+        zoneArmy={shuffleDealSetup?.playerArmy}
+        zoneColorHand={playerDeckVisual?.deckCards}
+        zoneArmies={playerDeckVisual?.armies}
       />
+
+      {isShuffleDealPhase && (
+        <div className="absolute inset-0 z-[24] pointer-events-auto" aria-hidden />
+      )}
+      {isShuffleDealPhase && (
+        <BattlefieldShuffleDealOverlay
+          setup={shuffleDealSetup}
+          onComplete={completeShuffleDeal}
+          launchRevealHoldMs={shuffleLaunchHoldMsRef.current ?? 0}
+          onRevealPhaseChange={setDuelRevealPhase}
+        />
+      )}
 
       {/* ============================================ */}
       {/* EFFETTO CINEMA - Barre nere */}
@@ -2836,9 +3760,11 @@ export default function SatzeGame() {
           setCampaignLevel(null);
           setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
         }}
-        onOpenPlaytest={() => {
+        onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD ? undefined : () => {
           setGamePhase('playtestHistory');
         }}
+        onReplayDuel={replayDuelAnimation}
+        onSkipDuel={skipDuelAnimation}
       />
 
       <GuidedTutorialOverlay
@@ -2848,12 +3774,21 @@ export default function SatzeGame() {
         guidedInstruction={guidedInstruction}
         guidedHint={guidedHint}
         showGuidedTrianglesHighlight={showGuidedTrianglesHighlight}
-        isGuidedIntroWelcomePhase={isGuidedIntroWelcomePhase}
-        isGuidedIntroHandsPhase={isGuidedIntroHandsPhase}
-        isGuidedIntroPreviewPhase={isGuidedIntroPreviewPhase}
-        isGuidedIntroBattlefieldsPhase={isGuidedIntroBattlefieldsPhase}
+        isGuidedOkContinuePhase={isGuidedOkContinuePhase}
+        isGuidedAckPause={isGuidedEnemyAckPause}
+        isGuidedDuelPause={isGuidedDuelPause}
+        isGuidedIntroEpiloguePhase={isGuidedIntroEpiloguePhase}
+        isGuidedIntroFreePlayFinalPhase={isGuidedIntroFreePlayFinalPhase}
+        isGuidedAdvancedEpiloguePhase={isGuidedAdvancedEpiloguePhase}
+        guidedIntroStage={guidedIntroStage}
+        gamePhase={gamePhase}
+        overlayMode={guidedOverlayMode}
         raiseAboveGlossary={showGlossary}
-        onIntroContinue={handleGuidedIntroContinue}
+        onIntroContinue={handleGuidedContinue}
+        onIntroEpiloguePlay={handleIntroEpiloguePlay}
+        onIntroEpilogueEnd={() => finishGuidedTutorial('intro')}
+        onIntroFreePlayFinalClose={() => finishGuidedTutorial('intro')}
+        onAdvancedEpilogueClose={() => finishGuidedTutorial('advanced')}
       />
       {!guidedMatch.active && guidedHint && (
         <div className="absolute left-1/2 pointer-events-none" style={{ top: 118, transform: 'translateX(-50%)', zIndex: 18 }}>
@@ -2948,6 +3883,7 @@ export default function SatzeGame() {
               showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
               bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
               abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+              overdrivePreview={playerOverdrivePreview}
               onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
               onClick={() => setSelectedAgent(null)}
               onDragStart={handleDragStart}
@@ -3003,8 +3939,18 @@ export default function SatzeGame() {
         />
       )}
 
+      {devDialogueDuelActive && gamePhase === 'result' && battleResult && (
+        <DuelDialogueOverlay
+          battleResult={battleResult}
+          duelPhase={duelPhase}
+          showDiscardDialogue={showClashAnimation}
+          isZoomed={isZoomed}
+          paused={isGuidedDuelPause}
+        />
+      )}
+
       {/* ============================================ */}
-      {/* Centro alto: Round, SATZE; sopra il pannello campo: Replay/Skip (fuori da BattlefieldPanel) */}
+      {/* Centro alto: Round, SATZE */}
       {/* ============================================ */}
       <div
         className="absolute left-1/2 flex flex-col items-center gap-1.5 pointer-events-none"
@@ -3052,68 +3998,32 @@ export default function SatzeGame() {
         >
           <span className="text-amber-400 font-bold">⚔️ SATZE</span>
         </div>
-
-        {gamePhase === 'result' && battleResult && (
-          <div className="flex gap-1.5 items-center justify-center pointer-events-auto relative z-20 w-fit shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setDuelPhase(0);
-                setPlayerFocusCoinsShown(0);
-                setEnemyFocusCoinsShown(0);
-                setPlayerCardGlow(0);
-                setEnemyCardGlow(0);
-                setCardGlowIntensity(0);
-              }}
-              className="satze-hud-duel-btn"
-            >
-              Replay
-            </button>
-            {typeof window !== 'undefined' &&
-              new URLSearchParams(window.location.search).get('duelDebug') === '1' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDuelPhase(6);
-                    if (battleResult) {
-                      setPlayerFocusCoinsShown(battleResult.playerFocusUsed || 0);
-                      setEnemyFocusCoinsShown(battleResult.enemyFocusUsed || 0);
-                      setPlayerCardGlow(1);
-                      setEnemyCardGlow(1);
-                      setCardGlowIntensity(1);
-                    }
-                  }}
-                  className="satze-hud-duel-btn satze-hud-duel-btn--skip"
-                >
-                  Skip
-                </button>
-              )}
-          </div>
-        )}
       </div>
 
       {/* ============================================ */}
       {/* DATI IA - Alto Sinistra - z-index 10 */}
       {/* ============================================ */}
-      <StatsPanel 
-        label={isOnlinePvP ? 'Avversario' : 'IA'} 
-        hp={enemyHP} 
+      <StatsPanel
+        label={mpEnemyLabel}
+        hp={enemyHP}
         focus={enemyFocus}
         toxin={enemyToxin}
         position="top-left"
         gamePhase={gamePhase}
+        accentColor={ARMY_COLORS[enemyHand?.[0]?.army]?.accent}
       />
 
       {/* ============================================ */}
       {/* DATI PLAYER - Basso Destra - z-index 10 */}
       {/* ============================================ */}
-      <StatsPanel 
-        label="TU" 
+      <StatsPanel
+        label={mpSelfLabel}
         hp={playerHP}
-        focus={playerFocus} 
+        focus={playerFocus}
         toxin={playerToxin}
         position="bottom-right"
         gamePhase={gamePhase}
+        accentColor={playerIdentityColor}
       />
 
       {/* ============================================ */}
@@ -3167,6 +4077,11 @@ export default function SatzeGame() {
                   if (gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only' && enemyHP > 0) {
                     return;
                   }
+                  sendClaimDecisionRelay(
+                    'victory',
+                    showClaimVictoryChoice.playerFields,
+                    showClaimVictoryChoice.enemyFields
+                  );
                   setGameResult({ winner: 'player', reason: 'fields', playerFields: showClaimVictoryChoice.playerFields, enemyFields: showClaimVictoryChoice.enemyFields });
                   setShowClaimVictoryChoice(null);
                   setGamePhase('gameOver');
@@ -3178,6 +4093,11 @@ export default function SatzeGame() {
               </button>
               <button
                 onClick={() => {
+                  sendClaimDecisionRelay(
+                    'continue',
+                    showClaimVictoryChoice.playerFields,
+                    showClaimVictoryChoice.enemyFields
+                  );
                   setShowClaimVictoryChoice(null);
                   doResetAndNextRound(showClaimVictoryChoice.playerFields, showClaimVictoryChoice.enemyFields);
                 }}
@@ -3186,6 +4106,26 @@ export default function SatzeGame() {
                 <Icon name="check" type="cardIcon" size={18} color="#fff" />
                 Continua a giocare
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attesa decisione reclamazione avversario (multiplayer, round 3–4) */}
+      {opponentClaimPending && isOnlinePvP && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[100]"
+          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.88)' }}
+        >
+          <div
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-md text-center border border-slate-500/50"
+            style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
+          >
+            <div className="text-xl font-bold text-slate-200">
+              {onlinePeerName || 'L\'avversario'} ha conquistato 3 campi
+            </div>
+            <div className="text-slate-400 text-sm">
+              Può reclamare la vittoria o continuare la partita. In attesa della sua scelta…
             </div>
           </div>
         </div>
@@ -3237,7 +4177,7 @@ export default function SatzeGame() {
         onComplete={tutorial.completeTutorial}
         steps={activeTutorialSteps}
       />
-      
+
     </div>
   );
 }

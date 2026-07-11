@@ -145,8 +145,13 @@ export function applyDuelPostBattleEffects({
         `Bonus copiato ${side.agent.army} (post)`
       )
     ) {
-      if (sideKey === 'player') pPostBonusTriggered = true;
-      else ePostBonusTriggered = true;
+      if (sideKey === 'player') {
+        pPostBonusTriggered = true;
+        state.pCopiedBonusNotTriggered = false;
+      } else {
+        ePostBonusTriggered = true;
+        state.eCopiedBonusNotTriggered = false;
+      }
       visualRecorder?.pushPostBonus(sideKey, state);
     }
   }

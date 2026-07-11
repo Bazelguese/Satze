@@ -1,6 +1,18 @@
 import { useCallback, useState } from 'react';
 import { calcInitialBonuses } from '../utils/onlineMatch';
 import { preloadBattlefieldImages } from '../utils/preloadAssets';
+import {
+  GUIDED_ADVANCED_ROUNDS,
+  GUIDED_DECKS,
+  GUIDED_HANDS,
+  GUIDED_INTRO_ROUNDS,
+  ADV_STAGE_GOAL,
+} from '../data/tutorialGuidedContent';
+import {
+  assertGuidedHandInDeck,
+  buildGuidedHands,
+  getTutorialBattlefields,
+} from '../utils/guidedTutorialValidation';
 
 export function useTutorialOrchestrator({
   tutorial,
@@ -56,14 +68,17 @@ export function useTutorialOrchestrator({
     active: false,
     trackId: null,
     rounds: [],
+    freePlay: false,
   });
   const [guidedHint, setGuidedHint] = useState('');
   const [guidedIntroStage, setGuidedIntroStage] = useState(0);
+  const [guidedPause, setGuidedPause] = useState(null);
 
   const resetGuidedTutorial = useCallback(() => {
-    setGuidedMatch({ active: false, trackId: null, rounds: [] });
+    setGuidedMatch({ active: false, trackId: null, rounds: [], freePlay: false });
     setGuidedHint('');
     setGuidedIntroStage(0);
+    setGuidedPause(null);
   }, []);
 
   const openTutorialSelector = useCallback(() => {
@@ -75,12 +90,32 @@ export function useTutorialOrchestrator({
   }, []);
 
   const startGuidedMatch = useCallback((trackId) => {
-    const orderedAgents = [...allAgents]
-      .filter((agent) => agent && typeof agent.id === 'number')
-      .sort((a, b) => a.id - b.id);
-    const playerGuidedHand = orderedAgents.slice(0, 5).map((card) => ({ ...card }));
-    const enemyGuidedHand = orderedAgents.slice(5, 10).map((card) => ({ ...card }));
-    const guidedFields = [...allBattlefields].slice(0, 5);
+    const handIds = GUIDED_HANDS[trackId];
+    if (!handIds) {
+      setLogs((prev) => [
+        ...prev.slice(-50),
+        `[GUIDA] Percorso "${trackId}" non supportato.`,
+      ]);
+      return;
+    }
+
+    let playerGuidedHand;
+    let enemyGuidedHand;
+    try {
+      ({ player: playerGuidedHand, enemy: enemyGuidedHand } = buildGuidedHands(allAgents, handIds));
+      const deckMeta = GUIDED_DECKS[trackId];
+      assertGuidedHandInDeck(handIds.player, deckMeta.player);
+      assertGuidedHandInDeck(handIds.enemy, deckMeta.enemy);
+    } catch (err) {
+      setLogs((prev) => [
+        ...prev.slice(-50),
+        `[GUIDA] ${err.message}`,
+      ]);
+      return;
+    }
+
+    const guidedFields = getTutorialBattlefields(allBattlefields);
+    const rounds = trackId === 'advanced' ? GUIDED_ADVANCED_ROUNDS : GUIDED_INTRO_ROUNDS;
 
     if (playerGuidedHand.length < 3 || enemyGuidedHand.length < 3 || guidedFields.length < 3) {
       setLogs((prev) => [
@@ -90,20 +125,9 @@ export function useTutorialOrchestrator({
       return;
     }
 
-    const rounds = trackId === 'advanced'
-      ? [
-          { round: 1, fieldIndex: 1, playerAgentId: playerGuidedHand[1].id, focus: 2, enemyAgentId: enemyGuidedHand[1].id, enemyFocus: 3 },
-          { round: 2, fieldIndex: 2, playerAgentId: playerGuidedHand[2].id, focus: 2, enemyAgentId: enemyGuidedHand[2].id, enemyFocus: 1 },
-        ]
-      : [
-          { round: 1, fieldIndex: 0, playerAgentId: playerGuidedHand[0].id, focus: 3, enemyAgentId: enemyGuidedHand[0].id, enemyFocus: 2 },
-          { round: 2, fieldIndex: 1, playerAgentId: playerGuidedHand[1].id, focus: 2, enemyAgentId: enemyGuidedHand[1].id, enemyFocus: 3 },
-          { round: 3, fieldIndex: 2, playerAgentId: playerGuidedHand[2].id, focus: 4, enemyAgentId: enemyGuidedHand[2].id, enemyFocus: 2 },
-        ];
-
-    setGuidedMatch({ active: true, trackId, rounds });
+    setGuidedMatch({ active: true, trackId, rounds, freePlay: false });
     setGuidedHint('');
-    setGuidedIntroStage(trackId === 'intro' ? 0 : 3);
+    setGuidedIntroStage(trackId === 'intro' ? 0 : ADV_STAGE_GOAL);
     setIsTutorialSelectorOpen(false);
     tutorial.closeTutorial();
 
@@ -146,6 +170,8 @@ export function useTutorialOrchestrator({
     setLogs([
       '🎯 Partita guidata avviata',
       `📘 Percorso: ${trackId === 'advanced' ? 'Avanzato' : 'Introduttivo'}`,
+      `🛡️ Tu: ${GUIDED_DECKS[trackId].player.army} — "${GUIDED_DECKS[trackId].player.name}"`,
+      `⚔️ Nemico: ${GUIDED_DECKS[trackId].enemy.army} — "${GUIDED_DECKS[trackId].enemy.name}"`,
       '[R1] Segui le istruzioni in alto: ogni scelta viene validata.',
       trackId === 'intro'
         ? '[R1] Intro completa: PV, FC, agenti, campi, iniziativa e duello passo-passo.'
@@ -214,19 +240,39 @@ export function useTutorialOrchestrator({
     gameFlow.startGame(...args);
   }, [resetGuidedTutorial, tutorial, gameFlow]);
 
+  const enableGuidedFreePlay = useCallback(() => {
+    setGuidedMatch((prev) => ({ ...prev, freePlay: true }));
+    setGuidedIntroStage(9);
+    setGuidedHint('');
+    setLogs((prev) => [
+      ...prev.slice(-80),
+      '[GUIDA] Round 4–5 liberi: nessuna validazione, vittoria attiva.',
+    ]);
+  }, [setLogs]);
+
+  const finishGuidedTutorial = useCallback((trackId) => {
+    tutorial.completeTutorial(trackId);
+    resetGuidedTutorial();
+    setGamePhase('menu');
+  }, [tutorial, resetGuidedTutorial, setGamePhase]);
+
   return {
     isTutorialSelectorOpen,
     activeTutorialSteps,
     guidedMatch,
     guidedHint,
     guidedIntroStage,
+    guidedPause,
     setGuidedHint,
     setGuidedIntroStage,
+    setGuidedPause,
     setGuidedMatch,
     openTutorialSelector,
     closeTutorialSelector,
     handleTutorialTrackSelect,
     startStandardGame,
     resetGuidedTutorial,
+    enableGuidedFreePlay,
+    finishGuidedTutorial,
   };
 }

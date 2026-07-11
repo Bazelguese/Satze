@@ -8,11 +8,15 @@
  */
 import http from 'http';
 import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { WebSocketServer } from 'ws';
 
 const PORT = Number(process.env.PORT || process.env.SATZE_WS_PORT || 3847);
 const HOST = process.env.HOST || '0.0.0.0';
-const RECONNECT_GRACE_MS = Number(process.env.SATZE_RECONNECT_GRACE_MS || 120000);
+const RECONNECT_GRACE_MS = Number(process.env.SATZE_RECONNECT_GRACE_MS || 300000);
+const ROOMS_DIR = process.env.SATZE_ROOMS_DIR || join(process.cwd(), 'data');
+const ROOMS_FILE = join(ROOMS_DIR, 'rooms.json');
 
 /** @type {Map<string, {
  *   host: import('ws').WebSocket | null,
@@ -24,6 +28,53 @@ const RECONNECT_GRACE_MS = Number(process.env.SATZE_RECONNECT_GRACE_MS || 120000
  *   hostDisconnectTimer: ReturnType<typeof setTimeout> | null,
  * }>} */
 const rooms = new Map();
+
+function persistRooms() {
+  try {
+    mkdirSync(ROOMS_DIR, { recursive: true });
+    const data = {};
+    for (const [code, room] of rooms) {
+      data[code] = {
+        hostName: room.hostName,
+        guestName: room.guestName ?? null,
+        hostSecret: room.hostSecret,
+        guestSecret: room.guestSecret,
+      };
+    }
+    writeFileSync(ROOMS_FILE, JSON.stringify(data));
+  } catch (e) {
+    console.warn('[SATZE] persist rooms:', e.message);
+  }
+}
+
+function loadPersistedRooms() {
+  try {
+    if (!existsSync(ROOMS_FILE)) return;
+    const data = JSON.parse(readFileSync(ROOMS_FILE, 'utf8'));
+    for (const [code, snap] of Object.entries(data)) {
+      if (!snap?.hostSecret) continue;
+      rooms.set(code, {
+        host: null,
+        guest: null,
+        hostName: snap.hostName || 'Host',
+        guestName: snap.guestName || undefined,
+        hostSecret: snap.hostSecret,
+        guestSecret: snap.guestSecret ?? null,
+        hostDisconnectTimer: null,
+      });
+    }
+    if (rooms.size > 0) {
+      console.log(`[SATZE] Ripristinate ${rooms.size} stanze da disco`);
+    }
+  } catch (e) {
+    console.warn('[SATZE] load rooms:', e.message);
+  }
+}
+
+function deleteRoom(roomCode) {
+  rooms.delete(roomCode);
+  persistRooms();
+}
 
 function genRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -60,7 +111,27 @@ const server = http.createServer((_req, res) => {
 
 const wss = new WebSocketServer({ server });
 
+/** Keepalive protocollo WS: evita timeout proxy Fly durante partite lunghe. */
+const WS_PING_MS = 25000;
+const wsKeepalive = setInterval(() => {
+  for (const ws of wss.clients) {
+    const sock = ws;
+    if (sock.isAlive === false) {
+      sock.terminate();
+      continue;
+    }
+    sock.isAlive = false;
+    sock.ping();
+  }
+}, WS_PING_MS);
+
+wss.on('close', () => clearInterval(wsKeepalive));
+
 wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
   /** @type {{ roomCode: string | null, role: 'host' | 'guest' | null }} */
   const client = { roomCode: null, role: null };
 
@@ -94,6 +165,7 @@ wss.on('connection', (ws) => {
           playerId: 'host',
           reconnectSecret: hostSecret,
         });
+        persistRooms();
         break;
       }
 
@@ -104,7 +176,7 @@ wss.on('connection', (ws) => {
           safeSend(ws, { type: 'error', message: 'Stanza non trovata' });
           return;
         }
-        if (room.guest) {
+        if (room.guest && room.guest.readyState === 1) {
           safeSend(ws, { type: 'error', message: 'Stanza già piena' });
           return;
         }
@@ -131,6 +203,7 @@ wss.on('connection', (ws) => {
           type: 'peer_joined',
           playerName: room.guestName,
         });
+        persistRooms();
         break;
       }
 
@@ -155,6 +228,7 @@ wss.on('connection', (ws) => {
           if (room.guest && room.guest.readyState === 1) {
             safeSend(room.guest, { type: 'peer_rejoined', role: 'host' });
           }
+          persistRooms();
           break;
         }
         if (role === 'guest' && room.guestSecret && secret === room.guestSecret) {
@@ -165,6 +239,7 @@ wss.on('connection', (ws) => {
           if (room.host && room.host.readyState === 1) {
             safeSend(room.host, { type: 'peer_rejoined', role: 'guest' });
           }
+          persistRooms();
           break;
         }
         safeSend(ws, { type: 'error', message: 'Riconnessione non valida' });
@@ -222,9 +297,10 @@ wss.on('connection', (ws) => {
           if (r.guest && r.guest.readyState === 1) {
             safeSend(r.guest, { type: 'peer_left' });
           }
-          rooms.delete(roomCode);
+          deleteRoom(roomCode);
         }
       }, RECONNECT_GRACE_MS);
+      persistRooms();
       return;
     }
 
@@ -235,9 +311,12 @@ wss.on('connection', (ws) => {
       if (room.host && room.host.readyState === 1) {
         safeSend(room.host, { type: 'peer_disconnected', who: 'guest' });
       }
+      persistRooms();
     }
   });
 });
+
+loadPersistedRooms();
 
 server.listen(PORT, HOST, () => {
   console.log(`[SATZE] WebSocket in ascolto su ws://${HOST === '0.0.0.0' ? '0.0.0.0 (tutte le interfacce)' : HOST}:${PORT}`);

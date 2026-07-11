@@ -1,3 +1,5 @@
+import { IS_PUBLIC_PLAYTEST_BUILD } from './buildProfile.js';
+
 /**
  * URL del server WebSocket multiplayer.
  *
@@ -5,13 +7,20 @@
  * 1) File multiplayer.json (Electron: accanto all'exe o in AppData)
  * 2) public/satze-multiplayer.json (build web / fetch)
  * 3) VITE_MULTIPLAYER_URL (file .env in sviluppo / build)
- * 4) Fallback da hostname (solo browser su http/https)
+ * 4) Build playtest pubblica → server online predefinito
+ * 5) Fallback da hostname (solo browser su http/https)
  */
+
+/** Server multiplayer playtest (deploy una volta: fly deploy). */
+export const PUBLIC_PLAYTEST_WS_URL = 'wss://satze-ws.fly.dev';
 
 /** @type {string | null} */
 let cachedUrl = null;
 
 function defaultFromLocation() {
+  if (IS_PUBLIC_PLAYTEST_BUILD) {
+    return PUBLIC_PLAYTEST_WS_URL;
+  }
   const DEFAULT_HOST = '127.0.0.1';
   const PORT = 3847;
   if (typeof window === 'undefined') {

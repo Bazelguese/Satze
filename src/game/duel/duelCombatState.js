@@ -27,6 +27,8 @@ export function pickPostBattleFields(state) {
     eCopiedAbilityNotTriggered: state.eCopiedAbilityNotTriggered,
     pBonusCopied: state.pBonusCopied,
     eBonusCopied: state.eBonusCopied,
+    pCopiedBonusNotTriggered: state.pCopiedBonusNotTriggered,
+    eCopiedBonusNotTriggered: state.eCopiedBonusNotTriggered,
     playerToxinActivated: state.playerToxinActivated,
     enemyToxinActivated: state.enemyToxinActivated,
   };
@@ -60,6 +62,8 @@ export function createDuelCombatState(duel) {
     eCopiedAbilityNotTriggered: false,
     pBonusCopied: null,
     eBonusCopied: null,
+    pCopiedBonusNotTriggered: false,
+    eCopiedBonusNotTriggered: false,
     playerToxinActivated: null,
     enemyToxinActivated: null,
     pModifierInversion: false,

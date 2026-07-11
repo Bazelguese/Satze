@@ -11,7 +11,7 @@ import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 // Fallback per armate con nomi alternativi (es. Nati dalla Bocca -> Mounthborn)
 const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
 
-export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = null }) => {
+export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = null, accentColor = null }) => {
   const trackRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const effectiveMax = Math.max(1, max - reserved);
@@ -20,7 +20,7 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
   const army = agent?.army;
   const armyKey = ARMY_COLOR_FALLBACK[army] || army;
   const colors = ARMY_COLORS[armyKey] || ARMY_COLORS['Kethran'] || { accent: '#fbbf24' };
-  const accent = colors.accent || '#fbbf24';
+  const accent = accentColor || colors.accent || '#fbbf24';
   const power = agent?.power ?? 0;
   const baseAssault = power * value; // VA base = POT × FC
 

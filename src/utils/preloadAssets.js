@@ -25,6 +25,11 @@ function resolveUrl(path) {
   return full.replace(/\/+/g, '/').replace(/\.\/\.\//g, './');
 }
 
+/** URL asset in public/ — funziona in browser e in Electron (base ./). */
+export function resolvePublicAssetUrl(path) {
+  return resolveUrl(path);
+}
+
 function preloadImage(url) {
   return new Promise((resolve) => {
     if (!url) {

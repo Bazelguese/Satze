@@ -185,3 +185,82 @@ export function getHandAccentColor(hand, armyColors, fallback = '#94a3b8') {
   if (totalWeight === 0) return fallback;
   return rgbToHex(totalR / totalWeight, totalG / totalWeight, totalB / totalWeight);
 }
+
+/**
+ * Estrae le armate distinte di un mazzo/esercito, ordinate per numero di carte.
+ * @param {Array} cards - Carte con proprietà army
+ * @param {{ fallbackArmy?: string, maxArmies?: number }} [options]
+ */
+export function getDeckArmies(cards, { fallbackArmy = null, maxArmies = 2 } = {}) {
+  const counts = {};
+  for (const card of cards || []) {
+    const army = card?.army;
+    if (army) counts[army] = (counts[army] || 0) + 1;
+  }
+  if (Object.keys(counts).length === 0 && fallbackArmy) {
+    return [fallbackArmy];
+  }
+  return Object.keys(counts)
+    .sort((a, b) => (counts[b] - counts[a]) || a.localeCompare(b, 'it'))
+    .slice(0, maxArmies);
+}
+
+/**
+ * Accent e armate per UI (lista eserciti, ticket cinematic, duello).
+ * Mono-armata → accent puro; misto → fusione pesata come in duello.
+ */
+export function getDeckVisualMeta(deckCards, {
+  fallbackArmy = null,
+  armyColors = {},
+  fallbackAccent = '#94a3b8',
+} = {}) {
+  const armies = getDeckArmies(deckCards, { fallbackArmy });
+  const isMixed = armies.length >= 2;
+  const accent = isMixed
+    ? getHandAccentColor(deckCards, armyColors, fallbackAccent)
+    : (armyColors[armies[0]]?.accent || fallbackAccent);
+  return { armies, accent, isMixed };
+}
+
+export function buildDeckVisualIdentity(deckCards, {
+  fallbackArmy = null,
+  armyColors = {},
+  fallbackAccent = '#94a3b8',
+} = {}) {
+  const meta = getDeckVisualMeta(deckCards, { fallbackArmy, armyColors, fallbackAccent });
+  return {
+    armies: meta.armies,
+    accent: meta.accent,
+    isMixed: meta.isMixed,
+    deckCards: Array.isArray(deckCards) ? deckCards : [],
+  };
+}
+
+/**
+ * Arricchisce lo setup shuffle con accent e armate derivati dal mazzo completo (10 carte).
+ * Durante shuffleDeal le mani sono vuote: serve per triangoli zona, dorsi e HUD.
+ */
+export function attachShuffleDealVisuals(setup, armyColors, { fallbackAccent = '#94a3b8' } = {}) {
+  if (!setup) return setup;
+  const playerDeckVisual = buildDeckVisualIdentity(setup.playerSet, {
+    fallbackArmy: setup.playerSet?.[0]?.army ?? setup.playerArmy,
+    armyColors,
+    fallbackAccent,
+  });
+  const enemyDeckVisual = buildDeckVisualIdentity(setup.enemySet, {
+    fallbackArmy: setup.enemySet?.[0]?.army ?? setup.enemyArmy,
+    armyColors,
+    fallbackAccent,
+  });
+  return {
+    ...setup,
+    playerDeckVisual,
+    enemyDeckVisual,
+    playerDeckArmies: playerDeckVisual.armies,
+    enemyDeckArmies: enemyDeckVisual.armies,
+    playerAccent: playerDeckVisual.accent,
+    enemyAccent: enemyDeckVisual.accent,
+    playerIsMixed: playerDeckVisual.isMixed,
+    enemyIsMixed: enemyDeckVisual.isMixed,
+  };
+}

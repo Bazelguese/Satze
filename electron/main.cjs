@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const { ipcMain } = require('electron');
 const { join, dirname } = require('path');
 const { existsSync, writeFileSync, readFileSync } = require('fs');
@@ -14,6 +14,7 @@ function createWindow() {
     minWidth: 1200,
     minHeight: 700,
     backgroundColor: '#0a0a0a',
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -23,6 +24,10 @@ function createWindow() {
     // icon: join(__dirname, '../assets/icon.png'), // Opzionale: aggiungi un'icona
     show: false, // Non mostrare finché non è pronta
   });
+
+  // Niente barra File / Modifica / Visualizza (menu Electron predefinito)
+  Menu.setApplicationMenu(null);
+  mainWindow.setMenuBarVisibility(false);
 
   // Carica l'app
   const isDev = !app.isPackaged;

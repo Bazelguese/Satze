@@ -1,6 +1,6 @@
 import { MENU_ACCENTS, HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, PALETTE } from '../../theme/hudOratorioPalette';
 
-export function TutorialSelector({ isOpen, onClose, onSelect, tracks }) {
+export function TutorialSelector({ isOpen, onClose, onSelect, tracks, wasIntroCompleted }) {
   if (!isOpen) return null;
 
   return (
@@ -44,23 +44,29 @@ export function TutorialSelector({ isOpen, onClose, onSelect, tracks }) {
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tracks.map((track) => (
-            <button
-              key={track.id}
-              type="button"
-              onClick={() => onSelect(track.id)}
-              className="text-left rounded-xl p-4 border transition-all hover:-translate-y-0.5"
-              style={{
-                borderColor: 'rgba(192, 38, 211, 0.35)',
-                background: 'rgba(17, 11, 32, 0.8)',
-              }}
-            >
-              <p className="text-lg font-semibold text-fuchsia-200">{track.title}</p>
-              <p className="text-xs text-fuchsia-300 mt-1">{track.duration}</p>
-              <p className="text-sm text-slate-300 mt-3">{track.description}</p>
-              <p className="text-xs text-slate-500 mt-4">Avvia percorso</p>
-            </button>
-          ))}
+          {tracks.map((track) => {
+            const recommendAdvanced = track.id === 'advanced' && !wasIntroCompleted;
+            return (
+              <button
+                key={track.id}
+                type="button"
+                onClick={() => onSelect(track.id)}
+                className="text-left rounded-xl p-4 border transition-all hover:-translate-y-0.5"
+                style={{
+                  borderColor: 'rgba(192, 38, 211, 0.35)',
+                  background: 'rgba(17, 11, 32, 0.8)',
+                }}
+              >
+                <p className="text-lg font-semibold text-fuchsia-200">{track.title}</p>
+                <p className="text-xs text-fuchsia-300 mt-1">{track.duration}</p>
+                {recommendAdvanced && (
+                  <p className="text-xs text-amber-300/90 mt-1">Consigliato dopo l&apos;introduttivo</p>
+                )}
+                <p className="text-sm text-slate-300 mt-3">{track.description}</p>
+                <p className="text-xs text-slate-500 mt-4">Avvia percorso</p>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   reconnectToRoom,
   clearMpSession,
 } from '../../utils/multiplayerReconnect';
+import { IS_PUBLIC_PLAYTEST_BUILD } from '../../config/buildProfile';
 import { MENU_ACCENTS, PALETTE, HUD_ORATORIO_FONT_DISPLAY, HUD_ORATORIO_FONT_UI, injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
 
 function waitForMessage(manager, predicate, timeoutMs = 20000) {
@@ -66,11 +67,15 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
   const [roomIdInput, setRoomIdInput] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
   /** Sessione salvata (refresh / crash) per riconnettersi alla stessa stanza */
   const savedSession = useMemo(() => readMpSession(), []);
 
   React.useEffect(() => {
     injectSatzeUiFonts();
+    resolveMultiplayerWsUrl()
+      .then((url) => setServerUrl(url))
+      .catch(() => {});
   }, []);
 
   const connectAndCreate = async () => {
@@ -132,7 +137,11 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
         reconnectSecret: msg.reconnectSecret,
       });
     } catch (e) {
-      setErrorMessage(e.message || 'Errore di connessione');
+      let msg = e.message || 'Errore di connessione';
+      if (/non trovata/i.test(msg) && serverUrl) {
+        msg += ` Verifica che l'host usi lo stesso server (${serverUrl}).`;
+      }
+      setErrorMessage(msg);
       mgr.disconnect({ intentional: true });
     } finally {
       setIsConnecting(false);
@@ -247,10 +256,21 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
                 <div className="rounded-lg border border-red-500/50 bg-red-900/30 p-3 text-sm text-red-400">{errorMessage}</div>
               )}
               <p className="mt-4 text-xs" style={{ color: PALETTE.textSecondary }}>
-                Avvia il server con <span className="font-mono" style={{ color: PALETTE.textPrimary }}>npm run server</span> (porta 3847). Per giocare da
-                un altro dispositivo in LAN imposta <span className="font-mono">VITE_MULTIPLAYER_URL</span> nel file{' '}
-                <span className="font-mono">.env</span>.
+                {IS_PUBLIC_PLAYTEST_BUILD
+                  ? 'Connessione online automatica: crea una stanza e invia il codice a 6 caratteri al tuo amico.'
+                  : (
+                    <>
+                      Avvia il server con <span className="font-mono" style={{ color: PALETTE.textPrimary }}>npm run server</span> (porta 3847). Per giocare da
+                      un altro dispositivo in LAN imposta <span className="font-mono">VITE_MULTIPLAYER_URL</span> nel file{' '}
+                      <span className="font-mono">.env</span>.
+                    </>
+                  )}
               </p>
+              {serverUrl && (
+                <p className="mt-2 text-[10px] font-mono break-all" style={{ color: PALETTE.textSecondary }}>
+                  Server: {serverUrl}
+                </p>
+              )}
             </div>
           )}
 

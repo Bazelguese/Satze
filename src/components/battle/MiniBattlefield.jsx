@@ -12,6 +12,7 @@ export const MiniBattlefield = ({
   onClick, 
   conquered, 
   conqueredBy, 
+  conqueredAccent = null,
   hidden, 
   turnsUntilReveal, 
   onHover,
@@ -30,14 +31,14 @@ export const MiniBattlefield = ({
     );
   }
   
-  // Colori per campo conquistato basati sull'armata
+  // Colori conquista: accent identità esercito (fusione) se fornito, altrimenti armata vincitrice
   const getConqueredStyle = () => {
-    if (!conquered || !conqueredBy) return {};
-    const armyColor = ARMY_COLORS[conqueredBy];
-    if (!armyColor) return {};
+    if (!conquered) return {};
+    const accent = conqueredAccent || ARMY_COLORS[conqueredBy]?.accent;
+    if (!accent) return {};
     return {
-      borderColor: armyColor.accent,
-      backgroundColor: armyColor.accent + '20'
+      borderColor: accent,
+      backgroundColor: `${accent}20`,
     };
   };
   

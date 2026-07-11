@@ -1,15 +1,27 @@
-# Fly.io — dopo: fly launch --no-deploy && fly deploy
-# Imposta la variabile PORT automaticamente; il server usa process.env.PORT
+# fly.toml app configuration file generated for satze-ws on 2026-07-10T01:42:02+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "satze-ws"
-primary_region = "fra"
+app = 'satze-ws'
+primary_region = 'fra'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [http_service]
-  internal_port = 8080
+  internal_port = 3847
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'off'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
+
+[mounts]
+  source = 'satze_rooms_data'
+  destination = '/app/data'

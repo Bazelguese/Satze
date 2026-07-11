@@ -27,6 +27,7 @@ import { ALL_BATTLEFIELDS, getBattlefieldAnimationType } from '../../../data/bat
 import { ARMY_LORE } from '../cosmic/armyLore.js';
 import { BattlefieldReveal } from '../../gallery/BattlefieldRevealAnimations.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
+import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
 
 const CATEGORY_LABEL = {
   values: 'VALORI',
@@ -48,10 +49,9 @@ const CATEGORY_DESC = {
 
 function resolveFieldImage(bgImage, fieldId) {
   if (bgImage) {
-    const normalized = bgImage.replace(/^\.\//, '/');
-    return normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return resolvePublicAssetUrl(bgImage) || bgImage;
   }
-  return `/campi_bg/campo-${fieldId}.webp`;
+  return resolvePublicAssetUrl(`/campi_bg/campo-${fieldId}.webp`);
 }
 
 function buildFields() {

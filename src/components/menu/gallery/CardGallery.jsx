@@ -8,6 +8,7 @@ import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { CardTagsRow } from '../../cards/CardTagBadges.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
 
+const DEFAULT_GALLERY_ARMY = "Figli dell'Orizzonte";
 const TILE_WIDTH = 210;
 const GRID_COLUMNS = 6;
 const GRID_GAP_X = 32;
@@ -39,11 +40,14 @@ export default function CardGallery({
   fieldCount,
 }) {
   const ARMIES = useMemo(() => armyList(SORTED_AGENTS), []);
-  const [filter, setFilter] = useState(null);
+  const [filter, setFilter] = useState(DEFAULT_GALLERY_ARMY);
   const [active, setActive] = useState(null);
 
-  const shown = filter ? SORTED_AGENTS.filter((a) => a.army === filter) : SORTED_AGENTS;
-  const headAccent = filter ? (ARMY_COLORS[filter] || {}).accent || '#f5f3eb' : '#f5f3eb';
+  const shown = useMemo(
+    () => SORTED_AGENTS.filter((a) => a.army === filter),
+    [filter],
+  );
+  const headAccent = (ARMY_COLORS[filter] || {}).accent || '#f5f3eb';
 
   useEffect(() => {
     if (!active) return undefined;
@@ -89,14 +93,6 @@ export default function CardGallery({
         </div>
 
         <div className="cgl-filters">
-          <button
-            type="button"
-            className={`cgl-chip ${!filter ? 'on' : ''}`}
-            style={{ '--c': '#f5f3eb' }}
-            onClick={() => setFilter(null)}
-          >
-            <span className="dot" /><span>TUTTE</span>
-          </button>
           {ARMIES.map((a) => (
             <button
               key={a}

@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import {
   buildPhaseAdvanceDelaysMs,
   duelPhase3NeedsWork,
+  computeFocusCoinSequenceDurationMs,
+  computeFocusCoinAppearDelayMs,
+  computeFocusCoinStepIntervalMs,
+  isDuelPhaseActive,
+  getNextDuelPhase,
+  computePhase0DurationMs,
 } from './duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from './duelVisualConfig.js';
 
@@ -40,7 +46,7 @@ test('duelPhase3NeedsWork: true se raw sotto min', () => {
   );
 });
 
-test('buildPhaseAdvanceDelaysMs: fase 3 corta senza mod né clamp', () => {
+test('buildPhaseAdvanceDelaysMs: fase 3 saltata senza mod né clamp', () => {
   const br = {
     playerAssaultMod: 0,
     enemyAssaultMod: 0,
@@ -56,7 +62,8 @@ test('buildPhaseAdvanceDelaysMs: fase 3 corta senza mod né clamp', () => {
     enemyAgent: { power: 2 },
   };
   const d = buildPhaseAdvanceDelaysMs(vfx, 2, 2, br);
-  assert.equal(d[3], vfx.phaseMs3Empty);
+  assert.equal(d[3], 0);
+  assert.equal(getNextDuelPhase(2, br), 4);
 });
 
 test('buildPhaseAdvanceDelaysMs: fase 3 piena con mod', () => {
@@ -133,9 +140,44 @@ test('buildPhaseAdvanceDelaysMs: usa fallback default se vfx corrotto', () => {
     playerAssaultMinFinal: 3,
     enemyAssaultMinFinal: 2,
   });
-  assert.equal(d[0], DUEL_VISUAL_DEFAULTS.phaseMs0);
-  assert.equal(d[1], DUEL_VISUAL_DEFAULTS.phaseMs1);
-  assert.equal(d[2], 2 * DUEL_VISUAL_DEFAULTS.focusCoinStepMs + DUEL_VISUAL_DEFAULTS.focusPhaseBufferMs);
+  assert.equal(d[0], computePhase0DurationMs(badVfx, {
+    playerAssaultMod: 0,
+    enemyAssaultMod: 0,
+    playerAssaultRaw: 10,
+    enemyAssaultRaw: 8,
+    playerAssaultMinFinal: 3,
+    enemyAssaultMinFinal: 2,
+  }));
+  assert.equal(d[1], 0);
+  assert.equal(d[2], computeFocusCoinSequenceDurationMs(2, badVfx) + DUEL_VISUAL_DEFAULTS.focusPhaseBufferMs);
   assert.ok(d[4] >= 1200);
-  assert.equal(d[5], DUEL_VISUAL_DEFAULTS.phaseMs5);
+  assert.equal(d[5], 0);
+});
+
+test('isDuelPhaseActive: salta fase 1 senza visualSteps', () => {
+  const br = { playerFocusUsed: 3, enemyFocusUsed: 2, visualSteps: [{ kind: 'deploy' }, { kind: 'preVa' }] };
+  assert.equal(isDuelPhaseActive(1, br), false);
+  assert.equal(getNextDuelPhase(0, br), 2);
+});
+
+test('isDuelPhaseActive: salta fase 5 senza post-duello', () => {
+  const br = {
+    visualSteps: [{ kind: 'deploy' }, { kind: 'preVa' }],
+    playerFocusUsed: 1,
+    enemyFocusUsed: 1,
+  };
+  assert.equal(isDuelPhaseActive(5, br), false);
+  assert.equal(getNextDuelPhase(4, br), 6);
+});
+
+test('focus coin: intervalli decrescenti (lento → veloce)', () => {
+  const total = 6;
+  const intervals = Array.from({ length: total - 1 }, (_, i) =>
+    computeFocusCoinStepIntervalMs(i, total, vfx)
+  );
+  assert.ok(intervals[0] > intervals[intervals.length - 1]);
+  assert.equal(
+    computeFocusCoinAppearDelayMs(total - 1, total, vfx),
+    intervals.reduce((a, b) => a + b, 0)
+  );
 });

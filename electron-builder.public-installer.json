@@ -1,0 +1,35 @@
+{
+  "appId": "com.satze.playtest",
+  "productName": "SATZE Playtest",
+  "directories": {
+    "output": "release/playtest"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "electron/multiplayer.json.example",
+      "to": "multiplayer.json.example"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "forceCodeSigning": false,
+    "signAndEditExecutable": false
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "artifactName": "SATZE-Playtest-Setup-${version}.exe"
+  }
+}

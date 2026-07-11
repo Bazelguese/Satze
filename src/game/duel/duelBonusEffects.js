@@ -49,7 +49,11 @@ export function createApplyBonusEffects({
       const enemyHasBonusActive = target === 'player' ? eHasBonus : pHasBonus;
       if (enemyHasBonusActive && enemyBonus) {
         log.push(`🔮 ${source}: Copia Bonus nemico (${enemyBonus.description})`);
-        registerCopiedBonus(state, target, enemyBonus);
+        registerCopiedBonus(state, target, enemyBonus, {
+          context,
+          fieldOptions,
+          checkTriggerFn: checkTrigger,
+        });
         visualRecorder?.pushCopyBonus(target, state);
         applyCopiedBonusEffectsIfReady(
           enemyBonus,

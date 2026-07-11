@@ -98,3 +98,9 @@ export const FIELD_STYLES = {
     glow: "rgba(75, 0, 130, 0.3)"
   }
 };
+
+/** Shell grafiche PV/FC nel duello (sostituibili con .webp in public/Immagini_bg/) */
+export const DUEL_STATS_SHELL = {
+  enemy: '/Immagini_bg/stats-enemy-shell.svg',
+  player: '/Immagini_bg/stats-player-shell.svg',
+};

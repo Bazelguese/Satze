@@ -52,6 +52,13 @@ export function getFieldModifiers(field) {
   return buildFieldModifiers(field);
 }
 
+/** Campi che applicano un bonus quando Overdrive è attivo (FC ≥ soglia). */
+export function fieldGrantsOverdriveBonus(field) {
+  if (!field?.id) return false;
+  if (field.id === 44) return true; // Centrale Energetica: +1 DAN
+  return Boolean(getFieldModifiers(field).overdriveExtraPowerAndDamage); // Camera Rituale (79)
+}
+
 /** @param {{ id?: number }} field */
 export function getFieldSetupFlags(field) {
   const id = field?.id ?? 0;

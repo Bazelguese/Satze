@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="64" viewBox="0 0 280 64" fill="none">
+  <defs>
+    <linearGradient id="enemyBg" x1="0" y1="0" x2="280" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a0c14"/>
+      <stop offset="1" stop-color="#0c0a12"/>
+    </linearGradient>
+    <linearGradient id="enemyEdge" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f87171" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#7f1d1d" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="280" height="64" rx="10" fill="url(#enemyBg)"/>
+  <rect x="1.5" y="1.5" width="277" height="61" rx="8.5" stroke="url(#enemyEdge)" stroke-width="2"/>
+  <rect x="6" y="6" width="268" height="52" rx="6" stroke="rgba(248,113,113,0.18)" stroke-width="1"/>
+</svg>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satze · Dialogue Kit — demo</title>
+<link rel="stylesheet" href="satze-dialogue.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:#05060a;color:#e2e8f0;font-family:'Chakra Petch',system-ui,sans-serif;}
+  a{color:#a78bfa;}a:hover{color:#c4b5fd;}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 16px 40px;}
+  h1{font-size:18px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fbbf24;}
+  .hint{font-size:12px;color:#94a3b8;letter-spacing:.03em;}
+
+  /* palcoscenico demo con due "carte" segnaposto */
+  .scene{position:relative;width:900px;max-width:96vw;height:460px;border:1px solid rgba(148,163,184,.2);border-radius:12px;
+    background:radial-gradient(ellipse at 50% 45%,rgba(124,134,196,.10),transparent 60%),#0a0c14;overflow:hidden;}
+  .card{position:absolute;top:230px;transform:translate(-50%,-50%);width:150px;height:210px;border-radius:10px;
+    display:flex;align-items:flex-end;justify-content:center;padding:10px;font-size:11px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;text-align:center;color:#fff;background:#0a0a0d;border:2px solid rgba(255,255,255,.22);}
+  #cardL{left:230px;box-shadow:0 0 22px #f43f5e2a,0 0 0 1px #f43f5e35;}
+  #cardR{left:670px;box-shadow:0 0 26px #a78bfa55,0 0 0 1px #a78bfa45;}
+
+  .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;}
+  .ctl{display:flex;align-items:center;gap:7px;background:rgba(12,16,28,.8);border:1px solid rgba(148,163,184,.28);border-radius:9px;padding:7px 11px;}
+  .ctl label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;font-weight:600;}
+  select,button{font-family:inherit;font-size:13px;color:#f8fafc;background:#0a0c14;border:1px solid rgba(148,163,184,.35);border-radius:6px;padding:6px 10px;cursor:pointer;outline:none;}
+  button{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.5);color:#fde68a;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+  button:hover{background:rgba(251,191,36,.24);}
+  select:hover{border-color:rgba(251,191,36,.55);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Satze · Dialogue Kit</h1>
+  <div class="hint">Un fumetto stile Undertale, riutilizzabile. Scegli armata / font / effetto e premi <b>Riproduci scambio</b>.</div>
+
+  <div class="scene" id="scene">
+    <div class="card" id="cardL">Corte Rossa<br>Araldo di Brace</div>
+    <div class="card" id="cardR">Figli dell'Orizzonte<br>Veggente dell'Alba</div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><label>Font</label><select id="fontsel"></select></div>
+    <div class="ctl"><label>Effetto</label><select id="fxsel"></select></div>
+    <button id="play">Riproduci scambio</button>
+    <button id="single">Prova su carta destra</button>
+  </div>
+</div>
+
+<script src="satze-dialogue.js"></script>
+<script>
+(function(){
+  SatzeDialogue.injectFonts();
+  var scene = document.getElementById('scene');
+  var box = new SatzeDialogue.Box({ mount: scene });
+
+  // popola i due menu (prima opzione = Auto per armata)
+  var fontsel = document.getElementById('fontsel'), fxsel = document.getElementById('fxsel');
+  fontsel.appendChild(new Option('Auto (armata)', ''));
+  Object.keys(SatzeDialogue.FONTS).forEach(function(k){ fontsel.appendChild(new Option(SatzeDialogue.FONTS[k].family.replace(/'/g,''), k)); });
+  fxsel.appendChild(new Option('Auto (armata)', ''));
+  Object.keys(SatzeDialogue.EFFECTS).forEach(function(k){ fxsel.appendChild(new Option(SatzeDialogue.EFFECTS[k], k)); });
+
+  function opt(base){
+    var f = fontsel.value, x = fxsel.value;
+    if (f) { base.font = SatzeDialogue.FONTS[f].family; base.size = SatzeDialogue.FONTS[f].size; }
+    if (x) { base.fx = x; }
+    return base;
+  }
+
+  // ancore: sopra ciascuna carta (top della carta ~125px, centro x)
+  var L = { x: 230, y: 125, army: 'corte',     name: 'Araldo di Brace' };
+  var R = { x: 670, y: 125, army: 'orizzonte', name: 'Veggente dell\u2019Alba' };
+
+  // scambio scriptato prima/dopo lo scontro
+  var SCRIPT = [
+    Object.assign({}, L, { text: '* La Corte Rossa non fa prigionieri, veggente.' }),
+    Object.assign({}, R, { text: '* Ho gi\u00e0 visto come finisce. L\u2019alba vince sempre.' }),
+    Object.assign({}, R, { text: '* Te l\u2019avevo detto. La luce trafigge l\u2019ombra.' }),
+    Object.assign({}, L, { text: '* ...impossibile. Le mie braci si spengono.' })
+  ];
+
+  var timer = null;
+  function playFrom(i){
+    clearTimeout(timer);
+    if (i >= SCRIPT.length){ box.hide(); return; }
+    box.say(opt(Object.assign({}, SCRIPT[i], {
+      onDone: function(){ timer = setTimeout(function(){ playFrom(i+1); }, 1100); }
+    })));
+  }
+
+  document.getElementById('play').addEventListener('click', function(){ playFrom(0); });
+  document.getElementById('single').addEventListener('click', function(){
+    clearTimeout(timer);
+    box.say(opt(Object.assign({}, R, { text: '* Prova questo font e questo effetto!' })));
+  });
+
+  // avvio automatico
+  playFrom(0);
+})();
+</script>
+</body>
+</html>

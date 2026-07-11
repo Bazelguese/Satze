@@ -13,6 +13,7 @@ export {
 } from './CardReworkP4';
 export { CardReworkP4AsHtml } from './CardReworkP4AsHtml';
 export { HandCard } from './HandCard';
+export { CardBack } from './CardBack';
 export { Hand } from './Hand';
 export { CardTest } from './CardTest';
 export { TagBadge, CardTagsRow } from './CardTagBadges';

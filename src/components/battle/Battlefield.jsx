@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { generateFieldParticles, FIELD_STYLES } from '../../utils';
 import { Icon } from '../ui/Icon';
-import { DUEL_PHASE_META } from '../../config/duelVisualTimeline.js';
+import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVisualTimeline.js';
 
 /**
  * Componente sfondo campo di battaglia
@@ -215,6 +215,8 @@ export const BattlefieldPanel = ({
   gameResult,
   onMenu,
   onOpenPlaytest,
+  onReplayDuel,
+  onSkipDuel,
 }) => {
   const oppWait = isOnlinePvP ? "L'avversario sta scegliendo..." : "L'IA sta scegliendo...";
   const oppThink = isOnlinePvP ? "In attesa dell'avversario..." : "L'IA sta pensando...";
@@ -326,7 +328,7 @@ export const BattlefieldPanel = ({
         transform: isZoomed ? undefined : 'translate(-50%, -50%)',
         width: '200px',
         height: isDuelPhase ? '320px' : '280px',
-        zIndex: 10,
+        zIndex: isDuelPhase ? 20 : 10,
         transition: 'top 0.6s ease-out',
         overflow: 'visible',
       }}
@@ -384,41 +386,49 @@ export const BattlefieldPanel = ({
                 <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
                   <div 
                     className="h-full bg-amber-400/80 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${((duelPhase + 1) / 7) * 100}%` }}
+                    style={{ width: `${computeDuelProgressPercent(duelPhase, battleResult)}%` }}
                   />
+                </div>
+                <div className="flex gap-1.5 items-center justify-center mt-2 pointer-events-auto">
+                  {onReplayDuel && (
+                    <button
+                      type="button"
+                      onClick={onReplayDuel}
+                      className="satze-hud-duel-btn"
+                    >
+                      Replay
+                    </button>
+                  )}
+                  {onSkipDuel && duelPhase < 6 && (
+                    <button
+                      type="button"
+                      onClick={onSkipDuel}
+                      className="satze-hud-duel-btn satze-hud-duel-btn--skip"
+                    >
+                      Skip
+                    </button>
+                  )}
                 </div>
               </div>
             )}
             
-            {/* Indicatore vincitore e pulsante CONTINUA (fase 5+) */}
-            {gamePhase === 'result' && battleResult && duelPhase >= 5 && (
+            {/* Pulsante CONTINUA e riepilogo (fase 6) */}
+            {gamePhase === 'result' && battleResult && duelPhase >= 6 && (
               <div className="w-full mt-2 pointer-events-auto">
-                <div className={`text-center mb-2 text-sm font-semibold ${
-                  battleResult.winner === 'player' ? 'satze-result-victory' : 
-                  battleResult.winner === 'enemy' ? 'satze-result-defeat' : 
-                  'text-slate-400'
-                }`}>
-                  {battleResult.winner === 'player' && <><Icon name="star" type="cardIcon" size={18} color="#4FD1C5" /> Vittoria</>}
-                  {battleResult.winner === 'enemy' && <><Icon name="skull" type="cardIcon" size={18} color="#D946EF" /> Sconfitta</>}
-                  {battleResult.winner === 'draw' && <><Icon name="check" type="cardIcon" size={18} /> Pareggio</>}
-                </div>
-                
-                {duelPhase >= 6 && (
-                  <>
-                    {/* Riepilogo Post-Duello (chiuso di default, si apre al clic) */}
-                    <div ref={riepilogoAnchorRef} className="w-full mb-2 rounded-lg border border-slate-600/40 bg-slate-900/90 overflow-visible text-[10px] relative z-20">
-                      <button
-                        type="button"
-                        onClick={() => setRiepilogoOpen((o) => !o)}
-                        className="w-full py-2 px-2 flex items-center justify-between gap-2 text-left font-medium text-slate-400 text-xs uppercase tracking-wide hover:bg-white/5 transition-colors"
-                        aria-expanded={riepilogoOpen}
-                      >
-                        <span>Riepilogo</span>
-                        <span className="text-slate-500 tabular-nums shrink-0" aria-hidden>
-                          {riepilogoOpen ? '▼' : '▶'}
-                        </span>
-                      </button>
-                      {false && riepilogoOpen && (
+                {/* Riepilogo Post-Duello (chiuso di default, si apre al clic) */}
+                <div ref={riepilogoAnchorRef} className="w-full mb-2 rounded-lg border border-slate-600/40 bg-slate-900/90 overflow-visible text-[10px] relative z-20">
+                  <button
+                    type="button"
+                    onClick={() => setRiepilogoOpen((o) => !o)}
+                    className="w-full py-2 px-2 flex items-center justify-between gap-2 text-left font-medium text-slate-400 text-xs uppercase tracking-wide hover:bg-white/5 transition-colors"
+                    aria-expanded={riepilogoOpen}
+                  >
+                    <span>Riepilogo</span>
+                    <span className="text-slate-500 tabular-nums shrink-0" aria-hidden>
+                      {riepilogoOpen ? '▼' : '▶'}
+                    </span>
+                  </button>
+                  {false && riepilogoOpen && (
                     <div
                       className="absolute left-0 right-0 top-full mt-1 px-2 py-2 rounded-b-lg border-x border-b border-slate-600/40 bg-slate-900/95 overflow-y-auto satze-riepilogo-unroll"
                       style={{ zIndex: 30, maxHeight: '128px' }}
@@ -533,8 +543,6 @@ export const BattlefieldPanel = ({
                         <Icon name="check" type="cardIcon" size={12} color="#fff" /> Continua
                       </button>
                     </div>
-                  </>
-                )}
               </div>
             )}
           </div>

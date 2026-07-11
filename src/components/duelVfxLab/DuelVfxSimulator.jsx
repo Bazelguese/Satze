@@ -12,6 +12,8 @@ import {
   buildPhaseAdvanceDelaysMs,
   DUEL_PHASE_META,
   totalAutoTimelineMs,
+  computeFocusCoinAppearDelayMs,
+  getNextDuelPhase,
 } from '../../config/duelVisualTimeline.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../../utils/focusCoinGlow.js';
 
@@ -258,11 +260,11 @@ export function DuelVfxSimulator({ vfx }) {
           setEnemyFocusCoinsShown(es);
           setPlayerCardGlow(playerFc ? ps / playerFc : 0);
           setEnemyCardGlow(enemyFc ? es / enemyFc : 0);
-        }, (i * vfx.focusCoinStepMs) / playSpeed);
+        }, computeFocusCoinAppearDelayMs(i, maxT, vfx) / playSpeed);
         push(id);
       }
     },
-    [playerFc, enemyFc, vfx.focusCoinStepMs, playSpeed, push]
+    [playerFc, enemyFc, vfx, playSpeed, push]
   );
 
   useEffect(() => {
@@ -288,7 +290,7 @@ export function DuelVfxSimulator({ vfx }) {
         return;
       }
       const ms = delays[phase] / playSpeed;
-      const tid = setTimeout(() => step(phase + 1), ms);
+      const tid = setTimeout(() => step(getNextDuelPhase(phase, battle)), ms);
       push(tid);
     };
 
@@ -299,7 +301,7 @@ export function DuelVfxSimulator({ vfx }) {
       playGen.current += 1;
       clearAll();
     };
-  }, [autoPlay, delays, playSpeed, clearAll, push, runCoinAnimation]);
+  }, [autoPlay, delays, playSpeed, clearAll, push, runCoinAnimation, battle]);
 
   const segmentWidths = useMemo(() => {
     const sum = delays[0] + delays[1] + delays[2] + delays[3] + delays[4] + delays[5];

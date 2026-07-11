@@ -7,7 +7,6 @@ const PHASE_LABELS = {
   selectMode: 'PARTITA LOCALE',
   selectArmy: 'GESTIONE ARMATA',
   selectDeck: 'SELEZIONA MAZZO',
-  selectDifficulty: 'SCEGLI DIFFICOLTA',
   deckManager: 'GESTIONE MAZZI',
   selectField: 'CAMPO DI BATTAGLIA',
   selectAgent: 'SCHIERA AGENTE',

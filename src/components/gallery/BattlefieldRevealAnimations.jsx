@@ -8,6 +8,7 @@
  */
 import React, { useState, useEffect, useMemo, useId } from 'react';
 import { ARMY_COLORS } from '../../data';
+import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
 
 // chiave tema interna → nome armata in ARMY_COLORS
 const THEME_TO_ARMY = {
@@ -359,9 +360,13 @@ const REVEAL_MAP = {
  * @param {'swirl'|'frammenti'|'sipario'|'hud'|'onda'|'morsi'|'occhio'|'sciame'|'rivolta'|'cerchi'|'default'} animationType
  */
 export function BattlefieldReveal({ imageSrc, animationType }) {
+  const resolvedSrc = useMemo(
+    () => (imageSrc ? resolvePublicAssetUrl(imageSrc) || imageSrc : imageSrc),
+    [imageSrc]
+  );
   const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const Comp = (!reduce && REVEAL_MAP[animationType]) || DefaultReveal;
   const accent = getAccent(ANIM_TO_THEME[animationType]);
   const f = reduce ? 0.5 : 1;
-  return <Comp imageSrc={imageSrc} accent={accent} f={f} />;
+  return <Comp imageSrc={resolvedSrc} accent={accent} f={f} />;
 }

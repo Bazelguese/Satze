@@ -21,10 +21,18 @@ import { ARMY_DECKS, ARMY_SETS } from '../../../data/cards.js';
 import { CARD_IMAGES, AGENT_IMAGES } from '../../../data/images.js';
 import { getImagePositioning } from '../../../data/imagePositioning.js';
 import { DECK_SUMMARY_BG_POSITION } from '../../../data/deckSummaryCropConfig.js';
-import { loadCustomDecks, resolveDeckCards } from '../../../utils/deckManager.js';
+import { normalizeContainCrop, parseObjectPositionCenterY, addVerticalPanPercent } from '../../../utils/imageContainPan.js';
+import { loadCustomDecks, resolveDeckCards, getDeckVisualMeta } from '../../../utils/deckManager.js';
 import { formatAbilityHelper } from '../../../utils/cardUtils.js';
 import { getCardTags, shouldShowTagAsRole } from '../../../data/cardTags.js';
 import { DECK_LORE } from './deckLore.js';
+import { DeckConfirmTransition } from './DeckConfirmTransition.jsx';
+import {
+  getShuffleStyle,
+  setShuffleStyle,
+  SHUFFLE_STYLE_OPTIONS,
+  getShuffleStyleMeta,
+} from '../../../utils/shuffleStylePreference.js';
 
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
@@ -75,10 +83,17 @@ function buildDeckEntry({
   bonus,
   customDeck = null,
 }) {
-  const deckCards = customDeck
-    ? resolveDeckCards(customDeck, ARMY_SETS)
-    : (ARMY_SETS[army] || []).filter((c) => cardIds.includes(c.id));
+  const deckCards = resolveDeckCards(
+    customDeck || { cards: cardIds },
+    ARMY_SETS
+  );
   const totalLeague = deckCards.reduce((s, c) => s + (c.league || 0), 0);
+  const { armies, accent: resolvedAccent, isMixed } = getDeckVisualMeta(deckCards, {
+    fallbackArmy: army,
+    armyColors: ARMY_COLORS,
+    fallbackAccent: accent,
+  });
+  const armyIcons = armies.map((a) => ARMY_ICONS[a] || null);
   const leaderLore = lore.leader || {};
   const leaderAgent = pickLeaderAgent(deckCards, leaderLore);
   const leaderImg = leaderLore.img || resolveLeaderImage(leaderAgent?.id);
@@ -89,7 +104,9 @@ function buildDeckEntry({
     deckKey,
     rawKey,
     army,
-    accent,
+    armies,
+    isMixed,
+    accent: resolvedAccent,
     bg,
     code: lore.code || `${(_slug(army)[0] || 'X').toUpperCase()}·${['I', 'II', 'III', 'IV', 'V', 'VI'][index] || (index + 1)}`,
     name: displayName,
@@ -108,6 +125,7 @@ function buildDeckEntry({
       damage: leaderAgent?.damage ?? leaderLore.damage ?? 0,
     },
     armyIcon: ARMY_ICONS[iconArmy] || null,
+    armyIcons,
   };
 }
 
@@ -260,7 +278,9 @@ export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
       tags: getCardTags(card.id),
     };
   });
-  const armies = [...new Set(deckCards.map((c) => c.army || deck.army).filter(Boolean))];
+  const armies = deck.armies?.length
+    ? deck.armies
+    : [...new Set(deckCards.map((c) => c.army || deck.army).filter(Boolean))].slice(0, 2);
   return {
     id: deck.deckKey,
     name: deck.name,
@@ -282,10 +302,13 @@ export default function DeckSelectCinematic({
   selectedArmy = null,
   isMixedMode = false,
   campaignDeckIds = null,
+  variant = 'duel',
+  onCreateNew,
   onSelectDeck,
   onPreviewDeck,
   onBack,
 }) {
+  const isManager = variant === 'manager';
   const DECKS = useMemo(() => {
     if (gameDeckOptions?.length) {
       return buildCinematicDecksFromGameOptions(gameDeckOptions, {
@@ -300,6 +323,7 @@ export default function DeckSelectCinematic({
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState('intro'); // intro -> idle -> confirming
   const [pulse, setPulse] = useState(0);
+  const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
 
   const deck = DECKS[idx] || DECKS[0];
   const accent = deck ? deck.accent : '#a78bfa';
@@ -330,8 +354,27 @@ export default function DeckSelectCinematic({
   };
   const confirm = () => {
     if (phase !== 'idle' || !deck) return;
-    setPhase('confirming');
-    setTimeout(() => { onSelectDeck && onSelectDeck(deck.deckKey); }, 1500);
+    if (isManager) {
+      setPhase('confirming');
+      setTimeout(() => { onSelectDeck && onSelectDeck(deck.deckKey); }, 1500);
+      return;
+    }
+    setShuffleStyle(shuffleKind);
+    onSelectDeck && onSelectDeck(deck.deckKey);
+  };
+
+  const pickShuffleKind = (key) => {
+    setShuffleKind(key);
+    setShuffleStyle(key);
+  };
+
+  const shuffleIdx = SHUFFLE_STYLE_OPTIONS.findIndex((o) => o.key === shuffleKind);
+  const shuffleMeta = getShuffleStyleMeta(shuffleKind);
+  const cycleShuffle = (delta) => {
+    const base = shuffleIdx >= 0 ? shuffleIdx : 0;
+    const next =
+      (base + delta + SHUFFLE_STYLE_OPTIONS.length) % SHUFFLE_STYLE_OPTIONS.length;
+    pickShuffleKind(SHUFFLE_STYLE_OPTIONS[next].key);
   };
 
   useEffect(() => {
@@ -350,13 +393,32 @@ export default function DeckSelectCinematic({
     return (
       <div className="dsk dsk-empty">
         <DeckSelectStyles/>
-        <div className="dsk-empty-msg">Nessun esercito disponibile</div>
-        <button className="dsk-back" onClick={onBack}><span className="ar">←</span><span className="lbl">INDIETRO</span></button>
+        <div className="dsk-empty-msg">
+          {isManager ? 'Nessun esercito personalizzato' : 'Nessun esercito disponibile'}
+        </div>
+        {isManager && onCreateNew && (
+          <button type="button" className="dsk-schiera dsk-empty-create" onClick={onCreateNew}>
+            <span className="lbl">+ CREA ESERCITO</span>
+          </button>
+        )}
+        <button className="dsk-back" onClick={onBack}>
+          <span className="ar">←</span>
+          <span className="lbl">{isManager ? 'CHIUDI' : 'INDIETRO'}</span>
+        </button>
       </div>
     );
   }
 
-  const armyLabel = armyName == null ? 'ESERCITI MISTI' : String(armyName).toUpperCase();
+  const armyLabel = isManager
+    ? (deck.isMixed && deck.armies?.length >= 2
+      ? deck.armies.map((a) => String(a).toUpperCase()).join(' · ')
+      : (deck.army ? String(deck.army).toUpperCase() : 'ESERCITI MISTI'))
+    : (armyName == null ? 'ESERCITI MISTI' : String(armyName).toUpperCase());
+  const eyebrowText = isManager ? 'GESTIONE ESERCITI' : 'FASE II · ARRUOLAMENTO';
+  const titleText = isManager ? 'I TUOI ESERCITI' : "SCEGLI L'ESERCITO";
+  const actionHint = isManager ? 'per modificare' : 'per schierare';
+  const backLabel = isManager ? 'CHIUDI' : (armyName == null ? 'MENU' : 'ARMATA');
+  const confirmLabel = isManager ? 'MODIFICA' : 'SCHIERA';
   const compactPager = total > 12;
 
   return (
@@ -364,9 +426,15 @@ export default function DeckSelectCinematic({
       {/* BG */}
       <div className="dsk-bg-layer">
         <div className="dsk-bg" key={`bg-${deck.army}-${pulse}`} style={{ backgroundImage: deck.bg ? `url('${deck.bg}')` : 'none' }}>
-          {!deck.bg && deck.armyIcon && (
+          {!deck.bg && (deck.armyIcons?.length || deck.armyIcon) && (
             <div className="dsk-bg-fallback">
-              <ArmyIconMark src={deck.armyIcon} size="hero" alt={deck.army} />
+              <DeckArmyEmblemGroup
+                armies={deck.armies}
+                armyIcons={deck.armyIcons}
+                fallbackIcon={deck.armyIcon}
+                fallbackArmy={deck.army}
+                variant="hero"
+              />
             </div>
           )}
         </div>
@@ -382,13 +450,13 @@ export default function DeckSelectCinematic({
       {/* Top HUD */}
       <header className="dsk-top">
         <button className="dsk-back" onClick={onBack}>
-          <span className="ar">←</span><span className="lbl">{armyName == null ? 'MENU' : 'ARMATA'}</span>
+          <span className="ar">←</span><span className="lbl">{backLabel}</span>
         </button>
         <div className="dsk-title-block">
-          <div className="dsk-eyebrow">FASE II · ARRUOLAMENTO</div>
-          <h1 className="dsk-title">SCEGLI L'ESERCITO</h1>
+          <div className="dsk-eyebrow">{eyebrowText}</div>
+          <h1 className="dsk-title">{titleText}</h1>
           <div className="dsk-sub">
-            {armyLabel} · {total} {total === 1 ? 'ESERCITO' : 'ESERCITI'} — <kbd>↵</kbd> per schierare
+            {armyLabel} · {total} {total === 1 ? 'ESERCITO' : 'ESERCITI'} — <kbd>↵</kbd> {actionHint}
           </div>
         </div>
         <div className="dsk-faction">
@@ -424,8 +492,37 @@ export default function DeckSelectCinematic({
       <div className="dsk-ctabar">
         <DeckPager idx={idx} total={total} accent={accent} onPick={goTo} compact={compactPager}/>
         <div className="dsk-ctabar-info">
-          <span className="lbl">SELEZIONATO</span>
-          <span className="name">{deck.name}</span>
+          <div className="dsk-ctabar-deck">
+            <span className="lbl">SELEZIONATO</span>
+            <span className="name">{deck.name}</span>
+          </div>
+          {!isManager && phase === 'idle' && (
+            <div className="dsk-ctabar-shuffle">
+              <span className="lbl">MISCHIA</span>
+              <div className="dsk-shuffle-carousel" aria-label="Stile mischia">
+                <button
+                  type="button"
+                  className="dsk-shuffle-nav"
+                  onClick={() => cycleShuffle(-1)}
+                  aria-label="Mischia precedente"
+                >
+                  ‹
+                </button>
+                <div className="dsk-shuffle-slide" key={shuffleKind}>
+                  <span className="sub">{shuffleMeta.sub}</span>
+                  <span className="name">{shuffleMeta.title}</span>
+                </div>
+                <button
+                  type="button"
+                  className="dsk-shuffle-nav"
+                  onClick={() => cycleShuffle(1)}
+                  aria-label="Mischia successiva"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         {onPreviewDeck && (
           <button type="button" className="dsk-preview" onClick={() => onPreviewDeck(deck)}>
@@ -433,18 +530,41 @@ export default function DeckSelectCinematic({
             <span className="lbl">ANTEPRIMA</span>
           </button>
         )}
+        {isManager && onCreateNew && (
+          <button type="button" className="dsk-preview" onClick={onCreateNew}>
+            <span className="ic">+</span>
+            <span className="lbl">NUOVO</span>
+          </button>
+        )}
         <button type="button" className="dsk-schiera" onClick={confirm}>
-          <span className="lbl">SCHIERA</span>
+          <span className="lbl">{confirmLabel}</span>
           <span className="arr">→</span>
           <span className="key">↵</span>
         </button>
       </div>
 
       {/* Intro sigillo */}
-      {phase === 'intro' && <IntroSigillo accent={accent} armyIcon={deck.armyIcon} armyName={deck.army} />}
+      {phase === 'intro' && (
+        <IntroSigillo
+          accent={accent}
+          armies={deck.armies}
+          armyIcons={deck.armyIcons}
+          armyIcon={deck.armyIcon}
+          armyName={deck.army}
+          label={isManager ? 'GESTIONE' : 'ARRUOLAMENTO'}
+        />
+      )}
 
       {/* Confirm transition */}
-      {phase === 'confirming' && <ConfirmTransition deck={deck} armyLabel={armyLabel}/>}
+      {phase === 'confirming' && (
+        <DeckConfirmTransition
+          accent={deck.accent}
+          deckName={deck.name}
+          showText
+          visualPhase="animate"
+          variant={variant}
+        />
+      )}
 
       <div className="dsk-scanlines"/>
       <DeckSelectStyles/>
@@ -455,33 +575,75 @@ export default function DeckSelectCinematic({
 // ============================================================
 // PORTRAIT + ICONE ARMATA
 // ============================================================
+/** Zoom extra per riempire il ticket; origine zoom separata dal focus cover. */
+const DECK_PORTRAIT_FILL_BOOST = 1.1;
+
+/** Bias verticale sul ritaglio ticket (più alto = ritratto più in basso). */
+const DECK_PORTRAIT_Y_BIAS = 22;
+
+/** Pan verticale extra (translate verso il basso). */
+const DECK_PORTRAIT_TOP_NUDGE = 5;
+
+function resolveDeckTicketObjectPosition(agentId, imgObjectPosition) {
+  const crop = DECK_SUMMARY_BG_POSITION?.[agentId];
+  if (crop) {
+    const y = Math.min(78, Math.round(((crop.y ?? 28) + DECK_PORTRAIT_Y_BIAS) * 10) / 10);
+    return `${crop.x ?? 50}% ${y}%`;
+  }
+  const cardY = parseObjectPositionCenterY(imgObjectPosition);
+  const y = Math.min(60, Math.max(26, 32 + (50 - cardY) * 0.16));
+  return `center ${Math.round(y * 10) / 10}%`;
+}
+
 function resolveAgentPortraitStyle(agent) {
   if (!agent) return null;
   const src = CARD_IMAGES?.[agent.id] || AGENT_IMAGES?.[agent.id] || null;
   if (!src) return null;
-  const crop = DECK_SUMMARY_BG_POSITION?.[agent.id];
   const pos = getImagePositioning(agent.id, agent.army);
-  const objectPosition = crop
-    ? `${crop.x ?? 50}% ${crop.y ?? 25}%`
-    : (pos.objectPosition || 'center 18%');
-  const scale = pos.scale ? pos.scale / 100 : 1;
-  return { src, objectPosition, scale };
+  const objectPosition = pos.objectPosition || 'center center';
+  const scale = pos.scale ?? 100;
+  const {
+    objectPosition: imgObjectPosition,
+    containerLeft,
+    containerTop,
+  } = normalizeContainCrop(objectPosition, pos.containerLeft, pos.containerTop);
+  const deckObjectPosition = resolveDeckTicketObjectPosition(agent.id, imgObjectPosition);
+  const deckTop = addVerticalPanPercent(containerTop, DECK_PORTRAIT_TOP_NUDGE);
+  const panTransform =
+    containerLeft != null || deckTop != null
+      ? `translate(${containerLeft ?? '0'}, ${deckTop ?? '0'})`
+      : undefined;
+  const scaleFactor = (scale / 100) * DECK_PORTRAIT_FILL_BOOST;
+  const scaleTransform = `scale(${scaleFactor})`;
+  return {
+    src,
+    objectPosition: deckObjectPosition,
+    panTransform,
+    scaleTransform,
+    transformOrigin: 'center center',
+  };
 }
 
 function AgentPortrait({ agent }) {
   const style = resolveAgentPortraitStyle(agent);
   if (!style) return null;
   return (
-    <img
-      className="dsk-tk-portrait"
-      src={style.src}
-      alt={agent.name}
-      draggable={false}
-      style={{
-        objectPosition: style.objectPosition,
-        transform: style.scale !== 1 ? `scale(${style.scale})` : undefined,
-      }}
-    />
+    <div
+      className="dsk-tk-portrait-wrap"
+      style={style.panTransform ? { transform: style.panTransform } : undefined}
+    >
+      <img
+        className="dsk-tk-portrait"
+        src={style.src}
+        alt={agent.name}
+        draggable={false}
+        style={{
+          objectPosition: style.objectPosition,
+          transform: style.scaleTransform,
+          transformOrigin: style.transformOrigin,
+        }}
+      />
+    </div>
   );
 }
 
@@ -494,6 +656,65 @@ function ArmyIconMark({ src, size = 'md', alt = '' }) {
       alt={alt}
       draggable={false}
     />
+  );
+}
+
+function resolveDeckArmyIcons({ armies, armyIcons, fallbackIcon, fallbackArmy }) {
+  const list = (armies || []).slice(0, 2);
+  if (list.length >= 2) {
+    return list.map((army, i) => ({
+      army,
+      src: armyIcons?.[i] || ARMY_ICONS[army] || null,
+    })).filter((item) => item.src);
+  }
+  if (list.length === 1) {
+    const src = armyIcons?.[0] || ARMY_ICONS[list[0]] || fallbackIcon;
+    return src ? [{ army: list[0], src }] : [];
+  }
+  return fallbackIcon ? [{ army: fallbackArmy, src: fallbackIcon }] : [];
+}
+
+function DeckArmyEmblemGroup({
+  armies,
+  armyIcons,
+  fallbackIcon,
+  fallbackArmy,
+  variant = 'emblem',
+}) {
+  const items = resolveDeckArmyIcons({ armies, armyIcons, fallbackIcon, fallbackArmy });
+  if (!items.length) return null;
+
+  if (items.length === 1) {
+    return (
+      <div className={`dsk-army-emblem-group dsk-army-emblem-group--${variant}`}>
+        {variant === 'emblem' ? (
+          <div className="dsk-tk-emblem">
+            <ArmyIconMark src={items[0].src} size={variant} alt={items[0].army} />
+          </div>
+        ) : (
+          <ArmyIconMark src={items[0].src} size={variant} alt={items[0].army} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`dsk-army-emblem-group dsk-army-emblem-group--dual dsk-army-emblem-group--${variant}`}>
+      {items.map(({ army, src }) => (
+        variant === 'emblem' ? (
+          <div key={army} className="dsk-tk-emblem dsk-tk-emblem--dual">
+            <ArmyIconMark src={src} size="emblem-dual" alt={army} />
+          </div>
+        ) : (
+          <ArmyIconMark
+            key={army}
+            src={src}
+            size={variant === 'hero' ? 'hero-dual' : `${variant}-dual`}
+            alt={army}
+          />
+        )
+      ))}
+    </div>
   );
 }
 
@@ -535,7 +756,13 @@ function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick })
           <div className="dsk-tk-stripe"/>
           <div className="dsk-tk-rail">
             <div className="dsk-tk-rail-icon">
-              <ArmyIconMark src={deck.armyIcon} size="rail" alt={deck.army} />
+              <DeckArmyEmblemGroup
+                armies={deck.armies}
+                armyIcons={deck.armyIcons}
+                fallbackIcon={deck.armyIcon}
+                fallbackArmy={deck.army}
+                variant="rail"
+              />
             </div>
             <div className="dsk-tk-rail-tick">{String(number).padStart(2, '0')}/{String(total).padStart(2, '0')}</div>
           </div>
@@ -551,7 +778,13 @@ function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick })
             <img className="dsk-tk-portrait" src={L.img} alt={L.name} draggable={false} />
           ) : (
             <div className="dsk-tk-icon-fallback">
-              <ArmyIconMark src={deck.armyIcon} size="leader" alt={deck.army} />
+              <DeckArmyEmblemGroup
+                armies={deck.armies}
+                armyIcons={deck.armyIcons}
+                fallbackIcon={deck.armyIcon}
+                fallbackArmy={deck.army}
+                variant="leader"
+              />
             </div>
           )}
           {isCenter && <SigilloRing accent={deck.accent}/>}
@@ -560,9 +793,13 @@ function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick })
           {isCenter && <div className="dsk-scan"/>}
           <div className="dsk-tk-leader-grad"/>
           {isCenter && (
-            <div className="dsk-tk-emblem">
-              <ArmyIconMark src={deck.armyIcon} size="emblem" alt={deck.army} />
-            </div>
+            <DeckArmyEmblemGroup
+              armies={deck.armies}
+              armyIcons={deck.armyIcons}
+              fallbackIcon={deck.armyIcon}
+              fallbackArmy={deck.army}
+              variant="emblem"
+            />
           )}
         </div>
 
@@ -660,7 +897,7 @@ function SigilloRing({ accent }) {
 // ============================================================
 // INTRO + CONFIRM
 // ============================================================
-function IntroSigillo({ accent, armyIcon, armyName }) {
+function IntroSigillo({ accent, armies, armyIcons, armyIcon, armyName, label = 'ARRUOLAMENTO' }) {
   return (
     <div className="dsk-intro" style={{ '--accent': accent }}>
       <svg viewBox="0 0 800 800" width="760" height="760" className="dsk-intro-svg">
@@ -673,24 +910,15 @@ function IntroSigillo({ accent, armyIcon, armyName }) {
         </g>
       </svg>
       <div className="dsk-intro-icon">
-        <ArmyIconMark src={armyIcon} size="intro" alt={armyName} />
+        <DeckArmyEmblemGroup
+          armies={armies}
+          armyIcons={armyIcons}
+          fallbackIcon={armyIcon}
+          fallbackArmy={armyName}
+          variant="intro"
+        />
       </div>
-      <div className="dsk-intro-text">ARRUOLAMENTO</div>
-    </div>
-  );
-}
-
-function ConfirmTransition({ deck, armyLabel }) {
-  return (
-    <div className="dsk-confirming" style={{ '--accent': deck.accent }}>
-      <div className="dsk-cf-flash"/>
-      <div className="dsk-cf-iris"/>
-      <div className="dsk-cf-text">
-        <div className="eye" style={{ color: deck.accent }}>ESERCITO SCHIERATO</div>
-        <div className="nm">{deck.name}</div>
-        <div className="sub" style={{ color: deck.accent }}>{armyLabel}</div>
-        <div className="next">Apertura → Duello</div>
-      </div>
+      <div className="dsk-intro-text">{label}</div>
     </div>
   );
 }
@@ -731,10 +959,22 @@ function DeckSelectStyles() {
       }
       .dsk-army-icon { display: block; object-fit: contain; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 45%, transparent)); }
       .dsk-army-icon--hero { width: min(42vw, 420px); height: auto; opacity: 0.55; }
+      .dsk-army-icon--hero-dual { width: min(20vw, 200px); height: auto; opacity: 0.55; }
       .dsk-army-icon--intro { width: 140px; height: auto; animation: dsk-intro-icon 1.5s ease; }
+      .dsk-army-icon--intro-dual { width: 96px; height: auto; animation: dsk-intro-icon 1.5s ease; }
       .dsk-army-icon--rail { width: 26px; height: auto; filter: brightness(0.15) drop-shadow(0 0 8px var(--accent)); animation: dsk-icon-pulse 2.4s ease-in-out infinite; }
-      .dsk-army-icon--emblem { width: 30px; height: auto; filter: drop-shadow(0 0 10px var(--accent)); }
+      .dsk-army-icon--rail-dual { width: 20px; height: auto; filter: brightness(0.15) drop-shadow(0 0 8px var(--accent)); animation: dsk-icon-pulse 2.4s ease-in-out infinite; }
+      .dsk-army-icon--emblem { width: 40px; height: auto; filter: drop-shadow(0 0 10px var(--accent)); }
+      .dsk-army-icon--emblem-dual { width: 36px; height: auto; filter: drop-shadow(0 0 10px var(--accent)); }
       .dsk-army-icon--leader { width: min(72%, 220px); height: auto; opacity: 0.85; }
+      .dsk-army-icon--leader-dual { width: min(38%, 120px); height: auto; opacity: 0.85; }
+      .dsk-army-emblem-group--dual { display: flex; align-items: center; gap: 6px; }
+      .dsk-army-emblem-group--hero.dsk-army-emblem-group--dual { gap: min(4vw, 36px); }
+      .dsk-army-emblem-group--intro.dsk-army-emblem-group--dual { gap: 28px; }
+      .dsk-army-emblem-group--rail.dsk-army-emblem-group--dual { flex-direction: column; gap: 8px; }
+      .dsk-army-emblem-group--leader.dsk-army-emblem-group--dual { gap: 16px; justify-content: center; width: 100%; }
+      .dsk-army-emblem-group--emblem { position: absolute; bottom: 16px; right: 16px; z-index: 4; }
+      .dsk-army-emblem-group--emblem.dsk-army-emblem-group--dual { gap: 6px; }
       @keyframes dsk-icon-pulse { 0%,100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
       @keyframes dsk-intro-icon { 0% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); filter: blur(12px); } }
       .dsk-bg-vignette {
@@ -883,11 +1123,13 @@ function DeckSelectStyles() {
 
       .dsk-tk-leader { position: relative; height: 52%; overflow: hidden; background: #050608; z-index: 3; }
       .dsk-tk.is-center .dsk-tk-leader { height: 58%; margin-left: 44px; }
+      .dsk-tk-portrait-wrap {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+      }
       .dsk-tk-portrait {
         position: absolute; inset: 0; width: 100%; height: 100%;
-        object-fit: cover; object-position: center 18%;
+        object-fit: cover;
         filter: contrast(1.06) saturate(1.08);
-        transform-origin: center center;
       }
       .dsk-tk.is-center .dsk-tk-portrait { animation: dsk-leader-in 0.6s cubic-bezier(.2,.7,.2,1); }
       .dsk-tk-icon-fallback {
@@ -895,7 +1137,7 @@ function DeckSelectStyles() {
         background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 70%);
       }
       .dsk-tk.is-center .dsk-tk-leader img { animation: dsk-leader-in 0.6s cubic-bezier(.2,.7,.2,1); }
-      @keyframes dsk-leader-in { from { opacity: 0; filter: contrast(1.05) saturate(1.1) blur(8px); transform: scale(1.06); } }
+      @keyframes dsk-leader-in { from { opacity: 0; filter: contrast(1.05) saturate(1.1) blur(8px); } }
       .dsk-tk-leader-grad { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(5,6,8,0.96) 100%); z-index: 3; }
       @keyframes dsk-emblem-pulse { 0%,100% { box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 0 0 transparent; } 50% { box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 22px 6px color-mix(in srgb, var(--accent) 38%, transparent); } }
       .dsk-tk-emblem {
@@ -904,7 +1146,10 @@ function DeckSelectStyles() {
         clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
         display: grid; place-items: center; box-shadow: 0 4px 14px rgba(0,0,0,0.6);
         animation: dsk-emblem-pulse 3.2s ease-in-out infinite;
+        overflow: hidden;
       }
+      .dsk-army-emblem-group--emblem .dsk-tk-emblem { position: relative; bottom: auto; right: auto; }
+      .dsk-tk-emblem--dual { width: 44px; height: 44px; animation-delay: 0.4s; }
       .dsk-tk-leadername {
         position: absolute; left: 14px; bottom: 16px; z-index: 4; padding: 6px 12px;
         background: rgba(5,6,8,0.85); border-left: 3px solid var(--accent);
@@ -1081,9 +1326,106 @@ function DeckSelectStyles() {
       .dsk-pager.compact .bar { height: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
       .dsk-pager.compact .bar .fill { height: 100%; transition: width 0.45s cubic-bezier(.2,.7,.2,1); }
 
-      .dsk-ctabar-info { padding: 14px 22px; background: rgba(5,6,8,0.86); border: 1.5px solid var(--accent); border-left: 5px solid var(--accent); clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 30%, transparent); display: flex; flex-direction: column; min-width: 0; }
+      .dsk-ctabar-info {
+        padding: 12px 18px 12px 22px;
+        background: rgba(5,6,8,0.86);
+        border: 1.5px solid var(--accent);
+        border-left: 5px solid var(--accent);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+        box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 30%, transparent);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        min-width: 0;
+      }
+      .dsk-ctabar-deck {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
       .dsk-ctabar-info .lbl { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.32em; color: var(--accent); font-weight: 700; }
-      .dsk-ctabar-info .name { font-family: 'Cinzel', serif; font-weight: 800; font-size: 20px; letter-spacing: 0.1em; color: #f5f3eb; text-transform: uppercase; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dsk-ctabar-deck .name {
+        font-family: 'Cinzel', serif;
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: 0.1em;
+        color: #f5f3eb;
+        text-transform: uppercase;
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dsk-ctabar-shuffle {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        flex: 0 0 auto;
+        gap: 4px;
+        padding-left: 16px;
+        border-left: 1px solid color-mix(in srgb, var(--accent) 35%, rgba(255,255,255,0.08));
+      }
+      .dsk-shuffle-carousel {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dsk-shuffle-nav {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(5,6,8,0.65);
+        border: 1px solid color-mix(in srgb, var(--accent) 50%, rgba(255,255,255,0.15));
+        color: var(--accent);
+        font-family: 'Cinzel', serif;
+        font-weight: 900;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        transition: all .18s;
+      }
+      .dsk-shuffle-nav:hover {
+        border-color: var(--accent);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+        color: #fff;
+      }
+      .dsk-shuffle-slide {
+        width: 168px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 1px;
+        overflow: hidden;
+        animation: dsk-shuffle-in .28s cubic-bezier(.2,.7,.2,1);
+      }
+      @keyframes dsk-shuffle-in {
+        from { opacity: 0; transform: translateX(10px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      .dsk-shuffle-slide .sub {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.24em;
+        color: rgba(148,163,184,0.9);
+        font-weight: 700;
+      }
+      .dsk-shuffle-slide .name {
+        font-family: 'Cinzel', serif;
+        font-weight: 800;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        color: #f5f3eb;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
 
       .dsk-preview {
         padding: 16px 22px; background: rgba(5,6,8,0.82); cursor: pointer;
@@ -1114,23 +1456,11 @@ function DeckSelectStyles() {
       .dsk-intro-text { position: absolute; bottom: 28%; font-family: 'Share Tech Mono', monospace; font-size: 14px; letter-spacing: 0.5em; color: rgba(255,255,255,0.85); animation: dsk-intro-txt 1.5s ease; }
       @keyframes dsk-intro-txt { 0%,30% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-      /* Confirm */
-      .dsk-confirming { position: absolute; inset: 0; z-index: 60; }
-      .dsk-cf-flash { position: absolute; inset: 0; background: var(--accent); mix-blend-mode: screen; opacity: 0; animation: dsk-cf-flash 1.5s ease; }
-      @keyframes dsk-cf-flash { 0% { opacity: 0; } 20% { opacity: 0.5; } 100% { opacity: 0; } }
-      .dsk-cf-iris { position: absolute; inset: 0; background: rgba(0,0,0,0.95); clip-path: circle(120% at 50% 50%); animation: dsk-cf-iris 1.5s cubic-bezier(.7,.05,.3,1) forwards; }
-      @keyframes dsk-cf-iris { 0% { clip-path: circle(120% at 50% 50%); } 100% { clip-path: circle(0% at 50% 50%); } }
-      .dsk-cf-text { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; text-align: center; animation: dsk-cf-text 1.5s ease; }
-      @keyframes dsk-cf-text { 0%,30% { opacity: 0; transform: translateY(20px); } 60% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-10px); } }
-      .dsk-cf-text .eye { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.5em; margin-bottom: 12px; }
-      .dsk-cf-text .nm { font-family: 'Cinzel', serif; font-weight: 700; font-size: 60px; letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 0 40px var(--accent); }
-      .dsk-cf-text .sub { font-family: 'Share Tech Mono', monospace; font-size: 14px; letter-spacing: 0.32em; margin-top: 10px; }
-      .dsk-cf-text .next { margin-top: 14px; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.32em; color: rgba(255,255,255,0.7); }
-
       /* Scanlines + empty */
       .dsk-scanlines { position: absolute; inset: 0; pointer-events: none; z-index: 90; background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(255,255,255,0.022) 3px, rgba(255,255,255,0.022) 4px); mix-blend-mode: overlay; }
-      .dsk-empty { display: grid; place-items: center; }
+      .dsk-empty { display: grid; place-items: center; gap: 20px; }
       .dsk-empty-msg { font-family: 'Cinzel', serif; font-size: 28px; letter-spacing: 0.2em; color: #94a3b8; }
+      .dsk-empty-create { margin-top: 8px; }
 
       @media (prefers-reduced-motion: reduce) {
         .dsk *, .dsk *::after, .dsk *::before { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ARMY_COLORS, ARMY_GIFS, ARMY_BONUSES } from '../../data';
-import { getHandAccentColor } from '../../utils/deckManager';
+import { getDeckArmies, getHandAccentColor } from '../../utils/deckManager';
 import { HandCard } from './HandCard';
 
 /**
@@ -33,19 +33,39 @@ export const Hand = ({
   hideCards = false,
   highlightedAgentId = null,
   guidedBackgroundGlow = false,
+  /** Mostra triangolo zona anche senza carte (es. fase shuffleDeal). */
+  showZoneShell = false,
+  zoneArmy = null,
+  /** Mazzo completo (10 carte) per accent/armate durante shuffleDeal. */
+  zoneColorHand = null,
+  /** Armate esplicite per sfondo zona (max 2), es. da shuffleDealSetup. */
+  zoneArmies = null,
 }) => {
   const [gifError, setGifError] = useState(false);
-  const army = hand?.[0]?.army;
-  // Colore: armata singola → colore armata; mazzo misto → fusione colori
-  const color = getHandAccentColor(hand, ARMY_COLORS, position === 'top-left' ? '#818cf8' : '#2dd4bf');
+  const army = hand?.[0]?.army ?? zoneArmy;
+  const zoneArmiesResolved = useMemo(() => {
+    if (zoneArmies?.length) return zoneArmies.slice(0, 2);
+    if (zoneColorHand?.length) return getDeckArmies(zoneColorHand);
+    if (army && army !== 'Eserciti misti') return [army];
+    return [];
+  }, [zoneArmies, zoneColorHand, army]);
+  const colorHand = zoneColorHand?.length
+    ? zoneColorHand
+    : (hand?.length
+      ? hand
+      : (zoneArmiesResolved.length
+        ? zoneArmiesResolved.map((a) => ({ army: a }))
+        : (zoneArmy ? [{ army: zoneArmy }] : [])));
+  const color = getHandAccentColor(colorHand, ARMY_COLORS, position === 'top-left' ? '#818cf8' : '#2dd4bf');
+  const primaryZoneArmy = zoneArmiesResolved[0] ?? (army && army !== 'Eserciti misti' ? army : null);
   
   // Reset errore GIF quando cambia armata
   useEffect(() => {
     setGifError(false);
-  }, [army]);
+  }, [army, primaryZoneArmy, zoneArmiesResolved.join('|')]);
   
-  if (!hand || hand.length === 0) return null;
-  const gifSrc = armyGifUrl ?? (army && ARMY_GIFS[army]);
+  if ((!hand || hand.length === 0) && !showZoneShell) return null;
+  const gifSrc = armyGifUrl ?? (primaryZoneArmy && ARMY_GIFS[primaryZoneArmy]);
   const showGif = gifSrc && !gifError;
   
   const positionStyles = {
@@ -175,7 +195,7 @@ export const Hand = ({
           {label}
         </div>
         
-        {!hideCards && hand.map((agent, idx) => {
+        {!hideCards && hand?.length > 0 && hand.map((agent, idx) => {
           const outcome = battleOutcomes[agent.id] || null;
           const outcomeLowerOffset = outcome ? 20 : 0;
           const cardStyle = position === 'top-left' 

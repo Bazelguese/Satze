@@ -24,45 +24,40 @@ function smoothstep(a, b, x) {
   return t * t * (3 - 2 * t);
 }
 
-function useClashTimeline(durationMs, runId) {
-  const [t, setT] = React.useState(0);
-  React.useEffect(() => {
-    let raf;
-    let start;
-    setT(0);
-    const tick = (ts) => {
-      if (start == null) start = ts;
-      const p = Math.min(1, (ts - start) / durationMs);
-      setT(p);
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [durationMs, runId]);
-  return t;
-}
-
 const globalOrbitNowSec = () =>
   typeof performance !== 'undefined' ? performance.now() / 1000 : 0;
 
-function useGlobalOrbitClock(active) {
-  // Inizializzato al tempo globale corrente (non 0): il primissimo frame dello
-  // scontro deve già disegnare le monete all'angolo continuo con la fase
-  // precedente, altrimenti si vede un reset momentaneo dell'orbita.
-  const [sec, setSec] = React.useState(globalOrbitNowSec);
+/**
+ * Un solo rAF: aggiorna ref animazione + wrapper carte ogni frame a 60fps;
+ * setState ogni frame per VFX sincronizzati (carte via ref DOM, senza re-render GameCard).
+ */
+function useClashAnimationLoop(durationMs, runId, onFrame) {
+  const onFrameRef = React.useRef(onFrame);
+  onFrameRef.current = onFrame;
+  const animRef = React.useRef({ t: 0, orbitSec: globalOrbitNowSec() });
+  const [vfxTick, setVfxTick] = React.useState(0);
+
   React.useEffect(() => {
-    if (!active) return undefined;
-    // Riallinea subito (lo stato potrebbe essere fermo al valore di mount)
-    setSec(globalOrbitNowSec());
     let raf = 0;
+    let start = null;
+    animRef.current = { t: 0, orbitSec: globalOrbitNowSec() };
+    setVfxTick((v) => v + 1);
+
     const tick = (ts) => {
-      setSec(ts / 1000);
-      raf = requestAnimationFrame(tick);
+      if (start == null) start = ts;
+      const t = Math.min(1, (ts - start) / durationMs);
+      const orbitSec = ts / 1000;
+      animRef.current = { t, orbitSec };
+      onFrameRef.current(t, orbitSec);
+      setVfxTick((v) => v + 1);
+      if (t < 1) raf = requestAnimationFrame(tick);
     };
+
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [active]);
-  return sec;
+  }, [durationMs, runId]);
+
+  return { animRef, vfxTick };
 }
 
 function useSequenceRun(duelPhase) {
@@ -627,16 +622,289 @@ function FocusCoinOrbitCollapseFx({
   );
 }
 
+function buildClashMotionConfig({
+  battleResult,
+  winner,
+  intensity,
+  variant,
+  isZoomed,
+  playerArmy,
+  enemyArmy,
+}) {
+  const isN5 = variant === 'n5';
+  const isN2 = variant === 'n2';
+  const isN3 = variant === 'n3';
+  const isN4 = variant === 'n4';
+  const baseAgentScale = getDuelAgentBaseScale(isZoomed);
+  const scaledStartDistance = getScaledClashStartOffset(isZoomed);
+  const clashTravel = isN5 ? scaledStartDistance : 90;
+  const winnerRetreat = scaledStartDistance * 0.5;
+  const loserRetreat = scaledStartDistance;
+  const playerClashAnchor = getPlayerClashAnchorX(isZoomed);
+  const enemyClashAnchor = getEnemyClashAnchorX(isZoomed);
+  const agentCenterY = getDuelAgentCenterY(isZoomed);
+
+  return {
+    winner,
+    intensity,
+    isN5,
+    isN2,
+    isN3,
+    isN4,
+    baseAgentScale,
+    scaledStartDistance,
+    clashTravel,
+    winnerRetreat,
+    loserRetreat,
+    playerClashAnchor,
+    enemyClashAnchor,
+    agentCenterY,
+    playerArmy,
+    enemyArmy,
+    playerFocusCount: battleResult.playerFocusUsed || 1,
+    enemyFocusCount: battleResult.enemyFocusUsed || 1,
+  };
+}
+
+function computeCardMotion(t, orbitSec, cfg) {
+  const {
+    winner,
+    intensity,
+    isN5,
+    isN2,
+    isN3,
+    isN4,
+    baseAgentScale,
+    scaledStartDistance,
+    clashTravel,
+    winnerRetreat,
+    loserRetreat,
+    playerArmy,
+    enemyArmy,
+    playerFocusCount,
+    enemyFocusCount,
+  } = cfg;
+
+  const lunge = smoothstep(0.45, 0.55, t);
+  const impact = smoothstep(0.55, 0.62, t) * (1 - smoothstep(0.7, 0.9, t));
+  const aftermath = smoothstep(0.65, 1, t);
+  const clashRush = isN5 ? smoothstep(0.22, 0.56, t) : lunge;
+
+  const pX = scaledStartDistance - clashRush * clashTravel + aftermath * (winner === 'player' ? winnerRetreat : loserRetreat);
+  const pScale = baseAgentScale * (1 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'player' ? -0.06 : 0.2));
+  const pRot = aftermath * (winner === 'player' ? 0 : 18);
+  const pOpacity = winner === 'player' ? 1 : 1 - aftermath * 0.3;
+
+  const eX = -scaledStartDistance + clashRush * clashTravel + aftermath * (winner === 'enemy' ? -winnerRetreat : -loserRetreat);
+  const eScale = baseAgentScale * (1 + clashRush * (isN5 ? 0.22 : 0.15) - aftermath * (winner === 'enemy' ? -0.06 : 0.2));
+  const eRot = aftermath * (winner === 'enemy' ? 0 : -18);
+  const eOpacity = winner === 'enemy' ? 1 : 1 - aftermath * 0.3;
+
+  const shake = impact * 8 * intensity;
+  const sx = Math.sin(t * 220) * shake;
+  const sy = Math.cos(t * 180) * shake;
+
+  const playerVariantRot = isN2 ? Math.sin(t * 20) * 6 : isN3 ? Math.sin(t * 13) * 3 : isN4 ? Math.sin(t * 26) * 8 : 0;
+  const enemyVariantRot = isN2 ? Math.cos(t * 18) * -6 : isN3 ? Math.cos(t * 12) * -3 : isN4 ? Math.cos(t * 24) * -8 : 0;
+  const playerVariantScale = isN2 ? 1 + smoothstep(0.2, 0.55, t) * 0.06 : isN3 ? 1 + impact * 0.08 : isN4 ? 1 + Math.sin(t * 30) * 0.02 : 1;
+  const enemyVariantScale = isN2 ? 1 + smoothstep(0.2, 0.55, t) * 0.06 : isN3 ? 1 + impact * 0.08 : isN4 ? 1 + Math.cos(t * 28) * 0.02 : 1;
+
+  const playerFocusGlow = focusColorForCount(playerFocusCount, orbitSec);
+  const enemyFocusGlow = focusColorForCount(enemyFocusCount, orbitSec);
+  const playerFocusAura = isN5
+    ? clamp(winner === 'player' ? 1 + smoothstep(0.48, 0.82, t) * 0.9 : 1 - smoothstep(0.52, 0.92, t), 0, 2)
+    : 0;
+  const enemyFocusAura = isN5
+    ? clamp(winner === 'enemy' ? 1 + smoothstep(0.48, 0.82, t) * 0.9 : 1 - smoothstep(0.52, 0.92, t), 0, 2)
+    : 0;
+
+  const playerFilter =
+    impact > 0 || aftermath > 0
+      ? winner === 'player'
+        ? `drop-shadow(0 0 ${20 + impact * 40}px ${playerArmy.color})${isN4 ? ` drop-shadow(0 0 ${20 + impact * 36}px #f472b6)` : ''}`
+        : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6})${isN3 ? ` hue-rotate(${-aftermath * 32}deg)` : ''}`
+      : '';
+  const enemyFilter =
+    impact > 0 || aftermath > 0
+      ? winner === 'enemy'
+        ? `drop-shadow(0 0 ${20 + impact * 40}px ${enemyArmy.color})${isN4 ? ` drop-shadow(0 0 ${20 + impact * 36}px #fb7185)` : ''}`
+        : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6})${isN3 ? ` hue-rotate(${aftermath * 32}deg)` : ''}`
+      : '';
+
+  return {
+    sx,
+    sy,
+    player: {
+      x: pX + sx,
+      y: sy,
+      scale: pScale * playerVariantScale,
+      rot: pRot + playerVariantRot,
+      opacity: pOpacity,
+      zIndex: winner === 'player' ? 140 : 130,
+      boxShadow:
+        playerFocusAura > 0
+          ? `0 0 ${10 + playerFocusAura * 30}px ${playerFocusGlow.main}, 0 0 ${5 + playerFocusAura * 15}px ${playerFocusGlow.secondary} inset, 0 0 ${20 + playerFocusAura * 40}px ${playerFocusGlow.main}`
+          : '',
+      filter: playerFilter,
+    },
+    enemy: {
+      x: eX + sx,
+      y: sy,
+      scale: eScale * enemyVariantScale,
+      rot: eRot + enemyVariantRot,
+      opacity: eOpacity,
+      zIndex: winner === 'enemy' ? 140 : 130,
+      boxShadow:
+        enemyFocusAura > 0
+          ? `0 0 ${10 + enemyFocusAura * 30}px ${enemyFocusGlow.main}, 0 0 ${5 + enemyFocusAura * 15}px ${enemyFocusGlow.secondary} inset, 0 0 ${20 + enemyFocusAura * 40}px ${enemyFocusGlow.main}`
+          : '',
+      filter: enemyFilter,
+    },
+  };
+}
+
+function applyCardWrapperMotion(el, sideMotion) {
+  if (!el) return;
+  el.style.transform = `translate(calc(-50% + ${sideMotion.x}px), calc(-50% + ${sideMotion.y}px)) scale(${sideMotion.scale}) rotate(${sideMotion.rot}deg)`;
+  el.style.opacity = String(sideMotion.opacity);
+  el.style.zIndex = String(sideMotion.zIndex);
+  el.style.boxShadow = sideMotion.boxShadow;
+  el.style.filter = sideMotion.filter;
+}
+
+const ClashCardAgents = React.memo(function ClashCardAgents({
+  battleResult,
+  display,
+  cardLayout,
+  playerAbilityCurrentValue,
+  enemyAbilityCurrentValue,
+  agentCenterY,
+  playerClashAnchor,
+  enemyClashAnchor,
+  playerWrapRef,
+  enemyWrapRef,
+}) {
+  return (
+    <>
+      <div
+        ref={playerWrapRef}
+        style={{
+          position: 'absolute',
+          top: agentCenterY,
+          left: playerClashAnchor,
+          display: 'inline-flex',
+          borderRadius: '0.75rem',
+          willChange: 'transform, opacity, filter',
+          pointerEvents: 'none',
+        }}
+      >
+        <GameCard
+          cardLayout={cardLayout}
+          agent={battleResult.playerAgent}
+          modifiedPower={modifiedStatOrNull(battleResult.playerAgent?.power, display.playerPower)}
+          modifiedDamage={modifiedStatOrNull(battleResult.playerAgent?.damage, display.playerDamage)}
+          showOperators={display.showOperators}
+          showBonus={display.showPlayerBonusActive}
+          bonusBaseInactive={duelBonusBaseInactive(
+            battleResult.playerAgent,
+            battleResult.playerArmyBonusActive ?? battleResult.playerHasBonus,
+            display.showPlayerBonusNotTriggered,
+            display.showPlayerBonusBlocked,
+            display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null
+          )}
+          abilityCurrentValue={playerAbilityCurrentValue}
+          abilityBlocked={display.showPlayerAbilityBlocked}
+          bonusBlocked={display.showPlayerBonusBlocked}
+          highlightAbility={display.highlightPlayerAbility}
+          highlightBonus={display.highlightPlayerBonus}
+          visualStepKind={display.visualStepKind}
+          visualStepIndex={display.visualStepIndex}
+          copiedAbility={display.showPlayerCopiedAbility ? battleResult.playerAbilityCopied : null}
+          copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
+          copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
+          copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
+          abilityNotTriggered={display.showPlayerAbilityNotTriggered}
+          bonusNotTriggered={display.showPlayerBonusNotTriggered}
+          suppressAnimations
+        />
+      </div>
+      <div
+        ref={enemyWrapRef}
+        style={{
+          position: 'absolute',
+          top: agentCenterY,
+          left: enemyClashAnchor,
+          display: 'inline-flex',
+          borderRadius: '0.75rem',
+          willChange: 'transform, opacity, filter',
+          pointerEvents: 'none',
+        }}
+      >
+        <GameCard
+          cardLayout={cardLayout}
+          agent={battleResult.enemyAgent}
+          modifiedPower={modifiedStatOrNull(battleResult.enemyAgent?.power, display.enemyPower)}
+          modifiedDamage={modifiedStatOrNull(battleResult.enemyAgent?.damage, display.enemyDamage)}
+          showOperators={display.showOperators}
+          showBonus={display.showEnemyBonusActive}
+          bonusBaseInactive={duelBonusBaseInactive(
+            battleResult.enemyAgent,
+            battleResult.enemyArmyBonusActive ?? battleResult.enemyHasBonus,
+            display.showEnemyBonusNotTriggered,
+            display.showEnemyBonusBlocked,
+            display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null
+          )}
+          abilityCurrentValue={enemyAbilityCurrentValue}
+          abilityBlocked={display.showEnemyAbilityBlocked}
+          bonusBlocked={display.showEnemyBonusBlocked}
+          highlightAbility={display.highlightEnemyAbility}
+          highlightBonus={display.highlightEnemyBonus}
+          visualStepKind={display.visualStepKind}
+          visualStepIndex={display.visualStepIndex}
+          copiedAbility={display.showEnemyCopiedAbility ? battleResult.enemyAbilityCopied : null}
+          copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
+          copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
+          copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
+          abilityNotTriggered={display.showEnemyAbilityNotTriggered}
+          bonusNotTriggered={display.showEnemyBonusNotTriggered}
+          suppressAnimations
+        />
+      </div>
+    </>
+  );
+});
+
 export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectStep = 1, variant = 'v1', galleryCardLayout, getAbilityCurrentValue, isZoomed = true }) {
-  const { runId, active, setActive } = useSequenceRun(duelPhase);
+  const { runId, active } = useSequenceRun(duelPhase);
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const isN5 = variant === 'n5';
   const dyn = React.useMemo(() => computeDynamicClashVfx(battleResult), [battleResult]);
   const speed = Number.isFinite(dyn?.clashSpeed) && dyn.clashSpeed > 0 ? dyn.clashSpeed : 1;
   const intensity = Number.isFinite(dyn?.intensity) && dyn.intensity > 0 ? dyn.intensity : 1;
   const durationMs = (isN5 ? 3800 : 3000) / speed;
-  const t = useClashTimeline(durationMs, runId);
-  const orbitSec = useGlobalOrbitClock(active);
+
+  const playerWrapRef = React.useRef(null);
+  const enemyWrapRef = React.useRef(null);
+  const motionCfgRef = React.useRef(null);
+
+  const { animRef, vfxTick } = useClashAnimationLoop(durationMs, runId, (t, orbitSec) => {
+    const cfg = motionCfgRef.current;
+    if (!cfg) return;
+    const motion = computeCardMotion(t, orbitSec, cfg);
+    applyCardWrapperMotion(playerWrapRef.current, motion.player);
+    applyCardWrapperMotion(enemyWrapRef.current, motion.enemy);
+  });
+  void vfxTick;
+
+  React.useLayoutEffect(() => {
+    if (!active || !battleResult) return;
+    const cfg = motionCfgRef.current;
+    if (!cfg) return;
+    const { t: frameT, orbitSec: frameOrbit } = animRef.current;
+    const motion = computeCardMotion(frameT, frameOrbit, cfg);
+    applyCardWrapperMotion(playerWrapRef.current, motion.player);
+    applyCardWrapperMotion(enemyWrapRef.current, motion.enemy);
+  });
 
   if (!battleResult || !active) return null;
 
@@ -644,6 +912,19 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectSte
   const playerArmy = getArmyVisual(battleResult.playerAgent, '#a78bfa');
   const enemyArmy = getArmyVisual(battleResult.enemyAgent, '#fbbf24');
   const winArmy = winner === 'player' ? playerArmy : enemyArmy;
+
+  motionCfgRef.current = buildClashMotionConfig({
+    battleResult,
+    winner,
+    intensity,
+    variant,
+    isZoomed,
+    playerArmy,
+    enemyArmy,
+  });
+
+  const t = animRef.current.t;
+  const orbitSec = animRef.current.orbitSec;
 
   const charge = smoothstep(0.15, 0.45, t);
   const lunge = smoothstep(0.45, 0.55, t);
@@ -723,7 +1004,16 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectSte
   const agentCenterY = getDuelAgentCenterY(isZoomed);
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 58, pointerEvents: 'none', overflow: 'hidden' }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 58,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        contain: 'layout paint style',
+      }}
+    >
       {charge > 0 && !isN2 && !isN3 && !isN4 && !isN5 && (
         <>
           <ChargeRays
@@ -868,113 +1158,18 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectSte
         centerY={agentCenterY}
       />
 
-      <div
-        style={{
-          position: 'absolute',
-          top: agentCenterY,
-          left: playerClashAnchor,
-          transform: `translate(calc(-50% + ${pX + sx}px), calc(-50% + ${sy}px)) scale(${pScale * playerVariantScale}) rotate(${pRot + playerVariantRot}deg)`,
-          zIndex: winner === 'player' ? 140 : 130,
-          opacity: pOpacity,
-          display: 'inline-flex',
-          borderRadius: '0.75rem',
-          boxShadow:
-            playerFocusAura > 0
-              ? `0 0 ${10 + playerFocusAura * 30}px ${playerFocusGlow.main}, 0 0 ${5 + playerFocusAura * 15}px ${playerFocusGlow.secondary} inset, 0 0 ${20 + playerFocusAura * 40}px ${playerFocusGlow.main}`
-              : undefined,
-          filter:
-            impact > 0 || aftermath > 0
-              ? winner === 'player'
-                ? `drop-shadow(0 0 ${20 + impact * 40}px ${playerArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #f472b6)` : ''}`
-                : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${-aftermath * 32}deg)` : ''}`
-              : undefined,
-        }}
-      >
-        <GameCard
-          cardLayout={cardLayout}
-          agent={battleResult.playerAgent}
-          modifiedPower={modifiedStatOrNull(battleResult.playerAgent?.power, display.playerPower)}
-          modifiedDamage={modifiedStatOrNull(battleResult.playerAgent?.damage, display.playerDamage)}
-          showOperators={display.showOperators}
-          showBonus={display.showPlayerBonusActive}
-          bonusBaseInactive={duelBonusBaseInactive(
-            battleResult.playerAgent,
-            battleResult.playerArmyBonusActive ?? battleResult.playerHasBonus,
-            display.showPlayerBonusNotTriggered,
-            display.showPlayerBonusBlocked,
-            display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null
-          )}
-          abilityCurrentValue={playerAbilityCurrentValue}
-          abilityBlocked={display.showPlayerAbilityBlocked}
-          bonusBlocked={display.showPlayerBonusBlocked}
-          highlightAbility={display.highlightPlayerAbility}
-          highlightBonus={display.highlightPlayerBonus}
-          visualStepKind={display.visualStepKind}
-          visualStepIndex={display.visualStepIndex}
-          copiedAbility={
-            display.showPlayerCopiedAbility ? battleResult.playerAbilityCopied : null
-          }
-          copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
-          copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
-          abilityNotTriggered={display.showPlayerAbilityNotTriggered}
-          bonusNotTriggered={display.showPlayerBonusNotTriggered}
-          suppressAnimations
-        />
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          top: agentCenterY,
-          left: enemyClashAnchor,
-          transform: `translate(calc(-50% + ${eX + sx}px), calc(-50% + ${sy}px)) scale(${eScale * enemyVariantScale}) rotate(${eRot + enemyVariantRot}deg)`,
-          zIndex: winner === 'enemy' ? 140 : 130,
-          opacity: eOpacity,
-          display: 'inline-flex',
-          borderRadius: '0.75rem',
-          boxShadow:
-            enemyFocusAura > 0
-              ? `0 0 ${10 + enemyFocusAura * 30}px ${enemyFocusGlow.main}, 0 0 ${5 + enemyFocusAura * 15}px ${enemyFocusGlow.secondary} inset, 0 0 ${20 + enemyFocusAura * 40}px ${enemyFocusGlow.main}`
-              : undefined,
-          filter:
-            impact > 0 || aftermath > 0
-              ? winner === 'enemy'
-                ? `drop-shadow(0 0 ${20 + impact * 40}px ${enemyArmy.color}) ${isN4 ? `drop-shadow(0 0 ${20 + impact * 36}px #fb7185)` : ''}`
-                : `brightness(${1 - aftermath * 0.45}) grayscale(${aftermath * 0.6}) ${isN3 ? `hue-rotate(${aftermath * 32}deg)` : ''}`
-              : undefined,
-        }}
-      >
-        <GameCard
-          cardLayout={cardLayout}
-          agent={battleResult.enemyAgent}
-          modifiedPower={modifiedStatOrNull(battleResult.enemyAgent?.power, display.enemyPower)}
-          modifiedDamage={modifiedStatOrNull(battleResult.enemyAgent?.damage, display.enemyDamage)}
-          showOperators={display.showOperators}
-          showBonus={display.showEnemyBonusActive}
-          bonusBaseInactive={duelBonusBaseInactive(
-            battleResult.enemyAgent,
-            battleResult.enemyArmyBonusActive ?? battleResult.enemyHasBonus,
-            display.showEnemyBonusNotTriggered,
-            display.showEnemyBonusBlocked,
-            display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null
-          )}
-          abilityCurrentValue={enemyAbilityCurrentValue}
-          abilityBlocked={display.showEnemyAbilityBlocked}
-          bonusBlocked={display.showEnemyBonusBlocked}
-          highlightAbility={display.highlightEnemyAbility}
-          highlightBonus={display.highlightEnemyBonus}
-          visualStepKind={display.visualStepKind}
-          visualStepIndex={display.visualStepIndex}
-          copiedAbility={
-            display.showEnemyCopiedAbility ? battleResult.enemyAbilityCopied : null
-          }
-          copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
-          copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
-          abilityNotTriggered={display.showEnemyAbilityNotTriggered}
-          bonusNotTriggered={display.showEnemyBonusNotTriggered}
-          suppressAnimations
-        />
-      </div>
+      <ClashCardAgents
+        battleResult={battleResult}
+        display={display}
+        cardLayout={cardLayout}
+        playerAbilityCurrentValue={playerAbilityCurrentValue}
+        enemyAbilityCurrentValue={enemyAbilityCurrentValue}
+        agentCenterY={agentCenterY}
+        playerClashAnchor={playerClashAnchor}
+        enemyClashAnchor={enemyClashAnchor}
+        playerWrapRef={playerWrapRef}
+        enemyWrapRef={enemyWrapRef}
+      />
 
       {isN5 && (
         <>

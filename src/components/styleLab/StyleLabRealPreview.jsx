@@ -6,6 +6,7 @@ import { MiniBattlefield } from '../battle/MiniBattlefield';
 import { CardReworkP4AsHtml } from '../cards/CardReworkP4AsHtml';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields';
 import { ARMY_SETS } from '../../data/cards';
+import { ARMY_COLORS } from '../../data/armies';
 import { STYLELAB_STATS_SHELL, STYLELAB_ROUND_BOX, STYLELAB_STAGE_BG } from './styleLabShellStyles';
 
 const DEMO_ARMY = "Figli dell'Orizzonte";
@@ -60,6 +61,7 @@ export function StyleLabRealPreview({ themeId, large }) {
               position="top-left"
               gamePhase="selectAgent"
               styleOverride={shell}
+              accentColor={ARMY_COLORS[DEMO_ARMY]?.accent}
             />
             <StatsPanel
               label="TU"
@@ -68,6 +70,7 @@ export function StyleLabRealPreview({ themeId, large }) {
               position="bottom-right"
               gamePhase="selectAgent"
               styleOverride={shell}
+              accentColor={ARMY_COLORS[DEMO_ARMY]?.accent}
             />
 
             <div

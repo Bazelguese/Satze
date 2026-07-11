@@ -4,11 +4,14 @@
 // ============================================
 
 import { useCallback } from 'react';
-import { ARMY_SETS, ARMY_DECKS } from '../data';
+import { ARMY_SETS, ARMY_DECKS, ARMY_COLORS, ALL_BATTLEFIELDS } from '../data';
 import { selectBattlefields } from '../game/fieldLogic';
 import { DIFFICULTY_NAMES, shuffleArray } from '../utils';
-import { loadCustomDeck } from '../utils/deckManager';
-import { calcInitialBonuses } from '../utils/onlineMatch';
+import { loadCustomDeck, attachShuffleDealVisuals, buildDeckVisualIdentity } from '../utils/deckManager';
+import { calcInitialBonuses, normalizeOnlineMatchPayload, buildShuffleDealSetupFromMatch } from '../utils/onlineMatch';
+import { resolveShuffleKindsForDuel } from '../utils/shuffleStylePreference';
+import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShuffleHands';
+import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { preloadBattlefieldImages } from '../utils/preloadAssets';
 
 /**
@@ -51,6 +54,9 @@ export function useGameFlow(gameState, animations = null) {
     setIsPlayerFirst,
     setLogs,
     setCampaignDuelMod,
+    setShuffleDealSetup,
+    setPlayerDeckVisual,
+    setEnemyDeckVisual,
   } = gameState;
 
   const resolveCardIdsAcrossArmies = useCallback((cardIds, fallbackArmy = null) => {
@@ -79,7 +85,9 @@ export function useGameFlow(gameState, animations = null) {
    * @param {string} [enemyDeckKey] - Deck nemico (opzionale, per campagna)
    * @param {{ initiativeProfile?: 'assault'|'defense'|null, winCondition?: string }|null} [campaignDuelMod] - campagna
    */
-  const startGame = useCallback((selectedPlayerArmy, selectedDeckKey, mode = 'classic', difficulty = 'medium', allBattlefields, enemyArmy = null, enemyDeckKey = null, campaignDuelMod = null) => {
+  const startGame = useCallback((selectedPlayerArmy, selectedDeckKey, mode = 'classic', difficulty = 'medium', allBattlefields, enemyArmy = null, enemyDeckKey = null, campaignDuelMod = null, startOptions = null) => {
+    const skipShuffleDeal = startOptions?.skipShuffleDeal === true;
+    const fixedHands = startOptions?.fixedHands ?? null;
     setShowClaimVictoryChoice(null);
     setCampaignDuelMod(campaignDuelMod || null);
     setGameMode(mode);
@@ -133,18 +141,57 @@ export function useGameFlow(gameState, animations = null) {
     const enemyCardIds = enemyDeck.cards;
     const enemySet = resolveCardIdsAcrossArmies(enemyCardIds, enemyArmySelected);
     
-    // Estrae 5 carte random dal deck di 10 (preserva army per mazzi multi-armata)
-    const pHand = shuffleArray(playerSet).slice(0, 5).map((card) => ({ ...card, army: card.army || playerArmy }));
-    const eHand = shuffleArray(enemySet).slice(0, 5).map((card) => ({ ...card, army: card.army || enemyArmySelected }));
-    
-    const pBonuses = calcInitialBonuses(pHand);
-    const eBonuses = calcInitialBonuses(eHand);
-    
-    setPlayerArmyBonuses(pBonuses);
-    setEnemyArmyBonuses(eBonuses);
-    
-    setPlayerHand(pHand);
-    setEnemyHand(eHand);
+    const deal = computeShuffleDealFromSets(
+      playerSet,
+      enemySet,
+      playerArmy,
+      enemyArmySelected,
+      fixedHands
+    );
+    const { playerCardBack, enemyCardBack } = pickDistinctCardBackPair();
+    const pHand = deal.playerHand;
+    const eHand = deal.enemyHand;
+    const pBonuses = deal.playerBonuses;
+    const eBonuses = deal.enemyBonuses;
+
+    setPlayerDeckVisual(buildDeckVisualIdentity(deal.playerSet, {
+      fallbackArmy: deal.playerSet?.[0]?.army ?? playerArmy,
+      armyColors: ARMY_COLORS,
+    }));
+    setEnemyDeckVisual(buildDeckVisualIdentity(deal.enemySet, {
+      fallbackArmy: deal.enemySet?.[0]?.army ?? enemyArmySelected,
+      armyColors: ARMY_COLORS,
+    }));
+
+    if (!skipShuffleDeal) {
+      const { playerShuffleKind, enemyShuffleKind } = resolveShuffleKindsForDuel();
+      setShuffleDealSetup(attachShuffleDealVisuals({
+        playerSet: deal.playerSet,
+        enemySet: deal.enemySet,
+        playerFinalOrder: deal.playerFinalOrder,
+        enemyFinalOrder: deal.enemyFinalOrder,
+        playerHand: pHand,
+        enemyHand: eHand,
+        playerBonuses: pBonuses,
+        enemyBonuses: eBonuses,
+        playerArmy,
+        enemyArmy: enemyArmySelected,
+        playerCardBack,
+        enemyCardBack,
+        playerShuffleKind,
+        enemyShuffleKind,
+      }, ARMY_COLORS));
+      setPlayerArmyBonuses({});
+      setEnemyArmyBonuses({});
+      setPlayerHand([]);
+      setEnemyHand([]);
+    } else {
+      setShuffleDealSetup(null);
+      setPlayerArmyBonuses(pBonuses);
+      setEnemyArmyBonuses(eBonuses);
+      setPlayerHand(pHand);
+      setEnemyHand(eHand);
+    }
     
     const fields = selectBattlefields(mode, allBattlefields);
     setBattlefields(fields);
@@ -223,7 +270,7 @@ export function useGameFlow(gameState, animations = null) {
     
     setLogs(prev => [...prev, `[R1] ${startLog}`]);
     
-    setGamePhase('selectField');
+    setGamePhase(skipShuffleDeal ? 'selectField' : 'shuffleDeal');
   }, [
     setGameMode,
     setPlayerHand,
@@ -256,6 +303,9 @@ export function useGameFlow(gameState, animations = null) {
     setIsPlayerFirst,
     setLogs,
     setCampaignDuelMod,
+    setShuffleDealSetup,
+    setPlayerDeckVisual,
+    setEnemyDeckVisual,
     animations,
     resolveCardIdsAcrossArmies,
   ]);
@@ -266,7 +316,8 @@ export function useGameFlow(gameState, animations = null) {
    * @param {Object} payload - output di buildOnlineMatchPayload
    */
   const startOnlineMatch = useCallback(
-    (perspective, payload) => {
+    (perspective, rawPayload) => {
+      const payload = normalizeOnlineMatchPayload(rawPayload, ALL_BATTLEFIELDS);
       const {
         mode,
         battlefields,
@@ -288,14 +339,36 @@ export function useGameFlow(gameState, animations = null) {
       setGameMode(mode);
       setAiDifficulty('multiplayer');
 
-      const pBonuses = calcInitialBonuses(playerHand);
-      const eBonuses = calcInitialBonuses(enemyHand);
+      const shuffleSetup = buildShuffleDealSetupFromMatch(perspective, payload);
 
-      setPlayerArmyBonuses(pBonuses);
-      setEnemyArmyBonuses(eBonuses);
-
-      setPlayerHand(playerHand);
-      setEnemyHand(enemyHand);
+      if (shuffleSetup) {
+        const enriched = attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS);
+        setShuffleDealSetup(enriched);
+        setPlayerDeckVisual(enriched.playerDeckVisual);
+        setEnemyDeckVisual(enriched.enemyDeckVisual);
+        setPlayerArmyBonuses({});
+        setEnemyArmyBonuses({});
+        setPlayerHand([]);
+        setEnemyHand([]);
+      } else {
+        setShuffleDealSetup(null);
+        const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
+        const localEnemySet = perspective === 'host' ? payload.hostEnemySet : payload.hostPlayerSet;
+        setPlayerDeckVisual(buildDeckVisualIdentity(localPlayerSet, {
+          fallbackArmy: localPlayerSet?.[0]?.army ?? playerArmy,
+          armyColors: ARMY_COLORS,
+        }));
+        setEnemyDeckVisual(buildDeckVisualIdentity(localEnemySet, {
+          fallbackArmy: localEnemySet?.[0]?.army ?? enemyArmy,
+          armyColors: ARMY_COLORS,
+        }));
+        const pBonuses = calcInitialBonuses(playerHand);
+        const eBonuses = calcInitialBonuses(enemyHand);
+        setPlayerArmyBonuses(pBonuses);
+        setEnemyArmyBonuses(eBonuses);
+        setPlayerHand(playerHand);
+        setEnemyHand(enemyHand);
+      }
 
       setBattlefields(battlefields);
       preloadBattlefieldImages(battlefields);
@@ -354,7 +427,7 @@ export function useGameFlow(gameState, animations = null) {
       setLogs((prev) => [...prev, `[R1] ${startLog}`]);
 
       setIsPlayerFirst(isPlayerFirst);
-      setGamePhase('selectField');
+      setGamePhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
     },
     [
       setShowClaimVictoryChoice,
@@ -389,6 +462,7 @@ export function useGameFlow(gameState, animations = null) {
       setIsPlayerFirst,
       setGamePhase,
       setCampaignDuelMod,
+      setShuffleDealSetup,
     ]
   );
 
@@ -400,7 +474,10 @@ export function useGameFlow(gameState, animations = null) {
     setGameResult(null);
     setBattleResult(null);
     setCampaignDuelMod(null);
-  }, [setGamePhase, setGameResult, setBattleResult, setCampaignDuelMod]);
+    setShuffleDealSetup(null);
+    setPlayerDeckVisual(null);
+    setEnemyDeckVisual(null);
+  }, [setGamePhase, setGameResult, setBattleResult, setCampaignDuelMod, setShuffleDealSetup, setPlayerDeckVisual, setEnemyDeckVisual]);
 
   return {
     startGame,

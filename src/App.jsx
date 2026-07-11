@@ -10,6 +10,7 @@ import { preloadAllAssets } from './utils/preloadAssets';
 import { GameViewport } from './components/GameViewport';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CosmicTransitionProvider } from './components/cosmic/ScreenTransition';
+import { IS_PUBLIC_PLAYTEST_BUILD } from './config/buildProfile';
 
 const SHOW_CARD_TEST = false; // true per pagina test carte
 
@@ -21,6 +22,8 @@ const CardPrototypePage = lazy(() => import('./components/cards/CardPrototypePag
 const StyleLabPage = lazy(() => import('./components/styleLab/StyleLabPage'));
 const DuelVfxLabPage = lazy(() => import('./components/duelVfxLab/DuelVfxLabPage').then((m) => ({ default: m.DuelVfxLabPage })));
 const DuelClashToolPage = lazy(() => import('./components/duelVfxLab/DuelClashToolPage').then((m) => ({ default: m.DuelClashToolPage })));
+const OverdriveLabPage = lazy(() => import('./components/overdriveLab/OverdriveLabPage').then((m) => ({ default: m.OverdriveLabPage })));
+const DialogueLabPage = lazy(() => import('./components/dialogueLab/DialogueLabPage').then((m) => ({ default: m.DialogueLabPage })));
 
 const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
 const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
@@ -36,6 +39,17 @@ export function App() {
 function AppContent() {
   const [isReady, setIsReady] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!IS_PUBLIC_PLAYTEST_BUILD) return undefined;
+    document.body.classList.add('satze-public-build');
+    const blockSelect = (e) => e.preventDefault();
+    document.addEventListener('selectstart', blockSelect);
+    return () => {
+      document.body.classList.remove('satze-public-build');
+      document.removeEventListener('selectstart', blockSelect);
+    };
+  }, []);
 
   useEffect(() => {
     // Rimuovi il loading HTML statico (sostituito da React)
@@ -75,11 +89,14 @@ function AppContent() {
     return <LoadingScreen progress={progress} />;
   }
 
-  const showCropTool = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cropTool') === '1';
-  const showCardPrototype = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardPrototype') === '1';
-  const showStyleLab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('styleLab') === '1';
-  const showDuelVfxLab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelVfxLab') === '1';
-  const showDuelClashTool = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelClashTool') === '1';
+  const devToolsAllowed = !IS_PUBLIC_PLAYTEST_BUILD;
+  const showCropTool = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cropTool') === '1';
+  const showCardPrototype = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardPrototype') === '1';
+  const showStyleLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('styleLab') === '1';
+  const showDuelVfxLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelVfxLab') === '1';
+  const showDuelClashTool = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelClashTool') === '1';
+  const showOverdriveLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('overdriveLab') === '1';
+  const showDialogueLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('dialogue1') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -111,6 +128,18 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeOverdriveLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('overdriveLab');
+    window.location.href = url.toString();
+  };
+
+  const closeDialogueLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('dialogue1');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -121,6 +150,10 @@ function AppContent() {
         <DuelVfxLabPage onClose={closeDuelVfxLab} />
       ) : showDuelClashTool ? (
         <DuelClashToolPage onClose={closeDuelClashTool} />
+      ) : showOverdriveLab ? (
+        <OverdriveLabPage onClose={closeOverdriveLab} />
+      ) : showDialogueLab ? (
+        <DialogueLabPage onClose={closeDialogueLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

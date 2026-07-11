@@ -17,6 +17,7 @@ import { getCardSprite } from "../../utils";
 import { getCardImageUrl } from "../../data/images";
 import { getCardTags, shouldShowTagAsRole } from "../../data/cardTags";
 import { TagBadge } from "../cards/CardTagBadges";
+import { IS_PUBLIC_PLAYTEST_BUILD, createSingleClickHandlers } from "../../config/buildProfile.js";
 
 // Nomi effetti per filtro (italiano)
 const EFFECT_NAMES = {
@@ -166,10 +167,15 @@ const CatalogCardRow = ({ card, inDeck, onToggle, disabled, bgPositions }) => {
   const bgPosStr = typeof bgCfg === "object" && bgCfg != null
     ? `${bgCfg.x ?? 50}% ${bgCfg.y ?? 25}% / ${(bgCfg.scale ?? 100) === 100 ? "cover" : `${bgCfg.scale}%`}`
     : `center ${typeof bgCfg === "string" ? bgCfg : "25%"}/cover`;
+  const activate = () => {
+    if (!disabled) onToggle(card);
+  };
+  const dragSafeClick = IS_PUBLIC_PLAYTEST_BUILD ? createSingleClickHandlers(activate) : null;
   return (
     <div
       className="cosmic-catalog-row"
-      onClick={() => !disabled && onToggle(card)}
+      onClick={dragSafeClick ? undefined : activate}
+      {...(dragSafeClick ?? {})}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -239,10 +245,13 @@ const DeckSummaryCardRow = ({ card, onToggle, armyColor, bgPositions }) => {
   const bgPosStr = typeof bgCfg === "object" && bgCfg != null
     ? `${bgCfg.x ?? 50}% ${bgCfg.y ?? 25}% / ${(bgCfg.scale ?? 100) === 100 ? "cover" : `${bgCfg.scale}%`}`
     : `center ${typeof bgCfg === "string" ? bgCfg : "25%"}/cover`;
+  const activate = () => onToggle(card);
+  const dragSafeClick = IS_PUBLIC_PLAYTEST_BUILD ? createSingleClickHandlers(activate) : null;
   return (
     <div
       className="cosmic-deck-row"
-      onClick={() => onToggle(card)}
+      onClick={dragSafeClick ? undefined : activate}
+      {...(dragSafeClick ?? {})}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

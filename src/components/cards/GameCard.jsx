@@ -1,4 +1,7 @@
 import React from 'react';
+import { getOverdrivePalette } from '../../utils/overdrivePalette';
+import { getOverdriveEffectVariant } from '../../utils/overdriveEffectPreference';
+import { OverdriveEffectOverlay } from './OverdriveEffectOverlay';
 import { CardReworkP4 } from './CardReworkP4';
 
 /**
@@ -29,6 +32,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
     copiedAbility = null,
     copiedBonus = null,
     copiedAbilityNotTriggered = false,
+    copiedBonusNotTriggered = false,
     abilityNotTriggered = false,
     bonusNotTriggered = false,
     bonusBaseInactive = false,
@@ -39,6 +43,8 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
     copyAbilityAnim = false,
     copyBonusAnim = false,
     fieldMinFloorReduction = 0,
+    overdrivePreview = false,
+    overdriveEffectVariant = null,
   } = rest;
 
   const isUsed = usedCards.includes(agent?.id);
@@ -61,6 +67,19 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
     if (onHover && agent) onHover({ agent, showBonus });
   };
 
+  const overdrivePalette = getOverdrivePalette(agent?.army);
+  const overdriveVariant = overdriveEffectVariant ?? getOverdriveEffectVariant();
+  const overdriveCardStyle = overdrivePreview
+    ? {
+        '--od-accent': overdrivePalette.accent,
+        '--od-secondary': overdrivePalette.secondary,
+        '--od-tertiary': overdrivePalette.tertiary,
+      }
+    : undefined;
+  const overdriveCardClass = overdrivePreview
+    ? `satze-field-overdrive-card satze-card-overdrive-preview${overdriveVariant === 'prism-halo' ? ' satze-card-overdrive-preview--prism-halo' : ''}`
+    : '';
+
   return (
     <div
       onClick={handleClick}
@@ -75,31 +94,38 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
               : 'pointer',
       }}
     >
-      <div className="pointer-events-none">
-        <CardReworkP4
-          agent={displayAgent}
-          duelBasePower={agent.power}
-          duelBaseDamage={agent.damage}
-          showBonus={showBonus}
-          abilityBlocked={abilityBlocked}
-          bonusBlocked={bonusBlocked}
-          showOperators={showOperators}
-          highlightAbility={highlightAbility}
-          highlightBonus={highlightBonus}
-          copiedAbility={copiedAbility}
-          copiedBonus={copiedBonus}
-          copiedAbilityNotTriggered={copiedAbilityNotTriggered}
-          abilityNotTriggered={abilityNotTriggered}
-          bonusNotTriggered={bonusNotTriggered}
-          bonusBaseInactive={bonusBaseInactive}
-          abilityCurrentValue={abilityCurrentValue}
-          suppressAnimations={suppressAnimations}
-          visualStepKind={visualStepKind}
-          visualStepIndex={visualStepIndex}
-          copyAbilityAnim={copyAbilityAnim}
-          copyBonusAnim={copyBonusAnim}
-          fieldMinFloorReduction={fieldMinFloorReduction}
-        />
+      <div
+        className={`relative overflow-hidden rounded-[14px] ${overdriveCardClass}`}
+        style={overdriveCardStyle}
+      >
+        <div className="pointer-events-none">
+          <CardReworkP4
+            agent={displayAgent}
+            duelBasePower={agent.power}
+            duelBaseDamage={agent.damage}
+            showBonus={showBonus}
+            abilityBlocked={abilityBlocked}
+            bonusBlocked={bonusBlocked}
+            showOperators={showOperators}
+            highlightAbility={highlightAbility}
+            highlightBonus={highlightBonus}
+            copiedAbility={copiedAbility}
+            copiedBonus={copiedBonus}
+            copiedAbilityNotTriggered={copiedAbilityNotTriggered}
+            copiedBonusNotTriggered={copiedBonusNotTriggered}
+            abilityNotTriggered={abilityNotTriggered}
+            bonusNotTriggered={bonusNotTriggered}
+            bonusBaseInactive={bonusBaseInactive}
+            abilityCurrentValue={abilityCurrentValue}
+            suppressAnimations={suppressAnimations}
+            visualStepKind={visualStepKind}
+            visualStepIndex={visualStepIndex}
+            copyAbilityAnim={copyAbilityAnim}
+            copyBonusAnim={copyBonusAnim}
+            fieldMinFloorReduction={fieldMinFloorReduction}
+          />
+        </div>
+        {overdrivePreview && <OverdriveEffectOverlay variant={overdriveVariant} />}
       </div>
     </div>
   );

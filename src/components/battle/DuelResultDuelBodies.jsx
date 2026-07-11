@@ -455,6 +455,7 @@ export function DuelResultEnemyResultBody({
             }
             copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
             copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
+            copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
             abilityNotTriggered={display.showEnemyAbilityNotTriggered}
             bonusNotTriggered={display.showEnemyBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
@@ -643,6 +644,7 @@ export function DuelResultPlayerResultBody({
             }
             copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
             copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
+            copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
             abilityNotTriggered={display.showPlayerAbilityNotTriggered}
             bonusNotTriggered={display.showPlayerBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}

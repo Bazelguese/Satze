@@ -95,6 +95,8 @@ test('buildDuelBattleResult: shape minimo', () => {
     eCopiedAbilityNotTriggered: false,
     pBonusCopied: null,
     eBonusCopied: null,
+    pCopiedBonusNotTriggered: false,
+    eCopiedBonusNotTriggered: false,
     pAbilityNotTriggered: false,
     eAbilityNotTriggered: false,
     pBonusNotTriggered: false,

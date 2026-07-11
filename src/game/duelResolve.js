@@ -309,6 +309,8 @@ export function computeDuelResolution({
     let eCopiedAbilityNotTriggered = state.eCopiedAbilityNotTriggered;
     let pBonusCopied = state.pBonusCopied;
     let eBonusCopied = state.eBonusCopied;
+    let pCopiedBonusNotTriggered = state.pCopiedBonusNotTriggered;
+    let eCopiedBonusNotTriggered = state.eCopiedBonusNotTriggered;
     let playerToxinActivated = state.playerToxinActivated;
     let enemyToxinActivated = state.enemyToxinActivated;
 
@@ -439,6 +441,8 @@ export function computeDuelResolution({
     eCopiedAbilityNotTriggered = pb.eCopiedAbilityNotTriggered;
     pBonusCopied = pb.pBonusCopied;
     eBonusCopied = pb.eBonusCopied;
+    pCopiedBonusNotTriggered = pb.pCopiedBonusNotTriggered;
+    eCopiedBonusNotTriggered = pb.eCopiedBonusNotTriggered;
     playerToxinActivated = pb.playerToxinActivated;
     enemyToxinActivated = pb.enemyToxinActivated;
 
@@ -518,6 +522,8 @@ export function computeDuelResolution({
       eCopiedAbilityNotTriggered,
       pBonusCopied,
       eBonusCopied,
+      pCopiedBonusNotTriggered,
+      eCopiedBonusNotTriggered,
       pAbilityNotTriggered,
       eAbilityNotTriggered,
       pBonusNotTriggered,

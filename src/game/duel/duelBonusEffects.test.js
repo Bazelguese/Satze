@@ -67,7 +67,7 @@ test('copyBonus sostituisce anche con trigger nemico non attivo in pre-duello', 
   const applyEffect = (effect, value, target, source, log, opt) => {
     calls.push({ effect, value, target });
   };
-  const state = { pBonusCopied: null, eBonusCopied: null };
+  const state = { pBonusCopied: null, eBonusCopied: null, pCopiedBonusNotTriggered: false };
   const applyBonusEffects = createApplyBonusEffects({
     applyEffect,
     fieldOptions: {},
@@ -95,6 +95,7 @@ test('copyBonus sostituisce anche con trigger nemico non attivo in pre-duello', 
   );
   assert.ok(state.pBonusCopied);
   assert.equal(state.pBonusCopied.description, 'Conquista: +2 FC');
+  assert.equal(state.pCopiedBonusNotTriggered, true);
   assert.equal(calls.length, 0);
   assert.ok(log.some((line) => line.includes('Copia Bonus nemico')));
 });

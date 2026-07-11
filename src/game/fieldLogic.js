@@ -120,4 +120,4 @@ export const selectBattlefields = (
   return pickBattlefieldsByRarity(mode, allBattlefields, rng, config);
 };
 
-export { getFieldModifiers } from './battlefieldEffects.js';
+export { getFieldModifiers, fieldGrantsOverdriveBonus } from './battlefieldEffects.js';

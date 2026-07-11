@@ -71,3 +71,25 @@ export function normalizeContainCrop(objectPosition, containerLeft, containerTop
 
   return { objectPosition: op, containerLeft: undefined, containerTop: topRaw };
 }
+
+/** Estrae la % verticale da object-position stile carta (contain). */
+export function parseObjectPositionCenterY(objectPosition) {
+  const s = String(objectPosition ?? 'center center').trim();
+  const centerY = s.match(/^center\s+(-?[\d.]+)%$/i);
+  if (centerY) return parseFloat(centerY[1]);
+  const dual = s.match(/^\d+(?:\.\d+)?%\s+(-?[\d.]+)%$/);
+  if (dual) return parseFloat(dual[1]);
+  if (/^center\s+center$/i.test(s)) return 50;
+  if (/center/i.test(s)) return 50;
+  return 50;
+}
+
+/** Somma un pan verticale in % a un containerTop esistente. */
+export function addVerticalPanPercent(containerTop, addPercent) {
+  if (addPercent == null || addPercent === 0) return containerTop;
+  if (containerTop == null || containerTop === '') return `${addPercent}%`;
+  const m = String(containerTop).trim().match(/^(-?[\d.]+)%$/);
+  if (!m) return containerTop;
+  const v = Math.round((parseFloat(m[1]) + addPercent) * 100) / 100;
+  return `${v}%`;
+}

@@ -6,14 +6,26 @@ import {
 } from './duelCopyBonus.js';
 
 test('Copia Bonus: sostituisce sempre, anche se trigger nemico non attivo', () => {
-  const state = { pBonusCopied: null, eBonusCopied: null };
+  const state = { pBonusCopied: null, eBonusCopied: null, pCopiedBonusNotTriggered: false };
   const enemyBonus = {
     trigger: 'conquest',
     description: 'Conquista: +2 FC',
     effects: [{ effect: 'focusCoin', value: 2 }],
   };
-  registerCopiedBonus(state, 'player', enemyBonus);
+  registerCopiedBonus(state, 'player', enemyBonus, { context: {}, fieldOptions: {} });
   assert.deepEqual(state.pBonusCopied, enemyBonus);
+  assert.equal(state.pCopiedBonusNotTriggered, true);
+});
+
+test('Copia Bonus: trigger pre-duello attivo → copia considerata attiva', () => {
+  const state = { pBonusCopied: null, eBonusCopied: null, pCopiedBonusNotTriggered: false };
+  const enemyBonus = {
+    trigger: null,
+    description: '-5 VA nem.',
+    effects: [{ effect: 'enemyAssault', value: -5 }],
+  };
+  registerCopiedBonus(state, 'player', enemyBonus, { context: {}, fieldOptions: {} });
+  assert.equal(state.pCopiedBonusNotTriggered, false);
 });
 
 test('Copia Bonus: effetti post-duello differiti senza won nel contesto', () => {

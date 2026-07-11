@@ -4,6 +4,7 @@ WORKDIR /app
 COPY server/package.json ./
 RUN npm install --omit=dev
 COPY server/index.mjs ./
+RUN mkdir -p /app/data
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 # Railway/Render/Fly impostano PORT automaticamente

@@ -2,6 +2,15 @@
 // MULTIPLAYER — WebSocket verso server SATZE (stanze + relay)
 // ============================================
 
+import { IS_PUBLIC_PLAYTEST_BUILD } from '../config/buildProfile.js';
+
+function connectionFailureHint(serverUrl) {
+  if (IS_PUBLIC_PLAYTEST_BUILD) {
+    return ' Il server online potrebbe essere temporaneamente spento: riprova tra qualche secondo.';
+  }
+  return ' Controlla che il server sia avviato (nella cartella del progetto: npm run server) e che la porta 3847 non sia bloccata dal firewall.';
+}
+
 /**
  * @typedef {Object} ServerMessage
  * @property {string} type
@@ -15,6 +24,24 @@ export class MultiplayerManager {
     this.handlers = new Set();
     /** Chiusura volontaria (menu / nuova connessione): non mostrare "connessione persa" in multiplayer */
     this._intentionalClose = false;
+    /** @type {ReturnType<typeof setInterval> | null} */
+    this._heartbeatTimer = null;
+  }
+
+  _startHeartbeat() {
+    this._stopHeartbeat();
+    this._heartbeatTimer = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.send({ type: 'ping', t: Date.now() });
+      }
+    }, 25000);
+  }
+
+  _stopHeartbeat() {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+    }
   }
 
   /**
@@ -27,11 +54,10 @@ export class MultiplayerManager {
       const fail = (detail) => {
         if (settled) return;
         settled = true;
-        const hint =
-          ' Controlla che il server sia avviato (nella cartella del progetto: npm run server) e che la porta 3847 non sia bloccata dal firewall.';
+        this._stopHeartbeat();
         reject(
           new Error(
-            `Connessione WebSocket fallita verso ${serverUrl}.${detail ? ` (${detail})` : ''}${hint}`
+            `Connessione WebSocket fallita verso ${serverUrl}.${detail ? ` (${detail})` : ''}${connectionFailureHint(serverUrl)}`
           )
         );
       };
@@ -40,6 +66,7 @@ export class MultiplayerManager {
         this.ws.onopen = () => {
           if (settled) return;
           settled = true;
+          this._startHeartbeat();
           resolve();
         };
         this.ws.onerror = () => fail('evento error');
@@ -61,6 +88,7 @@ export class MultiplayerManager {
         this.ws.onclose = (ev) => {
           const intentional = this._intentionalClose;
           this._intentionalClose = false;
+          this._stopHeartbeat();
           if (!settled) {
             fail(ev.code ? `chiusura codice ${ev.code}` : "chiusa prima dell'apertura");
           }
@@ -82,6 +110,7 @@ export class MultiplayerManager {
    * @param {{ intentional?: boolean }} [opts] — intentional=true per chiusure da menu o prima di riconnettersi
    */
   disconnect(opts = {}) {
+    this._stopHeartbeat();
     if (this.ws) {
       if (opts.intentional) this._intentionalClose = true;
       this.ws.close();

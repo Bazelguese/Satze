@@ -14,6 +14,16 @@ import {
   DEFAULT_MIN_CLASS,
   FOOTER_MUTED_MIN_CLASS,
 } from './AbilityFormatted';
+import {
+  CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
+  CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
+  CARD_FOOTER_ROW_DIVIDER_STYLE,
+  CARD_FOOTER_ROW_SHELL_CLASS,
+  CardFooterTintLayer,
+  CardFooterBlockIconOverlay,
+  getBlockedFooterFxClasses,
+  resolveCardFooterPanelVisual,
+} from './cardFooterPanelVisual';
 
 const GAME_CARD_UI_FONT = "'Chakra Petch', 'Segoe UI', system-ui, sans-serif";
 
@@ -42,12 +52,11 @@ const P4_LEAGUE_COLORED_OUTLINE =
 /** Testo bianco nel pannello footer (abilità / bonus). */
 const P4_FOOTER_WHITE_OUTLINE = '0 0 2px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)';
 
-/**
- * Piastra footer “non attivo” — stesso formato delle evidenziazioni (gradiente orizzontale,
- * px-0, overflow, ombre), tinta ardesia invece di arancio/sky/smeraldo.
- */
-const P4_FOOTER_INACTIVE_PANEL =
-  'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-slate-950/42 via-slate-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(148,163,184,0.11)] origin-bottom transform-gpu';
+/** Alone scuro su testo verde della parte copiata. */
+const P4_FOOTER_COPY_OUTLINE =
+  '0 0 2px rgba(0,0,0,0.92), 0 1px 3px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.65)';
+
+const COPY_TEXT_GREEN = '#86efac';
 
 /** Barra nome armata (layout senza fascia HUD). */
 const ARMY_BADGE_H = 24;
@@ -305,9 +314,6 @@ function useIncrementalStatAnimation(value, active, baseValue = null) {
 
   return state;
 }
-
-const COPY_PANEL_IDLE =
-  'rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-emerald-950/40 via-emerald-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(52,211,153,0.09)] origin-bottom transform-gpu';
 
 function isDuelStatModified(showOperators, baseValue, value) {
   return Boolean(showOperators && baseValue != null && value !== baseValue);
@@ -668,6 +674,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   copiedAbility = null,
   copiedBonus = null,
   copiedAbilityNotTriggered = false,
+  copiedBonusNotTriggered = false,
   abilityNotTriggered = false,
   bonusNotTriggered = false,
   bonusBaseInactive = false,
@@ -717,10 +724,51 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   const abilityCopyAnim = copyAbilityAnim && Boolean(copiedAbility);
   const bonusCopyAnim = copyBonusAnim && Boolean(copiedBonus);
   const copiedAbilityInactive = Boolean(copiedAbility && copiedAbilityNotTriggered);
+  const copiedBonusInactive = Boolean(copiedBonus && copiedBonusNotTriggered);
+  const abilityCopyText = Boolean(copiedAbility);
+  const bonusCopyText = Boolean(copiedBonus);
   const abilityFooterInactive =
     (abilityNotTriggered && !copiedAbility) || copiedAbilityInactive;
+  const bonusFooterInactive =
+    (bonusNotTriggered && !copiedBonus) || bonusBaseInactive || copiedBonusInactive;
   const abilityFooterHighlight =
     highlightAbility && !abilityBlocked && !abilityFooterInactive;
+  const bonusFooterHighlight =
+    highlightBonus && !bonusBlocked && !bonusFooterInactive;
+  const duelFooterPanelFx =
+    highlightAbility ||
+    highlightBonus ||
+    abilityBlocked ||
+    bonusBlocked ||
+    abilityNotTriggered ||
+    bonusNotTriggered ||
+    copiedAbilityInactive ||
+    copiedBonusInactive;
+  const abilityPanelInactive =
+    (abilityNotTriggered && !copiedAbility) || copiedAbilityInactive;
+  const bonusPanelInactive =
+    (bonusNotTriggered && !copiedBonus) || copiedBonusInactive;
+  const abilityPanelVisual = resolveCardFooterPanelVisual({
+    blocked: duelFooterPanelFx && abilityBlocked,
+    inactive: duelFooterPanelFx && abilityPanelInactive,
+    highlight: abilityFooterHighlight,
+    highlightTint: CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
+    suppressAnimations,
+  });
+  const bonusPanelVisual = resolveCardFooterPanelVisual({
+    blocked: duelFooterPanelFx && bonusBlocked,
+    inactive: duelFooterPanelFx && bonusPanelInactive,
+    highlight: bonusFooterHighlight,
+    highlightTint: CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
+    stagger: true,
+    suppressAnimations,
+  });
+  const abilityBlockedFx = abilityBlocked
+    ? getBlockedFooterFxClasses(suppressAnimations, false, 'ability')
+    : null;
+  const bonusBlockedFx = bonusBlocked
+    ? getBlockedFooterFxClasses(suppressAnimations, true, 'bonus')
+    : null;
   const abilityCopyPanelKey =
     abilityCopyAnim && !suppressAnimations
       ? `ability-copy-${visualStepKind}-${visualStepIndex}`
@@ -864,7 +912,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
           zIndex: 2,
           background: CARD_FOOTER_PANEL_BG,
           backdropFilter: 'blur(4px)',
-          padding: '8px 10px 8px',
+          padding: '6px 10px 6px',
           fontFamily: GAME_CARD_UI_FONT,
           borderTop: `1px solid ${CARD_FOOTER_DIVIDER}`,
           boxShadow: `inset 0 1px 0 ${accent}28`,
@@ -913,84 +961,85 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
         )}
         <div
           key={abilityCopyPanelKey}
-          className={`relative mb-0 transition-[opacity,background-color,box-shadow] duration-500 ${
-            abilityBlocked ? 'opacity-60' : ''
-          } ${
-            copiedAbility && abilityCopyAnim
-              ? `${COPY_PANEL_IDLE} ${!suppressAnimations ? 'animate-modifier-copy-panel' : ''}`
-              : abilityBlocked
-                ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
-                : abilityFooterInactive
-                  ? P4_FOOTER_INACTIVE_PANEL
-                  : abilityFooterHighlight
-                    ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-orange-950/40 via-orange-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(251,146,60,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel'}`
-                    : copiedAbility
-                      ? COPY_PANEL_IDLE
-                      : 'rounded px-1.5 py-1'
-          }`}
+          className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2.5 px-2.5 ${abilityPanelVisual.shellPadding}`}
         >
-          <div className="flex justify-between items-baseline gap-2">
+          <CardFooterTintLayer
+            state={abilityPanelVisual.state}
+            tintClass={abilityPanelVisual.tintClass}
+            animClass={abilityPanelVisual.animClass}
+            blockedPanel={abilityPanelVisual.blockedPanel}
+          />
+          <div
+            className={`relative z-[1] flex justify-between items-baseline gap-2 min-h-[1.375rem] ${
+              abilityBlocked ? abilityBlockedFx?.dim ?? 'opacity-60' : ''
+            }`}
+          >
             <span
-              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 flex-shrink-0 ${
-                copiedAbility && abilityCopyAnim
-                  ? 'text-green-300'
-                  : abilityBlocked
-                    ? 'text-red-400'
-                    : abilityFooterInactive
-                      ? 'text-slate-500'
-                      : abilityFooterHighlight
-                        ? 'text-orange-300'
-                        : copiedAbility
-                          ? 'text-green-300'
-                          : ''
+              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${
+                abilityBlocked
+                  ? abilityBlockedFx?.label ?? 'text-red-400'
+                  : abilityFooterInactive
+                    ? 'text-slate-500'
+                    : abilityFooterHighlight
+                      ? 'text-orange-300'
+                      : ''
               }`}
               style={{
                 letterSpacing: '0.1em',
                 color:
-                  copiedAbility || abilityBlocked || abilityFooterInactive || abilityFooterHighlight
-                    ? undefined
-                    : CARD_ABILITY_LABEL,
+                  abilityBlocked
+                    ? abilityBlockedFx
+                      ? CARD_ABILITY_LABEL
+                      : undefined
+                    : abilityFooterInactive || abilityFooterHighlight
+                      ? undefined
+                      : CARD_ABILITY_LABEL,
                 display: 'inline-flex',
                 alignItems: 'baseline',
                 gap: 3,
               }}
             >
-              {copiedAbility && abilityCopyAnim && <Icon name="copy" type="cardIcon" size={10} color="#86efac" />}
-              {!copiedAbility && (
-                <span
-                  className="inline-flex shrink-0 items-center justify-center"
-                  style={{ width: 12, height: 12, fontSize: 11, lineHeight: 1 }}
-                  aria-hidden
-                >
-                  ★
-                </span>
+              {copiedAbility && abilityCopyAnim && (
+                <Icon name="copy" type="cardIcon" size={10} color={COPY_TEXT_GREEN} />
               )}
+              <span
+                className="inline-flex shrink-0 items-center justify-center"
+                style={{ width: 12, height: 12, fontSize: 11, lineHeight: 1 }}
+                aria-hidden
+              >
+                ★
+              </span>
               <span className="whitespace-nowrap" style={{ fontSize: 8, letterSpacing: '0.06em' }}>
                 POTERE
               </span>
             </span>
             <span
-              className={`text-[11px] font-semibold text-right leading-snug ${
-                copiedAbility && abilityCopyAnim
-                  ? 'text-green-200'
-                  : abilityBlocked
-                    ? 'text-red-300 line-through'
+              className={`min-w-0 flex-1 text-[11px] font-semibold text-right leading-snug ${
+                abilityBlocked
+                  ? abilityBlockedFx?.text ?? 'text-red-300 line-through'
+                  : abilityCopyText
+                    ? 'text-green-200'
                     : abilityFooterInactive
                       ? 'text-slate-500'
                       : abilityFooterHighlight
                         ? 'text-orange-200'
-                        : copiedAbility
-                          ? 'text-green-200'
-                          : 'text-white'
+                        : 'text-white'
               }`}
               style={{
-                textShadow: abilityFooterInactive ? undefined : P4_FOOTER_WHITE_OUTLINE,
+                textShadow:
+                  abilityBlocked || !abilityCopyText
+                    ? abilityFooterInactive && !abilityBlocked
+                      ? undefined
+                      : P4_FOOTER_WHITE_OUTLINE
+                    : P4_FOOTER_COPY_OUTLINE,
               }}
             >
               <AbilityFormatted
                 ability={copiedAbility || agent.ability}
                 minClassName={
-                  abilityFooterInactive ? FOOTER_MUTED_MIN_CLASS : DEFAULT_MIN_CLASS
+                  abilityCopyText || (!abilityFooterInactive && !abilityBlocked)
+                    ? DEFAULT_MIN_CLASS
+                    : FOOTER_MUTED_MIN_CLASS
                 }
                 options={
                   copiedAbility
@@ -1003,51 +1052,51 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
             </span>
           </div>
           {abilityBlocked && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Icon name="block" type="cardIcon" size={24} color="#ef4444" className="opacity-30" style={{ transform: 'rotate(-15deg)' }} />
-            </div>
+            <CardFooterBlockIconOverlay
+              animClass={abilityBlockedFx?.icon ?? abilityPanelVisual.animClass}
+              suppressAnimations={suppressAnimations}
+            />
           )}
         </div>
-        <div style={{ height: 1, background: CARD_FOOTER_DIVIDER, margin: '5px 0' }} />
+        <div
+          className="-mx-2.5"
+          style={{ height: 1, background: CARD_FOOTER_DIVIDER, ...CARD_FOOTER_ROW_DIVIDER_STYLE }}
+        />
         <div
           key={bonusCopyPanelKey}
-          className={`relative transition-[opacity,background-color,box-shadow] duration-500 border-t border-transparent ${
-            copiedBonus && bonusCopyAnim
-              ? `${COPY_PANEL_IDLE} ${!suppressAnimations ? 'animate-modifier-copy-panel-stagger' : ''}`
-              : bonusBlocked
-                ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-red-950/42 via-red-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.11),0_8px_20px_-12px_rgba(0,0,0,0.14),0_0_22px_-8px_rgba(248,113,113,0.1)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
-                : bonusNotTriggered || bonusBaseInactive
-                  ? P4_FOOTER_INACTIVE_PANEL
-                  : highlightBonus
-                    ? `rounded px-0 py-1 overflow-hidden bg-gradient-to-r from-sky-950/40 via-sky-900/12 to-transparent shadow-[inset_0_-12px_20px_-10px_rgba(0,0,0,0.1),0_8px_20px_-12px_rgba(0,0,0,0.12),0_0_22px_-8px_rgba(56,189,248,0.09)] origin-bottom transform-gpu ${suppressAnimations ? '' : 'animate-modifier-highlight-panel-stagger'}`
-                    : copiedBonus
-                      ? COPY_PANEL_IDLE
-                      : showBonus && !bonusBlocked
-                        ? 'rounded px-1.5 py-1 bg-sky-500/8'
-                        : 'rounded px-1.5 py-1'
-          } ${bonusBlocked ? 'opacity-60' : ''}`}
+          className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2.5 px-2.5 ${bonusPanelVisual.shellPadding}`}
         >
-          <div className="flex justify-between items-baseline gap-2">
+          <CardFooterTintLayer
+            state={bonusPanelVisual.state}
+            tintClass={bonusPanelVisual.tintClass}
+            animClass={bonusPanelVisual.animClass}
+            blockedPanel={bonusPanelVisual.blockedPanel}
+          />
+          <div
+            className={`relative z-[1] flex justify-between items-baseline gap-2 min-h-[1.375rem] ${
+              bonusBlocked ? bonusBlockedFx?.dim ?? 'opacity-60' : ''
+            }`}
+          >
             <span
-              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 flex-shrink-0 ${
-                copiedBonus && bonusCopyAnim
-                  ? 'text-green-300'
-                  : bonusBlocked
-                    ? 'text-red-400'
-                    : bonusNotTriggered || bonusBaseInactive
-                      ? 'text-slate-500'
-                      : highlightBonus
-                        ? 'text-sky-300'
-                        : copiedBonus
-                          ? 'text-green-300'
-                          : ''
+              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${
+                bonusBlocked
+                  ? bonusBlockedFx?.label ?? 'text-red-400'
+                  : bonusFooterInactive
+                    ? 'text-slate-500'
+                    : bonusFooterHighlight
+                      ? 'text-sky-300'
+                      : ''
               }`}
               style={{
                 letterSpacing: '0.1em',
                 color:
-                  copiedBonus || bonusBlocked || bonusNotTriggered || bonusBaseInactive || highlightBonus
-                    ? undefined
-                    : CARD_BONUS_LABEL,
+                  bonusBlocked
+                    ? bonusBlockedFx
+                      ? CARD_BONUS_LABEL
+                      : undefined
+                    : bonusFooterInactive || bonusFooterHighlight
+                      ? undefined
+                      : CARD_BONUS_LABEL,
                 display: 'inline-flex',
                 alignItems: 'baseline',
                 gap: 3,
@@ -1065,33 +1114,33 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
               </span>
             </span>
             <span
-              className={`text-[11px] font-semibold text-right leading-snug ${
-                copiedBonus && bonusCopyAnim
-                  ? 'text-green-200'
-                  : bonusBlocked
-                    ? 'text-red-300 line-through'
-                    : bonusNotTriggered || bonusBaseInactive
+              className={`min-w-0 flex-1 text-[11px] font-semibold text-right leading-snug ${
+                bonusBlocked
+                  ? bonusBlockedFx?.text ?? 'text-red-300 line-through'
+                  : bonusCopyText
+                    ? 'text-green-200'
+                    : bonusFooterInactive
                       ? 'text-slate-500'
-                      : highlightBonus
+                      : bonusFooterHighlight
                         ? 'text-sky-200'
-                        : copiedBonus
-                          ? 'text-green-200'
-                          : 'text-white'
+                        : 'text-white'
               }`}
               style={{
                 textShadow:
-                  bonusNotTriggered || bonusBaseInactive ? undefined : P4_FOOTER_WHITE_OUTLINE,
+                  bonusBlocked || !bonusCopyText
+                    ? bonusFooterInactive && !bonusBlocked
+                      ? undefined
+                      : P4_FOOTER_WHITE_OUTLINE
+                    : P4_FOOTER_COPY_OUTLINE,
               }}
             >
               {copiedBonus || !(bonusBaseInactive && armyBonus) ? (
                 <BonusFormattedFromString
                   text={copiedBonus ? copiedBonus.description : armyBonus?.description || '—'}
                   minClassName={
-                    copiedBonus && bonusCopyAnim
+                    bonusCopyText || (!bonusFooterInactive && !bonusBlocked)
                       ? DEFAULT_MIN_CLASS
-                      : bonusNotTriggered || bonusBaseInactive
-                        ? FOOTER_MUTED_MIN_CLASS
-                        : DEFAULT_MIN_CLASS
+                      : FOOTER_MUTED_MIN_CLASS
                   }
                 />
               ) : (
@@ -1100,9 +1149,10 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
             </span>
           </div>
           {bonusBlocked && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Icon name="block" type="cardIcon" size={24} color="#ef4444" className="opacity-30" style={{ transform: 'rotate(-15deg)' }} />
-            </div>
+            <CardFooterBlockIconOverlay
+              animClass={bonusBlockedFx?.icon ?? bonusPanelVisual.animClass}
+              suppressAnimations={suppressAnimations}
+            />
           )}
         </div>
       </div>

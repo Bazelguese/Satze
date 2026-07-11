@@ -9,6 +9,20 @@
   box-sizing: border-box;
 }
 
+/* Build playtest: niente selezione testo/UI trascinando il cursore */
+body.satze-public-build,
+body.satze-public-build * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body.satze-public-build input,
+body.satze-public-build textarea,
+body.satze-public-build [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -445,6 +459,118 @@ button:disabled {
     modifierHighlightAppear 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both,
     modifierHighlightShine 2.2s ease-in-out 0.72s infinite both;
 }
+
+/* Entrata tinta pannello footer: sweep da destra → sinistra (layer sfondo) */
+@keyframes modifierFooterPanelTintSweep {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-modifier-footer-panel-tint-in {
+  animation: modifierFooterPanelTintSweep 0.92s cubic-bezier(0.22, 1, 0.32, 1) both;
+}
+
+.animate-modifier-footer-panel-tint-in-stagger {
+  animation: modifierFooterPanelTintSweep 0.92s cubic-bezier(0.22, 1, 0.32, 1) 0.18s both;
+}
+
+/* Pannello vittima blocco: drop dall’alto, dopo lo sweep del pannello causa (blocker) */
+@keyframes modifierFooterPanelBlockedDrop {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Footer panel: effetti blocco vittima dopo pausa 0.5s (non dopo fine sweep causa) */
+.animate-modifier-footer-panel-blocked-in {
+  transform-origin: top center;
+  animation: modifierFooterPanelBlockedDrop 0.92s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+
+.animate-modifier-footer-panel-blocked-in-stagger {
+  transform-origin: top center;
+  animation: modifierFooterPanelBlockedDrop 0.92s cubic-bezier(0.22, 1, 0.36, 1) 0.68s both;
+}
+
+/* Effetti blocco su testo/etichetta già visibili (delay = pausa 0.5s) */
+@keyframes modifierFooterBlockedLabelFx {
+  from {
+    color: rgb(251 146 60);
+  }
+  to {
+    color: rgb(248 113 113);
+  }
+}
+
+@keyframes modifierFooterBlockedBonusLabelFx {
+  from {
+    color: rgb(56 189 248);
+  }
+  to {
+    color: rgb(248 113 113);
+  }
+}
+
+@keyframes modifierFooterBlockedTextFx {
+  from {
+    color: rgb(255 255 255);
+    text-decoration-line: none;
+  }
+  to {
+    color: rgb(252 165 165);
+    text-decoration-line: line-through;
+  }
+}
+
+@keyframes modifierFooterBlockedDimFx {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+.animate-modifier-footer-blocked-label-fx {
+  animation: modifierFooterBlockedLabelFx 0.55s ease-out 0.5s both;
+}
+
+.animate-modifier-footer-blocked-label-fx-stagger {
+  animation: modifierFooterBlockedLabelFx 0.55s ease-out 0.68s both;
+}
+
+.animate-modifier-footer-blocked-bonus-label-fx {
+  animation: modifierFooterBlockedBonusLabelFx 0.55s ease-out 0.5s both;
+}
+
+.animate-modifier-footer-blocked-bonus-label-fx-stagger {
+  animation: modifierFooterBlockedBonusLabelFx 0.55s ease-out 0.68s both;
+}
+
+.animate-modifier-footer-blocked-text-fx {
+  animation: modifierFooterBlockedTextFx 0.55s ease-out 0.5s both;
+}
+
+.animate-modifier-footer-blocked-text-fx-stagger {
+  animation: modifierFooterBlockedTextFx 0.55s ease-out 0.68s both;
+}
+
+.animate-modifier-footer-blocked-dim-fx {
+  animation: modifierFooterBlockedDimFx 0.55s ease-out 0.5s both;
+}
+
+.animate-modifier-footer-blocked-dim-fx-stagger {
+  animation: modifierFooterBlockedDimFx 0.55s ease-out 0.68s both;
+}
+
+/* highlight usa lo stesso sweep una tantum (niente pulse infinito sul footer) */
 
 /* Copia potere/bonus: “trasformazione” leggibile (snap + bagliore smeraldo) */
 @keyframes modifierCopyPanelReveal {
@@ -1039,6 +1165,688 @@ button:disabled {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
+/* ═══ Anteprima Overdrive — carta sul campo durante scelta FC ═══ */
+.satze-field-overdrive-card {
+  z-index: 1;
+}
+
+.satze-card-overdrive-preview {
+  border: 2px solid color-mix(in srgb, var(--od-accent, #ef4444) 62%, transparent);
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--od-accent, #ef4444) 42%, transparent),
+    0 0 36px color-mix(in srgb, var(--od-secondary, #fb923c) 22%, transparent),
+    inset 0 0 24px color-mix(in srgb, var(--od-tertiary, #fbbf24) 10%, transparent);
+}
+
+.satze-field-overdrive-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  border-radius: inherit;
+  pointer-events: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.satze-field-overdrive-fx__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 90% 55% at 50% 108%,
+      color-mix(in srgb, var(--od-accent, #ef4444) 34%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 70% 40% at 28% 102%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 18%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 70% 40% at 72% 102%,
+      color-mix(in srgb, var(--od-tertiary, #fbbf24) 16%, transparent) 0%,
+      transparent 70%
+    ),
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--od-accent, #ef4444) 22%, #000) 0%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 8%, transparent) 42%,
+      transparent 78%
+    );
+}
+
+.satze-field-overdrive-fx__stream-track {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: 0;
+  height: 200%;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  animation: satzeOverdriveStreamRise 3.6s linear infinite;
+}
+
+.satze-field-overdrive-fx__stream-track--b {
+  opacity: 0.72;
+  animation-delay: -1.8s;
+}
+
+.satze-field-overdrive-fx__stream-segment {
+  flex: 0 0 50%;
+  height: 50%;
+  filter: blur(9px);
+  mix-blend-mode: screen;
+}
+
+.satze-field-overdrive-fx__stream-segment--a {
+  background:
+    radial-gradient(
+      ellipse 16% 34% at 24% 82%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 52%, white) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 22% 42% at 50% 88%,
+      color-mix(in srgb, var(--od-accent, #ef4444) 58%, transparent) 0%,
+      transparent 74%
+    ),
+    radial-gradient(
+      ellipse 14% 30% at 74% 80%,
+      color-mix(in srgb, var(--od-tertiary, #fbbf24) 44%, white) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 10% 22% at 36% 62%,
+      color-mix(in srgb, var(--od-accent, #ef4444) 22%, white) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 9% 18% at 63% 58%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 18%, transparent) 0%,
+      transparent 70%
+    );
+}
+
+.satze-field-overdrive-fx__stream-segment--b {
+  background:
+    radial-gradient(
+      ellipse 12% 26% at 18% 76%,
+      color-mix(in srgb, var(--od-tertiary, #fbbf24) 36%, white) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 18% 36% at 58% 84%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 42%, transparent) 0%,
+      transparent 74%
+    ),
+    radial-gradient(
+      ellipse 11% 20% at 82% 72%,
+      color-mix(in srgb, var(--od-accent, #ef4444) 30%, white) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 8% 16% at 42% 64%,
+      color-mix(in srgb, var(--od-tertiary, #fbbf24) 18%, white) 0%,
+      transparent 70%
+    );
+}
+
+.satze-field-overdrive-fx__ember {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--od-accent, #ef4444) 35%, white) 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 55%, transparent) 38%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 15%, transparent) 62%,
+    transparent 78%
+  );
+  filter: blur(0.5px);
+  mix-blend-mode: screen;
+  animation: satzeOverdriveEmberRise 3.6s linear infinite;
+}
+
+.satze-field-overdrive-fx__ember--1 {
+  left: 18%;
+  width: 7px;
+  height: 7px;
+  animation-delay: 0s;
+}
+
+.satze-field-overdrive-fx__ember--2 {
+  left: 31%;
+  width: 5px;
+  height: 5px;
+  animation-delay: -0.45s;
+}
+
+.satze-field-overdrive-fx__ember--3 {
+  left: 44%;
+  width: 8px;
+  height: 8px;
+  animation-delay: -0.9s;
+}
+
+.satze-field-overdrive-fx__ember--4 {
+  left: 56%;
+  width: 4px;
+  height: 4px;
+  animation-delay: -1.35s;
+}
+
+.satze-field-overdrive-fx__ember--5 {
+  left: 67%;
+  width: 6px;
+  height: 6px;
+  animation-delay: -1.8s;
+}
+
+.satze-field-overdrive-fx__ember--6 {
+  left: 76%;
+  width: 5px;
+  height: 5px;
+  animation-delay: -2.25s;
+}
+
+.satze-field-overdrive-fx__ember--7 {
+  left: 26%;
+  width: 4px;
+  height: 4px;
+  animation-delay: -2.7s;
+}
+
+.satze-field-overdrive-fx__ember--8 {
+  left: 61%;
+  width: 6px;
+  height: 6px;
+  animation-delay: -3.15s;
+}
+
+@keyframes satzeOverdriveStreamRise {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+
+@keyframes satzeOverdriveEmberRise {
+  0%, 100% {
+    transform: translate3d(0, 10%, 0) scale(0.5);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+    transform: translate3d(0, 4%, 0) scale(0.7);
+  }
+  92% {
+    transform: translate3d(0, -108%, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
+.satze-hand-outcome-label-overdrive {
+  color: color-mix(in srgb, var(--od-accent, #ef4444) 28%, white);
+  font-size: 1.05rem;
+  -webkit-text-stroke: 0.6px color-mix(in srgb, var(--od-secondary, #fb923c) 70%, #000);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--od-accent, #ef4444) 95%, transparent),
+    0 0 28px color-mix(in srgb, var(--od-tertiary, #fbbf24) 55%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  filter: brightness(1.12);
+}
+
+/* ── Variante: Aurora Ring ── */
+.satze-od-aurora__wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% 100%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 20%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.satze-od-aurora__ring {
+  position: absolute;
+  left: 50%;
+  bottom: -42%;
+  width: 118%;
+  height: 118%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--od-accent, #ef4444) 55%, transparent),
+    color-mix(in srgb, var(--od-secondary, #fb923c) 45%, transparent),
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 50%, transparent),
+    color-mix(in srgb, var(--od-accent, #ef4444) 55%, transparent)
+  );
+  filter: blur(10px);
+  mix-blend-mode: screen;
+  animation: satzeOdAuroraSpin 4.8s linear infinite;
+  opacity: 0.78;
+}
+
+.satze-od-aurora__core {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 80% 100% at 50% 100%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 28%, transparent) 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 14%, transparent) 45%,
+    transparent 78%
+  );
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  animation: satzeOdAuroraBreathe 2.8s ease-in-out infinite;
+}
+
+@keyframes satzeOdAuroraSpin {
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+@keyframes satzeOdAuroraBreathe {
+  0%, 100% { opacity: 0.55; transform: scaleY(0.92); }
+  50% { opacity: 0.9; transform: scaleY(1.05); }
+}
+
+/* ── Variante: Veil Columns ── */
+.satze-od-columns__track {
+  position: absolute;
+  top: 0;
+  width: 16%;
+  height: 200%;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  animation: satzeOverdriveStreamRise 1s linear infinite;
+}
+
+.satze-od-columns__track--a {
+  left: 12%;
+}
+
+.satze-od-columns__track--b {
+  left: 42%;
+}
+
+.satze-od-columns__track--c {
+  left: 72%;
+}
+
+.satze-od-columns__segment {
+  flex: 0 0 50%;
+  height: 50%;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 8%, transparent) 18%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 42%, transparent) 42%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 28%, transparent) 58%,
+    transparent 82%
+  );
+  filter: blur(5px);
+  mix-blend-mode: screen;
+}
+
+.satze-od-columns__segment--b {
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 10%, transparent) 20%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 48%, transparent) 46%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 22%, transparent) 62%,
+    transparent 84%
+  );
+}
+
+.satze-od-columns__segment--c {
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 12%, transparent) 22%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 38%, transparent) 48%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 24%, transparent) 64%,
+    transparent 86%
+  );
+}
+
+/* Wash potenziato per varianti Veil piene */
+.satze-od-columns__wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.satze-od-columns__wash--full {
+  background:
+    radial-gradient(ellipse 95% 58% at 50% 108%, color-mix(in srgb, var(--od-accent, #ef4444) 42%, transparent) 0%, transparent 74%),
+    radial-gradient(ellipse 55% 42% at 22% 104%, color-mix(in srgb, var(--od-secondary, #fb923c) 28%, transparent) 0%, transparent 72%),
+    radial-gradient(ellipse 55% 42% at 78% 104%, color-mix(in srgb, var(--od-tertiary, #fbbf24) 26%, transparent) 0%, transparent 72%),
+    linear-gradient(0deg, color-mix(in srgb, var(--od-accent, #ef4444) 30%, #000) 0%, color-mix(in srgb, var(--od-secondary, #fb923c) 14%, transparent) 48%, transparent 82%);
+}
+
+.satze-od-columns__wash--dense {
+  background:
+    radial-gradient(ellipse 100% 62% at 50% 110%, color-mix(in srgb, var(--od-accent, #ef4444) 48%, transparent) 0%, transparent 76%),
+    linear-gradient(0deg, color-mix(in srgb, var(--od-accent, #ef4444) 36%, #000) 0%, color-mix(in srgb, var(--od-tertiary, #fbbf24) 18%, transparent) 55%, transparent 88%);
+  opacity: 0.92;
+}
+
+.satze-od-columns__wash--flood {
+  background:
+    radial-gradient(ellipse 110% 68% at 50% 112%, color-mix(in srgb, var(--od-accent, #ef4444) 52%, transparent) 0%, transparent 78%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, color-mix(in srgb, var(--od-secondary, #fb923c) 32%, transparent) 0%, transparent 70%),
+    linear-gradient(0deg, color-mix(in srgb, var(--od-accent, #ef4444) 38%, #000) 0%, color-mix(in srgb, var(--od-secondary, #fb923c) 22%, transparent) 62%, transparent 90%);
+}
+
+/* Posizioni colonne extra */
+.satze-od-columns__track--d { left: 58%; }
+.satze-od-columns__track--e { left: 76%; }
+.satze-od-columns__track--f { left: 58%; }
+.satze-od-columns__track--g { left: 72%; }
+
+/* Nuclei luminosi (varianti piene) */
+.satze-od-columns__core {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 200%;
+  border-radius: 999px;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 75%, white) 35%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 55%, white) 55%,
+    transparent 88%
+  );
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  animation: satzeOverdriveStreamRise 1s linear infinite;
+  opacity: 0.85;
+}
+
+.satze-od-columns__core--a { left: 19%; }
+.satze-od-columns__core--b { left: 35%; }
+.satze-od-columns__core--c { left: 51%; }
+.satze-od-columns__core--d { left: 67%; }
+.satze-od-columns__core--e { left: 83%; }
+.satze-od-columns__core--f { left: 51%; }
+.satze-od-columns__core--g { left: 65%; }
+
+/* ── Veil Full: 5 colonne larghe ── */
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track {
+  width: 20%;
+  animation-duration: 1s;
+}
+
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track--a { left: 4%; }
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track--b { left: 22%; }
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track--c { left: 40%; }
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track--d { left: 58%; }
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__track--e { left: 76%; }
+
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__segment {
+  filter: blur(6px);
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-accent, #ef4444) 18%, transparent) 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 58%, transparent) 32%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 42%, transparent) 52%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 22%, transparent) 72%,
+    transparent 94%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__segment--b {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 20%, transparent) 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 62%, transparent) 34%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 38%, transparent) 54%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 20%, transparent) 74%,
+    transparent 95%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__segment--c {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 16%, transparent) 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 55%, transparent) 36%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 48%, transparent) 56%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 18%, transparent) 76%,
+    transparent 96%
+  );
+}
+
+/* ── Veil Dense: 7 colonne fitte ── */
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track {
+  width: 15%;
+  animation-duration: 0.85s;
+  filter: saturate(1.15);
+}
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--a { left: 0%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--b { left: 14%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--c { left: 28%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--d { left: 42%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--e { left: 56%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--f { left: 70%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__track--g { left: 84%; }
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__segment {
+  filter: blur(4px);
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-accent, #ef4444) 28%, transparent) 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 68%, transparent) 28%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 52%, transparent) 48%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 32%, transparent) 68%,
+    transparent 92%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__segment--b {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 26%, transparent) 0%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 64%, transparent) 30%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 58%, transparent) 50%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 28%, transparent) 70%,
+    transparent 93%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__segment--c {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 24%, transparent) 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 66%, transparent) 32%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 54%, transparent) 52%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 26%, transparent) 72%,
+    transparent 94%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-full .satze-od-columns__core {
+  animation-duration: 1s;
+}
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core {
+  width: 2px;
+  opacity: 0.95;
+  animation-duration: 0.85s;
+}
+
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--a { left: 6.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--b { left: 20.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--c { left: 34.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--d { left: 48.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--e { left: 62.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--f { left: 76.5%; }
+.satze-field-overdrive-fx--veil-columns-dense .satze-od-columns__core--g { left: 90.5%; }
+
+/* ── Veil Flood: 4 colonne molto larghe ── */
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__track {
+  width: 30%;
+  animation-duration: 1.1s;
+}
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__track--a { left: -4%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__track--b { left: 20%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__track--c { left: 44%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__track--d { left: 68%; }
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__segment {
+  filter: blur(8px);
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-accent, #ef4444) 42%, transparent) 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 72%, transparent) 22%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 58%, transparent) 42%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 38%, transparent) 62%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 16%, transparent) 82%,
+    transparent 98%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__segment--b {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 40%, transparent) 0%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 70%, transparent) 24%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 64%, transparent) 44%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 36%, transparent) 64%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 14%, transparent) 84%,
+    transparent 99%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__segment--c {
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 38%, transparent) 0%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 68%, transparent) 26%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 62%, transparent) 46%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 34%, transparent) 66%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 12%, transparent) 86%,
+    transparent 99%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__core {
+  width: 5px;
+  filter: blur(2px);
+  opacity: 0.92;
+  animation-duration: 1.1s;
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--od-accent, #ef4444) 85%, white) 0%,
+    color-mix(in srgb, var(--od-secondary, #fb923c) 70%, white) 40%,
+    color-mix(in srgb, var(--od-tertiary, #fbbf24) 50%, white) 60%,
+    transparent 92%
+  );
+}
+
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__core--a { left: 9%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__core--b { left: 33%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__core--c { left: 57%; }
+.satze-field-overdrive-fx--veil-columns-flood .satze-od-columns__core--d { left: 81%; }
+
+/* ── Variante: Ember Field ── */
+.satze-od-ember-field__wash {
+  opacity: 0.72;
+}
+
+.satze-od-ember-field__spark--9 { left: 48%; width: 3px; height: 3px; animation-delay: -3.6s; }
+.satze-od-ember-field__spark--10 { left: 84%; width: 5px; height: 5px; animation-delay: -1.05s; }
+
+/* ── Variante: Prism Halo (cornice) ── */
+.satze-card-overdrive-preview--prism-halo {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#0a0a0e, #0a0a0e) padding-box,
+    linear-gradient(
+      120deg,
+      var(--od-accent, #ef4444),
+      var(--od-secondary, #fb923c),
+      var(--od-tertiary, #fbbf24),
+      var(--od-accent, #ef4444)
+    ) border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: satzeOdPrismBorder 4s linear infinite;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--od-accent, #ef4444) 35%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--od-secondary, #fb923c) 8%, transparent);
+}
+
+.satze-od-prism__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 45% at 50% 100%,
+    color-mix(in srgb, var(--od-accent, #ef4444) 12%, transparent) 0%,
+    transparent 72%
+  );
+  animation: satzeOdPrismBreathe 3s ease-in-out infinite;
+}
+
+@keyframes satzeOdPrismBorder {
+  0% { background-position: 0 0, 0% 50%; }
+  100% { background-position: 0 0, 200% 50%; }
+}
+
+@keyframes satzeOdPrismBreathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+
+/* ── Variante: Surge Bloom ── */
+.satze-od-surge__wash {
+  opacity: 0.55;
+}
+
+.satze-od-surge__track {
+  position: absolute;
+  left: -15%;
+  right: -15%;
+  top: 0;
+  height: 200%;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  animation: satzeOverdriveStreamRise 3.8s linear infinite;
+}
+
+.satze-od-surge__bloom {
+  flex: 0 0 50%;
+  height: 50%;
+  background:
+    radial-gradient(
+      ellipse 55% 48% at 50% 88%,
+      color-mix(in srgb, var(--od-accent, #ef4444) 62%, white) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 38% 32% at 34% 78%,
+      color-mix(in srgb, var(--od-secondary, #fb923c) 38%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 36% 30% at 68% 80%,
+      color-mix(in srgb, var(--od-tertiary, #fbbf24) 34%, transparent) 0%,
+      transparent 70%
+    );
+  filter: blur(11px);
+  mix-blend-mode: screen;
+}
+
 .satze-glow-aurora {
   animation: satzeGlowAurora 3s ease-in-out infinite;
 }
@@ -1216,6 +2024,216 @@ button:disabled {
 
 .animate-fade-out-panels-right {
   animation: fadeOutPanelsRight 0.9s ease-in-out forwards;
+}
+
+/* ---------- StatsPanel — barra HUD tattica orizzontale ---------- */
+
+.satze-stats-panel {
+  position: absolute;
+  width: fit-content;
+  min-width: 188px;
+  max-width: 360px;
+  overflow: visible;
+}
+
+.satze-stats-panel--has-toxin {
+  min-width: 248px;
+  max-width: 400px;
+}
+
+.satze-stats-panel--shell {
+  background: rgba(10, 10, 10, 0.82);
+  border: 1px solid var(--stats-army-border, rgba(200, 200, 200, 0.22));
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.45),
+    0 0 18px var(--stats-army-glow, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Angoli a L — colore esercito */
+.satze-stats-bracket {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+  z-index: 2;
+  border-color: var(--stats-army-accent, rgba(224, 224, 224, 0.55));
+}
+
+.satze-stats-bracket--tl {
+  top: 3px;
+  left: 3px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.satze-stats-bracket--tr {
+  top: 3px;
+  right: 3px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+.satze-stats-bracket--bl {
+  bottom: 3px;
+  left: 3px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+.satze-stats-bracket--br {
+  bottom: 3px;
+  right: 3px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+.satze-stats-panel__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 18px;
+  min-height: 48px;
+}
+
+.satze-stats-panel__name {
+  flex: 0 1 auto;
+  min-width: 2.5ch;
+  max-width: 14ch;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stats-army-accent, #e0e0e0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 4px;
+}
+
+.satze-stats-panel__divider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 34px;
+  background: rgba(160, 160, 160, 0.28);
+  flex-shrink: 0;
+  margin: 0 10px;
+}
+
+.satze-stats-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.satze-stats-cell__label {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(180, 180, 180, 0.75);
+  line-height: 1;
+}
+
+.satze-stats-cell__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #f0f0f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.satze-stats-cell__value--pv {
+  color: #22c55e;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+.satze-stats-cell__value--fc {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+/* Tossina — cerchio viola + etichetta Tox */
+.satze-stats-toxin {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-left: 2px;
+  min-width: 46px;
+}
+
+.satze-stats-toxin--blocked {
+  opacity: 0.55;
+}
+
+.satze-stats-toxin--pulse .satze-stats-toxin__orb {
+  animation: satzeStatsToxinPulse 1s ease-in-out 2;
+}
+
+@keyframes satzeStatsToxinPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.45), inset 0 0 6px rgba(168, 85, 247, 0.15);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 18px rgba(168, 85, 247, 0.7), inset 0 0 10px rgba(168, 85, 247, 0.25);
+  }
+}
+
+.satze-stats-toxin__orb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #a855f7;
+  font-size: 10px;
+  font-weight: 700;
+  color: #c084fc;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 0 8px rgba(168, 85, 247, 0.45),
+    inset 0 0 6px rgba(168, 85, 247, 0.15);
+  flex-shrink: 0;
+}
+
+.satze-stats-toxin__label {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a855f7;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  line-height: 1;
+}
+
+.satze-stats-toxin__warn {
+  font-size: 9px;
+  font-weight: 800;
+  color: #f87171;
+  line-height: 1;
+}
+
+body.graphics-prova .satze-stats-panel--shell {
+  border-color: var(--stats-army-border, rgba(56, 189, 248, 0.3)) !important;
+  box-shadow:
+    0 0 0 1px rgba(30, 40, 54, 0.85),
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 18px var(--stats-army-glow, transparent) !important;
+}
+
+body.graphics-prova .satze-stats-bracket {
+  border-color: var(--stats-army-accent, rgba(56, 189, 248, 0.55));
 }
 
 /* Tabellone Campi: tilt per attirare attenzione quando serve selezionare il campo */

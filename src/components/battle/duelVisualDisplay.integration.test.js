@@ -344,11 +344,107 @@ describe('copia potere non attivo', () => {
     );
   });
 
-  it('potere copiato non attivo: highlightAbility resta true ma UI usa flag copia', () => {
+  it('potere copiato non attivo: niente highlight, UI inattiva', () => {
     const d = getDuelVisualDisplay(brCopyInactive, 2, 1);
-    expect(d.highlightPlayerAbility).toBe(true);
+    expect(d.highlightPlayerAbility).toBe(false);
     expect(d.showPlayerCopiedAbility).toBe(true);
     expect(d.showPlayerCopiedAbilityNotTriggered).toBe(true);
+  });
+});
+
+describe('copia bonus non attivo', () => {
+  const brCopyBonusInactive = {
+    ...battleResult,
+    playerBonusCopied: {
+      trigger: 'imboscata',
+      description: 'Imboscata: +1 POT',
+      effects: [{ effect: 'power', value: 1 }],
+    },
+    playerCopiedBonusNotTriggered: true,
+    visualSteps: [
+      battleResult.visualSteps[0],
+      {
+        kind: 'copyBonus',
+        side: 'player',
+        playerPower: 5,
+        enemyPower: 4,
+        playerDamage: 3,
+        enemyDamage: 2,
+        highlightPlayerBonus: false,
+        highlightEnemyBonus: false,
+        highlightPlayerAbility: false,
+        highlightEnemyAbility: false,
+      },
+      battleResult.visualSteps[3],
+    ],
+  };
+
+  it('bonus copiato non attivo: flag visibile dopo step copia', () => {
+    expect(getDuelVisualDisplay(brCopyBonusInactive, 1, 1).showPlayerCopiedBonusNotTriggered).toBe(
+      true
+    );
+    expect(getDuelVisualDisplay(brCopyBonusInactive, 1, 1).showPlayerCopiedBonus).toBe(true);
+    expect(getDuelVisualDisplay(brCopyBonusInactive, 1, 1).highlightPlayerBonus).toBe(false);
+  });
+});
+
+describe('copia bonus Conquista: niente spoiler pre-esito', () => {
+  const brConquestCopy = {
+    ...battleResult,
+    playerHasBonus: true,
+    playerBonusCopied: {
+      trigger: 'conquest',
+      description: 'Conquista: +2 FC',
+      effects: [{ effect: 'focusCoin', value: 2 }],
+    },
+    playerCopiedBonusNotTriggered: true,
+    visualSteps: [
+      battleResult.visualSteps[0],
+      {
+        kind: 'copyBonus',
+        side: 'player',
+        playerPower: 5,
+        enemyPower: 4,
+        playerDamage: 3,
+        enemyDamage: 2,
+        highlightPlayerBonus: false,
+        highlightEnemyBonus: false,
+        highlightPlayerAbility: false,
+        highlightEnemyAbility: false,
+      },
+      preVaStep,
+      {
+        kind: 'postBonus',
+        side: 'player',
+        playerPower: 5,
+        enemyPower: 4,
+        playerDamage: 3,
+        enemyDamage: 2,
+        highlightPlayerBonus: true,
+        highlightEnemyBonus: false,
+        highlightPlayerAbility: false,
+        highlightEnemyAbility: false,
+      },
+    ],
+  };
+
+  it('fase 1: Conquista copiata neutra come nativo, niente highlight', () => {
+    const d = getDuelVisualDisplay(brConquestCopy, 1, 1);
+    expect(d.showPlayerCopiedBonus).toBe(true);
+    expect(d.showPlayerCopiedBonusNotTriggered).toBe(false);
+    expect(d.highlightPlayerBonus).toBe(false);
+  });
+
+  it('fase 4: Conquista copiata in attesa, non grigia', () => {
+    const d = getDuelVisualDisplay(brConquestCopy, 4, 1);
+    expect(d.highlightPlayerBonus).toBe(false);
+    expect(d.showPlayerCopiedBonusNotTriggered).toBe(false);
+  });
+
+  it('fase 5 postBonus: highlight al reveal post-duello', () => {
+    const d = getDuelVisualDisplay(brConquestCopy, 5, 1);
+    expect(d.highlightPlayerBonus).toBe(true);
+    expect(d.showPlayerCopiedBonusNotTriggered).toBe(false);
   });
 });
 

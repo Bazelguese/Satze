@@ -303,7 +303,104 @@ export function getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep = 1
     Boolean(battleResult.enemyBonusBlocked)
   );
 
+  function copiedPostLayerLit(isPlayer, kind) {
+    const first =
+      kind === 'ability'
+        ? isPlayer
+          ? playerAbilityFirstPost
+          : enemyAbilityFirstPost
+        : isPlayer
+          ? playerBonusFirstPost
+          : enemyBonusFirstPost;
+    if (first < 0 || duelPhase < 5 || pastStep < first) return false;
+    const stepAtFirst = steps[first];
+    if (!stepAtFirst) return false;
+    return kind === 'ability'
+      ? isPlayer
+        ? Boolean(stepAtFirst.highlightPlayerAbility)
+        : Boolean(stepAtFirst.highlightEnemyAbility)
+      : isPlayer
+        ? Boolean(stepAtFirst.highlightPlayerBonus)
+        : Boolean(stepAtFirst.highlightEnemyBonus);
+  }
+
+  function copiedLayerLit(isPlayer, kind) {
+    const copiedAbility = isPlayer ? battleResult.playerAbilityCopied : battleResult.enemyAbilityCopied;
+    const copiedBonus = isPlayer ? battleResult.playerBonusCopied : battleResult.enemyBonusCopied;
+    const copied = kind === 'ability' ? copiedAbility : copiedBonus;
+    const copyStep =
+      kind === 'ability'
+        ? isPlayer
+          ? playerCopyAbilityStep
+          : enemyCopyAbilityStep
+        : isPlayer
+          ? playerCopyBonusStep
+          : enemyCopyBonusStep;
+    if (!copied || !copiedContentVisible(steps, stepIndex, copyStep, true)) return null;
+
+    const isPostDuel =
+      kind === 'ability' ? isPostDuelAbility(copied) : isPostDuelBonus(copied);
+    if (isPostDuel) return copiedPostLayerLit(isPlayer, kind);
+
+    const notTriggered =
+      kind === 'ability'
+        ? isPlayer
+          ? battleResult.playerCopiedAbilityNotTriggered
+          : battleResult.enemyCopiedAbilityNotTriggered
+        : isPlayer
+          ? battleResult.playerCopiedBonusNotTriggered
+          : battleResult.enemyCopiedBonusNotTriggered;
+    if (notTriggered) return false;
+    if (duelPhase < 1 || pastStep < copyStep) return false;
+
+    const first =
+      kind === 'ability'
+        ? isPlayer
+          ? playerAbilityFirstPre
+          : enemyAbilityFirstPre
+        : isPlayer
+          ? playerBonusFirstPre
+          : enemyBonusFirstPre;
+    if (first < 0) return true;
+    return pastStep >= first;
+  }
+
+  function copiedContentInactiveDisplay(isPlayer, kind) {
+    const copiedAbility = isPlayer ? battleResult.playerAbilityCopied : battleResult.enemyAbilityCopied;
+    const copiedBonus = isPlayer ? battleResult.playerBonusCopied : battleResult.enemyBonusCopied;
+    const copied = kind === 'ability' ? copiedAbility : copiedBonus;
+    const copyStep =
+      kind === 'ability'
+        ? isPlayer
+          ? playerCopyAbilityStep
+          : enemyCopyAbilityStep
+        : isPlayer
+          ? playerCopyBonusStep
+          : enemyCopyBonusStep;
+    if (!copied || !copiedContentVisible(steps, stepIndex, copyStep, true)) return false;
+
+    const isPostDuel =
+      kind === 'ability' ? isPostDuelAbility(copied) : isPostDuelBonus(copied);
+    if (isPostDuel) {
+      if (duelPhase < 5) return false;
+      return !copiedPostLayerLit(isPlayer, kind);
+    }
+
+    const notTriggered =
+      kind === 'ability'
+        ? isPlayer
+          ? battleResult.playerCopiedAbilityNotTriggered
+          : battleResult.enemyCopiedAbilityNotTriggered
+        : isPlayer
+          ? battleResult.playerCopiedBonusNotTriggered
+          : battleResult.enemyCopiedBonusNotTriggered;
+    return Boolean(notTriggered);
+  }
+
   function abilityLit(isPlayer) {
+    const copiedLit = copiedLayerLit(isPlayer, 'ability');
+    if (copiedLit !== null) return copiedLit;
+
     const blockedFinal = isPlayer
       ? battleResult.playerAbilityBlocked
       : battleResult.enemyAbilityBlocked;
@@ -334,6 +431,9 @@ export function getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep = 1
   }
 
   function bonusLit(isPlayer) {
+    const copiedLit = copiedLayerLit(isPlayer, 'bonus');
+    if (copiedLit !== null) return copiedLit;
+
     const hasBonus = isPlayer ? battleResult.playerHasBonus : battleResult.enemyHasBonus;
     if (!hasBonus) return false;
 
@@ -406,18 +506,8 @@ export function getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep = 1
       enemyCopyAbilityStep,
       Boolean(battleResult.enemyAbilityCopied)
     ),
-    showPlayerCopiedAbilityNotTriggered: copiedContentVisible(
-      steps,
-      stepIndex,
-      playerCopyAbilityStep,
-      Boolean(battleResult.playerCopiedAbilityNotTriggered)
-    ),
-    showEnemyCopiedAbilityNotTriggered: copiedContentVisible(
-      steps,
-      stepIndex,
-      enemyCopyAbilityStep,
-      Boolean(battleResult.enemyCopiedAbilityNotTriggered)
-    ),
+    showPlayerCopiedAbilityNotTriggered: copiedContentInactiveDisplay(true, 'ability'),
+    showEnemyCopiedAbilityNotTriggered: copiedContentInactiveDisplay(false, 'ability'),
     showPlayerCopiedBonus: copiedContentVisible(
       steps,
       stepIndex,
@@ -430,6 +520,8 @@ export function getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep = 1
       enemyCopyBonusStep,
       Boolean(battleResult.enemyBonusCopied)
     ),
+    showPlayerCopiedBonusNotTriggered: copiedContentInactiveDisplay(true, 'bonus'),
+    showEnemyCopiedBonusNotTriggered: copiedContentInactiveDisplay(false, 'bonus'),
     showPlayerAbilityBlocked,
     showEnemyAbilityBlocked,
     showPlayerBonusBlocked,
