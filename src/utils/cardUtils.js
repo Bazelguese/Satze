@@ -137,13 +137,14 @@ export const formatAbilityHelper = (ability, options = {}) => {
     case 'powerAndDamage': effect = `+${ability.value} POT, +${ability.value} DAN`; break;
     case 'toxin': effect = `Tossina ${ability.value}${ability.minHealth ? ` (min ${ability.minHealth})` : ''}`; break;
     case 'escalation': 
-      const escalationStat = ability.stat === 'power' ? 'POT' : (ability.stat === 'damage' ? 'DAN' : ability.stat?.toUpperCase() || 'STAT');
+      const escalationStat = ability.stat === 'power' ? 'POT' : (ability.stat === 'damage' ? 'DAN' : ability.stat === 'assaultValue' ? 'VA' : ability.stat?.toUpperCase() || 'STAT');
       effect = ability.stat === 'powerAndDamage' ? `Escalation ${ability.value} POT, ${ability.value} DAN` : `Escalation ${ability.value} ${escalationStat}`;
       if (currentValue !== undefined && currentValue !== null) effect += ` (+${currentValue})`;
       break;
     case 'attrition': 
-      const attritionStat = ability.stat === 'power' ? 'POT' : (ability.stat === 'damage' ? 'DAN' : ability.stat?.toUpperCase() || 'STAT');
-      effect = `Attrizione ${ability.value} ${attritionStat}`;
+      effect = ability.stat === 'powerAndDamage'
+        ? `Attrizione ${ability.value} POT, ${ability.value} DAN`
+        : `Attrizione ${ability.value} ${ability.stat === 'power' ? 'POT' : (ability.stat === 'damage' ? 'DAN' : ability.stat === 'directDamage' ? 'Danni dir.' : ability.stat?.toUpperCase() || 'STAT')}`;
       if (currentValue !== undefined && currentValue !== null) effect += ` (+${currentValue})`;
       break;
     case 'inversion': effect = "Inversione"; break;

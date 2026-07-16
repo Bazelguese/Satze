@@ -2440,6 +2440,11 @@ export default function SatzeGame() {
       url.searchParams.set('overdriveLab', '1');
       window.location.href = url.toString();
     };
+    const openDeckBuilderLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('deckBuilderLab', '1');
+      window.location.href = url.toString();
+    };
     const launchShuffleDuelTest = (shuffleKind) => {
       setDevDialogueDuelActive(false);
       setShuffleStyle(shuffleKind);
@@ -2478,6 +2483,7 @@ export default function SatzeGame() {
         accent: '#94a3b8',
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
+          { label: 'DECK BUILDER LAB', sub: 'UI', meta: 'PROTOTIPO · TAG v2', onClick: openDeckBuilderLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
           {
             label: 'DIALOGUE DUELLO',

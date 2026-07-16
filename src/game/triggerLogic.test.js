@@ -21,3 +21,12 @@ test('reckoning: true dal 3° duello (contatori ≥ 3)', () => {
     true
   );
 });
+
+test('rinforzi: false con solo la carta giocata della stessa Lega in mano iniziale', () => {
+  assert.equal(checkTrigger('rinforzi', { ...base, playerInitialLeagueCount: 1 }), false);
+});
+
+test('rinforzi: true con 1 altra carta della stessa Lega oltre alla carta giocata', () => {
+  assert.equal(checkTrigger('rinforzi', { ...base, playerInitialLeagueCount: 2 }), true);
+  assert.equal(checkTrigger('rinforzi', { ...base, playerInitialLeagueCount: 3 }), true);
+});

@@ -24,6 +24,7 @@ const DuelVfxLabPage = lazy(() => import('./components/duelVfxLab/DuelVfxLabPage
 const DuelClashToolPage = lazy(() => import('./components/duelVfxLab/DuelClashToolPage').then((m) => ({ default: m.DuelClashToolPage })));
 const OverdriveLabPage = lazy(() => import('./components/overdriveLab/OverdriveLabPage').then((m) => ({ default: m.OverdriveLabPage })));
 const DialogueLabPage = lazy(() => import('./components/dialogueLab/DialogueLabPage').then((m) => ({ default: m.DialogueLabPage })));
+const DeckBuilderLabPage = lazy(() => import('./components/deckBuilderLab/DeckBuilderLabPage').then((m) => ({ default: m.DeckBuilderLabPage })));
 
 const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
 const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
@@ -97,6 +98,7 @@ function AppContent() {
   const showDuelClashTool = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelClashTool') === '1';
   const showOverdriveLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('overdriveLab') === '1';
   const showDialogueLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('dialogue1') === '1';
+  const showDeckBuilderLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('deckBuilderLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -140,6 +142,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeDeckBuilderLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('deckBuilderLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -154,6 +162,8 @@ function AppContent() {
         <OverdriveLabPage onClose={closeOverdriveLab} />
       ) : showDialogueLab ? (
         <DialogueLabPage onClose={closeDialogueLab} />
+      ) : showDeckBuilderLab ? (
+        <DeckBuilderLabPage onClose={closeDeckBuilderLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

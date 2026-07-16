@@ -60,7 +60,7 @@
 | **Resistenza** | Il nemico ha conquistato 1+ campi |
 | **Turbo** | Turno 1 o 2 |
 | **Ultima Chance** | Turno 5+ |
-| **Rinforzi** | Nella mano iniziale c'erano 2+ carte della stessa Lega della carta giocata |
+| **Rinforzi** | Nella mano iniziale c'era almeno 1 altra carta della stessa Lega della carta giocata |
 
 ---
 

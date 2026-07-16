@@ -21,7 +21,7 @@
  * @property {number} playerFieldsConquered - Campi conquistati da te
  * @property {number} enemyFieldsConquered - Campi conquistati dal nemico
  * @property {number} roundNumber - Numero del round corrente
- * @property {number} playerInitialLeagueCount - Quante carte della stessa Lega della carta giocata avevi nella mano iniziale
+ * @property {number} playerInitialLeagueCount - Carte della stessa Lega della carta giocata nella mano iniziale (inclusa la carta giocata)
  * @property {Object} fieldModifiers - Modificatori del campo di battaglia
  */
 
@@ -113,7 +113,8 @@ export const checkTrigger = (trigger, context) => {
         return (context.roundNumber || 1) >= 5;
 
       case 'rinforzi':
-        return (context.playerInitialLeagueCount || 0) >= 2;
+        // Almeno 1 altra carta della stessa Lega in mano iniziale, oltre alla carta giocata.
+        return Math.max(0, (context.playerInitialLeagueCount || 0) - 1) >= 1;
         
       default: 
         return false;

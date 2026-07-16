@@ -39,7 +39,7 @@ export const GLOSSARY_TERMS = [
   { term: 'Resistenza', abbr: null, category: 'trigger', desc: "Il nemico ha conquistato 1+ campi", detail: "Si attiva quando l'avversario ha conquistato almeno un campo. Premiato chi deve rimontare." },
   { term: 'Turbo', abbr: null, category: 'trigger', desc: "Turno 1 o 2", detail: "Si attiva nei primi due turni. Effetti pensati per l'apertura di partita." },
   { term: 'Ultima Chance', abbr: null, category: 'trigger', desc: "Turno 5+", detail: "Si attiva dal turno 5 in poi. Effetti pensati per la fase finale, quando conta la Supremazia (PV)." },
-  { term: 'Rinforzi', abbr: null, category: 'trigger', desc: "2+ carte della stessa Lega della carta giocata in mano iniziale", detail: "Si attiva se, tra le 5 carte della tua mano iniziale, c'erano almeno 2 carte con la stessa Lega dell'Agente che stai giocando in questo scontro. Usato dal bonus armata del Patto degli Indocili." },
+  { term: 'Rinforzi', abbr: null, category: 'trigger', desc: "1 altra carta della stessa Lega della carta giocata in mano iniziale", detail: "Si attiva se, tra le 5 carte della tua mano iniziale, c'era almeno 1 altra carta (oltre a quella che stai giocando) con la stessa Lega dell'Agente in questo scontro. Contano anche le carte di quella mano già giocate. Usato dal bonus armata del Patto degli Indocili." },
 
   // Effetti Buff
   { term: '+X POT', abbr: null, category: 'effetti', desc: "Aumenta la tua Potenza di X", detail: "Aggiunge X alla tua POT prima del calcolo del VA. Esempio: +2 POT con POT 5 e 3 FC → VA considera POT 7." },

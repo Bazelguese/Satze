@@ -436,6 +436,16 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         if (attritionStat === 'power') {
           if (target === 'player') { state.pPower += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} POT (${attritionCards} carte) → ${state.pPower}`); }
           else { state.ePower += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} POT (${attritionCards} carte) → ${state.ePower}`); }
+        } else if (attritionStat === 'powerAndDamage') {
+          if (target === 'player') {
+            state.pPower += attritionBonus; state.pDamage += attritionBonus;
+            log.push(`📈 ${source}: Attrizione +${attritionBonus} POT, +${attritionBonus} DAN (${attritionCards} carte) → ${state.pPower}/${state.pDamage}`);
+          } else {
+            state.ePower += attritionBonus; state.eDamage += attritionBonus;
+            log.push(`📈 ${source}: Attrizione +${attritionBonus} POT, +${attritionBonus} DAN (${attritionCards} carte) → ${state.ePower}/${state.eDamage}`);
+          }
+        } else if (attritionStat === 'directDamage') {
+          applyDuelPowerEffect('directDamage', attritionBonus, target, source, log, options, state, ctx);
         } else {
           if (target === 'player') { state.pDamage += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} DAN (${attritionCards} carte) → ${state.pDamage}`); }
           else { state.eDamage += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} DAN (${attritionCards} carte) → ${state.eDamage}`); }
@@ -459,6 +469,9 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
             state.ePower += escalationBonus; state.eDamage += escalationBonus;
             log.push(`📈 ${source}: Escalation +${escalationBonus} POT, +${escalationBonus} DAN (${escalationFields} campi) → ${state.ePower}/${state.eDamage}`);
           }
+        } else if (escalationStat === 'assaultValue') {
+          if (target === 'player') { state.pAssaultMod += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} VA (${escalationFields} campi)`); }
+          else { state.eAssaultMod += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} VA (${escalationFields} campi)`); }
         } else {
           if (target === 'player') { state.pDamage += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} DAN (${escalationFields} campi) → ${state.pDamage}`); }
           else { state.eDamage += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} DAN (${escalationFields} campi) → ${state.eDamage}`); }
