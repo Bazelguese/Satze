@@ -351,6 +351,29 @@ export function DeckBuilderLabPage({ onClose }) {
     [query, legaFilter, trigFilter, tagFilter, effectFilter]
   );
 
+  const hasActiveFilters = Boolean(
+    query.trim() || legaFilter || trigFilter || tagFilter || effectFilter
+  );
+
+  const clearFilters = useCallback(() => {
+    setQuery('');
+    setLegaFilter(null);
+    setTrigFilter('');
+    setTagFilter('');
+    setEffectFilter('');
+    setDetail(null);
+  }, []);
+
+  const armySortOrder = useMemo(() => {
+    const keys = selectedArmyKeys.length > 0 ? selectedArmyKeys : FACTIONS.map((f) => f.key);
+    const order = {};
+    keys.forEach((key, index) => {
+      const faction = FACTIONS.find((f) => f.key === key);
+      if (faction) order[faction.name] = index;
+    });
+    return order;
+  }, [selectedArmyKeys]);
+
   const shown = useMemo(() => {
     const list = applyCatalogFilters(pool, filterState);
     const cmp = {
@@ -358,10 +381,35 @@ export function DeckBuilderLabPage({ onClose }) {
       pot: (a, b) => b.pot - a.pot,
       dan: (a, b) => b.dan - a.dan,
       ruolo: (a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || b.pot - a.pot,
+      armata: (a, b) =>
+        (armySortOrder[a.army] ?? 999) - (armySortOrder[b.army] ?? 999)
+        || a.league - b.league
+        || b.pot + b.dan - (a.pot + a.dan),
     }[sort];
 
     return list.sort(cmp);
-  }, [pool, filterState, sort]);
+  }, [pool, filterState, sort, armySortOrder]);
+
+  const shownByArmy = useMemo(() => {
+    if (sort !== 'armata' || shown.length === 0) return null;
+
+    const groups = [];
+    let current = null;
+
+    for (const card of shown) {
+      if (!current || current.army !== card.army) {
+        current = {
+          army: card.army,
+          faction: FACTIONS.find((f) => f.name === card.army),
+          cards: [],
+        };
+        groups.push(current);
+      }
+      current.cards.push(card);
+    }
+
+    return groups;
+  }, [shown, sort]);
 
   const legaFilterBase = useMemo(
     () => applyCatalogFilters(pool, filterState, 'lega'),
@@ -590,10 +638,20 @@ export function DeckBuilderLabPage({ onClose }) {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="dbl-clear-filt"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              title="Rimuovi tutti i filtri"
+            >
+              AZZERA FILTRI
+            </button>
             <div className="dbl-sort">
               <label>ORDINA</label>
               <select value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="lega">Lega</option>
+                <option value="armata">Armata</option>
                 <option value="pot">POT ↓</option>
                 <option value="dan">DAN ↓</option>
                 <option value="ruolo">Ruolo stat</option>
@@ -606,6 +664,31 @@ export function DeckBuilderLabPage({ onClose }) {
               <div className="dbl-empty">
                 Seleziona almeno un&apos;armata dal pannello a sinistra
               </div>
+            ) : shownByArmy ? (
+              shownByArmy.map(({ army, faction, cards }) => (
+                <section key={army} className="dbl-grid-group" style={{ '--c': faction?.accent || accent }}>
+                  <div className="dbl-grid-group-h">
+                    {faction?.icon ? (
+                      <img src={faction.icon} alt="" className="dbl-grid-group-ic" draggable={false} />
+                    ) : null}
+                    <span>{army}</span>
+                    <span className="dbl-grid-group-n">({cards.length})</span>
+                  </div>
+                  <div className="dbl-grid-group-inner">
+                    {cards.map((c) => (
+                      <CatalogCard
+                        key={c.id}
+                        card={c}
+                        inDeck={deckIds.includes(c.id)}
+                        disabled={!canAdd(c)}
+                        onClick={() => toggle(c)}
+                        onHover={(card, el) => setDetail({ card, rect: el.getBoundingClientRect() })}
+                        onLeave={() => setDetail(null)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))
             ) : (
               shown.map((c) => (
                 <CatalogCard

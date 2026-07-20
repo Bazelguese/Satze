@@ -80,7 +80,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
     return groups;
   }, [filteredTerms]);
 
-  const categoryOrder = ['concetti', 'vittoria', 'trigger', 'effetti'];
+  const categoryOrder = ['concetti', 'vittoria', 'trigger', 'effetti', 'tag'];
 
   if (!originRect) return null;
 
@@ -155,7 +155,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca termini (es. POT, Imboscata, VA...)"
+              placeholder="Cerca termini (es. POT, Buffer, First Strike...)"
               className={`w-full rounded-lg border border-slate-600/50 bg-menu-panel/95 px-4 py-3 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none ${inputRing}`}
               autoFocus
             />
@@ -188,6 +188,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
                 purple: { color: '#a78bfa', border: 'rgba(168, 85, 247, 0.3)' },
                 emerald: { color: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
                 green: { color: '#4ade80', border: 'rgba(34, 197, 94, 0.3)' },
+                rose: { color: '#fb7185', border: 'rgba(244, 63, 94, 0.35)' },
               };
               const { color, border } = catColors[meta.color] || catColors.amber;
               return (
@@ -222,6 +223,8 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
                                     ? '#22d3ee'
                                     : meta.color === 'purple'
                                     ? '#a78bfa'
+                                    : meta.color === 'rose'
+                                    ? '#fb7185'
                                     : '#4ade80',
                               }}
                             >

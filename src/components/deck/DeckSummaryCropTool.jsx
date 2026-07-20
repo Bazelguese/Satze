@@ -2,7 +2,7 @@
 // DECK SUMMARY CROP TOOL (esteso)
 // Tool per configurare posizione (X,Y), scala e ritaglio delle immagini
 // in tutte le sezioni: Riepilogo mazzo, Anteprima, Carta in mano,
-// Agente sul campo, Agente in galleria, Layout P4 HUD (galleria rework).
+// Agente sul campo, Agente in galleria (layout ufficiale CardReworkP4).
 // Apri con ?cropTool=1 nell'URL
 // ============================================
 
@@ -14,9 +14,10 @@ import { getCardImageUrl } from "../../data/images";
 import { TRIGGER_NAMES } from "../../data/triggers";
 import { DECK_SUMMARY_BG_POSITION as INITIAL_POSITIONS } from "../../data/deckSummaryCropConfig";
 import { IMAGE_POSITIONING } from "../../data/imagePositioning";
-import { CardImage } from "../cards/CardImage";
 import { CardReworkP4 } from "../cards/CardReworkP4";
 import { PALETTE } from "../../theme/hudOratorioPalette";
+import { HAND_CARD_H, HAND_CARD_W } from "../../config/battlefieldHandLayout";
+import { DUEL_PANEL_LAYOUT } from "../../config/duelClashLayout";
 import {
   CROP_TOOL_SLIDER_MAX,
   CROP_TOOL_SLIDER_MIN,
@@ -70,7 +71,12 @@ const parseDeckSummaryConfig = (val) => {
   return { x: 50, y: isNaN(y) ? 25 : y, scale: 100 };
 };
 
-// Parse objectPosition + opzionale containerLeft (slider X nel tool ↔ translate orizzontale in CardImage)
+const PCT = String.raw`-?\d+(?:\.\d+)?`;
+const clampCropSlider = (n) =>
+  Math.min(CROP_TOOL_SLIDER_MAX, Math.max(CROP_TOOL_SLIDER_MIN, Math.round(Number(n))));
+
+// Parse objectPosition + opzionale containerLeft (slider X nel tool ↔ translate orizzontale in CardImage).
+// Supporta Y/X negativi (es. objectPosition: 'center -23%') — lo slider va da -50 a 150.
 const parseObjectPositionConfig = (cfg) => {
   if (!cfg) return DEFAULTS.objectCard;
   const op = cfg.objectPosition;
@@ -78,22 +84,22 @@ const parseObjectPositionConfig = (cfg) => {
   let result;
   if (!op || op === "center center") {
     result = { x: 50, y: 50, scale };
-  } else if (String(op).includes("top")) {
+  } else if (/\btop\b/i.test(String(op))) {
     result = { x: 50, y: 0, scale };
-  } else if (String(op).includes("bottom")) {
+  } else if (/\bbottom\b/i.test(String(op))) {
     result = { x: 50, y: 100, scale };
   } else {
-    const m = String(op).match(/(\d+)%?\s+(\d+)%?/);
-    if (m) {
-      result = { x: parseInt(m[1], 10), y: parseInt(m[2], 10), scale };
+    const dual = String(op).match(new RegExp(`^(${PCT})%?\\s+(${PCT})%?$`));
+    if (dual) {
+      result = { x: clampCropSlider(dual[1]), y: clampCropSlider(dual[2]), scale };
     } else {
-      const m2 = String(op).match(/center\s+(\d+)%?/);
-      if (m2) {
-        result = { x: 50, y: parseInt(m2[1], 10), scale };
+      const centerY = String(op).match(new RegExp(`^center\\s+(${PCT})%?$`, "i"));
+      if (centerY) {
+        result = { x: 50, y: clampCropSlider(centerY[1]), scale };
       } else {
-        const m3 = String(op).match(/(\d+)%?\s+center/);
-        if (m3) {
-          result = { x: parseInt(m3[1], 10), y: 50, scale };
+        const xCenter = String(op).match(new RegExp(`^(${PCT})%?\\s+center$`, "i"));
+        if (xCenter) {
+          result = { x: clampCropSlider(xCenter[1]), y: 50, scale };
         } else {
           result = { ...DEFAULTS.objectCard, scale };
         }
@@ -113,15 +119,16 @@ const StatBadge = ({ label, value, color }) => (
   </div>
 );
 
-// Dimensioni originali dai componenti reali
+// Dimensioni allineate ai layout reali (deck panel 420−24 padding; CardReworkP4; HandCard)
 const DIMENSIONS = {
   deckSummary: { width: 396, height: 128 },
-  card: { width: 224, height: 320 },
-  handCard: { width: 144, height: 208 },
+  card: { width: DUEL_PANEL_LAYOUT.cardWidth, height: DUEL_PANEL_LAYOUT.cardHeight }, // 230×330
+  handCard: { width: HAND_CARD_W, height: HAND_CARD_H }, // 144×208
 };
-const CARD_IMAGE_SIZES = { card: 260, handCard: 140 };
+/** Stesso scale di HandCard: P4 nativo dentro lo shell mano. */
+const HAND_P4_SCALE = Math.min(HAND_CARD_W / DIMENSIONS.card.width, HAND_CARD_H / DIMENSIONS.card.height);
 
-/** Allineato all’export verso imagePositioning.js e ai blocchi CardImage del tool. */
+/** Allineato all’export verso imagePositioning.js e alle anteprime CardReworkP4 del tool. */
 function buildCropPreviewPositioning(obj) {
   const out = {
     objectPosition: `center ${obj.y}%`,
@@ -584,56 +591,74 @@ export function getImagePositioning(cardId, army) {
                   </div>
                 </div>
 
-                {/* Carte */}
+                {/* Carte — stessi layout di GameCard / HandCard / galleria (CardReworkP4) */}
                 <div>
                   <div style={{ fontSize: 12, color: PALETTE.cyan, marginBottom: 12, fontWeight: 600 }}>
                     Anteprima / Carta in mano / Campo / Galleria
                   </div>
+                  <div style={{ fontSize: 11, color: PALETTE.textSecondary, marginBottom: 10 }}>
+                    CardReworkP4 {DIMENSIONS.card.width}×{DIMENSIONS.card.height}px · mano shell {DIMENSIONS.handCard.width}×{DIMENSIONS.handCard.height}px (scale {HAND_P4_SCALE.toFixed(3)})
+                  </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start" }}>
                     {[
-                      { label: "Anteprima", dim: DIMENSIONS.card, size: CARD_IMAGE_SIZES.card },
-                      { label: "Carta in mano", dim: DIMENSIONS.handCard, size: CARD_IMAGE_SIZES.handCard },
-                      { label: "Agente sul campo", dim: DIMENSIONS.card, size: CARD_IMAGE_SIZES.card },
-                      { label: "Agente in galleria", dim: DIMENSIONS.card, size: CARD_IMAGE_SIZES.card },
-                    ].map(({ label, dim, size }) => (
-                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, color: PALETTE.textSecondary, marginBottom: 6 }}>{label}</div>
-                        <div style={{ fontSize: 10, color: PALETTE.slate, marginBottom: 4 }}>{dim.width}×{dim.height}px</div>
-                        <div style={{ width: dim.width, height: dim.height, background: "#1a1a2e", borderRadius: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${getArmyConfig(card.army).color}` }}>
-                          <CardImage
-                            type={getCardSprite(card).type}
-                            palette={getCardSprite(card).palette}
-                            agentId={getCardSprite(card).agentId}
-                            size={size}
-                            objectPosition={`center ${obj.y}%`}
-                            scale={obj.scale}
-                            containerLeft={sliderXToContainerLeftPercent(obj.x)}
-                          />
+                      { label: "Anteprima", mode: "native" },
+                      { label: "Carta in mano", mode: "hand" },
+                      { label: "Agente sul campo", mode: "native" },
+                      { label: "Agente in galleria", mode: "native" },
+                    ].map(({ label, mode }) => {
+                      const positioning = buildCropPreviewPositioning(obj);
+                      if (mode === "hand") {
+                        const dim = DIMENSIONS.handCard;
+                        return (
+                          <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{ fontSize: 11, color: PALETTE.textSecondary, marginBottom: 6 }}>{label}</div>
+                            <div style={{ fontSize: 10, color: PALETTE.slate, marginBottom: 4 }}>{dim.width}×{dim.height}px</div>
+                            <div
+                              style={{
+                                width: dim.width,
+                                height: dim.height,
+                                background: "#1a1a2e",
+                                borderRadius: 12,
+                                overflow: "hidden",
+                                position: "relative",
+                                border: `2px solid ${getArmyConfig(card.army).color}`,
+                              }}
+                            >
+                              <div
+                                className="pointer-events-none"
+                                style={{
+                                  position: "absolute",
+                                  left: "50%",
+                                  top: "50%",
+                                  width: DIMENSIONS.card.width,
+                                  height: DIMENSIONS.card.height,
+                                  transform: `translate(-50%, -50%) scale(${HAND_P4_SCALE})`,
+                                }}
+                              >
+                                <CardReworkP4 agent={card} positioningOverride={positioning} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const dim = DIMENSIONS.card;
+                      return (
+                        <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div style={{ fontSize: 11, color: PALETTE.textSecondary, marginBottom: 6 }}>{label}</div>
+                          <div style={{ fontSize: 10, color: PALETTE.slate, marginBottom: 4 }}>{dim.width}×{dim.height}px</div>
+                          <div
+                            style={{
+                              borderRadius: 12,
+                              overflow: "hidden",
+                              border: `2px solid ${getArmyConfig(card.army).color}`,
+                              boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
+                            }}
+                          >
+                            <CardReworkP4 agent={card} positioningOverride={positioning} />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Layout P4 HUD — stesso componente della galleria con toggle «P4 HUD» */}
-                <div>
-                  <div style={{ fontSize: 12, color: PALETTE.cyan, marginBottom: 12, fontWeight: 600 }}>
-                    Layout P4 HUD (galleria rework)
-                  </div>
-                  <div style={{ fontSize: 11, color: PALETTE.textSecondary, marginBottom: 10 }}>
-                    230×330px · fascia rune / LEGA · stesso ritaglio immagine delle anteprime sopra
-                  </div>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      padding: 12,
-                      background: "#12121a",
-                      borderRadius: 12,
-                      border: `1px solid ${PALETTE.slate}`,
-                      boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
-                    }}
-                  >
-                    <CardReworkP4 agent={card} positioningOverride={buildCropPreviewPositioning(obj)} />
+                      );
+                    })}
                   </div>
                 </div>
               </div>
