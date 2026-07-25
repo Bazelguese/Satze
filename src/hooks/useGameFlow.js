@@ -52,6 +52,7 @@ export function useGameFlow(gameState, animations = null) {
     setShowClaimVictoryChoice,
     setAiDifficulty,
     setIsPlayerFirst,
+    setOpeningPlayerFirst,
     setLogs,
     setCampaignDuelMod,
     setShuffleDealSetup,
@@ -261,6 +262,7 @@ export function useGameFlow(gameState, animations = null) {
     } else if (campaignDuelMod?.initiativeProfile === 'defense') {
       playerFirst = false;
     }
+    setOpeningPlayerFirst(playerFirst);
     setIsPlayerFirst(playerFirst);
     
     // Aggiungi log per chi inizia (usa roundNumber = 1 per il formato)
@@ -301,6 +303,7 @@ export function useGameFlow(gameState, animations = null) {
     setGameResult,
     setAiDifficulty,
     setIsPlayerFirst,
+    setOpeningPlayerFirst,
     setLogs,
     setCampaignDuelMod,
     setShuffleDealSetup,
@@ -426,6 +429,7 @@ export function useGameFlow(gameState, animations = null) {
 
       setLogs((prev) => [...prev, `[R1] ${startLog}`]);
 
+      setOpeningPlayerFirst(isPlayerFirst);
       setIsPlayerFirst(isPlayerFirst);
       setGamePhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
     },
@@ -460,6 +464,7 @@ export function useGameFlow(gameState, animations = null) {
       setSelectedFocus,
       setLogs,
       setIsPlayerFirst,
+      setOpeningPlayerFirst,
       setGamePhase,
       setCampaignDuelMod,
       setShuffleDealSetup,

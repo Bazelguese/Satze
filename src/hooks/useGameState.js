@@ -48,10 +48,12 @@ export function useGameState() {
   // Carte usate e risultati
   const [playerUsedCards, setPlayerUsedCards] = useState([]);
   const [enemyUsedCards, setEnemyUsedCards] = useState([]);
-  const [cardBattleOutcomes, setCardBattleOutcomes] = useState({}); // { cardId: 'winner' | 'loser' }
+  const [cardBattleOutcomes, setCardBattleOutcomes] = useState({}); // { 'player:id' | 'enemy:id': 'winner' | 'loser' }
   
   // Battaglia
   const [isPlayerFirst, setIsPlayerFirst] = useState(true);
+  /** Iniziativa del round 1: usata per derivare i round successivi (niente toggle). */
+  const [openingPlayerFirst, setOpeningPlayerFirst] = useState(true);
   const [battleResult, setBattleResult] = useState(null);
   const [logs, setLogs] = useState([]);
   
@@ -96,7 +98,7 @@ export function useGameState() {
   
   // Selezione deck e difficoltà
   const [selectedDeckKey, setSelectedDeckKey] = useState(null);
-  const [aiDifficulty, setAiDifficulty] = useState(null); // 'easy' | 'medium' | 'hard' | 'chaos'
+  const [aiDifficulty, setAiDifficulty] = useState(null); // 'easy' | 'medium' | 'hard' (legacy 'chaos' → medium)
   
   // UI states aggiuntivi
   const [showDeckManager, setShowDeckManager] = useState(false);
@@ -180,6 +182,8 @@ export function useGameState() {
     // Battle
     isPlayerFirst,
     setIsPlayerFirst,
+    openingPlayerFirst,
+    setOpeningPlayerFirst,
     battleResult,
     setBattleResult,
     logs,

@@ -1,12 +1,11 @@
 // ============================================
-// DECK BUILDER LAB — prototipo UI kit con dati reali
-// Accesso: ?deckBuilderLab=1  |  menu → STRUMENTI DEV
+// DECK BUILDER — costruzione esercito (Gestione Eserciti)
 // ============================================
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
-import { saveCustomDeck, generateDeckId } from '../../utils/deckManager';
+import { saveCustomDeck, loadCustomDeck, generateDeckId } from '../../utils/deckManager';
 import {
   FACTIONS,
   POOLS,
@@ -20,7 +19,6 @@ import {
   isRole,
 } from './deckBuilderLabData';
 import {
-  ROLE_ORDER,
   displayTagsForCard,
   analyzeDeck,
 } from './deckBuilderLabLogic';
@@ -112,8 +110,28 @@ function CardTagsToggle({ card }) {
   );
 }
 
+const CARD_P4_W = 230;
+const CARD_P4_H = 330;
+
 function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
   const accent = accentForArmy(card.army);
+  const shellRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const node = shellRef.current;
+    if (!node) return;
+
+    const updateScale = () => {
+      const width = node.offsetWidth;
+      if (width > 0) setScale(width / CARD_P4_W);
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
@@ -128,11 +146,12 @@ function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
         disabled={disabled}
         onClick={onClick}
       >
-        <div className="dbl-cc-card">
-          <div className="dbl-cc-p4">
-            <div className="dbl-cc-p4-scaler">
-              <CardReworkP4 agent={card} suppressAnimations />
-            </div>
+        <div className="dbl-cc-card" ref={shellRef}>
+          <div
+            className="dbl-cc-p4-scaler"
+            style={{ transform: `translateX(-50%) scale(${scale})` }}
+          >
+            <CardReworkP4 agent={card} suppressAnimations />
           </div>
           {inDeck && <span className="dbl-cc-check">✓</span>}
         </div>
@@ -194,7 +213,6 @@ function DetailPopover({ data }) {
 }
 
 function DeckRow({ card, accent, onRemove }) {
-  const cardTags = displayTagsForCard(card);
   const lc = LEAGUE_COLORS[card.league] || accent;
 
   return (
@@ -202,15 +220,9 @@ function DeckRow({ card, accent, onRemove }) {
       <span className="dbl-row-lg" style={{ color: lc, borderColor: `${lc}80` }}>
         L{card.league}
       </span>
-      <div className="dbl-row-mid">
-        <span className="dbl-row-nm">{card.name}</span>
-        <span className="dbl-row-tags">
-          <TriggerBadge trigger={card.trigger} mini />
-          {cardTags.map(({ tag, showAsRole }) => (
-            <Tag key={tag} t={tag} mini showAsRole={showAsRole} />
-          ))}
-        </span>
-      </div>
+      <span className="dbl-row-nm" title={card.name}>
+        {card.name}
+      </span>
       <span className="dbl-row-st">
         <b style={{ color: '#fde047' }}>{card.pot}</b>/<b style={{ color: '#c084fc' }}>{card.dan}</b>
       </span>
@@ -221,32 +233,7 @@ function DeckRow({ card, accent, onRemove }) {
   );
 }
 
-function Bar({ label, value, max, accent, unit, hint }) {
-  return (
-    <div className="dbl-bar">
-      <div className="dbl-bar-h">
-        <span>{label}</span>
-        <em style={{ color: accent, fontStyle: 'normal', fontWeight: 700 }}>
-          {value}
-          {unit || ''}
-        </em>
-      </div>
-      {hint ? <p className="dbl-bar-hint">{hint}</p> : null}
-      <div className="dbl-bar-t">
-        <div
-          className="dbl-bar-f"
-          style={{
-            width: `${Math.min(100, (value / max) * 100)}%`,
-            background: `linear-gradient(90deg, ${accent}44, ${accent})`,
-            boxShadow: `0 0 8px ${accent}80`,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function DeckBuilderLabPage({ onClose }) {
+export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   useEffect(() => {
     injectSatzeUiFonts();
   }, []);
@@ -254,6 +241,7 @@ export function DeckBuilderLabPage({ onClose }) {
   const [selectedArmyKeys, setSelectedArmyKeys] = useState([FACTIONS[0].key]);
   const [deckIds, setDeckIds] = useState([]);
   const [deckName, setDeckName] = useState('');
+  const [isDeckLoading, setIsDeckLoading] = useState(Boolean(existingDeckId));
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('lega');
   const [legaFilter, setLegaFilter] = useState(null);
@@ -298,6 +286,27 @@ export function DeckBuilderLabPage({ onClose }) {
     setDetail(null);
   }, []);
 
+  useEffect(() => {
+    if (!existingDeckId) return;
+    const loaded = loadCustomDeck(existingDeckId);
+    if (!loaded?.cards?.length) {
+      setIsDeckLoading(false);
+      return;
+    }
+
+    const resolved = loaded.cards
+      .map((id) => ALL_CARDS.find((c) => c.id === id))
+      .filter(Boolean);
+    const armyKeys = [...new Set(resolved.map((c) => c.army))]
+      .map((name) => FACTIONS.find((f) => f.name === name)?.key)
+      .filter(Boolean);
+
+    setDeckIds(loaded.cards);
+    setDeckName(loaded.name || '');
+    if (armyKeys.length > 0) setSelectedArmyKeys(armyKeys);
+    setIsDeckLoading(false);
+  }, [existingDeckId]);
+
   const allArmyKeys = useMemo(() => FACTIONS.map((f) => f.key), []);
   const allArmiesSelected = selectedArmyKeys.length === allArmyKeys.length;
 
@@ -341,10 +350,14 @@ export function DeckBuilderLabPage({ onClose }) {
       army: primaryArmy,
       cards: deckCards.map((c) => c.id),
     };
-    saveCustomDeck(generateDeckId(), deckData);
+    const deckId = existingDeckId || generateDeckId();
+    if (!saveCustomDeck(deckId, deckData)) return;
     setFlash(true);
-    setTimeout(() => setFlash(false), 1400);
-  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name]);
+    setTimeout(() => {
+      setFlash(false);
+      onClose?.();
+    }, 1400);
+  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
 
   const filterState = useMemo(
     () => ({ query, legaFilter, trigFilter, tagFilter, effectFilter }),
@@ -380,7 +393,6 @@ export function DeckBuilderLabPage({ onClose }) {
       lega: (a, b) => a.league - b.league || b.pot + b.dan - (a.pot + a.dan),
       pot: (a, b) => b.pot - a.pot,
       dan: (a, b) => b.dan - a.dan,
-      ruolo: (a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || b.pot - a.pot,
       armata: (a, b) =>
         (armySortOrder[a.army] ?? 999) - (armySortOrder[b.army] ?? 999)
         || a.league - b.league
@@ -470,8 +482,10 @@ export function DeckBuilderLabPage({ onClose }) {
     if (selectedArmyKeys.length === 1) {
       return FACTIONS.find((f) => f.key === selectedArmyKeys[0])?.name || '';
     }
-    return `${selectedArmyKeys.length} armate`;
+    return 'Armate miste';
   }, [selectedArmyKeys]);
+
+  const showHeaderArmyIcon = selectedArmyKeys.length === 1 && headerArmies[0]?.icon;
 
   useEffect(() => {
     const onKey = (e) => {
@@ -483,6 +497,15 @@ export function DeckBuilderLabPage({ onClose }) {
 
   const ringLen = 2 * Math.PI * 26;
 
+  if (isDeckLoading) {
+    return (
+      <div className="dbl-root dbl-loading" style={{ '--accent': accent }}>
+        <div className="dbl-cosmic" />
+        <p className="dbl-loading-txt">Caricamento esercito…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="dbl-root" style={{ '--accent': accent }}>
       <div className="dbl-cosmic" />
@@ -491,15 +514,15 @@ export function DeckBuilderLabPage({ onClose }) {
       <header className="dbl-head">
         <button type="button" className="dbl-back" onClick={onClose}>
           <span className="ar">←</span>
-          <span>GIoco</span>
+          <span>Indietro</span>
         </button>
         <div className="dbl-head-mid">
           <div className="dbl-eyebrow" style={{ color: accent }}>
-            FASE II · ARRUOLAMENTO · DEV LAB
+            FASE II · ARRUOLAMENTO
           </div>
           <h1 className="dbl-title">COSTRUZIONE ESERCITO</h1>
           <div className="dbl-subtitle">
-            {DECK_SIZE} CARTE · MAX {MAX_LEAGUE} LEGA · DATI REALI · TAG v2
+            {DECK_SIZE} CARTE · MAX {MAX_LEAGUE} LEGA
           </div>
         </div>
         <div className="dbl-head-r">
@@ -510,11 +533,11 @@ export function DeckBuilderLabPage({ onClose }) {
           >
             GLOSSARIO
           </button>
-          <div className="dbl-head-icons">
-            {headerArmies.map((f) => (
-              <img key={f.key} src={f.icon} alt="" className="dbl-head-ic" draggable={false} />
-            ))}
-          </div>
+          {showHeaderArmyIcon ? (
+            <div className="dbl-head-icons">
+              <img src={headerArmies[0].icon} alt="" className="dbl-head-ic" draggable={false} />
+            </div>
+          ) : null}
           <span className="dbl-fac-name">{catalogLabel}</span>
         </div>
       </header>
@@ -654,7 +677,6 @@ export function DeckBuilderLabPage({ onClose }) {
                 <option value="armata">Armata</option>
                 <option value="pot">POT ↓</option>
                 <option value="dan">DAN ↓</option>
-                <option value="ruolo">Ruolo stat</option>
               </select>
             </div>
           </div>
@@ -779,61 +801,24 @@ export function DeckBuilderLabPage({ onClose }) {
           </div>
 
           <div className="dbl-slots">
-            {deckCards.map((c) => (
-              <DeckRow
-                key={c.id}
-                card={c}
-                accent={accentForArmy(c.army)}
-                onRemove={() => setDeck(deckIds.filter((i) => i !== c.id))}
-              />
-            ))}
-            {Array.from({ length: Math.max(0, DECK_SIZE - deckCards.length) }).map((_, i) => (
-              <div className="dbl-slot-x" key={`e${i}`}>
-                <span>—</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="dbl-analysis">
-            <div className="dbl-an-h">ANALISI TATTICA</div>
-            <div className="dbl-an-grid">
-              <Bar label="POT medio" value={+analysis.aP.toFixed(1)} max={9} accent="#fde047" />
-              <Bar label="DAN medio" value={+analysis.aD.toFixed(1)} max={9} accent="#c084fc" />
-              <Bar
-                label="Offesa"
-                value={analysis.off}
-                max={100}
-                accent={accent}
-                unit="%"
-                hint="Quanto il mazzo punta a vincere i duelli. Calcolata dal POT medio rispetto al massimo (9)."
-              />
-              <Bar
-                label="Difesa"
-                value={analysis.def}
-                max={100}
-                accent={accent}
-                unit="%"
-                hint="Quanto il mazzo punta a infliggere PV al nemico. Calcolata dal DAN medio rispetto al massimo (9)."
-              />
+            <div className="dbl-deck-roster-h">
+              <span>ESERCITO</span>
+              <span>
+                {analysis.count}/{DECK_SIZE}
+              </span>
             </div>
-            <div className="dbl-curve">
-              <span className="dbl-curve-l">CURVA LEGHE</span>
-              <div className="dbl-curve-bars">
-                {analysis.leagues.map((lg) => (
-                  <div key={lg.l} className="dbl-curve-col">
-                    <div
-                      className="dbl-curve-fill"
-                      style={{
-                        height: `${Math.min(100, lg.n * 22)}%`,
-                        background: LEAGUE_COLORS[lg.l],
-                      }}
-                    />
-                    <span className="dbl-curve-n">{lg.n}</span>
-                    <span className="dbl-curve-t">L{lg.l}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {deckCards.length === 0 ? (
+              <p className="dbl-deck-empty">Nessuna carta selezionata.</p>
+            ) : (
+              deckCards.map((c) => (
+                <DeckRow
+                  key={c.id}
+                  card={c}
+                  accent={accentForArmy(c.army)}
+                  onRemove={() => setDeck(deckIds.filter((i) => i !== c.id))}
+                />
+              ))
+            )}
           </div>
 
           {activeBonuses.length > 0 && (
@@ -874,7 +859,7 @@ export function DeckBuilderLabPage({ onClose }) {
             onClick={schiera}
             disabled={!analysis.legal}
           >
-            <span>SCHIERA ESERCITO</span>
+            <span>SALVA ESERCITO</span>
             <span>↵</span>
           </button>
         </aside>
@@ -895,8 +880,7 @@ export function DeckBuilderLabPage({ onClose }) {
             </div>
             <div className="n">{deckName}</div>
             <div className="s">
-              {catalogLabel} · {analysis.count} carte · {analysis.totalLeague} Lega · POT {analysis.aP.toFixed(1)} / DAN{' '}
-              {analysis.aD.toFixed(1)}
+              {catalogLabel} · {analysis.count} carte · {analysis.totalLeague} Lega
             </div>
           </div>
         </div>

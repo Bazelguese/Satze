@@ -1,6 +1,7 @@
 import React from 'react';
 import { getOverdrivePalette } from '../../utils/overdrivePalette';
 import { getOverdriveEffectVariant } from '../../utils/overdriveEffectPreference';
+import { resolveOverdriveVariantForQuality } from '../../settings/vfxQualityProfile';
 import { OverdriveEffectOverlay } from './OverdriveEffectOverlay';
 import { CardReworkP4 } from './CardReworkP4';
 
@@ -68,7 +69,9 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
   };
 
   const overdrivePalette = getOverdrivePalette(agent?.army);
-  const overdriveVariant = overdriveEffectVariant ?? getOverdriveEffectVariant();
+  const overdriveVariant = resolveOverdriveVariantForQuality(
+    overdriveEffectVariant ?? getOverdriveEffectVariant(),
+  );
   const overdriveCardStyle = overdrivePreview
     ? {
         '--od-accent': overdrivePalette.accent,

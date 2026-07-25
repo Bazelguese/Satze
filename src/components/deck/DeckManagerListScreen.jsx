@@ -3,11 +3,13 @@
 // Schermata elenco eserciti personalizzati — stesso carosello cinematic del duello
 // ============================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getDeckVisualMeta } from '../../utils/deckManager';
 import { ARMY_SETS, ARMY_COLORS } from '../../data';
-import DeckSelectCinematic from '../menu/cosmic/DeckSelectCinematic.jsx';
+import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
+import DeckSelectCinematic, { buildDeckPreviewPayload } from '../menu/cosmic/DeckSelectCinematic.jsx';
+import DeckPreviewCosmic from '../cosmic/DeckPreviewCosmic.jsx';
 
 function buildCustomDeckGameOptions() {
   const customDecks = loadCustomDecks();
@@ -38,15 +40,32 @@ function buildCustomDeckGameOptions() {
 
 export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose, renderInPortal = true }) {
   const gameDeckOptions = useMemo(() => buildCustomDeckGameOptions(), []);
+  const [previewDeckData, setPreviewDeckData] = useState(null);
 
-  const content = (
+  const openEdit = (deckKey) => {
+    const deckId = deckKey?.startsWith('custom_') ? deckKey.replace('custom_', '') : deckKey;
+    if (deckId) onEditDeck(deckId);
+  };
+
+  const content = previewDeckData ? (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
+      <DeckPreviewCosmic
+        deck={previewDeckData}
+        onBack={() => setPreviewDeckData(null)}
+        onEdit={(d) => {
+          setPreviewDeckData(null);
+          openEdit(d?.id);
+        }}
+      />
+    </div>
+  ) : (
     <DeckSelectCinematic
       variant="manager"
       gameDeckOptions={gameDeckOptions}
       onCreateNew={onCreateNew}
-      onSelectDeck={(deckKey) => {
-        const deckId = deckKey.startsWith('custom_') ? deckKey.replace('custom_', '') : deckKey;
-        onEditDeck(deckId);
+      onSelectDeck={openEdit}
+      onPreviewDeck={(deck) => {
+        setPreviewDeckData(buildDeckPreviewPayload(deck));
       }}
       onBack={onClose}
     />

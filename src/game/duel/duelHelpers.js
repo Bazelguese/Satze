@@ -64,6 +64,17 @@ export function resolveUsedCardId(entry) {
 }
 
 /**
+ * Chiave esito duello scoped per lato: evita che player e IA con lo stesso cardId
+ * condividano winner/loser (es. entrambi Morto che Vola).
+ * @param {'player'|'enemy'} side
+ * @param {number|string} cardId
+ */
+export function battleOutcomeKey(side, cardId) {
+  if (side == null || cardId == null) return null;
+  return `${side}:${cardId}`;
+}
+
+/**
  * Carte giocate prima dell'agente corrente (base Attrizione).
  * `usedCards` può essere un array di id o di oggetti carta.
  */

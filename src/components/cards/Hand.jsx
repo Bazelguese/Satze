@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ARMY_COLORS, ARMY_GIFS, ARMY_BONUSES } from '../../data';
 import { getDeckArmies, getHandAccentColor } from '../../utils/deckManager';
+import { battleOutcomeKey } from '../../game/duel/duelHelpers';
 import { HandCard } from './HandCard';
 
 /**
@@ -14,7 +15,9 @@ export const Hand = ({
   selectedAgent, 
   onAgentSelect, 
   onPreviewClick, 
-  battleOutcomes = {}, 
+  battleOutcomes = {},
+  /** 'player' | 'enemy' — chiavi esito `side:cardId` (stesso id non condivide lo stato tra le parti). */
+  battleOutcomeSide = null,
   cardPositions = [],
   position = 'bottom-right', // 'bottom-right' | 'top-left'
   label = 'Mano',
@@ -196,7 +199,8 @@ export const Hand = ({
         </div>
         
         {!hideCards && hand?.length > 0 && hand.map((agent, idx) => {
-          const outcome = battleOutcomes[agent.id] || null;
+          const outcomeKey = battleOutcomeKey(battleOutcomeSide, agent.id) ?? agent.id;
+          const outcome = battleOutcomes[outcomeKey] || null;
           const outcomeLowerOffset = outcome ? 20 : 0;
           const cardStyle = position === 'top-left' 
             ? {
@@ -236,7 +240,7 @@ export const Hand = ({
                 bonusBaseInactive={
                   Boolean(ARMY_BONUSES[agent?.army]) && !armyBonuses?.[agent?.army]
                 }
-                battleOutcome={battleOutcomes[agent.id] || null}
+                battleOutcome={outcome}
                 onDragStart={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled && onDragStart
                   ? onDragStart
                   : undefined}

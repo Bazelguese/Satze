@@ -16,7 +16,8 @@ import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLog
 import { applyToxin } from '../src/game/toxinLogic';
 import { checkTrigger } from '../src/game/triggerLogic';
 import { getFieldModifiers, fieldGrantsOverdriveBonus } from '../src/game/fieldLogic';
-import { countAttritionPriorCards, countInitialLeagueCards } from '../src/game/duel/duelHelpers.js';
+import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
+import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
 import { DuelRevealHudStyles } from '../src/components/shuffle/DuelRevealVeil';
@@ -50,8 +51,10 @@ import { CampaignWarHub } from '../src/components/campaign/CampaignWarHub';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { buildCampaignDuelLaunchConfig } from '../src/game/campaign/campaignDuelAdapter.js';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
-import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
+import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
+import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
+import { DISPLAY_SETTINGS_CHANGED_EVENT } from '../src/settings/displaySettings';
 import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
 import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
 import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
@@ -140,6 +143,7 @@ export default function SatzeGame() {
     enemyUsedCards, setEnemyUsedCards,
     cardBattleOutcomes, setCardBattleOutcomes,
     isPlayerFirst, setIsPlayerFirst,
+    openingPlayerFirst, setOpeningPlayerFirst,
     battleResult, setBattleResult,
     logs, setLogs,
     roundNumber, setRoundNumber,
@@ -349,9 +353,17 @@ export default function SatzeGame() {
   useEffect(() => {
     const on = () => setDuelVfxRev((r) => r + 1);
     window.addEventListener(DUEL_VFX_CHANGED_EVENT, on);
-    return () => window.removeEventListener(DUEL_VFX_CHANGED_EVENT, on);
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => {
+      window.removeEventListener(DUEL_VFX_CHANGED_EVENT, on);
+      window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    };
   }, []);
-  const duelVfx = useMemo(() => getDuelVisualConfig(), [duelVfxRev]);
+  const duelVfx = useMemo(
+    () => applyVfxQualityToDuelConfig(getDuelVisualConfig(), getVfxQualityProfile()),
+    [duelVfxRev],
+  );
+  const vfxProfile = useMemo(() => getVfxQualityProfile(), [duelVfxRev]);
 
   const { visualEffectStep, advanceEffectStep } = useSafeDuelEffectStep(
     duelPhase,
@@ -378,6 +390,16 @@ export default function SatzeGame() {
   const [opponentClaimPending, setOpponentClaimPending] = useState(null);
   const [incomingClaimDecision, setIncomingClaimDecision] = useState(null);
   const forceContinueAfterClaimRef = useRef(false);
+  /** Evita doppio advance (double-click / doppio timeout) che ribaltava l'iniziativa. */
+  const roundAdvanceLockRef = useRef(null);
+  const nextRoundInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (roundNumber === 1 && (gamePhase === 'selectField' || gamePhase === 'shuffleDeal')) {
+      roundAdvanceLockRef.current = null;
+      nextRoundInFlightRef.current = false;
+    }
+  }, [roundNumber, gamePhase]);
   const focusCoinTimersRef = useRef([]);
   const [onlineOpponentLeft, setOnlineOpponentLeft] = useState(false);
   /** Connessione WebSocket persa (rete / refresh): mostra pulsante Riconnetti */
@@ -640,6 +662,7 @@ export default function SatzeGame() {
     setPlayerToxin,
     setEnemyToxin,
     setIsPlayerFirst,
+    setOpeningPlayerFirst,
     setLogs,
     setGamePhase,
     setPlayerConfirmedAwaitingAI,
@@ -1395,7 +1418,10 @@ export default function SatzeGame() {
       const timer = setTimeout(() => {
         const available = battlefields.filter((_, i) => !(i in conqueredFields) && i < revealedFields);
         if (available.length > 0) {
-          const fieldIdx = battlefields.indexOf(available[Math.floor(Math.random() * available.length)]);
+          let fieldIdx = ai.selectEnemyField?.();
+          if (fieldIdx == null || fieldIdx < 0 || !(fieldIdx in battlefields) || (fieldIdx in conqueredFields) || fieldIdx >= revealedFields) {
+            fieldIdx = battlefields.indexOf(available[0]);
+          }
           setCurrentFieldIndex(fieldIdx);
           setLogs(prev => [...prev.slice(-20), `[R${roundNumber}] L'IA sceglie: ${battlefields[fieldIdx].name}`]);
           setGamePhase('selectAgent');
@@ -1411,6 +1437,7 @@ export default function SatzeGame() {
     revealedFields,
     roundNumber,
     ai.getThinkingTime,
+    ai.selectEnemyField,
     isOnlinePvP,
     guidedMatch.active,
     guidedMatch.freePlay,
@@ -1940,6 +1967,9 @@ export default function SatzeGame() {
 
   // Prossimo round
   const nextRound = () => {
+    if (nextRoundInFlightRef.current) return;
+    nextRoundInFlightRef.current = true;
+
     // Se siamo in fase risultato e c'è un battleResult, attiva l'animazione clash delle carte
     if (gamePhase === 'result' && battleResult && duelPhase >= 4) {
       setShowClashAnimation(true);
@@ -1957,6 +1987,8 @@ export default function SatzeGame() {
   };
   
   const proceedToNextRound = () => {
+    let handedOffToAdvance = false;
+    try {
     // Reset zoom
     setIsZoomed(false);
     
@@ -2042,12 +2074,14 @@ export default function SatzeGame() {
       };
       setConqueredFields(updatedConqueredFields);
       
-      // Aggiorna gli esiti delle battaglie per le carte usate
+      // Esiti scoped per lato: stesso cardId su player e IA non devono condividere winner/loser
       if (battleResult.playerAgent && battleResult.enemyAgent) {
+        const playerKey = battleOutcomeKey('player', battleResult.playerAgent.id);
+        const enemyKey = battleOutcomeKey('enemy', battleResult.enemyAgent.id);
         setCardBattleOutcomes(prev => ({
           ...prev,
-          [battleResult.playerAgent.id]: battleResult.winner === 'player' ? 'winner' : 'loser',
-          [battleResult.enemyAgent.id]: battleResult.winner === 'enemy' ? 'winner' : 'loser'
+          [playerKey]: battleResult.winner === 'player' ? 'winner' : 'loser',
+          [enemyKey]: battleResult.winner === 'enemy' ? 'winner' : 'loser'
         }));
       }
     }
@@ -2179,10 +2213,23 @@ export default function SatzeGame() {
       return;
     }
     
+    handedOffToAdvance = true;
     doResetAndNextRound(playerFields, enemyFields);
+    } finally {
+      if (!handedOffToAdvance) {
+        nextRoundInFlightRef.current = false;
+      }
+    }
   };
 
   const advanceGuidedRoundState = (playerFields, enemyFields) => {
+    const nextRoundNum = roundNumber + 1;
+    if (roundAdvanceLockRef.current === nextRoundNum) {
+      nextRoundInFlightRef.current = false;
+      return;
+    }
+    roundAdvanceLockRef.current = nextRoundNum;
+
     setSelectedAgent(null);
     setSelectedFocus(1);
     setEnemyAgent(null);
@@ -2203,16 +2250,15 @@ export default function SatzeGame() {
     );
     setGuidedHint('');
 
-    const nextRoundNum = roundNumber + 1;
     setRoundNumber(nextRoundNum);
-
-    if (campaignDuelMod?.initiativeProfile === 'assault' && nextRoundNum === 2) {
-      setIsPlayerFirst(true);
-    } else if (campaignDuelMod?.initiativeProfile === 'defense' && nextRoundNum === 2) {
-      setIsPlayerFirst(false);
-    } else {
-      setIsPlayerFirst((prev) => !prev);
-    }
+    setIsPlayerFirst(
+      resolveRoundInitiative({
+        roundNumber: nextRoundNum,
+        openingPlayerFirst,
+        initiativeProfile: campaignDuelMod?.initiativeProfile ?? null,
+      })
+    );
+    nextRoundInFlightRef.current = false;
 
     if (nextRoundNum === 5 && playerFields < 3 && enemyFields < 3 && gameMode === 'classic') {
       setShowFinalRoundAnimation(true);
@@ -2246,6 +2292,7 @@ export default function SatzeGame() {
     ) {
       setGuidedIntroStage(INTRO_STAGE_EPILOGUE);
       setGuidedHint('');
+      nextRoundInFlightRef.current = false;
       return;
     }
 
@@ -2256,6 +2303,7 @@ export default function SatzeGame() {
     ) {
       setGuidedIntroStage(ADV_STAGE_EPILOGUE);
       setGuidedHint('');
+      nextRoundInFlightRef.current = false;
       return;
     }
 
@@ -2440,11 +2488,6 @@ export default function SatzeGame() {
       url.searchParams.set('overdriveLab', '1');
       window.location.href = url.toString();
     };
-    const openDeckBuilderLab = () => {
-      const url = new URL(window.location.href);
-      url.searchParams.set('deckBuilderLab', '1');
-      window.location.href = url.toString();
-    };
     const launchShuffleDuelTest = (shuffleKind) => {
       setDevDialogueDuelActive(false);
       setShuffleStyle(shuffleKind);
@@ -2474,6 +2517,7 @@ export default function SatzeGame() {
       { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
       { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
+      { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', onClick: openTutorialSelector },
       { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => startTransition(() => setGamePhaseFromMainMenu('gallery')) },
       {
@@ -2483,7 +2527,6 @@ export default function SatzeGame() {
         accent: '#94a3b8',
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
-          { label: 'DECK BUILDER LAB', sub: 'UI', meta: 'PROTOTIPO · TAG v2', onClick: openDeckBuilderLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
           {
             label: 'DIALOGUE DUELLO',
@@ -2565,6 +2608,12 @@ export default function SatzeGame() {
   if (gamePhase === 'playtestHistory') {
     return (
       <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />
+    );
+  }
+
+  if (gamePhase === 'options') {
+    return (
+      <OptionsScreen onClose={() => setGamePhase('menu')} />
     );
   }
 
@@ -2969,6 +3018,7 @@ export default function SatzeGame() {
   }
 
   if (gamePhase === 'previewDeck' && previewDeckData) {
+    const previewIsCustom = Boolean(previewDeckData?.id?.startsWith?.('custom_'));
     return (
       <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
         <DeckPreviewCosmic
@@ -2977,7 +3027,7 @@ export default function SatzeGame() {
             setPreviewDeckData(null);
             setGamePhase('selectDeck');
           }}
-          onEdit={(d) => {
+          onEdit={previewIsCustom ? (d) => {
             if (d?.id && d.id.startsWith('custom_')) {
               setPreviewDeckData(null);
               setEditingDeckId(d.id.replace('custom_', ''));
@@ -2986,7 +3036,7 @@ export default function SatzeGame() {
               setShowDeckManager(false);
               setGamePhase('deckManager');
             }
-          }}
+          } : null}
           onConfirm={(d) => {
             setPreviewDeckData(null);
             d?._opt?.onSelect?.();
@@ -3655,6 +3705,7 @@ export default function SatzeGame() {
         selectedAgent={enemyAgent}
         onPreviewClick={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
         battleOutcomes={cardBattleOutcomes}
+        battleOutcomeSide="enemy"
         cardPositions={iaCardPositions}
         position="top-left"
         label={mpEnemyHandLabel}
@@ -3682,6 +3733,7 @@ export default function SatzeGame() {
         onAgentSelect={handleAgentSelect}
         onPreviewClick={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
         battleOutcomes={cardBattleOutcomes}
+        battleOutcomeSide="player"
         cardPositions={playerCardPositions}
         position="bottom-right"
         label={mpSelfHandLabel}
@@ -3842,7 +3894,7 @@ export default function SatzeGame() {
           <div className="text-slate-500 text-sm text-center">In attesa...</div>
         )}
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}
-        {gamePhase === 'result' && battleResult && duelPhase < 4 && (
+        {gamePhase === 'result' && battleResult && (duelPhase < 4 || !vfxProfile.clashVfxEnabled) && (
           <DuelResultEnemyResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -3915,7 +3967,7 @@ export default function SatzeGame() {
             </div>
           </div>
         )}
-        {gamePhase === 'result' && battleResult && duelPhase < 4 && (
+        {gamePhase === 'result' && battleResult && (duelPhase < 4 || !vfxProfile.clashVfxEnabled) && (
           <DuelResultPlayerResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -3933,7 +3985,7 @@ export default function SatzeGame() {
         )}
       </div>
 
-      {gamePhase === 'result' && battleResult && duelPhase >= 4 && (
+      {gamePhase === 'result' && battleResult && duelPhase >= 4 && vfxProfile.clashVfxEnabled && (
         <DuelClashAuroraSequence
           battleResult={battleResult}
           duelPhase={duelPhase}

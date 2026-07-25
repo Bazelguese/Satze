@@ -51,8 +51,8 @@ export const HandCard = React.memo(({
         ${hasOutcome ? 'satze-hand-outcome-card transition-transform duration-300' : 'transition-all duration-300'}
         ${selected ? 'border-yellow-400 shadow-2xl shadow-yellow-400/60 scale-105 -translate-y-2 z-20 ring-4 ring-yellow-400/30' : 'border-white/30 shadow-lg'}
         ${highlighted ? 'ring-4 ring-amber-300/80 border-amber-200 shadow-2xl shadow-amber-300/45 animate-pulse' : ''}
-        ${isWinner ? 'satze-card-winner' : ''}
-        ${isLoser ? 'satze-card-loser satze-hand-outcome-loser' : ''}
+        ${hasOutcome && isWinner ? 'satze-card-winner' : ''}
+        ${hasOutcome && isLoser ? 'satze-card-loser satze-hand-outcome-loser' : ''}
         ${disabled || isUsed ? (onPreviewClick || hasOutcome ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60') : onDragStart ? 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-grab active:cursor-grabbing active:scale-95' : 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-pointer active:scale-95'}
         ${isDragging ? 'scale-90 shadow-2xl' : ''}
         flex flex-col overflow-hidden
@@ -75,8 +75,8 @@ export const HandCard = React.memo(({
       >
         <CardReworkP4 agent={agent} showBonus={showBonus} bonusBaseInactive={bonusBaseInactive} />
       </div>
-      {isWinner && <div className="satze-hand-outcome-diamond pointer-events-none" aria-hidden />}
-      {isLoser && <div className="satze-hand-outcome-dim pointer-events-none" aria-hidden />}
+      {hasOutcome && isWinner && <div className="satze-hand-outcome-diamond pointer-events-none" aria-hidden />}
+      {hasOutcome && isLoser && <div className="satze-hand-outcome-dim pointer-events-none" aria-hidden />}
       {hasOutcome && (
         <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center" aria-hidden>
           <span

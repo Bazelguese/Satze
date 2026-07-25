@@ -2,17 +2,27 @@ const { app, BrowserWindow, Menu } = require('electron');
 const { ipcMain } = require('electron');
 const { join, dirname } = require('path');
 const { existsSync, writeFileSync, readFileSync } = require('fs');
+const {
+  loadDisplaySettings,
+  saveDisplaySettings,
+  applyDisplayToWindow,
+  getDisplayState,
+  listDisplays,
+  initialWindowOptions,
+  MIN_WIDTH,
+  MIN_HEIGHT,
+} = require('./displaySettings.cjs');
 
 // Mantieni un riferimento globale dell'oggetto window
 let mainWindow;
 
 function createWindow() {
-  // Crea la finestra del browser
+  const winOpts = initialWindowOptions(app);
+  const savedDisplay = winOpts._satzeDisplay;
+  delete winOpts._satzeDisplay;
+
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1200,
-    minHeight: 700,
+    ...winOpts,
     backgroundColor: '#0a0a0a',
     autoHideMenuBar: true,
     webPreferences: {
@@ -21,9 +31,14 @@ function createWindow() {
       enableRemoteModule: false,
       preload: join(__dirname, 'preload.cjs'),
     },
-    // icon: join(__dirname, '../assets/icon.png'), // Opzionale: aggiungi un'icona
-    show: false, // Non mostrare finché non è pronta
+    show: false,
   });
+
+  try {
+    mainWindow.setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
+  } catch {
+    /* ignore */
+  }
 
   // Niente barra File / Modifica / Visualizza (menu Electron predefinito)
   Menu.setApplicationMenu(null);
@@ -35,7 +50,6 @@ function createWindow() {
 
   if (isDev) {
     let devFallbackLoaded = false;
-    // Se Vite non è in esecuzione, localhost fallisce → finestra bianca. Prova dist/ (serve `npm run build` almeno una volta).
     mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, _url, isMainFrame) => {
       if (!isMainFrame || devFallbackLoaded) return;
       const isConnection =
@@ -52,11 +66,9 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
     mainWindow.loadURL('http://localhost:5173');
   } else {
-    // In produzione: impedisci che i DevTools si aprano (chiudi subito se qualcosa li apre)
     mainWindow.webContents.on('devtools-opened', () => {
       mainWindow.webContents.closeDevTools();
     });
-    // Blocca F12 e Ctrl+Shift+I per evitare che l'utente apra i DevTools
     mainWindow.webContents.on('before-input-event', (event, input) => {
       if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
         event.preventDefault();
@@ -64,7 +76,7 @@ function createWindow() {
     });
     const indexPath = distIndexPath;
     if (existsSync(indexPath)) {
-      mainWindow.loadFile(indexPath).catch(err => {
+      mainWindow.loadFile(indexPath).catch(() => {
         const altPaths = [
           join(app.getAppPath(), 'dist/index.html'),
           join(process.resourcesPath, 'app/dist/index.html'),
@@ -92,17 +104,20 @@ function createWindow() {
     }
   }
 
-  // Gestisci errori di caricamento (solo in dev per non mostrare nulla in produzione)
   if (isDev) {
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
       console.error('Errore nel caricamento:', errorCode, errorDescription);
     });
   }
 
-  // Mostra la finestra quando è pronta
   mainWindow.once('ready-to-show', () => {
+    // Applica display salvato prima dello show (evita flash a size default)
+    try {
+      applyDisplayToWindow(mainWindow, savedDisplay || loadDisplaySettings(app));
+    } catch (err) {
+      console.error('[SATZE Electron] apply display failed:', err);
+    }
     mainWindow.show();
-    // In produzione: assicurati che i DevTools non siano aperti (alcune versioni li aprono automaticamente)
     if (!isDev && mainWindow.webContents.isDevToolsOpened()) {
       mainWindow.webContents.closeDevTools();
     }
@@ -111,24 +126,17 @@ function createWindow() {
     }
   });
 
-  // Gestisci la chiusura della finestra
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-// Gestisci errori non catturati (solo in dev)
 if (!app.isPackaged) {
   process.on('uncaughtException', (error) => {
     console.error('Errore non catturato:', error);
   });
 }
 
-// Salvataggio config crop tool (solo in dev: scrive nei sorgenti)
-/**
- * URL server multiplayer da file (senza ricompilare l'exe).
- * Cerca: %APPDATA%\\SATZE\\multiplayer.json poi cartella SATZE.exe\\multiplayer.json
- */
 ipcMain.handle('satze:getMultiplayerConfig', () => {
   const candidates = [
     join(app.getPath('userData'), 'multiplayer.json'),
@@ -163,20 +171,28 @@ ipcMain.handle('save-crop-config', async (_event, payload) => {
   }
 });
 
-// Questo metodo verrà chiamato quando Electron ha finito l'inizializzazione
+ipcMain.handle('satze:display:getDisplays', () => listDisplays());
+
+ipcMain.handle('satze:display:getState', () => getDisplayState(mainWindow));
+
+ipcMain.handle('satze:display:getSaved', () => loadDisplaySettings(app));
+
+ipcMain.handle('satze:display:apply', (_event, payload) => {
+  const saved = saveDisplaySettings(app, payload);
+  const result = applyDisplayToWindow(mainWindow, saved);
+  return result;
+});
+
 app.whenReady().then(() => {
   createWindow();
 
   app.on('activate', () => {
-    // Su macOS è comune ricreare una finestra quando
-    // l'icona del dock viene cliccata e non ci sono altre finestre aperte
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 }).catch(() => {});
 
-// Esci quando tutte le finestre sono chiuse, tranne su macOS
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

@@ -268,8 +268,23 @@ export function buildCinematicDecksFromGameOptions(gameDeckOptions, {
 /** Payload per DeckPreviewCosmic (stesso schema del vecchio DeckSelectCosmic). */
 export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
   const deckCards = deck.deckCards || [];
+  const armies = deck.armies?.length
+    ? deck.armies
+    : [...new Set(deckCards.map((c) => c.army || deck.army).filter(Boolean))].slice(0, 2);
+  const isMixed = Boolean(deck.isMixed) || armies.length >= 2;
+  const safeSelected =
+    selectedArmy && selectedArmy !== 'Eserciti misti' ? selectedArmy : null;
+  const safeDeckArmy =
+    deck.army && deck.army !== 'Eserciti misti' && deck.army !== 'Misto'
+      ? deck.army
+      : null;
+  const displayArmy =
+    isMixed && armies.length >= 2
+      ? armies.join(' · ')
+      : (safeDeckArmy || safeSelected || armies[0] || 'Misto');
+
   const previewCards = deckCards.slice(0, 10).map((card) => {
-    const cardArmy = card.army || deck.army || selectedArmy;
+    const cardArmy = card.army || safeDeckArmy || armies[0] || safeSelected;
     return {
       ...card,
       army: cardArmy,
@@ -278,14 +293,11 @@ export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
       tags: getCardTags(card.id),
     };
   });
-  const armies = deck.armies?.length
-    ? deck.armies
-    : [...new Set(deckCards.map((c) => c.army || deck.army).filter(Boolean))].slice(0, 2);
   return {
     id: deck.deckKey,
     name: deck.name,
     description: deck.description || '',
-    army: deck.army || selectedArmy,
+    army: displayArmy,
     accentColor: deck.accent,
     armies,
     cards: previewCards,
@@ -328,14 +340,8 @@ export default function DeckSelectCinematic({
   const deck = DECKS[idx] || DECKS[0];
   const accent = deck ? deck.accent : '#a78bfa';
 
-  // wrap-aware offset per il carosello circolare
-  const half = Math.floor(total / 2);
-  const computeOff = (i) => {
-    let off = i - idx;
-    if (off > half) off -= total;
-    if (off < -half) off += total;
-    return off;
-  };
+  // Offset lineare: ordine 01…N senza wrap (l'ultimo non compare a sinistra del primo)
+  const computeOff = (i) => i - idx;
 
   useEffect(() => {
     const t = setTimeout(() => setPhase('idle'), 1500);
@@ -344,7 +350,9 @@ export default function DeckSelectCinematic({
 
   const go = (delta) => {
     if (phase !== 'idle' || total === 0) return;
-    setIdx((idx + delta + total) % total);
+    const next = Math.max(0, Math.min(total - 1, idx + delta));
+    if (next === idx) return;
+    setIdx(next);
     setPulse((p) => p + 1);
   };
   const goTo = (i) => {
@@ -466,8 +474,12 @@ export default function DeckSelectCinematic({
       </header>
 
       {/* Nav arrows */}
-      {total > 1 && phase === 'idle' && <button className="dsk-nav left" onClick={() => go(-1)} aria-label="prev">‹</button>}
-      {total > 1 && phase === 'idle' && <button className="dsk-nav right" onClick={() => go(1)} aria-label="next">›</button>}
+      {total > 1 && phase === 'idle' && idx > 0 && (
+        <button className="dsk-nav left" onClick={() => go(-1)} aria-label="prev">‹</button>
+      )}
+      {total > 1 && phase === 'idle' && idx < total - 1 && (
+        <button className="dsk-nav right" onClick={() => go(1)} aria-label="next">›</button>
+      )}
 
       {/* Carousel — tutte le carte montate, --off guida lo scroll */}
       <div className="dsk-stage">
@@ -524,23 +536,25 @@ export default function DeckSelectCinematic({
             </div>
           )}
         </div>
-        {onPreviewDeck && (
-          <button type="button" className="dsk-preview" onClick={() => onPreviewDeck(deck)}>
-            <span className="ic">👁</span>
-            <span className="lbl">ANTEPRIMA</span>
+        <div className="dsk-ctabar-actions">
+          {onPreviewDeck && (
+            <button type="button" className="dsk-preview" onClick={() => onPreviewDeck(deck)}>
+              <span className="ic">👁</span>
+              <span className="lbl">ANTEPRIMA</span>
+            </button>
+          )}
+          {isManager && onCreateNew && (
+            <button type="button" className="dsk-preview" onClick={onCreateNew}>
+              <span className="ic">+</span>
+              <span className="lbl">NUOVO</span>
+            </button>
+          )}
+          <button type="button" className="dsk-schiera" onClick={confirm}>
+            <span className="lbl">{confirmLabel}</span>
+            <span className="arr">→</span>
+            <span className="key">↵</span>
           </button>
-        )}
-        {isManager && onCreateNew && (
-          <button type="button" className="dsk-preview" onClick={onCreateNew}>
-            <span className="ic">+</span>
-            <span className="lbl">NUOVO</span>
-          </button>
-        )}
-        <button type="button" className="dsk-schiera" onClick={confirm}>
-          <span className="lbl">{confirmLabel}</span>
-          <span className="arr">→</span>
-          <span className="key">↵</span>
-        </button>
+        </div>
       </div>
 
       {/* Intro sigillo */}
@@ -1313,7 +1327,8 @@ function DeckSelectStyles() {
       .dsk-corners > span:nth-child(4) { bottom: 4px; right: 4px; border-left: 0; border-top: 0; }
 
       /* CTA bar */
-      .dsk-ctabar { position: absolute; bottom: 24px; left: 48px; right: 48px; height: 90px; z-index: 12; display: grid; grid-template-columns: 240px 1fr auto auto; gap: 14px; align-items: center; }
+      .dsk-ctabar { position: absolute; bottom: 24px; left: 48px; right: 48px; height: 90px; z-index: 12; display: grid; grid-template-columns: 240px 1fr auto; gap: 14px; align-items: center; }
+      .dsk-ctabar-actions { display: flex; align-items: center; gap: 10px; justify-self: end; }
       .dsk-pager { padding: 12px 16px; background: rgba(5,6,8,0.72); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent); border-left: 4px solid var(--accent); clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); display: flex; flex-direction: column; gap: 6px; }
       .dsk-pager .eye { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 0.3em; color: #94a3b8; font-weight: 700; }
       .dsk-pager .dots { display: flex; gap: 4px; flex-wrap: wrap; }

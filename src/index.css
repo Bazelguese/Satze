@@ -2954,6 +2954,18 @@ body.graphics-prova .satze-stats-bracket {
   }
 }
 
+/* Override in-app (Opzioni → Riduci animazioni) */
+html.satze-reduce-motion .satze-brand-logo-pulse,
+body.satze-reduce-motion .satze-brand-logo-pulse {
+  animation: none;
+  transform: rotateX(5deg) rotateY(-2deg) translateZ(0);
+}
+html.satze-reduce-motion .satze-brand-logo-glare-layer,
+body.satze-reduce-motion .satze-brand-logo-glare-layer {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
 /* Wrapper viewport del gioco: centra e letterboxa il canvas 1920x1080.
    100dvh segue le barre dinamiche dei browser mobile (fallback 100vh). */
 .satze-viewport {

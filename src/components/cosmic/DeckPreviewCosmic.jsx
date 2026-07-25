@@ -336,7 +336,7 @@ function DeckPreviewCosmic({
               «{(D.name || 'ESERCITO').toUpperCase()}»
             </div>
             <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: accent, letterSpacing: '0.3em' }}>
-              {(D.army || '—').toUpperCase()} · {cards.length} CARTE · {totalLega} LEGA
+              {(displayArmies.length >= 2 ? displayArmies.join(' · ') : (D.army || '—')).toUpperCase()} · {cards.length} CARTE · {totalLega} LEGA
             </div>
           </div>
         </div>

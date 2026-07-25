@@ -7,6 +7,9 @@ import { MENU_ACCENTS,
 } from "../../theme/hudOratorioPalette";
 import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
 import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
+import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from "../../settings/displaySettings";
+import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/vfxQualityProfile";
+import { useUiScale } from "../../hooks/useUiScale";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -46,6 +49,8 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
   const [hover, setHover] = useState(null);
   /** @type {Array<{ accent: string, title: string, options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
+  const [vfxProfile, setVfxProfile] = useState(() => getVfxQualityProfile());
+  const uiScale = useUiScale();
 
   const choicePicker = choicePickerStack[choicePickerStack.length - 1] ?? null;
 
@@ -55,6 +60,12 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
 
   useEffect(() => {
     injectSatzeUiFonts();
+  }, []);
+
+  useEffect(() => {
+    const on = () => setVfxProfile(resolveVfxQualityProfile(getDisplaySettings()));
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
   }, []);
 
   useEffect(() => {
@@ -267,10 +278,11 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
         width: "100%",
         height: "100%",
         minHeight: "100%",
-        overflow: "hidden",
+        overflow: uiScale > 1 ? "auto" : "hidden",
         background: MENU_ACCENTS.void,
         fontFamily: "'Chakra Petch', system-ui, sans-serif",
         color: MENU_ACCENTS.text,
+        zoom: uiScale,
       }}
     >
       <style>{`
@@ -288,27 +300,29 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
           background: `radial-gradient(ellipse at ${GLOW_X} ${GLOW_Y}, #2a0a3a 0%, #14051f 40%, ${MENU_ACCENTS.void} 80%)`,
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          left: GLOW_X,
-          top: GLOW_Y,
-          transform: "translate(-50%, -50%)",
-          width: "min(920px, 95vw)",
-          height: "min(880px, 95vh)",
-          background:
-            "radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.24) 0%, rgba(88,28,135,0.2) 30%, transparent 64%)",
-          filter: "blur(28px)",
-          animation: "satze-v5-pulse-glow 6s ease-in-out infinite",
-          color: ACCENT,
-          pointerEvents: "none",
-        }}
-      />
+      {vfxProfile.menuGlowEnabled && (
+        <div
+          style={{
+            position: "absolute",
+            left: GLOW_X,
+            top: GLOW_Y,
+            transform: "translate(-50%, -50%)",
+            width: "min(920px, 95vw)",
+            height: "min(880px, 95vh)",
+            background:
+              "radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.24) 0%, rgba(88,28,135,0.2) 30%, transparent 64%)",
+            filter: vfxProfile.menuBlurPx > 0 ? `blur(${vfxProfile.menuBlurPx}px)` : "none",
+            animation: vfxProfile.menuSigilAnimation ? "satze-v5-pulse-glow 6s ease-in-out infinite" : "none",
+            color: ACCENT,
+            pointerEvents: "none",
+          }}
+        />
+      )}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          opacity: 0.1,
+          opacity: vfxProfile.quality === "low" ? 0.04 : 0.1,
           backgroundImage: `radial-gradient(${ACCENT} 1px, transparent 1.4px)`,
           backgroundSize: "8px 8px",
           mixBlendMode: "screen",

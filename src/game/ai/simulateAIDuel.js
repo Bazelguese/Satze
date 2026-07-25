@@ -1,0 +1,194 @@
+// ============================================
+// Simulazione duello via computeDuelResolution
+// ============================================
+
+import { computeDuelResolution } from '../duelResolve.js';
+import { countConqueredFields } from '../duel/duelHelpers.js';
+import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
+
+/**
+ * Conta Campi proiettati dopo l'esito del Campo corrente (senza mutare lo stato).
+ */
+export function projectFieldCounts(context, duelWinner) {
+  const { playerFieldsConquered, enemyFieldsConquered } = countConqueredFields(
+    context.conqueredFields,
+    context.player.hand,
+    context.ai.hand
+  );
+
+  let playerFieldsAfter = playerFieldsConquered;
+  let enemyFieldsAfter = enemyFieldsConquered;
+  if (duelWinner === 'player') playerFieldsAfter += 1;
+  if (duelWinner === 'enemy') enemyFieldsAfter += 1;
+
+  return {
+    playerFieldsBefore: playerFieldsConquered,
+    enemyFieldsBefore: enemyFieldsConquered,
+    playerFieldsAfter,
+    enemyFieldsAfter,
+  };
+}
+
+/**
+ * Stato terminale proiettato (allineato alle regole classiche principali).
+ * Non replica claim-choice UI: valuta minaccia / chiusura territoriale.
+ */
+export function resolveTerminalStatus(context, {
+  winner,
+  aiHpAfter,
+  playerHpAfter,
+  aiFieldsAfter,
+  playerFieldsAfter,
+  aiCardsRemaining,
+  playerCardsRemaining,
+}) {
+  if (playerHpAfter <= 0 && aiHpAfter > 0) return 'ai_win_hp';
+  if (aiHpAfter <= 0 && playerHpAfter > 0) return 'ai_loss_hp';
+  if (playerHpAfter <= 0 && aiHpAfter <= 0) return 'draw_hp';
+
+  const round = context.roundNumber || 1;
+  const mode = context.mode || 'classic';
+  const territorialAllowed =
+    mode === 'bareHands' || (mode === 'classic' && round < AI_SUPREMACY_ROUND);
+
+  if (territorialAllowed) {
+    if (aiFieldsAfter >= AI_FIELDS_TO_WIN) return 'ai_win_fields';
+    if (playerFieldsAfter >= AI_FIELDS_TO_WIN) return 'ai_loss_fields';
+  }
+
+  if (aiCardsRemaining <= 0 || playerCardsRemaining <= 0) {
+    if (aiHpAfter > playerHpAfter) return 'ai_win_cards';
+    if (playerHpAfter > aiHpAfter) return 'ai_loss_cards';
+    if (aiFieldsAfter > playerFieldsAfter) return 'ai_win_cards';
+    if (playerFieldsAfter > aiFieldsAfter) return 'ai_loss_cards';
+    return 'draw_cards';
+  }
+
+  if (winner === 'enemy' && aiFieldsAfter === AI_FIELDS_TO_WIN - 1 && territorialAllowed) {
+    return 'ai_threat_fields';
+  }
+  if (winner === 'player' && playerFieldsAfter === AI_FIELDS_TO_WIN - 1 && territorialAllowed) {
+    return 'player_threat_fields';
+  }
+
+  return null;
+}
+
+/**
+ * Simula un duello completo senza mutare il contesto.
+ *
+ * @param {object} context
+ * @param {{ card: object, focus: number, fieldIndex?: number }} aiAction
+ * @param {{ card: object, focus: number }} playerAction
+ * @param {{ cache?: Map }} [options]
+ */
+export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
+  if (!context?.field) {
+    throw new Error('simulateAIDuel: Campo mancante');
+  }
+  if (!aiAction?.card || !playerAction?.card) {
+    throw new Error('simulateAIDuel: carte mancanti');
+  }
+
+  const fieldIndex =
+    aiAction.fieldIndex != null ? aiAction.fieldIndex : context.currentFieldIndex;
+  const field =
+    fieldIndex != null && context.battlefields?.[fieldIndex]
+      ? context.battlefields[fieldIndex]
+      : context.field;
+
+  const cacheKey = [
+    field?.id ?? fieldIndex,
+    aiAction.card.id,
+    aiAction.focus,
+    playerAction.card.id,
+    playerAction.focus,
+    context.isPlayerFirst ? 1 : 0,
+    context.roundNumber,
+    context.lastWinner ?? '',
+    context.player.hp,
+    context.ai.hp,
+    context.player.focus,
+    context.ai.focus,
+  ].join(':');
+
+  if (options.cache?.has(cacheKey)) {
+    return options.cache.get(cacheKey);
+  }
+
+  const { battleResult } = computeDuelResolution({
+    field,
+    selectedAgent: playerAction.card,
+    enemyAgent: aiAction.card,
+    selectedFocus: playerAction.focus,
+    enemySelectedFocus: aiAction.focus,
+    playerHP: context.player.hp,
+    enemyHP: context.ai.hp,
+    playerFocus: context.player.focus,
+    enemyFocus: context.ai.focus,
+    playerUsedCards: context.player.usedCardIds,
+    enemyUsedCards: context.ai.usedCardIds,
+    isPlayerFirst: context.isPlayerFirst,
+    lastWinner: context.lastWinner,
+    playerArmyBonuses: context.player.armyBonuses,
+    enemyArmyBonuses: context.ai.armyBonuses,
+    playerToxin: context.player.toxin,
+    enemyToxin: context.ai.toxin,
+    roundNumber: context.roundNumber,
+    conqueredFields: context.conqueredFields,
+    playerHand: context.player.hand,
+    enemyHand: context.ai.hand,
+    currentFieldIndex: fieldIndex,
+  });
+
+  const fields = projectFieldCounts(context, battleResult.winner);
+
+  const aiUsed = new Set(
+    (context.ai.usedCardIds || []).map((e) => (typeof e === 'object' ? e.id : e))
+  );
+  aiUsed.add(aiAction.card.id);
+  const playerUsed = new Set(
+    (context.player.usedCardIds || []).map((e) => (typeof e === 'object' ? e.id : e))
+  );
+  playerUsed.add(playerAction.card.id);
+
+  const aiCardsRemaining = (context.ai.hand || []).filter((c) => c && !aiUsed.has(c.id)).length;
+  const playerCardsRemaining = (context.player.hand || []).filter(
+    (c) => c && !playerUsed.has(c.id)
+  ).length;
+
+  const simulation = {
+    winner: battleResult.winner,
+    battleResult,
+
+    aiHpBefore: context.ai.hp,
+    aiHpAfter: battleResult.finalEnemyHP,
+    playerHpBefore: context.player.hp,
+    playerHpAfter: battleResult.finalPlayerHP,
+
+    aiFocusBefore: context.ai.focus,
+    aiFocusAfter: battleResult.finalEnemyFC,
+    playerFocusBefore: context.player.focus,
+    playerFocusAfter: battleResult.finalPlayerFC,
+
+    aiFieldsBefore: fields.enemyFieldsBefore,
+    aiFieldsAfter: fields.enemyFieldsAfter,
+    playerFieldsBefore: fields.playerFieldsBefore,
+    playerFieldsAfter: fields.playerFieldsAfter,
+
+    aiCardsRemaining,
+    playerCardsRemaining,
+
+    aiAbilityTriggered: !!battleResult.enemyAbilityTriggered,
+    playerAbilityTriggered: !!battleResult.playerAbilityTriggered,
+    aiBonusTriggered: !!battleResult.enemyArmyBonusActive || !!battleResult.enemyHasBonus,
+    playerBonusTriggered: !!battleResult.playerArmyBonusActive || !!battleResult.playerHasBonus,
+
+    terminalStatus: null,
+  };
+
+  simulation.terminalStatus = resolveTerminalStatus(context, simulation);
+
+  if (options.cache) options.cache.set(cacheKey, simulation);
+  return simulation;
+}

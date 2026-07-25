@@ -1,16 +1,29 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
-
-const PARTICLE_COUNT = 100;
+import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from '../../settings/displaySettings';
+import { getVfxQualityProfile, resolveVfxQualityProfile } from '../../settings/vfxQualityProfile';
 
 export function CosmicMenuOverlay() {
   const canvasRef = useRef(null);
+  const [profile, setProfile] = useState(() => getVfxQualityProfile());
+
+  useEffect(() => {
+    const on = () => setProfile(resolveVfxQualityProfile(getDisplaySettings()));
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const particleCount = profile.menuParticleCount;
+    if (particleCount <= 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return undefined;
+    }
 
     let rafId = 0;
     let width = 0;
@@ -29,7 +42,7 @@ export function CosmicMenuOverlay() {
     };
 
     const seed = () => {
-      particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+      particles = Array.from({ length: particleCount }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         size: 0.7 + Math.random() * 1.9,
@@ -70,7 +83,7 @@ export function CosmicMenuOverlay() {
       window.removeEventListener('resize', resize);
       window.cancelAnimationFrame(rafId);
     };
-  }, []);
+  }, [profile.menuParticleCount]);
 
   return (
     <div
@@ -114,8 +127,8 @@ export function CosmicMenuOverlay() {
             position: 'absolute', bottom: 50, left: 36, zIndex: 2,
             width: 200, height: 200,
             pointerEvents: 'none',
-            animation: 'sigil-rot 36s linear infinite',
-            opacity: 0.65,
+            animation: profile.menuSigilAnimation ? 'sigil-rot 36s linear infinite' : 'none',
+            opacity: profile.menuSigilAnimation ? 0.65 : 0.35,
           }}>
             <svg viewBox="0 0 200 200" width="100%" height="100%">
               <circle cx="100" cy="100" r="78" fill="none" stroke={ACCENT} strokeWidth="0.5" strokeDasharray="2 6"/>

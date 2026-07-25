@@ -21,6 +21,7 @@ const PHASE_LABELS = {
   onlineDeckReady: 'PRONTI AL DUELLO',
   multiplayerLobby: 'MULTIPLAYER',
   playtestHistory: 'STORICO PLAYTEST',
+  options: 'OPZIONI',
 };
 
 // Sub-fasi del duello: NON innescano la transizione cosmic

@@ -55,6 +55,7 @@ export function useTutorialOrchestrator({
   setPlayerToxin,
   setEnemyToxin,
   setIsPlayerFirst,
+  setOpeningPlayerFirst,
   setLogs,
   setGamePhase,
   setPlayerConfirmedAwaitingAI,
@@ -164,6 +165,7 @@ export function useTutorialOrchestrator({
     setBattleResult(null);
     setPlayerToxin(null);
     setEnemyToxin(null);
+    setOpeningPlayerFirst?.(true);
     setIsPlayerFirst(true);
     resetAiSelectionRef?.();
     setPlayerConfirmedAwaitingAI(false);
@@ -216,6 +218,7 @@ export function useTutorialOrchestrator({
     setPlayerToxin,
     setEnemyToxin,
     setIsPlayerFirst,
+    setOpeningPlayerFirst,
     setPlayerConfirmedAwaitingAI,
     setGamePhase,
     resetAiSelectionRef,

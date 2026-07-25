@@ -1,6 +1,9 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY, injectSatzeUiFonts } from "../../theme/hudOratorioPalette";
 import { CosmicMenuBackground } from "./CosmicMenuBackground";
+import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from "../../settings/displaySettings";
+import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/vfxQualityProfile";
+import { useUiScale } from "../../hooks/useUiScale";
 
 // ═══════════════════════════════════════════════════
 // Layout condiviso — stesso cosmic del menù V5 (non duello)
@@ -12,9 +15,21 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
   const glowRef = useRef(null);
   const pendingMouseRef = useRef({ x: 0, y: 0 });
   const parallaxRafRef = useRef(0);
+  const uiScale = useUiScale();
+  const [parallaxEnabled, setParallaxEnabled] = useState(
+    () => getVfxQualityProfile().menuParallaxEnabled,
+  );
 
   useEffect(() => {
     injectSatzeUiFonts();
+  }, []);
+
+  useEffect(() => {
+    const on = () => {
+      setParallaxEnabled(resolveVfxQualityProfile(getDisplaySettings()).menuParallaxEnabled);
+    };
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
   }, []);
 
   const applyParallax = useCallback(() => {
@@ -28,6 +43,7 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
 
   const handleMouseMove = useCallback(
     (e) => {
+      if (!parallaxEnabled) return;
       const el = containerRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -39,7 +55,7 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
         parallaxRafRef.current = requestAnimationFrame(applyParallax);
       }
     },
-    [applyParallax],
+    [applyParallax, parallaxEnabled],
   );
 
   useEffect(
@@ -84,11 +100,14 @@ export function MenuScreenLayout({ children, title, subtitle, centered = true })
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: centered ? "center" : "flex-start",
-          height: centered ? "100%" : "auto",
-          minHeight: centered ? 0 : "100%",
+          justifyContent: centered && uiScale <= 1 ? "center" : "flex-start",
+          height: "auto",
+          minHeight: "100%",
           padding: "1rem",
-          overflow: centered ? "hidden" : "visible",
+          overflow: "visible",
+          // Densità UI: ingrandisce controlli/testi; lo scroll del container
+          // evita il crop sui bordi (niente zoom viewport/cover).
+          zoom: uiScale,
         }}
       >
         {(title || subtitle) && (

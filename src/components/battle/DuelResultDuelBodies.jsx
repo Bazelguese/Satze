@@ -17,6 +17,7 @@ import {
 } from './duelVisualDisplay.js';
 import { DUEL_CLASH_START_OFFSET_PX } from '../../config/duelClashLayout.js';
 import { DUEL_ACCENTS } from '../../theme/duelAccents.js';
+import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 
 /** Armata con bonus in dati ma regola mazzo non soddisfatta (non trigger, non copia, non blocco). */
 function duelBonusBaseInactive(agent, hasBonus, bonusNotTriggered, bonusBlocked, bonusCopied) {
@@ -69,7 +70,9 @@ function useClashDynamicSnapshot(battleResult, duelPhase) {
 
 function normalizeClashDyn(dyn) {
   const clashSpeed = Number.isFinite(dyn?.clashSpeed) && dyn.clashSpeed > 0 ? dyn.clashSpeed : 1;
-  const intensity = Number.isFinite(dyn?.intensity) && dyn.intensity > 0 ? dyn.intensity : 1;
+  const baseIntensity = Number.isFinite(dyn?.intensity) && dyn.intensity > 0 ? dyn.intensity : 1;
+  const mul = getVfxQualityProfile().clashIntensityMul;
+  const intensity = baseIntensity * (Number.isFinite(mul) ? mul : 1);
   return { clashSpeed, intensity };
 }
 
@@ -381,9 +384,9 @@ export function DuelResultEnemyResultBody({
   const victoryMs = Math.round(1500 / Math.max(0.1, dyn.clashSpeed));
   const particlesMs = Math.round(1000 / Math.max(0.1, dyn.clashSpeed));
   const clashSequenceActive = useClashSequenceWindow(duelPhase, dyn.clashSpeed);
-  const particleCount = Math.max(1, Math.round(8 * dyn.intensity));
+  const particleCount = dyn.intensity <= 0 ? 0 : Math.max(1, Math.round(8 * dyn.intensity));
   const particles = React.useMemo(
-    () => vaParticleOffsets(particleSeed, particleCount),
+    () => (particleCount > 0 ? vaParticleOffsets(particleSeed, particleCount) : []),
     [particleSeed, particleCount]
   );
 
@@ -570,9 +573,9 @@ export function DuelResultPlayerResultBody({
   const victoryMs = Math.round(1500 / Math.max(0.1, dyn.clashSpeed));
   const particlesMs = Math.round(1000 / Math.max(0.1, dyn.clashSpeed));
   const clashSequenceActive = useClashSequenceWindow(duelPhase, dyn.clashSpeed);
-  const particleCount = Math.max(1, Math.round(8 * dyn.intensity));
+  const particleCount = dyn.intensity <= 0 ? 0 : Math.max(1, Math.round(8 * dyn.intensity));
   const particles = React.useMemo(
-    () => vaParticleOffsets(particleSeed, particleCount),
+    () => (particleCount > 0 ? vaParticleOffsets(particleSeed, particleCount) : []),
     [particleSeed, particleCount]
   );
 

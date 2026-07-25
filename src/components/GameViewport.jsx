@@ -1,20 +1,21 @@
 import { useState, useLayoutEffect, useEffect } from 'react';
 import { useViewportLayout } from '../hooks/useViewportLayout';
 import { PALETTE } from '../theme/hudOratorioPalette';
+import {
+  DISPLAY_SETTINGS_CHANGED_EVENT,
+  applyDisplaySettingsToDom,
+  getDisplaySettings,
+  setDisplaySettings,
+} from '../settings/displaySettings';
+import { computeViewportScale } from '../settings/viewportScale';
 
 const DESKTOP_W = 1920;
 const DESKTOP_H = 1080;
 
 /**
- * Wrapper che scala il gioco a tutto schermo (scale-to-fit "contain").
- *
- * Il canvas logico è SEMPRE 1920×1080: in portrait il gioco appare
- * letterboxato ma completo. (Il vecchio canvas 1080×1920 in portrait
- * causava clipping orizzontale: il layout interno resta 1920×1080.)
- * In mobile portrait viene comunque applicata la classe
- * `satze-layout-mobile-portrait` per il padding safe-area.
- *
- * Espone `--satze-scale` sul wrapper per eventuali aggiustamenti CSS.
+ * Wrapper che scala il gioco a tutto schermo (contain).
+ * Canvas logico 1920×1080 sempre interamente visibile.
+ * La "Scala interfaccia" non zoomma questo viewport: è densità nei menù.
  */
 export function GameViewport({ children }) {
   const layout = useViewportLayout();
@@ -24,12 +25,34 @@ export function GameViewport({ children }) {
   const gameW = DESKTOP_W;
   const gameH = DESKTOP_H;
 
+  useEffect(() => {
+    applyDisplaySettingsToDom();
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await window.electronAPI?.display?.getSaved?.();
+        if (cancelled || !saved) return;
+        setDisplaySettings({
+          displayMode: saved.displayMode,
+          resolutionPreset: saved.resolutionPreset,
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+    const on = () => applyDisplaySettingsToDom(getDisplaySettings());
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const updateScale = () => {
-      // visualViewport tiene conto di barre browser mobile e pinch-zoom
       const vw = window.visualViewport?.width ?? window.innerWidth;
       const vh = window.visualViewport?.height ?? window.innerHeight;
-      setScale(Math.min(vw / gameW, vh / gameH));
+      setScale(computeViewportScale(vw, vh, gameW, gameH));
     };
     updateScale();
     window.addEventListener('resize', updateScale);
@@ -49,6 +72,9 @@ export function GameViewport({ children }) {
     };
   }, [isMobilePortrait]);
 
+  const layoutW = gameW * scale;
+  const layoutH = gameH * scale;
+
   return (
     <div
       className="satze-viewport"
@@ -57,17 +83,29 @@ export function GameViewport({ children }) {
         '--satze-scale': scale,
       }}
     >
+      {/* Spacer: la box di layout coincide con la size visuale post-scale */}
       <div
         style={{
-          width: gameW,
-          height: gameH,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
+          width: layoutW,
+          height: layoutH,
+          position: 'relative',
           flexShrink: 0,
-          overflow: 'hidden',
         }}
       >
-        {children}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: gameW,
+            height: gameH,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            overflow: 'hidden',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
