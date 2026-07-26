@@ -185,10 +185,38 @@ export function generateOpponentScenarios(context, profile) {
   return normalizeScenarioProbabilities(selected);
 }
 
-function normalizeScenarioProbabilities(scenarios) {
-  const total = scenarios.reduce((sum, s) => sum + (s.weight || 0), 0) || 1;
-  return scenarios.map((s) => ({
-    ...s,
-    probability: (s.weight || 0) / total,
-  }));
+/**
+ * Probabilità a due livelli:
+ * - prior uniforme sulla carta (aggiungere Focus non aumenta P(carta));
+ * - distribuzione Focus normalizzata dentro la carta.
+ */
+export function normalizeScenarioProbabilities(scenarios) {
+  if (!scenarios?.length) return [];
+
+  const byCard = new Map();
+  for (const s of scenarios) {
+    const id = s.cardId ?? s.card?.id;
+    if (id == null) continue;
+    if (!byCard.has(id)) byCard.set(id, []);
+    byCard.get(id).push(s);
+  }
+
+  const nCards = Math.max(1, byCard.size);
+  const cardPrior = 1 / nCards;
+  const out = [];
+
+  for (const [, list] of byCard) {
+    const weightSum = list.reduce((sum, s) => sum + (s.weight || 0), 0) || 1;
+    for (const s of list) {
+      const focusShare = (s.weight || 0) / weightSum;
+      out.push({
+        ...s,
+        cardPrior,
+        focusShare,
+        probability: cardPrior * focusShare,
+      });
+    }
+  }
+
+  return out;
 }

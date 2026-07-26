@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   generateOpponentFocusValues,
   generateOpponentScenarios,
+  normalizeScenarioProbabilities,
 } from './generateOpponentScenarios.js';
 import { getAIProfile } from './aiProfiles.js';
 import { makeAIContext, makeCard, makeRound1BudgetFixture } from './aiTestFixtures.js';
@@ -103,4 +104,25 @@ test('cinque carte nascoste: tutte rappresentate, non solo le prime in mano', ()
   for (const c of cards) {
     assert.ok(ids.has(c.id), `manca carta ${c.id}`);
   }
+});
+
+test('prior carta uniforme: più Focus non alzano P(carta)', () => {
+  const cardA = makeCard({ id: 1 });
+  const cardB = makeCard({ id: 2 });
+  const few = normalizeScenarioProbabilities([
+    { card: cardA, cardId: 1, focus: 2, weight: 1, band: 'standard' },
+    { card: cardB, cardId: 2, focus: 2, weight: 1, band: 'standard' },
+  ]);
+  const many = normalizeScenarioProbabilities([
+    { card: cardA, cardId: 1, focus: 1, weight: 1, band: 'economical' },
+    { card: cardA, cardId: 1, focus: 2, weight: 1, band: 'standard' },
+    { card: cardA, cardId: 1, focus: 4, weight: 1, band: 'pressure' },
+    { card: cardA, cardId: 1, focus: 6, weight: 1, band: 'high' },
+    { card: cardB, cardId: 2, focus: 2, weight: 1, band: 'standard' },
+  ]);
+  const priorFewA = few.filter((s) => s.cardId === 1).reduce((s, x) => s + x.probability, 0);
+  const priorManyA = many.filter((s) => s.cardId === 1).reduce((s, x) => s + x.probability, 0);
+  assert.ok(Math.abs(priorFewA - 0.5) < 1e-9);
+  assert.ok(Math.abs(priorManyA - 0.5) < 1e-9);
+  assert.ok(Math.abs(priorFewA - priorManyA) < 1e-9);
 });

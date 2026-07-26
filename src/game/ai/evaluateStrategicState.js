@@ -35,8 +35,8 @@ function evaluateImmediateTriggers(state) {
     if (t === 'ultimaChance' && round >= 4) score += 110;
     if (t === 'ultimaChance' && round < 3) score += 35;
     if (t === 'reckoning' && (state.aiUsedCardIds?.length || 0) >= 2) score += 70;
-    if (t === 'glory' && state.lastWinner === 'enemy') score += 55;
-    if (t === 'vendetta' && state.lastWinner === 'player') score += 55;
+    if (t === 'glory' && state.lastWinner === 'enemy') score += 380;
+    if (t === 'vendetta' && state.lastWinner === 'player') score += 420;
     if (t === 'invasione' && (state.enemyFieldsConquered || 0) >= 1) score += 50;
     if (t === 'resistenza' && (state.playerFieldsConquered || 0) >= 1) score += 50;
     if (t === 'intervention' && state.isPlayerFirst) score += 40;
@@ -135,12 +135,12 @@ export function evaluateStrategicState(state, profile = {}) {
     parts.initiative -= 70;
   }
 
-  // Bonus leggero se la sconfitta ha preparato Vendetta e abbiamo iniziativa
+  // Setup post-sconfitta / post-vittoria con iniziativa (catene Vendetta/Gloria)
   if (state.lastWinner === 'player' && state.initiativeSide === 'ai') {
-    parts.triggers += 40;
+    parts.triggers += 220;
   }
   if (state.lastWinner === 'enemy' && state.initiativeSide === 'ai') {
-    parts.triggers += 25;
+    parts.triggers += 160;
   }
 
   const score =

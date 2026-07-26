@@ -88,6 +88,13 @@ function futurePlanningPenalty(card, context, profile, weights) {
   if (trigger === 'turbo' && (context.roundNumber || 1) > 2) {
     setup += weights.futureTriggerSetup * 0.3;
   }
+  // Conserva Vendetta/Gloria finché il setup (sconfitta/vittoria) non è pronto
+  if (trigger === 'vendetta' && context.lastWinner !== 'player') {
+    setup -= weights.futureTriggerSetup * 1.35;
+  }
+  if (trigger === 'glory' && context.lastWinner !== 'enemy') {
+    setup -= weights.futureTriggerSetup * 1.1;
+  }
 
   return (setup - consumed * 0.35 + keptValue * 0.02) * futureWeight;
 }

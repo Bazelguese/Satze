@@ -76,7 +76,9 @@ export {
   scoreActionsWithSearch,
   chooseBestAiReplyAggregatingFocus,
   scoreAiActionAgainstFocusVariants,
+  aggregatePlayerCardScores,
 } from './searchGameTree.js';
+export { normalizeScenarioProbabilities } from './generateOpponentScenarios.js';
 export { publicStateHash } from './publicStateHash.js';
 export {
   lightRankField,

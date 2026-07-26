@@ -201,35 +201,53 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
     return { score: leafScore(rootState, profile), stats, depth };
   }
 
-  const values = [];
-  const probs = [];
+  // Prior uniforme per carta; Focus solo dentro la carta
+  const byCard = groupScenariosByCardId(scenarios);
+  const cardValues = [];
+  for (const [, cardScenarios] of byCard) {
+    const values = [];
+    const probs = [];
+    let focusSum = 0;
+    for (const scenario of cardScenarios) {
+      stats.nodes += 1;
+      const simulation = simulateAIDuel(
+        context,
+        action,
+        { card: scenario.card, focus: scenario.focus },
+        { cache: duelCache }
+      );
+      const projected = projectPostDuelState(
+        rootState,
+        simulation,
+        action,
+        { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
+      );
 
-  for (const scenario of scenarios) {
-    stats.nodes += 1;
-    const simulation = simulateAIDuel(
-      context,
-      action,
-      { card: scenario.card, focus: scenario.focus },
-      { cache: duelCache }
-    );
-    const projected = projectPostDuelState(
-      rootState,
-      simulation,
-      action,
-      { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
-    );
-
-    let childScore;
-    if (projected.terminalStatus || depth <= 0) {
-      childScore = leafScore(projected, profile);
-    } else {
-      childScore = valueState(projected, depth, profile, { duelCache, tt, stats });
+      let childScore;
+      if (projected.terminalStatus || depth <= 0) {
+        childScore = leafScore(projected, profile);
+      } else {
+        childScore = valueState(projected, depth, profile, { duelCache, tt, stats });
+      }
+      values.push(childScore);
+      const share = scenario.focusShare ?? scenario.probability ?? 0;
+      probs.push(share);
+      focusSum += share;
     }
-    values.push(childScore);
-    probs.push(scenario.probability || 0);
+    const norm = focusSum > 0 ? focusSum : 1;
+    cardValues.push(
+      aggregateRisk(
+        values,
+        probs.map((p) => p / norm),
+        profile.riskWeight
+      )
+    );
   }
 
-  let score = aggregateRisk(values, probs, profile.riskWeight);
+  let score =
+    cardValues.length > 0
+      ? cardValues.reduce((s, v) => s + v, 0) / cardValues.length
+      : leafScore(rootState, profile);
 
   const budget = getOrdinaryFocusCap(context, 'ai', profile);
   score -= computeOverinvestmentPenalty(
@@ -295,33 +313,85 @@ function valueAiToMove(state, depth, profile, ctx, beamWidth) {
     if (!actions.length || !scenarios.length) continue;
 
     for (const action of actions) {
-      // Anche quando l'IA apre: raggruppa per carta avversaria, una risposta non dipende dal Focus esatto
-      // (qui l'IA gioca prima: sceglie action senza vedere Focus; lo score aggrega già i Focus).
-      const values = [];
-      const probs = [];
-      for (const scenario of scenarios) {
-        ctx.stats.nodes += 1;
-        const simulation = simulateAIDuel(
-          context,
-          action,
-          { card: scenario.card, focus: scenario.focus },
-          { cache: ctx.duelCache }
+      // Prior uniforme per carta; Focus normalizzati dentro ogni carta
+      const byCard = groupScenariosByCardId(scenarios);
+      const cardValues = [];
+      for (const [, cardScenarios] of byCard) {
+        const values = [];
+        const probs = [];
+        let focusSum = 0;
+        for (const scenario of cardScenarios) {
+          ctx.stats.nodes += 1;
+          const simulation = simulateAIDuel(
+            context,
+            action,
+            { card: scenario.card, focus: scenario.focus },
+            { cache: ctx.duelCache }
+          );
+          const projected = projectPostDuelState(
+            state,
+            simulation,
+            action,
+            { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
+          );
+          values.push(afterRoundValue(projected, depth, profile, ctx));
+          const share = scenario.focusShare ?? scenario.probability ?? 0;
+          probs.push(share);
+          focusSum += share;
+        }
+        const norm = focusSum > 0 ? focusSum : 1;
+        cardValues.push(
+          aggregateRisk(
+            values,
+            probs.map((p) => p / norm),
+            profile.riskWeight
+          )
         );
-        const projected = projectPostDuelState(
-          state,
-          simulation,
-          action,
-          { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
-        );
-        values.push(afterRoundValue(projected, depth, profile, ctx));
-        probs.push(scenario.probability || 0);
       }
-      const score = aggregateRisk(values, probs, profile.riskWeight);
+      const score =
+        cardValues.length > 0
+          ? cardValues.reduce((s, v) => s + v, 0) / cardValues.length
+          : leafScore(state, profile);
       if (score > best) best = score;
     }
   }
 
   return best === -Infinity ? leafScore(state, profile) : best;
+}
+
+/**
+ * Aggrega i valori per carta avversaria dopo risposta IA unica.
+ * Difficile: carta peggiore per l'IA; Normale: pesi sulle carte sensate; Facile: media.
+ * La prior di carta è uniforme (non dipende dal numero di Focus).
+ */
+export function aggregatePlayerCardScores(cardScores, profile) {
+  if (!cardScores?.length) return -Infinity;
+
+  if (profile?.id === 'hard') {
+    return Math.min(...cardScores.map((c) => c.score));
+  }
+
+  if (profile?.id === 'easy') {
+    return cardScores.reduce((sum, c) => sum + c.score, 0) / cardScores.length;
+  }
+
+  // Normale: distribuzione ponderata tra le carte più sensate (peggiori per l'IA)
+  const scores = cardScores.map((c) => c.score);
+  const worst = Math.min(...scores);
+  const best = Math.max(...scores);
+  const span = Math.max(1e-6, best - worst);
+  const band = span * 0.5 + 40;
+  const sensible = cardScores.filter((c) => c.score <= worst + band);
+  const pool = sensible.length ? sensible : cardScores;
+
+  let totalW = 0;
+  let sum = 0;
+  for (const c of pool) {
+    const weight = (best - c.score) / span + 0.25;
+    totalW += weight;
+    sum += c.score * weight;
+  }
+  return totalW > 0 ? sum / totalW : worst;
 }
 
 /**
@@ -346,12 +416,10 @@ function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
     if (!scenarios.length || !aiActions.length) continue;
 
     const byCard = groupScenariosByCardId(scenarios);
-    const cardValues = [];
-    const cardProbs = [];
-    let cardProbSum = 0;
+    const cardScores = [];
 
-    for (const [, cardScenarios] of byCard) {
-      const groupProb = cardScenarios.reduce((s, sc) => s + (sc.probability || 0), 0);
+    for (const [cardId, cardScenarios] of byCard) {
+      // Focus rinormalizzati dentro la carta; prior carta separata
       const { score } = chooseBestAiReplyAggregatingFocus(
         context,
         state,
@@ -362,19 +430,16 @@ function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
         ctx
       );
       if (!Number.isFinite(score)) continue;
-      cardValues.push(score);
-      cardProbs.push(groupProb);
-      cardProbSum += groupProb;
+      cardScores.push({
+        cardId,
+        score,
+        cardPrior: cardScenarios[0]?.cardPrior ?? 1 / Math.max(1, byCard.size),
+      });
     }
 
-    if (!cardValues.length) continue;
+    if (!cardScores.length) continue;
 
-    const norm = cardProbSum > 0 ? cardProbSum : 1;
-    const fieldScore = aggregateRisk(
-      cardValues,
-      cardProbs.map((p) => p / norm),
-      profile.riskWeight
-    );
+    const fieldScore = aggregatePlayerCardScores(cardScores, profile);
 
     fieldScores.push({
       score: fieldScore,
@@ -385,7 +450,6 @@ function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
   if (!fieldScores.length) return leafScore(state, profile);
 
   if (profile.id === 'hard') {
-    // Scelta peggiore per l'IA
     return Math.min(...fieldScores.map((f) => f.score));
   }
 
@@ -393,7 +457,6 @@ function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
     return fieldScores.reduce((s, f) => s + f.score, 0) / fieldScores.length;
   }
 
-  // Normale: distribuzione ponderata (Campi più attraenti per il giocatore pesano di più)
   const totalW = fieldScores.reduce((s, f) => s + f.weight, 0) || 1;
   return fieldScores.reduce((s, f) => s + f.score * (f.weight / totalW), 0);
 }
