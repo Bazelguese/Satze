@@ -19,6 +19,9 @@ import {
 import { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 import { buildAIDebugPayload, isAIDebugEnabled, logAIDebug } from './aiDebug.js';
 import { scoreActionWithStrategicProjection } from './strategicScore.js';
+import { buildStrategicState } from './strategicState.js';
+import { strategicEvalWeight } from './evaluateStrategicState.js';
+import { evaluateActionWithSearch, resolveSearchDepth } from './searchGameTree.js';
 
 export { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 
@@ -159,6 +162,14 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
   }
 
   const budget = getOrdinaryFocusCap(context, 'ai', profile);
+  const rootState = buildStrategicState(context);
+  const searchDepth =
+    options.searchDepth != null
+      ? options.searchDepth
+      : resolveSearchDepth(profile, rootState);
+  const searchEnabled = searchDepth > 0 && options.includeSearch !== false;
+  const transpositionTable = options.transpositionTable || new Map();
+  const searchStats = options.searchStats || { nodes: 0, cacheHits: 0 };
   const scored = [];
 
   for (const action of shortlist) {
@@ -192,16 +203,29 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
 
     const useStrategic =
       options.includeStrategicProjection !== false;
-    const finalScore = useStrategic
-      ? scoreActionWithStrategicProjection({
-          context,
-          action,
-          scenarios,
-          duelAggregateScore: agg.finalScore,
-          profile,
-          cache,
-        })
-      : agg.finalScore;
+
+    let finalScore = agg.finalScore;
+    if (searchEnabled) {
+      const searched = evaluateActionWithSearch(context, action, profile, {
+        depth: searchDepth,
+        rootState,
+        cache,
+        transpositionTable,
+        stats: searchStats,
+        scenarios,
+      });
+      const weight = Math.min(0.85, strategicEvalWeight(profile) + 0.25);
+      finalScore = agg.finalScore * (1 - weight) + searched.score * weight;
+    } else if (useStrategic) {
+      finalScore = scoreActionWithStrategicProjection({
+        context,
+        action,
+        scenarios,
+        duelAggregateScore: agg.finalScore,
+        profile,
+        cache,
+      });
+    }
 
     scored.push({
       action,
@@ -223,6 +247,7 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
       budget,
       exceptionReason: action.meta?.exceptionReason || null,
       scenariosConsidered: scenarios.length,
+      searchDepth,
     });
   }
 
@@ -232,6 +257,9 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
   return finalizeDecision(chosen, scored, profile, context, {
     fairShare: budget.fairShare,
     ordinaryCap: budget.ordinaryCap,
+    searchDepth,
+    searchNodes: searchStats.nodes,
+    searchCacheHits: searchStats.cacheHits,
     scenarios: scenarios.map((s) => ({
       cardId: s.cardId,
       focus: s.focus,

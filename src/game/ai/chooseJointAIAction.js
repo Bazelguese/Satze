@@ -47,6 +47,7 @@ export function chooseJointAIAction(context, difficulty, options = {}) {
             ownActionLimitWhenFirst: Math.min(profile.ownActionLimitWhenFirst || 10, 8),
             opponentScenarioCount: Math.min(profile.opponentScenarioCount || 4, 4),
             ownVariantsPerCard: Math.min(profile.ownVariantsPerCard || 3, 3),
+            beamWidth: Math.min(profile.beamWidth || 12, 8),
             selectionMode: 'best',
           }
         : { ...profile, selectionMode: profile.selectionMode };

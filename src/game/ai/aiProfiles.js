@@ -38,6 +38,10 @@ export const AI_PROFILES = {
       pressure: 0,
       high: 0,
     },
+
+    searchDepth: 0,
+    beamWidth: 6,
+    solveEndgameAtCardsRemaining: 1,
   },
 
   medium: {
@@ -75,6 +79,10 @@ export const AI_PROFILES = {
       pressure: 0.25,
       high: 0.1,
     },
+
+    searchDepth: 1,
+    beamWidth: 12,
+    solveEndgameAtCardsRemaining: 2,
   },
 
   hard: {
@@ -111,6 +119,10 @@ export const AI_PROFILES = {
       pressure: 0.3,
       high: 0.2,
     },
+
+    searchDepth: 2,
+    beamWidth: 16,
+    solveEndgameAtCardsRemaining: 2,
   },
 };
 

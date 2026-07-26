@@ -119,3 +119,65 @@ export function findCardInState(state, side, cardId) {
   const hand = side === 'ai' ? state._refs?.aiHand : state._refs?.playerHand;
   return (hand || []).find((c) => c && c.id === cardId) || null;
 }
+
+/**
+ * Ricostruisce un information-set / context simulabile da uno stato strategico.
+ * Non include mai selectedFocus.
+ *
+ * @param {object} state
+ * @param {number|null} [fieldIndex]
+ */
+export function rebuildContextFromStrategicState(state, fieldIndex = null) {
+  const battlefields = state._refs?.battlefields || [];
+  const resolvedFieldIndex =
+    fieldIndex != null
+      ? fieldIndex
+      : state.currentFieldIndex != null
+        ? state.currentFieldIndex
+        : null;
+  const field =
+    resolvedFieldIndex != null && battlefields[resolvedFieldIndex]
+      ? battlefields[resolvedFieldIndex]
+      : null;
+
+  return {
+    difficulty: state.difficulty,
+    mode: state.mode,
+    informationPolicy: state.informationPolicy,
+    roundNumber: state.roundNumber,
+    lastWinner: state.lastWinner,
+    isPlayerFirst: state.initiativeSide
+      ? state.initiativeSide === 'player'
+      : state.isPlayerFirst !== false,
+    openingPlayerFirst: state.openingPlayerFirst,
+    initiativeProfile: state.initiativeProfile,
+    currentFieldIndex: resolvedFieldIndex,
+    field,
+    battlefields,
+    conqueredFields: state.conqueredFields,
+    revealedFields: state.revealedFields,
+    playerFieldsConquered: state.playerFieldsConquered,
+    enemyFieldsConquered: state.enemyFieldsConquered,
+    player: {
+      hand: state._refs?.playerHand || [],
+      usedCardIds: state.playerUsedCardIds || [],
+      hp: state.playerHP,
+      focusPool: state.playerFocus,
+      focus: state.playerFocus,
+      armyBonuses: state._refs?.playerArmyBonuses || {},
+      toxin: state.playerToxin,
+      // Carta pubblica solo se il giocatore ha già aperto in questo duello — in ricerca futura è nascosta.
+      visibleCard: null,
+    },
+    ai: {
+      hand: state._refs?.aiHand || [],
+      usedCardIds: state.aiUsedCardIds || [],
+      hp: state.aiHP,
+      focusPool: state.aiFocus,
+      focus: state.aiFocus,
+      armyBonuses: state._refs?.aiArmyBonuses || {},
+      toxin: state.aiToxin,
+    },
+    campaignDuelMod: state._refs?.campaignDuelMod ?? null,
+  };
+}
