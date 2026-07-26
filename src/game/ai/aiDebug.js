@@ -2,6 +2,8 @@
 // Debug developer opzionale per decisioni IA
 // ============================================
 
+import { INFORMATION_POLICY } from './aiConstants.js';
+
 export function isAIDebugEnabled() {
   try {
     return (
@@ -15,10 +17,11 @@ export function isAIDebugEnabled() {
   }
 }
 
-export function buildAIDebugPayload({ difficulty, selected, candidates, context }) {
+export function buildAIDebugPayload({ difficulty, selected, candidates, context, extras = {} }) {
   if (!selected) {
     return {
       difficulty,
+      informationPolicy: INFORMATION_POLICY,
       selected: null,
       reasons: ['nessuna mossa legale'],
       candidates: [],
@@ -33,13 +36,24 @@ export function buildAIDebugPayload({ difficulty, selected, candidates, context 
   if (sim?.winner === 'enemy') reasons.push('vince il Campo');
   if (sim?.winner === 'player') reasons.push('sconfitta strategica possibile');
   if (sim?.aiAbilityTriggered) reasons.push('abilità attiva');
-  if (selected.dominated) reasons.push('dominata');
+  if (selected.exceptionReason) reasons.push(`eccezione:${selected.exceptionReason}`);
   reasons.push(`Focus ${selected.action.focus}`);
+  reasons.push('Focus giocatore nascosto');
 
   return {
     difficulty,
+    informationPolicy: INFORMATION_POLICY,
     roundNumber: context?.roundNumber,
     isPlayerFirst: context?.isPlayerFirst,
+    visiblePlayerCardId: context?.player?.visibleCard?.id ?? null,
+    fairShare: extras.fairShare ?? selected.budget?.fairShare,
+    ordinaryCap: extras.ordinaryCap ?? selected.budget?.ordinaryCap,
+    exception: selected.exceptionReason || null,
+    expectedScore: selected.expectedScore,
+    lowerPercentileScore: selected.lowerPercentileScore,
+    overinvestmentPenalty: selected.overinvestmentPenalty,
+    winProbability: selected.winProbability,
+    scenarios: extras.scenarios || [],
     selected: {
       cardId: selected.action.cardId,
       cardName: selected.action.card?.name,
@@ -53,12 +67,14 @@ export function buildAIDebugPayload({ difficulty, selected, candidates, context 
       cardName: c.action.card?.name,
       focus: c.action.focus,
       score: Number(c.score?.toFixed?.(1) ?? c.score),
+      expectedScore: Number(c.expectedScore?.toFixed?.(1) ?? c.expectedScore),
+      overinvestmentPenalty: Number(c.overinvestmentPenalty?.toFixed?.(1) ?? c.overinvestmentPenalty),
+      exception: c.exceptionReason || null,
       winner: c.simulation?.winner,
       aiHpAfter: c.simulation?.aiHpAfter,
       playerHpAfter: c.simulation?.playerHpAfter,
       aiFocusAfter: c.simulation?.aiFocusAfter,
       playerFocusAfter: c.simulation?.playerFocusAfter,
-      dominated: !!c.dominated,
       terminalStatus: c.simulation?.terminalStatus,
     })),
   };
@@ -66,7 +82,22 @@ export function buildAIDebugPayload({ difficulty, selected, candidates, context 
 
 export function logAIDebug(debug) {
   if (!debug) return;
-  console.info('[SATZE AI]', debug.selected, debug.reasons);
+  console.info(
+    '[SATZE AI]',
+    {
+      card: debug.selected?.cardName,
+      focus: debug.selected?.focus,
+      fairShare: debug.fairShare,
+      ordinaryCap: debug.ordinaryCap,
+      exception: debug.exception,
+      expectedScore: debug.expectedScore,
+      lowerPercentileScore: debug.lowerPercentileScore,
+      overinvestmentPenalty: debug.overinvestmentPenalty,
+      winProbability: debug.winProbability,
+      informationPolicy: debug.informationPolicy,
+    },
+    debug.reasons
+  );
   if (debug.candidates?.length && typeof console.table === 'function') {
     console.table(debug.candidates.slice(0, 10));
   }

@@ -30,7 +30,7 @@ export const AI_SCORE_WEIGHTS = {
   activeTriggerTiePreference: 40,
   futureTriggerSetup: 120,
 
-  focusSpentPerPoint: -28,
+  focusSpentPerPoint: -18,
   wastedFocusPerPoint: -160,
 
   valuableCardConsumed: -100,
@@ -39,6 +39,20 @@ export const AI_SCORE_WEIGHTS = {
 export const AI_MIN_FOCUS = 1;
 export const AI_FIELDS_TO_WIN = 3;
 export const AI_SUPREMACY_ROUND = 5;
+
+/** Tie-break solo entro questa finestra di punteggio. */
+export const SCORE_TIE_EPSILON = 5;
+
+/** Moltiplicatori penalità sovrainvestimento per round. */
+export const OVERINVESTMENT_ROUND_MULTIPLIER = {
+  1: 1.5,
+  2: 1.25,
+  3: 1,
+  4: 0.7,
+  5: 0.35,
+};
+
+export const INFORMATION_POLICY = 'hidden-player-focus';
 
 /** RNG di default (solo adapter / runtime). Nei test iniettare un RNG deterministico. */
 export function defaultRng() {

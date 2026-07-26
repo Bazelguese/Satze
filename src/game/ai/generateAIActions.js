@@ -1,8 +1,14 @@
 // ============================================
-// Generazione azioni legali carta + Focus
+// Generazione azioni legali / strategiche carta + Focus
 // ============================================
 
+import { getFieldModifiers } from '../battlefieldEffects.js';
 import { AI_MIN_FOCUS } from './aiConstants.js';
+import {
+  getOrdinaryFocusCap,
+  getFocusCapException,
+  estimateStandardFocus,
+} from './focusBudget.js';
 
 /**
  * Normalizza usedCards (id o oggetti) in Set di id.
@@ -32,14 +38,9 @@ export function getAvailableCards(hand, usedCardIds) {
 
 /**
  * Riserva UI: 1 FC per ogni carta ancora da giocare dopo quella corrente.
- * Allineata a FocusCoinSelector (max - reserved).
- *
- * @param {number} focusPool
- * @param {number} availableCardCount
  */
 export function getReservedFocus(focusPool, availableCardCount) {
-  const reserved = Math.max(0, (availableCardCount || 0) - 1);
-  return reserved;
+  return Math.max(0, (availableCardCount || 0) - 1);
 }
 
 /**
@@ -47,18 +48,15 @@ export function getReservedFocus(focusPool, availableCardCount) {
  *
  * @param {object} context
  * @param {'ai'|'player'} side
- * @returns {{ minFocus: number, maxFocus: number, reserved: number, pool: number }}
  */
 export function getLegalFocusRange(context, side) {
   const sideState = side === 'ai' ? context.ai : context.player;
   const available = getAvailableCards(sideState.hand, sideState.usedCardIds);
-  const pool = Math.max(0, Number(sideState.focus) || 0);
+  const pool = Math.max(0, Number(sideState.focusPool ?? sideState.focus) || 0);
   const reserved = getReservedFocus(pool, available.length);
   const maxFocus = Math.max(AI_MIN_FOCUS, pool - reserved);
   const minFocus = AI_MIN_FOCUS;
 
-  // Se il pool è 0, il gioco può essere in stato terminale: resta comunque min 1
-  // come UI, ma generateActions filtrerà se non ci sono carte.
   return {
     minFocus,
     maxFocus: Math.min(maxFocus, Math.max(pool, AI_MIN_FOCUS)),
@@ -68,11 +66,7 @@ export function getLegalFocusRange(context, side) {
 }
 
 /**
- * Genera tutte le coppie legali carta × Focus per un lato.
- *
- * @param {object} context
- * @param {'ai'|'player'} side
- * @param {number|null} [fieldIndex]
+ * Genera tutte le coppie legali carta × Focus (test / simulazioni mirate).
  */
 export function generateActionsForSide(context, side, fieldIndex = null) {
   const sideState = side === 'ai' ? context.ai : context.player;
@@ -96,9 +90,119 @@ export function generateActionsForSide(context, side, fieldIndex = null) {
 }
 
 /**
- * Azioni IA sul Campo corrente.
- * @param {object} context
+ * Candidati Focus strategici per una carta (non tutti i valori legali).
  */
+export function generateStrategicFocusCandidates(context, card, profile) {
+  const { minFocus, maxFocus } = getLegalFocusRange(context, 'ai');
+  const budget = getOrdinaryFocusCap(context, 'ai', profile);
+  const {
+    fairShare,
+    ordinaryCap,
+    legalMax,
+    pool,
+    cardsRemaining,
+    standardFocus,
+  } = budget;
+
+  const fieldMods = getFieldModifiers(context.field);
+  const odThreshold = fieldMods.overdriveThreshold || 5;
+  const pressure = Math.min(ordinaryCap, standardFocus + 1);
+
+  const values = [
+    minFocus,
+    fairShare,
+    standardFocus,
+    pressure,
+    ordinaryCap,
+  ];
+
+  const wantsOd =
+    card?.ability?.trigger === 'overdrive' ||
+    fieldMods.overdriveExtraPowerAndDamage === true;
+  if (wantsOd) {
+    values.push(odThreshold);
+  }
+
+  if (fieldMods.winnerByFocusNotVa) {
+    values.push(Math.min(legalMax, ordinaryCap + 2));
+  }
+
+  // Max legale solo se un'eccezione lo giustifica
+  const maxAction = { card, cardId: card?.id, focus: legalMax, fieldIndex: context.currentFieldIndex };
+  const maxException = getFocusCapException(context, maxAction, profile, budget);
+  if (maxException.allowed && (maxException.reason || cardsRemaining <= 1)) {
+    values.push(legalMax);
+  }
+
+  // Soglia OD sopra cap: solo se eccezione overdrive-soglia
+  if (wantsOd && odThreshold > ordinaryCap) {
+    const odAction = { card, cardId: card?.id, focus: odThreshold, fieldIndex: context.currentFieldIndex };
+    const odEx = getFocusCapException(context, odAction, profile, budget);
+    if (odEx.allowed) values.push(odThreshold);
+  }
+
+  const unique = [...new Set(values)]
+    .map((v) => Math.max(minFocus, Math.min(maxFocus, Math.round(v))))
+    .filter((v) => v >= minFocus && v <= maxFocus)
+    .sort((a, b) => a - b);
+
+  return {
+    focuses: unique,
+    budget: {
+      fairShare,
+      ordinaryCap,
+      legalMax,
+      pool,
+      cardsRemaining,
+      standardFocus,
+    },
+  };
+}
+
+/**
+ * Azioni strategiche IA: poche varianti Focus per carta.
+ */
+export function generateStrategicActionsForSide(context, side, profile, fieldIndex = null) {
+  if (side !== 'ai') {
+    // Per il giocatore usiamo scenari dedicati; fallback enumerazione ridotta
+    return generateActionsForSide(context, side, fieldIndex);
+  }
+
+  const cards = getAvailableCards(context.ai.hand, context.ai.usedCardIds);
+  const resolvedFieldIndex =
+    fieldIndex != null ? fieldIndex : context.currentFieldIndex;
+  const actions = [];
+
+  for (const card of cards) {
+    const { focuses, budget } = generateStrategicFocusCandidates(context, card, profile);
+    for (const focus of focuses) {
+      const action = {
+        card,
+        cardId: card.id,
+        focus,
+        fieldIndex: resolvedFieldIndex,
+      };
+      const exception = getFocusCapException(context, action, profile, budget);
+      // Escludi candidati sopra cap senza eccezione
+      if (focus > budget.ordinaryCap && !exception.allowed) continue;
+      actions.push({
+        ...action,
+        meta: {
+          fairShare: budget.fairShare,
+          ordinaryCap: budget.ordinaryCap,
+          standardFocus: budget.standardFocus,
+          exceptionReason: exception.reason,
+        },
+      });
+    }
+  }
+
+  return actions;
+}
+
 export function generateAIActions(context) {
   return generateActionsForSide(context, 'ai', context.currentFieldIndex);
 }
+
+// Re-export utili per i test
+export { estimateStandardFocus };

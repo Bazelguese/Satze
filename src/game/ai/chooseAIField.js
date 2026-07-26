@@ -1,10 +1,10 @@
 // ============================================
-// Scelta Campo per l'IA
+// Scelta Campo per l'IA (information set sanitizzato)
 // ============================================
 
 import { getAIProfile } from './aiProfiles.js';
 import { defaultRng } from './aiConstants.js';
-import { chooseAIAction } from './chooseAIAction.js';
+import { chooseAIIndependentAction } from './chooseAIAction.js';
 
 /**
  * Indici Campo legali (rivelati e non conquistati).
@@ -31,22 +31,16 @@ function evaluateField(context, fieldIndex, profile, options) {
     field: context.battlefields[fieldIndex],
   };
 
-  // Lookahead ridotto: profilo snello, selezione best per confrontare i Campi
   const leanProfile = {
     ...profile,
-    ownActionLimitWhenFirst: Math.min(
-      profile.ownActionLimitWhenFirst || 8,
-      profile.id === 'hard' ? 12 : 6
-    ),
-    opponentResponseLimit:
-      profile.id === 'hard'
-        ? Math.min(Number.isFinite(profile.opponentResponseLimit) ? profile.opponentResponseLimit : 8, 8)
-        : Math.min(profile.opponentResponseLimit || 3, 3),
+    ownActionLimitWhenFirst: Math.min(profile.ownActionLimitWhenFirst || 8, 8),
+    opponentScenarioCount: Math.min(profile.opponentScenarioCount || 4, 3),
+    ownVariantsPerCard: Math.min(profile.ownVariantsPerCard || 3, 2),
     selectionMode: 'best',
-    useDominanceFilter: true,
+    useDominanceFilterWhenHiddenFocus: false,
   };
 
-  const decision = chooseAIAction(fieldContext, leanProfile.id, {
+  const decision = chooseAIIndependentAction(fieldContext, leanProfile.id, {
     ...options,
     profile: leanProfile,
     rng: () => 0,
@@ -60,7 +54,7 @@ function evaluateField(context, fieldIndex, profile, options) {
 }
 
 /**
- * @param {object} context
+ * @param {object} context — information set sanitizzato
  * @param {object|string} [profileOrDifficulty]
  * @param {{ rng?: () => number }} [options]
  * @returns {number|null} fieldIndex
@@ -76,7 +70,6 @@ export function chooseAIField(context, profileOrDifficulty, options = {}) {
   if (!legal.length) return null;
   if (legal.length === 1) return legal[0];
 
-  // Facile: pesato tra Campi non pessimi
   if (profile.id === 'easy') {
     const evaluated = legal.map((fieldIndex) => evaluateField(context, fieldIndex, profile, options));
     evaluated.sort((a, b) => b.score - a.score);
@@ -113,6 +106,5 @@ export function chooseAIField(context, profileOrDifficulty, options = {}) {
     return top[0].fieldIndex;
   }
 
-  // Difficile: miglior Campo
   return evaluated[0].fieldIndex;
 }

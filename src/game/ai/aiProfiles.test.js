@@ -10,7 +10,8 @@ test('profili: easy/medium/hard presenti; chaos ricade su medium', () => {
   assert.equal(getAIProfile('medium').label, 'Normale');
   assert.equal(getAIProfile('hard').selectionMode, 'best');
   assert.equal(getAIProfile('chaos').id, 'medium');
-  assert.ok(AI_PROFILES.hard.useDominanceFilter);
+  assert.equal(AI_PROFILES.hard.useDominanceFilterWhenHiddenFocus, false);
+  assert.equal(AI_PROFILES.medium.ordinaryFocusBuffer, 2);
 });
 
 test('UI difficoltà: tre opzioni, Normale, senza chaos', () => {

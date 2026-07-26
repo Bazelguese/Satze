@@ -5,6 +5,7 @@
 import { useCallback, useRef } from 'react';
 import {
   buildAIContext,
+  buildPublicDecisionKey,
   chooseAIAction,
   chooseAIField as chooseAIFieldPure,
   getAIProfile,
@@ -30,20 +31,8 @@ export function useAI(gameState) {
 
   const decisionKey = useCallback(() => {
     const ctx = buildAIContext(gameState);
-    return [
-      ctx.difficulty,
-      ctx.roundNumber,
-      ctx.isPlayerFirst ? 1 : 0,
-      ctx.currentFieldIndex,
-      ctx.player.selectedCard?.id ?? '',
-      ctx.player.selectedFocus ?? '',
-      ctx.ai.focus,
-      ctx.player.focus,
-      ctx.ai.hp,
-      ctx.player.hp,
-      (ctx.ai.usedCardIds || []).join(','),
-      (ctx.player.usedCardIds || []).join(','),
-    ].join('|');
+    // Mai includere selectedFocus: Focus privato del giocatore
+    return buildPublicDecisionKey(ctx);
   }, [gameState]);
 
   const computeDecision = useCallback(
@@ -69,22 +58,15 @@ export function useAI(gameState) {
     [decisionKey, gameState]
   );
 
-  /**
-   * Seleziona un agente per l'IA (compatibilità: memorizza decisione completa).
-   */
   const selectEnemyAgent = useCallback(() => {
     const decision = computeDecision();
     return decision?.card ?? null;
   }, [computeDecision]);
 
-  /**
-   * Restituisce il Focus della stessa decisione memorizzata (non ricalcola a parte).
-   */
   const calculateEnemyFocus = useCallback(
     (agent) => {
       const decision = computeDecision();
       if (decision?.card && agent && decision.card.id !== agent.id) {
-        // Call site ha passato un agente diverso: ricalcola forzando
         pendingDecisionRef.current = null;
         const fresh = computeDecision({ force: true });
         return fresh?.focus ?? 1;
@@ -94,9 +76,6 @@ export function useAI(gameState) {
     [computeDecision]
   );
 
-  /**
-   * Percorso principale: carta + Focus insieme.
-   */
   const selectEnemyAgentAndFocus = useCallback(
     (logSelection = true) => {
       pendingDecisionRef.current = null;
@@ -127,18 +106,12 @@ export function useAI(gameState) {
     return selectEnemyAgentAndFocus();
   }, [selectEnemyAgentAndFocus]);
 
-  /**
-   * Scelta Campo (puro + profilo difficoltà).
-   */
   const selectEnemyField = useCallback(() => {
     const context = buildAIContext(gameState);
     const profile = getAIProfile(context.difficulty);
     return chooseAIFieldPure(context, profile, { rng: defaultRng });
   }, [gameState]);
 
-  /**
-   * Tempo di "pensiero" dell'IA in ms — resta casuale a livello React.
-   */
   const getThinkingTime = useCallback(() => {
     const difficulty = aiDifficulty === 'chaos' ? 'medium' : aiDifficulty;
     const r = Math.random();

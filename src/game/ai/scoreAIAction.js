@@ -2,8 +2,9 @@
 // Punteggio, dominanza e valore futuro carte
 // ============================================
 
-import { AI_SCORE_WEIGHTS } from './aiConstants.js';
+import { AI_SCORE_WEIGHTS, SCORE_TIE_EPSILON } from './aiConstants.js';
 import { getAvailableCards } from './generateAIActions.js';
+import { computeOverinvestmentPenalty } from './focusBudget.js';
 
 const POST_BATTLE = new Set(['conquest', 'lastWish']);
 
@@ -66,9 +67,6 @@ export function estimateFutureCardValue(card, context) {
   return base + triggerFuture + effectUtility;
 }
 
-/**
- * Bonus conservazione trigger futuri per la carta consumata.
- */
 function futurePlanningPenalty(card, context, profile, weights) {
   if (!card || !profile) return 0;
   const futureWeight = profile.futurePlanningWeight ?? 0.5;
@@ -96,11 +94,6 @@ function futurePlanningPenalty(card, context, profile, weights) {
 
 /**
  * Punteggio di uno stato simulato dal punto di vista di un lato.
- *
- * @param {object} simulation
- * @param {object} context
- * @param {'ai'|'player'} side
- * @param {object} [weights]
  */
 export function scoreSimulationForSide(simulation, context, side, weights = AI_SCORE_WEIGHTS) {
   const aiView = side === 'ai';
@@ -140,7 +133,6 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
       score += weights.opponentClaimThreshold * 0.35;
     }
   } else {
-    // punto di vista giocatore (per ranking risposte)
     if (oppHpAfter <= 0 && myHpAfter > 0) score += weights.matchWin;
     if (myHpAfter <= 0 && oppHpAfter > 0) score += weights.matchLoss;
     if (myFieldsAfter >= 3) score += weights.claimVictoryThreshold;
@@ -148,18 +140,7 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
   }
 
   if (oppHpAfter <= 0 && myHpAfter > 0) score += weights.lethalCreated;
-  if (myHpBefore > 0 && oppHpBefore > 0 && myHpAfter > 0 && /* prevented self lethal via win/trade */ false) {
-    // placeholder kept for clarity
-  }
-  if (myHpAfter > 0 && oppHpBefore > 0 && simulation.playerHpAfter <= 0 === false) {
-    // no-op
-  }
-
-  // Prevenzione letale: se senza questa mossa l'avversario poteva chiudere,
-  // il fatto di restare vivi con HP bassi ha già valore via matchLoss evitato.
-  if (myHpAfter > 0 && oppHpAfter <= 0) {
-    score += weights.lethalCreated * 0.15;
-  }
+  if (myHpAfter > 0 && oppHpAfter <= 0) score += weights.lethalCreated * 0.15;
 
   score += won ? weights.duelWin : 0;
   score += lost ? weights.duelLoss : 0;
@@ -174,8 +155,9 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
   score += healMe * weights.healAiPerPoint;
   score += healOpp * weights.healPlayerPerPoint;
 
-  score += myFocusAfter * weights.aiFocusRemainingPerPoint;
-  score += oppFocusAfter * weights.playerFocusRemainingPerPoint;
+  // Evita doppio conteggio pesante: residuo Focus conta, spesa gestita a parte
+  score += myFocusAfter * weights.aiFocusRemainingPerPoint * 0.55;
+  score += oppFocusAfter * weights.playerFocusRemainingPerPoint * 0.55;
 
   const myFieldGain = myFieldsAfter - myFieldsBefore;
   const oppFieldGain = oppFieldsAfter - oppFieldsBefore;
@@ -193,6 +175,38 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
 }
 
 /**
+ * Aggrega punteggi di scenari con valore atteso + rischio moderato.
+ */
+export function aggregateScenarioScores(scenarioScores, profile) {
+  if (!scenarioScores.length) {
+    return { expectedScore: 0, lowerPercentileScore: 0, finalScore: 0, winProbability: 0 };
+  }
+
+  let expected = 0;
+  let winProb = 0;
+  for (const entry of scenarioScores) {
+    expected += entry.score * (entry.probability || 0);
+    if (entry.won) winProb += entry.probability || 0;
+  }
+
+  const sorted = [...scenarioScores].sort((a, b) => a.score - b.score);
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.floor(sorted.length * 0.25))
+  );
+  const lowerPercentileScore = sorted[idx].score;
+  const riskWeight = profile?.riskWeight ?? 0.2;
+  const finalScore = expected * (1 - riskWeight) + lowerPercentileScore * riskWeight;
+
+  return {
+    expectedScore: expected,
+    lowerPercentileScore,
+    finalScore,
+    winProbability: winProb,
+  };
+}
+
+/**
  * @param {object} simulation
  * @param {object} context
  * @param {object} aiAction
@@ -202,14 +216,24 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
 export function scoreAIAction(simulation, context, aiAction, profile, weights = AI_SCORE_WEIGHTS) {
   let score = scoreSimulationForSide(simulation, context, 'ai', weights);
 
-  const focusSpent = aiAction?.focus || 0;
-  const efficiency = profile?.focusEfficiencyWeight ?? 0.7;
-  score += focusSpent * weights.focusSpentPerPoint * efficiency;
+  const standardFocus = aiAction?.meta?.standardFocus;
+  const overinvest =
+    standardFocus != null
+      ? computeOverinvestmentPenalty(
+          aiAction.focus,
+          standardFocus,
+          profile,
+          context.roundNumber
+        )
+      : 0;
+  score -= overinvest;
 
-  // Overdrive / effetti già riflessi nello stato: non ri-contare value nominale.
+  // Lieve costo Focus (non doppiare la penalità progressiva)
+  const efficiency = profile?.focusEfficiencyWeight ?? 0.7;
+  score += (aiAction?.focus || 0) * weights.focusSpentPerPoint * efficiency * 0.35;
+
   score += futurePlanningPenalty(aiAction?.card, context, profile, weights);
 
-  // Carta consumata: piccolo costo se ha alto valore futuro e trigger post-duello non usato bene
   const trigger = aiAction?.card?.ability?.trigger;
   if (trigger && POST_BATTLE.has(trigger)) {
     const helped =
@@ -218,7 +242,6 @@ export function scoreAIAction(simulation, context, aiAction, profile, weights = 
     if (!helped) score += weights.valuableCardConsumed * 0.4 * (profile?.futurePlanningWeight ?? 0.5);
   }
 
-  // Terminal override markers for selection logic
   const terminal = simulation.terminalStatus;
   const isTerminalWin =
     terminal === 'ai_win_hp' || terminal === 'ai_win_fields' || terminal === 'ai_win_cards';
@@ -227,15 +250,13 @@ export function scoreAIAction(simulation, context, aiAction, profile, weights = 
 
   return {
     score,
+    overinvestmentPenalty: overinvest,
     isTerminalWin,
     isTerminalLoss,
     simulation,
   };
 }
 
-/**
- * A domina B se stessa carta/campo, focus <=, e nessun aspetto peggiore.
- */
 export function actionDominates(a, b) {
   if (!a || !b) return false;
   if (a.action.cardId !== b.action.cardId) return false;
@@ -256,19 +277,9 @@ export function actionDominates(a, b) {
   if (!!sa.aiAbilityTriggered !== !!sb.aiAbilityTriggered) return false;
   if ((sa.terminalStatus || null) !== (sb.terminalStatus || null)) return false;
 
-  // A deve essere strettamente migliore in almeno un aspetto (focus speso o residuo)
-  const strict =
-    a.action.focus < b.action.focus ||
-    sa.aiFocusAfter > sb.aiFocusAfter ||
-    sa.aiHpAfter > sb.aiHpAfter ||
-    sa.playerHpAfter < sb.playerHpAfter;
-
-  return strict || a.action.focus < b.action.focus;
+  return a.action.focus < b.action.focus;
 }
 
-/**
- * @param {Array<{ action, simulation, score }>} scoredActions
- */
 export function findDominatedActions(scoredActions) {
   const dominated = new Set();
   for (let i = 0; i < scoredActions.length; i += 1) {
@@ -283,28 +294,27 @@ export function findDominatedActions(scoredActions) {
 }
 
 /**
- * Ordinamento di tie-break tra mosse quasi equivalenti.
+ * Score decrescente; tie-break solo entro SCORE_TIE_EPSILON.
  */
-export function compareScoredActions(a, b) {
+export function compareScoredActions(a, b, epsilon = SCORE_TIE_EPSILON) {
+  const scoreDiff = (b.score || 0) - (a.score || 0);
+  if (Math.abs(scoreDiff) > epsilon) return scoreDiff;
+
   if (a.isTerminalWin !== b.isTerminalWin) return a.isTerminalWin ? -1 : 1;
   if (a.isTerminalLoss !== b.isTerminalLoss) return a.isTerminalLoss ? 1 : -1;
+
+  if (a.action.focus !== b.action.focus) return a.action.focus - b.action.focus;
 
   const sa = a.simulation;
   const sb = b.simulation;
   if (sa && sb) {
-    if (sa.aiFieldsAfter !== sb.aiFieldsAfter) return sb.aiFieldsAfter - sa.aiFieldsAfter;
+    if (sa.aiFocusAfter !== sb.aiFocusAfter) return sb.aiFocusAfter - sa.aiFocusAfter;
     if (sa.aiHpAfter !== sb.aiHpAfter) return sb.aiHpAfter - sa.aiHpAfter;
     if (sa.playerHpAfter !== sb.playerHpAfter) return sa.playerHpAfter - sb.playerHpAfter;
-    if (sa.aiFocusAfter !== sb.aiFocusAfter) return sb.aiFocusAfter - sa.aiFocusAfter;
-    if (sa.playerFocusAfter !== sb.playerFocusAfter) {
-      return sa.playerFocusAfter - sb.playerFocusAfter;
+    if (!!sa.aiAbilityTriggered !== !!sb.aiAbilityTriggered) {
+      return sa.aiAbilityTriggered ? -1 : 1;
     }
   }
-
-  if (a.action.focus !== b.action.focus) return a.action.focus - b.action.focus;
-
-  const scoreDiff = (b.score || 0) - (a.score || 0);
-  if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
 
   return String(a.action.cardId).localeCompare(String(b.action.cardId));
 }

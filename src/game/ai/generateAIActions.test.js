@@ -20,6 +20,7 @@ test('generazione: Focus interi legali e permette spendere fino al max UI', () =
     ai: {
       hand: [makeCard({ id: 1 }), makeCard({ id: 2 })],
       usedCardIds: [],
+      focusPool: 6,
       focus: 6,
       hp: 20,
       armyBonuses: {},
@@ -46,6 +47,7 @@ test('generazione: con una sola carta può investire tutto il pool', () => {
     ai: {
       hand: [makeCard({ id: 9 })],
       usedCardIds: [],
+      focusPool: 7,
       focus: 7,
       hp: 20,
       armyBonuses: {},

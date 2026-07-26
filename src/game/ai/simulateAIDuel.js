@@ -116,6 +116,9 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
     return options.cache.get(cacheKey);
   }
 
+  const playerFocusPool = context.player.focusPool ?? context.player.focus;
+  const aiFocusPool = context.ai.focusPool ?? context.ai.focus;
+
   const { battleResult } = computeDuelResolution({
     field,
     selectedAgent: playerAction.card,
@@ -124,8 +127,8 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
     enemySelectedFocus: aiAction.focus,
     playerHP: context.player.hp,
     enemyHP: context.ai.hp,
-    playerFocus: context.player.focus,
-    enemyFocus: context.ai.focus,
+    playerFocus: playerFocusPool,
+    enemyFocus: aiFocusPool,
     playerUsedCards: context.player.usedCardIds,
     enemyUsedCards: context.ai.usedCardIds,
     isPlayerFirst: context.isPlayerFirst,
@@ -166,9 +169,9 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
     playerHpBefore: context.player.hp,
     playerHpAfter: battleResult.finalPlayerHP,
 
-    aiFocusBefore: context.ai.focus,
+    aiFocusBefore: aiFocusPool,
     aiFocusAfter: battleResult.finalEnemyFC,
-    playerFocusBefore: context.player.focus,
+    playerFocusBefore: playerFocusPool,
     playerFocusAfter: battleResult.finalPlayerFC,
 
     aiFieldsBefore: fields.enemyFieldsBefore,
