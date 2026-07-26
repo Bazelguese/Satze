@@ -185,6 +185,10 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
       scenarioScores.push({
         score: base.score,
         probability: scenario.probability,
+        focusShare: scenario.focusShare,
+        cardPrior: scenario.cardPrior,
+        cardId: scenario.cardId,
+        card: scenario.card,
         won: simulation.winner === 'enemy',
         simulation,
         focus: scenario.focus,

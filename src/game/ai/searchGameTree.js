@@ -15,6 +15,9 @@ import {
   selectCandidateFields,
   playerFieldChoiceWeight,
 } from './rankFields.js';
+import { aggregatePlayerCardScores } from './cardBeliefAggregation.js';
+
+export { aggregatePlayerCardScores } from './cardBeliefAggregation.js';
 
 /**
  * Profondità = round futuri da esplorare dopo il duello corrente.
@@ -201,10 +204,10 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
     return { score: leafScore(rootState, profile), stats, depth };
   }
 
-  // Prior uniforme per carta; Focus solo dentro la carta
+  // Focus dentro la carta; tra carte: aggregatePlayerCardScores (Hard = peggiore)
   const byCard = groupScenariosByCardId(scenarios);
-  const cardValues = [];
-  for (const [, cardScenarios] of byCard) {
+  const cardScores = [];
+  for (const [cardId, cardScenarios] of byCard) {
     const values = [];
     const probs = [];
     let focusSum = 0;
@@ -235,18 +238,19 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
       focusSum += share;
     }
     const norm = focusSum > 0 ? focusSum : 1;
-    cardValues.push(
-      aggregateRisk(
+    cardScores.push({
+      cardId,
+      score: aggregateRisk(
         values,
         probs.map((p) => p / norm),
         profile.riskWeight
-      )
-    );
+      ),
+    });
   }
 
   let score =
-    cardValues.length > 0
-      ? cardValues.reduce((s, v) => s + v, 0) / cardValues.length
+    cardScores.length > 0
+      ? aggregatePlayerCardScores(cardScores, profile)
       : leafScore(rootState, profile);
 
   const budget = getOrdinaryFocusCap(context, 'ai', profile);
@@ -313,10 +317,10 @@ function valueAiToMove(state, depth, profile, ctx, beamWidth) {
     if (!actions.length || !scenarios.length) continue;
 
     for (const action of actions) {
-      // Prior uniforme per carta; Focus normalizzati dentro ogni carta
+      // Focus normalizzati per carta; tra carte: aggregatePlayerCardScores
       const byCard = groupScenariosByCardId(scenarios);
-      const cardValues = [];
-      for (const [, cardScenarios] of byCard) {
+      const cardScores = [];
+      for (const [cardId, cardScenarios] of byCard) {
         const values = [];
         const probs = [];
         let focusSum = 0;
@@ -340,58 +344,24 @@ function valueAiToMove(state, depth, profile, ctx, beamWidth) {
           focusSum += share;
         }
         const norm = focusSum > 0 ? focusSum : 1;
-        cardValues.push(
-          aggregateRisk(
+        cardScores.push({
+          cardId,
+          score: aggregateRisk(
             values,
             probs.map((p) => p / norm),
             profile.riskWeight
-          )
-        );
+          ),
+        });
       }
       const score =
-        cardValues.length > 0
-          ? cardValues.reduce((s, v) => s + v, 0) / cardValues.length
+        cardScores.length > 0
+          ? aggregatePlayerCardScores(cardScores, profile)
           : leafScore(state, profile);
       if (score > best) best = score;
     }
   }
 
   return best === -Infinity ? leafScore(state, profile) : best;
-}
-
-/**
- * Aggrega i valori per carta avversaria dopo risposta IA unica.
- * Difficile: carta peggiore per l'IA; Normale: pesi sulle carte sensate; Facile: media.
- * La prior di carta è uniforme (non dipende dal numero di Focus).
- */
-export function aggregatePlayerCardScores(cardScores, profile) {
-  if (!cardScores?.length) return -Infinity;
-
-  if (profile?.id === 'hard') {
-    return Math.min(...cardScores.map((c) => c.score));
-  }
-
-  if (profile?.id === 'easy') {
-    return cardScores.reduce((sum, c) => sum + c.score, 0) / cardScores.length;
-  }
-
-  // Normale: distribuzione ponderata tra le carte più sensate (peggiori per l'IA)
-  const scores = cardScores.map((c) => c.score);
-  const worst = Math.min(...scores);
-  const best = Math.max(...scores);
-  const span = Math.max(1e-6, best - worst);
-  const band = span * 0.5 + 40;
-  const sensible = cardScores.filter((c) => c.score <= worst + band);
-  const pool = sensible.length ? sensible : cardScores;
-
-  let totalW = 0;
-  let sum = 0;
-  for (const c of pool) {
-    const weight = (best - c.score) / span + 0.25;
-    totalW += weight;
-    sum += c.score * weight;
-  }
-  return totalW > 0 ? sum / totalW : worst;
 }
 
 /**

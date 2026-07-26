@@ -5,6 +5,7 @@
 import { AI_SCORE_WEIGHTS, SCORE_TIE_EPSILON } from './aiConstants.js';
 import { getAvailableCards } from './generateAIActions.js';
 import { computeOverinvestmentPenalty } from './focusBudget.js';
+import { aggregatePlayerCardScores } from './cardBeliefAggregation.js';
 
 const POST_BATTLE = new Set(['conquest', 'lastWish']);
 
@@ -182,28 +183,55 @@ export function scoreSimulationForSide(simulation, context, side, weights = AI_S
 }
 
 /**
- * Aggrega punteggi di scenari con valore atteso + rischio moderato.
+ * Aggrega punteggi di scenari: Focus dentro la carta, poi aggregatePlayerCardScores tra carte.
  */
 export function aggregateScenarioScores(scenarioScores, profile) {
   if (!scenarioScores.length) {
     return { expectedScore: 0, lowerPercentileScore: 0, finalScore: 0, winProbability: 0 };
   }
 
-  let expected = 0;
-  let winProb = 0;
+  const byCard = new Map();
   for (const entry of scenarioScores) {
-    expected += entry.score * (entry.probability || 0);
-    if (entry.won) winProb += entry.probability || 0;
+    const id = entry.cardId ?? entry.card?.id ?? '_';
+    if (!byCard.has(id)) byCard.set(id, []);
+    byCard.get(id).push(entry);
   }
 
-  const sorted = [...scenarioScores].sort((a, b) => a.score - b.score);
+  const cardScores = [];
+  let winProb = 0;
+
+  for (const [cardId, list] of byCard) {
+    const focusSum =
+      list.reduce((s, e) => s + (e.focusShare ?? e.probability ?? 0), 0) || 1;
+    let cardExpected = 0;
+    let cardWin = 0;
+    const focusValues = [];
+    for (const entry of list) {
+      const share = (entry.focusShare ?? entry.probability ?? 0) / focusSum;
+      cardExpected += entry.score * share;
+      if (entry.won) cardWin += share;
+      focusValues.push(entry.score);
+    }
+    // Prior carta uniforme nel contributo a winProb
+    winProb += cardWin / byCard.size;
+    cardScores.push({ cardId, score: cardExpected, focusValues });
+  }
+
+  const expected = aggregatePlayerCardScores(cardScores, profile);
+
+  const allSorted = [...scenarioScores].sort((a, b) => a.score - b.score);
   const idx = Math.min(
-    sorted.length - 1,
-    Math.max(0, Math.floor(sorted.length * 0.25))
+    allSorted.length - 1,
+    Math.max(0, Math.floor(allSorted.length * 0.25))
   );
-  const lowerPercentileScore = sorted[idx].score;
+  const lowerPercentileScore = allSorted[idx].score;
   const riskWeight = profile?.riskWeight ?? 0.2;
-  const finalScore = expected * (1 - riskWeight) + lowerPercentileScore * riskWeight;
+
+  // Difficile: il "expected" è già worst-card; rischio sul worst-case globale
+  const finalScore =
+    profile?.id === 'hard'
+      ? expected * (1 - riskWeight * 0.5) + lowerPercentileScore * (riskWeight * 0.5)
+      : expected * (1 - riskWeight) + lowerPercentileScore * riskWeight;
 
   return {
     expectedScore: expected,
