@@ -28,8 +28,14 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
+    "allowElevation": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "artifactName": "SATZE-Playtest-Setup-${version}.exe"
+    "shortcutName": "SATZE Playtest",
+    "uninstallDisplayName": "SATZE Playtest",
+    "installerLanguages": ["it_IT"],
+    "language": "1040",
+    "artifactName": "SATZE-Playtest-Setup-${version}.exe",
+    "include": "electron/installer.nsh"
   }
 }
