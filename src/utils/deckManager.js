@@ -64,22 +64,26 @@ export function loadCustomDeck(deckId) {
 }
 
 /**
- * Valida un mazzo (controlla che abbia 10 carte e lega <= 30)
+ * Valida un mazzo (10 carte e lega esattamente 30)
  */
 export function validateDeck(cards, armyCards) {
   if (cards.length !== 10) {
     return { valid: false, error: "L'esercito deve contenere esattamente 10 carte" };
   }
-  
+
   const totalLeague = cards.reduce((sum, cardId) => {
     const card = armyCards.find(c => c.id === cardId);
     return sum + (card?.league || 0);
   }, 0);
-  
+
   if (totalLeague > 30) {
     return { valid: false, error: `Lega totale troppo alta: ${totalLeague}/30` };
   }
-  
+
+  if (totalLeague < 30) {
+    return { valid: false, error: `Lega insufficiente: ${totalLeague}/30 (servono 30 punti)` };
+  }
+
   return { valid: true, totalLeague };
 }
 

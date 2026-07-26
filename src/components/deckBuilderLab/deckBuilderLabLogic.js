@@ -43,9 +43,15 @@ export function analyzeDeck(deckCards) {
     if (totalLeague > MAX_LEAGUE) {
       msgs.push({ t: 'warn', x: `Lega totale ${totalLeague}: supera il massimo di ${MAX_LEAGUE}.` });
     }
+    if (count === DECK_SIZE && totalLeague < MAX_LEAGUE) {
+      msgs.push({
+        t: 'warn',
+        x: `Lega ${totalLeague}/${MAX_LEAGUE}: devi usare tutti i ${MAX_LEAGUE} punti Lega (${remLeague} residui).`,
+      });
+    }
   }
 
-  const legal = count === DECK_SIZE && totalLeague <= MAX_LEAGUE;
+  const legal = count === DECK_SIZE && totalLeague === MAX_LEAGUE;
   if (legal) {
     msgs.length = 0;
     msgs.push({ t: 'ok', x: `Esercito completo · ${totalLeague}/${MAX_LEAGUE} Lega.` });

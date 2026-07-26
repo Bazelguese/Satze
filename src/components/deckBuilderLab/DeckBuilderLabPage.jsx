@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
-import { saveCustomDeck, loadCustomDeck, generateDeckId } from '../../utils/deckManager';
+import { saveCustomDeck, loadCustomDeck, generateDeckId, validateDeck } from '../../utils/deckManager';
 import {
   FACTIONS,
   POOLS,
@@ -340,6 +340,9 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
 
   const schiera = useCallback(() => {
     if (!analysis.legal) return;
+    const cardIds = deckCards.map((c) => c.id);
+    const validation = validateDeck(cardIds, pool);
+    if (!validation.valid) return;
     const name = deckName.trim() || 'Esercito personalizzato';
     const primaryArmy =
       Object.entries(armyCountsInDeck).sort((a, b) => b[1] - a[1])[0]?.[0] ||
@@ -357,7 +360,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
       setFlash(false);
       onClose?.();
     }, 1400);
-  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
+  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose, pool]);
 
   const filterState = useMemo(
     () => ({ query, legaFilter, trigFilter, tagFilter, effectFilter }),
@@ -522,7 +525,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
           </div>
           <h1 className="dbl-title">COSTRUZIONE ESERCITO</h1>
           <div className="dbl-subtitle">
-            {DECK_SIZE} CARTE · MAX {MAX_LEAGUE} LEGA
+            {DECK_SIZE} CARTE · {MAX_LEAGUE} LEGA
           </div>
         </div>
         <div className="dbl-head-r">
@@ -755,11 +758,14 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
                 <em
                   style={{
                     color:
-                      analysis.totalLeague > MAX_LEAGUE
+                      analysis.totalLeague > MAX_LEAGUE ||
+                      (analysis.count === DECK_SIZE && analysis.totalLeague < MAX_LEAGUE)
                         ? '#c2473f'
-                        : analysis.totalLeague >= 25
-                          ? '#c9a23e'
-                          : accent,
+                        : analysis.totalLeague === MAX_LEAGUE && analysis.count === DECK_SIZE
+                          ? '#4a9e78'
+                          : analysis.totalLeague >= 25
+                            ? '#c9a23e'
+                            : accent,
                   }}
                 >
                   {analysis.totalLeague} / {MAX_LEAGUE}

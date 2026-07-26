@@ -40,22 +40,25 @@ export const calculateDeckLeague = (deck) => {
 };
 
 /**
- * Verifica se un deck è valido (10 carte, lega <= 30)
+ * Verifica se un deck è valido (10 carte, lega esattamente 30)
  * @param {Array} deck - Array di ID carte
  * @returns {Object} - { valid: boolean, errors: string[] }
  */
 export const validateDeck = (deck) => {
   const errors = [];
-  
+
   if (deck.length !== 10) {
     errors.push(`Il deck deve contenere esattamente 10 carte (attualmente: ${deck.length})`);
   }
-  
+
   const league = calculateDeckLeague(deck);
   if (league > 30) {
     errors.push(`La lega totale non può superare 30 (attualmente: ${league})`);
   }
-  
+  if (deck.length === 10 && league < 30) {
+    errors.push(`La lega totale deve essere 30 (attualmente: ${league})`);
+  }
+
   return {
     valid: errors.length === 0,
     errors,
