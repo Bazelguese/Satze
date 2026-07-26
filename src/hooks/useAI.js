@@ -7,8 +7,7 @@ import {
   buildAIContext,
   buildPublicDecisionKey,
   chooseAIAction,
-  chooseAIField as chooseAIFieldPure,
-  getAIProfile,
+  chooseJointAIAction,
   defaultRng,
 } from '../game/ai/index.js';
 
@@ -24,38 +23,77 @@ export function useAI(gameState) {
     setLogs,
     aiDifficulty = 'medium',
     roundNumber,
+    currentFieldIndex,
   } = gameState;
 
+  /** Decisione congiunta { fieldIndex, card, focus } da riusare nello stesso round. */
   const pendingDecisionRef = useRef(null);
   const pendingKeyRef = useRef(null);
 
   const decisionKey = useCallback(() => {
     const ctx = buildAIContext(gameState);
-    // Mai includere selectedFocus: Focus privato del giocatore
     return buildPublicDecisionKey(ctx);
   }, [gameState]);
 
+  const storeDecision = useCallback((decision, key) => {
+    pendingDecisionRef.current = decision;
+    pendingKeyRef.current = key;
+    return decision;
+  }, []);
+
+  /**
+   * Riusa la decisione congiunta se ancora valida per lo stato pubblico corrente.
+   */
+  const getReusableDecision = useCallback(() => {
+    const key = decisionKey();
+    const pending = pendingDecisionRef.current;
+    if (!pending?.card || pendingKeyRef.current == null) return null;
+
+    // Chiave completa uguale → ok
+    if (pendingKeyRef.current === key) return pending;
+
+    // Dopo scelta Campo: currentFieldIndex entra nella key; accetta se campo/carta/focus coerenti
+    const ctx = buildAIContext(gameState);
+    if (
+      pending.fieldIndex != null &&
+      ctx.currentFieldIndex === pending.fieldIndex &&
+      pending.card &&
+      pending.focus >= 1
+    ) {
+      // Aggiorna key allo stato corrente (Campo ora fissato) senza ricalcolare
+      pendingKeyRef.current = key;
+      return pending;
+    }
+
+    return null;
+  }, [decisionKey, gameState]);
+
   const computeDecision = useCallback(
     (options = {}) => {
-      const key = decisionKey();
-      if (
-        pendingDecisionRef.current &&
-        pendingKeyRef.current === key &&
-        !options.force
-      ) {
-        return pendingDecisionRef.current;
+      if (!options.force) {
+        const reusable = getReusableDecision();
+        if (reusable) return reusable;
       }
 
       const context = buildAIContext(gameState);
-      const decision = chooseAIAction(context, context.difficulty, {
-        rng: options.rng || defaultRng,
-      });
+      const key = buildPublicDecisionKey(context);
 
-      pendingDecisionRef.current = decision;
-      pendingKeyRef.current = key;
-      return decision;
+      // Se il Campo non è ancora scelto e l'IA apre, decisione congiunta
+      const needsJoint =
+        options.joint ||
+        (context.currentFieldIndex == null && context.isPlayerFirst === false);
+
+      const decision = needsJoint
+        ? chooseJointAIAction(context, context.difficulty, {
+            rng: options.rng || defaultRng,
+          })
+        : chooseAIAction(context, context.difficulty, {
+            rng: options.rng || defaultRng,
+          });
+
+      return storeDecision(decision, key);
     },
-    [decisionKey, gameState]
+    [gameState, getReusableDecision, storeDecision]
   );
 
   const selectEnemyAgent = useCallback(() => {
@@ -67,7 +105,6 @@ export function useAI(gameState) {
     (agent) => {
       const decision = computeDecision();
       if (decision?.card && agent && decision.card.id !== agent.id) {
-        pendingDecisionRef.current = null;
         const fresh = computeDecision({ force: true });
         return fresh?.focus ?? 1;
       }
@@ -78,8 +115,24 @@ export function useAI(gameState) {
 
   const selectEnemyAgentAndFocus = useCallback(
     (logSelection = true) => {
-      pendingDecisionRef.current = null;
-      const decision = computeDecision({ force: true });
+      // Riusa decisione congiunta se presente (non forzare ricalcolo)
+      let decision = getReusableDecision();
+      if (!decision?.card) {
+        decision = computeDecision({ force: false });
+      }
+      if (!decision?.card) {
+        decision = computeDecision({ force: true });
+      }
+      if (!decision?.card) return null;
+
+      // Coerenza Campo: se il Campo corrente non combacia, ricalcola sul Campo fissato
+      if (
+        currentFieldIndex != null &&
+        decision.fieldIndex != null &&
+        decision.fieldIndex !== currentFieldIndex
+      ) {
+        decision = computeDecision({ force: true });
+      }
       if (!decision?.card) return null;
 
       setEnemyAgent(decision.card);
@@ -95,22 +148,46 @@ export function useAI(gameState) {
       return {
         agent: decision.card,
         focus: decision.focus,
-        fieldIndex: decision.fieldIndex,
+        fieldIndex: decision.fieldIndex ?? currentFieldIndex,
         debug: decision.debug,
       };
     },
-    [computeDecision, setEnemyAgent, setEnemySelectedFocus, setLogs, roundNumber]
+    [
+      getReusableDecision,
+      computeDecision,
+      currentFieldIndex,
+      setEnemyAgent,
+      setEnemySelectedFocus,
+      setLogs,
+      roundNumber,
+    ]
   );
 
   const selectEnemyAgentAdvanced = useCallback(() => {
     return selectEnemyAgentAndFocus();
   }, [selectEnemyAgentAndFocus]);
 
+  /**
+   * Scelta Campo via azione congiunta: memorizza anche carta+Focus.
+   */
   const selectEnemyField = useCallback(() => {
     const context = buildAIContext(gameState);
-    const profile = getAIProfile(context.difficulty);
-    return chooseAIFieldPure(context, profile, { rng: defaultRng });
-  }, [gameState]);
+    // Forza contesto senza Campo corrente per valutare i legali
+    const fieldPickContext = {
+      ...context,
+      currentFieldIndex: null,
+      field: null,
+    };
+    const joint = chooseJointAIAction(fieldPickContext, context.difficulty, {
+      rng: defaultRng,
+    });
+    if (!joint) return null;
+
+    // Key basata sullo stato al momento della scelta Campo (senza field index)
+    const key = buildPublicDecisionKey(fieldPickContext);
+    storeDecision(joint, key);
+    return joint.fieldIndex;
+  }, [gameState, storeDecision]);
 
   const getThinkingTime = useCallback(() => {
     const difficulty = aiDifficulty === 'chaos' ? 'medium' : aiDifficulty;

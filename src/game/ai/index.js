@@ -55,5 +55,11 @@ export {
   chooseWhenAILeads,
 } from './chooseAIAction.js';
 export { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
-export { chooseAIField, getLegalFieldIndexes } from './chooseAIField.js';
+export { chooseAIField } from './chooseAIField.js';
+export { getLegalFieldIndexes } from './legalFields.js';
+export { chooseJointAIAction } from './chooseJointAIAction.js';
+export { buildStrategicState, deriveOpeningPlayerFirst, findCardInState } from './strategicState.js';
+export { projectPostDuelState } from './projectPostDuelState.js';
+export { evaluateStrategicState, strategicEvalWeight } from './evaluateStrategicState.js';
+export { scoreActionWithStrategicProjection } from './strategicScore.js';
 export { isAIDebugEnabled, buildAIDebugPayload, logAIDebug } from './aiDebug.js';

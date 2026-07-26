@@ -51,6 +51,11 @@ export function buildAIInformationSet(gameState) {
     roundNumber: gameState.roundNumber || 1,
     lastWinner: gameState.lastWinner ?? null,
     isPlayerFirst,
+    openingPlayerFirst:
+      gameState.openingPlayerFirst != null
+        ? Boolean(gameState.openingPlayerFirst)
+        : undefined,
+    initiativeProfile: gameState.campaignDuelMod?.initiativeProfile ?? null,
 
     currentFieldIndex,
     field,

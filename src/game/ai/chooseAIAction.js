@@ -18,6 +18,7 @@ import {
 } from './scoreAIAction.js';
 import { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 import { buildAIDebugPayload, isAIDebugEnabled, logAIDebug } from './aiDebug.js';
+import { scoreActionWithStrategicProjection } from './strategicScore.js';
 
 export { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 
@@ -189,10 +190,23 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
     const meta = scoreAIAction(representative, context, action, profile, weights);
     const overinvestmentPenalty = meta.overinvestmentPenalty || 0;
 
+    const useStrategic =
+      options.includeStrategicProjection !== false;
+    const finalScore = useStrategic
+      ? scoreActionWithStrategicProjection({
+          context,
+          action,
+          scenarios,
+          duelAggregateScore: agg.finalScore,
+          profile,
+          cache,
+        })
+      : agg.finalScore;
+
     scored.push({
       action,
       simulation: representative,
-      score: agg.finalScore,
+      score: finalScore,
       expectedScore: agg.expectedScore,
       lowerPercentileScore: agg.lowerPercentileScore,
       winProbability: agg.winProbability,

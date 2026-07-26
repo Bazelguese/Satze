@@ -41,6 +41,8 @@ export function makeAIContext(overrides = {}) {
     roundNumber: 1,
     lastWinner: null,
     isPlayerFirst,
+    openingPlayerFirst: overrides.openingPlayerFirst ?? isPlayerFirst,
+    initiativeProfile: overrides.initiativeProfile ?? null,
     currentFieldIndex: 0,
     field: neutralField,
     battlefields: [neutralField],
