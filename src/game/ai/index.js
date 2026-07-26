@@ -38,7 +38,12 @@ export {
   generateOpponentScenarios,
   generateOpponentFocusValues,
 } from './generateOpponentScenarios.js';
-export { simulateAIDuel, projectFieldCounts, resolveTerminalStatus } from './simulateAIDuel.js';
+export {
+  simulateAIDuel,
+  projectFieldCounts,
+  resolveTerminalStatus,
+  buildSimulateAIDuelCacheKey,
+} from './simulateAIDuel.js';
 export {
   scoreAIAction,
   scoreSimulationForSide,
@@ -59,13 +64,23 @@ export { chooseAIField } from './chooseAIField.js';
 export { getLegalFieldIndexes } from './legalFields.js';
 export { chooseJointAIAction } from './chooseJointAIAction.js';
 export { buildStrategicState, deriveOpeningPlayerFirst, findCardInState } from './strategicState.js';
-export { projectPostDuelState } from './projectPostDuelState.js';
+export {
+  projectPostDuelState,
+  resolveNextInitiativeFromWinner,
+} from './projectPostDuelState.js';
 export { evaluateStrategicState, strategicEvalWeight } from './evaluateStrategicState.js';
 export { scoreActionWithStrategicProjection } from './strategicScore.js';
 export {
   resolveSearchDepth,
   evaluateActionWithSearch,
   scoreActionsWithSearch,
+  chooseBestAiReplyAggregatingFocus,
+  scoreAiActionAgainstFocusVariants,
 } from './searchGameTree.js';
 export { publicStateHash } from './publicStateHash.js';
+export {
+  lightRankField,
+  selectCandidateFields,
+  playerFieldChoiceWeight,
+} from './rankFields.js';
 export { isAIDebugEnabled, buildAIDebugPayload, logAIDebug } from './aiDebug.js';

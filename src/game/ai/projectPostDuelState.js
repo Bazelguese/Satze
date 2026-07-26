@@ -2,7 +2,6 @@
 // Proiezione stato strategico post-duello
 // ============================================
 
-import { resolveRoundInitiative } from '../duel/resolveRoundInitiative.js';
 import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
 
 function usedList(ids) {
@@ -35,6 +34,27 @@ function resolveTerminalFromProjected(state) {
   }
 
   return null;
+}
+
+/**
+ * Iniziativa del round successivo: il perdente del duello inizia.
+ * Non usa alternanza fissa su opening/round.
+ *
+ * @param {'player'|'enemy'|null|undefined} winner
+ * @param {boolean} currentIsPlayerFirst
+ * @returns {boolean}
+ */
+export function resolveNextInitiativeFromWinner(winner, currentIsPlayerFirst = true) {
+  if (winner === 'player') {
+    // IA ha perso → IA inizia
+    return false;
+  }
+  if (winner === 'enemy') {
+    // giocatore ha perso → giocatore inizia
+    return true;
+  }
+  // Pareggio / sconosciuto: invertire l'iniziativa corrente
+  return !currentIsPlayerFirst;
 }
 
 /**
@@ -88,15 +108,25 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
   if (simulation?.winner === 'enemy') enemyFieldsConquered += 1;
 
   const nextRound = (strategicState.roundNumber || 1) + 1;
-  const nextIsPlayerFirst = resolveRoundInitiative({
-    roundNumber: nextRound,
-    openingPlayerFirst: strategicState.openingPlayerFirst,
-    initiativeProfile: strategicState.initiativeProfile,
-  });
-
-  const availableFieldIndexes = (strategicState.availableFieldIndexes || []).filter(
-    (i) => i !== fieldIndex && !(i in conqueredFields)
+  const nextIsPlayerFirst = resolveNextInitiativeFromWinner(
+    simulation?.winner,
+    strategicState.isPlayerFirst !== false
   );
+
+  const battlefields = strategicState._refs?.battlefields || [];
+  const prevRevealed =
+    strategicState.revealedFields == null
+      ? battlefields.length
+      : Number(strategicState.revealedFields);
+  const maxReveal = Math.max(battlefields.length, prevRevealed);
+  const revealedFields = Math.min(maxReveal, prevRevealed + 1);
+
+  const availableFieldIndexes = [];
+  for (let i = 0; i < battlefields.length; i += 1) {
+    if (i in conqueredFields) continue;
+    if (i >= revealedFields) continue;
+    availableFieldIndexes.push(i);
+  }
 
   const projected = {
     ...strategicState,
@@ -116,6 +146,7 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
     aiUsedCardIds,
 
     conqueredFields,
+    revealedFields,
     availableFieldIndexes,
     currentFieldIndex: null,
     playerFieldsConquered,

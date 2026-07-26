@@ -11,6 +11,10 @@ import { generateOpponentScenarios } from './generateOpponentScenarios.js';
 import { buildBalancedShortlist, lightRankAction } from './aiPruning.js';
 import { publicStateHash } from './publicStateHash.js';
 import { computeOverinvestmentPenalty, getOrdinaryFocusCap } from './focusBudget.js';
+import {
+  selectCandidateFields,
+  playerFieldChoiceWeight,
+} from './rankFields.js';
 
 /**
  * Profondità = round futuri da esplorare dopo il duello corrente.
@@ -43,12 +47,6 @@ function leanProfile(profile, beamWidth) {
     ownVariantsPerCard: Math.min(profile.ownVariantsPerCard || 2, 2),
     ownActionLimitWhenFirst: Math.min(profile.ownActionLimitWhenFirst || 8, beamWidth),
   };
-}
-
-function limitFields(indexes, maxFields) {
-  if (!indexes?.length) return [];
-  if (indexes.length <= maxFields) return indexes;
-  return indexes.slice(0, maxFields);
 }
 
 function beamActions(context, profile, beamWidth) {
@@ -93,6 +91,94 @@ function aggregateRisk(values, probabilities, riskWeight) {
 
 function leafScore(state, profile) {
   return evaluateStrategicState(state, profile).score;
+}
+
+function groupScenariosByCardId(scenarios) {
+  const map = new Map();
+  for (const scenario of scenarios) {
+    const id = scenario.cardId ?? scenario.card?.id;
+    if (id == null) continue;
+    if (!map.has(id)) map.set(id, []);
+    map.get(id).push(scenario);
+  }
+  return map;
+}
+
+/**
+ * Valuta un'azione IA contro tutte le varianti Focus di una stessa carta (nessuna risposta diversa per Focus esatto).
+ */
+export function scoreAiActionAgainstFocusVariants(
+  context,
+  state,
+  aiAction,
+  focusScenarios,
+  depth,
+  profile,
+  ctx
+) {
+  const values = [];
+  const probs = [];
+  let probSum = 0;
+  for (const scenario of focusScenarios) {
+    ctx.stats.nodes += 1;
+    const simulation = simulateAIDuel(
+      context,
+      aiAction,
+      { card: scenario.card, focus: scenario.focus },
+      { cache: ctx.duelCache }
+    );
+    const projected = projectPostDuelState(
+      state,
+      simulation,
+      aiAction,
+      { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
+    );
+    values.push(afterRoundValue(projected, depth, profile, ctx));
+    const p = scenario.probability || 0;
+    probs.push(p);
+    probSum += p;
+  }
+  const norm = probSum > 0 ? probSum : 1;
+  return aggregateRisk(
+    values,
+    probs.map((p) => p / norm),
+    profile.riskWeight
+  );
+}
+
+/**
+ * Una sola risposta IA per carta visibile, aggregando i Focus possibili.
+ * @returns {{ action: object|null, score: number }}
+ */
+export function chooseBestAiReplyAggregatingFocus(
+  context,
+  state,
+  aiActions,
+  cardScenarios,
+  depth,
+  profile,
+  ctx
+) {
+  let bestAction = null;
+  let bestScore = -Infinity;
+
+  for (const aiAction of aiActions) {
+    const score = scoreAiActionAgainstFocusVariants(
+      context,
+      state,
+      aiAction,
+      cardScenarios,
+      depth,
+      profile,
+      ctx
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      bestAction = aiAction;
+    }
+  }
+
+  return { action: bestAction, score: bestScore };
 }
 
 /**
@@ -193,13 +279,13 @@ function afterRoundValue(projected, depth, profile, ctx) {
 
 function valueAiToMove(state, depth, profile, ctx, beamWidth) {
   const maxFields = profile.id === 'hard' ? 3 : 2;
-  const fields = limitFields(state.availableFieldIndexes || [], maxFields);
+  const fields = selectCandidateFields(state, maxFields, profile, 'ai');
   if (!fields.length) return leafScore(state, profile);
 
   const lean = leanProfile(profile, beamWidth);
   let best = -Infinity;
 
-  for (const fieldIndex of fields) {
+  for (const { index: fieldIndex } of fields) {
     const context = rebuildContextFromStrategicState(state, fieldIndex);
     context.isPlayerFirst = false;
     context.player.visibleCard = null;
@@ -209,6 +295,8 @@ function valueAiToMove(state, depth, profile, ctx, beamWidth) {
     if (!actions.length || !scenarios.length) continue;
 
     for (const action of actions) {
+      // Anche quando l'IA apre: raggruppa per carta avversaria, una risposta non dipende dal Focus esatto
+      // (qui l'IA gioca prima: sceglie action senza vedere Focus; lo score aggrega già i Focus).
       const values = [];
       const probs = [];
       for (const scenario of scenarios) {
@@ -236,17 +324,19 @@ function valueAiToMove(state, depth, profile, ctx, beamWidth) {
   return best === -Infinity ? leafScore(state, profile) : best;
 }
 
+/**
+ * Giocatore a muovere: Campi adversariali + una sola risposta IA per carta (Focus aggregato).
+ */
 function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
   const maxFields = profile.id === 'easy' ? 1 : 2;
-  const fields = limitFields(state.availableFieldIndexes || [], maxFields);
-  if (!fields.length) return leafScore(state, profile);
+  const fieldEntries = selectCandidateFields(state, maxFields, profile, 'player');
+  if (!fieldEntries.length) return leafScore(state, profile);
 
   const lean = leanProfile(profile, beamWidth);
-  const values = [];
-  const probs = [];
-  let totalWeight = 0;
+  const fieldScores = [];
+  const fieldRanks = fieldEntries.map((f) => f.rank);
 
-  for (const fieldIndex of fields) {
+  for (const { index: fieldIndex, rank } of fieldEntries) {
     const context = rebuildContextFromStrategicState(state, fieldIndex);
     context.isPlayerFirst = true;
     context.player.visibleCard = null;
@@ -255,42 +345,57 @@ function valuePlayerToMove(state, depth, profile, ctx, beamWidth) {
     const aiActions = beamActions(context, profile, Math.min(beamWidth, 6));
     if (!scenarios.length || !aiActions.length) continue;
 
-    for (const scenario of scenarios) {
-      const weight = (scenario.probability || 0) / fields.length;
-      totalWeight += weight;
+    const byCard = groupScenariosByCardId(scenarios);
+    const cardValues = [];
+    const cardProbs = [];
+    let cardProbSum = 0;
 
-      let bestReply = -Infinity;
-      for (const aiAction of aiActions) {
-        ctx.stats.nodes += 1;
-        const simulation = simulateAIDuel(
-          context,
-          aiAction,
-          { card: scenario.card, focus: scenario.focus },
-          { cache: ctx.duelCache }
-        );
-        const projected = projectPostDuelState(
-          state,
-          simulation,
-          aiAction,
-          { card: scenario.card, cardId: scenario.cardId, focus: scenario.focus }
-        );
-        const child = afterRoundValue(projected, depth, profile, ctx);
-        if (child > bestReply) bestReply = child;
-      }
-      if (bestReply === -Infinity) bestReply = leafScore(state, profile);
-      values.push(bestReply);
-      probs.push(weight);
+    for (const [, cardScenarios] of byCard) {
+      const groupProb = cardScenarios.reduce((s, sc) => s + (sc.probability || 0), 0);
+      const { score } = chooseBestAiReplyAggregatingFocus(
+        context,
+        state,
+        aiActions,
+        cardScenarios,
+        depth,
+        profile,
+        ctx
+      );
+      if (!Number.isFinite(score)) continue;
+      cardValues.push(score);
+      cardProbs.push(groupProb);
+      cardProbSum += groupProb;
     }
+
+    if (!cardValues.length) continue;
+
+    const norm = cardProbSum > 0 ? cardProbSum : 1;
+    const fieldScore = aggregateRisk(
+      cardValues,
+      cardProbs.map((p) => p / norm),
+      profile.riskWeight
+    );
+
+    fieldScores.push({
+      score: fieldScore,
+      weight: playerFieldChoiceWeight(rank, fieldRanks, profile),
+    });
   }
 
-  if (!values.length) return leafScore(state, profile);
+  if (!fieldScores.length) return leafScore(state, profile);
 
-  const norm = totalWeight > 0 ? totalWeight : 1;
-  return aggregateRisk(
-    values,
-    probs.map((p) => p / norm),
-    profile.riskWeight
-  );
+  if (profile.id === 'hard') {
+    // Scelta peggiore per l'IA
+    return Math.min(...fieldScores.map((f) => f.score));
+  }
+
+  if (profile.id === 'easy') {
+    return fieldScores.reduce((s, f) => s + f.score, 0) / fieldScores.length;
+  }
+
+  // Normale: distribuzione ponderata (Campi più attraenti per il giocatore pesano di più)
+  const totalW = fieldScores.reduce((s, f) => s + f.weight, 0) || 1;
+  return fieldScores.reduce((s, f) => s + f.score * (f.weight / totalW), 0);
 }
 
 /**

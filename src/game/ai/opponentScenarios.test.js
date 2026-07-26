@@ -76,3 +76,31 @@ test('con carta visibile gli scenari usano solo quella carta', () => {
   const scenarios = generateOpponentScenarios(context, getAIProfile('medium'));
   assert.ok(scenarios.every((s) => s.cardId === 77));
 });
+
+test('cinque carte nascoste: tutte rappresentate, non solo le prime in mano', () => {
+  const cards = [50, 10, 40, 20, 30].map((n) =>
+    makeCard({ id: n, name: `C${n}`, power: 2, damage: 2 })
+  );
+  const context = makeAIContext({
+    isPlayerFirst: false,
+    player: {
+      hand: cards,
+      usedCardIds: [],
+      hp: 20,
+      focusPool: 18,
+      focus: 18,
+      armyBonuses: {},
+      toxin: null,
+      visibleCard: null,
+    },
+  });
+  const scenarios = generateOpponentScenarios(context, {
+    ...getAIProfile('medium'),
+    opponentScenarioCount: 4,
+  });
+  const ids = new Set(scenarios.map((s) => s.cardId));
+  assert.equal(ids.size, 5);
+  for (const c of cards) {
+    assert.ok(ids.has(c.id), `manca carta ${c.id}`);
+  }
+});

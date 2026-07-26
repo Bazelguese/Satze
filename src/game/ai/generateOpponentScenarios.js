@@ -3,7 +3,6 @@
 // ============================================
 
 import { getFieldModifiers } from '../battlefieldEffects.js';
-import { AI_MIN_FOCUS } from './aiConstants.js';
 import { getAvailableCards, getLegalFocusRange } from './generateAIActions.js';
 import { estimateStandardFocus, getFairShare } from './focusBudget.js';
 
@@ -71,16 +70,33 @@ function bandForFocus(focus, { economical, standard, pressure, high }) {
   return 'high';
 }
 
+function pickPreferredScenario(list, bandOrder) {
+  for (const band of bandOrder) {
+    const hit = list.find((s) => s.band === band);
+    if (hit) return hit;
+  }
+  return list[0] || null;
+}
+
 /**
  * Genera scenari { card, focus, probability, band }.
+ * Passata 1: almeno uno scenario per carta (ordine stabile per id, non per mano).
+ * Passata 2: varianti Focus aggiuntive fino al budget.
  */
 export function generateOpponentScenarios(context, profile) {
   const visible = context.player?.visibleCard ?? null;
-  const cards = visible
+  const available = visible
     ? [visible]
     : getAvailableCards(context.player.hand, context.player.usedCardIds);
 
-  if (!cards.length) return [];
+  if (!available.length) return [];
+
+  // Non privilegiare l'ordine della mano: ordine stabile per id
+  const cards = [...available].sort((a, b) => {
+    const idA = a?.id ?? 0;
+    const idB = b?.id ?? 0;
+    return idA - idB;
+  });
 
   const { minFocus, maxFocus, pool } = getLegalFocusRange(context, 'player');
   const cardsRemaining = getAvailableCards(context.player.hand, context.player.usedCardIds).length;
@@ -98,14 +114,15 @@ export function generateOpponentScenarios(context, profile) {
     high: 0.1,
   };
 
-  const raw = [];
+  const byCard = new Map();
   for (const card of cards) {
     const focuses = generateOpponentFocusValues({ context, card, profile });
+    const list = [];
     for (const focus of focuses) {
       const band = bandForFocus(focus, bands);
       const weight = weights[band] ?? 0;
       if (weight <= 0) continue;
-      raw.push({
+      list.push({
         card,
         cardId: card.id,
         focus,
@@ -113,43 +130,59 @@ export function generateOpponentScenarios(context, profile) {
         weight,
       });
     }
+    // Se i pesi azzerano tutto (es. Facile senza pressure/high), tieni almeno economical/standard
+    if (!list.length) {
+      const fallbackFocus = clampFocus(standard, minFocus, maxFocus);
+      list.push({
+        card,
+        cardId: card.id,
+        focus: fallbackFocus,
+        band: 'standard',
+        weight: 1,
+      });
+    }
+    byCard.set(card.id, list);
   }
 
-  // Limita al conteggio profilo, bilanciando bande
-  const limit = profile.opponentScenarioCount || 4;
-  if (raw.length <= limit) {
-    return normalizeScenarioProbabilities(raw);
-  }
-
-  // Priorità: standard → pressure → economical → high; una per carta quando possibile
-  const byCard = new Map();
-  for (const s of raw) {
-    if (!byCard.has(s.cardId)) byCard.set(s.cardId, []);
-    byCard.get(s.cardId).push(s);
-  }
-
-  const selected = [];
   const bandOrder = ['standard', 'economical', 'pressure', 'high'];
-  for (const [, list] of byCard) {
+  const selected = [];
+  const seen = new Set();
+
+  // Passata 1: copertura completa delle carte
+  for (const card of cards) {
+    const list = byCard.get(card.id) || [];
+    const pick = pickPreferredScenario(list, bandOrder);
+    if (!pick) continue;
+    const key = `${pick.cardId}:${pick.focus}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(pick);
+  }
+
+  // Passata 2: varianti Focus aggiuntive (budget ≥ max(limit, nCarte))
+  const limit = Math.max(profile.opponentScenarioCount || 4, cards.length);
+  const extras = [];
+  for (const card of cards) {
+    const list = byCard.get(card.id) || [];
     for (const band of bandOrder) {
-      const hit = list.find((s) => s.band === band);
-      if (hit && !selected.some((x) => x.cardId === hit.cardId && x.focus === hit.focus)) {
-        selected.push(hit);
+      for (const s of list) {
+        if (s.band !== band) continue;
+        const key = `${s.cardId}:${s.focus}`;
+        if (seen.has(key)) continue;
+        extras.push(s);
       }
-      if (selected.length >= limit) break;
-    }
-    if (selected.length >= limit) break;
-  }
-
-  // Completa se serve
-  for (const s of raw) {
-    if (selected.length >= limit) break;
-    if (!selected.some((x) => x.cardId === s.cardId && x.focus === s.focus)) {
-      selected.push(s);
     }
   }
 
-  return normalizeScenarioProbabilities(selected.slice(0, limit));
+  for (const s of extras) {
+    if (selected.length >= limit) break;
+    const key = `${s.cardId}:${s.focus}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(s);
+  }
+
+  return normalizeScenarioProbabilities(selected);
 }
 
 function normalizeScenarioProbabilities(scenarios) {

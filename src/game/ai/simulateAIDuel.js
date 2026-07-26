@@ -74,6 +74,68 @@ export function resolveTerminalStatus(context, {
   return null;
 }
 
+function normalizeIdList(ids) {
+  return (ids || [])
+    .map((e) => (typeof e === 'object' && e != null ? e.id : e))
+    .filter((id) => id != null)
+    .map(String)
+    .sort()
+    .join(',');
+}
+
+function stableObjectKey(value) {
+  if (value == null) return '';
+  if (typeof value !== 'object') return String(value);
+  if (Array.isArray(value)) return value.map(stableObjectKey).join(',');
+  return Object.keys(value)
+    .sort()
+    .map((k) => `${k}:${stableObjectKey(value[k])}`)
+    .join(',');
+}
+
+function toxinCacheKey(toxin) {
+  if (!toxin) return '0';
+  if (typeof toxin !== 'object') return String(toxin);
+  return `v${toxin.value ?? 0}|m${toxin.minHealth ?? ''}|s${toxin.source ?? ''}`;
+}
+
+/**
+ * Chiave cache: tutto il contesto che influenza computeDuelResolution.
+ */
+export function buildSimulateAIDuelCacheKey(context, aiAction, playerAction) {
+  const fieldIndex =
+    aiAction.fieldIndex != null ? aiAction.fieldIndex : context.currentFieldIndex;
+  const field =
+    fieldIndex != null && context.battlefields?.[fieldIndex]
+      ? context.battlefields[fieldIndex]
+      : context.field;
+
+  return [
+    field?.id ?? fieldIndex ?? '',
+    fieldIndex ?? '',
+    aiAction.card?.id,
+    aiAction.focus,
+    playerAction.card?.id,
+    playerAction.focus,
+    context.isPlayerFirst ? 1 : 0,
+    context.roundNumber ?? 1,
+    context.lastWinner ?? '',
+    context.player?.hp,
+    context.ai?.hp,
+    context.player?.focusPool ?? context.player?.focus,
+    context.ai?.focusPool ?? context.ai?.focus,
+    normalizeIdList(context.player?.usedCardIds),
+    normalizeIdList(context.ai?.usedCardIds),
+    stableObjectKey(context.conqueredFields || {}),
+    context.playerFieldsConquered ?? 0,
+    context.enemyFieldsConquered ?? 0,
+    toxinCacheKey(context.player?.toxin),
+    toxinCacheKey(context.ai?.toxin),
+    stableObjectKey(context.player?.armyBonuses || {}),
+    stableObjectKey(context.ai?.armyBonuses || {}),
+  ].join('|');
+}
+
 /**
  * Simula un duello completo senza mutare il contesto.
  *
@@ -97,20 +159,7 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
       ? context.battlefields[fieldIndex]
       : context.field;
 
-  const cacheKey = [
-    field?.id ?? fieldIndex,
-    aiAction.card.id,
-    aiAction.focus,
-    playerAction.card.id,
-    playerAction.focus,
-    context.isPlayerFirst ? 1 : 0,
-    context.roundNumber,
-    context.lastWinner ?? '',
-    context.player.hp,
-    context.ai.hp,
-    context.player.focus,
-    context.ai.focus,
-  ].join(':');
+  const cacheKey = buildSimulateAIDuelCacheKey(context, aiAction, playerAction);
 
   if (options.cache?.has(cacheKey)) {
     return options.cache.get(cacheKey);
