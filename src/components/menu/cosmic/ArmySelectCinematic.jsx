@@ -2,9 +2,8 @@
 // ArmySelectCinematic.jsx — Schermata "Scegli la tua armata"
 // ============================================================
 // Drop-in component. È la trasposizione 1:1 dell'esplorazione V3
-// approvata. NON modificare struttura, stili o markup — i testi
-// per ogni armata (lore / style / keywords / stats) si modificano
-// in `armyLore.js`.
+// approvata. I testi per ogni armata (synopsis / motto / bonusExplain /
+// style / tips) si modificano in `armyLore.js`.
 //
 // Props:
 //   onSelect(armyName: string | null)  // null = "Eserciti Misti"
@@ -25,13 +24,6 @@ import {
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
 
-const STAT_LABELS = {
-  aggressione: 'Aggressione',
-  difesa: 'Difesa',
-  tempo: 'Tempo',
-  difficolta: 'Difficoltà',
-};
-
 // ------------------------------------------------------------
 // Adapter: traduce i dati reali del gioco nel formato usato dal V3
 // ------------------------------------------------------------
@@ -42,7 +34,6 @@ function buildArmies() {
   list.push({
     id: 'mixed',
     name: 'Eserciti Misti',
-    sub: 'ESERCITI MULTI-ARMATA',
     color: '#a78bfa',
     bg: null,
     portrait: null,
@@ -51,10 +42,12 @@ function buildArmies() {
     decks: 0,
     bonus: null,
     bonusLabel: MIXED_ARMIES_LORE.bonusLabel || 'NESSUNO',
-    lore: MIXED_ARMIES_LORE.lore || '',
+    bonusWhen: MIXED_ARMIES_LORE.bonusWhen || '',
+    bonusExplain: MIXED_ARMIES_LORE.bonusExplain || '',
+    motto: MIXED_ARMIES_LORE.motto || '',
+    synopsis: MIXED_ARMIES_LORE.synopsis || '',
     style: MIXED_ARMIES_LORE.style || '',
-    keywords: MIXED_ARMIES_LORE.keywords || [],
-    stats: MIXED_ARMIES_LORE.stats || null,
+    tips: MIXED_ARMIES_LORE.tips || '',
     isMixed: true,
   });
 
@@ -69,7 +62,6 @@ function buildArmies() {
     list.push({
       id: armyName,
       name: armyName,
-      sub: lore.sub || `${cards.length} CARTE • ${decks} ESERCITI`,
       color: colors.accent,
       bg,
       portrait: ARMY_ICONS[armyName] || null,
@@ -78,10 +70,12 @@ function buildArmies() {
       decks,
       bonus: bonus?.description || '—',
       bonusLabel: lore.bonusLabel || (bonus?.trigger ? bonus.trigger.toUpperCase() : 'PASSIVO'),
-      lore: lore.lore || '',
+      bonusWhen: lore.bonusWhen || '',
+      bonusExplain: lore.bonusExplain || '',
+      motto: lore.motto || '',
+      synopsis: lore.synopsis || lore.lore || '',
       style: lore.style || '',
-      keywords: lore.keywords || [],
-      stats: lore.stats || null,
+      tips: lore.tips || '',
       isMixed: false,
     });
   }
@@ -354,68 +348,59 @@ function SigilloRing({ accent }) {
   );
 }
 
-function StatBar({ label, value, accent }) {
-  return (
-    <div className="v3c-stat">
-      <div className="v3c-stat-head">
-        <span className="lbl">{label}</span>
-        <span className="val" style={{ color: accent }}>{value}</span>
-      </div>
-      <div className="v3c-stat-track">
-        <div className="v3c-stat-fill" style={{ width: `${value}%`, background: `linear-gradient(90deg, ${accent}40, ${accent})`, boxShadow: `0 0 8px ${accent}80` }}/>
-        <div className="v3c-stat-ticks">
-          {Array.from({length: 10}).map((_, i) => <span key={i}/>)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DetailPanel({ army, onConfirm }) {
+  const metaCards = army.cards || '—';
+  const metaDecks = army.decks || '—';
+  const synopsisBlocks = (army.synopsis || '').split(/\n\n+/).filter(Boolean);
   return (
     <>
-      {/* LEFT side panel — lore + tags */}
+      {/* LEFT — sinossi narrativa */}
       <div className="v3c-side v3c-side-l" style={{ '--accent': army.color }}>
-        <div className="v3c-side-inner">
-          <div className="v3c-side-eye">{army.sub}</div>
+        <div className="v3c-side-inner v3c-side-inner-lore">
+          <div className="v3c-side-eye">ARMATA · {army.glyph}</div>
           <h2 className="v3c-side-name">{army.name}</h2>
-          {army.lore && <p className="v3c-side-lore">"{army.lore}"</p>}
-          {army.style && (
-            <div className="v3c-side-style">
-              <div className="lbl">STILE DI GIOCO</div>
-              <div className="txt">{army.style}</div>
-            </div>
-          )}
-          {army.keywords?.length > 0 && (
-            <div className="v3c-side-tags">
-              {army.keywords.map((k) => (
-                <span key={k} style={{ borderColor: `${army.color}66`, color: army.color }}>{k}</span>
-              ))}
-            </div>
-          )}
+          {army.motto && <p className="v3c-side-motto">"{army.motto}"</p>}
+          <div className="v3c-side-synopsis">
+            {synopsisBlocks.map((block, i) => (
+              <p key={i}>{block}</p>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* RIGHT side panel — bonus + stats + confirm */}
+      {/* RIGHT — tecnica: bonus, stile, note, meta, confirm */}
       <div className="v3c-side v3c-side-r" style={{ '--accent': army.color }}>
-        <div className="v3c-side-inner">
-          <div className="v3c-bonus" style={{ borderColor: army.color }}>
-            <div className="v3c-bonus-eye" style={{ color: army.color }}>BONUS · {army.bonusLabel}</div>
-            <div className="v3c-bonus-val">{army.bonus || '— Multi-Armata —'}</div>
-            <div className="v3c-bonus-foot">
-              <span><b>{army.cards || '—'}</b> Carte</span>
+        <div className="v3c-side-inner v3c-side-inner-tech">
+          <div className="v3c-side-tech-body">
+            <div className="v3c-bonus" style={{ borderColor: army.color }}>
+              <div className="v3c-bonus-eye" style={{ color: army.color }}>BONUS · {army.bonusLabel}</div>
+              {army.bonusWhen && <div className="v3c-bonus-when">{army.bonusWhen}</div>}
+              {army.bonusExplain && <p className="v3c-bonus-explain">{army.bonusExplain}</p>}
+              {army.bonus && (
+                <div className="v3c-bonus-val">{army.bonus}</div>
+              )}
+              {!army.bonus && !army.bonusExplain && (
+                <div className="v3c-bonus-val">— Multi-Armata —</div>
+              )}
+            </div>
+            {army.style && (
+              <div className="v3c-side-block">
+                <div className="lbl">STILE CONSIGLIATO</div>
+                <div className="txt">{army.style}</div>
+              </div>
+            )}
+            {army.tips && (
+              <div className="v3c-side-block">
+                <div className="lbl">NOTE TATTICHE</div>
+                <div className="txt">{army.tips}</div>
+              </div>
+            )}
+            <div className="v3c-side-meta">
+              <span><b>{metaCards}</b> Carte</span>
               <span className="dot">•</span>
-              <span><b>{army.decks || '—'}</b> Eserciti</span>
+              <span><b>{metaDecks}</b> Eserciti</span>
             </div>
           </div>
-          {army.stats && (
-            <div className="v3c-stats">
-              <div className="v3c-stats-head">PROFILO TATTICO</div>
-              {Object.entries(army.stats).map(([k, v]) => (
-                <StatBar key={k} label={STAT_LABELS[k] || k} value={v} accent={army.color}/>
-              ))}
-            </div>
-          )}
           <button className="v3c-confirm" style={{ borderColor: army.color, color: army.color }} onClick={onConfirm}>
             <span className="v3c-confirm-bg"/>
             <span className="v3c-confirm-lbl">SCHIERA</span>
@@ -817,13 +802,13 @@ function V3CinematicStyles() {
       /* Side panels */
       .v3c-side {
         position: absolute;
-        top: 220px; bottom: 140px;
+        top: 160px; bottom: 110px;
         z-index: 8;
-        width: 360px;
+        width: 460px;
         perspective: 1400px;
       }
-      .v3c-side-l { left: 40px; }
-      .v3c-side-r { right: 40px; }
+      .v3c-side-l { left: 24px; }
+      .v3c-side-r { right: 24px; }
       .v3c-side-inner {
         position: relative;
         height: 100%;
@@ -837,6 +822,8 @@ function V3CinematicStyles() {
           inset 0 1px 0 rgba(255,255,255,0.06);
         animation: v3c-panel-in .6s cubic-bezier(.2,.7,.2,1);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
       .v3c-side-l .v3c-side-inner {
         transform: rotateY(14deg);
@@ -859,43 +846,81 @@ function V3CinematicStyles() {
 
       .v3c-side-eye {
         font-family: 'Share Tech Mono', monospace;
-        font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+        font-size: 15px; letter-spacing: 0.26em; text-transform: uppercase;
         color: var(--accent);
+        flex-shrink: 0;
       }
       .v3c-side-name {
         font-family: 'Cinzel', serif;
-        font-weight: 700; font-size: 24px;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        margin: 4px 0 12px;
-        line-height: 1.15;
+        font-weight: 700; font-size: 36px;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        margin: 8px 0 14px;
+        line-height: 1.1;
+        flex-shrink: 0;
       }
-      .v3c-side-lore {
+      .v3c-side-motto {
+        flex-shrink: 0;
+        margin: 0 0 18px;
         font-family: 'Cinzel', serif;
         font-style: italic;
-        font-size: 13px; line-height: 1.55;
-        color: #cbd5e1;
-        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.4;
+        color: color-mix(in srgb, var(--accent) 75%, #e4e4e7);
+      }
+      .v3c-side-synopsis {
+        flex: 1;
+        min-height: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow: auto;
+      }
+      .v3c-side-synopsis p {
+        margin: 0;
+        font-family: 'Cinzel', serif;
+        font-size: 20px;
+        line-height: 1.55;
+        color: #d4d4d8;
         text-wrap: pretty;
       }
-      .v3c-side-style { margin-bottom: 14px; }
+      .v3c-side-inner-tech {
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .v3c-side-tech-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 18px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+      .v3c-side-block .lbl,
       .v3c-side-style .lbl {
         font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.28em; color: rgba(255,255,255,0.5);
+        font-size: 14px; letter-spacing: 0.22em; color: rgba(255,255,255,0.5);
         text-transform: uppercase;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
       }
+      .v3c-side-block .txt,
       .v3c-side-style .txt {
-        font-size: 12.5px; line-height: 1.55;
+        font-size: 18px; line-height: 1.5;
         color: #d4d4d8;
+        text-wrap: pretty;
       }
-      .v3c-side-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-      .v3c-side-tags span {
+      .v3c-side-meta {
+        display: flex; gap: 12px;
         font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.22em;
-        padding: 4px 10px;
-        border: 1px solid;
-        text-transform: uppercase;
+        font-size: 15px; color: rgba(255,255,255,0.6);
+        letter-spacing: 0.14em;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255,255,255,0.08);
       }
+      .v3c-side-meta b { color: #e8e8ec; font-weight: 600; }
+      .v3c-side-meta .dot { color: rgba(255,255,255,0.3); }
 
       /* Named ticker */
       .v3c-ticker-named {
@@ -933,59 +958,36 @@ function V3CinematicStyles() {
       }
 
       .v3c-bonus {
-        padding: 14px 18px;
+        padding: 14px 16px;
         background: rgba(0,0,0,0.55);
         border: 1px solid;
-        margin-bottom: 12px;
       }
       .v3c-bonus-eye {
         font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+        font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase;
+      }
+      .v3c-bonus-when {
+        margin-top: 10px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 15px;
+        letter-spacing: 0.04em;
+        color: color-mix(in srgb, var(--accent) 80%, #fff);
+        line-height: 1.4;
+      }
+      .v3c-bonus-explain {
+        margin: 10px 0 0;
+        font-size: 18px;
+        line-height: 1.5;
+        color: #e4e4e7;
+        text-wrap: pretty;
       }
       .v3c-bonus-val {
         font-family: 'Share Tech Mono', monospace;
-        font-size: 18px; margin: 6px 0 8px;
+        font-size: 14px;
+        margin-top: 12px;
+        color: rgba(255,255,255,0.5);
+        letter-spacing: 0.04em;
       }
-      .v3c-bonus-foot {
-        display: flex; gap: 10px;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 11px; color: rgba(255,255,255,0.6);
-        letter-spacing: 0.18em;
-      }
-      .v3c-bonus-foot b { color: #e8e8ec; font-weight: 600; }
-      .v3c-bonus-foot .dot { color: rgba(255,255,255,0.3); }
-
-      .v3c-stats-head {
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.3em; color: rgba(255,255,255,0.55);
-        margin-bottom: 8px; text-transform: uppercase;
-      }
-      .v3c-stat { margin-bottom: 7px; }
-      .v3c-stat-head {
-        display: flex; justify-content: space-between;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.18em;
-        margin-bottom: 3px;
-      }
-      .v3c-stat-head .lbl { color: rgba(255,255,255,0.7); text-transform: uppercase; }
-      .v3c-stat-track {
-        position: relative;
-        height: 6px;
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.08);
-      }
-      .v3c-stat-fill {
-        height: 100%;
-        transition: width .8s cubic-bezier(.2,.7,.2,1);
-        animation: v3c-bar-grow .8s cubic-bezier(.2,.7,.2,1);
-      }
-      @keyframes v3c-bar-grow { from { width: 0 !important; } }
-      .v3c-stat-ticks {
-        position: absolute; inset: 0;
-        display: flex; pointer-events: none;
-      }
-      .v3c-stat-ticks span { flex: 1; border-right: 1px solid rgba(0,0,0,0.5); }
-      .v3c-stat-ticks span:last-child { border-right: 0; }
 
       .v3c-confirm {
         position: relative;
@@ -998,15 +1000,16 @@ function V3CinematicStyles() {
         border: 1.5px solid;
         font-family: 'Cinzel', serif;
         font-weight: 700;
-        font-size: 16px;
-        letter-spacing: 0.22em;
+        font-size: 20px;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
         cursor: pointer;
         transition: all .25s;
         overflow: hidden;
-        margin-top: 14px;
+        margin-top: auto;
         width: 100%;
         color: inherit;
+        flex-shrink: 0;
       }
       .v3c-confirm-bg {
         position: absolute; inset: 0;

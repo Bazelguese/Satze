@@ -4,6 +4,8 @@ import {
   applyDuelNexusMaxDamage,
   applyCentraleOverdriveDamage,
 } from './duelDamagePipeline.js';
+import { emitAftermathResourceEvents } from './battleFieldEventDiff.js';
+import { BATTLE_PHASES, BATTLE_REVEAL_AT } from './battleEventEmit.js';
 
 export function runDuelDamageAftermathAndFcAdjust({
   battleLog,
@@ -22,6 +24,10 @@ export function runDuelDamageAftermathAndFcAdjust({
   selectedFocus,
   enemySelectedFocus,
 }) {
+  if (battleLog && typeof battleLog.setContext === 'function') {
+    battleLog.setContext(BATTLE_PHASES.post, BATTLE_REVEAL_AT.postFx);
+  }
+
   let dm = applyDuelNexusMaxDamage(battleLog, maxDamage, pDamage, eDamage);
   let pD = dm.pDamage;
   let eD = dm.eDamage;
@@ -39,6 +45,13 @@ export function runDuelDamageAftermathAndFcAdjust({
 
   let damageDealt = winner === 'player' ? pD : eD;
 
+  const beforeAftermath = {
+    pHP: pHPCurrent,
+    eHP: eHPCurrent,
+    pFC: pFCCurrent,
+    eFC: eFCCurrent,
+  };
+
   const aftermath = applyBattlefieldRoundAftermath({
     field,
     winner,
@@ -48,6 +61,13 @@ export function runDuelDamageAftermathAndFcAdjust({
     pFCCurrent,
     eFCCurrent,
     battleLog,
+  });
+
+  emitAftermathResourceEvents(battleLog, field, beforeAftermath, {
+    pHP: aftermath.pHPCurrent,
+    eHP: aftermath.eHPCurrent,
+    pFC: aftermath.pFCCurrent,
+    eFC: aftermath.eFCCurrent,
   });
 
   return {
@@ -113,6 +133,7 @@ export function buildDuelBattleResult({
   enemyToxinActivated,
   visualSteps = [],
   isPlayerFirst = true,
+  events = [],
 }) {
   const {
     pAssault,
@@ -182,6 +203,7 @@ export function buildDuelBattleResult({
     finalEnemyFC,
     logs: battleLog,
     phaseLogs,
+    events,
     field,
     fieldIndex: currentFieldIndex,
     winnerArmy: winner === 'player' ? pAgent.army : eAgent.army,

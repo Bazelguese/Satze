@@ -1,4 +1,13 @@
 // Calcolo VA, log intermedio animazione, risultato VA nel log.
+import {
+  emitAssaultCalculation,
+  makeAgentTarget,
+} from './battleEventEmit.js';
+
+function pushLog(log, message) {
+  if (log && typeof log.push === 'function') log.push(message);
+}
+
 export function runDuelAssaultCalculation(battleLog, {
   pAgent,
   eAgent,
@@ -20,24 +29,28 @@ export function runDuelAssaultCalculation(battleLog, {
   const pAssault = Math.max(pMinFinal, pAssaultRaw);
   const eAssault = Math.max(eMinFinal, eAssaultRaw);
 
-  battleLog.push(`━━━ CALCOLO VA ━━━`);
+  pushLog(battleLog, `━━━ CALCOLO VA ━━━`);
   const pMinText = pAssaultRaw < pMinFinal ? ` → ${pAssault} (min ${pMinFinal})` : '';
   const eMinText = eAssaultRaw < eMinFinal ? ` → ${eAssault} (min ${eMinFinal})` : '';
-  battleLog.push(
+  pushLog(
+    battleLog,
     `TU: ${pPower} POT × ${pFocusUsed} FC${pAssaultMod !== 0 ? ` ${pAssaultMod > 0 ? '+' : ''}${pAssaultMod} mod` : ''} = ${pAssaultRaw}${pMinText}`
   );
-  battleLog.push(
+  pushLog(
+    battleLog,
     `IA: ${ePower} POT × ${eFocusUsed} FC${eAssaultMod !== 0 ? ` ${eAssaultMod > 0 ? '+' : ''}${eAssaultMod} mod` : ''} = ${eAssaultRaw}${eMinText}`
   );
 
   if (pAssaultRaw < pMinFinal) {
-    battleLog.push(
-      `🐛¡️ Il tuo VA era ${pAssaultRaw}, ma non può scendere sotto ${pMinFinal}${pMinAssault !== null ? ` (minAssault ${pMinAssault})` : ` (POT corrente ${pPower})`}`
+    pushLog(
+      battleLog,
+      `Il tuo VA era ${pAssaultRaw}, ma non può scendere sotto ${pMinFinal}${pMinAssault !== null ? ` (minAssault ${pMinAssault})` : ` (POT corrente ${pPower})`}`
     );
   }
   if (eAssaultRaw < eMinFinal) {
-    battleLog.push(
-      `🐛¡️ VA IA era ${eAssaultRaw}, ma non può scendere sotto ${eMinFinal}${eMinAssault !== null ? ` (minAssault ${eMinAssault})` : ` (POT corrente ${ePower})`}`
+    pushLog(
+      battleLog,
+      `VA IA era ${eAssaultRaw}, ma non può scendere sotto ${eMinFinal}${eMinAssault !== null ? ` (minAssault ${eMinAssault})` : ` (POT corrente ${ePower})`}`
     );
   }
 
@@ -48,8 +61,31 @@ export function runDuelAssaultCalculation(battleLog, {
   const pAssaultAfterFocus = Math.max(pMinBase, pPower * pFocusUsed);
   const eAssaultAfterFocus = Math.max(eMinBase, ePower * eFocusUsed);
 
-  battleLog.push(`━━━ RISULTATO ━━━`);
-  battleLog.push(`⚔️ VA FINALE: Tu ${pAssault} vs IA ${eAssault}`);
+  pushLog(battleLog, `━━━ RISULTATO ━━━`);
+  pushLog(battleLog, `VA FINALE: Tu ${pAssault} vs IA ${eAssault}`);
+
+  if (battleLog && typeof battleLog.emit === 'function') {
+    emitAssaultCalculation(battleLog, {
+      target: makeAgentTarget('player', pAgent),
+      basePower: pPower,
+      focus: pFocusUsed,
+      modifiers: pAssaultMod,
+      floorApplied: pAssaultRaw < pMinFinal,
+      floorValue: pMinFinal,
+      rawVA: pAssaultRaw,
+      finalVA: pAssault,
+    });
+    emitAssaultCalculation(battleLog, {
+      target: makeAgentTarget('enemy', eAgent),
+      basePower: ePower,
+      focus: eFocusUsed,
+      modifiers: eAssaultMod,
+      floorApplied: eAssaultRaw < eMinFinal,
+      floorValue: eMinFinal,
+      rawVA: eAssaultRaw,
+      finalVA: eAssault,
+    });
+  }
 
   return {
     pAssaultRaw,

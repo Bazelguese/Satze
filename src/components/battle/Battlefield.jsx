@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { generateFieldParticles, FIELD_STYLES } from '../../utils';
 import { Icon } from '../ui/Icon';
 import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVisualTimeline.js';
+import { getDuelOutcomeSubtitle } from './DuelCinematicOverlays';
 
 /**
  * Componente sfondo campo di battaglia
@@ -214,6 +215,13 @@ export const BattlefieldPanel = ({
   onContinue,
   gameResult,
   onMenu,
+  onRematch,
+  /** Rematch online: cambia esercito/mazzo restando in stanza */
+  onRematchChangeDeck,
+  rematchLabel = 'Rematch',
+  rematchChangeDeckLabel = 'Cambia mazzo',
+  /** false mentre overlay TRIONFO/SCONFITTA è attivo — i tasti compaiono dopo */
+  endGameActionsReady = true,
   onOpenPlaytest,
   onReplayDuel,
   onSkipDuel,
@@ -318,6 +326,8 @@ export const BattlefieldPanel = ({
       className={`absolute flex flex-col items-center justify-center p-4 pointer-events-none satze-battlefield-panel satze-hud-panel ${
         riepilogoOpen ? 'satze-battlefield-panel-riepilogo-open' : ''
       } ${
+        gamePhase === 'gameOver' ? 'satze-battlefield-panel-gameover' : ''
+      } ${
         isZoomed 
           ? 'satze-battlefield-panel-zoomed animate-battlefield-zoom-smooth' 
           : ''
@@ -327,14 +337,14 @@ export const BattlefieldPanel = ({
         left: '50%', 
         transform: isZoomed ? undefined : 'translate(-50%, -50%)',
         width: '200px',
-        height: isDuelPhase ? '320px' : '280px',
-        zIndex: isDuelPhase ? 20 : 10,
+        height: isDuelPhase ? '320px' : gamePhase === 'gameOver' ? '300px' : '280px',
+        zIndex: isDuelPhase || gamePhase === 'gameOver' ? 20 : 10,
         transition: 'top 0.6s ease-out',
         overflow: 'visible',
       }}
     >
       {gamePhase === 'selectField' && (
-        <div className="text-center">
+        <div className="text-center satze-bf-select-placeholder">
           <div className="text-amber-400/90 text-sm font-semibold mb-1 tracking-wide">Campo di Battaglia</div>
           <div className="text-slate-400 text-xs">
             {isPlayerFirst ? 'Scegli un campo' : oppWait}
@@ -549,8 +559,8 @@ export const BattlefieldPanel = ({
         </>
       )}
       
-      {gamePhase === 'gameOver' && (
-        <div className="text-center space-y-3 pointer-events-auto">
+      {gamePhase === 'gameOver' && endGameActionsReady && (
+        <div className="text-center space-y-3 pointer-events-auto satze-endgame-actions w-full">
           <div className={`text-base font-semibold flex items-center justify-center gap-2 ${
             gameResult?.winner === 'player' ? 'satze-result-victory' : 
             gameResult?.winner === 'draw' ? 'text-slate-400' : 'satze-result-defeat'
@@ -559,17 +569,40 @@ export const BattlefieldPanel = ({
              gameResult?.winner === 'draw' ? <><Icon name="check" type="cardIcon" size={20} /> Pareggio</> : <><Icon name="skull" type="cardIcon" size={20} color="#D946EF" /> Sconfitta</>}
           </div>
           <div className="text-[11px] text-slate-500">
-            {gameResult?.reason === 'fields' && '3 campi conquistati'}
-            {gameResult?.reason === 'hp' && 'Per punti vita'}
+            {gameResult?.winner === 'player' && getDuelOutcomeSubtitle(gameResult, 'win')}
+            {gameResult?.winner === 'enemy' && getDuelOutcomeSubtitle(gameResult, 'lose')}
+            {gameResult?.winner === 'draw' && 'Pareggio'}
           </div>
-          <button
-            onClick={onMenu}
-            className="w-full py-2 px-4 bg-white/15 hover:bg-white/25 text-white text-xs font-medium rounded-lg border border-white/20 transition-all"
-          >
-            Menu
-          </button>
+          <div className="flex flex-col gap-2 w-full">
+            {onRematch && (
+              <button
+                type="button"
+                onClick={onRematch}
+                className="w-full py-2 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-medium rounded-lg border border-amber-400/40 transition-all"
+              >
+                {rematchLabel}
+              </button>
+            )}
+            {onRematchChangeDeck && (
+              <button
+                type="button"
+                onClick={onRematchChangeDeck}
+                className="w-full py-2 px-4 bg-violet-500/20 hover:bg-violet-500/30 text-violet-100 text-xs font-medium rounded-lg border border-violet-400/40 transition-all"
+              >
+                {rematchChangeDeckLabel}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onMenu}
+              className="w-full py-2 px-4 bg-white/15 hover:bg-white/25 text-white text-xs font-medium rounded-lg border border-white/20 transition-all"
+            >
+              Menù
+            </button>
+          </div>
           {onOpenPlaytest && (
             <button
+              type="button"
               onClick={onOpenPlaytest}
               className="w-full py-2 px-4 bg-emerald-700/30 hover:bg-emerald-600/40 text-emerald-100 text-xs font-medium rounded-lg border border-emerald-500/40 transition-all"
             >

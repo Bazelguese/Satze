@@ -1,0 +1,109 @@
+/* ============================================================
+   SATZE — Duello: rivelazione campo + ingresso dell'agente in campo
+   Estratto da docs/Duello - Layout 2.5D.html.
+   Richiede --acc (colore armata) sulla scena.
+
+   USO
+   · Rivelazione campo: aggiungi 'imp-row-reveal' al wrapper della riga
+     appena scoperta e rimuovilo dopo ~900 ms.
+   · Ingresso agente: sul contenitore della carta schierata metti
+     'place-card play-slam' (tonfo) oppure 'place-card play-rise' (risalita);
+     accanto, un fratello '.place-fx fx-slam' / '.place-fx fx-rise' con dentro
+     .place-shadow, .place-flash, .place-ring ×2, .place-echo ×3, .place-edge ×2.
+     Rimonta il blocco (key/remount) a ogni nuovo schieramento per riavviarlo.
+   ============================================================ */
+
+/* ══ Rivelazione di un nuovo campo ══ */
+.imp-row-reveal{animation:field-reveal .75s cubic-bezier(.16,1,.3,1) both}
+@keyframes field-reveal{
+  0%{opacity:0;transform:perspective(700px) rotateX(-78deg);transform-origin:50% 0%;filter:brightness(2.2)}
+  55%{opacity:1;transform:perspective(700px) rotateX(8deg);filter:brightness(1.5)}
+  100%{opacity:1;transform:none;filter:none}}
+.imp-row-reveal::after{content:'';position:absolute;inset:0;z-index:30;pointer-events:none;
+  background:linear-gradient(100deg, transparent 0%, color-mix(in srgb,var(--acc,#a78bfa) 75%, #fff) 48%, transparent 100%);
+  opacity:0;animation:field-sweep .6s ease-out .12s both}
+@keyframes field-sweep{0%{opacity:0;transform:translateX(-100%)}35%{opacity:.85}100%{opacity:0;transform:translateX(100%)}}
+
+/* ══ Posa dell'agente — due varianti: TONFO dall'alto e RISALITA dal piano ══ */
+.place-card{transform-origin:50% 62%;transform-style:preserve-3d}
+
+/* A · TONFO — piomba dall'alto quasi orizzontale e sbatte di schiena sul piano */
+.place-card.play-slam{animation:place-slam .72s cubic-bezier(.3,.85,.2,1) backwards}
+@keyframes place-slam{
+  0%{opacity:0;transform:perspective(1300px) translate3d(0,-620px,420px) rotateX(84deg) rotateZ(-7deg)}
+  18%{opacity:1}
+  /* arriva coricata, si raddrizza nell'ultimo tratto */
+  62%{transform:perspective(1300px) translate3d(0,-70px,90px) rotateX(46deg) rotateZ(-2deg)}
+  /* impatto: schiaccia leggermente */
+  76%{transform:perspective(1300px) translate3d(0,10px,0) rotateX(-6deg) scale(1.05,.94)}
+  88%{transform:perspective(1300px) translate3d(0,-8px,0) rotateX(3deg) scale(.99,1.02)}
+  100%{transform:perspective(1300px) translate3d(0,0,0) rotateX(0) scale(1)}}
+
+/* B · RISALITA — emerge dal piano, dal basso, aprendosi verso la camera */
+.place-card.play-rise{animation:place-rise .8s cubic-bezier(.18,.9,.24,1) backwards}
+@keyframes place-rise{
+  0%{opacity:0;transform:perspective(1300px) translate3d(0,150px,-260px) rotateX(-86deg) scale(.9)}
+  22%{opacity:1}
+  58%{transform:perspective(1300px) translate3d(0,52px,-40px) rotateX(-38deg) scale(.97)}
+  82%{transform:perspective(1300px) translate3d(0,-14px,70px) rotateX(7deg) scale(1.04)}
+  100%{transform:perspective(1300px) translate3d(0,0,0) rotateX(0) scale(1)}}
+
+/* ombra portata: si stringe sotto la carta (tonfo) o si allarga uscendo (risalita) */
+.place-shadow{position:absolute;left:50%;top:50%;width:230px;height:300px;margin:-140px 0 0 -115px;
+  background:radial-gradient(ellipse at 50% 60%, rgba(0,0,0,.72) 0%, rgba(0,0,0,.32) 45%, transparent 72%);
+  filter:blur(9px);opacity:.5;transform:translate3d(0,18px,0) rotateX(74deg);transform-origin:50% 100%}
+.fx-slam .place-shadow{animation:shadow-slam .72s cubic-bezier(.3,.85,.2,1) backwards}
+@keyframes shadow-slam{
+  0%{opacity:.1;transform:translate3d(0,18px,0) rotateX(74deg) scale(2.1)}
+  62%{opacity:.3;transform:translate3d(0,18px,0) rotateX(74deg) scale(1.5)}
+  78%{opacity:.65;transform:translate3d(0,18px,0) rotateX(74deg) scale(.92)}
+  100%{opacity:.5;transform:translate3d(0,18px,0) rotateX(74deg) scale(1)}}
+.fx-rise .place-shadow{animation:shadow-rise .8s cubic-bezier(.18,.9,.24,1) backwards}
+@keyframes shadow-rise{
+  0%{opacity:.7;transform:translate3d(0,18px,0) rotateX(74deg) scale(.35)}
+  100%{opacity:.5;transform:translate3d(0,18px,0) rotateX(74deg) scale(1)}}
+
+.place-fx{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:6}
+/* onda a terra coricata sul piano, come la pedana */
+.place-ring{position:absolute;left:50%;top:50%;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;
+  border:2px solid color-mix(in srgb,var(--acc,#a78bfa) 85%,#fff);opacity:0;
+  transform:perspective(900px) translateY(120px) rotateX(74deg) scale(.2)}
+.place-ring.b{border-color:color-mix(in srgb,var(--acc,#a78bfa) 40%,transparent)}
+@keyframes place-ring{0%{opacity:.95;transform:perspective(900px) translateY(120px) rotateX(74deg) scale(.2)}
+  100%{opacity:0;transform:perspective(900px) translateY(120px) rotateX(74deg) scale(1.5)}}
+.fx-slam .place-ring{animation:place-ring .8s cubic-bezier(.1,.8,.3,1) .5s forwards}
+.fx-slam .place-ring.b{animation-delay:.6s}
+.fx-rise .place-ring{animation:place-ring .9s cubic-bezier(.1,.8,.3,1) .12s forwards}
+.fx-rise .place-ring.b{animation-delay:.3s}
+.place-flash{position:absolute;left:50%;top:50%;width:620px;height:300px;margin:-40px 0 0 -310px;
+  background:radial-gradient(ellipse at center, color-mix(in srgb,var(--acc,#a78bfa) 55%,#fff) 0%, transparent 62%);
+  opacity:0;transform:perspective(900px) rotateX(74deg)}
+@keyframes place-flash{0%{opacity:.55}100%{opacity:0}}
+.fx-slam .place-flash{animation:place-flash .5s ease-out .48s forwards}
+.fx-rise .place-flash{animation:place-flash .6s ease-out .1s forwards}
+/* Impatto sagomato: eco rettangolari della carta che si allargano e sfumano,
+   più due lame di luce lungo i bordi lunghi. Niente particellare tondo. */
+.place-echo{position:absolute;left:50%;top:50%;width:230px;height:330px;margin:-165px 0 0 -115px;
+  border:2px solid color-mix(in srgb,var(--acc,#a78bfa) 80%,#fff);border-radius:14px;opacity:0}
+.place-echo.e2{border-color:color-mix(in srgb,var(--acc,#a78bfa) 45%,transparent)}
+.place-echo.e3{border-color:color-mix(in srgb,var(--acc,#a78bfa) 22%,transparent)}
+@keyframes place-echo{0%{opacity:.9;transform:scale(1)}
+  100%{opacity:0;transform:scale(1.42) translateZ(60px)}}
+.fx-slam .place-echo{animation:place-echo .62s cubic-bezier(.15,.75,.3,1) .5s forwards}
+.fx-slam .place-echo.e2{animation-delay:.58s}
+.fx-slam .place-echo.e3{animation-delay:.66s}
+.fx-rise .place-echo{animation:place-echo .7s cubic-bezier(.15,.75,.3,1) .12s forwards}
+.fx-rise .place-echo.e2{animation-delay:.2s}
+.fx-rise .place-echo.e3{animation-delay:.28s}
+/* lame di luce sui lati lunghi della carta */
+.place-edge{position:absolute;top:50%;width:3px;height:330px;margin-top:-165px;
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--acc,#a78bfa) 90%,#fff),transparent);opacity:0}
+.place-edge.l{left:50%;margin-left:-116px}
+.place-edge.r{left:50%;margin-left:113px}
+@keyframes place-edge{0%{opacity:0;transform:scaleY(.2)}
+  25%{opacity:1;transform:scaleY(1.12)}100%{opacity:0;transform:scaleY(.9)}}
+.fx-slam .place-edge{animation:place-edge .5s ease-out .52s forwards}
+.fx-rise .place-edge{animation:place-edge .55s ease-out .14s forwards}
+
+/* Ritocco handoff �8.3: riga selezionata leggibile (niente overlay MiniBattlefield) */
+.imp-row-sel > * > .absolute{display:none!important}

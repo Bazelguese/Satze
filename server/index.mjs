@@ -26,6 +26,7 @@ const ROOMS_FILE = join(ROOMS_DIR, 'rooms.json');
  *   hostSecret: string,
  *   guestSecret: string | null,
  *   hostDisconnectTimer: ReturnType<typeof setTimeout> | null,
+ *   guestDisconnectTimer: ReturnType<typeof setTimeout> | null,
  * }>} */
 const rooms = new Map();
 
@@ -61,6 +62,7 @@ function loadPersistedRooms() {
         hostSecret: snap.hostSecret,
         guestSecret: snap.guestSecret ?? null,
         hostDisconnectTimer: null,
+        guestDisconnectTimer: null,
       });
     }
     if (rooms.size > 0) {
@@ -156,6 +158,7 @@ wss.on('connection', (ws) => {
           hostSecret,
           guestSecret: null,
           hostDisconnectTimer: null,
+          guestDisconnectTimer: null,
         });
         client.roomCode = roomCode;
         client.role = 'host';
@@ -186,6 +189,10 @@ wss.on('connection', (ws) => {
             message: "Stanza in attesa del ritorno dell'ospite. Riprova più tardi o crea un'altra stanza.",
           });
           return;
+        }
+        if (room.guestDisconnectTimer) {
+          clearTimeout(room.guestDisconnectTimer);
+          room.guestDisconnectTimer = null;
         }
         const guestSecret = genReconnectSecret();
         room.guest = ws;
@@ -232,6 +239,10 @@ wss.on('connection', (ws) => {
           break;
         }
         if (role === 'guest' && room.guestSecret && secret === room.guestSecret) {
+          if (room.guestDisconnectTimer) {
+            clearTimeout(room.guestDisconnectTimer);
+            room.guestDisconnectTimer = null;
+          }
           room.guest = ws;
           client.roomCode = roomCode;
           client.role = 'guest';
@@ -243,6 +254,51 @@ wss.on('connection', (ws) => {
           break;
         }
         safeSend(ws, { type: 'error', message: 'Riconnessione non valida' });
+        break;
+      }
+
+      /** Uscita volontaria (menu / fine partita): libera subito lo slot. */
+      case 'leave_room': {
+        const roomCode = String(msg.roomCode || client.roomCode || '').toUpperCase().trim();
+        const room = rooms.get(roomCode);
+        if (!room || !client.roomCode || client.roomCode !== roomCode) {
+          break;
+        }
+        if (client.role === 'host') {
+          if (room.hostDisconnectTimer) {
+            clearTimeout(room.hostDisconnectTimer);
+            room.hostDisconnectTimer = null;
+          }
+          if (room.guestDisconnectTimer) {
+            clearTimeout(room.guestDisconnectTimer);
+            room.guestDisconnectTimer = null;
+          }
+          if (room.guest && room.guest.readyState === 1) {
+            safeSend(room.guest, { type: 'peer_left' });
+          }
+          client.roomCode = null;
+          client.role = null;
+          deleteRoom(roomCode);
+          break;
+        }
+        if (client.role === 'guest') {
+          if (room.guestDisconnectTimer) {
+            clearTimeout(room.guestDisconnectTimer);
+            room.guestDisconnectTimer = null;
+          }
+          if (room.guest === ws) {
+            room.guest = null;
+          }
+          room.guestSecret = null;
+          room.guestName = undefined;
+          if (room.host && room.host.readyState === 1) {
+            safeSend(room.host, { type: 'peer_left' });
+          }
+          client.roomCode = null;
+          client.role = null;
+          persistRooms();
+          break;
+        }
         break;
       }
 
@@ -311,6 +367,19 @@ wss.on('connection', (ws) => {
       if (room.host && room.host.readyState === 1) {
         safeSend(room.host, { type: 'peer_disconnected', who: 'guest' });
       }
+      // Dopo il grace, libera lo slot ospite: altrimenti nessuno può più entrare col codice.
+      if (room.guestDisconnectTimer) {
+        clearTimeout(room.guestDisconnectTimer);
+        room.guestDisconnectTimer = null;
+      }
+      room.guestDisconnectTimer = setTimeout(() => {
+        const r = rooms.get(roomCode);
+        if (!r || r.guest) return;
+        r.guestSecret = null;
+        r.guestName = undefined;
+        r.guestDisconnectTimer = null;
+        persistRooms();
+      }, RECONNECT_GRACE_MS);
       persistRooms();
     }
   });

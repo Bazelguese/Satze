@@ -5,6 +5,99 @@ import {
   registerCopiedBonus,
 } from './duelCopyBonus.js';
 import { getEffectiveMinFloor } from '../battlefieldEffects.js';
+import {
+  BATTLE_STATS,
+  emitBlock,
+  emitCopy,
+  emitFieldRule,
+  emitInfo,
+  emitResourceChange,
+  emitStatChange,
+  makeAgentTarget,
+  makePlayerTarget,
+  makeSource,
+  toBattleSide,
+} from './battleEventEmit.js';
+
+function pushLog(log, message) {
+  if (log && typeof log.push === 'function') log.push(message);
+}
+
+function hasEmitter(log) {
+  return log && typeof log.emit === 'function';
+}
+
+function resolveOwnerSide(target, options) {
+  if (options?.ownerSide) return options.ownerSide;
+  return target;
+}
+
+function srcOf(source, target, options) {
+  const kind =
+    options?.sourceKind === 'bonus'
+      ? 'bonus'
+      : options?.sourceKind === 'field'
+        ? 'field'
+        : 'ability';
+  const owner = toBattleSide(resolveOwnerSide(target, options));
+  return makeSource({
+    kind,
+    id: options?.sourceId ?? (typeof source === 'string' ? source : source?.id ?? source),
+    name: typeof source === 'string' ? source : source?.name ?? String(source),
+    ownerSide: kind === 'field' ? null : owner,
+  });
+}
+
+function agentTarget(engineSide, ctx) {
+  const agent = engineSide === 'player' ? ctx?.pAgent : ctx?.eAgent;
+  return makeAgentTarget(engineSide, agent);
+}
+
+function enemyEngineSide(target) {
+  return target === 'player' ? 'enemy' : 'player';
+}
+
+function emitSelfStat(log, source, target, options, ctx, stat, before, after) {
+  if (!hasEmitter(log) || before === after) return;
+  emitStatChange(log, {
+    source: srcOf(source, target, options),
+    target: agentTarget(target, ctx),
+    stat,
+    before,
+    after,
+  });
+}
+
+function emitEnemyStat(log, source, target, options, ctx, stat, before, after) {
+  if (!hasEmitter(log) || before === after) return;
+  emitStatChange(log, {
+    source: srcOf(source, target, options),
+    target: agentTarget(enemyEngineSide(target), ctx),
+    stat,
+    before,
+    after,
+  });
+}
+
+function emitImmuneBlock(log, source, target, options, ctx, effectType) {
+  if (!hasEmitter(log)) return;
+  const enemy = enemyEngineSide(target);
+  emitBlock(log, {
+    source: makeSource({
+      kind: 'ability',
+      id: `${enemy}:immune`,
+      name: agentTarget(enemy, ctx).name || 'Immune',
+      ownerSide: toBattleSide(enemy),
+    }),
+    target: agentTarget(target, ctx),
+    blockedEffect: {
+      kind: 'ability',
+      sourceId: options?.sourceId ?? source,
+      effectType,
+    },
+    blockedBy: 'immune',
+  });
+}
 
 export function applyDuelPowerEffect(effect, value, target, source, log, options = {}, state, ctx) {
   const {
@@ -17,254 +110,367 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     directDamageBonus = 0,
     minFloorReduction = 0,
   } = options;
-  
-  // Specchio dell'Anima: annulla modificatori POT/DAN
-  if (modDisabled && ['power', 'damage', 'enemyPower', 'enemyDamage', 'enemyPowerAndDamage', 'powerAndDamage', 'imponiPower', 'imponiDamage'].includes(effect)) {
-    log.push(`🐛¡️ ${source}: BLOCCATO da Radura dell'Anima`);
-    return;
-  }
-  
-  // Helper per nome target
+
   const targetName = target === 'player' ? 'TU' : 'IA';
   const enemyName = target === 'player' ? 'IA' : 'TU';
-  
+
+  if (
+    modDisabled &&
+    [
+      'power',
+      'damage',
+      'enemyPower',
+      'enemyDamage',
+      'enemyPowerAndDamage',
+      'powerAndDamage',
+      'imponiPower',
+      'imponiDamage',
+    ].includes(effect)
+  ) {
+    pushLog(log, `${source}: BLOCCATO da Radura dell'Anima`);
+    if (hasEmitter(log)) {
+      emitBlock(log, {
+        source: makeSource({ kind: 'field', id: 'radura_anima', name: "Radura dell'Anima", ownerSide: null }),
+        target: agentTarget(target, ctx),
+        blockedEffect: { kind: 'ability', sourceId: source, effectType: effect },
+        blockedBy: 'modifiersDisabled',
+      });
+    }
+    return;
+  }
+
   switch (effect) {
-    // Effetti SELF (bonus a se stesso) - MAI bloccati dalla propria immunità
-    case 'power':
-      if (target === 'player') { state.pPower += value; log.push(`⚡ ${source}: ${targetName} +${value} POT → ${state.pPower}`); }
-      else { state.ePower += value; log.push(`⚡ ${source}: ${targetName} +${value} POT → ${state.ePower}`); }
+    case 'power': {
+      if (target === 'player') {
+        const before = state.pPower;
+        state.pPower += value;
+        pushLog(log, `${source}: ${targetName} +${value} POT → ${state.pPower}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.pPower);
+      } else {
+        const before = state.ePower;
+        state.ePower += value;
+        pushLog(log, `${source}: ${targetName} +${value} POT → ${state.ePower}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.ePower);
+      }
       break;
-    case 'damage':
-      if (target === 'player') { state.pDamage += value; log.push(`🗡️ ${source}: ${targetName} +${value} DAN → ${state.pDamage}`); }
-      else { state.eDamage += value; log.push(`🗡️ ${source}: ${targetName} +${value} DAN → ${state.eDamage}`); }
+    }
+    case 'damage': {
+      if (target === 'player') {
+        const before = state.pDamage;
+        state.pDamage += value;
+        pushLog(log, `${source}: ${targetName} +${value} DAN → ${state.pDamage}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.pDamage);
+      } else {
+        const before = state.eDamage;
+        state.eDamage += value;
+        pushLog(log, `${source}: ${targetName} +${value} DAN → ${state.eDamage}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.eDamage);
+      }
       break;
-    case 'assaultValue':
-      if (target === 'player') { state.pAssaultMod += value; log.push(`💥 ${source}: ${targetName} +${value} VA`); }
-      else { state.eAssaultMod += value; log.push(`💥 ${source}: ${targetName} +${value} VA`); }
+    }
+    case 'assaultValue': {
+      if (target === 'player') {
+        const before = state.pAssaultMod;
+        state.pAssaultMod += value;
+        pushLog(log, `${source}: ${targetName} +${value} VA`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.VA, before, state.pAssaultMod);
+      } else {
+        const before = state.eAssaultMod;
+        state.eAssaultMod += value;
+        pushLog(log, `${source}: ${targetName} +${value} VA`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.VA, before, state.eAssaultMod);
+      }
       break;
-    
-    // Effetti ENEMY (debuff al nemico) - bloccati dall'immunità di chi subisce
-    case 'enemyPower':
-      // target='player' → player riduce potenza IA → bloccato se IA immune
-      // target='enemy' → IA riduce potenza player → bloccato se player immune
-      // Inversione: un debuff POT subito dal bersaglio diventa +POT (solo valori negativi / riduzione)
+    }
+    case 'enemyPower': {
       const minPow = getEffectiveMinFloor(minPower, minFloorReduction, 1);
       if (target === 'player') {
         if (!state.eImmune) {
           const powerReduction = Math.abs(value);
           const minPowerValue = minPow !== undefined ? minPow : 1;
           if (state.eModifierInversion && value < 0) {
+            const before = state.ePower;
             state.ePower += powerReduction;
-            log.push(`🔄 ${source}: Inversione — ${enemyName} +${powerReduction} POT → ${state.ePower}`);
+            pushLog(log, `${source}: Inversione — ${enemyName} +${powerReduction} POT → ${state.ePower}`);
+            emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.ePower);
           } else if (state.ePower <= minPowerValue) {
-            log.push(`⚡ ${source}: ${value} POT nem. già al minimo ${minPowerValue} (nessun effetto)`);
+            pushLog(log, `${source}: ${value} POT nem. già al minimo ${minPowerValue} (nessun effetto)`);
           } else {
-            const newPower = state.ePower - powerReduction;
-            state.ePower = Math.max(minPowerValue, newPower);
-            log.push(`⚡ ${source}: ${enemyName} ${value} POT → ${state.ePower}${state.ePower === minPowerValue ? ' (min)' : ''}`);
+            const before = state.ePower;
+            state.ePower = Math.max(minPowerValue, state.ePower - powerReduction);
+            pushLog(log, `${source}: ${enemyName} ${value} POT → ${state.ePower}${state.ePower === minPowerValue ? ' (min)' : ''}`);
+            emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.ePower);
           }
         } else {
-          log.push(`🐛¡️ ${source}: ${value} POT nem. BLOCCATO (Immune)`);
+          pushLog(log, `${source}: ${value} POT nem. BLOCCATO (Immune)`);
+          emitImmuneBlock(log, source, target, options, ctx, 'enemyPower');
+        }
+      } else if (!state.pImmune) {
+        const powerReduction = Math.abs(value);
+        const minPowerValue = minPow !== undefined ? minPow : 1;
+        if (state.pModifierInversion && value < 0) {
+          const before = state.pPower;
+          state.pPower += powerReduction;
+          pushLog(log, `${source}: Inversione — ${enemyName} +${powerReduction} POT → ${state.pPower}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.pPower);
+        } else if (state.pPower <= minPowerValue) {
+          pushLog(log, `${source}: ${value} POT nem. già al minimo ${minPowerValue} (nessun effetto)`);
+        } else {
+          const before = state.pPower;
+          state.pPower = Math.max(minPowerValue, state.pPower - powerReduction);
+          pushLog(log, `${source}: ${enemyName} ${value} POT → ${state.pPower}${state.pPower === minPowerValue ? ' (min)' : ''}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.pPower);
         }
       } else {
-        if (!state.pImmune) {
-          const powerReduction = Math.abs(value);
-          const minPowerValue = minPow !== undefined ? minPow : 1;
-          if (state.pModifierInversion && value < 0) {
-            state.pPower += powerReduction;
-            log.push(`🔄 ${source}: Inversione — ${enemyName} +${powerReduction} POT → ${state.pPower}`);
-          } else if (state.pPower <= minPowerValue) {
-            log.push(`⚡ ${source}: ${value} POT nem. già al minimo ${minPowerValue} (nessun effetto)`);
-          } else {
-            const newPower = state.pPower - powerReduction;
-            state.pPower = Math.max(minPowerValue, newPower);
-            log.push(`⚡ ${source}: ${enemyName} ${value} POT → ${state.pPower}${state.pPower === minPowerValue ? ' (min)' : ''}`);
-          }
-        } else {
-          log.push(`🐛¡️ ${source}: ${value} POT nem. BLOCCATO (Immune)`);
-        }
+        pushLog(log, `${source}: ${value} POT nem. BLOCCATO (Immune)`);
+        emitImmuneBlock(log, source, target, options, ctx, 'enemyPower');
       }
       break;
-    case 'enemyDamage':
-      const minDmg = minDamage != null
-        ? getEffectiveMinFloor(minDamage, minFloorReduction, 0)
-        : 0;
+    }
+    case 'enemyDamage': {
+      const minDmg = minDamage != null ? getEffectiveMinFloor(minDamage, minFloorReduction, 0) : 0;
       if (target === 'player') {
         if (state.eImmune) {
-          log.push(`🐛¡️ ${source}: ${value} DAN nem. BLOCCATO (Immune)`);
+          pushLog(log, `${source}: ${value} DAN nem. BLOCCATO (Immune)`);
+          emitImmuneBlock(log, source, target, options, ctx, 'enemyDamage');
         } else if (state.eModifierInversion && value < 0) {
           const before = state.eDamage;
           state.eDamage = Math.max(minDmg, state.eDamage - value);
-          log.push(`🔄 ${source}: Inversione — ${enemyName} DAN ${before} → ${state.eDamage}`);
+          pushLog(log, `${source}: Inversione — ${enemyName} DAN ${before} → ${state.eDamage}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.eDamage);
         } else if (state.eDamage <= minDmg) {
-          log.push(`🐛¡️ ${source}: ${value} DAN nem. BLOCCATO (già al minimo ${minDmg})`);
+          pushLog(log, `${source}: ${value} DAN nem. BLOCCATO (già al minimo ${minDmg})`);
         } else {
           const before = state.eDamage;
           state.eDamage = Math.max(minDmg, state.eDamage + value);
-          log.push(`🗡️ ${source}: ${enemyName} ${value} DAN → ${before} → ${state.eDamage}${minDmg > 0 ? ` (min ${minDmg})` : ''}`);
+          pushLog(log, `${source}: ${enemyName} ${value} DAN → ${before} → ${state.eDamage}${minDmg > 0 ? ` (min ${minDmg})` : ''}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.eDamage);
         }
+      } else if (state.pImmune) {
+        pushLog(log, `${source}: ${value} DAN nem. BLOCCATO (Immune)`);
+        emitImmuneBlock(log, source, target, options, ctx, 'enemyDamage');
+      } else if (state.pModifierInversion && value < 0) {
+        const before = state.pDamage;
+        state.pDamage = Math.max(minDmg, state.pDamage - value);
+        pushLog(log, `${source}: Inversione — ${enemyName} DAN ${before} → ${state.pDamage}`);
+        emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.pDamage);
+      } else if (state.pDamage <= minDmg) {
+        pushLog(log, `${source}: ${value} DAN nem. BLOCCATO (già al minimo ${minDmg})`);
       } else {
-        if (state.pImmune) {
-          log.push(`🐛¡️ ${source}: ${value} DAN nem. BLOCCATO (Immune)`);
-        } else if (state.pModifierInversion && value < 0) {
-          const before = state.pDamage;
-          state.pDamage = Math.max(minDmg, state.pDamage - value);
-          log.push(`🔄 ${source}: Inversione — ${enemyName} DAN ${before} → ${state.pDamage}`);
-        } else if (state.pDamage <= minDmg) {
-          log.push(`🐛¡️ ${source}: ${value} DAN nem. BLOCCATO (già al minimo ${minDmg})`);
-        } else {
-          const before = state.pDamage;
-          state.pDamage = Math.max(minDmg, state.pDamage + value);
-          log.push(`🗡️ ${source}: ${enemyName} ${value} DAN → ${before} → ${state.pDamage}${minDmg > 0 ? ` (min ${minDmg})` : ''}`);
-        }
+        const before = state.pDamage;
+        state.pDamage = Math.max(minDmg, state.pDamage + value);
+        pushLog(log, `${source}: ${enemyName} ${value} DAN → ${before} → ${state.pDamage}${minDmg > 0 ? ` (min ${minDmg})` : ''}`);
+        emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.pDamage);
       }
       break;
+    }
     case 'enemyPowerAndDamage':
-      // Debuff combinato al nemico: applica POT e DAN in sequenza, rispettando minimi e immunità
-      applyDuelPowerEffect('enemyPower', value, target, source, log, { minPower, minFloorReduction }, state, ctx);
-      applyDuelPowerEffect('enemyDamage', value, target, source, log, { minDamage, minFloorReduction }, state, ctx);
+      applyDuelPowerEffect('enemyPower', value, target, source, log, { ...options, minPower, minFloorReduction }, state, ctx);
+      applyDuelPowerEffect('enemyDamage', value, target, source, log, { ...options, minDamage, minFloorReduction }, state, ctx);
       break;
-    case 'imponiPower':
-      // Imposta la POT nemica uguale alla POT corrente dell'utilizzatore (bloccabile da immune, non invertibile)
+    case 'imponiPower': {
       if (target === 'player') {
         if (state.eImmune) {
-          log.push(`🐛¡️ ${source}: Imponi POT BLOCCATO (Immune)`);
+          pushLog(log, `${source}: Imponi POT BLOCCATO (Immune)`);
+          emitImmuneBlock(log, source, target, options, ctx, 'imponiPower');
         } else {
           const before = state.ePower;
           state.ePower = state.pPower;
-          log.push(`🧷 ${source}: Imponi POT nem. ${before} → ${state.ePower}`);
+          pushLog(log, `${source}: Imponi POT nem. ${before} → ${state.ePower}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.ePower);
         }
+      } else if (state.pImmune) {
+        pushLog(log, `${source}: Imponi POT BLOCCATO (Immune)`);
+        emitImmuneBlock(log, source, target, options, ctx, 'imponiPower');
       } else {
-        if (state.pImmune) {
-          log.push(`🐛¡️ ${source}: Imponi POT BLOCCATO (Immune)`);
-        } else {
-          const before = state.pPower;
-          state.pPower = state.ePower;
-          log.push(`🧷 ${source}: Imponi POT nem. ${before} → ${state.pPower}`);
-        }
+        const before = state.pPower;
+        state.pPower = state.ePower;
+        pushLog(log, `${source}: Imponi POT nem. ${before} → ${state.pPower}`);
+        emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.pPower);
       }
       break;
-    case 'imponiDamage':
-      // Imposta il DAN nemico uguale al DAN corrente dell'utilizzatore (bloccabile da immune, non invertibile)
+    }
+    case 'imponiDamage': {
       if (target === 'player') {
         if (state.eImmune) {
-          log.push(`🐛¡️ ${source}: Imponi DAN BLOCCATO (Immune)`);
+          pushLog(log, `${source}: Imponi DAN BLOCCATO (Immune)`);
+          emitImmuneBlock(log, source, target, options, ctx, 'imponiDamage');
         } else {
           const before = state.eDamage;
           state.eDamage = state.pDamage;
-          log.push(`🧷 ${source}: Imponi DAN nem. ${before} → ${state.eDamage}`);
+          pushLog(log, `${source}: Imponi DAN nem. ${before} → ${state.eDamage}`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.eDamage);
         }
+      } else if (state.pImmune) {
+        pushLog(log, `${source}: Imponi DAN BLOCCATO (Immune)`);
+        emitImmuneBlock(log, source, target, options, ctx, 'imponiDamage');
       } else {
-        if (state.pImmune) {
-          log.push(`🐛¡️ ${source}: Imponi DAN BLOCCATO (Immune)`);
-        } else {
-          const before = state.pDamage;
-          state.pDamage = state.eDamage;
-          log.push(`🧷 ${source}: Imponi DAN nem. ${before} → ${state.pDamage}`);
-        }
+        const before = state.pDamage;
+        state.pDamage = state.eDamage;
+        pushLog(log, `${source}: Imponi DAN nem. ${before} → ${state.pDamage}`);
+        emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.pDamage);
       }
       break;
-    case 'enemyAssault':
-      // VA È protetto da immunità (modifiche negative)
-      // Il minimo significa: "può scendere FINO AL minimo" - se già sotto il minimo, non applicare
-      const minAssault = getEffectiveMinFloor(options.minAssault, minFloorReduction, undefined);
+    }
+    case 'enemyAssault': {
+      const minAssaultFloor = getEffectiveMinFloor(options.minAssault, minFloorReduction, undefined);
       const invertAssaultPlayer = target === 'player' && state.eModifierInversion && value < 0;
       const invertAssaultEnemy = target === 'enemy' && state.pModifierInversion && value < 0;
-      if (minAssault !== undefined && !invertAssaultPlayer && !invertAssaultEnemy) {
+      if (minAssaultFloor !== undefined && !invertAssaultPlayer && !invertAssaultEnemy) {
         if (target === 'player') {
-          // Giocatore riduce VA nemico (IA)
-          // Calcola VA attuale: (POT × FC) + modificatori attuali
-          const currentAssaultRaw = (state.ePower * state.eFocusUsed) + state.eAssaultMod;
-          // Se il VA è già sotto il minimo, NON applicare l'effetto
-          if (currentAssaultRaw < minAssault) {
-            log.push(`💥 ${source}: ${value} VA nem. BLOCCATO (VA già ${currentAssaultRaw} < minimo ${minAssault})`);
-            break; // Non applicare la riduzione
-          }
-          // Traccia il minimo per applicarlo nel calcolo finale (stack: usa il minimo meno restrittivo/più basso)
-          if (state.eMinAssault === null) {
-            state.eMinAssault = minAssault;
-          } else {
-            state.eMinAssault = Math.min(state.eMinAssault, minAssault);
-          }
-        } else {
-          // IA riduce VA nemico (giocatore)
-          const currentAssaultRaw = (state.pPower * state.pFocusUsed) + state.pAssaultMod;
-          if (currentAssaultRaw < minAssault) {
-            log.push(`💥 ${source}: ${value} VA nem. BLOCCATO (VA già ${currentAssaultRaw} < minimo ${minAssault})`);
+          const currentAssaultRaw = state.ePower * state.eFocusUsed + state.eAssaultMod;
+          if (currentAssaultRaw < minAssaultFloor) {
+            pushLog(log, `${source}: ${value} VA nem. BLOCCATO (VA già ${currentAssaultRaw} < minimo ${minAssaultFloor})`);
             break;
           }
-          if (state.pMinAssault === null) {
-            state.pMinAssault = minAssault;
-          } else {
-            state.pMinAssault = Math.min(state.pMinAssault, minAssault);
+          if (state.eMinAssault === null) state.eMinAssault = minAssaultFloor;
+          else state.eMinAssault = Math.min(state.eMinAssault, minAssaultFloor);
+        } else {
+          const currentAssaultRaw = state.pPower * state.pFocusUsed + state.pAssaultMod;
+          if (currentAssaultRaw < minAssaultFloor) {
+            pushLog(log, `${source}: ${value} VA nem. BLOCCATO (VA già ${currentAssaultRaw} < minimo ${minAssaultFloor})`);
+            break;
           }
+          if (state.pMinAssault === null) state.pMinAssault = minAssaultFloor;
+          else state.pMinAssault = Math.min(state.pMinAssault, minAssaultFloor);
         }
       }
       if (target === 'player') {
         if (!state.eImmune) {
+          const before = state.eAssaultMod;
           const v = invertAssaultPlayer ? -value : value;
           state.eAssaultMod += v;
-          log.push(invertAssaultPlayer ? `🔄 ${source}: Inversione — ${enemyName} +${-value} VA` : `💥 ${source}: ${enemyName} ${value} VA`);
+          pushLog(log, invertAssaultPlayer ? `${source}: Inversione — ${enemyName} +${-value} VA` : `${source}: ${enemyName} ${value} VA`);
+          emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.VA, before, state.eAssaultMod);
+        } else {
+          pushLog(log, `${source}: ${value} VA nem. BLOCCATO (Immune)`);
+          emitImmuneBlock(log, source, target, options, ctx, 'enemyAssault');
         }
-        else log.push(`🐛¡️ ${source}: ${value} VA nem. BLOCCATO (Immune)`);
+      } else if (!state.pImmune) {
+        const before = state.pAssaultMod;
+        const v = invertAssaultEnemy ? -value : value;
+        state.pAssaultMod += v;
+        pushLog(log, invertAssaultEnemy ? `${source}: Inversione — ${enemyName} +${-value} VA` : `${source}: ${enemyName} ${value} VA`);
+        emitEnemyStat(log, source, target, options, ctx, BATTLE_STATS.VA, before, state.pAssaultMod);
       } else {
-        if (!state.pImmune) {
-          const v = invertAssaultEnemy ? -value : value;
-          state.pAssaultMod += v;
-          log.push(invertAssaultEnemy ? `🔄 ${source}: Inversione — ${enemyName} +${-value} VA` : `💥 ${source}: ${enemyName} ${value} VA`);
-        }
-        else log.push(`🐛¡️ ${source}: ${value} VA nem. BLOCCATO (Immune)`);
+        pushLog(log, `${source}: ${value} VA nem. BLOCCATO (Immune)`);
+        emitImmuneBlock(log, source, target, options, ctx, 'enemyAssault');
       }
       break;
-    
-    // Effetti COPIA - sono poteri propri, non bloccati da immunità
-    // Ma possono essere disabilitati dalla Fossa dei Traditori
-    case 'copyPower':
+    }
+    case 'copyPower': {
       if (copyDisabled) {
-        log.push(`🐛¡️ Fossa dei Traditori: Copia POT BLOCCATA`);
-        break;
-      }
-      if (target === 'player') { 
-        const newVal = state.ePower;
-        state.pPower = newVal;
-        log.push(`📋 ${source}: ${targetName} copia POT nem. → ${newVal}`);
-      } else {
-        const newVal = state.pPower;
-        state.ePower = newVal;
-        log.push(`📋 ${source}: ${targetName} copia POT nem. → ${newVal}`);
-      }
-      break;
-    case 'copyDamage':
-      if (copyDisabled) {
-        log.push(`🐛¡️ Fossa dei Traditori: Copia DAN BLOCCATA`);
+        pushLog(log, `Fossa dei Traditori: Copia POT BLOCCATA`);
+        if (hasEmitter(log)) {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 27, name: 'Fossa dei Traditori', ownerSide: null }),
+            target: agentTarget(target, ctx),
+            blockedEffect: { kind: 'ability', sourceId: source, effectType: 'copyPower' },
+            blockedBy: 'copyDisabled',
+          });
+        }
         break;
       }
       if (target === 'player') {
-        const newVal = state.eDamage;
-        state.pDamage = newVal;
-        log.push(`📋 ${source}: ${targetName} copia DAN nem. → ${newVal}`);
+        const before = state.pPower;
+        const newVal = state.ePower;
+        state.pPower = newVal;
+        pushLog(log, `${source}: ${targetName} copia POT nem. → ${newVal}`);
+        if (hasEmitter(log)) {
+          emitCopy(log, {
+            source: srcOf(source, target, options),
+            target: agentTarget(target, ctx),
+            copied: { kind: 'POT', value: newVal, fromId: ctx?.eAgent?.id ?? null },
+          });
+          emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.pPower);
+        }
       } else {
-        const newVal = state.pDamage;
-        state.eDamage = newVal;
-        log.push(`📋 ${source}: ${targetName} copia DAN nem. → ${newVal}`);
+        const before = state.ePower;
+        const newVal = state.pPower;
+        state.ePower = newVal;
+        pushLog(log, `${source}: ${targetName} copia POT nem. → ${newVal}`);
+        if (hasEmitter(log)) {
+          emitCopy(log, {
+            source: srcOf(source, target, options),
+            target: agentTarget(target, ctx),
+            copied: { kind: 'POT', value: newVal, fromId: ctx?.pAgent?.id ?? null },
+          });
+          emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, before, state.ePower);
+        }
       }
       break;
-    case 'copyAbility':
+    }
+    case 'copyDamage': {
       if (copyDisabled) {
-        log.push(`🐛¡️ Fossa dei Traditori: Copia Potere BLOCCATA`);
+        pushLog(log, `Fossa dei Traditori: Copia DAN BLOCCATA`);
+        if (hasEmitter(log)) {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 27, name: 'Fossa dei Traditori', ownerSide: null }),
+            target: agentTarget(target, ctx),
+            blockedEffect: { kind: 'ability', sourceId: source, effectType: 'copyDamage' },
+            blockedBy: 'copyDisabled',
+          });
+        }
         break;
       }
-      // Copia il potere dell'avversario (testo sempre; effetto solo se trigger copiato attivo)
+      if (target === 'player') {
+        const before = state.pDamage;
+        const newVal = state.eDamage;
+        state.pDamage = newVal;
+        pushLog(log, `${source}: ${targetName} copia DAN nem. → ${newVal}`);
+        if (hasEmitter(log)) {
+          emitCopy(log, {
+            source: srcOf(source, target, options),
+            target: agentTarget(target, ctx),
+            copied: { kind: 'DAN', value: newVal, fromId: ctx?.eAgent?.id ?? null },
+          });
+          emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.pDamage);
+        }
+      } else {
+        const before = state.eDamage;
+        const newVal = state.pDamage;
+        state.eDamage = newVal;
+        pushLog(log, `${source}: ${targetName} copia DAN nem. → ${newVal}`);
+        if (hasEmitter(log)) {
+          emitCopy(log, {
+            source: srcOf(source, target, options),
+            target: agentTarget(target, ctx),
+            copied: { kind: 'DAN', value: newVal, fromId: ctx?.pAgent?.id ?? null },
+          });
+          emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, before, state.eDamage);
+        }
+      }
+      break;
+    }
+    case 'copyAbility': {
+      if (copyDisabled) {
+        pushLog(log, `Fossa dei Traditori: Copia Potere BLOCCATA`);
+        if (hasEmitter(log)) {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 27, name: 'Fossa dei Traditori', ownerSide: null }),
+            target: agentTarget(target, ctx),
+            blockedEffect: { kind: 'ability', sourceId: source, effectType: 'copyAbility' },
+            blockedBy: 'copyDisabled',
+          });
+        }
+        break;
+      }
       const sourceAgent = target === 'player' ? ctx.eAgent : ctx.pAgent;
       if (sourceAgent?.ability?.effect) {
         const copiedAbilityTrigger = sourceAgent.ability.trigger;
-        const copyContext =
-          target === 'player' ? ctx.playerContext : ctx.enemyContext;
+        const copyContext = target === 'player' ? ctx.playerContext : ctx.enemyContext;
         const abilityTriggerSatisfied = copiedAbilityTrigger
           ? ctx.checkTrigger(copiedAbilityTrigger, copyContext)
           : true;
 
-        log.push(`🔮 ${source}: ${targetName} copia Potere di ${sourceAgent.name}`);
+        pushLog(log, `${source}: ${targetName} copia Potere di ${sourceAgent.name}`);
+        if (hasEmitter(log)) {
+          emitCopy(log, {
+            source: srcOf(source, target, options),
+            target: agentTarget(target, ctx),
+            copied: { kind: 'ability', value: sourceAgent.ability?.effect, fromId: sourceAgent.id },
+          });
+        }
         if (target === 'player') {
           state.pAbilityCopied = sourceAgent.ability;
           state.pCopiedAbilityNotTriggered = !abilityTriggerSatisfied;
@@ -282,6 +488,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
               `${source} (copiato)`,
               log,
               {
+                ...options,
                 minDamage: sourceAgent.ability.minDamage,
                 minPower: sourceAgent.ability.minPower,
                 minAssault: sourceAgent.ability.minAssault,
@@ -295,13 +502,30 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
           }
         } else {
           const triggerName = TRIGGER_NAMES[copiedAbilityTrigger] || copiedAbilityTrigger;
-          log.push(`⚠️ ${source}: Potere copiato (${triggerName} non attivo, effetto non applicato)`);
+          pushLog(log, `${source}: Potere copiato (${triggerName} non attivo, effetto non applicato)`);
+          if (hasEmitter(log)) {
+            emitInfo(log, {
+              infoCode: 'copiedTriggerInactive',
+              source: srcOf(source, target, options),
+              target: agentTarget(target, ctx),
+              data: { trigger: copiedAbilityTrigger },
+            });
+          }
         }
       }
       break;
-    case 'copyBonus':
+    }
+    case 'copyBonus': {
       if (copyDisabled) {
-        log.push(`🐛¡️ Fossa dei Traditori: Copia Bonus BLOCCATA`);
+        pushLog(log, `Fossa dei Traditori: Copia Bonus BLOCCATA`);
+        if (hasEmitter(log)) {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 27, name: 'Fossa dei Traditori', ownerSide: null }),
+            target: agentTarget(target, ctx),
+            blockedEffect: { kind: 'bonus', sourceId: source, effectType: 'copyBonus' },
+            blockedBy: 'copyDisabled',
+          });
+        }
         break;
       }
       {
@@ -309,7 +533,14 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         const enemyHasBonusActive = target === 'player' ? ctx.eHasBonus : ctx.pHasBonus;
         const copyContext = target === 'player' ? ctx.playerContext : ctx.enemyContext;
         if (enemyHasBonusActive && enemyBonusToCopy?.effects) {
-          log.push(`🔮 ${source}: ${targetName} copia Bonus nem. (${enemyBonusToCopy.description})`);
+          pushLog(log, `${source}: ${targetName} copia Bonus nem. (${enemyBonusToCopy.description})`);
+          if (hasEmitter(log)) {
+            emitCopy(log, {
+              source: srcOf(source, target, options),
+              target: agentTarget(target, ctx),
+              copied: { kind: 'bonus', value: enemyBonusToCopy.description, fromId: enemyBonusToCopy.id ?? null },
+            });
+          }
           registerCopiedBonus(state, target, enemyBonusToCopy, {
             context: copyContext,
             fieldOptions: {
@@ -339,94 +570,206 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
             ctx.checkTrigger
           );
         } else {
-          log.push(`⚠️ ${source}: Copia Bonus (nessun bonus attivo)`);
+          pushLog(log, `${source}: Copia Bonus (nessun bonus attivo)`);
         }
       }
       break;
+    }
     case 'blockAbility':
       if (target === 'player') state.eAbilityBlocked = true;
       else state.pAbilityBlocked = true;
-      log.push(`🚫 ${source}: Blocca Potere nemico`);
+      pushLog(log, `${source}: Blocca Potere nemico`);
+      if (hasEmitter(log)) {
+        emitBlock(log, {
+          source: srcOf(source, target, options),
+          target: agentTarget(enemyEngineSide(target), ctx),
+          blockedEffect: { kind: 'ability', sourceId: null, effectType: null },
+          blockedBy: 'blockAbility',
+        });
+      }
       break;
     case 'blockBonus':
       if (target === 'player') state.eBonusBlocked = true;
       else state.pBonusBlocked = true;
-      log.push(`🚫 ${source}: Blocca Bonus nemico`);
+      pushLog(log, `${source}: Blocca Bonus nemico`);
+      if (hasEmitter(log)) {
+        emitBlock(log, {
+          source: srcOf(source, target, options),
+          target: agentTarget(enemyEngineSide(target), ctx),
+          blockedEffect: { kind: 'bonus', sourceId: null, effectType: null },
+          blockedBy: 'blockBonus',
+        });
+      }
       break;
     case 'immune':
       if (target === 'player') state.pImmune = true;
       else state.eImmune = true;
-      log.push(`🐛¡️ ${source}: Immune`);
+      // No preventive "Immune attivo" log/event.
       break;
-    case 'focusCoin':
+    case 'focusCoin': {
       if (target === 'player') {
         const before = state.pFCCurrent;
         state.pFCCurrent += value;
-        log.push(`💰 ${source}: +${value} FC (${before} → ${state.pFCCurrent})`);
+        pushLog(log, `${source}: +${value} FC (${before} → ${state.pFCCurrent})`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            stat: BATTLE_STATS.FC,
+            before,
+            after: state.pFCCurrent,
+          });
+        }
       } else {
         const before = state.eFCCurrent;
         state.eFCCurrent += value;
-        log.push(`💰 ${source}: IA +${value} FC (${before} → ${state.eFCCurrent})`);
+        pushLog(log, `${source}: IA +${value} FC (${before} → ${state.eFCCurrent})`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('enemy'),
+            stat: BATTLE_STATS.FC,
+            before,
+            after: state.eFCCurrent,
+          });
+        }
       }
       break;
-    case 'heal':
+    }
+    case 'heal': {
       if (target === 'player') {
         const before = state.pHPCurrent;
         state.pHPCurrent = Math.min(25, state.pHPCurrent + value);
-        log.push(`💚 ${source}: +${value} PV (${before} → ${state.pHPCurrent})`);
+        pushLog(log, `${source}: +${value} PV (${before} → ${state.pHPCurrent})`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.pHPCurrent,
+          });
+        }
       } else {
         const before = state.eHPCurrent;
         state.eHPCurrent = Math.min(25, state.eHPCurrent + value);
-        log.push(`💚 ${source}: IA +${value} PV (${before} → ${state.eHPCurrent})`);
+        pushLog(log, `${source}: IA +${value} PV (${before} → ${state.eHPCurrent})`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('enemy'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.eHPCurrent,
+          });
+        }
       }
       break;
-    case 'directDamage':
-      // Firewall Centrale disabilita i DAN diretti
+    }
+    case 'directDamage': {
       if (directDamageDisabled) {
-        log.push(`🛡️ Firewall Centrale: Danni dir. annullato`);
+        pushLog(log, `Firewall Centrale: Danni dir. annullato`);
+        if (hasEmitter(log)) {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 43, name: 'Firewall Centrale', ownerSide: null }),
+            target: agentTarget(target, ctx),
+            blockedEffect: { kind: 'ability', sourceId: source, effectType: 'directDamage' },
+            blockedBy: 'directDamageDisabled',
+          });
+        }
         break;
       }
-      // Nido della Regina aggiunge +1 ai DAN diretti
       const ddValue = value + directDamageBonus;
       if (directDamageBonus > 0) {
-        log.push(`🐝 Nido della Regina: Danni dir. +${directDamageBonus}`);
+        pushLog(log, `Nido della Regina: Danni dir. +${directDamageBonus}`);
+        if (hasEmitter(log)) {
+          emitFieldRule(log, {
+            source: makeSource({ kind: 'field', id: 'nido_regina', name: 'Nido della Regina', ownerSide: null }),
+            ruleCode: 'directDamageBonus',
+            params: { bonus: directDamageBonus },
+          });
+        }
       }
       if (target === 'player') {
         const before = state.eHPCurrent;
         state.eHPCurrent = Math.max(0, state.eHPCurrent - ddValue);
-        log.push(`🔥 ${source}: ${ddValue} Danni dir. all'IA (${before} → ${state.eHPCurrent} PV)`);
+        pushLog(log, `${source}: ${ddValue} Danni dir. all'IA (${before} → ${state.eHPCurrent} PV)`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('enemy'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.eHPCurrent,
+          });
+        }
       } else {
         const before = state.pHPCurrent;
         state.pHPCurrent = Math.max(0, state.pHPCurrent - ddValue);
-        log.push(`🔥 ${source}: ${ddValue} Danni dir. a TE (${before} → ${state.pHPCurrent} PV)`);
+        pushLog(log, `${source}: ${ddValue} Danni dir. a TE (${before} → ${state.pHPCurrent} PV)`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.pHPCurrent,
+          });
+        }
       }
       break;
-    case 'selfDamage':
-      // Il danno va a chi usa l'abilità, non all'avversario
+    }
+    case 'selfDamage': {
       if (target === 'player') {
         const before = state.pHPCurrent;
         state.pHPCurrent = Math.max(0, state.pHPCurrent - value);
-        log.push(`💔 ${source}: -${value} PV a TE (${before} → ${state.pHPCurrent} PV)`);
+        pushLog(log, `${source}: -${value} PV a TE (${before} → ${state.pHPCurrent} PV)`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.pHPCurrent,
+          });
+        }
       } else {
         const before = state.eHPCurrent;
         state.eHPCurrent = Math.max(0, state.eHPCurrent - value);
-        log.push(`💔 ${source}: -${value} PV all'IA (${before} → ${state.eHPCurrent} PV)`);
+        pushLog(log, `${source}: -${value} PV all'IA (${before} → ${state.eHPCurrent} PV)`);
+        if (hasEmitter(log)) {
+          emitResourceChange(log, {
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('enemy'),
+            stat: BATTLE_STATS.PV,
+            before,
+            after: state.eHPCurrent,
+          });
+        }
       }
       break;
-    case 'powerAndDamage':
-      // Aumenta sia POT che DAN
+    }
+    case 'powerAndDamage': {
       if (target === 'player') {
+        const beforeP = state.pPower;
+        const beforeD = state.pDamage;
         state.pPower += value;
         state.pDamage += value;
-        log.push(`⚔️ ${source}: TU +${value} POT → ${state.pPower}, +${value} DAN → ${state.pDamage}`);
+        pushLog(log, `${source}: TU +${value} POT → ${state.pPower}, +${value} DAN → ${state.pDamage}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, beforeP, state.pPower);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, beforeD, state.pDamage);
       } else {
+        const beforeP = state.ePower;
+        const beforeD = state.eDamage;
         state.ePower += value;
         state.eDamage += value;
-        log.push(`⚔️ ${source}: IA +${value} POT → ${state.ePower}, +${value} DAN → ${state.eDamage}`);
+        pushLog(log, `${source}: IA +${value} POT → ${state.ePower}, +${value} DAN → ${state.eDamage}`);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.POT, beforeP, state.ePower);
+        emitSelfStat(log, source, target, options, ctx, BATTLE_STATS.DAN, beforeD, state.eDamage);
       }
       break;
-    case 'attrition':
-      // Attrizione: +X [STAT] per ogni carta già giocata dal proprietario (solo le sue carte)
+    }
+    case 'attrition': {
       const attritionStat = options.stat || 'power';
       const usedCards = target === 'player' ? (ctx.playerUsedCards || []) : (ctx.enemyUsedCards || []);
       const currentAgentId = target === 'player' ? ctx.pAgent?.id : ctx.eAgent?.id;
@@ -434,88 +777,88 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       const attritionBonus = value * attritionCards;
       if (attritionBonus > 0) {
         if (attritionStat === 'power') {
-          if (target === 'player') { state.pPower += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} POT (${attritionCards} carte) → ${state.pPower}`); }
-          else { state.ePower += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} POT (${attritionCards} carte) → ${state.ePower}`); }
+          applyDuelPowerEffect('power', attritionBonus, target, source, log, options, state, ctx);
         } else if (attritionStat === 'powerAndDamage') {
-          if (target === 'player') {
-            state.pPower += attritionBonus; state.pDamage += attritionBonus;
-            log.push(`📈 ${source}: Attrizione +${attritionBonus} POT, +${attritionBonus} DAN (${attritionCards} carte) → ${state.pPower}/${state.pDamage}`);
-          } else {
-            state.ePower += attritionBonus; state.eDamage += attritionBonus;
-            log.push(`📈 ${source}: Attrizione +${attritionBonus} POT, +${attritionBonus} DAN (${attritionCards} carte) → ${state.ePower}/${state.eDamage}`);
-          }
+          applyDuelPowerEffect('powerAndDamage', attritionBonus, target, source, log, options, state, ctx);
         } else if (attritionStat === 'directDamage') {
           applyDuelPowerEffect('directDamage', attritionBonus, target, source, log, options, state, ctx);
         } else {
-          if (target === 'player') { state.pDamage += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} DAN (${attritionCards} carte) → ${state.pDamage}`); }
-          else { state.eDamage += attritionBonus; log.push(`📈 ${source}: Attrizione +${attritionBonus} DAN (${attritionCards} carte) → ${state.eDamage}`); }
+          applyDuelPowerEffect('damage', attritionBonus, target, source, log, options, state, ctx);
         }
       }
       break;
-    case 'escalation':
-      // Escalation: +X [STAT] per ogni campo conquistato dal proprietario
+    }
+    case 'escalation': {
       const escalationStat = options.stat || 'power';
       const escalationFields = target === 'player' ? ctx.playerFieldsConquered : ctx.enemyFieldsConquered;
       const escalationBonus = value * escalationFields;
       if (escalationBonus > 0) {
         if (escalationStat === 'power') {
-          if (target === 'player') { state.pPower += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} POT (${escalationFields} campi) → ${state.pPower}`); }
-          else { state.ePower += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} POT (${escalationFields} campi) → ${state.ePower}`); }
+          applyDuelPowerEffect('power', escalationBonus, target, source, log, options, state, ctx);
         } else if (escalationStat === 'powerAndDamage') {
-          if (target === 'player') {
-            state.pPower += escalationBonus; state.pDamage += escalationBonus;
-            log.push(`📈 ${source}: Escalation +${escalationBonus} POT, +${escalationBonus} DAN (${escalationFields} campi) → ${state.pPower}/${state.pDamage}`);
-          } else {
-            state.ePower += escalationBonus; state.eDamage += escalationBonus;
-            log.push(`📈 ${source}: Escalation +${escalationBonus} POT, +${escalationBonus} DAN (${escalationFields} campi) → ${state.ePower}/${state.eDamage}`);
-          }
+          applyDuelPowerEffect('powerAndDamage', escalationBonus, target, source, log, options, state, ctx);
         } else if (escalationStat === 'assaultValue') {
-          if (target === 'player') { state.pAssaultMod += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} VA (${escalationFields} campi)`); }
-          else { state.eAssaultMod += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} VA (${escalationFields} campi)`); }
+          applyDuelPowerEffect('assaultValue', escalationBonus, target, source, log, options, state, ctx);
         } else {
-          if (target === 'player') { state.pDamage += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} DAN (${escalationFields} campi) → ${state.pDamage}`); }
-          else { state.eDamage += escalationBonus; log.push(`📈 ${source}: Escalation +${escalationBonus} DAN (${escalationFields} campi) → ${state.eDamage}`); }
+          applyDuelPowerEffect('damage', escalationBonus, target, source, log, options, state, ctx);
         }
       }
       break;
-    case 'toxin':
-      // Tossina: si attiva a fine turno successivo all'attivazione
-      // value = danno, minHealth = soglia minima PV
+    }
+    case 'toxin': {
       const minHealthToxin = options?.minHealth || 1;
       if (target === 'player') {
-        // Tossina applicata al nemico (IA)
-        // Controlla se c'è già una tossina attiva (dallo stato globale passato come closure)
-        // NOTA: ctx.playerToxin e ctx.enemyToxin sono acceduti dallo scope esterno
         if (!ctx.enemyToxin) {
-          // Prima attivazione
           state.enemyToxinActivated = { value, minHealth: minHealthToxin, source };
-          log.push(`☠️ ${source}: Tossina ${value} attiva sull'IA (min ${minHealthToxin} PV)`);
+          pushLog(log, `${source}: Tossina ${value} attiva sull'IA (min ${minHealthToxin} PV)`);
         } else {
-          // Stack: aumenta il valore di +1 e usa il minHealth meno restrittivo (più basso)
           state.enemyToxinActivated = {
             value: ctx.enemyToxin.value + 1,
             minHealth: Math.min(ctx.enemyToxin.minHealth, minHealthToxin),
-            source: source
+            source,
           };
-          log.push(`☠️ ${source}: Tossina stacka! Ora ${state.enemyToxinActivated.value} (min ${state.enemyToxinActivated.minHealth} PV)`);
+          pushLog(log, `${source}: Tossina stacka! Ora ${state.enemyToxinActivated.value} (min ${state.enemyToxinActivated.minHealth} PV)`);
+        }
+        if (hasEmitter(log)) {
+          emitInfo(log, {
+            infoCode: 'toxinApplied',
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('enemy'),
+            data: { value: state.enemyToxinActivated.value, minHealth: state.enemyToxinActivated.minHealth },
+          });
+        }
+      } else if (!ctx.playerToxin) {
+        state.playerToxinActivated = { value, minHealth: minHealthToxin, source };
+        pushLog(log, `${source}: Tossina ${value} attiva su TE (min ${minHealthToxin} PV)`);
+        if (hasEmitter(log)) {
+          emitInfo(log, {
+            infoCode: 'toxinApplied',
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            data: { value, minHealth: minHealthToxin },
+          });
         }
       } else {
-        // Tossina applicata al giocatore
-        if (!ctx.playerToxin) {
-          // Prima attivazione
-          state.playerToxinActivated = { value, minHealth: minHealthToxin, source };
-          log.push(`☠️ ${source}: Tossina ${value} attiva su TE (min ${minHealthToxin} PV)`);
-        } else {
-          // Stack: aumenta il valore di +1 e usa il minHealth meno restrittivo (più basso)
-          state.playerToxinActivated = {
-            value: ctx.playerToxin.value + 1,
-            minHealth: Math.min(ctx.playerToxin.minHealth, minHealthToxin),
-            source: source
-          };
-          log.push(`☠️ ${source}: Tossina stacka! Ora ${state.playerToxinActivated.value} (min ${state.playerToxinActivated.minHealth} PV)`);
+        state.playerToxinActivated = {
+          value: ctx.playerToxin.value + 1,
+          minHealth: Math.min(ctx.playerToxin.minHealth, minHealthToxin),
+          source,
+        };
+        pushLog(log, `${source}: Tossina stacka! Ora ${state.playerToxinActivated.value} (min ${state.playerToxinActivated.minHealth} PV)`);
+        if (hasEmitter(log)) {
+          emitInfo(log, {
+            infoCode: 'toxinApplied',
+            source: srcOf(source, target, options),
+            target: makePlayerTarget('player'),
+            data: {
+              value: state.playerToxinActivated.value,
+              minHealth: state.playerToxinActivated.minHealth,
+            },
+          });
         }
       }
       break;
+    }
     default:
       break;
   }

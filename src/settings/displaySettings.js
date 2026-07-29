@@ -8,6 +8,8 @@ export const DISPLAY_MODES = /** @type {const} */ (['windowed', 'fullscreen', 'b
 export const VFX_QUALITY_LEVELS = /** @type {const} */ (['high', 'medium', 'low']);
 /** Densità UI menù (80–125%). Non zoomma/croppa il viewport. */
 export const UI_SCALE_PRESETS = /** @type {const} */ ([80, 90, 100, 110, 125]);
+/** Respiro layout duello 2.5D: off / soft (mov-1) / strong (mov-2). */
+export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', 'strong']);
 
 
 export const RESOLUTION_PRESETS = [
@@ -27,6 +29,7 @@ export const RESOLUTION_PRESETS = [
  *   vfxQuality: typeof VFX_QUALITY_LEVELS[number],
  *   uiScale: typeof UI_SCALE_PRESETS[number],
  *   reduceMotion: boolean,
+ *   duelLayoutBreath: typeof DUEL_LAYOUT_BREATH_LEVELS[number],
  * }} DisplaySettings */
 
 /** @type {DisplaySettings} */
@@ -38,6 +41,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   vfxQuality: 'high',
   uiScale: 100,
   reduceMotion: false,
+  duelLayoutBreath: 'soft',
 };
 
 function readStorage() {
@@ -56,6 +60,10 @@ function isVfxQuality(v) {
 
 function isUiScale(v) {
   return UI_SCALE_PRESETS.includes(Number(v));
+}
+
+function isDuelLayoutBreath(v) {
+  return DUEL_LAYOUT_BREATH_LEVELS.includes(v);
 }
 
 function isResolutionPreset(v) {
@@ -78,6 +86,7 @@ export function normalizeDisplaySettings(raw) {
     base.uiScale = /** @type {typeof UI_SCALE_PRESETS[number]} */ (Number(o.uiScale));
   }
   if (typeof o.reduceMotion === 'boolean') base.reduceMotion = o.reduceMotion;
+  if (isDuelLayoutBreath(o.duelLayoutBreath)) base.duelLayoutBreath = o.duelLayoutBreath;
 
   if (
     o.customResolution &&
@@ -155,6 +164,20 @@ export function applyDisplaySettingsToDom(settings = getDisplaySettings()) {
   root.style.setProperty('--satze-ui-scale', String(s.uiScale / 100));
   root.classList.toggle('satze-reduce-motion', s.reduceMotion);
   document.body?.classList.toggle('satze-reduce-motion', s.reduceMotion);
+}
+
+/**
+ * Classe CSS `mov-*` per il respiro del layout duello.
+ * In fase result o con reduceMotion → sempre `mov-0`.
+ * @param {DisplaySettings | null | undefined} settings
+ * @param {{ isResult?: boolean }} [opts]
+ * @returns {'mov-0'|'mov-1'|'mov-2'}
+ */
+export function resolveDuelLayoutBreathClass(settings, opts = {}) {
+  const s = normalizeDisplaySettings(settings || getDisplaySettings());
+  if (opts.isResult || s.reduceMotion || s.duelLayoutBreath === 'off') return 'mov-0';
+  if (s.duelLayoutBreath === 'strong') return 'mov-2';
+  return 'mov-1';
 }
 
 export function hasElectronDisplayApi() {

@@ -4,7 +4,6 @@
 // ============================================
 
 import { checkTrigger } from './triggerLogic.js';
-import { buildDuelPhaseLogs } from './duelPhaseLogs.js';
 import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
 import {
   createDuelCanTriggerAbility,
@@ -28,6 +27,18 @@ import { ARMY_BONUSES } from '../data/index.js';
 import { attachFieldModifiersToContexts } from './battlefieldEffects.js';
 import { buildDuelTurnContexts } from './duel/duelTurnContexts.js';
 import { createDuelVisualRecorder } from './duel/duelVisualSteps.js';
+import { createBattleEventEmitter } from './duel/battleEventTypes.js';
+import {
+  createBattleLogChannel,
+  emitOutcome,
+  emitRoundHeader,
+  toBattleSide,
+} from './duel/battleEventEmit.js';
+import {
+  emitAftermathResourceEvents,
+  emitDuelFieldSetupEvents,
+  snapshotDuelFieldStats,
+} from './duel/battleFieldEventDiff.js';
 
 function combatStartDiffersFromDeploy(pAgent, eAgent, state) {
   return (
@@ -137,15 +148,23 @@ export function computeDuelResolution({
     duel.pImmune = checkImmunity(pAgent, pHasBonus, pArmyBonus, playerContext);
     duel.eImmune = checkImmunity(eAgent, eHasBonus, eArmyBonus, enemyContext);
 
-    const battleLog = [];
-    battleLog.push(`🔍 Campo: ${field.name}`);
-    battleLog.push(`🎮 Tu: ${pAgent.name} (${duel.pPower}P, ${duel.pDamage}D) + ${duel.pFocusUsed} FC`);
-    battleLog.push(`🤖 IA: ${eAgent.name} (${duel.ePower}P, ${duel.eDamage}D) + ${duel.eFocusUsed} FC`);
+    const eventEmitter = createBattleEventEmitter(roundNumber);
+    const battleLog = createBattleLogChannel(eventEmitter, { dualStrings: false });
+    battleLog.setContext('effects', 'abilityFx');
 
-    if (duel.pImmune) battleLog.push(`🐛¡️ ${pAgent.name}: Immune attivo`);
-    if (duel.eImmune) battleLog.push(`🐛¡️ ${eAgent.name}: Immune attivo`);
+    emitRoundHeader(battleLog, {
+      field: { id: field.id, name: field.name },
+      localAgent: { id: pAgent.id, name: pAgent.name },
+      opponentAgent: { id: eAgent.id, name: eAgent.name },
+      initiativeSide: toBattleSide(isPlayerFirst ? 'player' : 'enemy'),
+    });
+    battleLog.push(`Campo: ${field.name}`);
+    battleLog.push(`Tu: ${pAgent.name} (${duel.pPower}P, ${duel.pDamage}D) + ${duel.pFocusUsed} FC`);
+    battleLog.push(`IA: ${eAgent.name} (${duel.ePower}P, ${duel.eDamage}D) + ${duel.eFocusUsed} FC`);
+    // Immune preventivo: non emesso (block solo al blocco reale).
 
-    const fieldFlags = applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext);
+    const fieldStatsBefore = snapshotDuelFieldStats(duel);
+        const fieldFlags = applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext);
     const {
       blockDisabled,
       copyDisabled,
@@ -158,6 +177,15 @@ export function computeDuelResolution({
       triggersIgnored,
       minFloorReduction,
     } = fieldFlags;
+    emitDuelFieldSetupEvents(
+      battleLog,
+      field,
+      pAgent,
+      eAgent,
+      fieldStatsBefore,
+      snapshotDuelFieldStats(duel),
+      fieldFlags
+    );
 
     const state = createDuelCombatState(duel);
     const visualRecorder = createDuelVisualRecorder(pAgent, eAgent);
@@ -315,7 +343,17 @@ export function computeDuelResolution({
     let enemyToxinActivated = state.enemyToxinActivated;
 
     const statsBeforeField = visualRecorder.readStats(state);
+    const overdriveBefore = snapshotDuelFieldStats(state);
     applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
+    emitDuelFieldSetupEvents(
+      battleLog,
+      field,
+      pAgent,
+      eAgent,
+      overdriveBefore,
+      snapshotDuelFieldStats(state),
+      {}
+    );
     const statsAfterField = visualRecorder.readStats(state);
     if (
       statsBeforeField.playerPower !== statsAfterField.playerPower ||
@@ -357,11 +395,25 @@ export function computeDuelResolution({
     let winner;
     if (fieldFlags.winnerByFocusNotVa) {
       if (pFocusUsed > eFocusUsed) {
-        battleLog.push(`⚔️ ${field.name}: più FC investiti → Vittoria Tu`);
+        battleLog.push(`${field.name}: più FC investiti → Vittoria Tu`);
         winner = 'player';
+        emitOutcome(battleLog, {
+          winnerSide: 'local',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'focusInvested',
+          tieBreakData: { localFocus: pFocusUsed, opponentFocus: eFocusUsed },
+        });
       } else if (eFocusUsed > pFocusUsed) {
-        battleLog.push(`⚔️ ${field.name}: più FC investiti → Vittoria IA`);
+        battleLog.push(`${field.name}: più FC investiti → Vittoria IA`);
         winner = 'enemy';
+        emitOutcome(battleLog, {
+          winnerSide: 'opponent',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'focusInvested',
+          tieBreakData: { localFocus: pFocusUsed, opponentFocus: eFocusUsed },
+        });
       } else {
         winner = resolveDuelWinnerByAssault({
           pAssault,
@@ -391,6 +443,7 @@ export function computeDuelResolution({
     const playerContextPost = { ...playerContext, won: playerWon, lost: !playerWon };
     const enemyContextPost = { ...enemyContext, won: !playerWon, lost: playerWon };
 
+    battleLog.setContext('post', 'postFx');
     const {
       pPostAbilityTriggered,
       ePostAbilityTriggered,
@@ -470,28 +523,8 @@ export function computeDuelResolution({
       enemySelectedFocus,
     });
 
-    const phaseLogs = buildDuelPhaseLogs({
-      battleLog,
-      field,
-      pAgent,
-      eAgent,
-      isPlayerFirst,
-      playerHP,
-      enemyHP,
-      playerFocus,
-      enemyFocus,
-      selectedFocus,
-      enemySelectedFocus,
-      pFocusUsed,
-      eFocusUsed,
-      pPower,
-      ePower,
-      pAssaultMod,
-      eAssaultMod,
-      pAssault,
-      eAssault,
-      winner,
-    });
+    // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.
+    const phaseLogs = null;
 
     const battleResult = buildDuelBattleResult({
       winner,
@@ -533,7 +566,7 @@ export function computeDuelResolution({
       finalEnemyHP: outcome.finalEnemyHP,
       finalPlayerFC: outcome.finalPlayerFC,
       finalEnemyFC: outcome.finalEnemyFC,
-      battleLog,
+      battleLog: Array.isArray(battleLog) ? battleLog : battleLog.strings,
       phaseLogs,
       field,
       currentFieldIndex,
@@ -541,6 +574,7 @@ export function computeDuelResolution({
       enemyToxinActivated,
       visualSteps: visualRecorder.steps,
       isPlayerFirst,
+      events: eventEmitter.events,
     });
     return { battleResult };
 

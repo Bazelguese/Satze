@@ -1,3 +1,20 @@
+import { emitOutcome, toBattleSide } from './battleEventEmit.js';
+
+function pushLog(log, message) {
+  if (log && typeof log.push === 'function') log.push(message);
+}
+
+function emitWinner(battleLog, winnerEngineSide, pAssault, eAssault, tieBreakCode, tieBreakData) {
+  if (!battleLog || typeof battleLog.emit !== 'function') return;
+  emitOutcome(battleLog, {
+    winnerSide: toBattleSide(winnerEngineSide),
+    localVA: pAssault,
+    opponentVA: eAssault,
+    tieBreakCode,
+    tieBreakData,
+  });
+}
+
 /** @returns {'player'|'enemy'} */
 export function resolveDuelWinnerByAssault({
   pAssault,
@@ -12,34 +29,48 @@ export function resolveDuelWinnerByAssault({
   const pPot = pPower ?? pAgent.power;
   const ePot = ePower ?? eAgent.power;
   if (pAssault > eAssault) {
-    battleLog.push(`⚔️ ${pAssault} > ${eAssault} → Vinci tu!`);
+    pushLog(battleLog, `${pAssault} > ${eAssault} → Vinci tu!`);
+    emitWinner(battleLog, 'player', pAssault, eAssault, null, null);
     return 'player';
   }
   if (eAssault > pAssault) {
-    battleLog.push(`⚔️ ${eAssault} > ${pAssault} → Vince l'IA`);
+    pushLog(battleLog, `${eAssault} > ${pAssault} → Vince l'IA`);
+    emitWinner(battleLog, 'enemy', pAssault, eAssault, null, null);
     return 'enemy';
   }
   if (pAgent.league < eAgent.league) {
-    battleLog.push('⚖️ Parità VA! Vinci tu (Lega più bassa)');
+    pushLog(battleLog, 'Parità VA! Vinci tu (Lega più bassa)');
+    emitWinner(battleLog, 'player', pAssault, eAssault, 'league', {
+      localLeague: pAgent.league,
+      opponentLeague: eAgent.league,
+    });
     return 'player';
   }
   if (eAgent.league < pAgent.league) {
-    battleLog.push("⚖️ Parità VA! Vince l'IA (Lega più bassa)");
+    pushLog(battleLog, "Parità VA! Vince l'IA (Lega più bassa)");
+    emitWinner(battleLog, 'enemy', pAssault, eAssault, 'league', {
+      localLeague: pAgent.league,
+      opponentLeague: eAgent.league,
+    });
     return 'enemy';
   }
   if (pPot < ePot) {
-    battleLog.push('⚖️ Parità VA e Lega! Vinci tu (POT più bassa)');
+    pushLog(battleLog, 'Parità VA e Lega! Vinci tu (POT più bassa)');
+    emitWinner(battleLog, 'player', pAssault, eAssault, 'power', { localPower: pPot, opponentPower: ePot });
     return 'player';
   }
   if (ePot < pPot) {
-    battleLog.push("⚖️ Parità VA e Lega! Vince l'IA (POT più bassa)");
+    pushLog(battleLog, "Parità VA e Lega! Vince l'IA (POT più bassa)");
+    emitWinner(battleLog, 'enemy', pAssault, eAssault, 'power', { localPower: pPot, opponentPower: ePot });
     return 'enemy';
   }
   const w = isPlayerFirst ? 'enemy' : 'player';
-  battleLog.push(
+  pushLog(
+    battleLog,
     w === 'player'
-      ? '⚖️ Parità VA, Lega e POT! Vinci tu (hai giocato per secondo)'
-      : "⚖️ Parità VA, Lega e POT! Vince l'IA (ha giocato per secondo)"
+      ? 'Parità VA, Lega e POT! Vinci tu (hai giocato per secondo)'
+      : "Parità VA, Lega e POT! Vince l'IA (ha giocato per secondo)"
   );
+  emitWinner(battleLog, w, pAssault, eAssault, 'secondPlayer', { isPlayerFirst });
   return w;
 }

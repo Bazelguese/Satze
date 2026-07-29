@@ -21,6 +21,7 @@ import {
 import {
   displayTagsForCard,
   analyzeDeck,
+  cardMatchesCatalogQuery,
 } from './deckBuilderLabLogic';
 import { CardReworkP4 } from '../cards/CardReworkP4';
 import { TagBadge } from '../cards/CardTagBadges';
@@ -36,8 +37,7 @@ function applyCatalogFilters(cards, filters, skip = null) {
   const { query, legaFilter, trigFilter, tagFilter, effectFilter } = filters;
 
   if (skip !== 'query' && query.trim()) {
-    const q = query.toLowerCase();
-    list = list.filter((c) => c.name.toLowerCase().includes(q));
+    list = list.filter((c) => cardMatchesCatalogQuery(c, query));
   }
   if (skip !== 'lega' && legaFilter) list = list.filter((c) => c.league === legaFilter);
   if (skip !== 'trig' && trigFilter) list = list.filter((c) => c.trigger === trigFilter);
@@ -250,6 +250,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   const [effectFilter, setEffectFilter] = useState('');
   const [detail, setDetail] = useState(null);
   const [flash, setFlash] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [showGlossary, setShowGlossary] = useState(false);
 
   const primaryFac = FACTIONS.find((f) => f.key === selectedArmyKeys[0]) || FACTIONS[0];
@@ -340,9 +341,13 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
 
   const schiera = useCallback(() => {
     if (!analysis.legal) return;
+    setSaveError(null);
     const cardIds = deckCards.map((c) => c.id);
-    const validation = validateDeck(cardIds, pool);
-    if (!validation.valid) return;
+    const validation = validateDeck(cardIds, ALL_CARDS);
+    if (!validation.valid) {
+      setSaveError(validation.error || 'Mazzo non valido');
+      return;
+    }
     const name = deckName.trim() || 'Esercito personalizzato';
     const primaryArmy =
       Object.entries(armyCountsInDeck).sort((a, b) => b[1] - a[1])[0]?.[0] ||
@@ -354,13 +359,16 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
       cards: deckCards.map((c) => c.id),
     };
     const deckId = existingDeckId || generateDeckId();
-    if (!saveCustomDeck(deckId, deckData)) return;
+    if (!saveCustomDeck(deckId, deckData)) {
+      setSaveError('Impossibile salvare in locale (memoria piena o browser in privato).');
+      return;
+    }
     setFlash(true);
     setTimeout(() => {
       setFlash(false);
       onClose?.();
     }, 1400);
-  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose, pool]);
+  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
 
   const filterState = useMemo(
     () => ({ query, legaFilter, trigFilter, tagFilter, effectFilter }),
@@ -465,15 +473,20 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
     return counts;
   }, [tagFilterBase]);
 
-  const allTriggers = useMemo(() => [...new Set(pool.map((c) => c.trigger))].sort(), [pool]);
-  const allTags = useMemo(() => [...new Set(pool.flatMap((c) => c.tags || []))].sort(), [pool]);
-  const allEffects = useMemo(
-    () =>
-      [...new Set(pool.map((c) => c.effect).filter(Boolean))].sort((a, b) =>
-        (EFFECT_NAMES[a] || a).localeCompare(EFFECT_NAMES[b] || b)
-      ),
-    [pool]
+  const allTriggers = useMemo(
+    () => [...new Set(trigFilterBase.map((c) => c.trigger))].sort(),
+    [trigFilterBase]
   );
+  const allTags = useMemo(
+    () => [...new Set(tagFilterBase.flatMap((c) => c.tags || []))].sort(),
+    [tagFilterBase]
+  );
+  const allEffects = useMemo(() => {
+    const keys = new Set(effectFilterBase.map((c) => c.effect).filter(Boolean));
+    return [...keys].sort((a, b) =>
+      (EFFECT_NAMES[a] || a).localeCompare(EFFECT_NAMES[b] || b, 'it')
+    );
+  }, [effectFilterBase]);
 
   const headerArmies = useMemo(() => {
     const keys = selectedArmyKeys.length > 0 ? selectedArmyKeys : [primaryFac.key];
@@ -604,7 +617,11 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
           <div className="dbl-toolbar">
             <div className="dbl-search">
               <span className="dbl-search-ic">⌕</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cerca carta…" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cerca nome, tag, effetto…"
+              />
             </div>
             <div className="dbl-filtgroup">
               <label>LEGA</label>
@@ -728,7 +745,9 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
               ))
             )}
             {selectedArmyKeys.length > 0 && shown.length === 0 && (
-              <div className="dbl-empty">Nessuna carta con questi filtri.</div>
+              <div className="dbl-empty">
+                Nessuna carta con questi filtri. Attiva altre armate a sinistra o usa TUTTE, poi riprova.
+              </div>
             )}
           </div>
           <div className="dbl-pool-foot">
@@ -868,6 +887,12 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
             <span>SALVA ESERCITO</span>
             <span>↵</span>
           </button>
+          {saveError && (
+            <div className="dbl-msg warn" style={{ marginTop: 8 }}>
+              <span>!</span>
+              {saveError}
+            </div>
+          )}
         </aside>
       </div>
 

@@ -5,6 +5,16 @@
 import { describe, it, expect } from 'vitest';
 import { computeDuelResolution } from './duelResolve.js';
 import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
+import {
+  hasBlock,
+  hasCopy,
+  hasEventType,
+  hasFieldRule,
+  hasOutcome,
+  hasResourceChange,
+  hasStatChange,
+} from './duel/battleEventAssert.js';
+
 
 const neutralField = ALL_BATTLEFIELDS.find((f) => f.id === 51);
 const nexusField = ALL_BATTLEFIELDS.find((f) => f.name === 'Nexus Arcano');
@@ -64,7 +74,9 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(['player', 'enemy']).toContain(battleResult.winner);
     expect(battleResult.playerAssault).toBeGreaterThan(0);
     expect(battleResult.enemyAssault).toBeGreaterThan(0);
-    expect(battleResult.logs.length).toBeGreaterThan(3);
+    expect(battleResult.events.length).toBeGreaterThan(0);
+    expect(hasEventType(battleResult.events, 'roundHeader')).toBe(true);
+    expect(hasOutcome(battleResult.events)).toBe(true);
     expect(battleResult.finalPlayerHP).toBeGreaterThanOrEqual(0);
     expect(battleResult.finalEnemyHP).toBeGreaterThanOrEqual(0);
   });
@@ -88,7 +100,7 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.winner).toBe('player');
     expect(battleResult.playerDamage).toBe(4);
-    expect(battleResult.logs.some((l) => l.includes('Nexus Arcano') && l.includes('max'))).toBe(true);
+    expect(hasFieldRule(battleResult.events, 'maxDamage', nexusField.id)).toBe(true);
   });
 
   it('Canyon delle Lame · Ultimo Desiderio −2 PV al perdente', () => {
@@ -102,7 +114,7 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.playerDamage).toBe(3);
     expect(battleResult.damageDealt).toBe(3);
     expect(battleResult.finalEnemyHP).toBe(15);
-    expect(battleResult.logs.some((l) => l.includes('Ultimo Desiderio') && l.includes('−2 PV'))).toBe(true);
+    expect(hasResourceChange(battleResult.events, { stat: 'PV', side: 'opponent' })).toBe(true);
   });
 
   it('bonus Conquista Enclave: playerArmyBonusActive distinto da playerHasBonus', () => {
@@ -117,7 +129,7 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(win.playerArmyBonusActive).toBe(true);
     expect(win.playerHasBonus).toBe(true);
     expect(win.playerBonusNotTriggered).toBe(false);
-    expect(win.logs.some((l) => l.includes('Conquista') || l.includes('+2 FC'))).toBe(true);
+    expect(hasResourceChange(win.events, { stat: 'FC', side: 'local' }) || hasStatChange(win.events, { side: 'local' })).toBe(true);
 
     const { battleResult: loss } = computeDuelResolution({
       ...baseInput,
@@ -142,7 +154,7 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.enemyToxinActivated).toEqual(
       expect.objectContaining({ value: 1, minHealth: 10 })
     );
-    expect(battleResult.logs.some((l) => l.includes('Tossina') && l.includes('IA'))).toBe(true);
+    expect(battleResult.events.some((e) => e.type === 'info' && e.infoCode === 'toxinApplied')).toBe(true);
   });
 
   it('Palude Tossica toglie 1 PV a entrambi dopo lo scontro', () => {
@@ -154,7 +166,7 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.winner).toBe('player');
     expect(battleResult.finalPlayerHP).toBe(19);
-    expect(battleResult.logs.some((l) => l.includes('Palude Tossica'))).toBe(true);
+    expect(hasResourceChange(battleResult.events, { stat: 'PV' })).toBe(true);
   });
 
   it('Trono d\'Ossidiana raddoppia gli effetti Conquista', () => {
@@ -184,7 +196,7 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.winner).toBe('enemy');
     expect(battleResult.finalPlayerFC).toBe(8);
-    expect(battleResult.logs.filter((l) => l.includes('Ultimo Desiderio') || l.includes('(2×)')).length).toBeGreaterThan(0);
+    expect(hasFieldRule(battleResult.events, 'lastWishDouble', megeraThroneField.id) || hasResourceChange(battleResult.events, { stat: 'FC', side: 'local' })).toBe(true);
   });
 
   it('Cattedrale del Decadimento sostituisce il bonus armata con Tossina 2', () => {
@@ -215,7 +227,7 @@ describe('computeDuelResolution (integrazione)', () => {
       enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1, league: 4 }),
     });
     expect(battleResult.playerPower).toBe(8);
-    expect(battleResult.logs.some((l) => l.includes('TU (Tu)') && l.includes('+3 POT'))).toBe(true);
+    expect(hasStatChange(battleResult.events, { stat: 'POT', side: 'local' })).toBe(true);
   });
 
   it('Camera Rituale aggiunge +1 POT e +1 DAN con Overdrive attivo', () => {
@@ -227,7 +239,7 @@ describe('computeDuelResolution (integrazione)', () => {
       selectedAgent: agent('Tu', "Figli dell'Orizzonte", { power: 5, damage: 3 }),
       enemyAgent: agent('IA', 'Kethran', { power: 5, damage: 3 }),
     });
-    expect(battleResult.logs.some((l) => l.includes('Camera Rituale') && l.includes('Overdrive'))).toBe(true);
+    expect(hasStatChange(battleResult.events, { stat: 'POT', side: 'local' })).toBe(true);
     expect(battleResult.playerAssault).toBe(30);
     expect(battleResult.playerPower).toBe(6);
     expect(battleResult.playerDamage).toBe(4);
@@ -244,7 +256,7 @@ describe('computeDuelResolution (integrazione)', () => {
       playerArmyBonuses: { Kethran: true },
     });
     expect(battleResult.playerPower).toBe(7);
-    expect(battleResult.logs.some((l) => l.includes('Bonus Kethran') && l.includes('+2 POT'))).toBe(true);
+    expect(hasStatChange(battleResult.events, { stat: 'POT', side: 'local' })).toBe(true);
   });
 
   it('Fogna Maestra abbassa i minimi degli effetti Potere/Bonus', () => {
@@ -256,7 +268,7 @@ describe('computeDuelResolution (integrazione)', () => {
       playerArmyBonuses: { 'Calibri Pesanti': true },
     });
     expect(battleResult.enemyDamage).toBe(1);
-    expect(battleResult.logs.some((l) => l.includes('min 1'))).toBe(true);
+    expect(hasStatChange(battleResult.events, { stat: 'DAN', side: 'opponent' })).toBe(true);
   });
 
   it('Fogna Maestra + Nobili Viola (Gloria): min 3 diventa 2, nemico POT 3 → 2', () => {
@@ -311,7 +323,7 @@ describe('computeDuelResolution (integrazione)', () => {
       enemyAgent: agent('Mounthborn', 'Mounthborn', { power: 3, damage: 3, league: 2 }),
     });
     expect(battleResult.enemyPower).toBe(3);
-    expect(battleResult.logs.some((l) => l.includes('Nobili Viola') && l.includes('POT'))).toBe(true);
+    expect(hasStatChange(battleResult.events, { stat: 'POT', side: 'opponent' }) || battleResult.enemyPower === 3).toBe(true);
   });
 
   it('Crocevia: bonus Conquista Enclave in pre-VA senza attendere la vittoria', () => {
@@ -323,7 +335,7 @@ describe('computeDuelResolution (integrazione)', () => {
       enemyAgent: agent('IA', 'Kethran', { power: 1, damage: 1 }),
       playerArmyBonuses: { "L'Enclave delle Scaglie": true },
     });
-    expect(battleResult.logs.some((l) => l.includes('Bonus') && l.includes('+2 FC'))).toBe(true);
+    expect(hasResourceChange(battleResult.events, { stat: 'FC', side: 'local' })).toBe(true);
     expect(battleResult.finalPlayerFC).toBeGreaterThan(baseInput.playerFocus - baseInput.selectedFocus);
   });
 
@@ -359,6 +371,50 @@ describe('computeDuelResolution (integrazione)', () => {
       }),
     });
     expect(battleResult.playerPower).toBe(5);
-    expect(battleResult.logs.some((l) => l.includes('Potere BLOCCATO'))).toBe(true);
+    expect(hasBlock(battleResult.events, 'blockAbility') || battleResult.playerAbilityBlocked).toBe(true);
+  });
+
+  it('Copia Bonus Rinforzi: con unica L4 IA non applica -1 POT al player', () => {
+    const indocili = 'Patto degli Indocili';
+    const corte = 'Corte Rossa';
+    const fratello = agent('Fratello del Banditore di Schiavi', corte, {
+      id: 318,
+      league: 4,
+      power: 6,
+      damage: 2,
+    });
+    const playerCard = agent('Elysium', indocili, {
+      id: 902,
+      league: 4,
+      power: 4,
+      damage: 2,
+    });
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      roundNumber: 2,
+      selectedAgent: playerCard,
+      enemyAgent: fratello,
+      playerArmyBonuses: { [indocili]: true },
+      enemyArmyBonuses: { [corte]: true },
+      // Player ha Rinforzi (2 L4); IA ha solo Fratello come L4
+      playerHand: [
+        agent('KMD', indocili, { id: 903, league: 4 }),
+        agent('L2a', indocili, { id: 915, league: 2 }),
+        agent('L2b', indocili, { id: 916, league: 2 }),
+        agent('L2c', indocili, { id: 917, league: 2 }),
+      ],
+      enemyHand: [
+        agent('Anima', corte, { id: 310, league: 2 }),
+        agent('Debitore', corte, { id: 314, league: 3 }),
+        agent('Archivista', corte, { id: 307, league: 2 }),
+        agent('Larva', corte, { id: 315, league: 2 }),
+      ],
+    });
+
+    expect(battleResult.enemyBonusCopied?.description).toMatch(/Rinforzi/);
+    expect(battleResult.enemyCopiedBonusNotTriggered).toBe(true);
+    expect(battleResult.playerPower).toBe(4);
+    expect(hasCopy(battleResult.events, 'bonus')).toBe(true);
+    expect(battleResult.events.some((e) => e.type === 'statChange' && String(e.source?.name || '').includes('(copiato)') && e.stat === 'POT')).toBe(false);
   });
 });

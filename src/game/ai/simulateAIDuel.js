@@ -4,6 +4,7 @@
 
 import { computeDuelResolution } from '../duelResolve.js';
 import { countConqueredFields } from '../duel/duelHelpers.js';
+import { applyToxin } from '../toxinLogic.js';
 import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
 
 /**
@@ -195,6 +196,19 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
 
   const fields = projectFieldCounts(context, battleResult.winner);
 
+  // Allinea al client: tossina a fine turno dopo i PV del duello
+  let playerHpAfter = battleResult.finalPlayerHP;
+  let aiHpAfter = battleResult.finalEnemyHP;
+  let playerToxinAfter = battleResult.playerToxinActivated || context.player.toxin || null;
+  let aiToxinAfter = battleResult.enemyToxinActivated || context.ai.toxin || null;
+  if (playerToxinAfter || aiToxinAfter) {
+    const toxinResult = applyToxin(playerToxinAfter, aiToxinAfter, playerHpAfter, aiHpAfter);
+    playerHpAfter = toxinResult.newPlayerHP;
+    aiHpAfter = toxinResult.newEnemyHP;
+    playerToxinAfter = toxinResult.playerToxinActive;
+    aiToxinAfter = toxinResult.enemyToxinActive;
+  }
+
   const aiUsed = new Set(
     (context.ai.usedCardIds || []).map((e) => (typeof e === 'object' ? e.id : e))
   );
@@ -214,9 +228,11 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
     battleResult,
 
     aiHpBefore: context.ai.hp,
-    aiHpAfter: battleResult.finalEnemyHP,
+    aiHpAfter,
     playerHpBefore: context.player.hp,
-    playerHpAfter: battleResult.finalPlayerHP,
+    playerHpAfter,
+    playerToxinAfter,
+    aiToxinAfter,
 
     aiFocusBefore: aiFocusPool,
     aiFocusAfter: battleResult.finalEnemyFC,

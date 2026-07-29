@@ -4,6 +4,7 @@ import {
 } from './duelCopyBonus.js';
 import { canTriggerPreBattle } from './duelHelpers.js';
 import { isPostBattleTrigger } from '../triggerLogic.js';
+import { emitBlock, emitCopy, makeSource, toBattleSide } from './battleEventEmit.js';
 
 // Factory: applica effetti bonus armata (fasi own / enemy / legacy, copyBonus).
 export function createApplyBonusEffects({
@@ -42,13 +43,47 @@ export function createApplyBonusEffects({
     if (bonus.effects[0].effect === 'copyBonus') {
       if (onlyOwnEffects) return;
       if (copyDisabled) {
-        log.push(`🕳️ Fossa dei Traditori: Copia Bonus annullata`);
+        log.push(`Fossa dei Traditori: Copia Bonus annullata`);
+        if (log && typeof log.emit === 'function') {
+          emitBlock(log, {
+            source: makeSource({ kind: 'field', id: 27, name: 'Fossa dei Traditori', ownerSide: null }),
+            target: {
+              kind: 'agent',
+              side: toBattleSide(target),
+              id: null,
+              name: null,
+            },
+            blockedEffect: { kind: 'bonus', sourceId: source, effectType: 'copyBonus' },
+            blockedBy: 'copyDisabled',
+          });
+        }
         return;
       }
       const enemyBonus = target === 'player' ? eArmyBonus : pArmyBonus;
       const enemyHasBonusActive = target === 'player' ? eHasBonus : pHasBonus;
       if (enemyHasBonusActive && enemyBonus) {
-        log.push(`🔮 ${source}: Copia Bonus nemico (${enemyBonus.description})`);
+        log.push(`${source}: Copia Bonus nemico (${enemyBonus.description})`);
+        if (log && typeof log.emit === 'function') {
+          emitCopy(log, {
+            source: makeSource({
+              kind: 'bonus',
+              id: source,
+              name: source,
+              ownerSide: toBattleSide(target),
+            }),
+            target: {
+              kind: 'agent',
+              side: toBattleSide(target),
+              id: null,
+              name: null,
+            },
+            copied: {
+              kind: 'bonus',
+              value: enemyBonus.description,
+              fromId: enemyBonus.id ?? null,
+            },
+          });
+        }
         registerCopiedBonus(state, target, enemyBonus, {
           context,
           fieldOptions,
@@ -85,6 +120,8 @@ export function createApplyBonusEffects({
         minPower: eff.minPower,
         minAssault: eff.minAssault,
         minHealth: eff.minHealth,
+        sourceKind: 'bonus',
+        ownerSide: target,
         ...fieldOptions,
       };
 

@@ -41,11 +41,21 @@ describe('displaySettings', () => {
   });
 
   it('persists and reads settings', () => {
-    setDisplaySettings({ vfxQuality: 'low', uiScale: 90, reduceMotion: true });
+    setDisplaySettings({ vfxQuality: 'low', uiScale: 90, reduceMotion: true, duelLayoutBreath: 'strong' });
     const s = getDisplaySettings();
     expect(s.vfxQuality).toBe('low');
     expect(s.uiScale).toBe(90);
     expect(s.reduceMotion).toBe(true);
+    expect(s.duelLayoutBreath).toBe('strong');
+  });
+
+  it('resolves duel layout breath class', async () => {
+    const { resolveDuelLayoutBreathClass } = await import('./displaySettings.js');
+    expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'soft', reduceMotion: false }, {})).toBe('mov-1');
+    expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'strong', reduceMotion: false }, {})).toBe('mov-2');
+    expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'soft', reduceMotion: false }, { isResult: true })).toBe('mov-0');
+    expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'strong', reduceMotion: true }, {})).toBe('mov-0');
+    expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'off', reduceMotion: false }, {})).toBe('mov-0');
   });
 });
 

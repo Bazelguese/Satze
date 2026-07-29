@@ -26,10 +26,11 @@ export function loadCustomDecks() {
 export function saveCustomDeck(deckId, deckData) {
   try {
     const decks = loadCustomDecks();
+    const previous = decks[deckId];
     decks[deckId] = {
       ...deckData,
       id: deckId,
-      createdAt: new Date().toISOString(),
+      createdAt: previous?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(decks));
@@ -72,9 +73,16 @@ export function validateDeck(cards, armyCards) {
   }
 
   const totalLeague = cards.reduce((sum, cardId) => {
-    const card = armyCards.find(c => c.id === cardId);
+    const card = armyCards.find((c) => c.id === cardId || c.id === Number(cardId));
     return sum + (card?.league || 0);
   }, 0);
+
+  const resolvedCount = cards.filter((cardId) =>
+    armyCards.some((c) => c.id === cardId || c.id === Number(cardId))
+  ).length;
+  if (resolvedCount !== cards.length) {
+    return { valid: false, error: 'Una o più carte del mazzo non sono riconosciute' };
+  }
 
   if (totalLeague > 30) {
     return { valid: false, error: `Lega totale troppo alta: ${totalLeague}/30` };

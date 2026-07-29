@@ -1,10 +1,37 @@
 import { shouldShowTagAsRole } from '../../data/cardTags';
-import { DECK_SIZE, MAX_LEAGUE, isRole } from './deckBuilderLabData';
+import { DECK_SIZE, MAX_LEAGUE, isRole, EFFECT_NAMES } from './deckBuilderLabData';
 
 export const ROLES = ['Assalto', 'Difesa', 'Élite', 'Supporto'];
 export const ROLE_ORDER = { Assalto: 0, Difesa: 1, Élite: 2, Supporto: 3 };
 
 const avg = (arr, k) => (arr.length ? arr.reduce((s, c) => s + c[k], 0) / arr.length : 0);
+
+function normalizeCatalogSearch(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
+}
+
+/** Ricerca catalogo: nome, tag, trigger, testo potere, etichetta effetto */
+export function cardMatchesCatalogQuery(card, rawQuery) {
+  const q = normalizeCatalogSearch(rawQuery.trim());
+  if (!q) return true;
+
+  const fields = [
+    card.name,
+    card.army,
+    card.trigger,
+    card.role,
+    card.abilityText,
+    card.powerDesc,
+    card.effect,
+    card.effect ? EFFECT_NAMES[card.effect] : '',
+  ];
+
+  if (fields.some((s) => normalizeCatalogSearch(s).includes(q))) return true;
+  return (card.tags || []).some((tag) => normalizeCatalogSearch(tag).includes(q));
+}
 
 export function uniqTags(c) {
   return [...new Set(c.tags || [])];

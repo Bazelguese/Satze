@@ -1,0 +1,176 @@
+/* ============================================================
+   SATZE — Duello: overlay Round 5 / Vittoria / Sconfitta
+   Estratto da docs/Duello - Animazioni.html.
+   Richiede sulla scena: --acc (armata giocatore), --acc-en (armata avversaria).
+   I token --ink/--ink2/--bone/--bone2 sono dichiarati qui sotto: servono alle lastre chiare.
+   ============================================================ */
+
+:root{--ink:#0a0711;--ink2:#141020;--bone:#e6e1d8;--bone2:#f2eee6}
+/* ══════════ base overlay ══════════ */
+.ov{position:absolute;inset:0;z-index:100;pointer-events:none;display:none}
+.ov.on{display:block}
+.slab{position:absolute;inset:0;background:linear-gradient(168deg,rgba(14,10,24,.97) 0%,rgba(7,5,13,.99) 100%)}
+.grain{position:absolute;inset:0;opacity:.06;background:repeating-linear-gradient(101deg,transparent 0 6px,rgba(255,255,255,.9) 6px 7px)}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.band{display:inline-block;background:var(--bone);color:var(--ink);font-weight:800;letter-spacing:.3em;
+  padding:6px 26px;transform:rotate(-1.4deg);box-shadow:12px 9px 0 color-mix(in srgb,var(--acc) 85%,#000)}
+
+/* ══════════ 1 · ROUND 5 — tenda piena R→L, poi sequenza rapida ══════════ */
+/* Tutto il blocco inchiostro (fondo + frasi) entra da destra, copre il layout,
+   tiene, poi esce a sinistra. La sequenza testo parte SOLO a copertura completa. */
+.r5 .r5-ink{position:absolute;inset:0;overflow:hidden;
+  animation:r5-ink-pass 5.2s cubic-bezier(.65,0,.2,1) forwards;
+  will-change:transform}
+@keyframes r5-ink-pass{
+  0%{transform:translateX(100%)}
+  14%{transform:translateX(0)}   /* ~0.73s: layout interamente coperto */
+  84%{transform:translateX(0)}
+  100%{transform:translateX(-100%)}
+}
+.r5 .slab{position:absolute;inset:0;background:linear-gradient(168deg,rgba(14,10,24,.985) 0%,rgba(7,5,13,.995) 100%)}
+.r5 .grain{position:absolute;inset:0;opacity:.06;background:repeating-linear-gradient(101deg,transparent 0 6px,rgba(255,255,255,.9) 6px 7px)}
+/* schegge dietro il testo (dopo la copertura) */
+.r5 .shard{position:absolute;height:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:0;
+  animation:r5-shard .85s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes r5-shard{0%{opacity:0;transform:translateX(-40%) skewX(-38deg) scaleX(.2)}
+  30%{opacity:1}100%{opacity:0;transform:translateX(60%) skewX(-38deg) scaleX(1)}}
+/* cifra 5 di sfondo: centrata, parte dopo la copertura */
+.r5 .five{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+  font-family:'Cinzel',Georgia,serif;font-weight:900;font-size:260px;line-height:.8;
+  color:transparent;-webkit-text-stroke:2px color-mix(in srgb,var(--acc) 55%,#fff);opacity:0;
+  animation:r5-five 3.6s cubic-bezier(.16,1,.3,1) .78s forwards;pointer-events:none}
+@keyframes r5-five{0%{opacity:0;transform:translate(-50%,-50%) scale(1.4);filter:blur(12px)}
+  12%{opacity:.28;transform:translate(-50%,-50%) scale(1);filter:blur(0)}
+  18%{opacity:.18}
+  88%{opacity:.14;transform:translate(-50%,-50%) scale(1.02)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.05)}}
+/* Battuta 1 — subito dopo la copertura (~0.8s), breve */
+.r5 .beat-a{opacity:0;animation:r5-pop .4s cubic-bezier(.16,1,.3,1) .82s forwards, r5-out .35s ease-in 1.85s forwards}
+.r5 .beat-a .title{font-family:'Cinzel',Georgia,serif;font-size:64px;font-weight:900;letter-spacing:.04em;color:var(--bone2);
+  text-shadow:0 0 28px color-mix(in srgb,var(--acc) 50%,transparent),0 6px 0 rgba(0,0,0,.55);margin:0;text-align:center}
+/* Battuta 2 — ANNIENTA, sequenza compressa */
+.r5 .beat-b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;
+  animation:r5-pop .4s cubic-bezier(.16,1,.3,1) 2.05s forwards, r5-out .4s ease-in 3.85s forwards}
+.r5 .kicker{opacity:1}
+.r5 .title{font-family:'Cinzel',Georgia,serif;font-size:110px;font-weight:900;letter-spacing:.02em;color:var(--bone2);
+  text-shadow:0 0 40px color-mix(in srgb,var(--acc) 55%,transparent),0 8px 0 rgba(0,0,0,.55);
+  margin:18px 0 6px}
+.r5 .sub{font-size:24px;letter-spacing:.42em;text-transform:uppercase;color:color-mix(in srgb,var(--acc) 60%,var(--bone))}
+.r5 .rule{width:0;height:2px;background:linear-gradient(90deg,transparent,var(--acc),transparent);margin:22px 0 0;
+  animation:r5-rule .55s cubic-bezier(.16,1,.3,1) 2.25s forwards}
+@keyframes r5-rule{to{width:640px}}
+.r5 .note{margin-top:18px;font-size:18px;letter-spacing:.2em;color:rgba(230,225,216,.62)}
+.r5 .flash{position:absolute;inset:0;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--acc) 55%,#fff) 0%,transparent 60%);
+  opacity:0;animation:r5-flash .4s ease-out .78s forwards, r5-flash .35s ease-out 2.1s forwards}
+@keyframes r5-flash{0%{opacity:.5}100%{opacity:0}}
+@keyframes r5-pop{0%{opacity:0;transform:translateY(14px) scale(.97)}100%{opacity:1;transform:none}}
+@keyframes r5-out{to{opacity:0;transform:translateY(-12px)}}
+
+/* Flip condizione di vittoria (inizio round 5) */
+@keyframes victory-cond-reveal{
+  0%{opacity:0;transform:perspective(700px) rotateX(-72deg);transform-origin:50% 0%;filter:brightness(2)}
+  55%{opacity:1;transform:perspective(700px) rotateX(6deg);filter:brightness(1.35)}
+  100%{opacity:1;transform:none;filter:none}}
+.imp-victory.imp-victory-reveal{animation:victory-cond-reveal .8s cubic-bezier(.16,1,.3,1) both}
+.imp-victory.imp-victory-reveal::after{content:'';position:absolute;inset:0;z-index:5;pointer-events:none;
+  background:linear-gradient(100deg,transparent 0%,color-mix(in srgb,var(--acc,#a78bfa) 70%,#fff) 48%,transparent 100%);
+  opacity:0;animation:victory-cond-sweep .55s ease-out .08s both}
+@keyframes victory-cond-sweep{0%{opacity:0;transform:translateX(-100%)}35%{opacity:.85}100%{opacity:0;transform:translateX(100%)}}
+
+/* ══════════ 2 · VITTORIA ══════════ */
+/* raggi obliqui, lastra chiara che sale, lettere sfalsate, sigillo che si imprime */
+.win .slab{background:linear-gradient(168deg,rgba(12,9,20,.94) 0%,rgba(8,6,14,.97) 100%);
+  animation:win-fade .5s ease-out forwards}
+@keyframes win-fade{from{opacity:0}to{opacity:1}}
+.win .rays{position:absolute;inset:-30%;background:repeating-conic-gradient(from 0deg at 50% 55%,
+  color-mix(in srgb,var(--acc) 26%,transparent) 0deg 5deg, transparent 5deg 16deg);
+  opacity:0;animation:win-rays 4.2s ease-out .1s forwards}
+@keyframes win-rays{0%{opacity:0;transform:scale(.7) rotate(-12deg)}
+  18%{opacity:.5}70%{opacity:.32}100%{opacity:0;transform:scale(1.12) rotate(14deg)}}
+.win .plate{position:absolute;left:50%;top:50%;width:1180px;height:330px;transform:translate(-50%,-50%);
+  background:linear-gradient(96deg,var(--bone2) 0%,#d9d3c8 100%);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 34px),calc(100% - 34px) 100%,0 100%);
+  box-shadow:0 40px 80px rgba(0,0,0,.6);opacity:0;
+  animation:win-plate .9s cubic-bezier(.16,1,.3,1) .18s forwards, win-outp .6s ease-in 3.6s forwards}
+@keyframes win-plate{0%{opacity:0;transform:translate(-50%,-38%) scaleY(.6)}
+  100%{opacity:1;transform:translate(-50%,-50%) scaleY(1)}}
+@keyframes win-outp{to{opacity:0;transform:translate(-50%,-58%) scaleY(.94)}}
+.win .wedge{position:absolute;left:50%;top:50%;margin:-165px 0 0 -590px;width:120px;height:120px;
+  background:linear-gradient(135deg,var(--acc) 0%,color-mix(in srgb,var(--acc) 45%,#000) 100%);
+  clip-path:polygon(0 0,100% 0,0 100%);opacity:0;animation:win-plate .9s cubic-bezier(.16,1,.3,1) .26s forwards, win-outp .6s ease-in 3.6s forwards}
+.win .word{position:relative;display:flex;gap:2px;color:var(--ink);font-family:'Cinzel',Georgia,serif;
+  font-size:126px;font-weight:900;letter-spacing:.06em}
+.win .word span{display:inline-block;opacity:0;animation:win-letter .7s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes win-letter{0%{opacity:0;transform:translateY(64px) rotate(6deg)}100%{opacity:1;transform:none}}
+.win .tag{position:relative;margin-top:4px;font-size:22px;letter-spacing:.5em;text-transform:uppercase;
+  color:rgba(11,10,15,.55);opacity:0;animation:r5-pop .6s ease-out 1.15s forwards}
+.win .seal{position:absolute;left:50%;top:50%;margin:-96px 0 0 330px;width:192px;height:192px;border-radius:50%;
+  border:5px solid color-mix(in srgb,var(--acc) 80%,#000);display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 42%, color-mix(in srgb,var(--acc) 22%,transparent) 0%, transparent 70%);
+  transform:rotate(-14deg) scale(2.6);opacity:0;animation:win-seal .5s cubic-bezier(.2,1.5,.4,1) 1.25s forwards}
+.win .seal.seal-dual{width:auto;min-width:192px;height:168px;margin:-84px 0 0 280px;padding:0 18px;gap:14px;
+  border-radius:84px}
+.win .seal img{width:132px;height:132px;object-fit:contain;
+  filter:drop-shadow(0 0 12px color-mix(in srgb,var(--acc) 70%,transparent))}
+.win .seal.seal-dual img{width:104px;height:104px}
+@keyframes win-seal{0%{opacity:0;transform:rotate(-24deg) scale(2.6)}100%{opacity:.92;transform:rotate(-14deg) scale(1)}}
+/* Sconfitta: stesso sigillo giocatore (mono / doppia), dietro la marea */
+.lose .seal{position:absolute;left:50%;top:42%;z-index:1;margin:0;transform:translate(-50%,-50%) rotate(-8deg) scale(1.15);
+  width:220px;height:220px;border-radius:50%;border:4px solid color-mix(in srgb,var(--acc) 55%,#000);
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  background:radial-gradient(circle at 50% 42%, color-mix(in srgb,var(--acc) 18%,transparent) 0%, transparent 70%);
+  opacity:0;animation:lose-seal 4.6s ease-out .35s forwards}
+.lose .seal.seal-dual{width:auto;min-width:220px;height:190px;padding:0 20px;border-radius:95px}
+.lose .seal img{width:140px;height:140px;object-fit:contain;
+  filter:grayscale(.35) brightness(.85) drop-shadow(0 0 18px color-mix(in srgb,var(--acc) 45%,transparent))}
+.lose .seal.seal-dual img{width:110px;height:110px}
+@keyframes lose-seal{0%{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.9)}
+  35%{opacity:.72}100%{opacity:.38;transform:translate(-50%,-50%) rotate(-8deg) scale(1.08)}}
+.win .chip{position:absolute;width:14px;height:5px;background:var(--acc);opacity:0;animation:win-chip 1.5s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes win-chip{0%{opacity:0;transform:translate(0,0) rotate(0)}
+  12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+.win .content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  animation:win-outp .6s ease-in 3.6s forwards}
+
+/* ══════════ 3 · SCONFITTA — la marea d'inchiostro ══════════ */
+/* Il colore del giocatore si spegne, l'inchiostro sale dal basso e inghiotte il campo;
+   il titolo è un vuoto ritagliato nella marea, che sprofonda. */
+.lose .desat{position:absolute;inset:0;backdrop-filter:grayscale(.9) brightness(.42);opacity:0;
+  animation:lose-desat 1.4s ease-out forwards}
+@keyframes lose-desat{to{opacity:1}}
+/* sigillo avversario che incombe dietro la marea */
+.lose .looming{position:absolute;left:50%;top:46%;width:620px;height:620px;transform:translate(-50%,-50%) scale(.86);
+  background:radial-gradient(circle at 50% 50%, color-mix(in srgb,var(--acc-en) 32%,transparent) 0%, transparent 62%);
+  opacity:0;animation:lose-loom 4.6s ease-out .3s forwards}
+@keyframes lose-loom{0%{opacity:0;transform:translate(-50%,-50%) scale(.86)}
+  40%{opacity:.9}100%{opacity:.5;transform:translate(-50%,-50%) scale(1.06)}}
+/* marea: tre strati che salgono sfalsati, con cresta irregolare */
+.lose .tide{position:absolute;left:-4%;right:-4%;bottom:0;height:130%;transform:translateY(100%);
+  animation:lose-rise 2.6s cubic-bezier(.5,0,.15,1) .35s forwards}
+.lose .tide.t1{background:linear-gradient(180deg,rgba(12,9,20,.82) 0%,rgba(6,4,11,.94) 60%);
+  clip-path:polygon(0 6%,14% 3%,31% 8%,48% 2%,66% 7%,82% 3%,100% 8%,100% 100%,0 100%)}
+.lose .tide.t2{animation-delay:.5s;background:linear-gradient(180deg,rgba(8,6,14,.9) 0%,rgba(4,3,8,.98) 55%);
+  clip-path:polygon(0 10%,18% 5%,36% 11%,55% 4%,72% 10%,88% 5%,100% 11%,100% 100%,0 100%)}
+.lose .tide.t3{animation-delay:.72s;background:linear-gradient(180deg,#050409 0%,#040308 100%);
+  clip-path:polygon(0 14%,22% 9%,41% 15%,60% 8%,78% 14%,92% 9%,100% 15%,100% 100%,0 100%)}
+/* filo d'accento avversario sulla cresta */
+.lose .crest{position:absolute;left:0;right:0;bottom:0;height:2px;transform:translateY(-260px);opacity:0;
+  background:linear-gradient(90deg,transparent,var(--acc-en),transparent);
+  box-shadow:0 0 22px var(--acc-en);animation:lose-crest 2.6s cubic-bezier(.5,0,.15,1) .35s forwards}
+@keyframes lose-crest{0%{opacity:0;transform:translateY(60px)}25%{opacity:1}100%{opacity:.55;transform:translateY(-540px)}}
+@keyframes lose-rise{to{transform:translateY(0)}}
+/* titolo: ritaglio in negativo nella marea, poi sprofonda */
+.lose .title{position:relative;font-family:'Cinzel',Georgia,serif;font-size:126px;font-weight:900;letter-spacing:.2em;
+  color:transparent;-webkit-text-stroke:2px rgba(230,225,216,.34);
+  background:linear-gradient(180deg,rgba(230,225,216,.9) 0%,rgba(230,225,216,.28) 100%);
+  -webkit-background-clip:text;background-clip:text;
+  opacity:0;animation:lose-title 1.6s cubic-bezier(.16,1,.3,1) 1.5s forwards, lose-sink 2.4s ease-in 3.1s forwards}
+@keyframes lose-title{0%{opacity:0;letter-spacing:.62em;filter:blur(16px)}
+  100%{opacity:1;letter-spacing:.2em;filter:blur(0)}}
+@keyframes lose-sink{to{opacity:0;transform:translateY(46px);filter:blur(6px)}}
+.lose .sub{margin-top:14px;font-size:20px;letter-spacing:.44em;text-transform:uppercase;color:rgba(230,225,216,.38);
+  opacity:0;animation:r5-pop .9s ease-out 2.2s forwards, lose-sink 2.4s ease-in 3.1s forwards}
+/* bolle d'inchiostro che salgono lente */
+.lose .ash{position:absolute;width:4px;height:4px;border-radius:50%;background:color-mix(in srgb,var(--acc-en) 55%,#fff);
+  opacity:0;animation:lose-ash linear forwards}
+@keyframes lose-ash{0%{opacity:0;transform:translateY(120px) scale(.6)}
+  20%{opacity:.55}100%{opacity:0;transform:translateY(-320px) scale(1.2)}}

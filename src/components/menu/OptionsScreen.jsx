@@ -7,6 +7,7 @@ import {
   RESOLUTION_PRESETS,
   UI_SCALE_PRESETS,
   VFX_QUALITY_LEVELS,
+  DUEL_LAYOUT_BREATH_LEVELS,
   applyElectronDisplay,
   getDisplaySettings,
   hasElectronDisplayApi,
@@ -24,6 +25,12 @@ const QUALITY_LABELS = {
   high: 'Alta',
   medium: 'Media',
   low: 'Bassa',
+};
+
+const BREATH_LABELS = {
+  off: 'Off',
+  soft: 'Soft',
+  strong: 'Forte',
 };
 
 const segmentBtnStyle = (active, accent = MENU_ACCENTS.magenta) => ({
@@ -263,6 +270,33 @@ export function OptionsScreen({ onClose }) {
                   style={segmentBtnStyle(settings.vfxQuality === q, MENU_ACCENTS.pink)}
                 >
                   {QUALITY_LABELS[q]}
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          <Row
+            label="Respiro layout duello"
+            hint={
+              settings.reduceMotion
+                ? 'Disattivato da «Riduci animazioni»'
+                : 'Oscillazione leggera di colonne, mani e pannello campo'
+            }
+          >
+            <div style={{ display: 'flex', gap: 6 }}>
+              {DUEL_LAYOUT_BREATH_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  disabled={settings.reduceMotion}
+                  onClick={() => persistPresentation({ duelLayoutBreath: level })}
+                  style={{
+                    ...segmentBtnStyle(settings.duelLayoutBreath === level, MENU_ACCENTS.magenta),
+                    opacity: settings.reduceMotion ? 0.55 : 1,
+                    cursor: settings.reduceMotion ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {BREATH_LABELS[level]}
                 </button>
               ))}
             </div>

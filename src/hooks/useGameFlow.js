@@ -18,9 +18,10 @@ import { preloadBattlefieldImages } from '../utils/preloadAssets';
  * Hook per gestire il flusso del gioco
  * @param {Object} gameState - Stato del gioco da useGameState
  * @param {Object} animations - Stato delle animazioni da useAnimations (opzionale)
+ * @param {(() => void)|null} clearAiPendingDecision - cleanup cache decisioni IA tra partite/round
  * @returns {Object} Funzioni per gestire il flusso del gioco
  */
-export function useGameFlow(gameState, animations = null) {
+export function useGameFlow(gameState, animations = null, clearAiPendingDecision = null) {
   const {
     setGameMode,
     setPlayerHand,
@@ -89,6 +90,7 @@ export function useGameFlow(gameState, animations = null) {
   const startGame = useCallback((selectedPlayerArmy, selectedDeckKey, mode = 'classic', difficulty = 'medium', allBattlefields, enemyArmy = null, enemyDeckKey = null, campaignDuelMod = null, startOptions = null) => {
     const skipShuffleDeal = startOptions?.skipShuffleDeal === true;
     const fixedHands = startOptions?.fixedHands ?? null;
+    clearAiPendingDecision?.();
     setShowClaimVictoryChoice(null);
     setCampaignDuelMod(campaignDuelMod || null);
     setGameMode(mode);
@@ -234,6 +236,7 @@ export function useGameFlow(gameState, animations = null) {
     
     setSelectedAgent(null);
     setEnemyAgent(null);
+    setEnemySelectedFocus(1);
     setCurrentFieldIndex(null);
     setBattleResult(null);
     setSelectedFocus(1);
@@ -309,7 +312,9 @@ export function useGameFlow(gameState, animations = null) {
     setShuffleDealSetup,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
+    setShowClaimVictoryChoice,
     animations,
+    clearAiPendingDecision,
     resolveCardIdsAcrossArmies,
   ]);
 
@@ -337,6 +342,7 @@ export function useGameFlow(gameState, animations = null) {
       const enemyArmy = perspective === 'host' ? hostEnemyArmy : hostPlayerArmy;
       const isPlayerFirst = perspective === 'host' ? hostIsPlayerFirst : !hostIsPlayerFirst;
 
+      clearAiPendingDecision?.();
       setShowClaimVictoryChoice(null);
       setCampaignDuelMod(null);
       setGameMode(mode);
@@ -409,6 +415,7 @@ export function useGameFlow(gameState, animations = null) {
 
       setSelectedAgent(null);
       setEnemyAgent(null);
+      setEnemySelectedFocus(1);
       setCurrentFieldIndex(null);
       setBattleResult(null);
       setSelectedFocus(1);
@@ -452,6 +459,7 @@ export function useGameFlow(gameState, animations = null) {
       setCardBattleOutcomes,
       setGameResult,
       animations,
+      clearAiPendingDecision,
       setRoundNumber,
       setLastWinner,
       setPlayerToxin,
@@ -459,6 +467,7 @@ export function useGameFlow(gameState, animations = null) {
       setRevealedFields,
       setSelectedAgent,
       setEnemyAgent,
+      setEnemySelectedFocus,
       setCurrentFieldIndex,
       setBattleResult,
       setSelectedFocus,
@@ -472,17 +481,39 @@ export function useGameFlow(gameState, animations = null) {
   );
 
   /**
-   * Resetta il gioco al menu
+   * Resetta il gioco al menu (pulisce anche agenti/risultati residui della partita abbandonata)
    */
   const resetToMenu = useCallback(() => {
-    setGamePhase('menu');
-    setGameResult(null);
+    clearAiPendingDecision?.();
+    setSelectedAgent(null);
+    setEnemyAgent(null);
+    setEnemySelectedFocus(1);
+    setSelectedFocus(1);
+    setCurrentFieldIndex(null);
     setBattleResult(null);
+    setGameResult(null);
+    setShowClaimVictoryChoice(null);
     setCampaignDuelMod(null);
     setShuffleDealSetup(null);
     setPlayerDeckVisual(null);
     setEnemyDeckVisual(null);
-  }, [setGamePhase, setGameResult, setBattleResult, setCampaignDuelMod, setShuffleDealSetup, setPlayerDeckVisual, setEnemyDeckVisual]);
+    setGamePhase('menu');
+  }, [
+    clearAiPendingDecision,
+    setSelectedAgent,
+    setEnemyAgent,
+    setEnemySelectedFocus,
+    setSelectedFocus,
+    setCurrentFieldIndex,
+    setBattleResult,
+    setGameResult,
+    setShowClaimVictoryChoice,
+    setCampaignDuelMod,
+    setShuffleDealSetup,
+    setPlayerDeckVisual,
+    setEnemyDeckVisual,
+    setGamePhase,
+  ]);
 
   return {
     startGame,

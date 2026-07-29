@@ -287,7 +287,6 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
     >
       <style>{`
         @keyframes satze-v5-float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
-        @keyframes satze-v5-drift-x { 0%,100% { transform: translateX(0) } 50% { transform: translateX(8px) } }
         @keyframes satze-v5-pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
         @keyframes satze-v5-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
         @keyframes satze-v5-slide-in { from { transform: translateX(-30px) skewX(-12deg); opacity: 0 } to { transform: translateX(0) skewX(-8deg); opacity: 1 } }
@@ -369,51 +368,6 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
         LA GRANDE
         <br />
         GUERRA
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          top: 24,
-          left: 24,
-          display: "flex",
-          gap: 6,
-          transform: "skewX(-15deg)",
-        }}
-      >
-        {[0, 1, 2, 3, 4].map((idx) => (
-          <div
-            key={idx}
-            style={{
-              width: 28,
-              height: 4,
-              background: idx === 0 ? HEAT : `rgba(236,72,153,${0.6 - idx * 0.12})`,
-              animation: `satze-v5-drift-x 1.6s ${idx * 0.1}s ease-in-out infinite`,
-            }}
-          />
-        ))}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          bottom: 44,
-          right: 24,
-          display: "flex",
-          gap: 6,
-          transform: "skewX(-15deg)",
-        }}
-      >
-        {[0, 1, 2, 3, 4].map((idx) => (
-          <div
-            key={idx}
-            style={{
-              width: 4,
-              height: 28,
-              background: idx === 4 ? "#a78bfa" : `rgba(167,139,250,${0.18 + idx * 0.16})`,
-              animation: `satze-v5-float-y 1.6s ${idx * 0.1}s ease-in-out infinite`,
-            }}
-          />
-        ))}
       </div>
 
       <div

@@ -56,6 +56,8 @@ export function useGameState() {
   const [openingPlayerFirst, setOpeningPlayerFirst] = useState(true);
   const [battleResult, setBattleResult] = useState(null);
   const [logs, setLogs] = useState([]);
+  /** Structured battle-log history (last N complete rounds). */
+  const [battleEvents, setBattleEvents] = useState([]);
   
   // Round e vincitori
   const [roundNumber, setRoundNumber] = useState(1);
@@ -188,6 +190,8 @@ export function useGameState() {
     setBattleResult,
     logs,
     setLogs,
+    battleEvents,
+    setBattleEvents,
     
     // Round info
     roundNumber,

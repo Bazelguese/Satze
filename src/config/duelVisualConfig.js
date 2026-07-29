@@ -4,37 +4,40 @@
 // ============================================
 
 /** Incrementa quando cambiano i default di timing (reset override obsoleti in localStorage). */
-export const DUEL_VISUAL_DEFAULTS_VERSION = 3;
+export const DUEL_VISUAL_DEFAULTS_VERSION = 4;
+
+/** Floor ms fase 4 (scontro) dopo clashSpeed — evita scontri troppo brevi. */
+export const DUEL_PHASE4_MIN_MS = 1200;
 
 /** @typedef {typeof DUEL_VISUAL_DEFAULTS} DuelVisualConfig */
 
 export const DUEL_VISUAL_DEFAULTS = {
   /** Durata fase 0 — Schieramento (ms) */
-  phaseMs0: 4500,
+  phaseMs0: 2200,
   /** Fase 0 senza effetti pre-VA da mostrare in fase 1 (passaggio breve) */
-  phaseMs0Empty: 1400,
+  phaseMs0Empty: 700,
   /** Durata fase 1 — Poteri (ms) se nessun effetto da animare (fase saltata) */
-  phaseMs1: 5000,
+  phaseMs1: 2500,
   /** Durata di ogni sub-step potere/bonus in fase 1 (ms) */
-  effectStepMs: 1800,
+  effectStepMs: 900,
   /** Buffer dopo l'ultimo sub-step effetti prima della fase 2 (ms) */
-  effectPhaseBufferMs: 1000,
+  effectPhaseBufferMs: 400,
   /** Intervallo tra ogni focus coin in fase 2 (ms) — riferimento per easing lento→veloce */
-  focusCoinStepMs: 650,
+  focusCoinStepMs: 380,
   /** Moltiplicatore intervallo prima moneta (inizio lento) */
-  focusCoinEaseSlowMul: 1.85,
+  focusCoinEaseSlowMul: 1.55,
   /** Moltiplicatore intervallo ultima moneta (finale veloce) */
-  focusCoinEaseFastMul: 0.25,
+  focusCoinEaseFastMul: 0.35,
   /** Buffer aggiunto dopo l’ultimo focus coin prima della fase 3 (ms) */
-  focusPhaseBufferMs: 900,
+  focusPhaseBufferMs: 350,
   /** Durata fase 3 — Calcolo VA (ms) */
-  phaseMs3: 2400,
+  phaseMs3: 1100,
   /** Fase 3 senza mod VA né clamp al minimo: passaggio rapido (ms) */
-  phaseMs3Empty: 500,
+  phaseMs3Empty: 280,
   /** Durata fase 4 — Scontro (ms) */
   phaseMs4: 2200,
   /** Durata fase 5 — Risultato prima del pulsante (ms) */
-  phaseMs5: 1800,
+  phaseMs5: 900,
   /** Tick animazione arcobaleno / diamante (ms tra un frame e l’altro) */
   rainbowIntervalMs: 50,
   /** Incremento `rainbowTime` per tick */
@@ -44,11 +47,11 @@ export const DUEL_VISUAL_DEFAULTS = {
   rainbowHueMul13: 120,
   rainbowHueMul14: 180,
   /** Pausa dopo animazione clash su “Continua” (ms) */
-  nextRoundClashHoldMs: 1000,
+  nextRoundClashHoldMs: 500,
   /** Transizione zoom pannelli duello (ms) */
-  zoomTransitionMs: 1500,
+  zoomTransitionMs: 900,
   /** Ritardo transizione quando si attiva lo zoom (ms) */
-  zoomDelayMs: 400,
+  zoomDelayMs: 180,
 };
 
 export const DUEL_VISUAL_STORAGE_KEY = 'satze_duel_vfx';

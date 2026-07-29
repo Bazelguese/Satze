@@ -1,13 +1,13 @@
 /** Tempi dialogue nel duello dev (DIALOGUE DUELLO). */
 
 /** ms per carattere (typewriter). */
-export const DIALOGUE_CHAR_MS = 52;
+export const DIALOGUE_CHAR_MS = 36;
 
 /** Pausa tra una riga e la successiva. */
-export const DIALOGUE_PAUSE_MS = 2600;
+export const DIALOGUE_PAUSE_MS = 1600;
 
 /** Ritardo default prima del fumetto (fasi > 0). */
-export const DIALOGUE_PHASE_START_DELAY_MS = 800;
+export const DIALOGUE_PHASE_START_DELAY_MS = 400;
 
 /** Ritardo entrata: immediato (evita cancellazione al cambio fase). */
 export const DIALOGUE_ENTRADA_DELAY_MS = 0;

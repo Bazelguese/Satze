@@ -54,6 +54,9 @@ export const EFFECT_NAMES = {
   attrition: 'Attrition',
   inversion: 'Inversione',
   toxin: 'Tossina',
+  imponiPower: 'Imponi POT',
+  imponiDamage: 'Imponi DAN',
+  enemyPowerAndDamage: '-POT e DAN nem.',
 };
 
 const ARMY_KEY_BY_NAME = {
@@ -67,6 +70,7 @@ const ARMY_KEY_BY_NAME = {
   'Ratti della Megera': 'ratti',
   'Patto degli Indocili': 'indocili',
   Khemet: 'khemet',
+  Apex: 'apex',
 };
 
 function roleFromStats(pot, dan) {

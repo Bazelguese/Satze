@@ -78,6 +78,14 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
       .catch(() => {});
   }, []);
 
+  const leaveCurrentRoomIfAny = () => {
+    const mgr = getMultiplayerManager();
+    const saved = readMpSession();
+    if (saved?.roomCode && mgr.isConnected()) {
+      mgr.send({ type: 'leave_room', roomCode: saved.roomCode });
+    }
+  };
+
   const connectAndCreate = async () => {
     if (!playerName.trim()) {
       setErrorMessage('Inserisci un nome giocatore');
@@ -86,6 +94,7 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
     setIsConnecting(true);
     setErrorMessage('');
     const mgr = getMultiplayerManager();
+    leaveCurrentRoomIfAny();
     if (mgr.isConnected()) mgr.disconnect({ intentional: true });
     try {
       const url = await resolveMultiplayerWsUrl();
@@ -119,6 +128,7 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
     setIsConnecting(true);
     setErrorMessage('');
     const mgr = getMultiplayerManager();
+    leaveCurrentRoomIfAny();
     if (mgr.isConnected()) mgr.disconnect({ intentional: true });
     try {
       const url = await resolveMultiplayerWsUrl();

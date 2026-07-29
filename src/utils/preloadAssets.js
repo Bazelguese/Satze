@@ -17,11 +17,17 @@ function resolveUrl(path) {
   if (path.startsWith('data:')) return null; // base64, non preload
   const base = getBaseUrl();
   // Path già relativi (./) per Electron: usa così com'è se base è ./
-  const full = path.startsWith('/')
-    ? `${base}${path.slice(1)}`
-    : path.startsWith('./') && (base === './' || base === '.')
-      ? path
-      : `${base}${path}`;
+  // In browser (base `/`) normalizza `./campi_bg/...` → `/campi_bg/...`
+  let full;
+  if (path.startsWith('/')) {
+    full = `${base}${path.slice(1)}`;
+  } else if (path.startsWith('./') && (base === './' || base === '.')) {
+    full = path;
+  } else if (path.startsWith('./')) {
+    full = `${base}${path.slice(2)}`;
+  } else {
+    full = `${base}${path}`;
+  }
   return full.replace(/\/+/g, '/').replace(/\.\/\.\//g, './');
 }
 

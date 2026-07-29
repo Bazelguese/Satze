@@ -1,0 +1,38 @@
+---
+description: Source of truth for the in-match duel layout — never invent a fake duel UI
+alwaysApply: true
+---
+
+# SATZE Duel Layout — Source of Truth
+
+When the user says **duello**, **layout del duello**, **replicare il duello**, **schermata di scontro**, or similar, they mean the **production in-match UI**, not a lab or prototype.
+
+## Source of truth (mandatory)
+
+1. **Composition**: `Codice/satze.jsx` — section starting at `// Schermata di gioco` (1920×1080 canvas).
+2. **Shell**: `src/components/GameViewport.jsx` → `SatzeGame`.
+3. **Layout numbers**: `src/config/duelClashLayout.js`, `src/config/battlefieldHandLayout.js`.
+4. **Widgets already used there**: `Battlefield*`, `MiniBattlefield`, `Hand`/`GameCard`/`CardReworkP4`, `StatsPanel`, `LogPanel`, `FocusCoinSelector`, `DuelResultDuelBodies`, `DuelClashAuroraSequence`.
+5. **Chrome/CSS**: `src/index-graphics-prova.css` (`.satze-hud-panel`), duel parts of `src/index.css`, `src/theme/hudOratorioPalette.js`.
+6. **Official skin (2.5D / Strappo)**: `src/styles/satze-duello-2_5d.css` + scene classes `satze-scene dep-2 mov-1 sty-a imp-center` and `imp-*` / `dep-*` markers on existing nodes in `satze.jsx`. Skin only — do not invent a parallel layout.
+7. **Cinematics (duello2)**: `src/styles/satze-duello-animazioni.css` + `src/styles/satze-duello-ingresso-carta.css` via `DuelCinematicOverlays` / place-fx / `imp-row-reveal`.
+
+## Distractors (never treat as “the duel”)
+
+- `src/components/duelVfxLab/**`, StyleLab / DialogueLab / other `?…Lab=` tools
+- `satze-design-system/**/duel*`
+- `Documentazione/Rework_Ui/duello/**` and design canvases
+- Zip/handoff docs except as install notes for the CSS already in `src/styles/satze-duello-2_5d.css`
+- Any new mock HUD “inspired by” the duel
+
+## Hard rules
+
+- **Reuse / extract / mirror** the production composition. Do **not** redesign a parallel duel screen.
+- If a preview is needed outside the match, mount the **same** widgets and coordinates; do not invent a new layout.
+- `MiniBattlefield` = tabellone chips only, not the full duel stage.
+- Clash tools may reuse `DuelClashAuroraSequence`; they are **not** the full duel layout.
+- Before building UI for “il duello”, open `Codice/satze.jsx` at `Schermata di gioco` and follow that tree.
+
+## Regions of the real duel (checklist)
+
+Full-bleed field BG · left anteprima column · right tabellone/log/FC column · enemy/player hand triangles · center `BattlefieldPanel` · agent panels (clash anchors) · Aurora clash overlay · `StatsPanel` · round chrome.

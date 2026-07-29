@@ -1,6 +1,7 @@
 import React from 'react';
 import { ARMY_COLORS } from '../../data';
 import { FIELD_STYLES } from '../../utils/constants';
+import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
 
 /**
  * Componente campo di battaglia compatto
@@ -31,19 +32,21 @@ export const MiniBattlefield = ({
     );
   }
   
-  // Colori conquista: accent identità esercito (fusione) se fornito, altrimenti armata vincitrice
+  // Colore esercito (identità mazzo), non dell'agente singolo che ha vinto il duello
+  const conquestAccent = conquered
+    ? (conqueredAccent || ARMY_COLORS[conqueredBy]?.accent || null)
+    : null;
+
   const getConqueredStyle = () => {
-    if (!conquered) return {};
-    const accent = conqueredAccent || ARMY_COLORS[conqueredBy]?.accent;
-    if (!accent) return {};
+    if (!conquestAccent) return {};
     return {
-      borderColor: accent,
-      backgroundColor: `${accent}20`,
+      borderColor: conquestAccent,
     };
   };
   
   const conqueredStyle = getConqueredStyle();
   const fieldStyle = FIELD_STYLES[field.id] || {};
+  const bgUrl = field?.bgImage ? resolvePublicAssetUrl(field.bgImage) || field.bgImage : null;
   
   return (
     <div
@@ -64,11 +67,23 @@ export const MiniBattlefield = ({
       `}
       style={conquered ? conqueredStyle : {}}
     >
-      {/* Sfondo gradiente del campo */}
-      <div 
-        className="absolute inset-0 opacity-60"
-        style={{ background: fieldStyle.gradient || 'linear-gradient(135deg, #1a1a2e, #2a2a4e)' }}
-      />
+      {/* Immagine campo (fallback: gradiente) */}
+      {bgUrl ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(90deg, rgba(8,10,18,0.55) 0%, rgba(8,10,18,0.25) 55%, rgba(8,10,18,0.45) 100%), url(${bgUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: conquered ? 0.85 : 1,
+          }}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{ background: fieldStyle.gradient || 'linear-gradient(135deg, #1a1a2e, #2a2a4e)' }}
+        />
+      )}
       {/* Glow accent */}
       <div 
         className="absolute inset-0 opacity-30"
@@ -76,6 +91,17 @@ export const MiniBattlefield = ({
           background: `radial-gradient(ellipse at 20% 50%, ${fieldStyle.glow || 'rgba(100,100,100,0.3)'} 0%, transparent 70%)`
         }}
       />
+      {/* Pannello colore esercito conquistatore — tra immagine e testo */}
+      {conquered && conquestAccent && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 5,
+            background: `linear-gradient(90deg, ${conquestAccent}cc 0%, ${conquestAccent}99 45%, ${conquestAccent}66 100%)`,
+          }}
+          aria-hidden
+        />
+      )}
       {/* Contenuto */}
       <div className="flex-1 min-w-0 relative z-10">
         <h3 

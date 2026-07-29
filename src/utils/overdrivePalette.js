@@ -12,6 +12,7 @@ const ARMY_OVERDRIVE_COMPANIONS = {
   'Ratti della Megera': { secondary: '#34d399', tertiary: '#a7f3d0' },
   'Patto degli Indocili': { secondary: '#a855f7', tertiary: '#f472b6' },
   Khemet: { secondary: '#8b5cf6', tertiary: '#3b82f6' },
+  Apex: { secondary: '#94a3b8', tertiary: '#cbd5e1' },
 };
 
 const FALLBACK = { accent: '#ef4444', secondary: '#fb923c', tertiary: '#fbbf24' };

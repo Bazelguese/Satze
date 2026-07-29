@@ -3,7 +3,7 @@
 // Schermata elenco eserciti personalizzati — stesso carosello cinematic del duello
 // ============================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getDeckVisualMeta } from '../../utils/deckManager';
 import { ARMY_SETS, ARMY_COLORS } from '../../data';
@@ -39,7 +39,7 @@ function buildCustomDeckGameOptions() {
 }
 
 export function DeckManagerListScreen({ onEditDeck, onCreateNew, onClose, renderInPortal = true }) {
-  const gameDeckOptions = useMemo(() => buildCustomDeckGameOptions(), []);
+  const gameDeckOptions = buildCustomDeckGameOptions();
   const [previewDeckData, setPreviewDeckData] = useState(null);
 
   const openEdit = (deckKey) => {

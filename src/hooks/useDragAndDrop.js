@@ -73,7 +73,7 @@ export function useDragAndDrop({
     if (!draggingCard) return;
     
     if (isOverDropZone && onAgentSelect) {
-      onAgentSelect(draggingCard);
+      onAgentSelect(draggingCard, 'drop');
     } else if (selectedAgent?.id === draggingCard?.id && onAgentSelect) {
       onAgentSelect(null);
     }

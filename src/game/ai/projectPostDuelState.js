@@ -152,10 +152,15 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
     playerFieldsConquered,
     enemyFieldsConquered,
 
-    // Tossina: se attivata nel battleResult, proietta oggetto; altrimenti conserva
+    // Tossina post-applicazione (può scadere sotto minHealth); fallback a attivazione/stato
     playerToxin:
-      simulation?.battleResult?.playerToxinActivated ?? strategicState.playerToxin,
-    aiToxin: simulation?.battleResult?.enemyToxinActivated ?? strategicState.aiToxin,
+      simulation?.playerToxinAfter !== undefined
+        ? simulation.playerToxinAfter
+        : (simulation?.battleResult?.playerToxinActivated ?? strategicState.playerToxin),
+    aiToxin:
+      simulation?.aiToxinAfter !== undefined
+        ? simulation.aiToxinAfter
+        : (simulation?.battleResult?.enemyToxinActivated ?? strategicState.aiToxin),
 
     _refs: strategicState._refs,
     terminalStatus: simulation?.terminalStatus || null,

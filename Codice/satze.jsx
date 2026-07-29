@@ -9,8 +9,17 @@ import { getCardTags } from '../src/data/cardTags';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
+import {
+  DuelRound5Overlay,
+  DuelWinOverlay,
+  DuelLoseOverlay,
+  useDuelOutcomeOverlay,
+  getDuelOutcomeSubtitle,
+  DUEL_OV_DUR,
+  DUEL_R5_VICTORY_FLIP_MS,
+} from '../src/components/battle/DuelCinematicOverlays';
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
-import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, markCampaignMissionStarted } from '../src/data';
+import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, markCampaignMissionStarted, ARMY_ICONS } from '../src/data';
 import { loadCampaignProgress } from '../src/data/campaign';
 import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLogic.js';
 import { applyToxin } from '../src/game/toxinLogic';
@@ -54,7 +63,7 @@ import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
-import { DISPLAY_SETTINGS_CHANGED_EVENT } from '../src/settings/displaySettings';
+import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings, resolveDuelLayoutBreathClass } from '../src/settings/displaySettings';
 import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
 import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
 import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
@@ -84,6 +93,9 @@ import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
 import { getDuelVisualConfig } from '../src/config/duelVisualConfigStore.js';
 import { DUEL_VFX_CHANGED_EVENT } from '../src/config/duelVisualConfig.js';
 import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps, computeFocusCoinAppearDelayMs, getNextDuelPhase, syncDuelVisualsForPhase } from '../src/config/duelVisualTimeline.js';
+import { keepLastRounds } from '../src/game/duel/battleEventSelectors.js';
+import { BATTLE_EVENT_TYPES, createBattleEventEmitter } from '../src/game/duel/battleEventTypes.js';
+import { createBattleLogChannel, emitInfo } from '../src/game/duel/battleEventEmit.js';
 import { countDuelEffectSteps, countDuelPostEffectSteps } from '../src/game/duel/duelVisualSteps.js';
 import { DUEL_VISUAL_DEFAULTS } from '../src/config/duelVisualConfig.js';
 import { useSafeDuelEffectStep } from '../src/components/battle/useSafeDuelEffectStep.js';
@@ -146,6 +158,7 @@ export default function SatzeGame() {
     openingPlayerFirst, setOpeningPlayerFirst,
     battleResult, setBattleResult,
     logs, setLogs,
+    battleEvents, setBattleEvents,
     roundNumber, setRoundNumber,
     lastWinner, setLastWinner,
     revealedFields, setRevealedFields,
@@ -198,6 +211,14 @@ export default function SatzeGame() {
       ?? getHandAccentColor(enemyHand, ARMY_COLORS, '#D946EF'),
     [enemyHand, enemyDeckVisual?.accent],
   );
+  const outcomeOverlayKind = useDuelOutcomeOverlay(gamePhase, gameResult);
+  /** Sigilli esito: fino a 2 armate del mazzo giocatore (doppia armata). */
+  const playerArmySealSrcs = useMemo(() => {
+    const armies = playerDeckVisual?.armies?.length
+      ? playerDeckVisual.armies
+      : [...new Set((playerHand || []).map((c) => c?.army).filter(Boolean))].slice(0, 2);
+    return armies.map((army) => ARMY_ICONS[army]).filter(Boolean);
+  }, [playerDeckVisual?.armies, playerHand]);
 
   useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot });
 
@@ -292,6 +313,9 @@ export default function SatzeGame() {
   }, [setHoveredCard, setHoveredField]);
   // Tilt Tabellone: una volta che il cursore ci passa sopra, si ferma e non riparte
   const [tabelloneTiltDismissed, setTabelloneTiltDismissed] = useState(false);
+  /** Indice riga tabellone appena rivelata (animazione imp-row-reveal). */
+  const [justRevealedFieldIdx, setJustRevealedFieldIdx] = useState(-1);
+  const prevRevealedFieldsRef = useRef(null);
   
   // Stato per modal carta ingrandita nella galleria
   const [selectedCardForModal, setSelectedCardForModal] = useState(null);
@@ -349,6 +373,10 @@ export default function SatzeGame() {
     rainbowTime, setRainbowTime,
   } = animations;
 
+  /** Round 5: tiene la vecchia condizione finché non parte il flip reveal. */
+  const [victoryCondFx, setVictoryCondFx] = useState(/** @type {null | 'hold' | 'reveal'} */ (null));
+  const r5VictoryTimersRef = useRef([]);
+
   const [duelVfxRev, setDuelVfxRev] = useState(0);
   useEffect(() => {
     const on = () => setDuelVfxRev((r) => r + 1);
@@ -364,6 +392,10 @@ export default function SatzeGame() {
     [duelVfxRev],
   );
   const vfxProfile = useMemo(() => getVfxQualityProfile(), [duelVfxRev]);
+  const duelLayoutBreathClass = useMemo(
+    () => resolveDuelLayoutBreathClass(getDisplaySettings(), { isResult: gamePhase === 'result' }),
+    [duelVfxRev, gamePhase],
+  );
 
   const { visualEffectStep, advanceEffectStep } = useSafeDuelEffectStep(
     duelPhase,
@@ -373,16 +405,21 @@ export default function SatzeGame() {
 
   // Hook per la logica di battaglia
   const { resolveBattle } = useBattle(gameState, animations);
+
+  // Hook per l'IA (prima di useGameFlow: serve clearPendingDecision al reset/start)
+  const ai = useAI(gameState);
   
   // Hook per il flusso del gioco
-  const gameFlow = useGameFlow(gameState, animations);
-  const { startOnlineMatch } = gameFlow;
+  const gameFlow = useGameFlow(gameState, animations, ai.clearPendingDecision);
+  const { startOnlineMatch, resetToMenu } = gameFlow;
 
   const isOnlinePvP = aiDifficulty === 'multiplayer';
 
   const [onlineLocalReady, setOnlineLocalReady] = useState(false);
   const [onlinePeerDeck, setOnlinePeerDeck] = useState(null);
   const [onlinePeerName, setOnlinePeerName] = useState(null);
+  /** true dopo un rematch nella stessa stanza (solo UI) */
+  const [onlineRematchActive, setOnlineRematchActive] = useState(false);
   const [pendingGuestMatch, setPendingGuestMatch] = useState(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
@@ -412,6 +449,8 @@ export default function SatzeGame() {
   const onlineMatchStartedRef = useRef(false);
   const playtestAutoSavedRef = useRef(false);
   const multiplayerSessionRef = useRef(multiplayerSession);
+  /** Impostato dopo applyOnlineRematch — usato dal relay rematch */
+  const applyOnlineRematchRef = useRef(/** @type {null | ((mode: 'same' | 'change') => void)} */ (null));
   useEffect(() => {
     multiplayerSessionRef.current = multiplayerSession;
   }, [multiplayerSession]);
@@ -467,6 +506,9 @@ export default function SatzeGame() {
       if (p.type === 'match_start' && p.match) {
         setPendingGuestMatch(p.match);
       }
+      if (p.type === 'rematch') {
+        applyOnlineRematchRef.current?.(p.mode === 'change' ? 'change' : 'same');
+      }
       if (p.type === 'claim_decision') {
         setIncomingClaimDecision(p);
       }
@@ -512,7 +554,13 @@ export default function SatzeGame() {
     return () => clearTimeout(t);
   }, [mpConnectionLost, mpReconnecting, attemptMpSelfReconnect]);
 
-  const abandonMultiplayerSession = useCallback(() => {
+  /** Chiude stanza lato server + pulisce stato locale (senza cambiare gamePhase). */
+  const cleanupMultiplayerSession = useCallback(() => {
+    const s = multiplayerSessionRef.current;
+    const mgr = getMultiplayerManager();
+    if (s?.roomCode && mgr.isConnected()) {
+      mgr.send({ type: 'leave_room', roomCode: s.roomCode });
+    }
     setMpConnectionLost(false);
     setMpOpponentAway(false);
     setMpReconnectError('');
@@ -523,12 +571,101 @@ export default function SatzeGame() {
     setOpponentClaimPending(null);
     setIncomingClaimDecision(null);
     forceContinueAfterClaimRef.current = false;
+    setOnlineLocalReady(false);
+    setOnlinePeerDeck(null);
+    setOnlinePeerName(null);
+    setOnlineRematchActive(false);
     setMultiplayerSession(null);
     setIsMultiplayer(false);
     clearMpSession();
-    getMultiplayerManager().disconnect({ intentional: true });
+    mgr.disconnect({ intentional: true });
+  }, [setMultiplayerSession, setIsMultiplayer]);
+
+  const abandonMultiplayerSession = useCallback(() => {
+    cleanupMultiplayerSession();
     setGamePhase('menu');
-  }, [setMultiplayerSession, setIsMultiplayer, setGamePhase]);
+  }, [cleanupMultiplayerSession, setGamePhase]);
+
+  /** Prepara un rematch online nella stessa stanza (stesso mazzo o cambio mazzo). */
+  const applyOnlineRematch = useCallback((mode) => {
+    const keepDeck = mode !== 'change';
+    aiThinkGenerationRef.current += 1;
+    if (aiAgentThinkTimerRef.current) {
+      clearTimeout(aiAgentThinkTimerRef.current);
+      aiAgentThinkTimerRef.current = null;
+    }
+    aiHasSelectedAgent.current = false;
+    setPlayerConfirmedAwaitingAI(false);
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    ai.clearPendingDecision();
+    clearCardPreview();
+    setSelectedAgent(null);
+    setEnemyAgent(null);
+    setEnemySelectedFocus(1);
+    setSelectedFocus(1);
+    setCurrentFieldIndex(null);
+    setBattleResult(null);
+    setGameResult(null);
+    setShowClaimVictoryChoice(null);
+    setOpponentClaimPending(null);
+    setIncomingClaimDecision(null);
+    forceContinueAfterClaimRef.current = false;
+    setIncomingPeerMoveQueue([]);
+    setPendingGuestMatch(null);
+    setOnlineLocalReady(false);
+    setOnlinePeerDeck(null);
+    onlineMatchStartedRef.current = false;
+    setShuffleDealSetup(null);
+    setMpOpponentAway(false);
+    setOnlineOpponentLeft(false);
+    setOnlineRematchActive(true);
+
+    if (keepDeck && selectedArmy && selectedDeckKey) {
+      setGamePhase('onlineDeckReady');
+      return;
+    }
+    setGamePhase('selectArmy');
+  }, [
+    ai,
+    clearCardPreview,
+    selectedArmy,
+    selectedDeckKey,
+    setSelectedAgent,
+    setEnemyAgent,
+    setEnemySelectedFocus,
+    setSelectedFocus,
+    setCurrentFieldIndex,
+    setBattleResult,
+    setGameResult,
+    setShowClaimVictoryChoice,
+    setShuffleDealSetup,
+    setGamePhase,
+  ]);
+
+  applyOnlineRematchRef.current = applyOnlineRematch;
+
+  const requestOnlineRematch = useCallback((mode) => {
+    if (!multiplayerSession?.roomCode) return;
+    if (onlineOpponentLeft || mpConnectionLost) {
+      alert("L'avversario non è più connesso. Torna al menu e crea una nuova stanza.");
+      return;
+    }
+    if (!getMultiplayerManager().isConnected()) {
+      alert('Connessione al server multiplayer assente. Usa «Riconnetti» se compare, altrimenti torna al menu.');
+      return;
+    }
+    getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
+      type: 'rematch',
+      mode: mode === 'change' ? 'change' : 'same',
+    });
+    applyOnlineRematch(mode === 'change' ? 'change' : 'same');
+  }, [
+    multiplayerSession?.roomCode,
+    onlineOpponentLeft,
+    mpConnectionLost,
+    applyOnlineRematch,
+  ]);
 
   useEffect(() => {
     if (!pendingGuestMatch || multiplayerSession?.role !== 'guest') return;
@@ -536,6 +673,7 @@ export default function SatzeGame() {
     try {
       startOnlineMatch('guest', pendingGuestMatch);
       setPendingGuestMatch(null);
+      setOnlineRematchActive(false);
     } catch (e) {
       console.error('[multiplayer] avvio partita guest:', e);
       alert(
@@ -554,6 +692,7 @@ export default function SatzeGame() {
     }
     onlineMatchStartedRef.current = true;
     try {
+      setOnlineRematchActive(false);
       const seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
       const guestDeckSource =
         Array.isArray(onlinePeerDeck.deckCardIds) && onlinePeerDeck.deckCardIds.length
@@ -589,15 +728,16 @@ export default function SatzeGame() {
     setGamePhase,
   ]);
   
-  // Hook per l'IA
-  const ai = useAI(gameState);
-  
   // Hook per il tutorial
   const tutorial = useTutorial();
   const [playerConfirmedAwaitingAI, setPlayerConfirmedAwaitingAI] = useState(false);
   
   // Ref per tracciare se l'IA ha già selezionato l'agente in questo round
   const aiHasSelectedAgent = useRef(false);
+  /** Timer pensiero IA dopo conferma giocatore (player-first): va cancellato su Menu/reset. */
+  const aiAgentThinkTimerRef = useRef(null);
+  /** Incrementato a ogni reset/menu/round: invalida timeout pensiero IA orfani. */
+  const aiThinkGenerationRef = useRef(0);
   const guidedEnemyDeployTimerRef = useRef(null);
   const guidedEnemyDeployScheduledRef = useRef(false);
   const fcPanelRef = useRef(null);
@@ -1053,7 +1193,8 @@ export default function SatzeGame() {
     setEnemySelectedFocus(enemyFocusScripted);
     setLogs((prev) => [
       ...prev.slice(-80),
-      `[R${roundNumber}] Guida: il nemico schiera ${scriptedEnemy.name} (${enemyFocusScripted} FC).`,
+      // FC investiti: solo in phaseLogs.phase2
+      `[R${roundNumber}] Guida: il nemico schiera ${scriptedEnemy.name}.`,
     ]);
   }, [
     currentGuidedRound,
@@ -1080,7 +1221,17 @@ export default function SatzeGame() {
       const fieldIdx = currentGuidedRound.fieldIndex;
       const fieldName = battlefields[fieldIdx]?.name || `Campo ${fieldIdx + 1}`;
       setCurrentFieldIndex(fieldIdx);
-      setLogs((prev) => [...prev.slice(-20), `[R${roundNumber}] L'IA sceglie: ${fieldName}`]);
+      setBattleEvents((prev) => {
+        const emitter = createBattleEventEmitter(roundNumber);
+        const ch = createBattleLogChannel(emitter, { dualStrings: false });
+        emitInfo(ch, {
+          phase: 'preDuel',
+          revealAt: 'deploy',
+          infoCode: 'opponentFieldChosen',
+          data: { fieldName },
+        });
+        return keepLastRounds([...prev, ...emitter.events], 10);
+      });
       setGuidedPause(null);
       setGamePhase('selectAgent');
       return;
@@ -1268,7 +1419,20 @@ export default function SatzeGame() {
   }, [gamePhase, selectedAgent, playerFocus, playerHand, playerUsedCards, setSelectedFocus]);
 
   // Hook per drag and drop
-  const handleAgentSelect = useCallback((agent) => {
+  const [agentPlaceFx, setAgentPlaceFx] = useState('rise'); // rise = click, slam = drag&drop
+  const [enemyPlaceFx, setEnemyPlaceFx] = useState('rise');
+  const prevEnemyAgentIdRef = useRef(null);
+
+  // Ingresso agente nemico: tonfo se sceglie per primo, emersione se risponde dopo il giocatore
+  useEffect(() => {
+    const id = enemyAgent?.id ?? null;
+    if (id && id !== prevEnemyAgentIdRef.current) {
+      setEnemyPlaceFx(isPlayerFirst ? 'rise' : 'slam');
+    }
+    prevEnemyAgentIdRef.current = id;
+  }, [enemyAgent?.id, isPlayerFirst]);
+
+  const handleAgentSelect = useCallback((agent, via = 'click') => {
     if (
       guidedMatch.active &&
       !guidedMatch.freePlay &&
@@ -1280,6 +1444,9 @@ export default function SatzeGame() {
       return;
     }
     setGuidedHint('');
+    if (agent) {
+      setAgentPlaceFx(via === 'drop' ? 'slam' : 'rise');
+    }
     setSelectedAgent((prev) => (prev?.id === agent?.id ? null : agent));
   }, [guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, setSelectedAgent, setGuidedHint]);
 
@@ -1320,6 +1487,22 @@ export default function SatzeGame() {
   const addLog = (message) => {
     setLogs(prev => [...prev.slice(-200), `[R${roundNumber}] ${message}`]);
   };
+
+  // Commit structured duel events once per resolved battleResult.
+  const committedBattleResultRef = useRef(null);
+  useEffect(() => {
+    if (!battleResult?.events?.length) return;
+    if (committedBattleResultRef.current === battleResult) return;
+    if (gamePhase !== 'result') return;
+    if (duelPhase < 5) return;
+    committedBattleResultRef.current = battleResult;
+    setBattleEvents((prev) => {
+      const round = battleResult.events[0]?.round;
+      const withoutRound = round == null ? prev : prev.filter((e) => e.round !== round);
+      return keepLastRounds([...withoutRound, ...battleResult.events], 10);
+    });
+  }, [battleResult, gamePhase, duelPhase, setBattleEvents]);
+
   
   // Helper per calcolare se il bonus armata sarà attivo (per preview durante selectAgent)
   const isBonusTriggerSatisfied = useCallback((army, isPlayer, agent = null) => {
@@ -1406,6 +1589,15 @@ export default function SatzeGame() {
 
   // IA helper functions (usate in confirmPlayerChoice quando il giocatore inizia)
 
+  // Ref stabili: le callback di useAI cambiano identità a ogni gameState e
+  // non devono riarmare/cancellare i timer di pensiero IA.
+  const selectEnemyFieldRef = useRef(ai.selectEnemyField);
+  const selectEnemyAgentAndFocusRef = useRef(ai.selectEnemyAgentAndFocus);
+  const getThinkingTimeRef = useRef(ai.getThinkingTime);
+  selectEnemyFieldRef.current = ai.selectEnemyField;
+  selectEnemyAgentAndFocusRef.current = ai.selectEnemyAgentAndFocus;
+  getThinkingTimeRef.current = ai.getThinkingTime;
+
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
   useEffect(() => {
     if (isOnlinePvP) return;
@@ -1414,20 +1606,36 @@ export default function SatzeGame() {
     if (isGuidedScripted) return;
 
     if (gamePhase === 'selectField' && !isPlayerFirst && battlefields.length > 0) {
-      const delay = ai.getThinkingTime?.() ?? 2000;
+      let cancelled = false;
+      const delay = getThinkingTimeRef.current?.() ?? 2000;
       const timer = setTimeout(() => {
+        if (cancelled) return;
         const available = battlefields.filter((_, i) => !(i in conqueredFields) && i < revealedFields);
         if (available.length > 0) {
-          let fieldIdx = ai.selectEnemyField?.();
+          let fieldIdx = selectEnemyFieldRef.current?.();
           if (fieldIdx == null || fieldIdx < 0 || !(fieldIdx in battlefields) || (fieldIdx in conqueredFields) || fieldIdx >= revealedFields) {
             fieldIdx = battlefields.indexOf(available[0]);
           }
+          if (cancelled) return;
           setCurrentFieldIndex(fieldIdx);
-          setLogs(prev => [...prev.slice(-20), `[R${roundNumber}] L'IA sceglie: ${battlefields[fieldIdx].name}`]);
+          setBattleEvents((prev) => {
+            const emitter = createBattleEventEmitter(roundNumber);
+            const ch = createBattleLogChannel(emitter, { dualStrings: false });
+            emitInfo(ch, {
+              phase: 'preDuel',
+              revealAt: 'deploy',
+              infoCode: 'opponentFieldChosen',
+              data: { fieldName: battlefields[fieldIdx].name, fieldId: battlefields[fieldIdx]?.id },
+            });
+            return keepLastRounds([...prev, ...emitter.events], 10);
+          });
           setGamePhase('selectAgent');
         }
       }, delay);
-      return () => clearTimeout(timer);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
   }, [
     gamePhase,
@@ -1436,8 +1644,6 @@ export default function SatzeGame() {
     conqueredFields,
     revealedFields,
     roundNumber,
-    ai.getThinkingTime,
-    ai.selectEnemyField,
     isOnlinePvP,
     guidedMatch.active,
     guidedMatch.freePlay,
@@ -1447,10 +1653,21 @@ export default function SatzeGame() {
     setGamePhase,
   ]);
 
-  // Reset tilt Tabellone quando si esce da selectField (per il prossimo round)
+  // Tilt Tabellone: una volta che il cursore ci passa sopra, si ferma e non riparte
   useEffect(() => {
     if (gamePhase !== 'selectField') setTabelloneTiltDismissed(false);
   }, [gamePhase]);
+
+  // Animazione rivelazione nuova riga campo (handoff duello2)
+  useEffect(() => {
+    const prev = prevRevealedFieldsRef.current;
+    prevRevealedFieldsRef.current = revealedFields;
+    if (prev == null || revealedFields <= prev) return undefined;
+    const idx = revealedFields - 1;
+    setJustRevealedFieldIdx(idx);
+    const t = setTimeout(() => setJustRevealedFieldIdx(-1), 900);
+    return () => clearTimeout(t);
+  }, [revealedFields]);
 
   // Anteprima vuota all'apertura di ogni nuovo duello / round / mischia iniziale
   useLayoutEffect(() => {
@@ -1470,21 +1687,40 @@ export default function SatzeGame() {
   }, [gamePhase, enemyAgent]);
   
   // Gestione turno IA - selezione agente (tempo pensiero variabile a discrezione IA)
-  // IMPORTANTE: Usa un ref per evitare selezioni multiple
+  // Non latchare aiHasSelectedAgent prima del timer: se l'effect si riarma
+  // (re-render / cleanup) il flag resterebbe true e l'IA non sceglierebbe più.
   useEffect(() => {
     if (isOnlinePvP) return;
     if (guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound) return;
-    if (gamePhase === 'selectAgent' && !isPlayerFirst && enemyHand.length > 0 && !aiHasSelectedAgent.current) {
-      aiHasSelectedAgent.current = true;
-      const delay = ai.getThinkingTime?.() ?? 2000;
-      const timer = setTimeout(() => {
-        if (!enemyAgent) {
-          ai.selectEnemyAgentAndFocus();
-        }
-      }, delay);
-      return () => clearTimeout(timer);
+    if (gamePhase !== 'selectAgent' || isPlayerFirst || enemyHand.length === 0 || enemyAgent) {
+      return;
     }
-  }, [gamePhase, isPlayerFirst, enemyHand.length, enemyAgent, ai.selectEnemyAgentAndFocus, ai.getThinkingTime, isOnlinePvP, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound]);
+    if (aiHasSelectedAgent.current) return;
+
+    let cancelled = false;
+    const delay = getThinkingTimeRef.current?.() ?? 2000;
+    const timer = setTimeout(() => {
+      if (cancelled || aiHasSelectedAgent.current) return;
+      const result = selectEnemyAgentAndFocusRef.current?.();
+      // Latch solo dopo scelta riuscita: altrimenti un fallimento lascerebbe l'IA bloccata
+      if (result?.agent) {
+        aiHasSelectedAgent.current = true;
+      }
+    }, delay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    gamePhase,
+    isPlayerFirst,
+    enemyHand.length,
+    enemyAgent,
+    isOnlinePvP,
+    guidedMatch.active,
+    guidedMatch.freePlay,
+    currentGuidedRound,
+  ]);
 
   useEffect(() => {
     if (!guidedMatch.active || guidedMatch.freePlay || !currentGuidedRound) return;
@@ -1596,12 +1832,7 @@ export default function SatzeGame() {
       return;
     }
     setGuidedHint('');
-    // Se stiamo cambiando campo (non è la prima selezione), logga il cambio
-    if (currentFieldIndex !== null && currentFieldIndex !== idx) {
-      addLog(`Hai cambiato campo: ${field.name}`);
-    } else if (currentFieldIndex === null) {
-      addLog(`Hai scelto: ${field.name}`);
-    }
+    // Scelta campo locale: già visibile in scena — nessun log.
     setCurrentFieldIndex(idx);
     if (isOnlinePvP && multiplayerSession?.roomCode && isPlayerFirst) {
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
@@ -1775,7 +2006,15 @@ export default function SatzeGame() {
       setPlayerConfirmedAwaitingAI(true);
       aiHasSelectedAgent.current = true;
       const delay = ai.getThinkingTime?.() ?? 2000;
-      setTimeout(() => {
+      if (aiAgentThinkTimerRef.current) {
+        clearTimeout(aiAgentThinkTimerRef.current);
+        aiAgentThinkTimerRef.current = null;
+      }
+      const scheduledGeneration = aiThinkGenerationRef.current;
+      aiAgentThinkTimerRef.current = setTimeout(() => {
+        aiAgentThinkTimerRef.current = null;
+        // Partita abbandonata / nuova partita: non applicare la scelta della sessione precedente
+        if (scheduledGeneration !== aiThinkGenerationRef.current) return;
         ai.selectEnemyAgentAndFocus(false);
       }, delay);
     }
@@ -1826,13 +2065,7 @@ export default function SatzeGame() {
         guidedIntroStage >= INTRO_STAGE_PLAY &&
         guidedPause === 'duel';
       if (isGuidedDuelPaused) return;
-      if (duelPhase <= 4 && battleResult.phaseLogs) {
-        const phaseKey = `phase${duelPhase}`;
-        const phaseLogs = battleResult.phaseLogs[phaseKey] || [];
-        phaseLogs.forEach(log => {
-          addLog(log);
-        });
-      }
+      // Log causale: LogPanel legge battleResult.events filtrati per revealAt/duelPhase.
 
       const effectCount = countDuelEffectSteps(battleResult.visualSteps);
       const phase3SubCount = countDuelPhase3SubSteps(battleResult);
@@ -2099,8 +2332,9 @@ export default function SatzeGame() {
       (typeof f === 'object' && f?.winner === 'enemy') || (typeof f === 'string' && enemyHand.some(c => c.army === f))
     ).length;
 
-    const newPlayerHP = battleResult ? battleResult.finalPlayerHP : playerHP;
-    const newEnemyHP = battleResult ? battleResult.finalEnemyHP : enemyHP;
+    // Usa i PV già aggiornati (duello + tossina a fine turno), non final* pre-tossina
+    const newPlayerHP = currentPlayerHP;
+    const newEnemyHP = currentEnemyHP;
     const annihilationOnly = gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only';
     const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
     const suspendGuidedTerritorialWin = guidedMatch.active && !guidedMatch.freePlay;
@@ -2237,7 +2471,13 @@ export default function SatzeGame() {
     setCurrentFieldIndex(null);
     setBattleResult(null);
     setShowClashAnimation(false);
+    ai.clearPendingDecision();
+    aiThinkGenerationRef.current += 1;
     aiHasSelectedAgent.current = false;
+    if (aiAgentThinkTimerRef.current) {
+      clearTimeout(aiAgentThinkTimerRef.current);
+      aiAgentThinkTimerRef.current = null;
+    }
     setPlayerConfirmedAwaitingAI(false);
     guidedEnemyDeployScheduledRef.current = false;
     if (guidedEnemyDeployTimerRef.current) {
@@ -2261,11 +2501,19 @@ export default function SatzeGame() {
     nextRoundInFlightRef.current = false;
 
     if (nextRoundNum === 5 && playerFields < 3 && enemyFields < 3 && gameMode === 'classic') {
+      r5VictoryTimersRef.current.forEach(clearTimeout);
+      r5VictoryTimersRef.current = [];
+      setVictoryCondFx('hold');
+      // HUD visibile sotto l'overlay (niente fade-out di result) così si vede il flip condizione
+      setGamePhase('selectField');
       setShowFinalRoundAnimation(true);
-      setTimeout(() => {
-        setShowFinalRoundAnimation(false);
-        setGamePhase('selectField');
-      }, 3000);
+      r5VictoryTimersRef.current.push(
+        setTimeout(() => setVictoryCondFx('reveal'), DUEL_R5_VICTORY_FLIP_MS),
+        setTimeout(() => {
+          setVictoryCondFx(null);
+          setShowFinalRoundAnimation(false);
+        }, DUEL_OV_DUR.r5),
+      );
     } else {
       setGamePhase('selectField');
     }
@@ -2488,6 +2736,19 @@ export default function SatzeGame() {
       url.searchParams.set('overdriveLab', '1');
       window.location.href = url.toString();
     };
+    const launchArenaContesa = (playerArmy) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('arenaContesa', '1');
+      if (playerArmy) url.searchParams.set('army', playerArmy);
+      else url.searchParams.delete('army');
+      window.location.href = url.toString();
+    };
+    const arenaContesaArmyMenuChoices = Object.keys(ARMY_SETS).map((playerArmy) => ({
+      label: armyMenuLabel(playerArmy),
+      sub: 'TU',
+      meta: 'GIOCA CONTESA',
+      onClick: () => launchArenaContesa(playerArmy),
+    }));
     const launchShuffleDuelTest = (shuffleKind) => {
       setDevDialogueDuelActive(false);
       setShuffleStyle(shuffleKind);
@@ -2528,6 +2789,12 @@ export default function SatzeGame() {
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
+          {
+            label: 'ARENA CONTESA',
+            sub: 'GIOCA',
+            meta: 'FFA · ARMATA',
+            choices: arenaContesaArmyMenuChoices,
+          },
           {
             label: 'DIALOGUE DUELLO',
             sub: 'TEST',
@@ -2672,7 +2939,10 @@ export default function SatzeGame() {
           onlineMatchStartedRef.current = false;
           setPendingGuestMatch(null);
           setIncomingPeerMoveQueue([]);
+          setOnlineLocalReady(false);
+          setOnlinePeerDeck(null);
           setOnlinePeerName(null);
+          setOnlineRematchActive(false);
           setOpponentClaimPending(null);
           setIncomingClaimDecision(null);
           forceContinueAfterClaimRef.current = false;
@@ -2686,13 +2956,7 @@ export default function SatzeGame() {
           setGamePhase('selectArmy');
         }}
         onClose={() => {
-          setIsMultiplayer(false);
-          setMultiplayerSession(null);
-          onlineMatchStartedRef.current = false;
-          setPendingGuestMatch(null);
-          setIncomingPeerMoveQueue([]);
-          clearMpSession();
-          getMultiplayerManager().disconnect({ intentional: true });
+          cleanupMultiplayerSession();
           setGamePhase('menu');
         }}
       />
@@ -2744,6 +3008,18 @@ export default function SatzeGame() {
         }}
         onBack={() => {
           setCampaignLevel(null);
+          if (multiplayerSession && selectedMode === 'multiplayer') {
+            if (selectedArmy && selectedDeckKey) {
+              setOnlineLocalReady(false);
+              setGamePhase('onlineDeckReady');
+              return;
+            }
+            cleanupMultiplayerSession();
+            setSelectedArmy(null);
+            setSelectedDeckKey(null);
+            setGamePhase('menu');
+            return;
+          }
           setSelectedArmy(null);
           setSelectedDeckKey(null);
           setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
@@ -3081,7 +3357,7 @@ export default function SatzeGame() {
 
     return (
       <MenuScreenLayout
-        title="Partita online"
+        title={onlineRematchActive ? 'Rematch online' : 'Partita online'}
         subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
       >
         <div className="flex flex-col items-center gap-4 max-w-md w-full px-4">
@@ -3180,7 +3456,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-      className={`relative overflow-visible${duelHudDiscovering ? ' duel-hud--discovering' : ''}`}
+      className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -3193,8 +3469,11 @@ export default function SatzeGame() {
         backgroundColor: PALETTE.deepVoid,
         '--duel-reveal-ms': `${DUEL_REVEAL_MS}ms`,
         '--duel-reveal-delay': '0ms',
+        '--acc': playerIdentityColor,
+        '--acc-en': enemyIdentityColor,
       }}
     >
+      <div className="dep-floor" aria-hidden />
       <DuelRevealHudStyles />
       {onlineOpponentLeft && (
         <div
@@ -3209,14 +3488,7 @@ export default function SatzeGame() {
             <button
               type="button"
               onClick={() => {
-                setOnlineOpponentLeft(false);
-                onlineMatchStartedRef.current = false;
-                setPendingGuestMatch(null);
-                setIncomingPeerMoveQueue([]);
-                setMultiplayerSession(null);
-                setIsMultiplayer(false);
-                clearMpSession();
-                getMultiplayerManager().disconnect({ intentional: true });
+                cleanupMultiplayerSession();
                 setGamePhase('menu');
               }}
               className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold"
@@ -3291,7 +3563,7 @@ export default function SatzeGame() {
       {/* COLONNA SINISTRA - z-index 1 */}
       {/* ============================================ */}
       <div 
-        className={`absolute top-0 left-0 flex flex-col p-4 gap-6 justify-end overflow-visible ${
+        className={`absolute top-0 left-0 flex flex-col p-4 gap-6 justify-end overflow-visible imp-colL ${
           'border-r border-slate-600/50'
         } ${
           gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
@@ -3306,9 +3578,7 @@ export default function SatzeGame() {
       >
         {/* Anteprima Carta - inizia a metà colonna */}
         <div 
-          className={`p-3 mb-4 flex flex-col overflow-hidden satze-hide-scrollbar ${
-            'satze-hud-panel'
-          }`} 
+          className={`p-3 mb-4 flex flex-col overflow-hidden satze-hide-scrollbar satze-hud-panel imp-preview`} 
           style={{
             height: '530px',
             fontFamily: HUD_ORATORIO_FONT_UI,
@@ -3474,7 +3744,7 @@ export default function SatzeGame() {
       {/* COLONNA DESTRA - z-index 1 */}
       {/* ============================================ */}
       <div 
-        className={`absolute top-0 right-0 flex flex-col p-4 gap-6 overflow-visible ${
+        className={`absolute top-0 right-0 flex flex-col p-4 gap-6 overflow-visible imp-colR ${
           'border-l border-slate-600/50'
         } ${
           gamePhase === 'result' ? 'animate-fade-out-panels-right pointer-events-none' : ''
@@ -3488,7 +3758,7 @@ export default function SatzeGame() {
       >
         {/* Round e Stato Partita - sopra il tabellone campi (grafica menù principale) */}
         <div 
-          className="p-2 flex-shrink-0 satze-hud-panel"
+          className="p-2 flex-shrink-0 satze-hud-panel imp-topbar"
           style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
         {/* Campi conquistati: IA a sinistra, Tu a destra - colore identità esercito (fusione) */}
@@ -3543,38 +3813,49 @@ export default function SatzeGame() {
             );
           })()}
           {/* Condizione di vittoria */}
+          {(() => {
+            const holdOldVictory = victoryCondFx === 'hold';
+            const showAnnihilate =
+              gameMode !== 'bareHands' && roundNumber >= 5 && !holdOldVictory;
+            return (
           <div 
-            className="px-3 py-2 text-center rounded-xl"
+            className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}`}
             style={{
               background: 'rgba(56, 189, 248, 0.08)',
               border: '1px solid rgba(56, 189, 248, 0.28)',
               boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.35)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
             <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>Condizione di Vittoria</div>
             <div className="text-sm font-bold leading-tight" style={{ color: PALETTE.amber, textShadow: `0 1px 3px #000, 0 0 12px ${PALETTE.amber}44` }}>
               {gameMode === 'bareHands' 
                 ? 'Conquista 3 campi!'
-                : (roundNumber >= 5
+                : (showAnnihilate
                     ? "Annienta il nemico!"
                     : 'Conquista 3 campi!')}
             </div>
-            {gameMode !== 'bareHands' && roundNumber < 5 && (
+            {gameMode !== 'bareHands' && !showAnnihilate && (
               <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
-                Cambierà tra {5 - roundNumber} turn{5 - roundNumber === 1 ? 'o' : 'i'}
+                {holdOldVictory
+                  ? 'Sta per cambiare…'
+                  : `Cambierà tra ${5 - roundNumber} turn${5 - roundNumber === 1 ? 'o' : 'i'}`}
               </div>
             )}
-            {gameMode !== 'bareHands' && roundNumber >= 5 && (
+            {gameMode !== 'bareHands' && showAnnihilate && (
               <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
                 (Vince chi alla fine del turno ha più PV)
               </div>
             )}
           </div>
+            );
+          })()}
         </div>
 
         {/* Tabellone Campi */}
         <div 
-          className={`p-2 -mt-4 flex flex-col h-[300px] satze-hud-panel ${gamePhase === 'selectField' && isPlayerFirst && !tabelloneTiltDismissed && !guidedMatch.active ? 'animate-satze-tabellone-tilt' : ''} ${isGuidedIntroBattlefieldsPhase ? 'animate-satze-guided-twinkle' : ''}`} 
+          className={`p-2 -mt-4 flex flex-col h-[300px] satze-hud-panel imp-board imp-fields ${gamePhase === 'selectField' && isPlayerFirst && !tabelloneTiltDismissed && !guidedMatch.active ? 'animate-satze-tabellone-tilt' : ''} ${isGuidedIntroBattlefieldsPhase ? 'animate-satze-guided-twinkle' : ''}`} 
           onMouseEnter={() => setTabelloneTiltDismissed(true)}
           style={{
             fontFamily: HUD_ORATORIO_FONT_UI,
@@ -3602,29 +3883,46 @@ export default function SatzeGame() {
                 !(idx in conqueredFields) && 
                 idx < revealedFields &&
                 (gamePhase === 'selectField' || gamePhase === 'selectAgent');
+              const locked = idx >= revealedFields;
+              const rowCls = [
+                'imp-row',
+                locked ? 'imp-row-locked' : currentFieldIndex === idx ? 'imp-row-sel' : '',
+                justRevealedFieldIdx === idx ? 'imp-row-reveal' : '',
+              ].filter(Boolean).join(' ');
               
               return (
-                <MiniBattlefield
+                <div
                   key={field.id}
-                  field={field}
-                  selected={currentFieldIndex === idx}
-                  conquered={idx in conqueredFields}
-                  conqueredBy={typeof conqueredFields[idx] === 'object' ? conqueredFields[idx]?.army : conqueredFields[idx]}
-                  conqueredAccent={
-                    idx in conqueredFields
-                      ? (typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'player'
-                          ? playerIdentityColor
-                          : typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'enemy'
-                            ? enemyIdentityColor
-                            : null)
-                      : null
-                  }
-                  hidden={idx >= revealedFields}
-                  turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
-                  onClick={canSelectField ? () => handleFieldSelect(field) : undefined}
-                  onHover={setHoveredField}
-                  guidedHighlight={isGuidedIntroBattlefieldsPhase}
-                />
+                  className={rowCls}
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    width: '100%',
+                    overflow: 'hidden',
+                    '--imp-accent': locked ? PALETTE.slate : PALETTE.amber,
+                  }}
+                >
+                  <MiniBattlefield
+                    field={field}
+                    selected={currentFieldIndex === idx}
+                    conquered={idx in conqueredFields}
+                    conqueredBy={typeof conqueredFields[idx] === 'object' ? conqueredFields[idx]?.army : conqueredFields[idx]}
+                    conqueredAccent={
+                      idx in conqueredFields
+                        ? (typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'player'
+                            ? playerIdentityColor
+                            : typeof conqueredFields[idx] === 'object' && conqueredFields[idx]?.winner === 'enemy'
+                              ? enemyIdentityColor
+                              : null)
+                        : null
+                    }
+                    hidden={idx >= revealedFields}
+                    turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
+                    onClick={canSelectField ? () => handleFieldSelect(field) : undefined}
+                    onHover={setHoveredField}
+                    guidedHighlight={isGuidedIntroBattlefieldsPhase}
+                  />
+                </div>
               );
             })}
           </div>
@@ -3637,9 +3935,23 @@ export default function SatzeGame() {
             <div className="satze-panel-flip-face">
               <LogPanel
                 logs={logs}
+                battleEvents={
+                  gamePhase === 'result' && battleResult?.events
+                    ? [
+                        ...battleEvents.filter(
+                          (e) => e.round !== (battleResult.events[0]?.round ?? roundNumber)
+                        ),
+                        ...battleResult.events,
+                      ]
+                    : battleEvents
+                }
+                duelPhase={duelPhase}
+                currentRound={roundNumber}
                 gamePhase={gamePhase}
                 playerColor={playerIdentityColor}
                 enemyColor={enemyIdentityColor}
+                localLabel="Tu"
+                opponentLabel="IA"
               />
             </div>
             {/* Retro: FC */}
@@ -3699,6 +4011,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
+      <div className="imp-hand imp-hand-enemy">
       <Hand
         hand={enemyHand}
         usedCards={enemyUsedCards}
@@ -3722,10 +4035,12 @@ export default function SatzeGame() {
         zoneColorHand={enemyDeckVisual?.deckCards}
         zoneArmies={enemyDeckVisual?.armies}
       />
+      </div>
 
       {/* ============================================ */}
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
+      <div className="imp-hand imp-hand-player">
       <Hand
         hand={playerHand}
         usedCards={playerUsedCards}
@@ -3756,6 +4071,7 @@ export default function SatzeGame() {
         zoneColorHand={playerDeckVisual?.deckCards}
         zoneArmies={playerDeckVisual?.armies}
       />
+      </div>
 
       {isShuffleDealPhase && (
         <div className="absolute inset-0 z-[24] pointer-events-auto" aria-hidden />
@@ -3792,11 +4108,87 @@ export default function SatzeGame() {
       {/* ============================================ */}
       
       {/* Sfondo campo di battaglia */}
+      <div className="dep-stage" aria-hidden />
       <BattlefieldBackground 
         activeField={(currentFieldIndex !== null && battlefields[currentFieldIndex]) 
           ? battlefields[currentFieldIndex] 
           : battleResult?.field} 
       />
+
+      {/* Badge turno — dopo shuffle; segue iniziativa, poi si scambia dopo Conferma / scelta avversario */}
+      {gamePhase !== 'result' &&
+        gamePhase !== 'battle' &&
+        gamePhase !== 'gameOver' &&
+        gamePhase !== 'shuffleDeal' &&
+        (() => {
+        const isPlayersActionTurn =
+          gamePhase === 'selectField'
+            ? isPlayerFirst
+            : gamePhase === 'selectAgent'
+              ? (isPlayerFirst
+                  ? !playerConfirmedAwaitingAI
+                  : Boolean(enemyAgent) && !playerConfirmedAwaitingAI)
+              : isPlayerFirst;
+        const badgeLabel = isPlayersActionTurn
+          ? 'Tocca a te'
+          : (isOnlinePvP ? 'Turno avversario' : 'Turno nemico');
+        const badgeColor = isPlayersActionTurn ? playerIdentityColor : enemyIdentityColor;
+        return (
+        <div
+          className="absolute pointer-events-none flex justify-center"
+          style={{
+            top: 'calc(50% - 140px)',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 200,
+            zIndex: 12,
+          }}
+        >
+          <span
+            key={badgeLabel}
+            className="imp-turn-badge px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-[0.16em] whitespace-nowrap"
+            style={{
+              color: '#0c0814',
+              background: badgeColor,
+              boxShadow: `0 0 14px ${badgeColor}66, 0 2px 6px #000`,
+            }}
+          >
+            {badgeLabel}
+          </span>
+        </div>
+        );
+      })()}
+
+      {/* Invito tabellone in selectField (sostituisce il placeholder del pannello) */}
+      {gamePhase === 'selectField' && (
+        <div
+          className="absolute flex flex-col items-center justify-center gap-3 pointer-events-none imp-turn-badge"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 200,
+            height: 280,
+            zIndex: 11,
+          }}
+        >
+          <div className="text-center px-3">
+            <div className="text-sm font-semibold mb-1 tracking-wide" style={{ color: PALETTE.amber }}>
+              Campo di Battaglia
+            </div>
+            <div className="text-xs leading-snug" style={{ color: PALETTE.textPrimary }}>
+              Scegli un campo dal tabellone
+            </div>
+            <div
+              className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider imp-arrow"
+              style={{ color: PALETTE.textSecondary }}
+            >
+              <span>Tabellone</span>
+              <span>→</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
@@ -3814,10 +4206,74 @@ export default function SatzeGame() {
         gameResult={gameResult}
         onMenu={() => {
           resetGuidedTutorial();
-          setGameResult(null);
+          aiThinkGenerationRef.current += 1;
+          if (aiAgentThinkTimerRef.current) {
+            clearTimeout(aiAgentThinkTimerRef.current);
+            aiAgentThinkTimerRef.current = null;
+          }
+          aiHasSelectedAgent.current = false;
+          setPlayerConfirmedAwaitingAI(false);
           setCampaignLevel(null);
-          setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
+          if (selectedMode === 'campaign') {
+            ai.clearPendingDecision();
+            setSelectedAgent(null);
+            setEnemyAgent(null);
+            setEnemySelectedFocus(1);
+            setSelectedFocus(1);
+            setCurrentFieldIndex(null);
+            setBattleResult(null);
+            setGameResult(null);
+            setShowClaimVictoryChoice(null);
+            setShuffleDealSetup(null);
+            setGamePhase('campaignHub');
+          } else {
+            // Fine partita online: liberare stanza/codice, altrimenti lo slot resta occupato
+            // e non si può più entrare con un nuovo codice dalla lobby.
+            if (isOnlinePvP || multiplayerSession || selectedMode === 'multiplayer') {
+              cleanupMultiplayerSession();
+            }
+            resetToMenu();
+          }
         }}
+        onRematch={
+          isOnlinePvP && multiplayerSession && !onlineOpponentLeft
+            ? () => requestOnlineRematch('same')
+            : !isOnlinePvP &&
+                !guidedMatch.active &&
+                selectedMode !== 'campaign' &&
+                selectedMode !== 'multiplayer' &&
+                selectedArmy &&
+                selectedDeckKey
+              ? () => {
+                  aiThinkGenerationRef.current += 1;
+                  if (aiAgentThinkTimerRef.current) {
+                    clearTimeout(aiAgentThinkTimerRef.current);
+                    aiAgentThinkTimerRef.current = null;
+                  }
+                  aiHasSelectedAgent.current = false;
+                  setPlayerConfirmedAwaitingAI(false);
+                  setVictoryCondFx(null);
+                  setShowFinalRoundAnimation(false);
+                  ai.clearPendingDecision();
+                  clearCardPreview();
+                  startStandardGame(
+                    selectedArmy,
+                    selectedDeckKey,
+                    gameMode || selectedMode || 'classic',
+                    aiDifficulty || 'medium',
+                    ALL_BATTLEFIELDS
+                  );
+                }
+              : undefined
+        }
+        onRematchChangeDeck={
+          isOnlinePvP && multiplayerSession && !onlineOpponentLeft
+            ? () => requestOnlineRematch('change')
+            : undefined
+        }
+        rematchLabel={isOnlinePvP ? 'Rematch (stesso mazzo)' : 'Rematch'}
+        rematchChangeDeckLabel="Rematch (cambia mazzo)"
+        endGameActionsReady={!outcomeOverlayKind}
         onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD ? undefined : () => {
           setGamePhase('playtestHistory');
         }}
@@ -3879,15 +4335,30 @@ export default function SatzeGame() {
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
         )}
         {gamePhase === 'selectAgent' && enemyAgent && (
-          <div className="flex-shrink-0">
-            <GameCard
-              cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-              agent={enemyAgent}
-              showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
-              bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
-              abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-              onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
-            />
+          <div className="relative flex items-center justify-center flex-shrink-0">
+            <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}`}>
+              <div className={`place-fx fx-${enemyPlaceFx}`}>
+                <div className="place-shadow" />
+                <div className="place-flash" />
+                <div className="place-ring" />
+                <div className="place-ring b" />
+                <div className="place-echo" />
+                <div className="place-echo e2" />
+                <div className="place-echo e3" />
+                <div className="place-edge l" />
+                <div className="place-edge r" />
+              </div>
+              <div className={`place-card play-${enemyPlaceFx}`}>
+                <GameCard
+                  cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                  agent={enemyAgent}
+                  showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
+                  bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                  abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                  onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+                />
+              </div>
+            </React.Fragment>
           </div>
         )}
         {gamePhase === 'selectAgent' && !enemyAgent && (
@@ -3935,18 +4406,33 @@ export default function SatzeGame() {
         )}
         {gamePhase === 'selectAgent' && selectedAgent && (
           <div ref={playerCardZoneRef} className="relative flex items-center justify-center pointer-events-auto flex-shrink-0">
-            <GameCard
-              cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-              agent={selectedAgent}
-              showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
-              bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
-              abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
-              overdrivePreview={playerOverdrivePreview}
-              onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
-              onClick={() => setSelectedAgent(null)}
-              onDragStart={handleDragStart}
-              isDragging={draggingCard?.id === selectedAgent?.id}
-            />
+            <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}`}>
+              <div className={`place-fx fx-${agentPlaceFx}`}>
+                <div className="place-shadow" />
+                <div className="place-flash" />
+                <div className="place-ring" />
+                <div className="place-ring b" />
+                <div className="place-echo" />
+                <div className="place-echo e2" />
+                <div className="place-echo e3" />
+                <div className="place-edge l" />
+                <div className="place-edge r" />
+              </div>
+              <div className={`place-card play-${agentPlaceFx}`}>
+                <GameCard
+                  cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                  agent={selectedAgent}
+                  showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
+                  bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                  abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+                  overdrivePreview={playerOverdrivePreview}
+                  onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+                  onClick={() => setSelectedAgent(null)}
+                  onDragStart={handleDragStart}
+                  isDragging={draggingCard?.id === selectedAgent?.id}
+                />
+              </div>
+            </React.Fragment>
           </div>
         )}
         {gamePhase === 'selectAgent' && !selectedAgent && (
@@ -4026,9 +4512,6 @@ export default function SatzeGame() {
           <span className="font-bold text-sm uppercase tracking-wider" style={{ color: PALETTE.amber }}>
             Round {roundNumber}/5
           </span>
-          <span className="text-xs leading-tight" style={{ color: PALETTE.textSecondary }}>
-            {isPlayerFirst ? 'Tu inizi' : isOnlinePvP ? 'Avversario inizia' : 'IA inizia'}
-          </span>
         </div>
 
         <div
@@ -4085,31 +4568,19 @@ export default function SatzeGame() {
       />
 
       {/* ============================================ */}
-      {/* ANIMAZIONE ROUND 5 - z-index 100 */}
+      {/* ANIMAZIONE ROUND 5 / ESITO — overlay handoff duello2 */}
       {/* ============================================ */}
-      {showFinalRoundAnimation && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-[100]"
-          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.9)' }}
-        >
-          <div className="text-center animate-final-round-enter" style={{ fontFamily: HUD_ORATORIO_FONT_UI }}>
-            <div className="mb-8">
-              <div className="text-8xl font-black mb-4 animate-final-round-pulse" style={{ color: '#FFB347', textShadow: '0 0 40px rgba(255, 179, 71, 0.8)' }}>
-                ROUND 5
-              </div>
-              <div className="text-4xl font-bold text-red-400 mb-2">
-                ⚔️ ANNIENTA IL NEMICO! ⚔️
-              </div>
-              <div className="text-xl text-slate-300 mt-4">
-                La condizione di vittoria cambia:
-              </div>
-              <div className="text-2xl font-bold text-amber-400 mt-2">
-                Vincerà chi ha più Punti Vita!
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DuelRound5Overlay active={showFinalRoundAnimation} />
+      <DuelWinOverlay
+        active={outcomeOverlayKind === 'win'}
+        sealSrcs={playerArmySealSrcs}
+        subtitle={getDuelOutcomeSubtitle(gameResult, 'win')}
+      />
+      <DuelLoseOverlay
+        active={outcomeOverlayKind === 'lose'}
+        sealSrcs={playerArmySealSrcs}
+        subtitle={getDuelOutcomeSubtitle(gameResult, 'lose')}
+      />
 
       {/* ============================================ */}
       {/* RECLAMAZIONE - Scelta vittoria (round 3 o 4) */}
@@ -4236,6 +4707,7 @@ export default function SatzeGame() {
         steps={activeTutorialSteps}
       />
 
+      <div className="dep-vignette" aria-hidden />
     </div>
   );
 }

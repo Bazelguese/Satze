@@ -2,7 +2,7 @@
 // Timeline ms fasi duello (stessa logica di satze.jsx)
 // ============================================
 
-import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from './duelVisualConfig.js';
+import { DUEL_VISUAL_DEFAULTS, DUEL_PHASE4_MIN_MS, computeDynamicClashVfx } from './duelVisualConfig.js';
 import {
   countDuelEffectSteps,
   countDuelPostEffectSteps,
@@ -155,7 +155,7 @@ export function computePhase1DurationMs(vfx, battleResult) {
 /** Durata fase 0 in ms (breve se non ci sono effetti pre-VA in fase 1). */
 export function computePhase0DurationMs(vfx, battleResult) {
   const full = safeMs(vfx.phaseMs0, DUEL_VISUAL_DEFAULTS.phaseMs0, 120);
-  const empty = safeMs(vfx.phaseMs0Empty ?? 1400, DUEL_VISUAL_DEFAULTS.phaseMs0Empty ?? 1400, 400);
+  const empty = safeMs(vfx.phaseMs0Empty ?? DUEL_VISUAL_DEFAULTS.phaseMs0Empty, DUEL_VISUAL_DEFAULTS.phaseMs0Empty, 400);
   if (!isDuelPhaseActive(1, battleResult)) return empty;
   return full;
 }
@@ -257,7 +257,7 @@ export function buildPhaseAdvanceDelaysMs(vfx, playerFocusUsed, enemyFocusUsed, 
   const { clashSpeed } = computeDynamicClashVfx(battleResult);
   const safeClashSpeed = Number.isFinite(clashSpeed) && clashSpeed > 0 ? clashSpeed : 1;
   const phase4Base = safeMs(vfx.phaseMs4, DUEL_VISUAL_DEFAULTS.phaseMs4, 300);
-  const phase4 = Math.max(1200, Math.round(phase4Base / safeClashSpeed));
+  const phase4 = Math.max(DUEL_PHASE4_MIN_MS, Math.round(phase4Base / safeClashSpeed));
   const phase5 = computePhase5DurationMs(vfx, battleResult);
   return [
     phase0,
@@ -279,6 +279,26 @@ export const DUEL_PHASE_META = [
   { id: 5, code: 'outcome', label: 'Risultato', where: 'Testo vittoria/sconfitta prima del riepilogo' },
   { id: 6, code: 'continue', label: 'Continua', where: 'Pulsante; clash su “Continua” usa nextRoundClashHoldMs' },
 ];
+
+/**
+ * Battle-log `revealAt` keys → duelPhase index (shared with scene timeline).
+ * Do not duplicate delay ms in LogPanel; use this mapping only.
+ */
+export const BATTLE_REVEAL_AT_TO_PHASE = Object.freeze({
+  deploy: 0,
+  abilityFx: 1,
+  focusFx: 2,
+  assaultFx: 3,
+  outcome: 4,
+  postFx: 5,
+});
+
+/** @param {string|null|undefined} revealAt */
+export function getRevealIndex(revealAt) {
+  if (revealAt == null) return 0;
+  const idx = BATTLE_REVEAL_AT_TO_PHASE[revealAt];
+  return Number.isFinite(idx) ? idx : 0;
+}
 
 /** Somma ms delle fasi automatiche 0–5 (escluso il tap sulla 6). */
 export function totalAutoTimelineMs(vfx, playerFocusUsed, enemyFocusUsed, battleResult) {

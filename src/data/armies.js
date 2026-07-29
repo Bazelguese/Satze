@@ -19,7 +19,8 @@ export const ARMY_SYMBOLS = {
     "L'Enclave delle Scaglie": '🐉',
     'Ratti della Megera': '🐀',
     'Patto degli Indocili': '🕶️',
-    'Khemet': '𓂀'
+    'Khemet': '𓂀',
+    'Apex': '❄️'
   };
 
 // Esporta anche le icone per uso diretto
@@ -36,7 +37,8 @@ export { ARMY_ICONS };
     "L'Enclave delle Scaglie": { bg: "from-orange-900 to-amber-800", accent: "#f59e0b", text: "text-orange-200" },
     "Ratti della Megera": { bg: "from-green-900 to-emerald-900", accent: "#10b981", text: "text-green-200" },
     "Patto degli Indocili": { bg: "from-fuchsia-900 to-rose-900", accent: "#fb7185", text: "text-rose-100" },
-    "Khemet": { bg: "from-cyan-900 to-teal-900", accent: "#22d3ee", text: "text-cyan-100" }
+    "Khemet": { bg: "from-cyan-900 to-teal-900", accent: "#22d3ee", text: "text-cyan-100" },
+    "Apex": { bg: "from-slate-800 to-zinc-900", accent: "#f1f5f9", text: "text-slate-100" }
   };
   
   // Immagini armate - percorsi in public/Immagini_bg per gli sfondi sotto i triangoli delle mani
@@ -51,7 +53,8 @@ export { ARMY_ICONS };
     "L'Enclave delle Scaglie": './Immagini_bg/Enclave_bg1.webp',
     "Ratti della Megera": './Immagini_bg/Ratti_bg1.webp',
     "Patto degli Indocili": './Immagini_bg/indocili-bg1.webp',
-    "Khemet": './Immagini_bg/Khemet_bg1.webp'
+    "Khemet": './Immagini_bg/Khemet_bg1.webp',
+    "Apex": './Immagini_bg/Apex_bg1.png'
   };
 
   // BONUS ARMATE (unico per ogni armata)
@@ -108,5 +111,10 @@ export { ARMY_ICONS };
       trigger: "overdrive",
       effects: [{ effect: "immune", value: null }],
       description: "Overdrive: Immune"
+    },
+    "Apex": {
+      trigger: "invasione",
+      effects: [{ effect: "assaultValue", value: 5 }],
+      description: "Invasione: +5 VA"
     }
   };

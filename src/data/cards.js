@@ -351,6 +351,41 @@ export const ARMY_SETS = {
       { id: 1028, name: "Gar'Zet-Zal, Comandante dei Magus", league: 4, power: 4, damage: 3, icon: "sword", ability: { trigger: "imboscata", effect: "attrition", value: 1, stat: "power" }, description: "Potere: Imboscata: Attrizione 1 POT", flavour: "Comanda dal varco, non dal trono. Ogni mago già schierato diventa un filo della sua imboscata — e la potenza cresce senza rumore." },
       { id: 1029, name: "Maju-Label'la, magister del controllo", league: 4, power: 5, damage: 3, icon: "block", ability: { trigger: "sopraffare", effect: "enemyPower", value: -2, minPower: 2 }, description: "Potere: Sopraffare: -2 POT nem. (min 2)", flavour: "Non spezza le catene: le stringe. Quando la lega di Khemet domina, la forza avversaria si piega fino al limite che lui consente." },
       { id: 1030, name: "Ashigotte, il primo maestro", league: 5, power: 6, damage: 3, icon: "ankh", ability: { trigger: "overdrive", effect: "blockAbility", value: null }, description: "Potere: Overdrive: Blocca Potere", flavour: "Prima di Xer-Thael, prima dei sigilli scritti — c'era lui. Quando il rito supera la soglia, la volontà nemica non trova più parole." }
+    ],
+
+    // === APEX === (Tema: Caccia Maggiore, Logge, Crosta Bianca)
+    // Lega Totale: 100 (4×L5 · 9×L4 · 10×L3 · 7×L2)
+    "Apex": [
+      { id: 1101, name: "Sentinella della tundra", league: 2, power: 3, damage: 1, icon: "eye", ability: { trigger: "turbo", effect: "assaultValue", value: 5 }, description: "Potere: Turbo: +5 VA", flavour: "Sulla Crosta Bianca chi vede per primo decide chi mangia. Lei decide sempre." },
+      { id: 1102, name: "Restauratore di trofei", league: 2, power: 2, damage: 2, icon: "pickaxe", ability: { trigger: "imboscata", effect: "power", value: 2 }, description: "Potere: Imboscata: +2 POT", flavour: "Ripara mandibole, rinforza femori, rimonta crani. Ogni arma Apex è una caccia sopravvissuta." },
+      { id: 1103, name: "Veterano finito", league: 2, power: 4, damage: 1, icon: "skull", ability: { trigger: "conquest", effect: "selfDamage", value: 3 }, description: "Potere: Conquista: -3 PV (a te)", flavour: "Ha già dato troppa carne alla Loggia. Ogni vittoria gli chiede ancora un pezzo." },
+      { id: 1104, name: "Cacciatore ubriaco", league: 2, power: 2, damage: 3, icon: "coin", ability: { trigger: "opportunista", effect: "focusCoin", value: 2 }, description: "Potere: Opportunista: +2 FC", flavour: "Beve grasso bollito e ride mentre il nemico è avanti. Poi mette le monete sul tavolo e la risata diventa un conto." },
+      { id: 1105, name: "Cavalca-tagliagole", league: 2, power: 3, damage: 2, icon: "wolf", ability: { trigger: "resistenza", effect: "powerAndDamage", value: 1 }, description: "Potere: Resistenza: +1 POT, +1 DAN", flavour: "La belva sotto di lui non è domata: ha soltanto smesso di morderlo per questa notte." },
+      { id: 1106, name: "Zanna Corta, l'abile lanciere", league: 2, power: 3, damage: 2, icon: "sword", ability: { trigger: "sfida", effect: "powerAndDamage", value: 1 }, description: "Potere: Sfida: +1 POT, +1 DAN", flavour: "Piccolo di nome, lungo di arpione. Contro i giganti non cerca onore: cerca la gola." },
+      { id: 1107, name: "Delinquenti pianta-trappole", league: 2, power: 2, damage: 3, icon: "warning", ability: { trigger: "rinforzi", effect: "enemyDamage", value: -2, minDamage: 1 }, description: "Potere: Rinforzi: -2 DAN nem. (min 1)", flavour: "Scavano fosse sotto il ghiaccio e aspettano. Quando arrivano i compagni, la preda ha già perso i denti." },
+      { id: 1108, name: "Capobranco per un Giorno", league: 3, power: 4, damage: 2, icon: "crown", ability: { trigger: "glory", effect: "power", value: 2 }, description: "Potere: Gloria: +2 POT", flavour: "Nella Gerarchia della Carne il comando dura quanto l'ultimo bottino. Lui lo sa — e ruba ogni ora." },
+      { id: 1109, name: "Scorticatore delle Spoglie", league: 3, power: 3, damage: 3, icon: "angry", ability: { trigger: "vendetta", effect: "damage", value: 2 }, description: "Potere: Vendetta: +2 DAN", flavour: "Toglie la pelle alle bestie e ai nemici con la stessa pazienza. Al terzo scontro, la lama è già calda." },
+      { id: 1110, name: "Chiamavalanghe", league: 3, power: 4, damage: 2, icon: "horn", ability: { trigger: "rinforzi", effect: "assaultValue", value: 6 }, description: "Potere: Rinforzi: +6 VA", flavour: "Non grida agli uomini: grida al ghiaccio. Quando la Loggia risponde, la montagna cade con loro." },
+      { id: 1111, name: "Svuotanidi", league: 3, power: 4, damage: 2, icon: "insect", ability: { trigger: "turbo", effect: "enemyAssault", value: -6, minAssault: 6 }, description: "Potere: Turbo: -6 VA nem. (min 6)", flavour: "Rubano uova, cuccioli, futuro. Nei primi respiri del duello lasciano il nemico senza slancio." },
+      { id: 1112, name: "Leggiossa", league: 3, power: 3, damage: 3, icon: "copy", ability: { trigger: "imboscata", effect: "copyBonus", value: null }, description: "Potere: Imboscata: Copia Bonus", flavour: "Legge il sangue sulla neve e imita la tecnica nemica prima che il secondo colpo arrivi." },
+      { id: 1113, name: "Strappazanne", league: 3, power: 5, damage: 1, icon: "angry", ability: { trigger: "sopraffare", effect: "damage", value: 2 }, description: "Potere: Sopraffare: +2 DAN", flavour: "Quando la lega Apex domina, strappa le zanne al trofeo ancora vivo e le monta sulla propria arma." },
+      { id: 1114, name: "Cavalca-belve", league: 3, power: 4, damage: 1, icon: "wolf", ability: { trigger: "overdrive", effect: "powerAndDamage", value: 2 }, description: "Potere: Overdrive: +2 POT, +2 DAN", flavour: "Quando il rito della caccia supera la soglia, la montatura e il cavaliere diventano un solo predone." },
+      { id: 1115, name: "Veterano della tana", league: 3, power: 3, damage: 3, icon: "tower", ability: { trigger: "rimonta", effect: "power", value: 3 }, description: "Potere: Rimonta: +3 POT", flavour: "Difende il calore della Loggia da sotto la neve. Quando Apex resta indietro, lui esce e ripaga il debito." },
+      { id: 1116, name: "Rompilame", league: 3, power: 4, damage: 2, icon: "block", ability: { trigger: "vendetta", effect: "enemyDamage", value: -3, minDamage: 1 }, description: "Potere: Vendetta: -3 DAN nem. (min 1)", flavour: "Spezza le armi dei turisti del gelo. Al terzo scontro, le loro lame non tagliano più." },
+      { id: 1117, name: "Cavalca-fauci novizio", league: 3, power: 4, damage: 1, icon: "wolf", ability: { trigger: null, effect: "attrition", value: 1, stat: "damage" }, description: "Potere: Attrizione 1 DAN", flavour: "Ogni carta già giocata gli insegna a mordere più a fondo. È giovane — e per questo più affamato." },
+      { id: 1118, name: "Capocaccia", league: 4, power: 5, damage: 3, icon: "crown", ability: { trigger: "glory", effect: "power", value: 2 }, description: "Potere: Gloria: +2 POT", flavour: "Chi riporta la preda comanda. Lui ha riportato troppe prede per restare senza seguito." },
+      { id: 1119, name: "Scagliabraci", league: 4, power: 3, damage: 4, icon: "flame", ability: { trigger: "imboscata", effect: "assaultValue", value: 9 }, description: "Potere: Imboscata: +9 VA", flavour: "Lancia braci delle Fumarole Rosse nella bufera. Arriva per primo, e il ghiaccio diventa fuoco." },
+      { id: 1120, name: "Domafuoco", league: 4, power: 5, damage: 2, icon: "flame", ability: { trigger: "ultimaChance", effect: "enemyPowerAndDamage", value: -2, minPower: 3, minDamage: 3 }, description: "Potere: Ultima Chance: -2 POT, -2 DAN nem. (min 3)", flavour: "Quando resta un solo respiro, stringe il calore contro il nemico finché forza e morso si spezzano." },
+      { id: 1121, name: "Pioggia notturna", league: 4, power: 6, damage: 2, icon: "block", ability: { trigger: "rinforzi", effect: "blockBonus", value: null }, description: "Potere: Rinforzi: Blocca Bonus", flavour: "Cade silenziosa sulle Logge nemiche. Con i rinforzi al fianco, spegne ogni vantaggio altrui." },
+      { id: 1122, name: "Terrore Cremisi", league: 4, power: 6, damage: 4, icon: "skull", ability: { trigger: "conquest", effect: "selfDamage", value: 5 }, description: "Potere: Conquista: -5 PV (a te)", flavour: "Vincere costa sangue — spesso il tuo. Le Fumarole Rosse gli hanno insegnato il prezzo del calore." },
+      { id: 1123, name: "Dissuasore di turisti", league: 4, power: 4, damage: 4, icon: "block", ability: { trigger: "invasione", effect: "blockAbility", value: null }, description: "Potere: Invasione: Blocca Potere", flavour: "Chi arriva su Khaar senza merito trova lui. Con un campo conquistato, spegne ogni potere nemico." },
+      { id: 1124, name: "Senzariposo", league: 4, power: 4, damage: 3, icon: "lightning", ability: { trigger: "resistenza", effect: "enemyPower", value: -3, minPower: 3 }, description: "Potere: Resistenza: -3 POT nem. (min 3)", flavour: "Non dorme da tre cacce. Quando il nemico conquista, lui gli spezza le ginocchia prima dell'alba." },
+      { id: 1125, name: "Campione dell'Ora Verde", league: 4, power: 5, damage: 2, icon: "dove", ability: { trigger: "conquest", effect: "heal", value: 4 }, description: "Potere: Conquista: Cura 4", flavour: "Nell'ora in cui il sole pallido filtra tra i cristalli, riporta carne e calore alla Loggia ferita." },
+      { id: 1126, name: "Picchiagranchi", league: 4, power: 6, damage: 1, icon: "rocket", ability: { trigger: "sopraffare", effect: "directDamage", value: 3 }, description: "Potere: Sopraffare: 3 Danni dir.", flavour: "Frantuma corazze di crostacei del Mare Sordo. Quando la lega Apex domina, il colpo arriva diretto." },
+      { id: 1127, name: "Domatore dei taglia-gole", league: 5, power: 6, damage: 3, icon: "wolf", ability: { trigger: "vendetta", effect: "damage", value: 3 }, description: "Potere: Vendetta: +3 DAN", flavour: "Domina predatori che dovrebbero divorarlo. Al terzo scontro, il branco morde per lui." },
+      { id: 1128, name: "Bravo, il merita-nome", league: 5, power: 6, damage: 4, icon: "crown", ability: { trigger: "opportunista", effect: "focusCoin", value: 3 }, description: "Potere: Opportunista: +3 FC", flavour: "Si è guadagnato il nome rubando monete al destino. Quando il nemico è avanti, Bravo riscuote." },
+      { id: 1129, name: "Primarca del gelo", league: 5, power: 3, damage: 5, icon: "moon", ability: { trigger: "imboscata", effect: "enemyPowerAndDamage", value: -3, minPower: 3, minDamage: 3 }, description: "Potere: Imboscata: -3 POT, -3 DAN nem. (min 3)", flavour: "Il ghiaccio più vecchio parla attraverso di lui. Arriva per primo e riduce il nemico a misura umana." },
+      { id: 1130, name: "Volontà del Sole Verde", league: 5, power: 7, damage: 5, icon: "star", ability: { trigger: "glory", effect: "blockBonus", value: null }, description: "Potere: Gloria: Blocca Bonus", flavour: "Ridevi quando ci scegliesti. Guarda quanto costa ridere adesso — e tieni chiusi i tuoi doni." }
     ]
   };
   
@@ -524,6 +559,23 @@ export const ARMY_SETS = {
         name: "Trono delle Calamità",
         description: "Build ibrida: doppio L5, economia rituale e pacing disciplinato da costo interno.",
         cards: [1001, 1003, 1006, 1009, 1014, 1015, 1016, 1017, 1019, 1020]
+      }
+    },
+    "Apex": {
+      "A": {
+        name: "Caccia Maggiore",
+        description: "Pressione Invasione e Sopraffare: conquista campi e spezza poteri/danni nemici.",
+        cards: [1123, 1118, 1126, 1110, 1113, 1117, 1108, 1101, 1105, 1102]
+      },
+      "B": {
+        name: "Gerarchia della Carne",
+        description: "Midrange Gloria/Rinforzi: vittorie concatenate, cura da conquista e blocco bonus.",
+        cards: [1118, 1121, 1125, 1108, 1110, 1112, 1115, 1107, 1101, 1104]
+      },
+      "C": {
+        name: "Sole Verde",
+        description: "Late su Primarca e Volontà: imboscata debuff, ultima chance e chiusura L5.",
+        cards: [1129, 1130, 1120, 1115, 1116, 1101, 1102, 1103, 1104, 1107]
       }
     }
   };

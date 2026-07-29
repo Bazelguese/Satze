@@ -9,10 +9,20 @@ import {
   isDuelPhaseActive,
   getNextDuelPhase,
   computePhase0DurationMs,
+  getRevealIndex,
+  BATTLE_REVEAL_AT_TO_PHASE,
 } from './duelVisualTimeline.js';
-import { DUEL_VISUAL_DEFAULTS, computeDynamicClashVfx } from './duelVisualConfig.js';
+import { DUEL_VISUAL_DEFAULTS, DUEL_PHASE4_MIN_MS, computeDynamicClashVfx } from './duelVisualConfig.js';
 
 const vfx = { ...DUEL_VISUAL_DEFAULTS };
+
+test('getRevealIndex maps battle-log revealAt to duelPhase indices', () => {
+  assert.equal(getRevealIndex('deploy'), 0);
+  assert.equal(getRevealIndex('abilityFx'), 1);
+  assert.equal(getRevealIndex('postFx'), 5);
+  assert.equal(BATTLE_REVEAL_AT_TO_PHASE.outcome, 4);
+});
+
 
 test('duelPhase3NeedsWork: false senza mod e raw >= min', () => {
   assert.equal(
@@ -81,7 +91,7 @@ test('buildPhaseAdvanceDelaysMs: fase 4 dinamica accelera con gap alto', () => {
   };
   const dyn = computeDynamicClashVfx(br);
   const d = buildPhaseAdvanceDelaysMs(vfx, 2, 2, br);
-  const expected = Math.max(1200, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
+  const expected = Math.max(DUEL_PHASE4_MIN_MS, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
   assert.ok(dyn.clashSpeed > 1);
   assert.equal(d[4], expected);
   assert.ok(d[4] < vfx.phaseMs4);
@@ -96,7 +106,7 @@ test('buildPhaseAdvanceDelaysMs: fase 4 dinamica rallenta con gap nullo', () => 
   };
   const dyn = computeDynamicClashVfx(br);
   const d = buildPhaseAdvanceDelaysMs(vfx, 1, 1, br);
-  const expected = Math.max(1200, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
+  const expected = Math.max(DUEL_PHASE4_MIN_MS, Math.round(vfx.phaseMs4 / dyn.clashSpeed));
   assert.ok(dyn.clashSpeed < 1);
   assert.equal(d[4], expected);
   assert.ok(d[4] > vfx.phaseMs4);
@@ -114,7 +124,7 @@ test('buildPhaseAdvanceDelaysMs: fallback robusto con dati non numerici', () => 
   assert.equal(dyn.clashSpeed, 0.7);
   assert.equal(dyn.intensity, 0.3);
   assert.ok(Number.isFinite(d[4]));
-  assert.ok(d[4] >= 1200);
+  assert.ok(d[4] >= DUEL_PHASE4_MIN_MS);
 });
 
 test('buildPhaseAdvanceDelaysMs: usa fallback default se vfx corrotto', () => {
@@ -150,7 +160,7 @@ test('buildPhaseAdvanceDelaysMs: usa fallback default se vfx corrotto', () => {
   }));
   assert.equal(d[1], 0);
   assert.equal(d[2], computeFocusCoinSequenceDurationMs(2, badVfx) + DUEL_VISUAL_DEFAULTS.focusPhaseBufferMs);
-  assert.ok(d[4] >= 1200);
+  assert.ok(d[4] >= DUEL_PHASE4_MIN_MS);
   assert.equal(d[5], 0);
 });
 
