@@ -1,5 +1,6 @@
 // Pipeline post-VA: danni (Nexus, Centrale), aftermath campo, sottrazione FC, oggetto battleResult.
 import { applyBattlefieldRoundAftermath } from '../fieldBattleAftermath.js';
+import { applyFocusSpendWithGuarantee } from '../legalFocusSpend.js';
 import {
   applyDuelNexusMaxDamage,
   applyCentraleOverdriveDamage,
@@ -23,6 +24,8 @@ export function runDuelDamageAftermathAndFcAdjust({
   eFCCurrent,
   selectedFocus,
   enemySelectedFocus,
+  playerAgentsRemainingAfter = 0,
+  enemyAgentsRemainingAfter = 0,
 }) {
   if (battleLog && typeof battleLog.setContext === 'function') {
     battleLog.setContext(BATTLE_PHASES.post, BATTLE_REVEAL_AT.postFx);
@@ -76,8 +79,17 @@ export function runDuelDamageAftermathAndFcAdjust({
     damageDealt,
     finalPlayerHP: aftermath.pHPCurrent,
     finalEnemyHP: aftermath.eHPCurrent,
-    finalPlayerFC: aftermath.pFCCurrent - selectedFocus,
-    finalEnemyFC: aftermath.eFCCurrent - enemySelectedFocus,
+    // Mai sotto 1 FC per agente ancora da giocare (player e IA).
+    finalPlayerFC: applyFocusSpendWithGuarantee(
+      aftermath.pFCCurrent,
+      selectedFocus,
+      playerAgentsRemainingAfter
+    ),
+    finalEnemyFC: applyFocusSpendWithGuarantee(
+      aftermath.eFCCurrent,
+      enemySelectedFocus,
+      enemyAgentsRemainingAfter
+    ),
   };
 }
 

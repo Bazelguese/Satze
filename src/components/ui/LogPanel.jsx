@@ -204,6 +204,12 @@ export const LogPanel = ({
   const rounds = useEvents ? groupEventsByRound(visibleEvents) : [];
 
   useEffect(() => {
+    if (!useEvents || visibleEvents.length === 0) {
+      setExpandedRound(null);
+    }
+  }, [useEvents, visibleEvents.length]);
+
+  useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = 0;
   }, [battleEvents, logs, duelPhase, expandedRound]);
 

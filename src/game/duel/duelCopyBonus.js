@@ -14,17 +14,49 @@ export function isCopiedBonusTriggerActive(
   return checkTriggerFn(enemyBonus.trigger, context);
 }
 
-/** Registra la sostituzione del bonus armata (Copia Bonus). */
+/**
+ * Vista potere per UI: Copia Bonus da carta sostituisce il testo del Potere
+ * (non il Bonus armata).
+ */
+export function armyBonusAsCopiedAbilityDisplay(enemyBonus) {
+  if (!enemyBonus) return null;
+  return {
+    trigger: null,
+    effect: 'copiedArmyBonus',
+    value: null,
+    displayText: enemyBonus.description || '—',
+    sourceBonus: enemyBonus,
+  };
+}
+
+/**
+ * Registra la copia del bonus armata.
+ * @param {'bonus'|'ability'} [options.replaceSlot='bonus']
+ *   - `bonus`: sostituisce lo slot Bonus (bonus armata Corte Rossa)
+ *   - `ability`: sostituisce lo slot Potere dove compare l'effetto Copia Bonus
+ */
 export function registerCopiedBonus(
   state,
   target,
   enemyBonus,
-  { context, fieldOptions, checkTriggerFn } = {}
+  { context, fieldOptions, checkTriggerFn, replaceSlot = 'bonus' } = {}
 ) {
   const triggerActive =
     context != null
       ? isCopiedBonusTriggerActive(enemyBonus, context, fieldOptions, checkTriggerFn)
       : true;
+
+  if (replaceSlot === 'ability') {
+    const display = armyBonusAsCopiedAbilityDisplay(enemyBonus);
+    if (target === 'player') {
+      state.pAbilityCopied = display;
+      state.pCopiedAbilityNotTriggered = !triggerActive;
+    } else {
+      state.eAbilityCopied = display;
+      state.eCopiedAbilityNotTriggered = !triggerActive;
+    }
+    return;
+  }
 
   if (target === 'player') {
     state.pBonusCopied = enemyBonus;

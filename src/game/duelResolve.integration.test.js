@@ -458,4 +458,32 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(hasCopy(battleResult.events, 'bonus')).toBe(true);
     expect(battleResult.events.some((e) => e.type === 'statChange' && String(e.source?.name || '').includes('(copiato)') && e.stat === 'POT')).toBe(false);
   });
+
+  it('Potere Copia Bonus: aggiorna lo slot Potere e lascia intatto il Bonus armata', () => {
+    const ratti = 'Ratti della Megera';
+    const orizzonte = "Figli dell'Orizzonte";
+    const orfano = agent("L'Orfano", ratti, {
+      id: 816,
+      league: 5,
+      power: 7,
+      damage: 1,
+      ability: { trigger: 'intervention', effect: 'copyBonus', value: null },
+    });
+    const enemy = agent('IA', orizzonte, { id: 101, league: 2, power: 3, damage: 2 });
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      isPlayerFirst: false,
+      selectedAgent: orfano,
+      enemyAgent: enemy,
+      playerArmyBonuses: { [ratti]: true },
+      enemyArmyBonuses: { [orizzonte]: true },
+    });
+
+    expect(battleResult.playerBonusCopied).toBeFalsy();
+    expect(battleResult.playerAbilityCopied?.effect).toBe('copiedArmyBonus');
+    expect(battleResult.playerAbilityCopied?.displayText).toMatch(/VA/);
+    expect(battleResult.playerCopiedAbilityNotTriggered).toBe(false);
+    expect(battleResult.enemyAssault).toBeLessThanOrEqual(Math.max(6, 3 + 2 + 2 - 5));
+    expect(hasCopy(battleResult.events, 'bonus')).toBe(true);
+  });
 });

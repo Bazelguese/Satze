@@ -8,12 +8,12 @@ export const ADV_STAGE_EPILOGUE = 90;
 
 export const GUIDED_DECKS = {
   intro: {
-    player: { army: 'Calibri Pesanti', deckKey: 'A', name: 'Muraglia MK-IV' },
-    enemy: { army: 'Kethran', deckKey: 'B', name: 'Corona di Rovina' },
+    player: { army: 'Calibri Pesanti', deckKey: 'A', name: 'La Linea Infrangibile' },
+    enemy: { army: 'Kethran', deckKey: 'B', name: 'Processione dei Caduti' },
   },
   advanced: {
-    player: { army: 'Calibri Pesanti', deckKey: 'A', name: 'Muraglia MK-IV' },
-    enemy: { army: 'Kethran', deckKey: 'B', name: 'Corona di Rovina' },
+    player: { army: 'Calibri Pesanti', deckKey: 'B', name: 'Batteria di Saturazione' },
+    enemy: { army: 'Kethran', deckKey: 'C', name: 'La Legge dei Frammenti' },
   },
 };
 

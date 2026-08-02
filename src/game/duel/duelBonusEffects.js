@@ -88,6 +88,7 @@ export function createApplyBonusEffects({
           context,
           fieldOptions,
           checkTriggerFn: checkTrigger,
+          replaceSlot: 'bonus',
         });
         visualRecorder?.pushCopyBonus(target, state);
         applyCopiedBonusEffectsIfReady(

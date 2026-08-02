@@ -99,6 +99,10 @@ export const formatAbilityHelper = (ability, options = {}) => {
           ...(ability.minAssault != null ? { minAssault: adjMin(ability.minAssault) } : {}),
         }
       : ability;
+  // Bonus armata mostrato nello slot Potere dopo "Copia Bonus" (testo già completo).
+  if (abilityForFormat.effect === 'copiedArmyBonus') {
+    return abilityForFormat.displayText || abilityForFormat.sourceBonus?.description || '—';
+  }
   const trigger = abilityForFormat.trigger ? `${TRIGGER_NAMES[abilityForFormat.trigger]}: ` : "";
   const { currentValue } = options;
   let effect = "";

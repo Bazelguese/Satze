@@ -6,6 +6,7 @@ import { MENU_ACCENTS,
   injectSatzeUiFonts,
 } from "../../theme/hudOratorioPalette";
 import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
+import { MenuAgentRain } from "./MenuAgentRain";
 import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from "../../settings/displaySettings";
 import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/vfxQualityProfile";
@@ -327,6 +328,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
           mixBlendMode: "screen",
         }}
       />
+      <MenuAgentRain />
       <CosmicMenuOverlay />
 
       <div

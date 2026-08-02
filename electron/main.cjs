@@ -12,9 +12,14 @@ const {
   MIN_WIDTH,
   MIN_HEIGHT,
 } = require('./displaySettings.cjs');
+const {
+  prepareUpgradeHousekeeping,
+  clearWindowSessionCache,
+} = require('./upgradeHousekeeping.cjs');
 
 // Mantieni un riferimento globale dell'oggetto window
 let mainWindow;
+let pendingSessionCacheClear = false;
 
 function createWindow() {
   const winOpts = initialWindowOptions(app);
@@ -110,7 +115,11 @@ function createWindow() {
     });
   }
 
-  mainWindow.once('ready-to-show', () => {
+  mainWindow.once('ready-to-show', async () => {
+    if (pendingSessionCacheClear) {
+      await clearWindowSessionCache(mainWindow.webContents);
+      pendingSessionCacheClear = false;
+    }
     // Applica display salvato prima dello show (evita flash a size default)
     try {
       applyDisplayToWindow(mainWindow, savedDisplay || loadDisplaySettings(app));
@@ -136,6 +145,11 @@ if (!app.isPackaged) {
     console.error('Errore non catturato:', error);
   });
 }
+
+ipcMain.handle('satze:app:quit', () => {
+  app.quit();
+  return { ok: true };
+});
 
 ipcMain.handle('satze:getMultiplayerConfig', () => {
   const candidates = [
@@ -184,6 +198,7 @@ ipcMain.handle('satze:display:apply', (_event, payload) => {
 });
 
 app.whenReady().then(() => {
+  pendingSessionCacheClear = prepareUpgradeHousekeeping(app);
   createWindow();
 
   app.on('activate', () => {

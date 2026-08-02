@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   saveCropConfig: (payload) => ipcRenderer.invoke('save-crop-config', payload),
+  quitApp: () => ipcRenderer.invoke('satze:app:quit'),
   getMultiplayerConfig: () => ipcRenderer.invoke('satze:getMultiplayerConfig'),
   display: {
     getDisplays: () => ipcRenderer.invoke('satze:display:getDisplays'),

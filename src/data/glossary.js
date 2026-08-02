@@ -65,7 +65,7 @@ export const GLOSSARY_TERMS = [
   { term: 'Copia POT', abbr: null, category: 'effetti', desc: "La tua POT diventa uguale alla POT nemica", detail: "La tua Potenza viene sostituita con quella dell'Agente avversario. Utile contro avversari con POT alta." },
   { term: 'Copia DAN', abbr: null, category: 'effetti', desc: "Il tuo DAN diventa uguale al DAN nemico", detail: "Il tuo Danno diventa uguale a quello dell'avversario. Può essere utile se l'avversario ha DAN molto alto." },
   { term: 'Copia Potere', abbr: null, category: 'effetti', desc: "Usi il Potere dell'agente nemico", detail: "Per quello scontro, il tuo Potere è quello dell'Agente avversario. Potente contro nemici con abilità forti." },
-  { term: 'Copia Bonus', abbr: null, category: 'effetti', desc: "Usi il Bonus Armata nemico", detail: "Usi il Bonus Armata dell'avversario invece del tuo (se ne ha uno attivo). Raro ma devastante." },
+  { term: 'Copia Bonus', abbr: null, category: 'effetti', desc: "Usi il Bonus Armata nemico", detail: "Usi il Bonus Armata dell'avversario (se attivo per lui). Se è un Potere, sostituisce il testo del Potere; se è il Bonus armata (Corte Rossa), sostituisce lo slot Bonus." },
 
   // Effetti Controllo
   { term: 'Blocca Potere', abbr: null, category: 'effetti', desc: "Annulla il Potere dell'agente nemico", detail: "Il Potere dell'Agente avversario non si attiva. Molto forte contro nemici che dipendono dal loro potere." },

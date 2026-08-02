@@ -10,7 +10,7 @@ import {
   chooseJointAIAction,
   defaultRng,
 } from '../game/ai/index.js';
-import { getAvailableCards } from '../game/ai/generateAIActions.js';
+import { getAvailableCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
 
 /**
  * Hook per gestire la logica dell'IA
@@ -113,12 +113,19 @@ export function useAI(gameState) {
 
   const calculateEnemyFocus = useCallback(
     (agent) => {
+      const clampFocus = (focus) => {
+        const { maxFocus } = getLegalFocusRange(buildAIContext(gameStateRef.current), 'ai');
+        if (maxFocus < 1) return 0;
+        const n = Number(focus);
+        if (!Number.isFinite(n)) return 1;
+        return Math.max(1, Math.min(maxFocus, n));
+      };
       const decision = computeDecision();
       if (decision?.card && agent && decision.card.id !== agent.id) {
         const fresh = computeDecision({ force: true });
-        return fresh?.focus ?? 1;
+        return clampFocus(fresh?.focus);
       }
-      return decision?.focus ?? 1;
+      return clampFocus(decision?.focus);
     },
     [computeDecision]
   );
@@ -155,8 +162,12 @@ export function useAI(gameState) {
         return null;
       }
 
+      const { maxFocus } = getLegalFocusRange(buildAIContext(state), 'ai');
+      if (maxFocus < 1) return null;
+      const focus = Math.max(1, Math.min(maxFocus, decision.focus));
+
       state.setEnemyAgent(decision.card);
-      state.setEnemySelectedFocus(decision.focus);
+      state.setEnemySelectedFocus(focus);
 
       if (logSelection) {
         // FC investiti: solo in phaseLogs.phase2
@@ -168,7 +179,7 @@ export function useAI(gameState) {
 
       return {
         agent: decision.card,
-        focus: decision.focus,
+        focus,
         fieldIndex: decision.fieldIndex ?? state.currentFieldIndex,
         debug: decision.debug,
       };

@@ -3,12 +3,18 @@
 // ============================================
 
 import { getFieldModifiers } from '../battlefieldEffects.js';
+import {
+  computeLegalMaxFocus,
+  getReservedFocus as reservedFromCardCount,
+} from '../legalFocusSpend.js';
 import { AI_MIN_FOCUS } from './aiConstants.js';
 import {
   getOrdinaryFocusCap,
   getFocusCapException,
   estimateStandardFocus,
 } from './focusBudget.js';
+
+export { computeLegalMaxFocus } from '../legalFocusSpend.js';
 
 /**
  * Normalizza usedCards (id o oggetti) in Set di id.
@@ -38,9 +44,10 @@ export function getAvailableCards(hand, usedCardIds) {
 
 /**
  * Riserva UI: 1 FC per ogni carta ancora da giocare dopo quella corrente.
+ * Firma storica: il primo argomento (pool) è ignorato.
  */
-export function getReservedFocus(focusPool, availableCardCount) {
-  return Math.max(0, (availableCardCount || 0) - 1);
+export function getReservedFocus(_focusPool, availableCardCount) {
+  return reservedFromCardCount(availableCardCount);
 }
 
 /**
@@ -54,12 +61,12 @@ export function getLegalFocusRange(context, side) {
   const available = getAvailableCards(sideState.hand, sideState.usedCardIds);
   const pool = Math.max(0, Number(sideState.focusPool ?? sideState.focus) || 0);
   const reserved = getReservedFocus(pool, available.length);
-  const maxFocus = Math.max(AI_MIN_FOCUS, pool - reserved);
+  const maxFocus = computeLegalMaxFocus(pool, reserved);
   const minFocus = AI_MIN_FOCUS;
 
   return {
     minFocus,
-    maxFocus: Math.min(maxFocus, Math.max(pool, AI_MIN_FOCUS)),
+    maxFocus,
     reserved,
     pool,
   };

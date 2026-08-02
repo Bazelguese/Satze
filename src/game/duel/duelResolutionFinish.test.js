@@ -27,6 +27,76 @@ test('runDuelDamageAftermathAndFcAdjust: vincitore player, danno e FC finali', (
   assert.equal(r.finalEnemyFC, 6);
 });
 
+test('runDuelDamageAftermathAndFcAdjust: FC finali non scendono sotto 0', () => {
+  const r = runDuelDamageAftermathAndFcAdjust({
+    battleLog: [],
+    field: { name: 'Neutro' },
+    winner: 'player',
+    maxDamage: null,
+    overdriveThreshold: 5,
+    pFocusUsed: 1,
+    eFocusUsed: 1,
+    pDamage: 2,
+    eDamage: 2,
+    pHPCurrent: 20,
+    eHPCurrent: 20,
+    pFCCurrent: 0,
+    eFCCurrent: 0,
+    selectedFocus: 1,
+    enemySelectedFocus: 1,
+  });
+  assert.equal(r.finalPlayerFC, 0);
+  assert.equal(r.finalEnemyFC, 0);
+});
+
+test('runDuelDamageAftermathAndFcAdjust: minimo garantito 1 FC per agente restante', () => {
+  const r = runDuelDamageAftermathAndFcAdjust({
+    battleLog: [],
+    field: { name: 'Neutro' },
+    winner: 'player',
+    maxDamage: null,
+    overdriveThreshold: 5,
+    pFocusUsed: 1,
+    eFocusUsed: 1,
+    pDamage: 2,
+    eDamage: 2,
+    pHPCurrent: 20,
+    eHPCurrent: 20,
+    pFCCurrent: 3,
+    eFCCurrent: 3,
+    selectedFocus: 1,
+    enemySelectedFocus: 1,
+    playerAgentsRemainingAfter: 2,
+    enemyAgentsRemainingAfter: 2,
+  });
+  // 3 - 1 = 2, già al minimo
+  assert.equal(r.finalPlayerFC, 2);
+  assert.equal(r.finalEnemyFC, 2);
+
+  const drained = runDuelDamageAftermathAndFcAdjust({
+    battleLog: [],
+    field: { id: 40, name: 'Sala dei Contratti' },
+    winner: 'player',
+    maxDamage: null,
+    overdriveThreshold: 5,
+    pFocusUsed: 1,
+    eFocusUsed: 1,
+    pDamage: 2,
+    eDamage: 2,
+    pHPCurrent: 20,
+    eHPCurrent: 20,
+    pFCCurrent: 3,
+    eFCCurrent: 3,
+    selectedFocus: 1,
+    enemySelectedFocus: 1,
+    playerAgentsRemainingAfter: 2,
+    enemyAgentsRemainingAfter: 2,
+  });
+  // Sala −2 al vincitore poi −1 investiti → grezzo 0, pavimento 2
+  assert.equal(drained.finalPlayerFC, 2);
+  assert.equal(drained.finalEnemyFC, 2);
+});
+
 test('runDuelDamageAftermathAndFcAdjust: Canyon · Ultimo Desiderio −2 PV al perdente', () => {
   const log = [];
   const r = runDuelDamageAftermathAndFcAdjust({

@@ -7,6 +7,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { Icon } from './Icon';
 import { ARMY_COLORS } from '../../data';
 import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
+import { computeLegalMaxFocus } from '../../game/legalFocusSpend';
 
 // Fallback per armate con nomi alternativi (es. Nati dalla Bocca -> Mounthborn)
 const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
@@ -14,8 +15,9 @@ const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
 export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = null, accentColor = null }) => {
   const trackRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const effectiveMax = Math.max(1, max - reserved);
-  const progress = effectiveMax <= 1 ? 100 : ((value - 1) / (effectiveMax - 1)) * 100;
+  const effectiveMax = computeLegalMaxFocus(max, reserved);
+  const progress =
+    effectiveMax <= 0 ? 0 : effectiveMax <= 1 ? 100 : ((value - 1) / (effectiveMax - 1)) * 100;
 
   const army = agent?.army;
   const armyKey = ARMY_COLOR_FALLBACK[army] || army;
@@ -24,12 +26,20 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
   const power = agent?.power ?? 0;
   const baseAssault = power * value; // VA base = POT × FC
 
+  useEffect(() => {
+    if (effectiveMax < 1) return;
+    if (value > effectiveMax || value < 1) {
+      onChange(Math.max(1, Math.min(effectiveMax, value)));
+    }
+  }, [effectiveMax, value, onChange]);
+
   const valueToPosition = useCallback((v) => {
     if (effectiveMax <= 1) return 50;
     return ((v - 1) / (effectiveMax - 1)) * 100;
   }, [effectiveMax]);
 
   const positionToValue = useCallback((pct) => {
+    if (effectiveMax < 1) return 0;
     const v = Math.round(1 + (pct / 100) * (effectiveMax - 1));
     return Math.max(1, Math.min(effectiveMax, v));
   }, [effectiveMax]);
@@ -72,10 +82,10 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
       {/* Display FC + VA base - sopra il rail */}
       <div className="flex items-baseline justify-center gap-2 -mt-1 mb-2">
         <span className="text-xl font-black uppercase tracking-widest" style={{ color: '#fbbf24', ...textSharp }}>FC</span>
-        <span className="font-black text-3xl tabular-nums" style={{ color: accent, ...textSharp }}>{value}</span>
+        <span className="font-black text-3xl tabular-nums" style={{ color: accent, ...textSharp }}>{effectiveMax < 1 ? 0 : value}</span>
         <span className="text-xl font-black uppercase tracking-widest" style={{ color: '#f43f5e', ...textSharp }}>VA</span>
-        <span className="text-base font-mono tabular-nums font-semibold" style={{ color: accent, ...textSharp }}>{power}×{value}=</span>
-        <span className="font-black text-2xl tabular-nums" style={{ color: accent, ...textSharp }}>{baseAssault}</span>
+        <span className="text-base font-mono tabular-nums font-semibold" style={{ color: accent, ...textSharp }}>{power}×{effectiveMax < 1 ? 0 : value}=</span>
+        <span className="font-black text-2xl tabular-nums" style={{ color: accent, ...textSharp }}>{effectiveMax < 1 ? 0 : baseAssault}</span>
       </div>
 
       {/* Rail - forma a losanga, semplice e originale */}
@@ -83,16 +93,18 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
         <div 
           ref={trackRef}
           role="slider"
-          aria-valuemin={1}
+          aria-valuemin={effectiveMax < 1 ? 0 : 1}
           aria-valuemax={effectiveMax}
-          aria-valuenow={value}
-          tabIndex={0}
+          aria-valuenow={effectiveMax < 1 ? 0 : value}
+          aria-disabled={effectiveMax < 1}
+          tabIndex={effectiveMax < 1 ? -1 : 0}
           onKeyDown={(e) => {
+            if (effectiveMax < 1) return;
             if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') onChange(Math.max(1, value - 1));
             if (e.key === 'ArrowRight' || e.key === 'ArrowUp') onChange(Math.min(effectiveMax, value + 1));
           }}
           onClick={handleTrackClick}
-          className="relative h-6 flex items-center cursor-pointer select-none overflow-visible"
+          className={`relative h-6 flex items-center select-none overflow-visible ${effectiveMax < 1 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
         >
           {/* Sfondo rail - clip-path solo qui, così il thumb non viene tagliato */}
           <div 
@@ -119,13 +131,13 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
             className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tabular-nums pointer-events-none z-[1]"
             style={{ color: 'rgba(203, 213, 225, 0.95)', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
           >
-            1
+            {effectiveMax < 1 ? 0 : 1}
           </span>
           <span 
             className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold tabular-nums pointer-events-none z-[1]"
             style={{ color: 'rgba(203, 213, 225, 0.95)', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
           >
-            {effectiveMax}
+            {Math.max(0, effectiveMax)}
           </span>
           {/* Thumb - cerchio in rilievo con simbolo armata */}
           <div

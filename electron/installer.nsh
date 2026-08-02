@@ -31,6 +31,22 @@ FunctionEnd
 
 !endif
 
+!macro customInstall
+  !ifndef BUILD_UNINSTALLER
+    ${if} ${isUpdated}
+      SetShellVarContext current
+      RMDir /r "$APPDATA\${PRODUCT_NAME}\Cache"
+      RMDir /r "$APPDATA\${PRODUCT_NAME}\Code Cache"
+      RMDir /r "$APPDATA\${PRODUCT_NAME}\GPUCache"
+      RMDir /r "$APPDATA\${PRODUCT_NAME}\DawnGraphiteCache"
+      RMDir /r "$APPDATA\${PRODUCT_NAME}\DawnWebGPUCache"
+      RMDir /r "$APPDATA\${APP_PACKAGE_NAME}\Cache"
+      RMDir /r "$APPDATA\${APP_PACKAGE_NAME}\Code Cache"
+      RMDir /r "$APPDATA\${APP_PACKAGE_NAME}\GPUCache"
+    ${endif}
+  !endif
+!macroend
+
 !macro customInit
   !ifndef BUILD_UNINSTALLER
     Call SatzePromptExistingInstall

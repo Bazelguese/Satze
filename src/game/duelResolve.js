@@ -23,6 +23,7 @@ import { resolveDuelWinnerByAssault } from './duel/duelWinnerResolve.js';
 import { computeDuelTriggerUiFlags } from './duel/duelTriggerUiFlags.js';
 import { applyDuelPostBattleEffects } from './duel/duelPostBattle.js';
 import { runDuelDamageAftermathAndFcAdjust, buildDuelBattleResult } from './duel/duelResolutionFinish.js';
+import { countAgentsRemainingAfterPlay } from './legalFocusSpend.js';
 import { ARMY_BONUSES } from '../data/index.js';
 import { attachFieldModifiersToContexts } from './battlefieldEffects.js';
 import { buildDuelTurnContexts } from './duel/duelTurnContexts.js';
@@ -521,6 +522,16 @@ export function computeDuelResolution({
       eFCCurrent,
       selectedFocus,
       enemySelectedFocus,
+      playerAgentsRemainingAfter: countAgentsRemainingAfterPlay(
+        playerHand,
+        playerUsedCards,
+        pAgent?.id
+      ),
+      enemyAgentsRemainingAfter: countAgentsRemainingAfterPlay(
+        enemyHand,
+        enemyUsedCards,
+        eAgent?.id
+      ),
     });
 
     // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.

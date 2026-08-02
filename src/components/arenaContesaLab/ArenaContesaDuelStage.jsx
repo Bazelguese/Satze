@@ -22,6 +22,7 @@ import {
   isLastResponder,
   flipBattleResultForLocal,
 } from '../../game/arenaContesa';
+import { computeLegalMaxFocus } from '../../game/legalFocusSpend';
 import { ArenaSeatHand } from './ArenaSeatHand';
 
 const STAGE_STYLE = {
@@ -438,7 +439,7 @@ export function ArenaContesaDuelStage({
             >
               {(() => {
                 const reserved = Math.max(0, (local?.hand?.filter((c) => !local.usedIds.includes(c.id)).length || 1) - 1);
-                const maxFC = Math.max(1, (local?.focus ?? maxFocus) - reserved);
+                const maxFC = computeLegalMaxFocus(local?.focus ?? maxFocus, reserved);
                 const t = maxFC <= 1 ? 1 : Math.max(0, Math.min(1, (selectedFocus - 1) / (maxFC - 1)));
                 const [r1, g1, b1] = [148, 163, 184];
                 const [r2, g2, b2] = [255, 224, 130];

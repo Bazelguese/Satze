@@ -97,10 +97,9 @@ export function applyDuelMainAbilities({
       if (ability.trigger === 'lastWish' && fieldOptions?.lastWishDouble) {
         applyEffect(ability.effect, abilityValue, sideKey, `${abilitySource} (2×)`, battleLog, opt(ability));
       }
-      if (ability.effect === 'copyAbility') {
+      if (ability.effect === 'copyAbility' || ability.effect === 'copyBonus') {
+        // Copia Bonus da Potere aggiorna lo slot Potere (come Copia Potere).
         visualRecorder?.pushCopyAbility(sideKey, state);
-      } else if (ability.effect === 'copyBonus') {
-        visualRecorder?.pushCopyBonus(sideKey, state);
       }
       visualRecorder?.pushPower(sideKey, state);
     } else if (

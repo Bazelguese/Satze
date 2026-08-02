@@ -55,6 +55,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
+    setBattleEvents,
     setCampaignDuelMod,
     setShuffleDealSetup,
     setPlayerDeckVisual,
@@ -241,7 +242,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setBattleResult(null);
     setSelectedFocus(1);
     
-    // Log iniziali
+    // Log iniziali (stringhe legacy + eventi strutturati usati dal LogPanel)
+    setBattleEvents([]);
     setLogs([
       `⚔️ La battaglia ha inizio!`,
       `🎖️ Tu comandi: ${playerArmy}`,
@@ -308,6 +310,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
+    setBattleEvents,
     setCampaignDuelMod,
     setShuffleDealSetup,
     setPlayerDeckVisual,
@@ -423,6 +426,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       const playerLeague = playerHand.reduce((sum, c) => sum + c.league, 0);
       const enemyLeague = enemyHand.reduce((sum, c) => sum + c.league, 0);
 
+      setBattleEvents([]);
       setLogs([
         `⚔️ Partita online iniziata!`,
         `🎖️ Tu comandi: ${playerArmy}`,
@@ -472,6 +476,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setBattleResult,
       setSelectedFocus,
       setLogs,
+      setBattleEvents,
       setIsPlayerFirst,
       setOpeningPlayerFirst,
       setGamePhase,
@@ -497,6 +502,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShuffleDealSetup(null);
     setPlayerDeckVisual(null);
     setEnemyDeckVisual(null);
+    setBattleEvents([]);
+    setLogs([]);
     setGamePhase('menu');
   }, [
     clearAiPendingDecision,
@@ -512,6 +519,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShuffleDealSetup,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
+    setBattleEvents,
+    setLogs,
     setGamePhase,
   ]);
 

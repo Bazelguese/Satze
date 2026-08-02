@@ -1,6 +1,6 @@
 import { computeDuelResolution } from '../game/duelResolve.js';
 import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
-import { ARMY_DECKS } from '../data/cards.js';
+import { ARMY_DECKS, ARMY_SETS } from '../data/cards.js';
 import { calcInitialBonuses } from './onlineMatch.js';
 
 const TUTORIAL_FIELD_IDS = [51, 52, 53, 54, 55];
@@ -10,15 +10,21 @@ export function getTutorialBattlefields(allBattlefields) {
   return TUTORIAL_FIELD_IDS.map((id) => byId.get(id)).filter(Boolean);
 }
 
+/**
+ * La partita guidata usa mani scriptate da 5 carte, non il mazzo base da 10.
+ * Verifica che le carte appartengano all'armata del meta (le liste tutorial
+ * possono includere carte tipiche dell'armata fuori dalla lista precostruita).
+ */
 export function assertGuidedHandInDeck(handIds, deckMeta) {
-  const deck = ARMY_DECKS[deckMeta.army]?.[deckMeta.deckKey];
-  if (!deck) {
-    throw new Error(`Deck non trovato: ${deckMeta.army} / ${deckMeta.deckKey}`);
+  const armyCards = ARMY_SETS[deckMeta.army];
+  if (!armyCards?.length) {
+    throw new Error(`Armata non trovata: ${deckMeta.army}`);
   }
-  const pool = new Set(deck.cards);
+  const armyPool = new Set(armyCards.map((c) => c.id));
   handIds.forEach((id) => {
-    if (!pool.has(id)) {
-      throw new Error(`Carta ${id} non appartiene al mazzo "${deck.name}" (${deckMeta.army} ${deckMeta.deckKey})`);
+    if (!armyPool.has(id)) {
+      const label = deckMeta.name || ARMY_DECKS[deckMeta.army]?.[deckMeta.deckKey]?.name || deckMeta.deckKey;
+      throw new Error(`Carta ${id} non appartiene all'armata "${deckMeta.army}" (${label})`);
     }
   });
 }

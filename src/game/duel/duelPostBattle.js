@@ -129,6 +129,36 @@ export function applyDuelPostBattleEffects({
     return true;
   };
 
+  // Copia Bonus da Potere: effetti post (Conquista/UD) sullo slot Potere, non sul Bonus.
+  for (const sideKey of sides) {
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const contextPost = sideKey === 'player' ? playerContextPost : enemyContextPost;
+    const abilityBlocked = sideKey === 'player' ? pAbilityBlocked : eAbilityBlocked;
+    const abilityCopied = sideKey === 'player' ? state?.pAbilityCopied : state?.eAbilityCopied;
+    const deferredBonus = abilityCopied?.sourceBonus;
+
+    if (abilityBlocked || !deferredBonus) continue;
+
+    if (
+      resolveCopiedPostBonus(
+        deferredBonus,
+        sideKey,
+        contextPost,
+        `Bonus copiato via Potere ${side.agent.name} (post)`
+      )
+    ) {
+      if (sideKey === 'player') {
+        pPostAbilityTriggered = true;
+        state.pCopiedAbilityNotTriggered = false;
+      } else {
+        ePostAbilityTriggered = true;
+        state.eCopiedAbilityNotTriggered = false;
+      }
+      visualRecorder?.pushPostPower(sideKey, state);
+    }
+  }
+
+  // Copia Bonus da Bonus armata: effetti post sullo slot Bonus.
   for (const sideKey of sides) {
     const side = getDuelSideBundle(sideKey, bundleArgs);
     const contextPost = sideKey === 'player' ? playerContextPost : enemyContextPost;

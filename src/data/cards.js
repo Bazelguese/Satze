@@ -389,197 +389,207 @@ export const ARMY_SETS = {
     ]
   };
   
-  // DECK PRECOSTRUITI - 3 per armata, 10 carte ciascuno, Lega max 30
+  // DECK PRECOSTRUITI - 3 per armata (5 per Patto), 10 carte ciascuno, Lega esatta 30
   export const ARMY_DECKS = {
     "Figli dell'Orizzonte": {
       "A": {
-        name: "Ancora del Primo",
-        description: "Deck controllo centrato su Sorethal: riduzione VA e gestione del ritmo partita.",
-        cards: [101, 103, 112, 104, 106, 119, 107, 108, 115, 120]
+        name: "Il Sole Prima della Fine",
+        description: "Conquista aggressiva: prende il ritmo, vince i primi Campi e trasforma le vittorie in pressione PV.",
+        cards: [111, 105, 104, 114, 118, 125, 124, 109, 115, 108]
       },
       "B": {
-        name: "Sole in Frantumi",
-        description: "Lista turbo/momentum basata su Eco del Primo Sole per forzare vantaggio rapido.",
-        cards: [111, 102, 105, 104, 114, 118, 109, 110, 115, 120]
+        name: "La Domanda Senza Fine",
+        description: "Supremazia di controllo: riduce VA, nega poteri e costruisce vantaggio senza inseguire lo zero.",
+        cards: [101, 103, 112, 119, 123, 124, 107, 115, 120, 121]
       },
       "C": {
-        name: "Ultima Orbita",
-        description: "Versione late-game con Vega: regge i primi turni e ribalta nei round finali.",
-        cards: [116, 103, 117, 106, 113, 119, 107, 108, 109, 110]
-      }
+        name: "Liturgia dell'Ancora",
+        description: "Conquista adattiva bipolare L2/L4: Imboscata leggera e payoff pesanti con Rinforzi.",
+        cards: [117, 102, 105, 103, 129, 107, 108, 110, 115, 120]
+      },
     },
     "Kethran": {
       "A": {
-        name: "Ascesa del Conquistatore",
-        description: "Piano aggressivo-magnanimo attorno a Ur-Nammu con pressione continua.",
-        cards: [201, 202, 213, 206, 214, 219, 207, 208, 209, 220]
+        name: "Il Trono Ferito",
+        description: "Conquista aggressiva: vince ferendosi e converte il debito PV in Rimonta.",
+        cards: [216, 203, 214, 206, 218, 224, 225, 221, 210, 207]
       },
       "B": {
-        name: "Corona di Rovina",
-        description: "Build da mid/late su Nimrod, con chiusure dirette e valore in Rimonta.",
-        cards: [211, 203, 212, 204, 205, 218, 207, 208, 210, 215]
+        name: "Processione dei Caduti",
+        description: "Supremazia reattiva: sacrificio, Ultimo desiderio e Vendetta.",
+        cards: [230, 202, 227, 206, 222, 219, 210, 215, 209, 220]
       },
       "C": {
-        name: "Notte del Crepuscolo",
-        description: "Lista ad alta varianza su Crepuscolo: picchi forti con costo PV controllato.",
-        cards: [216, 217, 202, 214, 219, 205, 209, 210, 215, 220]
-      }
+        name: "La Legge dei Frammenti",
+        description: "Conquista tecnica: Alleato, controllo POT e lettura delle Leghe.",
+        cards: [212, 227, 223, 205, 204, 224, 225, 222, 220, 221]
+      },
     },
     "Corte Rossa": {
       "A": {
         name: "Debito di Sangue",
-        description: "Deck pressione/conquista su Vaelith con controllo mirato delle risposte nemiche.",
+        description: "Conquista aggressiva: pressione e danni diretti indipendenti dalla copia.",
         cards: [301, 303, 312, 304, 313, 319, 307, 309, 310, 320]
       },
       "B": {
-        name: "Specchio Infernale",
-        description: "Lista reattiva su Karthessi: copia, blocco e adattamento continuo.",
-        cards: [311, 302, 317, 305, 306, 313, 307, 308, 315, 320]
+        name: "Il Contratto dei Tre Sigilli",
+        description: "Conquista di controllo: Alleato e negazione di Bonus/Potere.",
+        cards: [321, 309, 307, 323, 325, 314, 319, 326, 328, 329]
       },
       "C": {
-        name: "Patto del Silenzio",
-        description: "Versione inversion/control con Airam, forte nei matchup pieni di modificatori.",
-        cards: [316, 318, 312, 304, 314, 319, 307, 309, 310, 315]
-      }
+        name: "La Corte Riflessa",
+        description: "Conquista adattiva: copia completa di Bonus, POT, DAN e Potere.",
+        cards: [311, 330, 305, 324, 304, 325, 321, 307, 320, 308]
+      },
     },
     "Calibri Pesanti": {
       "A": {
-        name: "Muraglia MK-IV",
-        description: "Impostazione tank/control con Titano: riduci danni e vinci per inerzia.",
-        cards: [401, 402, 403, 405, 406, 414, 408, 410, 419, 420]
+        name: "La Linea Infrangibile",
+        description: "Supremazia difensiva: tenuta, cura e immunità per vincere per inerzia.",
+        cards: [401, 426, 404, 405, 414, 415, 424, 408, 410, 421]
       },
       "B": {
-        name: "Dottrina Cenere",
-        description: "Lista offensiva su Protocollo Cenere con picchi overdrive e danno diretto.",
-        cards: [411, 413, 417, 404, 414, 418, 407, 409, 410, 420]
+        name: "Batteria di Saturazione",
+        description: "Conquista aggressiva: saturazione Overdrive e danni diretti.",
+        cards: [402, 403, 413, 414, 422, 425, 418, 420, 407, 410]
       },
       "C": {
-        name: "Sala Operatoria",
-        description: "Deck di recupero attorno al Chirurgo: curva robusta e sustain in rimonta.",
-        cards: [416, 402, 412, 404, 415, 418, 408, 409, 410, 419]
-      }
+        name: "Protocollo di Ricostruzione",
+        description: "Conquista adattiva bipolare L2/L4: Alleato, Resistenza e ripresa.",
+        cards: [417, 426, 428, 429, 412, 408, 409, 410, 419, 421]
+      },
     },
     "Orathai": {
       "A": {
-        name: "Canto di Gloria",
-        description: "Configurazione midrange su Voce della Fine, con pressione progressiva e vantaggio risorse.",
-        cards: [501, 502, 503, 505, 506, 514, 508, 509, 510, 515]
+        name: "Canto della Prima Vittoria",
+        description: "Conquista progressiva: Gloria, Magnanimo e pressione dopo le prime vittorie.",
+        cards: [501, 503, 505, 506, 514, 519, 523, 510, 515, 507]
       },
       "B": {
         name: "Tempesta Armonica",
-        description: "Versione overdrive/burst su Tempesta Cava: cerca finestre esplosive.",
-        cards: [511, 512, 517, 504, 519, 513, 507, 508, 510, 515]
+        description: "Conquista tecnica: economia, Alleato e Overdrive.",
+        cards: [511, 502, 512, 504, 505, 522, 508, 509, 521, 507]
       },
       "C": {
-        name: "Rituale del Coro",
-        description: "Deck difensivo da partita lunga centrato su Il Coro e catena di cura.",
-        cards: [516, 518, 502, 504, 514, 519, 507, 508, 509, 520]
-      }
+        name: "Il Bosco Non Muore",
+        description: "Supremazia: cura, Resistenza e vantaggio PV.",
+        cards: [516, 518, 513, 525, 524, 519, 523, 508, 509, 515]
+      },
     },
     "Mounthborn": {
       "A": {
-        name: "Fame della Regina",
-        description: "Lista bilanciata su Regina della Colonia: controllo e danni incrementali.",
-        cards: [601, 602, 612, 604, 606, 614, 608, 610, 615, 620]
+        name: "Il Primo Morso",
+        description: "Conquista aggressiva: Imboscata, Turbo e conversione della prima vittoria.",
+        cards: [611, 618, 604, 605, 606, 624, 625, 607, 620, 615]
       },
       "B": {
-        name: "Predazione Finale",
-        description: "Build turbo/aggressiva su Evoluzione Finale con chiusure rapide.",
-        cards: [611, 603, 618, 605, 613, 619, 607, 610, 615, 620]
+        name: "Il Morso di Ritorno",
+        description: "Supremazia reattiva: Rimonta, Vendetta e contrattacco.",
+        cards: [630, 602, 617, 613, 619, 625, 608, 607, 621, 615]
       },
       "C": {
-        name: "Guglia Invertita",
-        description: "Versione tecnica su Guardia Reale: anti-modificatori e pressione da intervento.",
-        cards: [616, 617, 612, 604, 614, 606, 608, 609, 615, 620]
-      }
+        name: "Intelligenza di Sciame",
+        description: "Controllo di sciame: Intervento, Alleato e negazione.",
+        cards: [601, 603, 612, 622, 624, 623, 621, 609, 620, 608]
+      },
     },
     "L'Enclave delle Scaglie": {
       "A": {
-        name: "Giudizio del Patriarca",
-        description: "Deck da vantaggio progressivo con Patriarca e catena di potenziamenti su vittoria.",
-        cards: [701, 702, 712, 714, 715, 718, 706, 708, 709, 720]
+        name: "Ascensione del Patriarca",
+        description: "Snowball di Conquista: Invasione, Gloria e pressione progressiva.",
+        cards: [701, 703, 712, 705, 714, 715, 720, 706, 709, 721]
       },
       "B": {
-        name: "Sonno Antico",
-        description: "Lista di rimonta su Drago Addormentato: difendi, assorbi, poi ribalti.",
-        cards: [711, 703, 713, 704, 705, 719, 707, 708, 710, 720]
+        name: "Il Tesoro Vuole Sangue",
+        description: "Pressione economica: Overdrive, Focus e conversione dei Campi.",
+        cards: [713, 726, 728, 714, 722, 724, 723, 708, 706, 720]
       },
       "C": {
-        name: "Sottosuolo Tirannico",
-        description: "Configurazione control/burst su Tiranno del Sottosuolo, forte contro poteri chiave.",
-        cards: [716, 717, 712, 704, 718, 715, 706, 707, 708, 709]
-      }
+        name: "Il Trono Non Cade",
+        description: "Supremazia reattiva: Rimonta, Resistenza e doppio L5.",
+        cards: [711, 730, 704, 718, 724, 725, 707, 708, 710, 721]
+      },
     },
     "Ratti della Megera": {
       "A": {
-        name: "Maledizione Eterna",
-        description: "Deck controllo puro su Megera Eterna: blocca e logora turno dopo turno.",
-        cards: [801, 802, 812, 805, 815, 819, 806, 807, 808, 810]
+        name: "La Peste che Avanza",
+        description: "Conquista tossica: aperture VA e pressione da tossina/Invasione.",
+        cards: [830, 829, 804, 822, 823, 824, 818, 820, 807, 821]
       },
       "B": {
-        name: "Trono del Flagello",
-        description: "Versione anti-stat su Flagello della Colonia con forte pressione debuff.",
-        cards: [811, 803, 817, 804, 814, 818, 806, 809, 810, 820]
+        name: "Il Morbo che Spegne",
+        description: "Controllo puro: blocco poteri, debuff e chiusura L5.",
+        cards: [801, 811, 805, 815, 819, 825, 807, 809, 821, 820]
       },
       "C": {
-        name: "Figlio dell'Odio",
-        description: "Lista trick su L'Orfano: copia bonus e sfrutta caos di matchup.",
-        cards: [816, 813, 802, 804, 815, 819, 807, 808, 809, 820]
-      }
+        name: "Il Banchetto delle Malelabbra",
+        description: "Pressione compositiva: Alleato, Opportunista e danni indiretti.",
+        cards: [802, 826, 817, 822, 804, 818, 824, 810, 808, 806]
+      },
     },
     "Patto degli Indocili": {
       "A": {
-        name: "Linea Rossa",
-        description: "Mono Indocili 5xL4 + 5xL2: massima pressione tecnica mantenendo Lega 30.",
-        cards: [901, 903, 904, 905, 906, 915, 916, 917, 920, 921]
+        name: "La Città a Due Livelli",
+        description: "Mono Patto bipolare L2/L4: Rinforzi sempre disponibili su una delle due fasce.",
+        cards: [915, 916, 919, 920, 921, 903, 905, 927, 928, 929]
       },
       "B": {
-        name: "Protocollo Intersezione",
-        description: "5 L3 Indocili + 5 L3 Corte Rossa: shell reattiva con altissima qualità di intervento.",
-        cards: [908, 909, 910, 911, 912, 304, 306, 313, 314, 319]
+        name: "Sciame dell'Ultrastrada",
+        description: "Ibrido Patto–Mounthborn: aggressione L3 e posizione.",
+        cards: [913, 908, 909, 924, 926, 620, 615, 604, 618, 626]
       },
       "C": {
-        name: "Patto d'Acciaio",
-        description: "Ibrido tecnico: nucleo Indocili e supporto Mounthborn per tempo e chiusure mirate.",
-        cards: [902, 905, 906, 916, 920, 602, 618, 610, 615, 620]
-      }
+        name: "Patto col Diavolo",
+        description: "Ibrido Patto–Corte: utilità L2 e copia/controllo ai vertici.",
+        cards: [920, 921, 919, 916, 320, 321, 302, 328, 311, 316]
+      },
+      "D": {
+        name: "Contrabbando delle Corone",
+        description: "Ibrido Patto–Enclave: rete economica L3 e conversione Conquista.",
+        cards: [908, 925, 924, 708, 706, 714, 705, 719, 713, 712]
+      },
+      "E": {
+        name: "Rivolta della Luna Verde",
+        description: "Ibrido Patto–Orathai: sustain L2 e motore L4 di centro partita.",
+        cards: [916, 918, 902, 929, 508, 509, 515, 502, 503, 528]
+      },
     },
     "Khemet": {
       "A": {
-        name: "Cerchio di Rottura",
-        description: "Lista aggressiva: turbo/imboscata con pressione diretta e chiusura su 3 duelli.",
-        cards: [1001, 1004, 1006, 1007, 1011, 1015, 1017, 1018, 1019, 1020]
+        name: "Il Nono Sigillo",
+        description: "Picco Overdrive: doppio L5 e aperture Turbo/Imboscata.",
+        cards: [1001, 1030, 1012, 1024, 1025, 1009, 1015, 1017, 1019, 1021]
       },
       "B": {
-        name: "Gabbia dell'Intervento",
-        description: "Versione control-reattiva: riduce il picco nemico e converte i turni complessi.",
-        cards: [1002, 1005, 1008, 1010, 1012, 1014, 1015, 1016, 1018, 1020]
+        name: "La Legge dell'Irrazionale",
+        description: "Controllo irrazionale: imposizioni, blocchi e risposte di Lega.",
+        cards: [1002, 1004, 1026, 1010, 1014, 1022, 1016, 1020, 1019, 1015]
       },
       "C": {
-        name: "Trono delle Calamità",
-        description: "Build ibrida: doppio L5, economia rituale e pacing disciplinato da costo interno.",
-        cards: [1001, 1003, 1006, 1009, 1014, 1015, 1016, 1017, 1019, 1020]
-      }
+        name: "Il Tributo delle Calamità",
+        description: "Economia rituale: Prodighi, Rimonta e tributo controllato.",
+        cards: [1003, 1005, 1009, 1011, 1023, 1014, 1024, 1018, 1016, 1021]
+      },
     },
     "Apex": {
       "A": {
-        name: "Caccia Maggiore",
-        description: "Pressione Invasione e Sopraffare: conquista campi e spezza poteri/danni nemici.",
-        cards: [1123, 1118, 1126, 1110, 1113, 1117, 1108, 1101, 1105, 1102]
+        name: "La Prima Preda",
+        description: "Snowball di Conquista: apre il varco, attiva Invasione, mantiene Gloria e blocchi.",
+        cards: [1101, 1102, 1104, 1106, 1108, 1112, 1111, 1119, 1123, 1130]
       },
       "B": {
-        name: "Gerarchia della Carne",
-        description: "Midrange Gloria/Rinforzi: vittorie concatenate, cura da conquista e blocco bonus.",
-        cards: [1118, 1121, 1125, 1108, 1110, 1112, 1115, 1107, 1101, 1104]
+        name: "La Loggia Non Arretra",
+        description: "Controllo e sustain bipolare L2/L4: Alleato, Resistenza e riparazione post-Conquista.",
+        cards: [1101, 1103, 1105, 1106, 1107, 1120, 1121, 1122, 1124, 1125]
       },
       "C": {
-        name: "Sole Verde",
-        description: "Late su Primarca e Volontà: imboscata debuff, ultima chance e chiusura L5.",
-        cards: [1129, 1130, 1120, 1115, 1116, 1101, 1102, 1103, 1104, 1107]
-      }
-    }
+        name: "La Caccia Maggiore",
+        description: "Adattamento e pressione: trigger che leggono nemico e stato partita + Invasione.",
+        cards: [1102, 1104, 1105, 1109, 1113, 1114, 1115, 1112, 1126, 1128]
+      },
+    },
   };
-  
+
   // Lista completa di tutti gli agenti (per ricerca e filtri)
   export const ALL_AGENTS = Object.entries(ARMY_SETS).flatMap(([army, cards]) => 
     cards.map(card => ({ ...card, army }))

@@ -26,6 +26,7 @@ export {
   generateAIActions,
   normalizeUsedIdSet,
   getReservedFocus,
+  computeLegalMaxFocus,
 } from './generateAIActions.js';
 export {
   estimateStandardFocus,

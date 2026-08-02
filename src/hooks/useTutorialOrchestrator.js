@@ -57,6 +57,7 @@ export function useTutorialOrchestrator({
   setIsPlayerFirst,
   setOpeningPlayerFirst,
   setLogs,
+  setBattleEvents,
   setGamePhase,
   setPlayerConfirmedAwaitingAI,
   resetAiSelectionRef,
@@ -169,6 +170,7 @@ export function useTutorialOrchestrator({
     setIsPlayerFirst(true);
     resetAiSelectionRef?.();
     setPlayerConfirmedAwaitingAI(false);
+    setBattleEvents?.([]);
     setLogs([
       '🎯 Partita guidata avviata',
       `📘 Percorso: ${trackId === 'advanced' ? 'Avanzato' : 'Introduttivo'}`,
@@ -185,6 +187,7 @@ export function useTutorialOrchestrator({
     allBattlefields,
     tutorial,
     setLogs,
+    setBattleEvents,
     setShowClaimVictoryChoice,
     setCampaignLevel,
     setCampaignDuelMod,

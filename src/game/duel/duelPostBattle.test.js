@@ -99,3 +99,53 @@ test('bonus copiato Conquista: applica effetti post se il copiatore vince', () =
   assert.equal(bonusCalls[0].effect, 'focusCoin');
   assert.equal(bonusCalls[0].won, true);
 });
+
+test('post-battaglia: Copia Bonus da Potere risolve Conquista sullo slot Potere', () => {
+  const checkTrigger = (trigger, context) => trigger === 'conquest' && context.won === true;
+  const bonusCalls = [];
+  const applyBonusEffects = (bonus, target, context) => {
+    bonusCalls.push({ effect: bonus.effects[0].effect, target, won: context.won });
+  };
+  const copiedBonus = {
+    trigger: 'conquest',
+    description: 'Conquista: +2 FC',
+    effects: [{ effect: 'focusCoin', value: 2 }],
+  };
+  const state = {
+    pBonusCopied: null,
+    eBonusCopied: null,
+    pAbilityCopied: {
+      trigger: null,
+      effect: 'copiedArmyBonus',
+      displayText: 'Conquista: +2 FC',
+      sourceBonus: copiedBonus,
+    },
+    pCopiedAbilityNotTriggered: true,
+  };
+  const result = applyDuelPostBattleEffects({
+    pAbilityBlocked: false,
+    eAbilityBlocked: false,
+    pBonusBlocked: true,
+    eBonusBlocked: false,
+    pHasBonus: true,
+    eHasBonus: false,
+    pArmyBonus: { trigger: 'conquest', effects: [{ effect: 'toxin', value: 1 }] },
+    eArmyBonus: null,
+    pAgent: { name: "L'Orfano", army: 'Ratti della Megera', ability: { trigger: 'intervention', effect: 'copyBonus' } },
+    eAgent: { name: 'E', army: "L'Enclave delle Scaglie" },
+    applyEffect: () => {},
+    applyBonusEffects,
+    checkTrigger,
+    fieldOptions: {},
+    playerContextPost: { won: true, lost: false },
+    enemyContextPost: { won: false, lost: true },
+    battleLog: [],
+    state,
+  });
+  assert.equal(bonusCalls.length, 1);
+  assert.equal(bonusCalls[0].effect, 'focusCoin');
+  assert.equal(result.pPostAbilityTriggered, true);
+  assert.equal(result.pPostBonusTriggered, false);
+  assert.equal(state.pCopiedAbilityNotTriggered, false);
+  assert.equal(state.pBonusCopied, null);
+});

@@ -4,6 +4,7 @@ import {
   getAvailableCards,
   getLegalFocusRange,
   generateActionsForSide,
+  computeLegalMaxFocus,
 } from './generateAIActions.js';
 import { makeAIContext, makeCard } from './aiTestFixtures.js';
 
@@ -68,4 +69,40 @@ test('generazione: non muta mano o usedCards', () => {
   generateActionsForSide(context, 'ai', 0);
   assert.equal(hand.length, 2);
   assert.equal(used.length, 0);
+});
+
+test('computeLegalMaxFocus: pool 0 non consente spendere 1', () => {
+  assert.equal(computeLegalMaxFocus(0, 0), 0);
+  assert.equal(computeLegalMaxFocus(0, 3), 0);
+  assert.equal(computeLegalMaxFocus(-2, 0), 0);
+});
+
+test('computeLegalMaxFocus: riserva dura (1 FC per agente restante)', () => {
+  // 2 agenti, pool 1 → reserved 1 → non legale (servirebbero 2)
+  assert.equal(computeLegalMaxFocus(1, 1), 0);
+  // 3 agenti, pool 2 → reserved 2 → non legale (servirebbero 3)
+  assert.equal(computeLegalMaxFocus(2, 2), 0);
+  // 3 agenti, pool 3 → reserved 2 → max 1
+  assert.equal(computeLegalMaxFocus(3, 2), 1);
+  // 5 agenti, 18 FC → reserved 4 → max 14
+  assert.equal(computeLegalMaxFocus(18, 4), 14);
+  // pool 6 reserved 1 → 5
+  assert.equal(computeLegalMaxFocus(6, 1), 5);
+});
+
+test('generazione: pool 0 → nessuna azione Focus legale', () => {
+  const context = makeAIContext({
+    ai: {
+      hand: [makeCard({ id: 1 }), makeCard({ id: 2 })],
+      usedCardIds: [],
+      focusPool: 0,
+      focus: 0,
+      hp: 20,
+      armyBonuses: {},
+      toxin: null,
+    },
+  });
+  const range = getLegalFocusRange(context, 'ai');
+  assert.equal(range.maxFocus, 0);
+  assert.equal(generateActionsForSide(context, 'ai', 0).length, 0);
 });

@@ -3,6 +3,7 @@
 // ============================================
 
 import { getFieldModifiers } from '../battlefieldEffects.js';
+import { computeLegalMaxFocus } from '../legalFocusSpend.js';
 import { AI_MIN_FOCUS, OVERINVESTMENT_ROUND_MULTIPLIER } from './aiConstants.js';
 
 function usedIdSet(usedCardIds) {
@@ -27,7 +28,7 @@ function legalMaxForSide(sideState) {
   const cards = availableCount(sideState);
   const pool = sidePool(sideState);
   const reserved = Math.max(0, cards - 1);
-  return Math.max(AI_MIN_FOCUS, Math.min(pool - reserved, Math.max(pool, AI_MIN_FOCUS)));
+  return computeLegalMaxFocus(pool, reserved);
 }
 
 /**
@@ -68,7 +69,7 @@ export function getOrdinaryFocusCap(context, side, profile) {
 
   return {
     fairShare,
-    ordinaryCap: Math.max(AI_MIN_FOCUS, ordinaryCap),
+    ordinaryCap: maxFocus < AI_MIN_FOCUS ? 0 : Math.max(AI_MIN_FOCUS, ordinaryCap),
     legalMax: maxFocus,
     pool,
     cardsRemaining,

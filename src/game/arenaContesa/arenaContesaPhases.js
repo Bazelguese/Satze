@@ -1,3 +1,4 @@
+import { computeLegalMaxFocus, getReservedFocus } from '../legalFocusSpend.js';
 import { ARENA_CONTESA, ARENA_PHASES } from './arenaContesaConstants.js';
 import {
   appendArenaLog,
@@ -21,8 +22,8 @@ function availableAgents(player) {
 
 function maxSpendableFocus(player) {
   const unused = availableAgents(player).length;
-  const reserved = Math.max(0, unused - 1);
-  return Math.max(1, Math.min(14, player.focus - reserved));
+  const reserved = getReservedFocus(unused);
+  return Math.min(14, computeLegalMaxFocus(player.focus, reserved));
 }
 
 export function getActingPlayerId(match) {
@@ -89,6 +90,7 @@ export function confirmFocus(match, focusValue) {
   if (!player) return match;
 
   const maxFc = maxSpendableFocus(player);
+  if (maxFc < 1) return match;
   const focus = Math.max(1, Math.min(maxFc, Number(focusValue) || 1));
 
   if (match.phase === ARENA_PHASES.CHIAMATA) {

@@ -104,6 +104,8 @@ import {
   PUBLIC_BUILD_MARQUEE,
   filterMenuItemsForBuild,
 } from '../src/config/buildProfile.js';
+import { confirmQuitDesktopGame, shouldShowMainMenuQuit } from '../src/utils/electronApp.js';
+import { computeLegalMaxFocus } from '../src/game/legalFocusSpend.js';
 
 // ============================================
 // SATZE - Componente principale del gioco
@@ -803,6 +805,7 @@ export default function SatzeGame() {
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
+    setBattleEvents,
     setGamePhase,
     setPlayerConfirmedAwaitingAI,
     resetAiSelectionRef: () => {
@@ -1186,7 +1189,7 @@ export default function SatzeGame() {
       enemyHand.find((c) => c.id === currentGuidedRound.enemyAgentId) || enemyHand[0];
     if (!scriptedEnemy) return;
     const enemyFocusScripted = currentGuidedRound.enemyFocusAllIn
-      ? Math.max(1, enemyFocus)
+      ? Math.max(0, enemyFocus)
       : currentGuidedRound.enemyFocus;
     setEnemyAgent(scriptedEnemy);
     setEnemySelectedFocus(enemyFocusScripted);
@@ -1405,7 +1408,7 @@ export default function SatzeGame() {
   useEffect(() => {
     if (gamePhase !== 'selectAgent' || !selectedAgent) return;
     const reserved = Math.max(0, playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1);
-    const effectiveMax = Math.max(1, playerFocus - reserved);
+    const effectiveMax = computeLegalMaxFocus(playerFocus, reserved);
     const onWheel = (e) => {
       e.preventDefault();
       if (effectiveMax < 1) return;
@@ -1489,6 +1492,11 @@ export default function SatzeGame() {
 
   // Commit structured duel events once per resolved battleResult.
   const committedBattleResultRef = useRef(null);
+  useEffect(() => {
+    if (battleEvents.length === 0) {
+      committedBattleResultRef.current = null;
+    }
+  }, [battleEvents]);
   useEffect(() => {
     if (!battleResult?.events?.length) return;
     if (committedBattleResultRef.current === battleResult) return;
@@ -1954,7 +1962,7 @@ export default function SatzeGame() {
       } else {
         setGuidedHint('');
       }
-      if (!selectedAgent || selectedFocus < 1) return;
+      if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
       if (enemyAgent) {
         setGamePhase('battle');
         return;
@@ -1965,7 +1973,7 @@ export default function SatzeGame() {
       }
     }
 
-    if (!selectedAgent || selectedFocus < 1) return;
+    if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
 
     if (isOnlinePvP && multiplayerSession?.roomCode) {
       if (enemyAgent) {
@@ -2815,11 +2823,25 @@ export default function SatzeGame() {
         ],
       },
     ]);
+    const menuItemsResolved = shouldShowMainMenuQuit()
+      ? [
+          ...menuItems,
+          {
+            label: 'ESCI DAL GIOCO',
+            sub: 'DESKTOP',
+            meta: 'CHIUDI APPLICAZIONE',
+            accent: '#64748b',
+            onClick: () => {
+              void confirmQuitDesktopGame();
+            },
+          },
+        ]
+      : menuItems;
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         {!showDeckManager && (
           <SatzeMenuPrototype
-            menuItems={menuItems}
+            menuItems={menuItemsResolved}
             marqueeText={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
           />
         )}
@@ -3967,7 +3989,7 @@ export default function SatzeGame() {
                   WebkitFontSmoothing: 'antialiased',
                   color: (() => {
                     const reserved = Math.max(0, playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1);
-                    const maxFC = Math.max(1, playerFocus - reserved);
+                    const maxFC = computeLegalMaxFocus(playerFocus, reserved);
                     const t = maxFC <= 1 ? 1 : Math.max(0, Math.min(1, (selectedFocus - 1) / (maxFC - 1)));
                     const [r1, g1, b1] = [148, 163, 184];
                     const [r2, g2, b2] = [255, 224, 130];
@@ -3978,7 +4000,7 @@ export default function SatzeGame() {
                   })(),
                   textShadow: (() => {
                     const reserved = Math.max(0, playerHand.filter(c => !playerUsedCards.includes(c.id)).length - 1);
-                    const maxFC = Math.max(1, playerFocus - reserved);
+                    const maxFC = computeLegalMaxFocus(playerFocus, reserved);
                     const t = maxFC <= 1 ? 1 : Math.max(0, Math.min(1, (selectedFocus - 1) / (maxFC - 1)));
                     const base = '255, 224, 130';
                     const innerAlpha = 0.05 + t * 0.85;

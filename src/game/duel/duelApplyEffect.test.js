@@ -158,3 +158,29 @@ test('copyAbility: applica effetto se trigger del potere nemico attivo', () => {
   assert.equal(state.pCopiedAbilityNotTriggered, false);
   assert.equal(state.pPower, 6);
 });
+
+test('copyBonus da Potere: scrive sullo slot Potere e applica effetti, senza toccare il Bonus', () => {
+  const state = minimalState({ eAssaultMod: 0 });
+  const log = [];
+  const enemyBonus = {
+    trigger: null,
+    description: '-5 VA nem. (min 6)',
+    effects: [{ effect: 'enemyAssault', value: -5, minAssault: 6 }],
+  };
+  const ctx = {
+    eArmyBonus: enemyBonus,
+    pArmyBonus: { trigger: 'conquest', description: 'Conquista: +2 FC', effects: [{ effect: 'focusCoin', value: 2 }] },
+    eHasBonus: true,
+    pHasBonus: true,
+    checkTrigger: () => true,
+    playerContext: {},
+    enemyContext: {},
+  };
+  applyDuelPowerEffect('copyBonus', null, 'player', 'L\'Orfano', log, {}, state, ctx);
+  assert.equal(state.pBonusCopied, null);
+  assert.equal(state.pAbilityCopied?.effect, 'copiedArmyBonus');
+  assert.equal(state.pAbilityCopied?.displayText, '-5 VA nem. (min 6)');
+  assert.equal(state.pCopiedAbilityNotTriggered, false);
+  assert.equal(state.eAssaultMod, -5);
+  assert.ok(log.some((l) => l.includes('copia Bonus nem.')));
+});

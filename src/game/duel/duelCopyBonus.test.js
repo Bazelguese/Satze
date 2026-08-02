@@ -17,6 +17,31 @@ test('Copia Bonus: sostituisce sempre, anche se trigger nemico non attivo', () =
   assert.equal(state.pCopiedBonusNotTriggered, true);
 });
 
+test('Copia Bonus da Potere: sostituisce lo slot Potere, non il Bonus armata', () => {
+  const state = {
+    pBonusCopied: null,
+    eBonusCopied: null,
+    pAbilityCopied: null,
+    pCopiedAbilityNotTriggered: false,
+    pCopiedBonusNotTriggered: false,
+  };
+  const enemyBonus = {
+    trigger: 'conquest',
+    description: 'Conquista: +2 FC',
+    effects: [{ effect: 'focusCoin', value: 2 }],
+  };
+  registerCopiedBonus(state, 'player', enemyBonus, {
+    context: {},
+    fieldOptions: {},
+    replaceSlot: 'ability',
+  });
+  assert.equal(state.pBonusCopied, null);
+  assert.equal(state.pAbilityCopied?.effect, 'copiedArmyBonus');
+  assert.equal(state.pAbilityCopied?.displayText, 'Conquista: +2 FC');
+  assert.equal(state.pAbilityCopied?.sourceBonus, enemyBonus);
+  assert.equal(state.pCopiedAbilityNotTriggered, true);
+});
+
 test('Copia Bonus: trigger pre-duello attivo → copia considerata attiva', () => {
   const state = { pBonusCopied: null, eBonusCopied: null, pCopiedBonusNotTriggered: false };
   const enemyBonus = {

@@ -541,6 +541,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
               copied: { kind: 'bonus', value: enemyBonusToCopy.description, fromId: enemyBonusToCopy.id ?? null },
             });
           }
+          // Potere "Copia Bonus": sostituisce lo slot Potere, non il Bonus armata.
           registerCopiedBonus(state, target, enemyBonusToCopy, {
             context: copyContext,
             fieldOptions: {
@@ -551,6 +552,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
               minFloorReduction,
             },
             checkTriggerFn: ctx.checkTrigger,
+            replaceSlot: 'ability',
           });
           applyCopiedBonusEffectsIfReady(
             enemyBonusToCopy,
