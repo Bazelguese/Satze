@@ -1,4 +1,4 @@
-import { shouldShowTagAsRole } from '../../data/cardTags';
+import { shouldShowAsArchetype, isArchetypeLabel, getCardDisplayLabels } from '../../data/cardArchetypes';
 import { DECK_SIZE, MAX_LEAGUE, isRole, EFFECT_NAMES } from './deckBuilderLabData';
 
 export const ROLES = ['Assalto', 'Difesa', 'Élite', 'Supporto'];
@@ -13,7 +13,7 @@ function normalizeCatalogSearch(text) {
     .replace(/\p{M}/gu, '');
 }
 
-/** Ricerca catalogo: nome, tag, trigger, testo potere, etichetta effetto */
+/** Ricerca catalogo: nome, archetipo, focus, trigger, testo potere, effetto */
 export function cardMatchesCatalogQuery(card, rawQuery) {
   const q = normalizeCatalogSearch(rawQuery.trim());
   if (!q) return true;
@@ -23,6 +23,10 @@ export function cardMatchesCatalogQuery(card, rawQuery) {
     card.army,
     card.trigger,
     card.role,
+    card.archetype,
+    card.secondary,
+    card.focus,
+    card.scaling ? 'Scalante' : '',
     card.abilityText,
     card.powerDesc,
     card.effect,
@@ -37,17 +41,21 @@ export function uniqTags(c) {
   return [...new Set(c.tags || [])];
 }
 
-/** Tag unici per carta, stesso criterio del deck builder ufficiale */
+/** Badge UI: usa displayLabels se presenti, altrimenti ricalcola */
 export function displayTagsForCard(card) {
-  const tags = card?.tags || [];
-  const unique = [...new Set(tags)];
-  return unique.map((tag) => ({
-    tag,
-    showAsRole: shouldShowTagAsRole(tag, tags),
+  const labels = card?.displayLabels?.length
+    ? card.displayLabels
+    : getCardDisplayLabels(card);
+  return labels.map((l) => ({
+    tag: l.text,
+    kind: l.kind,
+    title: l.title,
+    showAsRole: l.kind === 'archetype',
+    variant: l.kind,
   }));
 }
 
-export { isRole, shouldShowTagAsRole };
+export { isRole, shouldShowAsArchetype as shouldShowTagAsRole, isArchetypeLabel };
 
 export function analyzeDeck(deckCards) {
   const count = deckCards.length;

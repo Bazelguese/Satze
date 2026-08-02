@@ -2,11 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import { CardReworkP4 } from '../cards/CardReworkP4';
 import { Icon } from '../ui/Icon';
-import { getCardTags, shouldShowTagAsRole } from '../../data/cardTags';
+import { getCardDisplayLabels } from '../../data/cardArchetypes';
 
 const TRIGGER_MULTIPLIERS = {
   default: 1.0,
-  rinforzi: 0.75,
+  alleato: 0.96,
+  rinforzi: 0.55,
   imboscata: 0.7,
   intervention: 0.7,
   glory: 0.6,
@@ -35,7 +36,7 @@ const BONUS_PROFILE = {
   Mounthborn: { statPot: 1, statDan: 1, trigger: 'imboscata' },
   "L'Enclave delle Scaglie": { nonStatEff: 0.84, nonStatPot: 1.4 },
   'Ratti della Megera': { nonStatEff: 0.21, nonStatPot: 0.35 },
-  'Patto degli Indocili': { nonStatEff: 0.51, nonStatPot: 0.68 },
+  'Patto degli Indocili': { nonStatEff: 0.36, nonStatPot: 0.65 },
   Khemet: { nonStatEff: 1.0, nonStatPot: 2.0 },
 };
 
@@ -198,10 +199,11 @@ function DeckPreviewCosmic({
   }, [cards, D.armies, D.army]);
   const [selectedIndex, setSelectedIndex] = useState(cards.length ? 0 : -1);
   const selectedCard = selectedIndex >= 0 ? cards[selectedIndex] : null;
-  const selectedRawTags = selectedCard
-    ? (selectedCard.tags?.length ? selectedCard.tags : getCardTags(selectedCard.id)) || []
+  const selectedTags = selectedCard
+    ? (selectedCard.displayLabels?.length
+        ? selectedCard.displayLabels
+        : getCardDisplayLabels(selectedCard.id))
     : [];
-  const selectedTags = [...new Set(selectedRawTags)];
   const deckHighlights = useMemo(() => {
     if (!cards.length) return null;
     const byPower = cards.reduce((best, cur) => ((cur.power ?? cur.pot ?? 0) > (best.power ?? best.pot ?? 0) ? cur : best), cards[0]);
@@ -473,26 +475,31 @@ function DeckPreviewCosmic({
                 </div>
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: '#94a3b8', letterSpacing: '0.22em', marginBottom: 6 }}>
-                    TAG DELLA CARTA
+                    ARCHETIPO · FOCUS
                   </div>
                   {selectedTags.length ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {selectedTags.map((tag) => {
-                        const isRole = shouldShowTagAsRole(tag, selectedRawTags);
+                      {selectedTags.map(({ text, kind }) => {
+                        const colors = {
+                          archetype: { color: '#fbbf24', bg: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.45)' },
+                          secondary: { color: '#cbd5e1', bg: 'rgba(100,116,139,0.22)', border: 'rgba(148,163,184,0.35)' },
+                          focus: { color: '#67e8f9', bg: 'rgba(103,232,249,0.14)', border: 'rgba(103,232,249,0.4)' },
+                          scaling: { color: '#c084fc', bg: 'rgba(192,132,252,0.14)', border: 'rgba(192,132,252,0.42)' },
+                        }[kind] || { color: '#cbd5e1', bg: 'rgba(100,116,139,0.22)', border: 'rgba(148,163,184,0.35)' };
                         return (
                           <span
-                            key={tag}
+                            key={`${kind}-${text}`}
                             style={{
                               fontSize: 11,
-                              color: isRole ? '#fca5a5' : '#cbd5e1',
-                              background: isRole ? 'rgba(239,68,68,0.18)' : 'rgba(100,116,139,0.22)',
-                              border: `1px solid ${isRole ? 'rgba(239,68,68,0.45)' : 'rgba(148,163,184,0.35)'}`,
+                              color: colors.color,
+                              background: colors.bg,
+                              border: `1px solid ${colors.border}`,
                               padding: '3px 8px',
                               borderRadius: 4,
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {tag}
+                            {kind === 'secondary' ? `/ ${text}` : text}
                           </span>
                         );
                       })}

@@ -35,7 +35,7 @@ SATZE e un gioco di carte strategico per 2 giocatori. Ogni giocatore controlla u
 4. Ogni giocatore **pesca 5 carte** casualmente dal proprio Deck di 10. Queste 5 carte formano la **mano** per la partita
 5. Il primo giocatore del turno 1 e chi ha il valore di Lega totale piu basso tra le 5 carte in mano. In caso di parita, si determina casualmente
 
-> **Costruzione Deck:** Puoi mescolare carte di armate diverse. Il Bonus Armata si attiva solo se hai 2+ carte della stessa armata **in mano** (contando anche le carte gia giocate).
+> **Costruzione Deck:** Puoi mescolare carte di armate diverse. Il Bonus Armata si attiva solo se hai 2+ carte della stessa armata **in mano** (contando anche le carte gia giocate). Eccezione: **Patto degli Indocili** — basta 1 carta del Patto; il Bonus si applica per-carta se vale Rinforzi (≥2 altre carte della stessa Lega).
 
 ---
 

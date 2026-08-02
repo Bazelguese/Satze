@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ARMY_COLORS } from '../../../data/armies.js';
 import { ALL_AGENTS } from '../../../data/cards.js';
-import { getCardTags } from '../../../data/cardTags.js';
+import { getCardDisplayLabels } from '../../../data/cardArchetypes.js';
 import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { CardTagsRow } from '../../cards/CardTagBadges.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
@@ -150,7 +150,7 @@ function powerDescription(agent) {
 function Lightbox({ agent, onClose }) {
   const accent = (ARMY_COLORS[agent.army] || {}).accent || '#94a3b8';
   const powerBody = powerDescription(agent);
-  const tags = getCardTags(agent.id);
+  const tags = getCardDisplayLabels(agent.id);
 
   return (
     <div className="cgl-lb" onClick={onClose}>

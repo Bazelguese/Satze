@@ -353,7 +353,8 @@ Non usare vecchie versioni del regolamento o nomi ricordati da documenti precede
 | `resistenza` | l’avversario ha conquistato almeno un Campo |
 | `turbo` | round 1 o 2 |
 | `ultimaChance` | round 5 o successivo |
-| `rinforzi` | nella mano iniziale esiste almeno un’altra carta della stessa Lega |
+| `alleato` | nella mano iniziale esiste almeno un’altra carta della stessa Lega |
+| `rinforzi` | nella mano iniziale esistono almeno 2 altre carte della stessa Lega |
 
 ## 4.2 Trigger post-duello
 

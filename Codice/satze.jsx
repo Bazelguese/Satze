@@ -5,7 +5,6 @@ import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../sr
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
-import { getCardTags } from '../src/data/cardTags';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
@@ -2963,8 +2962,8 @@ export default function SatzeGame() {
     );
   }
 
-  // Opzione Mazzi misti (usata in selectArmy, selectDeck)
-  const MIXED_DECKS_OPTION = 'Eserciti misti';
+  // Opzione eserciti personalizzati (usata in selectArmy, selectDeck)
+  const MIXED_DECKS_OPTION = 'Eserciti personalizzati';
   const MIXED_DECKS_COLOR = '#a78bfa'; // violet-400
 
   const buildDeckConfirmDisplay = (army, deckKey, accent) => {

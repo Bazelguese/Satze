@@ -740,9 +740,27 @@
 }
 
 .dbl-tag.role {
-  color: #ef4444;
-  background: #ef444420;
-  border-color: #ef444440;
+  color: #fbbf24;
+  background: #fbbf2422;
+  border-color: #fbbf2455;
+}
+
+.dbl-tag.secondary {
+  color: #cbd5e1;
+  background: #64748b28;
+  border-color: #94a3b850;
+}
+
+.dbl-tag.focus {
+  color: #67e8f9;
+  background: rgba(103, 232, 249, 0.12);
+  border-color: rgba(103, 232, 249, 0.4);
+}
+
+.dbl-tag.scaling {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.14);
+  border-color: rgba(192, 132, 252, 0.42);
 }
 
 .dbl-tag.mini {

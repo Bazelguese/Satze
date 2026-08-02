@@ -1,9 +1,18 @@
-// Dati reali per Deck Builder Lab — allineati a ARMY_SETS, cardTags, deck builder ufficiale
+// Dati reali per Deck Builder Lab — allineati a ARMY_SETS, archetipi v3.3
 import { ARMY_SETS } from '../../data';
 import { ARMY_COLORS, ARMY_BONUSES } from '../../data/armies';
 import { LEAGUE_TIER_COLORS as LEAGUE_COLORS } from '../../data/leagueColors';
 import { TRIGGER_NAMES } from '../../data/triggers';
-import { getCardTags, RUOLO_TAGS, TAG_TOOLTIPS } from '../../data/cardTags';
+import {
+  getCardClassification,
+  getCardLabels,
+  getCardDisplayLabels,
+  isArchetypeLabel,
+  LABEL_TOOLTIPS,
+  ARCHETYPE_SET,
+  ARCHETYPES,
+  FOCUS_RELATIONS,
+} from '../../data/cardArchetypes';
 import { ARMY_ICONS } from '../../data/icons.jsx';
 
 export const DECK_SIZE = 10;
@@ -28,6 +37,7 @@ export const TRIGGER_COLORS = {
   Invasione: '#fb923c',
   Resistenza: '#60a5fa',
   'Ultima Chance': '#eab308',
+  Alleato: '#a8b4c4',
   Rinforzi: '#94a3b8',
 };
 
@@ -89,7 +99,9 @@ function bonusLabelFor(armyName) {
 
 function buildCard(card, army) {
   const agent = { ...card, army };
-  const tags = getCardTags(card.id);
+  const { archetype, secondary, focus, scaling } = getCardClassification(card);
+  const tags = getCardLabels(card);
+  const displayLabels = getCardDisplayLabels(card);
   const trigger = card.ability?.trigger ? (TRIGGER_NAMES[card.ability.trigger] || 'Sempre') : 'Sempre';
   const abilityText = card.description?.replace(/^Potere: /, '') || '';
 
@@ -101,7 +113,14 @@ function buildCard(card, army) {
     trigger,
     effect: card.ability?.effect || null,
     abilityText,
+    archetype,
+    secondary,
+    focus,
+    scaling,
+    // compat chiavi vecchie
+    profile: focus,
     tags,
+    displayLabels,
     role: roleFromStats(card.power, card.damage),
   };
 }
@@ -130,7 +149,15 @@ export const POOLS = Object.fromEntries(
 export const ALL_CARDS = Object.values(POOLS).flat();
 
 export function isRole(tag) {
-  return RUOLO_TAGS.has(tag);
+  return isArchetypeLabel(tag);
 }
 
-export { LEAGUE_COLORS, TAG_TOOLTIPS, RUOLO_TAGS };
+export {
+  LEAGUE_COLORS,
+  LABEL_TOOLTIPS,
+  LABEL_TOOLTIPS as TAG_TOOLTIPS,
+  ARCHETYPE_SET as RUOLO_TAGS,
+  ARCHETYPES,
+  FOCUS_RELATIONS,
+  FOCUS_RELATIONS as PROFILES,
+};

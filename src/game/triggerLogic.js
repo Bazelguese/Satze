@@ -112,9 +112,13 @@ export const checkTrigger = (trigger, context) => {
         if (fieldMods.invertTurboUltimaChance) return (context.roundNumber || 1) <= 2;
         return (context.roundNumber || 1) >= 5;
 
-      case 'rinforzi':
+      case 'alleato':
         // Almeno 1 altra carta della stessa Lega in mano iniziale, oltre alla carta giocata.
         return Math.max(0, (context.playerInitialLeagueCount || 0) - 1) >= 1;
+
+      case 'rinforzi':
+        // Almeno 2 altre carte della stessa Lega in mano iniziale, oltre alla carta giocata.
+        return Math.max(0, (context.playerInitialLeagueCount || 0) - 1) >= 2;
         
       default: 
         return false;

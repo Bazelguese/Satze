@@ -374,6 +374,47 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(hasBlock(battleResult.events, 'blockAbility') || battleResult.playerAbilityBlocked).toBe(true);
   });
 
+  it('Bonus Patto Rinforzi: con 3 L4 applica -1 POT/-1 DAN; con 2 L4 no', () => {
+    const indocili = 'Patto degli Indocili';
+    const playerCard = agent('Elysium', indocili, {
+      id: 902,
+      league: 4,
+      power: 4,
+      damage: 2,
+    });
+    const enemy = agent('IA', 'Kethran', { id: 201, league: 3, power: 5, damage: 4 });
+
+    const withRinforzi = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerCard,
+      enemyAgent: enemy,
+      playerArmyBonuses: { [indocili]: true },
+      playerHand: [
+        agent('KMD', indocili, { id: 903, league: 4 }),
+        agent('L4b', indocili, { id: 904, league: 4 }),
+        agent('L2a', indocili, { id: 915, league: 2 }),
+        agent('L2b', indocili, { id: 916, league: 2 }),
+      ],
+    });
+    expect(withRinforzi.battleResult.enemyPower).toBe(4);
+    expect(withRinforzi.battleResult.enemyDamage).toBe(3);
+
+    const withoutRinforzi = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerCard,
+      enemyAgent: enemy,
+      playerArmyBonuses: { [indocili]: true },
+      playerHand: [
+        agent('KMD', indocili, { id: 903, league: 4 }),
+        agent('L2a', indocili, { id: 915, league: 2 }),
+        agent('L2b', indocili, { id: 916, league: 2 }),
+        agent('L2c', indocili, { id: 917, league: 2 }),
+      ],
+    });
+    expect(withoutRinforzi.battleResult.enemyPower).toBe(5);
+    expect(withoutRinforzi.battleResult.enemyDamage).toBe(4);
+  });
+
   it('Copia Bonus Rinforzi: con unica L4 IA non applica -1 POT al player', () => {
     const indocili = 'Patto degli Indocili';
     const corte = 'Corte Rossa';
@@ -396,12 +437,12 @@ describe('computeDuelResolution (integrazione)', () => {
       enemyAgent: fratello,
       playerArmyBonuses: { [indocili]: true },
       enemyArmyBonuses: { [corte]: true },
-      // Player ha Rinforzi (2 L4); IA ha solo Fratello come L4
+      // Player ha 3 L4 (Rinforzi ok); IA ha solo Fratello come L4 (copia non scatta)
       playerHand: [
         agent('KMD', indocili, { id: 903, league: 4 }),
+        agent('L4b', indocili, { id: 904, league: 4 }),
         agent('L2a', indocili, { id: 915, league: 2 }),
         agent('L2b', indocili, { id: 916, league: 2 }),
-        agent('L2c', indocili, { id: 917, league: 2 }),
       ],
       enemyHand: [
         agent('Anima', corte, { id: 310, league: 2 }),

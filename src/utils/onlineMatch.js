@@ -131,11 +131,17 @@ export function buildOnlineMatchPayload(hostArmy, hostDeckKey, guestArmy, guestD
   };
 }
 
+/** Patto: deroga — basta 1 carta d'armata; l'attivazione reale è per-carta via Rinforzi. */
+const ARMY_BONUS_MIN_COUNT = {
+  'Patto degli Indocili': 1,
+};
+
 export function calcInitialBonuses(hand) {
   const counts = countArmies(hand);
   const bonuses = {};
   Object.keys(counts).forEach((army) => {
-    bonuses[army] = counts[army] >= 2;
+    const minCount = ARMY_BONUS_MIN_COUNT[army] ?? 2;
+    bonuses[army] = counts[army] >= minCount;
   });
   return bonuses;
 }

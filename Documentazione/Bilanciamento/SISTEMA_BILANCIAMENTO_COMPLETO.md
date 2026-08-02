@@ -67,6 +67,7 @@ Per evitare ambiguita tra documentazione e implementazione:
 | Resistenza | `resistenza` |
 | Turbo | `turbo` |
 | Ultima Chance | `ultimaChance` |
+| Alleato | `alleato` |
 | Rinforzi | `rinforzi` |
 
 | Etichetta design | Chiave effect nel codice |
@@ -537,7 +538,7 @@ Ultima Chance: +3 FC a T5 = 3 x 0.70 x 0.20 = 0.42 FC reali
 
 ### Calcolo con Bonus Armata
 
-Per attivare il Bonus Armata servono **2+ carte della stessa armata** nel deck.
+Per attivare il Bonus Armata servono **2+ carte della stessa armata** nel deck. Eccezione: **Patto degli Indocili** — basta 1 carta; attivazione per-carta via Rinforzi.
 
 ```
 Valore con Bonus = Valore Base + (Bonus x Moltiplicatore Trigger Bonus)

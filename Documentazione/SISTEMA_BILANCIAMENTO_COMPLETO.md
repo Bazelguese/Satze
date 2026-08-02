@@ -383,9 +383,10 @@ Quando una carta combina due trigger complementari, **non sommare i moltiplicato
 
 | Trigger | Condizione | Note |
 |---------|------------|------|
-| **Rinforzi** | In mano iniziale ci sono 2+ carte della stessa Lega della carta che porta il trigger (le carte gia giocate/scartate dalla mano iniziale contano) | Deck-tech: per deck legali con bi-armata o split di lega, attivazione vicina al 100%. Per deck mono-lega molto concentrati, garantita. |
+| **Alleato** | In mano iniziale c'è ≥1 altra carta della stessa Lega (oltre a quella giocata; contano anche le già giocate) | Ex-Rinforzi sul pool (21 carte). MS tipica ~0.96. |
+| **Rinforzi** | In mano iniziale ci sono ≥2 altre carte della stessa Lega (oltre a quella giocata) | Bonus Patto degli Indocili; lettura per-carta. Vedi `RINFORZI_E_ALLEATO.md`. |
 
-> **Calibrazione del moltiplicatore 0.75:** scelta come compromesso tra "Sempre attivo" (1.0) e "controllo parziale" (0.7). Si attiva quasi sempre nelle config legali ma richiede tech consapevole nel deckbuilding e ha varianza nei matchup di mulligan. Da rivedere dopo 50+ partite di playtest.
+> **Calibrazione:** Alleato ≈0.96; Rinforzi Bonus Patto mediana ≈0.36 (intervallo 0.14–0.65). Da rivedere dopo playtest.
 
 #### CATEGORIA: POSIZIONE
 
@@ -657,7 +658,7 @@ Dove `POT_atteso_nemico ≈ 4` e `DAN_atteso_nemico ≈ 3` come stat medie obser
 
 ### Calcolo con Bonus Armata
 
-Per attivare il Bonus Armata servono **2+ carte della stessa armata** nella mano iniziale (5 carte pescate dal deck di 10), contando anche carte gia giocate o scartate dalla mano iniziale.
+Per attivare il Bonus Armata servono **2+ carte della stessa armata** nella mano iniziale (5 carte pescate dal deck di 10), contando anche carte gia giocate o scartate dalla mano iniziale. Eccezione: **Patto degli Indocili** — basta 1 carta; attivazione per-carta via Rinforzi.
 
 ```
 Valore con Bonus = Valore Base + (Bonus_non_stat x Moltiplicatore Trigger Bonus)

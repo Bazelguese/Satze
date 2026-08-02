@@ -25,16 +25,17 @@ describe('onlineMatch', () => {
     );
   });
 
-  it('calcInitialBonuses richiede 2+ agenti per ogni armata incluso Patto degli Indocili', () => {
+  it('calcInitialBonuses: Patto con 1 carta, altre armate con 2+', () => {
     const patto = { ...ARMY_SETS['Patto degli Indocili'][0], army: 'Patto degli Indocili' };
     const kethran = { ...ARMY_SETS.Kethran[0], army: 'Kethran' };
 
-    expect(calcInitialBonuses([patto])).toEqual({ 'Patto degli Indocili': false });
+    expect(calcInitialBonuses([patto])).toEqual({ 'Patto degli Indocili': true });
     expect(calcInitialBonuses([patto, patto])).toEqual({ 'Patto degli Indocili': true });
     expect(calcInitialBonuses([patto, kethran])).toEqual({
-      'Patto degli Indocili': false,
+      'Patto degli Indocili': true,
       Kethran: false,
     });
+    expect(calcInitialBonuses([kethran, kethran])).toEqual({ Kethran: true });
   });
 
   it('build + normalize producono 5 campi coerenti', () => {

@@ -110,7 +110,7 @@ Dopo che si conosce vincitore e perdente:
 | **Conseguenze** (post-esito) | `conquest`, `lastWish` | ⑤ |
 | **Sempre** | Nessun trigger (`null`) | Dove applicabile |
 
-Elenco completo 18 trigger: [appendice §B](#b-trigger-carta).
+Elenco completo 19 trigger: [appendice §B](#b-trigger-carta).
 
 ---
 
@@ -147,7 +147,7 @@ Protocollo completo: [SISTEMA_BILANCIAMENTO_COMPLETO.md](Bilanciamento/SISTEMA_B
 
 ## Bonus armata (sintesi)
 
-Attivo con **2+ carte** della stessa armata nella mano iniziale. Risolve in blocco **③b**, dopo i poteri.
+Attivo con **2+ carte** della stessa armata nella mano iniziale (**Patto degli Indocili**: basta 1 carta; l'attivazione è per-carta via Rinforzi). Risolve in blocco **③b**, dopo i poteri.
 
 | Armata | Trigger | Finestra |
 |--------|---------|----------|
@@ -300,7 +300,8 @@ flowchart LR
 | `resistenza` | Resistenza | preVa | Nemico ≥ 1 campo | 83 |
 | `turbo` | Turbo | preVa | Round ≤ 2 | 72; 73 invert |
 | `ultimaChance` | Ultima Chance | preVa | Round ≥ 5 | 73 invert |
-| `rinforzi` | Rinforzi | preVa | ≥ 2 stessa lega in mano iniziale | Patto Indocili |
+| `alleato` | Alleato | preVa | ≥ 1 altra stessa lega in mano iniziale | 21 carte pool |
+| `rinforzi` | Rinforzi | preVa | ≥ 2 altre stessa lega in mano iniziale | Patto Indocili |
 
 ---
 

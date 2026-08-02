@@ -14,9 +14,11 @@ import {
   MAX_LEAGUE,
   TRIGGER_COLORS,
   LEAGUE_COLORS,
-  TAG_TOOLTIPS,
+  LABEL_TOOLTIPS,
   EFFECT_NAMES,
   isRole,
+  ARCHETYPES,
+  FOCUS_RELATIONS,
 } from './deckBuilderLabData';
 import {
   displayTagsForCard,
@@ -34,14 +36,19 @@ function accentForArmy(armyName) {
 
 function applyCatalogFilters(cards, filters, skip = null) {
   let list = cards;
-  const { query, legaFilter, trigFilter, tagFilter, effectFilter } = filters;
+  const { query, legaFilter, trigFilter, archetypeFilter, focusFilter, scalingFilter, effectFilter } = filters;
 
   if (skip !== 'query' && query.trim()) {
     list = list.filter((c) => cardMatchesCatalogQuery(c, query));
   }
   if (skip !== 'lega' && legaFilter) list = list.filter((c) => c.league === legaFilter);
   if (skip !== 'trig' && trigFilter) list = list.filter((c) => c.trigger === trigFilter);
-  if (skip !== 'tag' && tagFilter) list = list.filter((c) => c.tags?.includes(tagFilter));
+  if (skip !== 'archetype' && archetypeFilter) {
+    list = list.filter((c) => c.archetype === archetypeFilter || c.secondary === archetypeFilter);
+  }
+  if (skip !== 'focus' && focusFilter) list = list.filter((c) => c.focus === focusFilter);
+  if (skip !== 'scaling' && scalingFilter === 'yes') list = list.filter((c) => c.scaling);
+  if (skip !== 'scaling' && scalingFilter === 'no') list = list.filter((c) => !c.scaling);
   if (skip !== 'effect' && effectFilter) list = list.filter((c) => c.effect === effectFilter);
 
   return list;
@@ -57,14 +64,19 @@ function countBy(list, getKey) {
   return counts;
 }
 
-function Tag({ t, mini, showAsRole }) {
-  const role = showAsRole ?? isRole(t);
+function Tag({ t, mini, showAsRole, variant, kind }) {
+  const resolved = kind || variant;
+  const role = showAsRole ?? (resolved === 'archetype' || isRole(t));
+  const kindClass =
+    resolved === 'focus' ? ' focus' :
+    resolved === 'scaling' ? ' scaling' :
+    resolved === 'secondary' ? ' secondary' : '';
   return (
     <span
-      className={`dbl-tag${role ? ' role' : ''}${mini ? ' mini' : ''}`}
-      title={TAG_TOOLTIPS[t] || t}
+      className={`dbl-tag${role ? ' role' : ''}${kindClass}${mini ? ' mini' : ''}`}
+      title={LABEL_TOOLTIPS[t] || t}
     >
-      {t}
+      {resolved === 'secondary' ? `/ ${t}` : t}
     </span>
   );
 }
@@ -95,14 +107,14 @@ function CardTagsToggle({ card }) {
   return (
     <div className="dbl-cc-tags-wrap">
       <button type="button" className="dbl-tag-toggle" onClick={handleToggle}>
-        TAG
+        ARCH
         <span className="dbl-tag-toggle-n">{cardTags.length}</span>
         <span className="dbl-tag-toggle-caret">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
         <div className="dbl-cc-tags">
-          {cardTags.map(({ tag, showAsRole }) => (
-            <TagBadge key={tag} tag={tag} compact showAsRole={showAsRole} />
+          {cardTags.map(({ tag, showAsRole, variant, kind, title }) => (
+            <TagBadge key={`${kind}-${tag}`} tag={tag} compact showAsRole={showAsRole} variant={variant} kind={kind} title={title} />
           ))}
         </div>
       )}
@@ -200,11 +212,11 @@ function DetailPopover({ data }) {
         <span style={{ fontSize: 11.5, color: '#b9b6ad', lineHeight: 1.35 }}>{card.powerDesc || card.abilityText || '—'}</span>
       </div>
       <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 9, letterSpacing: '0.28em', color: '#6d6b64', marginBottom: 6 }}>
-        TAG · SISTEMA AGENTI
+        ARCHETIPO · FOCUS
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {cardTags.map(({ tag, showAsRole }) => (
-          <Tag key={tag} t={tag} showAsRole={showAsRole} />
+        {cardTags.map(({ tag, showAsRole, variant, kind }) => (
+          <Tag key={`${kind}-${tag}`} t={tag} showAsRole={showAsRole} variant={variant} kind={kind} />
         ))}
       </div>
     </div>,
@@ -246,7 +258,9 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   const [sort, setSort] = useState('lega');
   const [legaFilter, setLegaFilter] = useState(null);
   const [trigFilter, setTrigFilter] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
+  const [archetypeFilter, setArchetypeFilter] = useState('');
+  const [focusFilter, setFocusFilter] = useState('');
+  const [scalingFilter, setScalingFilter] = useState('');
   const [effectFilter, setEffectFilter] = useState('');
   const [detail, setDetail] = useState(null);
   const [flash, setFlash] = useState(false);
@@ -371,19 +385,21 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
 
   const filterState = useMemo(
-    () => ({ query, legaFilter, trigFilter, tagFilter, effectFilter }),
-    [query, legaFilter, trigFilter, tagFilter, effectFilter]
+    () => ({ query, legaFilter, trigFilter, archetypeFilter, focusFilter, scalingFilter, effectFilter }),
+    [query, legaFilter, trigFilter, archetypeFilter, focusFilter, scalingFilter, effectFilter]
   );
 
   const hasActiveFilters = Boolean(
-    query.trim() || legaFilter || trigFilter || tagFilter || effectFilter
+    query.trim() || legaFilter || trigFilter || archetypeFilter || focusFilter || scalingFilter || effectFilter
   );
 
   const clearFilters = useCallback(() => {
     setQuery('');
     setLegaFilter(null);
     setTrigFilter('');
-    setTagFilter('');
+    setArchetypeFilter('');
+    setFocusFilter('');
+    setScalingFilter('');
     setEffectFilter('');
     setDetail(null);
   }, []);
@@ -446,8 +462,16 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
     () => applyCatalogFilters(pool, filterState, 'effect'),
     [pool, filterState]
   );
-  const tagFilterBase = useMemo(
-    () => applyCatalogFilters(pool, filterState, 'tag'),
+  const archetypeFilterBase = useMemo(
+    () => applyCatalogFilters(pool, filterState, 'archetype'),
+    [pool, filterState]
+  );
+  const focusFilterBase = useMemo(
+    () => applyCatalogFilters(pool, filterState, 'focus'),
+    [pool, filterState]
+  );
+  const scalingFilterBase = useMemo(
+    () => applyCatalogFilters(pool, filterState, 'scaling'),
     [pool, filterState]
   );
 
@@ -463,23 +487,34 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
     () => countBy(effectFilterBase, (c) => c.effect),
     [effectFilterBase]
   );
-  const tagCounts = useMemo(() => {
+  const archetypeCounts = useMemo(() => {
     const counts = {};
-    for (const card of tagFilterBase) {
-      for (const tag of card.tags || []) {
-        counts[tag] = (counts[tag] || 0) + 1;
-      }
+    for (const card of archetypeFilterBase) {
+      if (card.archetype) counts[card.archetype] = (counts[card.archetype] || 0) + 1;
+      if (card.secondary) counts[card.secondary] = (counts[card.secondary] || 0) + 1;
     }
     return counts;
-  }, [tagFilterBase]);
+  }, [archetypeFilterBase]);
+  const focusCounts = useMemo(
+    () => countBy(focusFilterBase, (c) => c.focus),
+    [focusFilterBase]
+  );
+  const scalingYesCount = useMemo(
+    () => scalingFilterBase.filter((c) => c.scaling).length,
+    [scalingFilterBase]
+  );
 
   const allTriggers = useMemo(
     () => [...new Set(trigFilterBase.map((c) => c.trigger))].sort(),
     [trigFilterBase]
   );
-  const allTags = useMemo(
-    () => [...new Set(tagFilterBase.flatMap((c) => c.tags || []))].sort(),
-    [tagFilterBase]
+  const allArchetypes = useMemo(
+    () => ARCHETYPES.filter((a) => archetypeCounts[a]),
+    [archetypeCounts]
+  );
+  const allFocus = useMemo(
+    () => FOCUS_RELATIONS.filter((f) => focusCounts[f]),
+    [focusCounts]
   );
   const allEffects = useMemo(() => {
     const keys = new Set(effectFilterBase.map((c) => c.effect).filter(Boolean));
@@ -620,7 +655,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cerca nome, tag, effetto…"
+                placeholder="Cerca nome, archetipo, focus, effetto…"
               />
             </div>
             <div className="dbl-filtgroup">
@@ -670,16 +705,39 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
             </select>
             <select
               className="dbl-sel"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              title="Filtro tag"
+              value={archetypeFilter}
+              onChange={(e) => setArchetypeFilter(e.target.value)}
+              title="Filtro archetipo"
             >
-              <option value="">TAG · tutti ({tagFilterBase.length})</option>
-              {allTags.map((t) => (
+              <option value="">ARCHETIPO · tutti ({archetypeFilterBase.length})</option>
+              {allArchetypes.map((t) => (
                 <option key={t} value={t}>
-                  {t} ({tagCounts[t] || 0})
+                  {t} ({archetypeCounts[t] || 0})
                 </option>
               ))}
+            </select>
+            <select
+              className="dbl-sel"
+              value={focusFilter}
+              onChange={(e) => setFocusFilter(e.target.value)}
+              title="Filtro rapporto col Focus"
+            >
+              <option value="">FOCUS · tutti ({focusFilterBase.length})</option>
+              {allFocus.map((t) => (
+                <option key={t} value={t}>
+                  {t} ({focusCounts[t] || 0})
+                </option>
+              ))}
+            </select>
+            <select
+              className="dbl-sel"
+              value={scalingFilter}
+              onChange={(e) => setScalingFilter(e.target.value)}
+              title="Filtro Scalante"
+            >
+              <option value="">SCALANTE · tutti ({scalingFilterBase.length})</option>
+              <option value="yes">Solo Scalanti ({scalingYesCount})</option>
+              <option value="no">Senza Scalante ({scalingFilterBase.length - scalingYesCount})</option>
             </select>
             <button
               type="button"

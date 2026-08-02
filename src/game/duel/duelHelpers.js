@@ -86,7 +86,7 @@ export function countAttritionPriorCards(usedCards, currentAgentId) {
 
 /**
  * Quante carte della stessa Lega dell'agente corrente erano nella mano iniziale
- * (inclusa la carta giocata). Per Rinforzi serve almeno 1 oltre a quella giocata.
+ * (inclusa la carta giocata). Alleato: ≥1 oltre; Rinforzi: ≥2 oltre.
  * `usedCards` può essere un array di id o di oggetti carta.
  */
 export function countInitialLeagueCards(usedCards, currentHand, selectedAgent, lookupCardById = defaultLookupCardById) {

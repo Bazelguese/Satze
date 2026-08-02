@@ -7,7 +7,8 @@
 //
 // Campi usati dall'UI:
 //   glyph, motto, synopsis          → colonna sinistra
-//   bonusLabel, bonusWhen, bonusExplain, style, tips → colonna destra
+//   bonusLabel, bonusWhen, bonusExplain, bonusHighlight, style, tips → colonna destra
+//   bonusHighlight (opzionale)      → callout che evidenzia eccezioni di attivazione
 // ============================================
 
 export const ARMY_LORE = {
@@ -129,13 +130,16 @@ export const ARMY_LORE = {
     motto: 'Mai uniti. Mai sconfitti.',
     synopsis:
       "Mai uniti, mai sconfitti. Il Patto non è un esercito ordinato: è una coalizione di rifiuto, di voci che indeboliscono chiunque si opponga. La debolezza altrui è la loro forza — quando arrivano i rinforzi, il nemico si ritrova più fragile di quanto immaginasse.\n\nNon dominano con un colpo proprio: tolgono potenza e danno all'avversario, aprendo buchi dove prima c'era solidità.\n\nSceglili se ami sopprimere, debuffare e vincere duelli che l'avversario credeva sicuri.",
-    bonusWhen: 'Si attiva in Rinforzi — quando scatta il trigger di rinforzo.',
+    bonusHighlight:
+      'Unica eccezione: le altre armate guardano l’armata (almeno due Agenti uguali in mano). Il Patto guarda la Lega: servono tre carte della stessa Lega, compresa quella giocata.',
+    bonusWhen:
+      'Rinforzi — tre carte della stessa Lega in mano iniziale, compresa la carta giocata.',
     bonusExplain:
-      'Il nemico perde 1 Potenza e 1 Danno sul duello corrente, senza scendere sotto 2 su ciascuna stat. Un debuff doppio che apre vantaggi netti.',
+      'Il nemico perde 1 Potenza e 1 Danno sul duello corrente, senza scendere sotto 2 su ciascuna stat. Si valuta per-carta: solo se quella giocata ha i rinforzi in Lega.',
     style:
-      'Debuff doppio. Cerca trigger Rinforzi e sopprimi POT/DAN nemici nei duelli in cui serve aprire un vantaggio. Trasforma scambi difensivi in aperture offensive.',
+      'Debuff doppio. Costruisci concentrazioni di Lega e sopprimi POT/DAN nemici nei duelli in cui serve aprire un vantaggio.',
     tips:
-      'Il valore è nel timing del Rinforzi: tieni agenti pronti a sfruttare il debuff. Contro passivi già mitigatori, il -1/-1 può essere meno spettacolare — punta a duelli dove quel punto decide.',
+      'Il valore sta nella costruzione a cluster di Lega. Contro passivi già mitigatori, punta ai duelli in cui quel −1/−1 decide.',
   },
   "Khemet": {
     glyph: '𓂀',
@@ -167,16 +171,16 @@ export const ARMY_LORE = {
   },
 };
 
-// Entry sintetica per "Eserciti Misti" (multi-armata)
+// Entry sintetica per "Eserciti Personalizzati" (multi-armata)
 export const MIXED_ARMIES_LORE = {
   glyph: '⚔',
   bonusLabel: 'NESSUNO',
   motto: 'Nessun sigillo. Solo scelte.',
   synopsis:
-    "Coalizioni eterodosse di carte da armate diverse. Versatili, imprevedibili, difficili da pilotare: qui non c'è un sigillo unico a proteggerti, solo la tua capacità di unire poteri che non dovevano stare insieme.\n\nI misti offrono sinergie ibride e matchup creativi, ma rinunciano al bonus di fazione. Ogni lista è un esperimento — e ogni errore costa di più, perché non hai una rete di sicurezza meccanica.\n\nSceglili se conosci già le armate, ami costruire deck e vuoi massima flessibilità a costo di un piano più fragile.",
+    "Coalizioni eterodosse di carte da armate diverse. Versatili, imprevedibili, difficili da pilotare: qui non c'è un sigillo unico a proteggerti, solo la tua capacità di unire poteri che non dovevano stare insieme.\n\nGli eserciti personalizzati offrono sinergie ibride e matchup creativi, ma rinunciano al bonus di fazione. Ogni lista è un esperimento — e ogni errore costa di più, perché non hai una rete di sicurezza meccanica.\n\nSceglili se conosci già le armate, ami costruire deck e vuoi massima flessibilità a costo di un piano più fragile.",
   bonusWhen: 'Nessun bonus armata.',
   bonusExplain:
-    'I deck misti non ricevono il passivo o il trigger di una singola fazione. Tutto il valore deve venire dalle carte e dalle sinergie che costruisci tu.',
+    'Gli eserciti personalizzati non ricevono il passivo o il trigger di una singola fazione. Tutto il valore deve venire dalle carte e dalle sinergie che costruisci tu.',
   style:
     'Massima flessibilità. Compensa l\'assenza di bonus con sinergie di carte, cover dei matchup e scelte di esercito precise. Richiede esperienza.',
   tips:

@@ -6,8 +6,8 @@
 // scelta armata (Fase II - Arruolamento).
 //
 // Props:
-//   armyName(string|null)   nome armata scelta; null = Eserciti Misti
-//   onSelectDeck(deckKey)   chiamato alla conferma. Per i misti il
+//   armyName(string|null)   nome armata scelta; null = Eserciti Personalizzati
+//   onSelectDeck(deckKey)   chiamato alla conferma. Per i personalizzati il
 //                           deckKey ha forma "<armySlug>::<key>"
 //   onBack()                torna alla scelta armata
 
@@ -24,7 +24,7 @@ import { DECK_SUMMARY_BG_POSITION } from '../../../data/deckSummaryCropConfig.js
 import { normalizeContainCrop, parseObjectPositionCenterY, addVerticalPanPercent } from '../../../utils/imageContainPan.js';
 import { loadCustomDecks, resolveDeckCards, getDeckVisualMeta } from '../../../utils/deckManager.js';
 import { formatAbilityHelper } from '../../../utils/cardUtils.js';
-import { getCardTags, shouldShowTagAsRole } from '../../../data/cardTags.js';
+import { getCardLabels, getCardClassificationById, getCardDisplayLabels } from '../../../data/cardArchetypes.js';
 import { DECK_LORE } from './deckLore.js';
 import { DeckConfirmTransition } from './DeckConfirmTransition.jsx';
 import {
@@ -273,9 +273,14 @@ export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
     : [...new Set(deckCards.map((c) => c.army || deck.army).filter(Boolean))].slice(0, 2);
   const isMixed = Boolean(deck.isMixed) || armies.length >= 2;
   const safeSelected =
-    selectedArmy && selectedArmy !== 'Eserciti misti' ? selectedArmy : null;
+    selectedArmy && selectedArmy !== 'Eserciti personalizzati' && selectedArmy !== 'Eserciti misti'
+      ? selectedArmy
+      : null;
   const safeDeckArmy =
-    deck.army && deck.army !== 'Eserciti misti' && deck.army !== 'Misto'
+    deck.army &&
+    deck.army !== 'Eserciti personalizzati' &&
+    deck.army !== 'Eserciti misti' &&
+    deck.army !== 'Misto'
       ? deck.army
       : null;
   const displayArmy =
@@ -290,7 +295,9 @@ export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
       army: cardArmy,
       powerDesc: formatAbilityHelper(card.ability) || card.description || '—',
       bonusDesc: ARMY_BONUSES?.[cardArmy]?.description || '—',
-      tags: getCardTags(card.id),
+      tags: getCardLabels(card.id),
+      displayLabels: getCardDisplayLabels(card.id),
+      ...getCardClassificationById(card.id),
     };
   });
   return {
@@ -420,8 +427,8 @@ export default function DeckSelectCinematic({
   const armyLabel = isManager
     ? (deck.isMixed && deck.armies?.length >= 2
       ? deck.armies.map((a) => String(a).toUpperCase()).join(' · ')
-      : (deck.army ? String(deck.army).toUpperCase() : 'ESERCITI MISTI'))
-    : (armyName == null ? 'ESERCITI MISTI' : String(armyName).toUpperCase());
+      : (deck.army ? String(deck.army).toUpperCase() : 'ESERCITI PERSONALIZZATI'))
+    : (armyName == null ? 'ESERCITI PERSONALIZZATI' : String(armyName).toUpperCase());
   const eyebrowText = isManager ? 'GESTIONE ESERCITI' : 'FASE II · ARRUOLAMENTO';
   const titleText = isManager ? 'I TUOI ESERCITI' : "SCEGLI L'ESERCITO";
   const actionHint = isManager ? 'per modificare' : 'per schierare';
@@ -733,19 +740,18 @@ function DeckArmyEmblemGroup({
 }
 
 function DeckBossTags({ cardId }) {
-  const tags = getCardTags(cardId);
-  if (!tags?.length) return null;
-  const unique = [...new Set(tags)];
-  const traitTags = unique.filter((t) => !shouldShowTagAsRole(t, tags));
-  const roleTags = unique.filter((t) => shouldShowTagAsRole(t, tags));
+  const labels = getCardDisplayLabels(cardId);
+  if (!labels.length) return null;
 
   return (
     <div className="dsk-tk-tags">
-      {traitTags.map((tag) => (
-        <span key={tag} className="dsk-tag">{tag}</span>
-      ))}
-      {roleTags.map((tag) => (
-        <span key={tag} className="dsk-tag role">{tag}</span>
+      {labels.map(({ text, kind }) => (
+        <span
+          key={`${kind}-${text}`}
+          className={`dsk-tag${kind === 'archetype' ? ' role' : ''}${kind === 'focus' ? ' focus' : ''}${kind === 'scaling' ? ' scaling' : ''}`}
+        >
+          {kind === 'secondary' ? `/ ${text}` : text}
+        </span>
       ))}
     </div>
   );
@@ -1316,6 +1322,16 @@ function DeckSelectStyles() {
         color: var(--accent);
         background: color-mix(in srgb, var(--accent) 14%, rgba(5,6,8,0.88));
         text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent);
+      }
+      .dsk-tag.focus {
+        border-left-color: #67e8f9;
+        color: #67e8f9;
+        background: rgba(103,232,249,0.12);
+      }
+      .dsk-tag.scaling {
+        border-left-color: #c084fc;
+        color: #c084fc;
+        background: rgba(192,132,252,0.14);
       }
       @keyframes dsk-info-in { from { opacity: 0; transform: translateY(10px); } }
 

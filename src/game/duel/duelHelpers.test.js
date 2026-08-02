@@ -19,7 +19,7 @@ test('canTriggerPreBattle: Gloria forzata da fieldModifiers via checkTrigger', (
   assert.equal(canTriggerPreBattle('glory', ctx, { resolveTrigger: checkTrigger }), true);
 });
 
-test('countInitialLeagueCards: Rinforzi con 1 altra carta stessa Lega in mano iniziale', () => {
+test('countInitialLeagueCards: conta carte stessa Lega in mano iniziale (Rinforzi richiede 2 oltre alla giocata)', () => {
   const l4a = { id: 901, league: 4 };
   const l4b = { id: 903, league: 4 };
   const l2a = { id: 915, league: 2 };

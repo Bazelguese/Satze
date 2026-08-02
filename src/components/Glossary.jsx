@@ -80,7 +80,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
     return groups;
   }, [filteredTerms]);
 
-  const categoryOrder = ['concetti', 'vittoria', 'trigger', 'effetti', 'tag'];
+  const categoryOrder = ['concetti', 'vittoria', 'trigger', 'effetti', 'archetipi'];
 
   if (!originRect) return null;
 
@@ -155,7 +155,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca termini (es. POT, Buffer, First Strike...)"
+              placeholder="Cerca termini (es. POT, Campione, Vorace...)"
               className={`w-full rounded-lg border border-slate-600/50 bg-menu-panel/95 px-4 py-3 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none ${inputRing}`}
               autoFocus
             />

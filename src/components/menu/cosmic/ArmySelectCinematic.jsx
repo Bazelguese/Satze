@@ -6,7 +6,7 @@
 // style / tips) si modificano in `armyLore.js`.
 //
 // Props:
-//   onSelect(armyName: string | null)  // null = "Eserciti Misti"
+//   onSelect(armyName: string | null)  // null = "Eserciti Personalizzati"
 //   onBack()                           // torna al menu
 //
 // Si renderizza fullscreen (position: fixed). Renderizzala al
@@ -30,10 +30,10 @@ import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
 function buildArmies() {
   const list = [];
 
-  // Voce speciale "Eserciti Misti" (multi-armata)
+  // Voce speciale "Eserciti Personalizzati" (multi-armata)
   list.push({
     id: 'mixed',
-    name: 'Eserciti Misti',
+    name: 'Eserciti Personalizzati',
     color: '#a78bfa',
     bg: null,
     portrait: null,
@@ -72,6 +72,7 @@ function buildArmies() {
       bonusLabel: lore.bonusLabel || (bonus?.trigger ? bonus.trigger.toUpperCase() : 'PASSIVO'),
       bonusWhen: lore.bonusWhen || '',
       bonusExplain: lore.bonusExplain || '',
+      bonusHighlight: lore.bonusHighlight || '',
       motto: lore.motto || '',
       synopsis: lore.synopsis || lore.lore || '',
       style: lore.style || '',
@@ -372,8 +373,14 @@ function DetailPanel({ army, onConfirm }) {
       <div className="v3c-side v3c-side-r" style={{ '--accent': army.color }}>
         <div className="v3c-side-inner v3c-side-inner-tech">
           <div className="v3c-side-tech-body">
-            <div className="v3c-bonus" style={{ borderColor: army.color }}>
+            <div className={`v3c-bonus${army.bonusHighlight ? ' v3c-bonus--exception' : ''}`} style={{ borderColor: army.color }}>
               <div className="v3c-bonus-eye" style={{ color: army.color }}>BONUS · {army.bonusLabel}</div>
+              {army.bonusHighlight && (
+                <div className="v3c-bonus-highlight" style={{ '--accent': army.color }}>
+                  <span className="v3c-bonus-highlight-tag">DIVERSO DALLE ALTRE</span>
+                  <p>{army.bonusHighlight}</p>
+                </div>
+              )}
               {army.bonusWhen && <div className="v3c-bonus-when">{army.bonusWhen}</div>}
               {army.bonusExplain && <p className="v3c-bonus-explain">{army.bonusExplain}</p>}
               {army.bonus && (
@@ -962,9 +969,36 @@ function V3CinematicStyles() {
         background: rgba(0,0,0,0.55);
         border: 1px solid;
       }
+      .v3c-bonus--exception {
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+          0 0 28px color-mix(in srgb, var(--accent) 18%, transparent);
+      }
       .v3c-bonus-eye {
         font-family: 'Share Tech Mono', monospace;
         font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase;
+      }
+      .v3c-bonus-highlight {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-left: 3px solid var(--accent);
+        background: color-mix(in srgb, var(--accent) 16%, rgba(0,0,0,0.45));
+      }
+      .v3c-bonus-highlight-tag {
+        display: block;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+      }
+      .v3c-bonus-highlight p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.45;
+        color: #fafafa;
+        text-wrap: pretty;
       }
       .v3c-bonus-when {
         margin-top: 10px;

@@ -15,7 +15,13 @@ import { MenuCard, MenuBackButton, PALETTE } from "../menu";
 import { saveCustomDeck, loadCustomDeck, generateDeckId, resolveDeckCards } from "../../utils/deckManager";
 import { getCardSprite } from "../../utils";
 import { getCardImageUrl } from "../../data/images";
-import { getCardTags, shouldShowTagAsRole } from "../../data/cardTags";
+import {
+  getCardClassification,
+  getCardLabels,
+  getCardDisplayLabels,
+  ARCHETYPES,
+  FOCUS_RELATIONS,
+} from "../../data/cardArchetypes";
 import { TagBadge } from "../cards/CardTagBadges";
 import { IS_PUBLIC_PLAYTEST_BUILD, createSingleClickHandlers } from "../../config/buildProfile.js";
 
@@ -44,20 +50,40 @@ const EFFECT_NAMES = {
   inversion: "Inversione",
 };
 
-// Costruisce le carte: agent completo + campi per UI (pot, dan, powerDesc, trigger, effect, tags)
+function enrichCard(c, army) {
+  const agent = army ? { ...c, army } : { ...c };
+  const { archetype, secondary, focus, scaling } = getCardClassification(c);
+  return {
+    ...agent,
+    pot: c.power ?? c.pot,
+    dan: c.damage ?? c.dan,
+    powerDesc: c.powerDesc ?? c.description?.replace(/^Potere: /, "") ?? "",
+    trigger: c.trigger ?? (c.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || "Sempre") : "Sempre"),
+    effect: c.effect ?? c.ability?.effect ?? null,
+    archetype,
+    secondary,
+    focus,
+    scaling,
+    tags: getCardLabels(c),
+    displayLabels: getCardDisplayLabels(c),
+  };
+}
+
+function CardArchBadges({ card }) {
+  const labels = card.displayLabels?.length ? card.displayLabels : getCardDisplayLabels(card);
+  if (!labels.length) return null;
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+      {labels.map(({ text, kind, title }) => (
+        <TagBadge key={`${kind}-${text}`} tag={text} compact kind={kind} title={title} />
+      ))}
+    </div>
+  );
+}
+
+// Costruisce le carte: agent completo + campi per UI (archetipi v3.3)
 const ALL_CARDS = Object.entries(ARMY_SETS).flatMap(([army, cards]) =>
-  cards.map((c) => {
-    const agent = { ...c, army };
-    return {
-      ...agent,
-      pot: c.power,
-      dan: c.damage,
-      powerDesc: c.description?.replace(/^Potere: /, "") || "",
-      trigger: c.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || "Sempre") : "Sempre",
-      effect: c.ability?.effect || null,
-      tags: getCardTags(c.id),
-    };
-  })
+  cards.map((c) => enrichCard(c, army))
 );
 
 // Config armate da dati gioco (Icon usa type="army" con name=armyName)
@@ -215,13 +241,7 @@ const CatalogCardRow = ({ card, inDeck, onToggle, disabled, bgPositions }) => {
             {card.trigger && card.powerDesc?.startsWith(card.trigger + ": ") ? card.powerDesc.substring(card.trigger.length + 2).trim() : card.powerDesc}
           </span>
         </div>
-        {card.tags?.length > 0 && (
-          <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-            {[...new Set(card.tags)].map((t) => (
-              <TagBadge key={t} tag={t} compact showAsRole={shouldShowTagAsRole(t, card.tags)} />
-            ))}
-          </div>
-        )}
+        <CardArchBadges card={card} />
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
         <StatBadge label="POT" value={card.pot} color={POWER_COLOR} compact />
@@ -287,13 +307,7 @@ const DeckSummaryCardRow = ({ card, onToggle, armyColor, bgPositions }) => {
             {card.trigger && card.powerDesc?.startsWith(card.trigger + ": ") ? card.powerDesc.substring(card.trigger.length + 2).trim() : card.powerDesc}
           </span>
         </div>
-        {card.tags?.length > 0 && (
-          <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-            {[...new Set(card.tags)].map((t) => (
-              <TagBadge key={t} tag={t} compact showAsRole={shouldShowTagAsRole(t, card.tags)} />
-            ))}
-          </div>
-        )}
+        <CardArchBadges card={card} />
       </div>
       <div style={{ width: 32, height: 32, borderRadius: 0, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, background: `${PALETTE.fire}30`, color: PALETTE.fire, border: `1.5px solid ${PALETTE.fire}` }}>
         −
@@ -359,7 +373,9 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
   const [leagueFilter, setLeagueFilter] = useState(null);
   const [triggerFilter, setTriggerFilter] = useState(null);
   const [effectFilter, setEffectFilter] = useState(null);
-  const [tagFilter, setTagFilter] = useState(null);
+  const [archetypeFilter, setArchetypeFilter] = useState(null);
+  const [focusFilter, setFocusFilter] = useState(null);
+  const [scalingFilter, setScalingFilter] = useState(null);
   const [sortBy, setSortBy] = useState("league");
   const [showAllCards, setShowAllCards] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
@@ -386,15 +402,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
       return;
     }
     const rawCards = resolveDeckCards(loaded, ARMY_SETS);
-    const cards = rawCards.map((c) => ({
-      ...c,
-      pot: c.pot ?? c.power,
-      dan: c.dan ?? c.damage,
-      powerDesc: c.powerDesc ?? c.description?.replace(/^Potere: /, "") ?? "",
-      trigger: c.trigger ?? (c.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || "Sempre") : "Sempre"),
-      effect: c.effect ?? c.ability?.effect ?? null,
-      tags: getCardTags(c.id),
-    }));
+    const cards = rawCards.map((c) => enrichCard(c));
     if (cards.length) {
       setDeck(cards);
       setDeckName(loaded.name || "");
@@ -440,7 +448,12 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
     if (leagueFilter) cards = cards.filter((c) => c.league === leagueFilter);
     if (triggerFilter) cards = cards.filter((c) => c.trigger === triggerFilter);
     if (effectFilter) cards = cards.filter((c) => c.effect === effectFilter);
-    if (tagFilter) cards = cards.filter((c) => c.tags?.includes(tagFilter));
+    if (archetypeFilter) {
+      cards = cards.filter((c) => c.archetype === archetypeFilter || c.secondary === archetypeFilter);
+    }
+    if (focusFilter) cards = cards.filter((c) => c.focus === focusFilter);
+    if (scalingFilter === "yes") cards = cards.filter((c) => c.scaling);
+    if (scalingFilter === "no") cards = cards.filter((c) => !c.scaling);
     cards = [...cards].sort((a, b) => {
       if (sortBy === "league") return b.league - a.league || b.pot - a.pot;
       if (sortBy === "pot") return b.pot - a.pot;
@@ -448,7 +461,7 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
       return 0;
     });
     return cards;
-  }, [selectedArmy, leagueFilter, triggerFilter, effectFilter, tagFilter, sortBy, showAllCards]);
+  }, [selectedArmy, leagueFilter, triggerFilter, effectFilter, archetypeFilter, focusFilter, scalingFilter, sortBy, showAllCards]);
 
   const uniqueTriggers = useMemo(() => {
     const triggers = new Set();
@@ -464,12 +477,21 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
     return [...effects].sort((a, b) => (EFFECT_NAMES[a] || a).localeCompare(EFFECT_NAMES[b] || b));
   }, [selectedArmy, showAllCards]);
 
-  const uniqueTags = useMemo(() => {
-    const tags = new Set();
+  const uniqueArchetypes = useMemo(() => {
+    const set = new Set();
     (showAllCards ? ALL_CARDS : selectedArmy ? ALL_CARDS.filter((c) => c.army === selectedArmy) : []).forEach((c) => {
-      c.tags?.forEach((t) => tags.add(t));
+      if (c.archetype) set.add(c.archetype);
+      if (c.secondary) set.add(c.secondary);
     });
-    return [...tags].sort((a, b) => a.localeCompare(b));
+    return ARCHETYPES.filter((a) => set.has(a));
+  }, [selectedArmy, showAllCards]);
+
+  const uniqueFocus = useMemo(() => {
+    const set = new Set();
+    (showAllCards ? ALL_CARDS : selectedArmy ? ALL_CARDS.filter((c) => c.army === selectedArmy) : []).forEach((c) => {
+      if (c.focus) set.add(c.focus);
+    });
+    return FOCUS_RELATIONS.filter((f) => set.has(f));
   }, [selectedArmy, showAllCards]);
 
   const toggleCard = useCallback(
@@ -832,11 +854,11 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                     </select>
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>TAG:</span>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>ARCH:</span>
                     <select
                       className="cosmic-filter-select"
-                      value={tagFilter ?? ""}
-                      onChange={(e) => setTagFilter(e.target.value || null)}
+                      value={archetypeFilter ?? ""}
+                      onChange={(e) => setArchetypeFilter(e.target.value || null)}
                       style={{
                         padding: "4px 8px",
                         borderRadius: 0,
@@ -849,9 +871,54 @@ export function SatzeDeckBuilderPrototype({ existingDeckId, onClose }) {
                       }}
                     >
                       <option value="">Tutti</option>
-                      {uniqueTags.map((t) => (
+                      {uniqueArchetypes.map((t) => (
                         <option key={t} value={t}>{t}</option>
                       ))}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>FOCUS:</span>
+                    <select
+                      className="cosmic-filter-select"
+                      value={focusFilter ?? ""}
+                      onChange={(e) => setFocusFilter(e.target.value || null)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 0,
+                        border: `1px solid ${PALETTE.slate}`,
+                        background: PALETTE.deepVoid,
+                        color: PALETTE.textPrimary,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        minWidth: 140,
+                      }}
+                    >
+                      <option value="">Tutti</option>
+                      {uniqueFocus.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span className="cosmic-filter-label" style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 2 }}>SCAL:</span>
+                    <select
+                      className="cosmic-filter-select"
+                      value={scalingFilter ?? ""}
+                      onChange={(e) => setScalingFilter(e.target.value || null)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 0,
+                        border: `1px solid ${PALETTE.slate}`,
+                        background: PALETTE.deepVoid,
+                        color: PALETTE.textPrimary,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        minWidth: 120,
+                      }}
+                    >
+                      <option value="">Tutti</option>
+                      <option value="yes">Solo Scalanti</option>
+                      <option value="no">Senza Scalante</option>
                     </select>
                   </div>
                 </div>

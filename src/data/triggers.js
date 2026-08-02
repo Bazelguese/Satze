@@ -26,6 +26,7 @@ export const TRIGGER_NAMES = {
   resistenza: 'Resistenza',
   turbo: 'Turbo',
   ultimaChance: 'Ultima Chance',
+  alleato: 'Alleato',
   rinforzi: 'Rinforzi',
 };
 
@@ -47,7 +48,8 @@ export const TRIGGER_DESCRIPTIONS = {
   resistenza: 'se il nemico ha conquistato 1+ campi',
   turbo: 'se è il Round 1 o 2',
   ultimaChance: 'se è il Round 5 o successivo',
-  rinforzi: 'se nella tua mano iniziale c era almeno 1 altra carta della stessa Lega della carta giocata',
+  alleato: 'se nella tua mano iniziale c era almeno 1 altra carta della stessa Lega della carta giocata',
+  rinforzi: 'se nella tua mano iniziale c erano almeno 2 altre carte della stessa Lega della carta giocata',
 };
 
 export const getAbilityExplanation = (ability) => {

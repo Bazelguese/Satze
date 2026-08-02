@@ -49,7 +49,7 @@ export const Hand = ({
   const zoneArmiesResolved = useMemo(() => {
     if (zoneArmies?.length) return zoneArmies.slice(0, 2);
     if (zoneColorHand?.length) return getDeckArmies(zoneColorHand);
-    if (army && army !== 'Eserciti misti') return [army];
+    if (army && army !== 'Eserciti personalizzati' && army !== 'Eserciti misti') return [army];
     return [];
   }, [zoneArmies, zoneColorHand, army]);
   const colorHand = zoneColorHand?.length
@@ -60,7 +60,7 @@ export const Hand = ({
         ? zoneArmiesResolved.map((a) => ({ army: a }))
         : (zoneArmy ? [{ army: zoneArmy }] : [])));
   const color = getHandAccentColor(colorHand, ARMY_COLORS, position === 'top-left' ? '#818cf8' : '#2dd4bf');
-  const primaryZoneArmy = zoneArmiesResolved[0] ?? (army && army !== 'Eserciti misti' ? army : null);
+  const primaryZoneArmy = zoneArmiesResolved[0] ?? (army && army !== 'Eserciti personalizzati' && army !== 'Eserciti misti' ? army : null);
   
   // Reset errore GIF quando cambia armata
   useEffect(() => {
