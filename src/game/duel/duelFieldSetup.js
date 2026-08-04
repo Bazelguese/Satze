@@ -24,19 +24,32 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
   attachFieldModifiersToContexts(field, playerContext, enemyContext);
   const fieldModifiers = playerContext.fieldModifiers || {};
 
-  const {
+    const {
     blockDisabled,
     copyDisabled,
     directDamageDisabled,
     modifiersDisabled,
     maxDamage,
     maxFC,
+    maxFCByLeague,
     directDamageBonus,
+    positivePowerModifiersDisabled,
+    positiveDamageModifiersDisabled,
   } = flags;
   const overdriveThreshold = fieldModifiers.overdriveThreshold;
   const triggersIgnored = fieldModifiers.triggersIgnored;
 
-  if (maxFC !== null) {
+  if (maxFCByLeague) {
+    const pMax = pAgent?.league ?? 1;
+    const eMax = eAgent?.league ?? 1;
+    const pFCBefore = duel.pFocusUsed;
+    const eFCBefore = duel.eFocusUsed;
+    if (duel.pFocusUsed > pMax) duel.pFocusUsed = pMax;
+    if (duel.eFocusUsed > eMax) duel.eFocusUsed = eMax;
+    battleLog.push(
+      `🏯 ${fn}: FC max = Lega | TU ${pFCBefore}→${duel.pFocusUsed} (max ${pMax}) | IA ${eFCBefore}→${duel.eFocusUsed} (max ${eMax})`
+    );
+  } else if (maxFC !== null) {
     const pFCBefore = duel.pFocusUsed;
     const eFCBefore = duel.eFocusUsed;
     if (duel.pFocusUsed > maxFC) duel.pFocusUsed = maxFC;
@@ -70,6 +83,13 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     pPower = Math.min(pPower, flags.maxPower);
     ePower = Math.min(ePower, flags.maxPower);
     battleLog.push(`🐉 ${fn}: POT max ${flags.maxPower}`);
+  }
+
+  // Lizza del Palazzo d'Onice (96): DAN = Lega prima dei successivi modificatori
+  if (id === 96) {
+    pDamage = pAgent?.league ?? pDamage;
+    eDamage = eAgent?.league ?? eDamage;
+    battleLog.push(`🏛️ ${fn}: DAN = Lega`);
   }
 
   if (field.category === 'values' || id === 2) {
@@ -148,6 +168,71 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
       if (pAgent.power < eAgent.power) pAssaultMod += 5;
       else if (eAgent.power < pAgent.power) eAssaultMod += 5;
       battleLog.push(`🦴 ${fn}: +5 VA alla carta con meno POT`);
+    } else if (id === 84) {
+      if (pAgent.league > eAgent.league) pAssaultMod += 5;
+      else if (eAgent.league > pAgent.league) eAssaultMod += 5;
+      battleLog.push(`🪦 ${fn}: +5 VA a Lega più alta`);
+    } else if (id === 87) {
+      const pFields = playerContext.playerFieldsConquered ?? 0;
+      const eFields = playerContext.enemyFieldsConquered ?? 0;
+      if (pFields < eFields && !pImmune) pPower -= 1;
+      else if (eFields < pFields && !eImmune) ePower -= 1;
+      battleLog.push(`🧊 ${fn}: −1 POT a chi ha meno Campi conquistati`);
+    } else if (id === 90) {
+      const pHP = duel.pHPCurrent ?? 25;
+      const eHP = duel.eHPCurrent ?? 25;
+      if (pHP < eHP) pAssaultMod += 4;
+      else if (eHP < pHP) eAssaultMod += 4;
+      battleLog.push(`⚓ ${fn}: +4 VA a chi ha meno PV`);
+    } else if (id === 91) {
+      if (pAgent.league < eAgent.league) pPower += 1;
+      else if (eAgent.league < pAgent.league) ePower += 1;
+      battleLog.push(`🪖 ${fn}: +1 POT a Lega più bassa`);
+    } else if (id === 92) {
+      battleLog.push(`🏚️ ${fn}: −4 VA a DAN più alta (pre-VA)`);
+    } else if (id === 93) {
+      const pSum = (pAgent.power ?? 0) + (pAgent.damage ?? 0);
+      const eSum = (eAgent.power ?? 0) + (eAgent.damage ?? 0);
+      if (pSum < eSum) pAssaultMod += 5;
+      else if (eSum < pSum) eAssaultMod += 5;
+      battleLog.push(`⚔️ ${fn}: +5 VA a somma POT+DAN base più bassa`);
+    } else if (id === 95) {
+      if (playerContext.isFirst) {
+        pAssaultMod += 3;
+        eDamage += 1;
+      } else {
+        eAssaultMod += 3;
+        pDamage += 1;
+      }
+      battleLog.push(`🧱 ${fn}: 1° +3 VA · 2° +1 DAN`);
+    } else if (id === 102) {
+      if (playerContext.isFirst) eAssaultMod += 3;
+      else pAssaultMod += 3;
+      battleLog.push(`🗼 ${fn}: +3 VA al 2° giocato`);
+    } else if (id === 104) {
+      const pFields = playerContext.playerFieldsConquered ?? 0;
+      const eFields = playerContext.enemyFieldsConquered ?? 0;
+      if (pFields < eFields) pAssaultMod += 5;
+      else if (eFields < pFields) eAssaultMod += 5;
+      battleLog.push(`🔭 ${fn}: +5 VA a chi ha meno Campi conquistati`);
+    } else if (id === 105) {
+      if (pAgent.league === eAgent.league) {
+        pDamage += 1;
+        eDamage += 1;
+        battleLog.push(`🗿 ${fn}: stessa Lega · +1 DAN a entrambi`);
+      } else {
+        battleLog.push(`🗿 ${fn}: Leghe diverse · nessun effetto`);
+      }
+    } else if (id === 107) {
+      if (playerContext.isFirst) pAssaultMod += 3;
+      else eAssaultMod += 3;
+      battleLog.push(`🏰 ${fn}: +3 VA al 1° giocato`);
+    } else if (id === 111) {
+      const pHP = duel.pHPCurrent ?? 25;
+      const eHP = duel.eHPCurrent ?? 25;
+      if (pHP < eHP) pAssaultMod += 4;
+      else if (eHP < pHP) eAssaultMod += 4;
+      battleLog.push(`🌬️ ${fn}: +4 VA a chi ha meno PV`);
     }
   }
 
@@ -190,6 +275,7 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     else if (id === 58) battleLog.push(`🌳 ${fn}: Regola · Resa dei conti · sempre attivo`);
     else if (id === 72) battleLog.push(`🛣️ ${fn}: Regola · Turbo · sempre attivo`);
     else if (id === 83) battleLog.push(`📜 ${fn}: Regola · Resistenza · sempre attivo`);
+    else if (id === 88) battleLog.push(`🌋 ${fn}: Regola · Invasione · sempre attivo`);
     else if (id === 68) battleLog.push(`👑 ${fn}: Regola · Ultimo Desiderio · ×2`);
     else if (id === 59) battleLog.push(`🦷 ${fn}: Imboscata/Intervento invertiti`);
     else if (id === 73) battleLog.push(`🌉 ${fn}: Turbo/Ultima Chance invertiti`);
@@ -200,7 +286,27 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     } else if (id === 77 && playerContext.isFirst) {
       eAbilityBlocked = true;
       battleLog.push(`🚧 ${fn}: IA perde il Potere (secondo)`);
-    }
+    } else if (id === 85) battleLog.push(`🗡️ ${fn}: Vincitore · POT finale (parità → VA)`);
+    else if (id === 89) battleLog.push(`☀️ ${fn}: Bonus → Invasione: +2 POT, +1 DAN`);
+    else if (id === 94) {
+      if (pAgent.league === eAgent.league) {
+        pAbilityBlocked = true;
+        eAbilityBlocked = true;
+        battleLog.push(`⚖️ ${fn}: stessa Lega · Poteri disattivati`);
+      } else {
+        battleLog.push(`⚖️ ${fn}: Leghe diverse · nessun effetto`);
+      }
+    } else if (id === 96) {
+      // DAN già impostato sopra
+    } else if (id === 98) battleLog.push(`🖤 ${fn}: modificatori positivi di POT disattivati`);
+    else if (id === 99) battleLog.push(`⛓️ ${fn}: POT/DAN entro ±2 dal base (pre-VA)`);
+    else if (id === 108) battleLog.push(`🧱 ${fn}: Vincitore · DAN finale (parità → VA)`);
+    else if (id === 109) {
+      pBonusBlocked = true;
+      eBonusBlocked = true;
+      battleLog.push(`📡 ${fn}: Bonus Armata disattivati`);
+    } else if (id === 110) battleLog.push(`💧 ${fn}: modificatori positivi di DAN disattivati`);
+    else if (id === 112) battleLog.push(`🌲 ${fn}: POT finale max 7 (pre-VA)`);
   }
 
   if (id === 56) {
@@ -225,6 +331,12 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     if (pFocusUsed < eFocusUsed) pAssaultMod += 5;
     else if (eFocusUsed < pFocusUsed) eAssaultMod += 5;
     battleLog.push(`📚 ${fn}: +5 VA a chi investe meno FC`);
+  }
+
+  if (id === 101) {
+    if (pFocusUsed === 3) pAssaultMod += 4;
+    if (eFocusUsed === 3) eAssaultMod += 4;
+    battleLog.push(`🌉 ${fn}: +4 VA a chi investe esattamente 3 FC`);
   }
 
   if (flags.imposeDamageFromPower) {
@@ -255,10 +367,18 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     modifiersDisabled,
     maxDamage,
     maxFC,
+    maxFCByLeague: Boolean(maxFCByLeague),
     directDamageBonus,
     overdriveThreshold,
     triggersIgnored,
     winnerByFocusNotVa: flags.winnerByFocusNotVa,
+    winnerByFinalPowerThenVa: flags.winnerByFinalPowerThenVa === true,
+    winnerByFinalDamageThenVa: flags.winnerByFinalDamageThenVa === true,
+    vaModifiersDouble: flags.vaModifiersDouble === true,
+    positivePowerModifiersDisabled: positivePowerModifiersDisabled === true,
+    positiveDamageModifiersDisabled: positiveDamageModifiersDisabled === true,
+    clampPowerDamageToBasePlusMinus2: flags.clampPowerDamageToBasePlusMinus2 === true,
+    maxFinalPower: flags.maxFinalPower ?? null,
     focusHalvedInVa: flags.focusHalvedInVa,
     conquestDouble: flags.conquestDouble === true,
     lastWishDouble: flags.lastWishDouble === true,

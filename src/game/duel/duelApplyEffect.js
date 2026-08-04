@@ -106,6 +106,8 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     minAssault,
     copyDisabled = false,
     modifiersDisabled: modDisabled = false,
+    positivePowerModifiersDisabled = false,
+    positiveDamageModifiersDisabled = false,
     directDamageDisabled = false,
     directDamageBonus = 0,
     minFloorReduction = 0,
@@ -134,6 +136,32 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         target: agentTarget(target, ctx),
         blockedEffect: { kind: 'ability', sourceId: source, effectType: effect },
         blockedBy: 'modifiersDisabled',
+      });
+    }
+    return;
+  }
+
+  if (positivePowerModifiersDisabled && effect === 'power' && value > 0) {
+    pushLog(log, `${source}: +POT BLOCCATO da Piana del Vetro Nero`);
+    if (hasEmitter(log)) {
+      emitBlock(log, {
+        source: makeSource({ kind: 'field', id: 98, name: 'Piana del Vetro Nero', ownerSide: null }),
+        target: agentTarget(target, ctx),
+        blockedEffect: { kind: 'ability', sourceId: source, effectType: effect },
+        blockedBy: 'positivePowerModifiersDisabled',
+      });
+    }
+    return;
+  }
+
+  if (positiveDamageModifiersDisabled && effect === 'damage' && value > 0) {
+    pushLog(log, `${source}: +DAN BLOCCATO da Cascate di Vetro`);
+    if (hasEmitter(log)) {
+      emitBlock(log, {
+        source: makeSource({ kind: 'field', id: 110, name: 'Cascate di Vetro', ownerSide: null }),
+        target: agentTarget(target, ctx),
+        blockedEffect: { kind: 'ability', sourceId: source, effectType: effect },
+        blockedBy: 'positiveDamageModifiersDisabled',
       });
     }
     return;
@@ -752,6 +780,16 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
       break;
     }
     case 'powerAndDamage': {
+      if (positivePowerModifiersDisabled && value > 0) {
+        applyDuelPowerEffect('damage', value, target, source, log, options, state, ctx);
+        pushLog(log, `${source}: +POT annullato da Piana del Vetro Nero (DAN applicato)`);
+        break;
+      }
+      if (positiveDamageModifiersDisabled && value > 0) {
+        applyDuelPowerEffect('power', value, target, source, log, options, state, ctx);
+        pushLog(log, `${source}: +DAN annullato da Cascate di Vetro (POT applicato)`);
+        break;
+      }
       if (target === 'player') {
         const beforeP = state.pPower;
         const beforeD = state.pDamage;

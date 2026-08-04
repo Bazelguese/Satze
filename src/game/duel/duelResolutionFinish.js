@@ -64,6 +64,8 @@ export function runDuelDamageAftermathAndFcAdjust({
     pFCCurrent,
     eFCCurrent,
     battleLog,
+    pFocusUsed,
+    eFocusUsed,
   });
 
   emitAftermathResourceEvents(battleLog, field, beforeAftermath, {

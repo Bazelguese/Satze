@@ -1,5 +1,5 @@
 // ============================================
-// CAMPI DI BATTAGLIA — 83 campi (CAMPI_MASTER.md)
+// CAMPI DI BATTAGLIA — 113 campi (CAMPI_MASTER.md)
 // ============================================
 
 import { RAW_BATTLEFIELDS } from './battlefieldsData.js';
@@ -17,7 +17,7 @@ export const getFieldStyle = (category) => FIELD_STYLES[category] || FIELD_STYLE
 
 export const ALL_BATTLEFIELDS = RAW_BATTLEFIELDS;
 
-/** Mappa `tema` → animazione reveal. Tutte e 10 le armate hanno ora un'animazione dedicata. */
+/** Mappa `tema` → animazione reveal. Tutte e 11 le armate hanno un'animazione dedicata. */
 export const BATTLEFIELD_TEMA_TO_ANIMATION = {
   "Figli dell'Orizzonte": 'swirl',
   Kethran: 'frammenti',
@@ -29,6 +29,7 @@ export const BATTLEFIELD_TEMA_TO_ANIMATION = {
   'Ratti della Megera': 'sciame',
   'Patto degli Indocili': 'rivolta',
   Khemet: 'cerchi',
+  Apex: 'artigli',
 };
 
 const FIELD_BY_ID = new Map(RAW_BATTLEFIELDS.map((f) => [f.id, f]));
@@ -40,7 +41,7 @@ export const getBattlefieldEntranceTheme = (fieldId) => {
   return field.tema;
 };
 
-/** @returns {'default'|'swirl'|'frammenti'|'sipario'|'hud'|'onda'|'morsi'|'occhio'|'sciame'|'rivolta'|'cerchi'} */
+/** @returns {'default'|'swirl'|'frammenti'|'sipario'|'hud'|'onda'|'morsi'|'occhio'|'sciame'|'rivolta'|'cerchi'|'artigli'} */
 export const getBattlefieldAnimationType = (fieldId) => {
   const field = FIELD_BY_ID.get(fieldId);
   if (!field?.tema || field.tema === 'generico') return 'default';

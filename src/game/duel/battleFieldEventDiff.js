@@ -109,11 +109,27 @@ export function emitDuelFieldSetupEvents(log, field, pAgent, eAgent, before, aft
   if (flags.modifiersDisabled) rules.push({ ruleCode: 'modifiersDisabled', params: null });
   if (flags.maxDamage != null) rules.push({ ruleCode: 'maxDamage', params: { maxDamage: flags.maxDamage } });
   if (flags.maxFC != null) rules.push({ ruleCode: 'maxFC', params: { maxFC: flags.maxFC } });
+  if (flags.maxFCByLeague) rules.push({ ruleCode: 'maxFCByLeague', params: null });
   if (flags.triggersIgnored) rules.push({ ruleCode: 'triggersIgnored', params: null });
   if (flags.conquestDouble) rules.push({ ruleCode: 'conquestDouble', params: null });
   if (flags.lastWishDouble) rules.push({ ruleCode: 'lastWishDouble', params: null });
   if (flags.focusHalvedInVa) rules.push({ ruleCode: 'focusHalvedInVa', params: null });
   if (flags.winnerByFocusNotVa) rules.push({ ruleCode: 'winnerByFocusNotVa', params: null });
+  if (flags.winnerByFinalPowerThenVa) rules.push({ ruleCode: 'winnerByFinalPowerThenVa', params: null });
+  if (flags.winnerByFinalDamageThenVa) rules.push({ ruleCode: 'winnerByFinalDamageThenVa', params: null });
+  if (flags.vaModifiersDouble) rules.push({ ruleCode: 'vaModifiersDouble', params: null });
+  if (flags.positivePowerModifiersDisabled) {
+    rules.push({ ruleCode: 'positivePowerModifiersDisabled', params: null });
+  }
+  if (flags.positiveDamageModifiersDisabled) {
+    rules.push({ ruleCode: 'positiveDamageModifiersDisabled', params: null });
+  }
+  if (flags.clampPowerDamageToBasePlusMinus2) {
+    rules.push({ ruleCode: 'clampPowerDamageToBasePlusMinus2', params: null });
+  }
+  if (flags.maxFinalPower != null) {
+    rules.push({ ruleCode: 'maxFinalPower', params: { maxFinalPower: flags.maxFinalPower } });
+  }
 
   for (const rule of rules) {
     emitFieldRule(log, {

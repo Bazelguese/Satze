@@ -20,6 +20,8 @@ export function applyDuelMainAbilities({
   const {
     copyDisabled = false,
     modifiersDisabled = false,
+    positivePowerModifiersDisabled = false,
+    positiveDamageModifiersDisabled = false,
     directDamageDisabled = false,
     directDamageBonus = 0,
     minFloorReduction = 0,
@@ -33,6 +35,8 @@ export function applyDuelMainAbilities({
     stat: a.stat,
     copyDisabled,
     modifiersDisabled,
+    positivePowerModifiersDisabled,
+    positiveDamageModifiersDisabled,
     directDamageDisabled,
     directDamageBonus,
     minFloorReduction,

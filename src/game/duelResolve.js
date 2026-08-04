@@ -9,6 +9,7 @@ import {
   createDuelCanTriggerAbility,
   resolveFieldArmyBonuses,
   applyFieldOverdriveBonuses,
+  applyDuelFieldLateEffects,
 } from './battlefieldDeepEffects.js';
 import { applyDuelFieldSetup } from './duel/duelFieldSetup.js';
 import { applyDuelPowerEffect } from './duel/duelApplyEffect.js';
@@ -219,6 +220,8 @@ export function computeDuelResolution({
     const fieldOptions = {
       copyDisabled,
       modifiersDisabled,
+      positivePowerModifiersDisabled: fieldFlags.positivePowerModifiersDisabled === true,
+      positiveDamageModifiersDisabled: fieldFlags.positiveDamageModifiersDisabled === true,
       directDamageDisabled,
       directDamageBonus,
       minFloorReduction: minFloorReduction || 0,
@@ -346,6 +349,7 @@ export function computeDuelResolution({
     const statsBeforeField = visualRecorder.readStats(state);
     const overdriveBefore = snapshotDuelFieldStats(state);
     applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
+    applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog);
     emitDuelFieldSetupEvents(
       battleLog,
       field,
@@ -369,6 +373,8 @@ export function computeDuelResolution({
     ePower = state.ePower;
     pDamage = state.pDamage;
     eDamage = state.eDamage;
+    pAssaultMod = state.pAssaultMod;
+    eAssaultMod = state.eAssaultMod;
 
     const assault = runDuelAssaultCalculation(battleLog, {
       pAgent,
@@ -414,6 +420,112 @@ export function computeDuelResolution({
           opponentVA: eAssault,
           tieBreakCode: 'focusInvested',
           tieBreakData: { localFocus: pFocusUsed, opponentFocus: eFocusUsed },
+        });
+      } else {
+        winner = resolveDuelWinnerByAssault({
+          pAssault,
+          eAssault,
+          pAgent,
+          eAgent,
+          pPower,
+          ePower,
+          isPlayerFirst,
+          battleLog,
+        });
+      }
+    } else if (fieldFlags.winnerByFinalPowerThenVa) {
+      if (pPower > ePower) {
+        battleLog.push(`${field.name}: POT finale più alta → Vittoria Tu`);
+        winner = 'player';
+        emitOutcome(battleLog, {
+          winnerSide: 'local',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'finalPower',
+          tieBreakData: { localPower: pPower, opponentPower: ePower },
+        });
+      } else if (ePower > pPower) {
+        battleLog.push(`${field.name}: POT finale più alta → Vittoria IA`);
+        winner = 'enemy';
+        emitOutcome(battleLog, {
+          winnerSide: 'opponent',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'finalPower',
+          tieBreakData: { localPower: pPower, opponentPower: ePower },
+        });
+      } else if (pAssault > eAssault) {
+        battleLog.push(`${field.name}: parità POT · VA più alto → Vittoria Tu`);
+        winner = 'player';
+        emitOutcome(battleLog, {
+          winnerSide: 'local',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'vaAfterPowerTie',
+          tieBreakData: null,
+        });
+      } else if (eAssault > pAssault) {
+        battleLog.push(`${field.name}: parità POT · VA più alto → Vittoria IA`);
+        winner = 'enemy';
+        emitOutcome(battleLog, {
+          winnerSide: 'opponent',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'vaAfterPowerTie',
+          tieBreakData: null,
+        });
+      } else {
+        winner = resolveDuelWinnerByAssault({
+          pAssault,
+          eAssault,
+          pAgent,
+          eAgent,
+          pPower,
+          ePower,
+          isPlayerFirst,
+          battleLog,
+        });
+      }
+    } else if (fieldFlags.winnerByFinalDamageThenVa) {
+      if (pDamage > eDamage) {
+        battleLog.push(`${field.name}: DAN finale più alta → Vittoria Tu`);
+        winner = 'player';
+        emitOutcome(battleLog, {
+          winnerSide: 'local',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'finalDamage',
+          tieBreakData: { localDamage: pDamage, opponentDamage: eDamage },
+        });
+      } else if (eDamage > pDamage) {
+        battleLog.push(`${field.name}: DAN finale più alta → Vittoria IA`);
+        winner = 'enemy';
+        emitOutcome(battleLog, {
+          winnerSide: 'opponent',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'finalDamage',
+          tieBreakData: { localDamage: pDamage, opponentDamage: eDamage },
+        });
+      } else if (pAssault > eAssault) {
+        battleLog.push(`${field.name}: parità DAN · VA più alto → Vittoria Tu`);
+        winner = 'player';
+        emitOutcome(battleLog, {
+          winnerSide: 'local',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'vaAfterDamageTie',
+          tieBreakData: null,
+        });
+      } else if (eAssault > pAssault) {
+        battleLog.push(`${field.name}: parità DAN · VA più alto → Vittoria IA`);
+        winner = 'enemy';
+        emitOutcome(battleLog, {
+          winnerSide: 'opponent',
+          localVA: pAssault,
+          opponentVA: eAssault,
+          tieBreakCode: 'vaAfterDamageTie',
+          tieBreakData: null,
         });
       } else {
         winner = resolveDuelWinnerByAssault({

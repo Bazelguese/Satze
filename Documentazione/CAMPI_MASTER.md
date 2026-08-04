@@ -1,6 +1,6 @@
 # SATZE — CAMPI DI BATTAGLIA · LISTA MASTER
 
-Tutti gli 83 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEMA_POOL_CAMPI.md` per nomi e tag.
+Tutti i 113 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEMA_POOL_CAMPI.md` per nomi e tag.
 
 **Legenda tag**
 - `category`: tipo meccanico + mode-gate — values · limit · conditional · focus · trigger · neutral
@@ -8,13 +8,13 @@ Tutti gli 83 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEM
 - `minTurn`: turno minimo in cui il campo può essere attivo (1 / 2)
 - *tema* = intestazione di sezione (etichetta, non pesa lo spawn)
 
-**Totali:** comune 31 · raro 36 · special 11 · neutri 5 → **83**. Ogni armata: 6 campi a tema.
+**Totali:** comune 38 · raro 52 · special 18 · neutri 5 → **113**. Ogni armata: 6 campi a tema (inclusa Apex).
 
 Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)** Parte I (blocco ①/⑤) e Parte II §D.
 
 ---
 
-## Generico *(18 — riempitivo condiviso)*
+## Generico *(42 — riempitivo condiviso)*
 
 | id | Nome | Effetto | category | rarità | minTurn |
 |----|------|---------|----------|--------|---------|
@@ -36,6 +36,30 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 | 16 | Voragine Infinita | Post-scontro · Entrambi · −3 PV | conditional | comune | 2 |
 | 17 | Altare del Sacrificio | Conquista · −2 PV | conditional | comune | 1 |
 | 18 | Biblioteca Proibita | In scontro · Chi investe meno FC · +5 VA | values | special | 1 |
+| 90 | Baia delle Navi Spezzate | In scontro · Chi ha meno PV · +4 VA | values | comune | 2 |
+| 91 | Fossa delle Reclute | In scontro · Agente con Lega più bassa · +1 POT | values | raro | 1 |
+| 92 | Sala delle Volte Fratturate | In scontro · Agente con DAN più alta · −4 VA | values | comune | 1 |
+| 93 | Trincee del Ferro Morto | In scontro · Agente con POT base + DAN base più basse · +5 VA | values | raro | 1 |
+| 94 | Tribunale delle Insegne Gemelle | Regola · Agenti con la stessa Lega · Poteri disattivati | limit | raro | 1 |
+| 95 | Breccia di Rocca Vesta | In scontro · 1° giocato · +3 VA · 2° giocato · +1 DAN | values | raro | 1 |
+| 96 | Lizza del Palazzo d'Onice | Regola · Entrambi · DAN = Lega | limit | special | 1 |
+| 97 | Arena del Banco Rosso | Post-scontro · Perdente · +1 FC ogni 2 FC investiti, max 3 | conditional | special | 1 |
+| 98 | Piana del Vetro Nero | Regola · Modificatori positivi di POT disattivati | limit | raro | 1 |
+| 99 | Fossa delle Catene | Regola · POT e DAN entro ±2 dal valore base | limit | special | 1 |
+| 100 | Valico della Guardia | Regola · FC investibili max · Lega dell'Agente | focus | special | 1 |
+| 101 | Ponte dei Tre Piloni | In scontro · Chi investe esattamente 3 FC · +4 VA | focus | raro | 1 |
+| 102 | Faro di Vetta Grigia | In scontro · 2° giocato · +3 VA | values | raro | 1 |
+| 103 | Terme di Karsil | Post-scontro · Vincitore · Cura 2 PV | conditional | comune | 2 |
+| 104 | Osservatorio delle Braci | In scontro · Chi ha meno Campi conquistati · +5 VA | values | raro | 1 |
+| 105 | Piazza del Monolite | Regola · Agenti con la stessa Lega · +1 DAN | values | comune | 1 |
+| 106 | Porto della Catena | Post-scontro · Vincitore · +1 FC | conditional | comune | 1 |
+| 107 | Bastione di Frontiera | In scontro · 1° giocato · +3 VA | values | raro | 1 |
+| 108 | Ponte di Roccaferma | Regola · Vincitore · DAN finale più alta (parità → VA più alto) | limit | special | 1 |
+| 109 | Nodo dei Segnali | Regola · Bonus Armata disattivati | limit | raro | 1 |
+| 110 | Cascate di Vetro | Regola · Modificatori positivi di DAN disattivati | limit | raro | 1 |
+| 111 | Gola dei Venti Rossi | In scontro · Chi ha meno PV · +4 VA | values | comune | 2 |
+| 112 | Foresta Pietrificata | Regola · POT finale non può superare 7 | limit | raro | 1 |
+| 113 | Lago delle Sette Lune | Post-scontro · Perdente · +1 FC e +1 PV | conditional | raro | 1 |
 
 ## Figli dell'Orizzonte *(6)*
 
@@ -147,6 +171,17 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 | 82 | Necropoli Dorata | Conquista · +1 PV | conditional | comune | 2 |
 | 83 | Cripta dei Re-Maghi | Regola · Resistenza · sempre attivo | trigger | raro | 2 |
 
+## Apex *(6)*
+
+| id | Nome | Effetto | category | rarità | minTurn |
+|----|------|---------|----------|--------|---------|
+| 84 | Cimitero dei Colossi | In scontro · Agente con Lega più alta · +5 VA | values | raro | 1 |
+| 85 | Tana dei Tagliagole | Regola · Vincitore · POT finale più alta (parità → VA più alto) | limit | special | 1 |
+| 86 | Valle degli Infiniti Denti | Regola · Modificatori VA · valore ×2 | values | special | 1 |
+| 87 | Canyon Ghiacciato | In scontro · Chi ha meno Campi conquistati · −1 POT | values | comune | 2 |
+| 88 | Vulcano Dormiente Innevato | Regola · Invasione · sempre attivo | trigger | raro | 1 |
+| 89 | Meridiano del Sole Verde | Regola · Bonus → Invasione: +2 POT, +1 DAN | limit | raro | 1 |
+
 ## Neutri *(5 — solo Bare Hands · battaglie del mondo di SATZE)*
 
 | id | Nome | Effetto | category | minTurn |
@@ -159,9 +194,11 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 
 ---
 
-### Note d'implementazione (richiedono codice nuovo)
+### Note d'implementazione
 
-- **Nuovi field-mod `alwaysActive`** (oggi solo gloria/imboscata/intervento/magnanimo/rimonta/vendetta): 58, 72, 83.
+- **Field-mod `alwaysActive`:** 22, 31, 39, 45, 49, 58, 72, 83, 88 (Invasione).
 - **Swap/override trigger:** 59, 73, 74.
-- **`Imponi`** non ancora implementato: 81.
-- **Modificatori globali di campo:** 61 (×2 Conquista), 62/67 (override calcolo VA), 66 (−1 ai "minimi"), 68 (×2 Ultimo Desiderio).
+- **Sostituzione Bonus Armata:** 70, 89.
+- **Override vincitore:** 62 (FC), 85 (POT finale → VA).
+- **Clamp / limiti:** 15, 36, 63, 99, 100 (FC max = Lega).
+- **Modificatori globali:** 61 (×2 Conquista), 66 (−1 ai "minimi"), 67 (FC÷2 in VA), 68 (×2 Ultimo Desiderio), 86 (×2 mod VA), 98 (no +POT).

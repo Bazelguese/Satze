@@ -25,11 +25,13 @@ test('armate con mappa dedicata usano animazione tematica', () => {
   }
 });
 
-test('Enclave, Ratti, Patto, Khemet → animazioni dedicate', () => {
+test('Enclave, Ratti, Patto, Khemet, Apex → animazioni dedicate', () => {
   assert.equal(getBattlefieldAnimationType(60), 'occhio');
   assert.equal(getBattlefieldAnimationType(70), 'sciame');
   assert.equal(getBattlefieldAnimationType(74), 'rivolta');
   assert.equal(getBattlefieldAnimationType(79), 'cerchi');
+  assert.equal(getBattlefieldAnimationType(84), 'artigli');
+  assert.equal(getBattlefieldAnimationType(88), 'artigli');
 });
 
 test('esempi armate con animazione attiva', () => {

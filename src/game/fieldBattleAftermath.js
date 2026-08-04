@@ -27,6 +27,8 @@ export function applyBattlefieldRoundAftermath({
   pFCCurrent,
   eFCCurrent,
   battleLog,
+  pFocusUsed = 0,
+  eFocusUsed = 0,
 }) {
   let pHP = pHPCurrent;
   let eHP = eHPCurrent;
@@ -258,6 +260,72 @@ export function applyBattlefieldRoundAftermath({
     } else {
       eHP = Math.min(25, eHP + 1);
       battleLog.push(`🏛️ Necropoli Dorata: IA +1 PV`);
+    }
+  }
+
+  // Terme di Karsil (103): vincitore cura 2 PV
+  if (field.id === 103) {
+    if (winner === 'player') {
+      const before = pHP;
+      pHP = Math.min(25, pHP + 2);
+      battleLog.push(`♨️ Terme di Karsil: Tu +2 PV (${before} → ${pHP})`);
+    } else {
+      const before = eHP;
+      eHP = Math.min(25, eHP + 2);
+      battleLog.push(`♨️ Terme di Karsil: IA +2 PV (${before} → ${eHP})`);
+    }
+  }
+
+  // Porto della Catena (106): vincitore +1 FC
+  if (field.id === 106) {
+    if (winner === 'player') {
+      const before = pFC;
+      pFC += 1;
+      battleLog.push(`⚓ Porto della Catena: Tu +1 FC (${before} → ${pFC})`);
+    } else {
+      const before = eFC;
+      eFC += 1;
+      battleLog.push(`⚓ Porto della Catena: IA +1 FC (${before} → ${eFC})`);
+    }
+  }
+
+  // Lago delle Sette Lune (113): perdente +1 FC e +1 PV
+  if (field.id === 113) {
+    if (winner === 'player') {
+      const beforeFC = eFC;
+      const beforeHP = eHP;
+      eFC += 1;
+      eHP = Math.min(25, eHP + 1);
+      battleLog.push(`🌙 Lago delle Sette Lune: IA +1 FC (${beforeFC} → ${eFC}), +1 PV (${beforeHP} → ${eHP})`);
+    } else {
+      const beforeFC = pFC;
+      const beforeHP = pHP;
+      pFC += 1;
+      pHP = Math.min(25, pHP + 1);
+      battleLog.push(`🌙 Lago delle Sette Lune: Tu +1 FC (${beforeFC} → ${pFC}), +1 PV (${beforeHP} → ${pHP})`);
+    }
+  }
+
+  // Arena del Banco Rosso (97): perdente recupera floor(FC investiti / 2), max 3
+  if (field.id === 97) {
+    if (winner === 'player') {
+      const gain = Math.min(3, Math.floor((eFocusUsed || 0) / 2));
+      if (gain > 0) {
+        const before = eFC;
+        eFC += gain;
+        battleLog.push(`🔴 Arena del Banco Rosso: IA +${gain} FC (perdente, ${eFocusUsed} investiti) (${before} → ${eFC})`);
+      } else {
+        battleLog.push(`🔴 Arena del Banco Rosso: IA +0 FC (perdente, ${eFocusUsed} investiti)`);
+      }
+    } else {
+      const gain = Math.min(3, Math.floor((pFocusUsed || 0) / 2));
+      if (gain > 0) {
+        const before = pFC;
+        pFC += gain;
+        battleLog.push(`🔴 Arena del Banco Rosso: Tu +${gain} FC (perdente, ${pFocusUsed} investiti) (${before} → ${pFC})`);
+      } else {
+        battleLog.push(`🔴 Arena del Banco Rosso: Tu +0 FC (perdente, ${pFocusUsed} investiti)`);
+      }
     }
   }
 

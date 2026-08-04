@@ -5,6 +5,7 @@ import './index-graphics-prova.css'
 import './styles/satze-duello-2_5d.css'
 import './styles/satze-duello-animazioni.css'
 import './styles/satze-duello-ingresso-carta.css'
+import './styles/satze-duello-ingresso-carta-extra.css'
 import './styles/cosmic-tokens.css'
 
 import { App } from './App'

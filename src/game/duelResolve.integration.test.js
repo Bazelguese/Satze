@@ -486,4 +486,37 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.enemyAssault).toBeLessThanOrEqual(Math.max(6, 3 + 2 + 2 - 5));
     expect(hasCopy(battleResult.events, 'bonus')).toBe(true);
   });
+
+  it('85 Tana dei Tagliagole: vince chi ha POT finale più alta anche con VA inferiore', () => {
+    const tagliagole = ALL_BATTLEFIELDS.find((f) => f.id === 85);
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: tagliagole,
+      selectedFocus: 1,
+      enemySelectedFocus: 5,
+      selectedAgent: agent('Tu', 'Apex', { power: 8, damage: 1, league: 4 }),
+      enemyAgent: agent('IA', 'Kethran', { power: 3, damage: 4, league: 2 }),
+    });
+    expect(battleResult.winner).toBe('player');
+    expect(battleResult.playerPower).toBeGreaterThan(battleResult.enemyPower);
+    expect(hasFieldRule(battleResult.events, 'winnerByFinalPowerThenVa', 85)).toBe(true);
+  });
+
+  it('98 Piana del Vetro Nero: blocca +POT da Potere', () => {
+    const vetro = ALL_BATTLEFIELDS.find((f) => f.id === 98);
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: vetro,
+      isPlayerFirst: true,
+      selectedAgent: agent('Tu', 'Apex', {
+        power: 3,
+        damage: 2,
+        league: 2,
+        ability: { trigger: 'imboscata', effect: 'power', value: 2 },
+      }),
+      enemyAgent: agent('IA', 'Kethran', { power: 3, damage: 2, league: 2 }),
+    });
+    expect(battleResult.playerPower).toBe(3);
+    expect(hasFieldRule(battleResult.events, 'positivePowerModifiersDisabled', 98)).toBe(true);
+  });
 });

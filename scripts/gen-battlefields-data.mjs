@@ -19,8 +19,13 @@ const ICON_BY_ID = {
   51: 'sword', 52: 'dove', 53: 'castle', 54: 'tower', 55: 'flame',
   56: 'crown', 57: 'flame', 58: 'tree', 59: 'bone', 60: 'crystal', 61: 'crown', 62: 'sword',
   63: 'dragon', 64: 'egg', 65: 'tower', 66: 'hole', 67: 'castle', 68: 'crown', 69: 'wave',
-  70: 'temple', 71: 'ghost', 72: 'road', 73: 'bridge', 74: 'circle', 75: 'hole', 76: 'coin',
+  70: 'temple',   71: 'ghost', 72: 'road', 73: 'bridge', 74: 'circle', 75: 'hole', 76: 'coin',
   77: 'block', 78: 'temple', 79: 'star', 80: 'shield', 81: 'temple', 82: 'ghost', 83: 'scroll',
+  84: 'bone', 85: 'sword', 86: 'tooth', 87: 'crystal', 88: 'flame', 89: 'sun',
+  90: 'wave', 91: 'egg', 92: 'brick', 93: 'iron', 94: 'scales', 95: 'castle',
+  96: 'crown', 97: 'coin', 98: 'mirror', 99: 'block', 100: 'tower', 101: 'bridge',
+  102: 'tower', 103: 'wave', 104: 'flame', 105: 'brick', 106: 'coin', 107: 'castle',
+  108: 'bridge', 109: 'block', 110: 'mirror', 111: 'wind', 112: 'tree', 113: 'moon',
 };
 
 /** @type {Array<{id:number,name:string,effect:string,category:string,rarita:string,tema:string,minTurn:number}>} */
@@ -108,6 +113,38 @@ const MASTER = [
   [53,'Il Bastione del Nono Mondo','Nessuno','neutral',null,'generico',1],
   [54,'Il Ponte dell\'Ultimo Campione','Nessuno','neutral',null,'generico',1],
   [55,'Le Ceneri del Mondo Senza Nome','Nessuno','neutral',null,'generico',1],
+  // Apex (6)
+  [84,'Cimitero dei Colossi','In scontro · Agente con Lega più alta · +5 VA','values','raro','Apex',1],
+  [85,'Tana dei Tagliagole','Regola · Vincitore · POT finale più alta (parità → VA più alto)','limit','special','Apex',1],
+  [86,'Valle degli Infiniti Denti','Regola · Modificatori VA · valore ×2','values','special','Apex',1],
+  [87,'Canyon Ghiacciato','In scontro · Chi ha meno Campi conquistati · −1 POT','values','comune','Apex',2],
+  [88,'Vulcano Dormiente Innevato','Regola · Invasione · sempre attivo','trigger','raro','Apex',1],
+  [89,'Meridiano del Sole Verde','Regola · Bonus → Invasione: +2 POT, +1 DAN','limit','raro','Apex',1],
+  // Generici aggiuntivi (12)
+  [90,'Baia delle Navi Spezzate','In scontro · Chi ha meno PV · +4 VA','values','comune','generico',2],
+  [91,'Fossa delle Reclute','In scontro · Agente con Lega più bassa · +1 POT','values','raro','generico',1],
+  [92,'Sala delle Volte Fratturate','In scontro · Agente con DAN più alta · −4 VA','values','comune','generico',1],
+  [93,'Trincee del Ferro Morto','In scontro · Agente con POT base + DAN base più basse · +5 VA','values','raro','generico',1],
+  [94,'Tribunale delle Insegne Gemelle','Regola · Agenti con la stessa Lega · Poteri disattivati','limit','raro','generico',1],
+  [95,'Breccia di Rocca Vesta','In scontro · 1° giocato · +3 VA · 2° giocato · +1 DAN','values','raro','generico',1],
+  [96,'Lizza del Palazzo d\'Onice','Regola · Entrambi · DAN = Lega','limit','special','generico',1],
+  [97,'Arena del Banco Rosso','Post-scontro · Perdente · +1 FC ogni 2 FC investiti, max 3','conditional','special','generico',1],
+  [98,'Piana del Vetro Nero','Regola · Modificatori positivi di POT disattivati','limit','raro','generico',1],
+  [99,'Fossa delle Catene','Regola · POT e DAN entro ±2 dal valore base','limit','special','generico',1],
+  [100,'Valico della Guardia','Regola · FC investibili max · Lega dell\'Agente','focus','special','generico',1],
+  [101,'Ponte dei Tre Piloni','In scontro · Chi investe esattamente 3 FC · +4 VA','focus','raro','generico',1],
+  [102,'Faro di Vetta Grigia','In scontro · 2° giocato · +3 VA','values','raro','generico',1],
+  [103,'Terme di Karsil','Post-scontro · Vincitore · Cura 2 PV','conditional','comune','generico',2],
+  [104,'Osservatorio delle Braci','In scontro · Chi ha meno Campi conquistati · +5 VA','values','raro','generico',1],
+  [105,'Piazza del Monolite','Regola · Agenti con la stessa Lega · +1 DAN','values','comune','generico',1],
+  [106,'Porto della Catena','Post-scontro · Vincitore · +1 FC','conditional','comune','generico',1],
+  [107,'Bastione di Frontiera','In scontro · 1° giocato · +3 VA','values','raro','generico',1],
+  [108,'Ponte di Roccaferma','Regola · Vincitore · DAN finale più alta (parità → VA più alto)','limit','special','generico',1],
+  [109,'Nodo dei Segnali','Regola · Bonus Armata disattivati','limit','raro','generico',1],
+  [110,'Cascate di Vetro','Regola · Modificatori positivi di DAN disattivati','limit','raro','generico',1],
+  [111,'Gola dei Venti Rossi','In scontro · Chi ha meno PV · +4 VA','values','comune','generico',2],
+  [112,'Foresta Pietrificata','Regola · POT finale non può superare 7','limit','raro','generico',1],
+  [113,'Lago delle Sette Lune','Post-scontro · Perdente · +1 FC e +1 PV','conditional','raro','generico',1],
 ];
 
 const fields = MASTER.map(([id, name, effect, category, rarita, tema, minTurn]) => ({

@@ -97,6 +97,7 @@ export const checkTrigger = (trigger, context) => {
         return (context.playerLeague || 0) > (context.enemyLeague || 0);
         
       case 'invasione': // Invasione - hai conquistato 1+ campi
+        if (fieldMods.invasioneAlwaysActive) return true;
         return (context.playerFieldsConquered || 0) >= 1;
         
       case 'resistenza': // Resistenza - nemico ha conquistato 1+ campi

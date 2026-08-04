@@ -29,6 +29,7 @@ export const BATTLEFIELD_TEMA = {
   RATTI: 'Ratti della Megera',
   PATTO: 'Patto degli Indocili',
   KHEMET: 'Khemet',
+  APEX: 'Apex',
 };
 
 /** @param {{ rarita?: string, category?: string }} field */

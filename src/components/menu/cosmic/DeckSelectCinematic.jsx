@@ -32,7 +32,26 @@ import {
   setShuffleStyle,
   SHUFFLE_STYLE_OPTIONS,
   getShuffleStyleMeta,
+  CLASSIC_SHUFFLE_KIND,
 } from '../../../utils/shuffleStylePreference.js';
+import {
+  getPlaceFxPreference,
+  setPlaceFxPreference,
+  DROP_PLACE_FX_OPTIONS,
+  CLICK_PLACE_FX_OPTIONS,
+  PLACE_FX_STYLE_OPTIONS,
+  getDropPlaceFxMeta,
+  getClickPlaceFxMeta,
+  getPlaceFxStyleMeta,
+  needsTwoFaces,
+  placeFxStyleClass,
+  getPlaceFxDurationMs,
+} from '../../../utils/placeFxPreference.js';
+import { CARD_BACK_IMAGES } from '../../../utils/cardBackPicker.js';
+import { CardBack } from '../../cards/CardBack.jsx';
+import { CardShuffleDealStage } from '../../shuffle/CardShuffleDealStage.jsx';
+import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDealLayout.js';
+import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
 
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
@@ -343,6 +362,9 @@ export default function DeckSelectCinematic({
   const [phase, setPhase] = useState('intro'); // intro -> idle -> confirming
   const [pulse, setPulse] = useState(0);
   const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
+  const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
+  /** Anteprima attiva: shuffle | click | drop | effects */
+  const [previewMode, setPreviewMode] = useState('shuffle');
 
   const deck = DECKS[idx] || DECKS[0];
   const accent = deck ? deck.accent : '#a78bfa';
@@ -375,12 +397,18 @@ export default function DeckSelectCinematic({
       return;
     }
     setShuffleStyle(shuffleKind);
+    setPlaceFxPreference(placeFx);
     onSelectDeck && onSelectDeck(deck.deckKey);
   };
 
   const pickShuffleKind = (key) => {
     setShuffleKind(key);
     setShuffleStyle(key);
+  };
+
+  const patchPlaceFx = (partial) => {
+    const next = setPlaceFxPreference(partial);
+    setPlaceFx(next);
   };
 
   const shuffleIdx = SHUFFLE_STYLE_OPTIONS.findIndex((o) => o.key === shuffleKind);
@@ -391,6 +419,16 @@ export default function DeckSelectCinematic({
       (base + delta + SHUFFLE_STYLE_OPTIONS.length) % SHUFFLE_STYLE_OPTIONS.length;
     pickShuffleKind(SHUFFLE_STYLE_OPTIONS[next].key);
   };
+
+  const cycleOption = (options, currentKey, delta, onPick) => {
+    const base = Math.max(0, options.findIndex((o) => String(o.key) === String(currentKey)));
+    const next = (base + delta + options.length) % options.length;
+    onPick(options[next].key);
+  };
+
+  const clickMeta = getClickPlaceFxMeta(placeFx.click);
+  const dropMeta = getDropPlaceFxMeta(placeFx.drop);
+  const styleMeta = getPlaceFxStyleMeta(placeFx.style);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -507,6 +545,93 @@ export default function DeckSelectCinematic({
         </div>
       </div>
 
+      {/* Preferenze duello: anteprima (mischia / ingresso / effetti) + controlli */}
+      {!isManager && phase === 'idle' && (
+        <div className="dsk-prefstack">
+          <DuelAnimPreview
+            mode={previewMode}
+            onModeChange={setPreviewMode}
+            accent={accent}
+            shuffleKind={shuffleKind}
+            placeFx={placeFx}
+            shuffleMeta={shuffleMeta}
+            clickMeta={clickMeta}
+            dropMeta={dropMeta}
+            styleMeta={styleMeta}
+            deckCards={deck.deckCards || []}
+            card={{
+              name: deck.leader?.name || deck.name,
+              img: deck.leader?.img || null,
+              power: deck.leader?.power ?? 0,
+              damage: deck.leader?.damage ?? 0,
+              army: deck.army,
+            }}
+          />
+          <aside className="dsk-prefpanel" aria-label="Preferenze animazioni duello">
+            <div className="dsk-prefpanel-head">
+              <span className="eye">PREFERENZE DUELLO</span>
+              <span className="hint">MISCHIA · INGRESSO</span>
+            </div>
+            <div className="dsk-prefpanel-rows">
+              <PrefRow
+                label="MISCHIA"
+                meta={shuffleMeta}
+                rowKey={shuffleKind}
+                onPrev={() => { setPreviewMode('shuffle'); cycleShuffle(-1); }}
+                onNext={() => { setPreviewMode('shuffle'); cycleShuffle(1); }}
+                prevLabel="Mischia precedente"
+                nextLabel="Mischia successiva"
+              />
+              <PrefRow
+                label="CLICK"
+                meta={clickMeta}
+                rowKey={placeFx.click}
+                onPrev={() => {
+                  setPreviewMode('click');
+                  cycleOption(CLICK_PLACE_FX_OPTIONS, placeFx.click, -1, (key) => patchPlaceFx({ click: key }));
+                }}
+                onNext={() => {
+                  setPreviewMode('click');
+                  cycleOption(CLICK_PLACE_FX_OPTIONS, placeFx.click, 1, (key) => patchPlaceFx({ click: key }));
+                }}
+                prevLabel="Ingresso click precedente"
+                nextLabel="Ingresso click successivo"
+              />
+              <PrefRow
+                label="DROP"
+                meta={dropMeta}
+                rowKey={placeFx.drop}
+                onPrev={() => {
+                  setPreviewMode('drop');
+                  cycleOption(DROP_PLACE_FX_OPTIONS, placeFx.drop, -1, (key) => patchPlaceFx({ drop: key }));
+                }}
+                onNext={() => {
+                  setPreviewMode('drop');
+                  cycleOption(DROP_PLACE_FX_OPTIONS, placeFx.drop, 1, (key) => patchPlaceFx({ drop: key }));
+                }}
+                prevLabel="Ingresso drop precedente"
+                nextLabel="Ingresso drop successivo"
+              />
+              <PrefRow
+                label="EFFETTI"
+                meta={styleMeta}
+                rowKey={String(placeFx.style)}
+                onPrev={() => {
+                  setPreviewMode('effects');
+                  cycleOption(PLACE_FX_STYLE_OPTIONS, placeFx.style, -1, (key) => patchPlaceFx({ style: key }));
+                }}
+                onNext={() => {
+                  setPreviewMode('effects');
+                  cycleOption(PLACE_FX_STYLE_OPTIONS, placeFx.style, 1, (key) => patchPlaceFx({ style: key }));
+                }}
+                prevLabel="Stile effetti precedente"
+                nextLabel="Stile effetti successivo"
+              />
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Bottom: pager + selezionato + SCHIERA */}
       <div className="dsk-ctabar">
         <DeckPager idx={idx} total={total} accent={accent} onPick={goTo} compact={compactPager}/>
@@ -515,33 +640,6 @@ export default function DeckSelectCinematic({
             <span className="lbl">SELEZIONATO</span>
             <span className="name">{deck.name}</span>
           </div>
-          {!isManager && phase === 'idle' && (
-            <div className="dsk-ctabar-shuffle">
-              <span className="lbl">MISCHIA</span>
-              <div className="dsk-shuffle-carousel" aria-label="Stile mischia">
-                <button
-                  type="button"
-                  className="dsk-shuffle-nav"
-                  onClick={() => cycleShuffle(-1)}
-                  aria-label="Mischia precedente"
-                >
-                  ‹
-                </button>
-                <div className="dsk-shuffle-slide" key={shuffleKind}>
-                  <span className="sub">{shuffleMeta.sub}</span>
-                  <span className="name">{shuffleMeta.title}</span>
-                </div>
-                <button
-                  type="button"
-                  className="dsk-shuffle-nav"
-                  onClick={() => cycleShuffle(1)}
-                  aria-label="Mischia successiva"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-          )}
         </div>
         <div className="dsk-ctabar-actions">
           {onPreviewDeck && (
@@ -864,6 +962,224 @@ function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick })
 // ============================================================
 // PAGER
 // ============================================================
+function PrefRow({ label, meta, rowKey, onPrev, onNext, prevLabel, nextLabel }) {
+  return (
+    <div className="dsk-pref-row">
+      <span className="dsk-pref-lbl">{label}</span>
+      <div className="dsk-pref-carousel" aria-label={label}>
+        <button type="button" className="dsk-shuffle-nav" onClick={onPrev} aria-label={prevLabel}>
+          ‹
+        </button>
+        <div className="dsk-shuffle-slide" key={rowKey}>
+          <span className="sub">{meta.sub}</span>
+          <span className="name">{meta.title}</span>
+        </div>
+        <button type="button" className="dsk-shuffle-nav" onClick={onNext} aria-label={nextLabel}>
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PlaceFxMiniCard({ card, accent, flat = false }) {
+  return (
+    <div
+      className="dsk-fxpreview-card"
+      style={{
+        '--acc': accent,
+        boxShadow: flat
+          ? `0 0 0 1px ${accent}66`
+          : `0 0 0 1px ${accent}66, 0 18px 34px rgba(0,0,0,0.6)`,
+      }}
+    >
+      {card?.img ? (
+        <img src={card.img} alt="" draggable={false} />
+      ) : (
+        <div className="dsk-fxpreview-card-fallback" style={{ background: `radial-gradient(circle at 40% 30%, ${accent}55, #0a0a0d 70%)` }} />
+      )}
+      <div className="dsk-fxpreview-card-shade" />
+      <div className="dsk-fxpreview-card-top" style={{ background: `${accent}cc` }}>
+        <span className="pod pot">{card?.power ?? 0}</span>
+        <span className="ttl">{card?.name || 'Agente'}</span>
+        <span className="pod dan">{card?.damage ?? 0}</span>
+      </div>
+      <div className="dsk-fxpreview-card-bot" style={{ background: accent }}>
+        {card?.army || 'SATZE'}
+      </div>
+    </div>
+  );
+}
+
+const PREVIEW_TABS = [
+  { key: 'shuffle', label: 'MISCHIA' },
+  { key: 'click', label: 'CLICK' },
+  { key: 'drop', label: 'DROP' },
+  { key: 'effects', label: 'EFFETTI' },
+];
+
+function DuelAnimPreview({
+  mode,
+  onModeChange,
+  accent,
+  shuffleKind,
+  placeFx,
+  shuffleMeta,
+  clickMeta,
+  dropMeta,
+  styleMeta,
+  deckCards,
+  card,
+}) {
+  const [tick, setTick] = useState(0);
+  const [shuffleTick, setShuffleTick] = useState(0);
+  /** Stesso layout del duello (1920×1080): in preview viene solo scalato/croppato. */
+  const shuffleLayout = useMemo(() => createBattlefieldShuffleDealLayout('player'), []);
+  const previewDeck = useMemo(() => {
+    if (deckCards?.length >= 10) return deckCards.slice(0, 10);
+    const filler = deckCards?.[0] || { id: 'preview-0', army: card?.army || 'Kethran' };
+    return Array.from({ length: 10 }, (_, i) => deckCards?.[i] || { ...filler, id: filler.id ?? `preview-${i}` });
+  }, [deckCards, card?.army]);
+  const cardBackSrc = CARD_BACK_IMAGES[0];
+  const isClassicShuffle = shuffleKind === CLASSIC_SHUFFLE_KIND;
+  // Crop sulla zona mano/mazzo giocatore (stesso palco del duello).
+  const shuffleFocus = useMemo(() => {
+    const deck = shuffleLayout.deckPos;
+    const hand = shuffleLayout.getHandSlot(2, 5);
+    return {
+      x: (deck.x + hand.x) / 2,
+      y: (deck.y + hand.y) / 2 - 40,
+      scale: 0.36,
+    };
+  }, [shuffleLayout]);
+
+  // EFFETTI: usa la posa drop (impatto più leggibile per runic/thunder/sigil/shock)
+  const pose = mode === 'click' ? placeFx.click : placeFx.drop;
+  const twoFaces = needsTwoFaces(pose);
+  const duration = getPlaceFxDurationMs(pose);
+  const caption =
+    mode === 'shuffle' ? shuffleMeta
+      : mode === 'click' ? clickMeta
+        : mode === 'drop' ? dropMeta
+          : styleMeta;
+
+  useEffect(() => {
+    if (mode === 'shuffle') return undefined;
+    const t = setTimeout(() => setTick((n) => n + 1), duration + 700);
+    return () => clearTimeout(t);
+  }, [mode, pose, placeFx.style, tick, duration]);
+
+  const face = <PlaceFxMiniCard card={card} accent={accent} flat={twoFaces} />;
+
+  return (
+    <div className="dsk-fxpreview" style={{ '--accent': accent, '--acc': accent }} aria-label="Anteprima animazioni duello">
+      <div className="dsk-fxpreview-head">
+        <div className="dsk-fxpreview-tabs" role="tablist" aria-label="Tipo anteprima">
+          {PREVIEW_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={mode === tab.key}
+              className={mode === tab.key ? 'on' : ''}
+              onClick={() => onModeChange(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {mode !== 'shuffle' && (
+          <button
+            type="button"
+            className="dsk-fxpreview-replay"
+            onClick={() => setTick((n) => n + 1)}
+            aria-label="Riproduci anteprima"
+            title="Riproduci"
+          >
+            ↻
+          </button>
+        )}
+      </div>
+
+      {mode === 'shuffle' ? (
+        <div className="dsk-fxpreview-stage is-shuffle">
+          <div
+            className="dsk-fxpreview-shuffle-world"
+            style={{
+              width: BATTLEFIELD_VIEWPORT.width,
+              height: BATTLEFIELD_VIEWPORT.height,
+              left: `calc(50% - ${shuffleFocus.x * shuffleFocus.scale}px)`,
+              top: `calc(50% - ${shuffleFocus.y * shuffleFocus.scale}px)`,
+              transform: `scale(${shuffleFocus.scale})`,
+            }}
+          >
+            <CardShuffleDealStage
+              key={`${shuffleKind}-${shuffleTick}`}
+              deck={previewDeck}
+              layout={shuffleLayout}
+              shuffleKind={shuffleKind}
+              cardBackSrc={cardBackSrc}
+              battlefield
+              autoPlay
+              loop={!isClassicShuffle}
+              timeScale={1}
+              onComplete={
+                isClassicShuffle
+                  ? () => { setTimeout(() => setShuffleTick((n) => n + 1), 700); }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      ) : (
+        <div className={`dsk-fxpreview-stage is-place${mode === 'effects' ? ' is-effects' : ''}`}>
+          <div className="dsk-fxpreview-scale">
+            <React.Fragment key={`fxprev-${mode}-${pose}-${placeFx.style || 'default'}-${tick}`}>
+              <div className={`place-fx fx-${pose}${placeFxStyleClass(placeFx.style)}`}>
+                <div className="place-shadow" />
+                <div className="place-flash" />
+                <div className="place-ring" />
+                <div className="place-ring b" />
+                <div className="place-echo" />
+                <div className="place-echo e2" />
+                <div className="place-echo e3" />
+                <div className="place-edge l" />
+                <div className="place-edge r" />
+              </div>
+              <div
+                className={`place-card play-${pose}`}
+                style={{ width: 230, height: 330, position: 'relative', zIndex: 8 }}
+              >
+                {twoFaces ? (
+                  <div className="place-flip-inner">
+                    <div className="place-flip-face">{face}</div>
+                    <div className="place-flip-face back">
+                      <CardBack
+                        deck={previewDeck}
+                        backImage={cardBackSrc}
+                        fallbackArmy={card?.army}
+                        borderRadius={10}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  face
+                )}
+              </div>
+            </React.Fragment>
+          </div>
+        </div>
+      )}
+
+      <div className="dsk-fxpreview-caption">
+        <span className="sub">{caption.sub}</span>
+        <span className="name">{caption.title}</span>
+      </div>
+      {caption.desc && <p className="dsk-fxpreview-desc">{caption.desc}</p>}
+    </div>
+  );
+}
+
 function DeckPager({ idx, total, accent, onPick, compact }) {
   if (compact) {
     return (
@@ -1390,19 +1706,289 @@ function DeckSelectStyles() {
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .dsk-ctabar-shuffle {
+      .dsk-prefstack {
+        position: absolute;
+        left: 28px;
+        top: 64px;
+        bottom: auto;
+        z-index: 14;
+        width: min(460px, calc(100vw - 56px));
+        max-height: calc(100% - 118px);
+        overflow-x: hidden;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
-        align-items: flex-end;
-        flex: 0 0 auto;
-        gap: 4px;
-        padding-left: 16px;
-        border-left: 1px solid color-mix(in srgb, var(--accent) 35%, rgba(255,255,255,0.08));
+        gap: 8px;
+        animation: dsk-pref-in .4s cubic-bezier(.2,.7,.2,1) both;
+        pointer-events: none;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--accent) 55%, transparent) transparent;
       }
-      .dsk-shuffle-carousel {
+      .dsk-prefstack > * { pointer-events: auto; }
+      @keyframes dsk-pref-in {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .dsk-fxpreview {
+        padding: 10px 12px 12px;
+        background: rgba(5,6,8,0.92);
+        border: 1.5px solid color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,0.12));
+        border-left: 5px solid var(--accent);
+        box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 28%, transparent), 0 18px 40px rgba(0,0,0,0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .dsk-fxpreview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .dsk-fxpreview-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .dsk-fxpreview-tabs button {
+        padding: 5px 8px;
+        background: rgba(5,6,8,0.65);
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, rgba(255,255,255,0.12));
+        color: rgba(226,232,240,0.75);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .18s;
+      }
+      .dsk-fxpreview-tabs button.on,
+      .dsk-fxpreview-tabs button:hover {
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
+      }
+      .dsk-fxpreview-replay {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(5,6,8,0.65);
+        border: 1px solid color-mix(in srgb, var(--accent) 50%, rgba(255,255,255,0.15));
+        color: var(--accent);
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        transition: all .18s;
+        flex: 0 0 auto;
+      }
+      .dsk-fxpreview-replay:hover {
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+      }
+      .dsk-fxpreview-stage {
+        position: relative;
+        height: 360px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 62%),
+          linear-gradient(180deg, rgba(255,255,255,0.03), transparent 40%, rgba(0,0,0,0.35));
+        border: 1px solid color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,0.06));
+      }
+      .dsk-fxpreview-stage.is-shuffle {
+        height: 300px;
+      }
+      .dsk-fxpreview-stage.is-place,
+      .dsk-fxpreview-stage.is-effects {
+        height: 380px;
+      }
+      .dsk-fxpreview-shuffle-world {
+        position: absolute;
+        transform-origin: 0 0;
+        pointer-events: none;
+      }
+      .dsk-fxpreview-scale {
+        width: 230px;
+        height: 330px;
+        position: relative;
+        transform: scale(0.48);
+        transform-origin: 50% 50%;
+        transform-style: flat;
+      }
+      .dsk-fxpreview-stage.is-effects .dsk-fxpreview-scale {
+        transform: scale(0.42);
+        transform-origin: 50% 50%;
+      }
+      .dsk-fxpreview-card {
+        width: 230px;
+        height: 330px;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        background: #0a0a0d;
+        border: 2px solid rgba(255,255,255,0.28);
+      }
+      .dsk-fxpreview-card img,
+      .dsk-fxpreview-card-fallback {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .dsk-fxpreview-card-shade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.62) 0%, transparent 22%, transparent 68%, rgba(0,0,0,0.6) 100%);
+      }
+      .dsk-fxpreview-card-top {
+        position: absolute;
+        left: 0; right: 0; top: 8px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        gap: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+      }
+      .dsk-fxpreview-card-top .pod {
+        width: 28px; height: 28px; flex: none;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.85);
+        border: 1.5px solid #fde047;
+        display: grid; place-items: center;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px; font-weight: 800; color: #fde047;
+      }
+      .dsk-fxpreview-card-top .pod.dan { border-color: #c084fc; color: #c084fc; }
+      .dsk-fxpreview-card-top .ttl {
+        flex: 1;
+        text-align: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        text-shadow: 0 1px 3px #000;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dsk-fxpreview-card-bot {
+        position: absolute;
+        left: 0; right: 0; bottom: 0;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      }
+      .dsk-fxpreview-back {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 10px;
+      }
+      .dsk-fxpreview-caption {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 18px;
+      }
+      .dsk-fxpreview-caption .sub {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.22em;
+        color: rgba(148,163,184,0.9);
+        font-weight: 700;
+      }
+      .dsk-fxpreview-caption .name {
+        font-family: 'Cinzel', serif;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        color: #f5f3eb;
+        text-transform: uppercase;
+      }
+      .dsk-fxpreview-desc {
+        margin: 0;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px;
+        line-height: 1.4;
+        letter-spacing: 0.04em;
+        color: rgba(203,213,225,0.8);
+      }
+      .dsk-prefpanel {
+        position: relative;
+        width: 100%;
+        padding: 12px 14px 14px;
+        background: rgba(5,6,8,0.9);
+        border: 1.5px solid color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,0.12));
+        border-left: 5px solid var(--accent);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+        box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 28%, transparent), 0 18px 40px rgba(0,0,0,0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 0 0 auto;
+      }
+      .dsk-prefpanel-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid color-mix(in srgb, var(--accent) 28%, rgba(255,255,255,0.08));
+      }
+      .dsk-prefpanel-head .eye {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 0.32em;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .dsk-prefpanel-head .hint {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        color: rgba(148,163,184,0.85);
+        font-weight: 700;
+      }
+      .dsk-prefpanel-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .dsk-pref-row {
+        display: grid;
+        grid-template-columns: 78px 1fr;
+        align-items: center;
+        gap: 10px;
+      }
+      .dsk-pref-lbl {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        color: rgba(226,232,240,0.72);
+        font-weight: 700;
+      }
+      .dsk-pref-carousel {
         display: flex;
         align-items: center;
         gap: 8px;
+        justify-content: flex-end;
       }
       .dsk-shuffle-nav {
         width: 28px;
@@ -1419,6 +2005,7 @@ function DeckSelectStyles() {
         line-height: 1;
         cursor: pointer;
         transition: all .18s;
+        flex: 0 0 auto;
       }
       .dsk-shuffle-nav:hover {
         border-color: var(--accent);

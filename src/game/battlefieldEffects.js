@@ -19,6 +19,7 @@ export function buildFieldModifiers(field) {
   if (id === 58) m.reckoningAlwaysActive = true;
   if (id === 72) m.turboAlwaysActive = true;
   if (id === 83) m.resistenzaAlwaysActive = true;
+  if (id === 88) m.invasioneAlwaysActive = true;
   if (id === 59) m.swapImboscataIntervento = true;
   if (id === 73) m.invertTurboUltimaChance = true;
   if (id === 61) m.conquestDouble = true;
@@ -26,11 +27,19 @@ export function buildFieldModifiers(field) {
   if (id === 74) m.circuitAbilityTriggers = true;
   if (id === 79) m.overdriveExtraPowerAndDamage = true;
   if (id === 62) m.winnerByFocusNotVa = true;
+  if (id === 85) m.winnerByFinalPowerThenVa = true;
+  if (id === 108) m.winnerByFinalDamageThenVa = true;
+  if (id === 86) m.vaModifiersDouble = true;
   if (id === 67) m.focusHalvedInVa = true;
   if (id === 66) m.minFloorReduction = 1;
   if (id === 81) m.imposeDamageFromPower = true;
   if (id === 63) m.maxPower = 5;
+  if (id === 112) m.maxFinalPower = 7;
   if (id === 77) m.secondPlayerAbilityBlocked = true;
+  if (id === 98) m.positivePowerModifiersDisabled = true;
+  if (id === 110) m.positiveDamageModifiersDisabled = true;
+  if (id === 99) m.clampPowerDamageToBasePlusMinus2 = true;
+  if (id === 100) m.maxFCByLeague = true;
 
   return {
     ...m,
@@ -71,11 +80,19 @@ export function getFieldSetupFlags(field) {
     modifiersDisabled: id === 32,
     maxDamage: id === 15 ? 4 : null,
     maxFC: id === 36 ? 3 : null,
+    maxFCByLeague: id === 100,
     maxPower: id === 63 ? 5 : null,
     directDamageBonus: id === 33 ? 1 : 0,
     forceBothImmune: id === 80,
     minFloorReduction: id === 66 ? 1 : 0,
     imposeDamageFromPower: id === 81,
+    positivePowerModifiersDisabled: id === 98,
+    positiveDamageModifiersDisabled: id === 110,
+    clampPowerDamageToBasePlusMinus2: id === 99,
+    maxFinalPower: id === 112 ? 7 : null,
+    vaModifiersDouble: id === 86,
+    winnerByFinalPowerThenVa: id === 85,
+    winnerByFinalDamageThenVa: id === 108,
     ...getFieldModifiers(field),
   };
 }

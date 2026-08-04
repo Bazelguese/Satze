@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../src/utils';
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
+import { CardBack } from '../src/components/cards/CardBack';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
@@ -31,6 +32,13 @@ import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle
 import { DuelRevealHudStyles } from '../src/components/shuffle/DuelRevealVeil';
 import { prepareDuelShuffleHands, prepareRandomDuelShuffleHands } from '../src/components/shuffle/prepareDuelShuffleHands';
 import { SHUFFLE_STYLE_OPTIONS, setShuffleStyle } from '../src/utils/shuffleStylePreference';
+import {
+  getPlaceFxPreference,
+  resolvePlaceFxForVia,
+  placeFxStyleClass,
+  needsTwoFaces,
+} from '../src/utils/placeFxPreference';
+import { CARD_BACK_IMAGES } from '../src/utils/cardBackPicker';
 import {
   armyMenuLabel,
   buildDialogueDuelArmyChoices,
@@ -1420,16 +1428,33 @@ export default function SatzeGame() {
     return () => els.forEach((el) => el.removeEventListener('wheel', onWheel));
   }, [gamePhase, selectedAgent, playerFocus, playerHand, playerUsedCards, setSelectedFocus]);
 
-  // Hook per drag and drop
-  const [agentPlaceFx, setAgentPlaceFx] = useState('rise'); // rise = click, slam = drag&drop
+  // Hook per drag and drop — posa ingresso da preferenze (click/drop + stile FX)
+  const [agentPlaceFx, setAgentPlaceFx] = useState('rise');
+  const [agentPlaceFxStyle, setAgentPlaceFxStyle] = useState(null);
   const [enemyPlaceFx, setEnemyPlaceFx] = useState('rise');
+  const [enemyPlaceFxStyle, setEnemyPlaceFxStyle] = useState(null);
   const prevEnemyAgentIdRef = useRef(null);
+  /** Dorsi della partita (stessi dello shuffle): persistono dopo clear di shuffleDealSetup. */
+  const [duelCardBacks, setDuelCardBacks] = useState({
+    player: CARD_BACK_IMAGES[0],
+    enemy: CARD_BACK_IMAGES[1] || CARD_BACK_IMAGES[0],
+  });
 
-  // Ingresso agente nemico: tonfo se sceglie per primo, emersione se risponde dopo il giocatore
+  useEffect(() => {
+    if (!shuffleDealSetup?.playerCardBack && !shuffleDealSetup?.enemyCardBack) return;
+    setDuelCardBacks({
+      player: shuffleDealSetup.playerCardBack || CARD_BACK_IMAGES[0],
+      enemy: shuffleDealSetup.enemyCardBack || CARD_BACK_IMAGES[1] || CARD_BACK_IMAGES[0],
+    });
+  }, [shuffleDealSetup?.playerCardBack, shuffleDealSetup?.enemyCardBack]);
+
+  // Ingresso agente nemico: famiglia drop se sceglie per primo, click se risponde
   useEffect(() => {
     const id = enemyAgent?.id ?? null;
     if (id && id !== prevEnemyAgentIdRef.current) {
-      setEnemyPlaceFx(isPlayerFirst ? 'rise' : 'slam');
+      const prefs = getPlaceFxPreference();
+      setEnemyPlaceFx(resolvePlaceFxForVia(isPlayerFirst ? 'click' : 'drop', prefs));
+      setEnemyPlaceFxStyle(prefs.style);
     }
     prevEnemyAgentIdRef.current = id;
   }, [enemyAgent?.id, isPlayerFirst]);
@@ -1447,7 +1472,9 @@ export default function SatzeGame() {
     }
     setGuidedHint('');
     if (agent) {
-      setAgentPlaceFx(via === 'drop' ? 'slam' : 'rise');
+      const prefs = getPlaceFxPreference();
+      setAgentPlaceFx(resolvePlaceFxForVia(via, prefs));
+      setAgentPlaceFxStyle(prefs.style);
     }
     setSelectedAgent((prev) => (prev?.id === agent?.id ? null : agent));
   }, [guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, setSelectedAgent, setGuidedHint]);
@@ -4356,9 +4383,9 @@ export default function SatzeGame() {
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
         )}
         {gamePhase === 'selectAgent' && enemyAgent && (
-          <div className="relative flex items-center justify-center flex-shrink-0">
-            <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}`}>
-              <div className={`place-fx fx-${enemyPlaceFx}`}>
+          <div className="relative flex items-center justify-center flex-shrink-0" style={{ transformStyle: 'flat' }}>
+            <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}-${enemyPlaceFxStyle || 'default'}`}>
+              <div className={`place-fx fx-${enemyPlaceFx}${placeFxStyleClass(enemyPlaceFxStyle)}`}>
                 <div className="place-shadow" />
                 <div className="place-flash" />
                 <div className="place-ring" />
@@ -4369,15 +4396,42 @@ export default function SatzeGame() {
                 <div className="place-edge l" />
                 <div className="place-edge r" />
               </div>
-              <div className={`place-card play-${enemyPlaceFx}`}>
-                <GameCard
-                  cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                  agent={enemyAgent}
-                  showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
-                  bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
-                  abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-                  onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
-                />
+              <div
+                className={`place-card play-${enemyPlaceFx} relative flex items-center justify-center`}
+                style={needsTwoFaces(enemyPlaceFx) ? { width: 230, height: 330 } : undefined}
+              >
+                {needsTwoFaces(enemyPlaceFx) ? (
+                  <div className="place-flip-inner">
+                    <div className="place-flip-face">
+                      <GameCard
+                        cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                        agent={enemyAgent}
+                        showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
+                        bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                        abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                        onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+                      />
+                    </div>
+                    <div className="place-flip-face back">
+                      <CardBack
+                        armies={enemyDeckVisual?.armies}
+                        deck={enemyHand}
+                        backImage={duelCardBacks.enemy}
+                        fallbackArmy={enemyAgent.army}
+                        borderRadius={10}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <GameCard
+                    cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                    agent={enemyAgent}
+                    showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
+                    bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                    abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                    onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+                  />
+                )}
               </div>
             </React.Fragment>
           </div>
@@ -4426,9 +4480,13 @@ export default function SatzeGame() {
           <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
         )}
         {gamePhase === 'selectAgent' && selectedAgent && (
-          <div ref={playerCardZoneRef} className="relative flex items-center justify-center pointer-events-auto flex-shrink-0">
-            <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}`}>
-              <div className={`place-fx fx-${agentPlaceFx}`}>
+          <div
+            ref={playerCardZoneRef}
+            className="relative flex items-center justify-center pointer-events-auto flex-shrink-0"
+            style={{ transformStyle: 'flat' }}
+          >
+            <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}-${agentPlaceFxStyle || 'default'}`}>
+              <div className={`place-fx fx-${agentPlaceFx}${placeFxStyleClass(agentPlaceFxStyle)}`}>
                 <div className="place-shadow" />
                 <div className="place-flash" />
                 <div className="place-ring" />
@@ -4439,19 +4497,50 @@ export default function SatzeGame() {
                 <div className="place-edge l" />
                 <div className="place-edge r" />
               </div>
-              <div className={`place-card play-${agentPlaceFx}`}>
-                <GameCard
-                  cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                  agent={selectedAgent}
-                  showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
-                  bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
-                  abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
-                  overdrivePreview={playerOverdrivePreview}
-                  onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
-                  onClick={() => setSelectedAgent(null)}
-                  onDragStart={handleDragStart}
-                  isDragging={draggingCard?.id === selectedAgent?.id}
-                />
+              <div
+                className={`place-card play-${agentPlaceFx} relative flex items-center justify-center`}
+                style={needsTwoFaces(agentPlaceFx) ? { width: 230, height: 330 } : undefined}
+              >
+                {needsTwoFaces(agentPlaceFx) ? (
+                  <div className="place-flip-inner">
+                    <div className="place-flip-face">
+                      <GameCard
+                        cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                        agent={selectedAgent}
+                        showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
+                        bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                        abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+                        overdrivePreview={playerOverdrivePreview}
+                        onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+                        onClick={() => setSelectedAgent(null)}
+                        onDragStart={handleDragStart}
+                        isDragging={draggingCard?.id === selectedAgent?.id}
+                      />
+                    </div>
+                    <div className="place-flip-face back">
+                      <CardBack
+                        armies={playerDeckVisual?.armies}
+                        deck={playerHand}
+                        backImage={duelCardBacks.player}
+                        fallbackArmy={selectedAgent.army}
+                        borderRadius={10}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <GameCard
+                    cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                    agent={selectedAgent}
+                    showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
+                    bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                    abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+                    overdrivePreview={playerOverdrivePreview}
+                    onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+                    onClick={() => setSelectedAgent(null)}
+                    onDragStart={handleDragStart}
+                    isDragging={draggingCard?.id === selectedAgent?.id}
+                  />
+                )}
               </div>
             </React.Fragment>
           </div>
