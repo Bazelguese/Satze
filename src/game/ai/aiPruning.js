@@ -5,11 +5,12 @@
 import { getFieldModifiers } from '../battlefieldEffects.js';
 import { getOrdinaryFocusCap } from './focusBudget.js';
 import { estimateFutureCardValue } from './scoreAIAction.js';
+import { scoreImmediateCardPlan } from './strategyPlanner.js';
 
 /**
  * Pre-ranking senza power×focus dominante e senza Focus privato.
  */
-export function lightRankAction(action, context, side = 'ai') {
+export function lightRankAction(action, context, side = 'ai', profile = null) {
   const card = action.card;
   const focus = action.focus || 1;
   const budget = getOrdinaryFocusCap(context, side === 'ai' ? 'ai' : 'player', {
@@ -21,6 +22,12 @@ export function lightRankAction(action, context, side = 'ai') {
   let score = 0;
   score += estimateFutureCardValue(card, context) * 0.55;
   score += (card.power || 0) * 1.1 + (card.damage || 0) * 1.4;
+
+  // Il pianificatore legge la mano completa: premia finestre attive, opener ed
+  // economia; penalizza payoff giocati prima che il loro trigger sia pronto.
+  if (side === 'ai') {
+    score += scoreImmediateCardPlan(action, context, side, profile).score;
+  }
 
   const trigger = card.ability?.trigger;
   if (trigger === 'intervention' && context.isPlayerFirst && side === 'ai') score += 10;
@@ -76,7 +83,10 @@ export function buildBalancedShortlist(actions, context, profile) {
   const shortlist = [];
   for (const [, list] of byCard) {
     const ranked = list
-      .map((action) => ({ action, pre: lightRankAction(action, context, 'ai') }))
+      .map((action) => ({
+        action,
+        pre: lightRankAction(action, context, 'ai', profile),
+      }))
       .sort((a, b) => b.pre - a.pre);
 
     const budget = getOrdinaryFocusCap(context, 'ai', profile);
@@ -103,7 +113,10 @@ export function buildBalancedShortlist(actions, context, profile) {
   if (shortlist.length <= globalLimit) return shortlist;
 
   const rankedAll = shortlist
-    .map((action) => ({ action, pre: lightRankAction(action, context, 'ai') }))
+    .map((action) => ({
+      action,
+      pre: lightRankAction(action, context, 'ai', profile),
+    }))
     .sort((a, b) => b.pre - a.pre);
 
   const kept = [];

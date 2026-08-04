@@ -27,6 +27,7 @@ export {
   normalizeUsedIdSet,
   getReservedFocus,
   computeLegalMaxFocus,
+  shouldUseExactFocusSearch,
 } from './generateAIActions.js';
 export {
   estimateStandardFocus,
@@ -54,6 +55,15 @@ export {
   estimateFutureCardValue,
   actionDominates,
 } from './scoreAIAction.js';
+export {
+  estimateAbilityImpact,
+  evaluateTriggerWindow,
+  inferCardRoles,
+  evaluateCardPlan,
+  scoreImmediateCardPlan,
+  evaluateRemainingHandPlan,
+  isOutcomeDependentTrigger,
+} from './strategyPlanner.js';
 export {
   chooseAIAction,
   chooseAIIndependentAction,
