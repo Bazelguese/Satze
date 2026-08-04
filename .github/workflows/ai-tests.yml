@@ -9,7 +9,6 @@ on:
       - 'src/game/battlefieldEffects.js'
       - 'src/game/duelResolve.js'
       - 'package.json'
-      - 'package-lock.json'
       - '.github/workflows/ai-tests.yml'
   workflow_dispatch:
 
@@ -29,10 +28,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
 
       - name: Run unit tests
         run: npm run test:unit
