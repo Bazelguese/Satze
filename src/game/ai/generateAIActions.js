@@ -73,6 +73,34 @@ export function getLegalFocusRange(context, side) {
 }
 
 /**
+ * Decide quando la potatura euristica dei Focus non è accettabile.
+ * - Difficile: risposta a carta visibile, minaccia territoriale/letale o endgame.
+ * - Normale: risposta a carta visibile o ultime due carte.
+ * - Facile: resta volutamente approssimativa.
+ */
+export function shouldUseExactFocusSearch(context, profile) {
+  const mode = profile?.exactFocusSearch || 'off';
+  if (mode === 'always') return true;
+  if (mode === 'off') return false;
+
+  const respondingToVisibleCard = Boolean(context?.isPlayerFirst && context?.player?.visibleCard);
+  const available = getAvailableCards(context?.ai?.hand, context?.ai?.usedCardIds);
+  const endgame = available.length <= (profile?.exactFocusEndgameCards ?? 2);
+  const fieldThreat =
+    (context?.enemyFieldsConquered || 0) >= 2 ||
+    (context?.playerFieldsConquered || 0) >= 2;
+  const hpThreat =
+    (context?.player?.hp || 0) <= (profile?.exactFocusHpThreshold ?? 6) ||
+    (context?.ai?.hp || 0) <= (profile?.exactFocusHpThreshold ?? 6);
+
+  if (mode === 'responding') return respondingToVisibleCard || endgame;
+  if (mode === 'critical') {
+    return respondingToVisibleCard || endgame || fieldThreat || hpThreat;
+  }
+  return false;
+}
+
+/**
  * Genera tutte le coppie legali carta × Focus (test / simulazioni mirate).
  */
 export function generateActionsForSide(context, side, fieldIndex = null) {
@@ -97,7 +125,9 @@ export function generateActionsForSide(context, side, fieldIndex = null) {
 }
 
 /**
- * Candidati Focus strategici per una carta (non tutti i valori legali).
+ * Candidati Focus strategici per una carta.
+ * Nei momenti decisivi restituisce l'intero intervallo legale, così una puntata
+ * esatta non può essere eliminata prima della simulazione del duello.
  */
 export function generateStrategicFocusCandidates(context, card, profile) {
   const { minFocus, maxFocus } = getLegalFocusRange(context, 'ai');
@@ -110,6 +140,24 @@ export function generateStrategicFocusCandidates(context, card, profile) {
     cardsRemaining,
     standardFocus,
   } = budget;
+
+  const exactSearch = shouldUseExactFocusSearch(context, profile);
+  if (exactSearch) {
+    const focuses = [];
+    for (let focus = minFocus; focus <= maxFocus; focus += 1) focuses.push(focus);
+    return {
+      focuses,
+      exactSearch: true,
+      budget: {
+        fairShare,
+        ordinaryCap,
+        legalMax,
+        pool,
+        cardsRemaining,
+        standardFocus,
+      },
+    };
+  }
 
   const fieldMods = getFieldModifiers(context.field);
   const odThreshold = fieldMods.overdriveThreshold || 5;
@@ -126,24 +174,30 @@ export function generateStrategicFocusCandidates(context, card, profile) {
   const wantsOd =
     card?.ability?.trigger === 'overdrive' ||
     fieldMods.overdriveExtraPowerAndDamage === true;
-  if (wantsOd) {
-    values.push(odThreshold);
-  }
+  if (wantsOd) values.push(odThreshold);
 
   if (fieldMods.winnerByFocusNotVa) {
     values.push(Math.min(legalMax, ordinaryCap + 2));
   }
 
-  // Max legale solo se un'eccezione lo giustifica
-  const maxAction = { card, cardId: card?.id, focus: legalMax, fieldIndex: context.currentFieldIndex };
+  const maxAction = {
+    card,
+    cardId: card?.id,
+    focus: legalMax,
+    fieldIndex: context.currentFieldIndex,
+  };
   const maxException = getFocusCapException(context, maxAction, profile, budget);
   if (maxException.allowed && (maxException.reason || cardsRemaining <= 1)) {
     values.push(legalMax);
   }
 
-  // Soglia OD sopra cap: solo se eccezione overdrive-soglia
   if (wantsOd && odThreshold > ordinaryCap) {
-    const odAction = { card, cardId: card?.id, focus: odThreshold, fieldIndex: context.currentFieldIndex };
+    const odAction = {
+      card,
+      cardId: card?.id,
+      focus: odThreshold,
+      fieldIndex: context.currentFieldIndex,
+    };
     const odEx = getFocusCapException(context, odAction, profile, budget);
     if (odEx.allowed) values.push(odThreshold);
   }
@@ -155,6 +209,7 @@ export function generateStrategicFocusCandidates(context, card, profile) {
 
   return {
     focuses: unique,
+    exactSearch: false,
     budget: {
       fairShare,
       ordinaryCap,
@@ -167,11 +222,10 @@ export function generateStrategicFocusCandidates(context, card, profile) {
 }
 
 /**
- * Azioni strategiche IA: poche varianti Focus per carta.
+ * Azioni strategiche IA.
  */
 export function generateStrategicActionsForSide(context, side, profile, fieldIndex = null) {
   if (side !== 'ai') {
-    // Per il giocatore usiamo scenari dedicati; fallback enumerazione ridotta
     return generateActionsForSide(context, side, fieldIndex);
   }
 
@@ -181,7 +235,11 @@ export function generateStrategicActionsForSide(context, side, profile, fieldInd
   const actions = [];
 
   for (const card of cards) {
-    const { focuses, budget } = generateStrategicFocusCandidates(context, card, profile);
+    const { focuses, budget, exactSearch } = generateStrategicFocusCandidates(
+      context,
+      card,
+      profile
+    );
     for (const focus of focuses) {
       const action = {
         card,
@@ -190,8 +248,8 @@ export function generateStrategicActionsForSide(context, side, profile, fieldInd
         fieldIndex: resolvedFieldIndex,
       };
       const exception = getFocusCapException(context, action, profile, budget);
-      // Escludi candidati sopra cap senza eccezione
-      if (focus > budget.ordinaryCap && !exception.allowed) continue;
+      // In ricerca esatta il cap resta una preferenza di scoring, non un divieto.
+      if (!exactSearch && focus > budget.ordinaryCap && !exception.allowed) continue;
       actions.push({
         ...action,
         meta: {
@@ -199,6 +257,7 @@ export function generateStrategicActionsForSide(context, side, profile, fieldInd
           ordinaryCap: budget.ordinaryCap,
           standardFocus: budget.standardFocus,
           exceptionReason: exception.reason,
+          exactFocusSearch: exactSearch,
         },
       });
     }
@@ -211,5 +270,4 @@ export function generateAIActions(context) {
   return generateActionsForSide(context, 'ai', context.currentFieldIndex);
 }
 
-// Re-export utili per i test
 export { estimateStandardFocus };
