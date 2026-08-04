@@ -21,8 +21,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout source only
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            package.json
+          sparse-checkout-cone-mode: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
