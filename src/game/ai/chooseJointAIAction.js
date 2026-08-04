@@ -6,6 +6,8 @@ import { getAIProfile } from './aiProfiles.js';
 import { defaultRng } from './aiConstants.js';
 import { getLegalFieldIndexes } from './legalFields.js';
 import { chooseAIIndependentAction } from './chooseAIAction.js';
+import { buildStrategicState } from './strategicState.js';
+import { evaluateFieldSelectionAdjustment } from './fieldStrategy.js';
 
 /**
  * Sceglie { fieldIndex, card, focus } come unica decisione.
@@ -27,10 +29,10 @@ export function chooseJointAIAction(context, difficulty, options = {}) {
       : getLegalFieldIndexes(context);
 
   if (!legalFields.length) {
-    // Campo già obbligatorio ma assente: fallback carta/focus
     return chooseAIIndependentAction(context, profile.id, { ...options, profile, rng, cache });
   }
 
+  const strategicRoot = buildStrategicState(context);
   const candidates = [];
 
   for (const fieldIndex of legalFields) {
@@ -55,19 +57,30 @@ export function chooseJointAIAction(context, difficulty, options = {}) {
     const decision = chooseAIIndependentAction(fieldContext, leanProfile.id, {
       ...options,
       profile: leanProfile,
-      rng: () => 0, // valutazione deterministica per campo; RNG solo sulla scelta finale
+      rng: () => 0,
       cache,
       includeStrategicProjection: true,
     });
 
     if (!decision?.card) continue;
 
+    const fieldStrategy = evaluateFieldSelectionAdjustment(
+      strategicRoot,
+      fieldIndex,
+      decision.card,
+      profile
+    );
+    const baseScore = Number(decision.score) || 0;
+    const score = baseScore + fieldStrategy.score;
+
     candidates.push({
       fieldIndex,
       card: decision.card,
       cardId: decision.cardId,
       focus: decision.focus,
-      score: decision.score,
+      score,
+      baseScore,
+      fieldStrategy,
       debug: decision.debug,
       decision,
     });
@@ -78,7 +91,6 @@ export function chooseJointAIAction(context, difficulty, options = {}) {
   candidates.sort((a, b) => b.score - a.score);
   const best = candidates[0];
 
-  // Casualità profilo solo tra candidati vicini
   let chosen = best;
   if (profile.selectionMode === 'weighted-top' && candidates.length > 1) {
     const window = profile.scoreWindow || 550;
@@ -107,11 +119,41 @@ export function chooseJointAIAction(context, difficulty, options = {}) {
     debug: {
       ...(chosen.debug || {}),
       jointAction: true,
+      fieldStrategy: {
+        baseScore: Number(chosen.baseScore?.toFixed?.(1) ?? chosen.baseScore),
+        adjustment: Number(chosen.fieldStrategy.score?.toFixed?.(1) ?? chosen.fieldStrategy.score),
+        denialScore: Number(
+          chosen.fieldStrategy.denialScore?.toFixed?.(1) ?? chosen.fieldStrategy.denialScore
+        ),
+        preservePenalty: Number(
+          chosen.fieldStrategy.preservePenalty?.toFixed?.(1) ??
+            chosen.fieldStrategy.preservePenalty
+        ),
+        playerThreat: Number(
+          chosen.fieldStrategy.assessment.playerThreat?.toFixed?.(1) ??
+            chosen.fieldStrategy.assessment.playerThreat
+        ),
+        aiOpportunity: Number(
+          chosen.fieldStrategy.assessment.aiOpportunity?.toFixed?.(1) ??
+            chosen.fieldStrategy.assessment.aiOpportunity
+        ),
+      },
       jointCandidates: candidates.slice(0, 8).map((c) => ({
         fieldIndex: c.fieldIndex,
         cardId: c.cardId,
         focus: c.focus,
         score: Number(c.score?.toFixed?.(1) ?? c.score),
+        baseScore: Number(c.baseScore?.toFixed?.(1) ?? c.baseScore),
+        fieldAdjustment: Number(
+          c.fieldStrategy.score?.toFixed?.(1) ?? c.fieldStrategy.score
+        ),
+        playerThreat: Number(
+          c.fieldStrategy.assessment.playerThreat?.toFixed?.(1) ??
+            c.fieldStrategy.assessment.playerThreat
+        ),
+        reserveGap: Number(
+          c.fieldStrategy.reserveGap?.toFixed?.(1) ?? c.fieldStrategy.reserveGap
+        ),
       })),
     },
   };
