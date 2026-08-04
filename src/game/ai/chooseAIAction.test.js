@@ -34,8 +34,13 @@ test('lightRank: non premia sistematicamente il Focus massimo', () => {
   assert.ok(low > high, `atteso low>${high}? low=${low} high=${high}`);
 });
 
-test('shortlist: ogni carta ha ≥1 variante e ≤ ownVariantsPerCard', () => {
+test('shortlist non esatta: ogni carta ha ≥1 variante e ≤ ownVariantsPerCard', () => {
   const context = makeRound1BudgetFixture('medium');
+  // La risposta a una carta visibile usa intenzionalmente tutti i Focus legali.
+  // Questo test riguarda invece la normale potatura quando l’IA apre il duello.
+  context.isPlayerFirst = false;
+  context.player.visibleCard = null;
+
   const profile = getAIProfile('medium');
   const actions = generateStrategicActionsForSide(context, 'ai', profile, 0);
   const shortlist = buildBalancedShortlist(actions, context, profile);
