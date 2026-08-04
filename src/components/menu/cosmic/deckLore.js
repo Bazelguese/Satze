@@ -245,4 +245,25 @@ export const DECK_LORE = {
       leader: { name: "Bravo, il merita-nome", title: "il merita-nome", img: null, league: 5, power: 6, damage: 4, ability: "Opportunista: +3 FC" },
     },
   },
+  "Mascarada": {
+    __glyph: "🎭",
+    A: {
+      code: "M·I", name: "Il Main Event", archetype: "MIDCARD · OPPORTUNISTA",
+      flavor: "Dieci maschere L3. Un solo ring. Il pubblico ha già pagato.",
+      keywords: ["Opportunista","Imboscata","Tech"],
+      leader: { name: "Nobunaga \"Emperor's Order: Guillotine\"", title: "Emperor's Order", img: null, league: 3, power: 3, damage: 3, ability: "Resa dei conti: +9 VA" },
+    },
+    B: {
+      code: "M·II", name: "Curtain Call", archetype: "TITLE · FACE",
+      flavor: "Sipario Face: Gloria del cigno e pounce del rinoceronte chiudono lo show.",
+      keywords: ["Gloria","Overdrive","Turbo"],
+      leader: { name: "Mary \"Swan Punt Kick\"", title: "Swan Punt Kick", img: null, league: 5, power: 5, damage: 3, ability: "Gloria: +12 VA" },
+    },
+    C: {
+      code: "M·III", name: "Heel Turn", archetype: "TITLE · HEEL",
+      flavor: "Il pubblico fischia. Ragno e leone riscuotono — Opportunista e Ultimo desiderio.",
+      keywords: ["Opportunista","Vendetta","Controllo"],
+      leader: { name: "Dandelion \"Kingslayer's Cutter\"", title: "Kingslayer's Cutter", img: null, league: 5, power: 6, damage: 3, ability: "Opportunista: 4 Danni dir." },
+    },
+  },
 };

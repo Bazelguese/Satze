@@ -386,6 +386,41 @@ export const ARMY_SETS = {
       { id: 1128, name: "Bravo, il merita-nome", league: 5, power: 6, damage: 4, icon: "crown", ability: { trigger: "opportunista", effect: "focusCoin", value: 3 }, description: "Potere: Opportunista: +3 FC", flavour: "Si è guadagnato il nome rubando monete al destino. Quando il nemico è avanti, Bravo riscuote." },
       { id: 1129, name: "Primarca del gelo", league: 5, power: 3, damage: 5, icon: "moon", ability: { trigger: "imboscata", effect: "enemyPowerAndDamage", value: -3, minPower: 2, minDamage: 2 }, description: "Potere: Imboscata: -3 POT, -3 DAN nem. (min 2)", flavour: "Il ghiaccio più vecchio parla attraverso di lui. Arriva per primo e riduce il nemico a misura umana." },
       { id: 1130, name: "Volontà del Sole Verde", league: 5, power: 7, damage: 5, icon: "star", ability: { trigger: "glory", effect: "blockBonus", value: null }, description: "Potere: Gloria: Blocca Bonus", flavour: "Ridevi quando ci scegliesti. Guarda quanto costa ridere adesso — e tieni chiusi i tuoi doni." }
+    ],
+
+    // === MASCARADA === (Tema: Lucha / Face–Heel, bestiario da ring)
+    // Lega Totale: 100 (4×L5 · 9×L4 · 10×L3 · 7×L2)
+    "Mascarada": [
+      { id: 1201, name: "Janissa \"Coup de Grâce\"", league: 2, power: 2, damage: 2, icon: "star", ability: { trigger: "overdrive", effect: "assaultValue", value: 11 }, description: "Potere: Overdrive: +11 VA", flavour: "La gru scende solo quando il pubblico ha già deciso il verdetto. Poi spezza il collo al silenzio." },
+      { id: 1202, name: "Belisa \"Cazadora\"", league: 2, power: 3, damage: 2, icon: "wolf", ability: { trigger: "magnanimous", effect: "enemyPower", value: -2, minPower: 2 }, description: "Potere: Magnanimo: -2 POT nem. (min 2)", flavour: "Heel con sorriso da ghepardo: colpisce chi è ancora in piedi, perché cadere sarebbe troppo pietoso." },
+      { id: 1203, name: "Badgero \"Spear\"", league: 2, power: 4, damage: 1, icon: "angry", ability: { trigger: "turbo", effect: "immune", value: null }, description: "Potere: Turbo: Immune", flavour: "Il tasso non schiva: attraversa. Nei primi round la lancia lo rende untoccabile." },
+      { id: 1204, name: "Cadrega \"Cheap Shot\"", league: 2, power: 3, damage: 1, icon: "warning", ability: { trigger: "vendetta", effect: "directDamage", value: 2 }, description: "Potere: Vendetta: 2 Danni dir.", flavour: "Lo sciacallo non aspetta il gong. Se ha perso il round prima, il colpo basso arriva prima del saluto." },
+      { id: 1205, name: "Castillo \"Tornillo\"", league: 2, power: 2, damage: 2, icon: "sparkle", ability: { trigger: "glory", effect: "power", value: 3 }, description: "Potere: Gloria: +3 POT", flavour: "Face da pavone: dopo la vittoria si avvita sul successo e lo trasforma in muscolo puro." },
+      { id: 1206, name: "Joe \"Legend Splash\"", league: 2, power: 2, damage: 3, icon: "wave", ability: { trigger: "vendetta", effect: "enemyPowerAndDamage", value: -1, minPower: 2, minDamage: 2 }, description: "Potere: Vendetta: -1 POT, -1 DAN nem. (min 2)", flavour: "Il tricheco atterra come una leggenda bagnata. Se ha perso, schiaccia forza e morso nemici insieme." },
+      { id: 1207, name: "Blackwing \"Headbutt\"", league: 2, power: 3, damage: 1, icon: "eye", ability: { trigger: "reckoning", effect: "damage", value: 3 }, description: "Potere: Resa dei conti: +3 DAN", flavour: "L'avvoltoio aspetta il terzo scontro. Poi la fronte diventa sentenza." },
+      { id: 1208, name: "Ricardo \"Hotline Dropkick\"", league: 3, power: 4, damage: 2, icon: "horn", ability: { trigger: "sfida", effect: "power", value: 2 }, description: "Potere: Sfida: +2 POT", flavour: "Face da gallo: chiama il numero dei giganti e risponde con un calcio in piena linea." },
+      { id: 1209, name: "Tuiala \"Ocean Stomp\"", league: 3, power: 4, damage: 2, icon: "wave", ability: { trigger: "sopraffare", effect: "powerAndDamage", value: 1 }, description: "Potere: Sopraffare: +1 POT, +1 DAN", flavour: "Heel oceanico. Quando la lega lo sovrasta, la balena non nuota: calpesta." },
+      { id: 1210, name: "Faletau \"Shellsault\"", league: 3, power: 4, damage: 3, icon: "block", ability: { trigger: "resistenza", effect: "damage", value: 2 }, description: "Potere: Resistenza: +2 DAN", flavour: "Carapace da face. Se il nemico ha già conquistato, la tartaruga risponde a colpi di guscio." },
+      { id: 1211, name: "Houquan \"Black Hurricanrana\"", league: 3, power: 2, damage: 3, icon: "copy", ability: { trigger: "imboscata", effect: "copyPower", value: null }, description: "Potere: Imboscata: Copia POT", flavour: "La scimmia ruba la forza altrui prima che il secondo colpo esista." },
+      { id: 1212, name: "Fantastique Jerome \"Owl Dive\"", league: 3, power: 4, damage: 3, icon: "eye", ability: { trigger: "conquest", effect: "heal", value: 2 }, description: "Potere: Conquista: Cura 2", flavour: "Face notturno: dopo la vittoria il gufo riporta respiro al corner." },
+      { id: 1213, name: "Miguel \"Cobra Plunge\"", league: 3, power: 3, damage: 3, icon: "snake", ability: { trigger: "imboscata", effect: "enemyPowerAndDamage", value: -1, minPower: 3, minDamage: 3 }, description: "Potere: Imboscata: -1 POT, -1 DAN nem. (min 3)", flavour: "Heel a freddo. Arriva primo e lascia il nemico più corto di zanne e di veleno." },
+      { id: 1214, name: "Komodo \"Komodo Hug\"", league: 3, power: 4, damage: 2, icon: "dragon", ability: { trigger: "overdrive", effect: "blockAbility", value: null }, description: "Potere: Overdrive: Blocca Potere", flavour: "L'abbraccio del varano non è affetto: è un sigillo. A Focus alti, i poteri nemici restano senza fiato." },
+      { id: 1215, name: "Filomena \"Death Springboard\"", league: 3, power: 2, damage: 2, icon: "angry", ability: { trigger: "alleato", effect: "power", value: 3 }, description: "Potere: Alleato: +3 POT", flavour: "Piranha da heel: con un pari in mano, il trampolino diventa una lama." },
+      { id: 1216, name: "Kirin \"Shocking Lariat\"", league: 3, power: 5, damage: 1, icon: "lightning", ability: { trigger: "glory", effect: "damage", value: 2 }, description: "Potere: Gloria: +2 DAN", flavour: "Dopo la vittoria il cavallo fulmina il ring con un lariat che lascia segni." },
+      { id: 1217, name: "Nobunaga \"Emperor's Order: Guillotine\"", league: 3, power: 3, damage: 3, icon: "insect", ability: { trigger: "reckoning", effect: "assaultValue", value: 9 }, description: "Potere: Resa dei conti: +9 VA", flavour: "Heel da mantide. Dal terzo scontro in poi, l'ordine dell'imperatore è una ghigliottina di assalto." },
+      { id: 1218, name: "Wulf \"Sleeper Hold\"", league: 4, power: 5, damage: 3, icon: "wolf", ability: { trigger: "vendetta", effect: "enemyAssault", value: -6, minAssault: 10 }, description: "Potere: Vendetta: -6 VA nem. (min 10)", flavour: "Heel da lupo. Se ha perso il round prima, stringe il sonno sul VA nemico finché il pubblico smette di contare." },
+      { id: 1219, name: "Mordecai \"Redemption Buster\"", league: 4, power: 5, damage: 2, icon: "eye", ability: { trigger: "conquest", effect: "focusCoin", value: 2 }, description: "Potere: Conquista: +2 FC", flavour: "Face da corvo: dopo la vittoria raccoglie monete dal ring come penitenza pagata in Focus." },
+      { id: 1220, name: "Gran Torino \"Toothbreaker\"", league: 4, power: 3, damage: 3, icon: "angry", ability: { trigger: "glory", effect: "powerAndDamage", value: 2 }, description: "Potere: Gloria: +2 POT, +2 DAN", flavour: "Il toro non festeggia: carica di nuovo. Dopo la vittoria spezza denti e statistiche insieme." },
+      { id: 1221, name: "Domina \"Knee-Kneeling\"", league: 4, power: 5, damage: 1, icon: "block", ability: { trigger: "invasione", effect: "blockBonus", value: null }, description: "Potere: Invasione: Blocca Bonus", flavour: "Pantera da heel. Con un campo già preso, fa inginocchiare i vantaggi altrui." },
+      { id: 1222, name: "Maximillion \"Iron Press\"", league: 4, power: 4, damage: 4, icon: "brick", ability: { trigger: "turbo", effect: "blockAbility", value: null }, description: "Potere: Turbo: Blocca Potere", flavour: "Ippopotamo da face: nei primi round la pressa di ferro chiude i poteri nemici sotto tonnellate." },
+      { id: 1223, name: "Claymore \"Ragnarok Suplex\"", league: 4, power: 4, damage: 3, icon: "horn", ability: { trigger: "rimonta", effect: "heal", value: 3 }, description: "Potere: Rimonta: Cura 3", flavour: "Heel da cervo. Quando resta indietro, il suplex non uccide: rimette in piedi il corner." },
+      { id: 1224, name: "Connor \"Battering Ram-Ram\"", league: 4, power: 4, damage: 2, icon: "rocket", ability: { trigger: "rimonta", effect: "assaultValue", value: 10 }, description: "Potere: Rimonta: +10 VA", flavour: "Face da ariete. In svantaggio PV diventa un ariete puro: +10 VA e niente scuse." },
+      { id: 1225, name: "Foxie \"Sunset Flip\"", league: 4, power: 4, damage: 2, icon: "sparkle", ability: { trigger: "magnanimous", effect: "enemyPowerAndDamage", value: -2, minPower: 3, minDamage: 3 }, description: "Potere: Magnanimo: -2 POT, -2 DAN nem. (min 3)", flavour: "Volpe da face. In vantaggio di vita ribalta il tramonto sul nemico e gli toglie zanne e morso." },
+      { id: 1226, name: "Montgomery \"Deep Piledriver\"", league: 4, power: 4, damage: 4, icon: "wave", ability: { trigger: "opportunista", effect: "power", value: 3 }, description: "Potere: Opportunista: +3 POT", flavour: "Orca da heel. Quando il nemico ha già speso troppo Focus, lo affonda con un piledriver di pura potenza." },
+      { id: 1227, name: "Mary \"Swan Punt Kick\"", league: 5, power: 5, damage: 3, icon: "star", ability: { trigger: "glory", effect: "assaultValue", value: 12 }, description: "Potere: Gloria: +12 VA", flavour: "Face da cigno. Dopo la vittoria il punt kick non è eleganza: è un VA che spezza il ring." },
+      { id: 1228, name: "Oleg \"Juggernaut Pounce\"", league: 5, power: 6, damage: 2, icon: "brick", ability: { trigger: "overdrive", effect: "power", value: 3 }, description: "Potere: Overdrive: +3 POT", flavour: "Face da rinoceronte. A Focus alti non frena: pounce e +3 POT che travolge tutto." },
+      { id: 1229, name: "Killer \"Widow's Wail\"", league: 5, power: 5, damage: 4, icon: "insect", ability: { trigger: "lastWish", effect: "focusCoin", value: 2 }, description: "Potere: Ultimo desiderio: +2 FC", flavour: "Heel da ragno. Se cade, il pianto della vedova lascia Focus sul cadavere del round." },
+      { id: 1230, name: "Dandelion \"Kingslayer's Cutter\"", league: 5, power: 6, damage: 3, icon: "crown", ability: { trigger: "opportunista", effect: "directDamage", value: 4 }, description: "Potere: Opportunista: 4 Danni dir.", flavour: "Heel da leone. Quando il nemico ha già speso troppo, il cutter dello sterminatore di re non chiede il VA: chiede i PV." }
     ]
   };
   
@@ -586,6 +621,23 @@ export const ARMY_SETS = {
         name: "La Caccia Maggiore",
         description: "Adattamento e pressione: trigger che leggono nemico e stato partita + Invasione.",
         cards: [1102, 1104, 1105, 1109, 1113, 1114, 1115, 1112, 1126, 1128]
+      },
+    },
+    "Mascarada": {
+      "A": {
+        name: "Il Main Event",
+        description: "Midcard L3 puro (Lega 30): Imboscata, Gloria, Resa dei conti.",
+        cards: [1208, 1209, 1210, 1211, 1212, 1213, 1214, 1215, 1216, 1217]
+      },
+      "B": {
+        name: "Curtain Call",
+        description: "Title shot Face: Gloria/Overdrive L5 + midcard di supporto (Lega 30).",
+        cards: [1201, 1203, 1205, 1207, 1208, 1210, 1212, 1216, 1227, 1228]
+      },
+      "C": {
+        name: "Heel Turn",
+        description: "Title shot Heel: Opportunista, Ultimo desiderio, Vendetta e controllo (Lega 30).",
+        cards: [1202, 1203, 1204, 1206, 1207, 1213, 1215, 1218, 1229, 1230]
       },
     },
   };

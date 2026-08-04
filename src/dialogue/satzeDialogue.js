@@ -51,6 +51,7 @@ export const ARMY = {
   mounthborn: { name: 'Mounthborn', fx: 'bounce', color: '#b45309' },
   patto: { name: 'Patto degli Indocili', fx: 'sway', color: '#ef4444' },
   apex: { name: 'Apex', fx: 'pulse', color: '#f1f5f9' },
+  mascarada: { name: 'Mascarada', fx: 'shake', color: '#0047AB' },
 };
 
 const STAGGER = { wave: 1, bounce: 1, pulse: 1, float: 1, rainbow: 1, neon: 1 };

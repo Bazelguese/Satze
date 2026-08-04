@@ -20,7 +20,8 @@ export const ARMY_SYMBOLS = {
     'Ratti della Megera': '🐀',
     'Patto degli Indocili': '🕶️',
     'Khemet': '𓂀',
-    'Apex': '❄️'
+    'Apex': '❄️',
+    'Mascarada': '🎭'
   };
 
 // Esporta anche le icone per uso diretto
@@ -38,7 +39,8 @@ export { ARMY_ICONS };
     "Ratti della Megera": { bg: "from-green-900 to-emerald-900", accent: "#10b981", text: "text-green-200" },
     "Patto degli Indocili": { bg: "from-fuchsia-900 to-rose-900", accent: "#fb7185", text: "text-rose-100" },
     "Khemet": { bg: "from-cyan-900 to-teal-900", accent: "#22d3ee", text: "text-cyan-100" },
-    "Apex": { bg: "from-slate-800 to-zinc-900", accent: "#f1f5f9", text: "text-slate-100" }
+    "Apex": { bg: "from-slate-800 to-zinc-900", accent: "#f1f5f9", text: "text-slate-100" },
+    "Mascarada": { bg: "from-blue-950 to-blue-900", accent: "#0047AB", text: "text-blue-100" }
   };
   
   // Immagini armate - percorsi in public/Immagini_bg per gli sfondi sotto i triangoli delle mani
@@ -54,7 +56,8 @@ export { ARMY_ICONS };
     "Ratti della Megera": './Immagini_bg/Ratti_bg1.webp',
     "Patto degli Indocili": './Immagini_bg/indocili-bg1.webp',
     "Khemet": './Immagini_bg/Khemet_bg1.webp',
-    "Apex": './Immagini_bg/Apex_bg1.png'
+    "Apex": './Immagini_bg/Apex_bg1.png',
+    "Mascarada": './Immagini_bg/Mascarada_bg1.png'
   };
 
   // BONUS ARMATE (unico per ogni armata)
@@ -116,5 +119,10 @@ export { ARMY_ICONS };
       trigger: "invasione",
       effects: [{ effect: "assaultValue", value: 5 }],
       description: "Invasione: +5 VA"
+    },
+    "Mascarada": {
+      trigger: "opportunista",
+      effects: [{ effect: "focusCoin", value: 3 }],
+      description: "Opportunista: +3 FC"
     }
   };

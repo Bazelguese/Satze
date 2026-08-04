@@ -112,6 +112,7 @@ export const ARMY_ICONS = {
   'Patto degli Indocili': iconPublic('patto-indocili-icon.webp'),
   'Khemet': iconPublic('Khetan-nobg.webp'),
   'Apex': iconPublic('apex-nobg.png'),
+  'Mascarada': iconPublic('Mascarada-nobg.png'),
 };
 
 // ============================================

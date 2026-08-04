@@ -81,6 +81,7 @@ const ARMY_KEY_BY_NAME = {
   'Patto degli Indocili': 'indocili',
   Khemet: 'khemet',
   Apex: 'apex',
+  Mascarada: 'mascarada',
 };
 
 function roleFromStats(pot, dan) {

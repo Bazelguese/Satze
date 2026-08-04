@@ -169,6 +169,20 @@ export const ARMY_LORE = {
     tips:
       'Il bonus vive sull\'Invasione: non restare a zero campi. Contro armate che riprendono territorio, proteggi le conquiste. Usa Dissuasore di turisti e Volontà del Sole Verde per spegnere poteri/bonus quando la caccia è già aperta.',
   },
+  "Mascarada": {
+    glyph: '🎭',
+    bonusLabel: 'OPPORTUNISTA',
+    motto: 'Il pubblico paga. Tu riscuoti.',
+    synopsis:
+      "Maschere, heel e face sullo stesso ring. La Mascarada non combatte per ideali: combatte per il momento in cui il nemico ha già speso troppo Focus — e allora riscuote.\n\nOgni agente è un animal-spirit del main event: gru, cobra, mantide, pavone. Vincere è spettacolo; perdere è solo il setup del colpo basso successivo.\n\nSceglili se ami leggere lo spend del nemico, convertirlo in Focus Coin e chiudere con Imboscate, Gloria e Rese dei conti.",
+    bonusWhen: 'Si attiva in Opportunista — il nemico ha speso 5+ Focus Coin questo turno.',
+    bonusExplain:
+      'Guadagni +3 Focus Coin. Premia chi forza il nemico a overcommitare e poi riscuote la differenza.',
+    style:
+      'Economia reattiva. Spingi il nemico a spendere, attiva Opportunista, poi reinvesti FC in Overdrive e picchi di midcard.',
+    tips:
+      'Il bonus dorme se l\'avversario risparmia: crea turni costosi per lui. Contro spender aggressivi, Dandelion e Montgomery puniscono; Mary chiude dopo Gloria.',
+  },
 };
 
 // Entry sintetica per "Eserciti Personalizzati" (multi-armata)

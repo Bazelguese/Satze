@@ -30,6 +30,7 @@ const AGENT_ID_RANGES = [
   [901, 930],
   [1001, 1030],
   [1101, 1130],
+  [1201, 1230],
 ];
 
 function buildCardImagePaths() {

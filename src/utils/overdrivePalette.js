@@ -13,6 +13,7 @@ const ARMY_OVERDRIVE_COMPANIONS = {
   'Patto degli Indocili': { secondary: '#a855f7', tertiary: '#f472b6' },
   Khemet: { secondary: '#8b5cf6', tertiary: '#3b82f6' },
   Apex: { secondary: '#94a3b8', tertiary: '#cbd5e1' },
+  Mascarada: { secondary: '#1e3a8a', tertiary: '#60a5fa' },
 };
 
 const FALLBACK = { accent: '#ef4444', secondary: '#fb923c', tertiary: '#fbbf24' };

@@ -12,6 +12,7 @@ const ARMY_NAME_TO_KEY = {
   Mounthborn: 'mounthborn',
   'Patto degli Indocili': 'patto',
   Apex: 'apex',
+  Mascarada: 'mascarada',
 };
 
 /** Tutte le armate con chiave preset dialogue, ordine fisso per UI dev. */
@@ -27,6 +28,7 @@ export const ARMY_DIALOGUE_OPTIONS = [
   'Patto degli Indocili',
   'Khemet',
   'Apex',
+  'Mascarada',
 ].map((name) => ({ name, key: ARMY_NAME_TO_KEY[name] }));
 
 export function armyNameToDialogueKey(armyName) {
