@@ -46,10 +46,23 @@ export function lightRankAction(action, context, side = 'ai') {
   return score;
 }
 
+function exactFocusSearchActive(actions) {
+  return actions.some((action) => action?.meta?.exactFocusSearch === true);
+}
+
 /**
- * Shortlist bilanciata: ogni carta sopravvive con ≤ ownVariantsPerCard varianti.
+ * Shortlist bilanciata. Quando è attiva la ricerca Focus esatta, conserva ogni
+ * puntata legale: in quel contesto la potatura anticipata renderebbe inutile
+ * l'enumerazione completa.
  */
 export function buildBalancedShortlist(actions, context, profile) {
+  if (exactFocusSearchActive(actions)) {
+    return [...actions].sort((a, b) => {
+      const cardDiff = String(a.cardId).localeCompare(String(b.cardId));
+      return cardDiff || a.focus - b.focus;
+    });
+  }
+
   const perCard = profile.ownVariantsPerCard || 3;
   const globalLimit = profile.ownActionLimitWhenFirst || 12;
 
