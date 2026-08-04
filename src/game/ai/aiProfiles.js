@@ -21,6 +21,7 @@ export const AI_PROFILES = {
     useDominanceFilter: false,
     useDominanceFilterWhenHiddenFocus: false,
     preferExactMinFocus: false,
+    exactFocusSearch: 'off',
 
     standardFocusBuffer: 0,
     ordinaryFocusBuffer: 0,
@@ -62,6 +63,8 @@ export const AI_PROFILES = {
     useDominanceFilter: false,
     useDominanceFilterWhenHiddenFocus: false,
     preferExactMinFocus: true,
+    exactFocusSearch: 'responding',
+    exactFocusEndgameCards: 2,
 
     standardFocusBuffer: 1,
     ordinaryFocusBuffer: 2,
@@ -102,6 +105,9 @@ export const AI_PROFILES = {
     useDominanceFilter: false,
     useDominanceFilterWhenHiddenFocus: false,
     preferExactMinFocus: true,
+    exactFocusSearch: 'critical',
+    exactFocusEndgameCards: 2,
+    exactFocusHpThreshold: 6,
 
     standardFocusBuffer: 2,
     ordinaryFocusBuffer: 3,
