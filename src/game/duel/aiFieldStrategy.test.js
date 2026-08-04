@@ -1,3 +1,4 @@
+// Regressioni: negazione dei Campi e conservazione delle sinergie future.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
