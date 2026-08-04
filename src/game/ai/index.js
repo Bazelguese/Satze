@@ -65,6 +65,11 @@ export {
   isOutcomeDependentTrigger,
 } from './strategyPlanner.js';
 export {
+  evaluateCardFieldFit,
+  evaluateFieldControl,
+  evaluateFieldSelectionAdjustment,
+} from './fieldStrategy.js';
+export {
   chooseAIAction,
   chooseAIIndependentAction,
   chooseWhenAIResponds,
