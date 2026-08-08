@@ -64,6 +64,7 @@ export const checkTrigger = (trigger, context) => {
         return context.lostPrevious;
 
       case 'overdrive': {
+        if (fieldMods.overdriveDisabled) return false;
         const threshold = fieldMods.overdriveThreshold || 5;
         return context.focusCoins >= threshold;
       }
@@ -84,6 +85,7 @@ export const checkTrigger = (trigger, context) => {
         return context.lost;
         
       case 'conquest': // Conquista
+        if (fieldMods.conquestDisabled) return false;
         return context.won;
         
       // NUOVI TRIGGER

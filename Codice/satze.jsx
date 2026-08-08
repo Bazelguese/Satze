@@ -19,14 +19,15 @@ import {
   DUEL_R5_VICTORY_FLIP_MS,
 } from '../src/components/battle/DuelCinematicOverlays';
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
-import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, markCampaignMissionStarted, ARMY_ICONS } from '../src/data';
-import { loadCampaignProgress } from '../src/data/campaign';
-import { totalLeagueForCampaignDeck } from '../src/game/campaign/campaignDeckLogic.js';
+import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, ARMY_ICONS } from '../src/data';
+import { ACT as CAMPAIGN_ACT } from '../src/campaign/data/atto1.js';
+import { buildDuelConfig as buildCampaignDuelConfig } from '../src/campaign/logic/missionAdapter.js';
 import { applyToxin } from '../src/game/toxinLogic';
 import { checkTrigger } from '../src/game/triggerLogic';
 import { getFieldModifiers, fieldGrantsOverdriveBonus } from '../src/game/fieldLogic';
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
+import { formatAIReasoningLogText } from '../src/game/ai/aiDebug.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
 import { DuelRevealHudStyles } from '../src/components/shuffle/DuelRevealVeil';
@@ -63,14 +64,14 @@ import {
 } from '../src/components/tutorial';
 import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
-import { CampaignWarHub } from '../src/components/campaign/CampaignWarHub';
+import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
-import { buildCampaignDuelLaunchConfig } from '../src/game/campaign/campaignDuelAdapter.js';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings, resolveDuelLayoutBreathClass } from '../src/settings/displaySettings';
+import { isSatzeCursorDuelPhase, setSatzeCursorProps } from '../src/components/cursor/satzeCursorState';
 import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
 import DeckPreviewCosmic from '../src/components/cosmic/DeckPreviewCosmic.jsx';
 import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
@@ -93,6 +94,8 @@ import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, get
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
 import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
 import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
+import { preloadCardImagesForAgents } from '../src/data/images.js';
+import { getCardSprite } from '../src/utils/cardUtils.js';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
 import { clearMpSession, persistMpSession, reconnectToRoom } from '../src/utils/multiplayerReconnect';
 import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
@@ -309,6 +312,41 @@ export default function SatzeGame() {
     }
   }, [gamePhase, galleryTab]);
   
+  // Menu: precarica texture carte in idle (galleria / deck aprono più leggeri).
+  useEffect(() => {
+    if (gamePhase !== 'menu') return undefined;
+    let cancelled = false;
+    let cursor = 0;
+    const batch = 28;
+    let idleId = 0;
+
+    const pump = () => {
+      if (cancelled) return;
+      preloadCardImagesForAgents(ALL_AGENTS.slice(cursor, cursor + batch), getCardSprite);
+      cursor += batch;
+      if (cursor < ALL_AGENTS.length) {
+        idleId =
+          typeof requestIdleCallback === 'function'
+            ? requestIdleCallback(pump, { timeout: 500 })
+            : setTimeout(pump, 80);
+      }
+    };
+
+    idleId =
+      typeof requestIdleCallback === 'function'
+        ? requestIdleCallback(pump, { timeout: 1200 })
+        : setTimeout(pump, 400);
+
+    return () => {
+      cancelled = true;
+      if (typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(idleId);
+      } else {
+        clearTimeout(idleId);
+      }
+    };
+  }, [gamePhase]);
+
   // Galleria: contenuto pesante renderizzato dopo un frame per evitare freeze
   const [galleryContentReady, setGalleryContentReady] = useState(false);
   // Tab Agenti: griglia di 100+ carte molto pesante, differita al cambio tab
@@ -415,11 +453,11 @@ export default function SatzeGame() {
   // Hook per la logica di battaglia
   const { resolveBattle } = useBattle(gameState, animations);
 
-  // Hook per l'IA (prima di useGameFlow: serve clearPendingDecision al reset/start)
+  // Hook per l'IA (prima di useGameFlow: serve resetAiSession al reset/start partita)
   const ai = useAI(gameState);
   
   // Hook per il flusso del gioco
-  const gameFlow = useGameFlow(gameState, animations, ai.clearPendingDecision);
+  const gameFlow = useGameFlow(gameState, animations, ai.resetAiSession);
   const { startOnlineMatch, resetToMenu } = gameFlow;
 
   const isOnlinePvP = aiDifficulty === 'multiplayer';
@@ -607,7 +645,7 @@ export default function SatzeGame() {
     setPlayerConfirmedAwaitingAI(false);
     setVictoryCondFx(null);
     setShowFinalRoundAnimation(false);
-    ai.clearPendingDecision();
+    ai.resetAiSession();
     clearCardPreview();
     setSelectedAgent(null);
     setEnemyAgent(null);
@@ -853,20 +891,30 @@ export default function SatzeGame() {
     [launchDialogueDuelTest]
   );
 
-  const startCampaignGame = useCallback((army, deckKey) => {
-    if (!campaignLevel || !army || !deckKey) return;
-    const launch = buildCampaignDuelLaunchConfig(campaignLevel, null);
+  /**
+   * Campagna Atto I: lancio diretto della missione dall'hub.
+   * Il mazzo arriva dalla run (carte reali, Nascente assemblato al volo);
+   * il nemico dalla missione; le tre estensioni motore via campaignDuelMod.
+   */
+  const startCampaignMission = useCallback((mission, run) => {
+    if (!mission || !run) return;
+    const cfg = buildCampaignDuelConfig(mission, run, CAMPAIGN_ACT);
+    setCampaignLevel(mission);
+    setSelectedMode('campaign');
+    setIsMultiplayer(false);
+    setSelectedArmy(cfg.playerArmy);
+    setSelectedDeckKey(null);
     startStandardGame(
-      army,
-      deckKey,
+      cfg.playerArmy,
+      cfg.playerDeckCards,
       'campaign',
-      campaignLevel.difficulty,
+      cfg.difficulty,
       ALL_BATTLEFIELDS,
-      campaignLevel.enemyArmy,
-      campaignLevel.enemyDeck,
-      launch.campaignDuelMod
+      cfg.enemyArmy,
+      cfg.enemyDeckIds,
+      cfg.campaignDuelMod
     );
-  }, [campaignLevel, startStandardGame]);
+  }, [startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
 
   const goAfterDeckSelection = useCallback((deckKeyOverride) => {
     const deckKey = deckKeyOverride ?? selectedDeckKey;
@@ -880,48 +928,23 @@ export default function SatzeGame() {
       setGamePhase('onlineDeckReady');
       return;
     }
-    if (campaignLevel && deckKey) {
-      startCampaignGame(selectedArmy, deckKey);
-      return;
-    }
+    void deckKey;
     setPreviewDeckData(null);
     setGamePhase('selectDeck');
     setShowDifficultyPopup(true);
   }, [
     selectedDeckKey,
-    selectedArmy,
     isMultiplayer,
     selectedMode,
-    campaignLevel,
-    startCampaignGame,
     setGamePhase,
   ]);
 
-  /** Campagna Figli: dopo armata si salta la selezione deck se il mazzo hub è valido. */
   const selectArmyAndContinue = useCallback(
     (army) => {
       setSelectedArmy(army);
-      if (
-        selectedMode === 'campaign' &&
-        campaignLevel?.playerArmy === "Figli dell'Orizzonte" &&
-        army === "Figli dell'Orizzonte"
-      ) {
-        const prog = loadCampaignProgress(campaignSaveSlot);
-        const ids = prog.meta?.activeDeckCardIds;
-        const ok =
-          Array.isArray(ids) &&
-          ids.length >= 3 &&
-          ids.length <= 10 &&
-          totalLeagueForCampaignDeck(ids, "Figli dell'Orizzonte") <= 30;
-        if (ok) {
-          setSelectedDeckKey(ids);
-          startCampaignGame(army, ids);
-          return;
-        }
-      }
       setGamePhase('selectDeck');
     },
-    [selectedMode, campaignLevel, campaignSaveSlot, setSelectedArmy, setSelectedDeckKey, setGamePhase, startCampaignGame]
+    [setSelectedArmy, setGamePhase]
   );
 
   useEffect(() => {
@@ -1489,7 +1512,7 @@ export default function SatzeGame() {
     gameState,
   });
   
-  const { handleDragStart, dropZoneRef } = dragAndDrop;
+  const { handleDragStart, dropZoneRef, dragVisual } = dragAndDrop;
   
   // Ref per auto-scroll log - Gestito internamente da LogPanel
 
@@ -1505,12 +1528,23 @@ export default function SatzeGame() {
     };
   }, []);
 
-  // Cursore durante drag agente: grabbing, copy quando sopra area agente
+  // Sync cursore custom (army / inDuel / carta in drag) — host montato in App
   useEffect(() => {
-    if (draggingCard) {
-      document.body.style.cursor = isOverDropZone ? 'copy' : 'grabbing';
-      return () => { document.body.style.cursor = ''; };
-    }
+    setSatzeCursorProps({
+      army: selectedArmy || playerHand?.[0]?.army || null,
+      inDuel: isSatzeCursorDuelPhase(gamePhase),
+      dragCard: dragVisual
+        ? { cx: dragVisual.cx, cy: dragVisual.cy }
+        : null,
+    });
+  }, [selectedArmy, gamePhase, playerHand, dragVisual]);
+
+  // Cursore di sistema durante drag solo se il custom cursor è spento
+  useEffect(() => {
+    if (!draggingCard) return undefined;
+    if (document.documentElement.classList.contains('satze-custom-cursor')) return undefined;
+    document.body.style.cursor = isOverDropZone ? 'copy' : 'grabbing';
+    return () => { document.body.style.cursor = ''; };
   }, [draggingCard, isOverDropZone]);
 
   const addLog = (message) => {
@@ -1626,10 +1660,14 @@ export default function SatzeGame() {
   // Ref stabili: le callback di useAI cambiano identità a ogni gameState e
   // non devono riarmare/cancellare i timer di pensiero IA.
   const selectEnemyFieldRef = useRef(ai.selectEnemyField);
+  const selectEnemyFieldAsyncRef = useRef(ai.selectEnemyFieldAsync);
   const selectEnemyAgentAndFocusRef = useRef(ai.selectEnemyAgentAndFocus);
+  const selectEnemyAgentAndFocusAsyncRef = useRef(ai.selectEnemyAgentAndFocusAsync);
   const getThinkingTimeRef = useRef(ai.getThinkingTime);
   selectEnemyFieldRef.current = ai.selectEnemyField;
+  selectEnemyFieldAsyncRef.current = ai.selectEnemyFieldAsync;
   selectEnemyAgentAndFocusRef.current = ai.selectEnemyAgentAndFocus;
+  selectEnemyAgentAndFocusAsyncRef.current = ai.selectEnemyAgentAndFocusAsync;
   getThinkingTimeRef.current = ai.getThinkingTime;
 
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
@@ -1642,33 +1680,56 @@ export default function SatzeGame() {
     if (gamePhase === 'selectField' && !isPlayerFirst && battlefields.length > 0) {
       let cancelled = false;
       const delay = getThinkingTimeRef.current?.() ?? 2000;
-      const timer = setTimeout(() => {
+      const startedAt = Date.now();
+
+      (async () => {
+        await new Promise((resolve) => {
+          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(resolve);
+          else setTimeout(resolve, 0);
+        });
         if (cancelled) return;
-        const available = battlefields.filter((_, i) => !(i in conqueredFields) && i < revealedFields);
-        if (available.length > 0) {
-          let fieldIdx = selectEnemyFieldRef.current?.();
-          if (fieldIdx == null || fieldIdx < 0 || !(fieldIdx in battlefields) || (fieldIdx in conqueredFields) || fieldIdx >= revealedFields) {
-            fieldIdx = battlefields.indexOf(available[0]);
-          }
-          if (cancelled) return;
-          setCurrentFieldIndex(fieldIdx);
-          setBattleEvents((prev) => {
-            const emitter = createBattleEventEmitter(roundNumber);
-            const ch = createBattleLogChannel(emitter, { dualStrings: false });
-            emitInfo(ch, {
-              phase: 'preDuel',
-              revealAt: 'deploy',
-              infoCode: 'opponentFieldChosen',
-              data: { fieldName: battlefields[fieldIdx].name, fieldId: battlefields[fieldIdx]?.id },
-            });
-            return keepLastRounds([...prev, ...emitter.events], 10);
-          });
-          setGamePhase('selectAgent');
+
+        const available = battlefields.filter(
+          (_, i) => !(i in conqueredFields) && i < revealedFields
+        );
+        if (available.length === 0) return;
+
+        let fieldIdx = await selectEnemyFieldAsyncRef.current?.();
+        if (
+          fieldIdx == null ||
+          fieldIdx < 0 ||
+          !(fieldIdx in battlefields) ||
+          fieldIdx in conqueredFields ||
+          fieldIdx >= revealedFields
+        ) {
+          fieldIdx = battlefields.indexOf(available[0]);
         }
-      }, delay);
+
+        const waitMs = delay - (Date.now() - startedAt);
+        if (waitMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+        if (cancelled) return;
+
+        setCurrentFieldIndex(fieldIdx);
+        setBattleEvents((prev) => {
+          const emitter = createBattleEventEmitter(roundNumber);
+          const ch = createBattleLogChannel(emitter, { dualStrings: false });
+          emitInfo(ch, {
+            phase: 'preDuel',
+            revealAt: 'deploy',
+            infoCode: 'opponentFieldChosen',
+            data: { fieldName: battlefields[fieldIdx].name, fieldId: battlefields[fieldIdx]?.id },
+          });
+          return keepLastRounds([...prev, ...emitter.events], 10);
+        });
+        setGamePhase('selectAgent');
+      })().catch((err) => {
+        console.error('[SATZE] IA selectField:', err);
+      });
+
       return () => {
         cancelled = true;
-        clearTimeout(timer);
       };
     }
   }, [
@@ -1733,17 +1794,30 @@ export default function SatzeGame() {
 
     let cancelled = false;
     const delay = getThinkingTimeRef.current?.() ?? 2000;
-    const timer = setTimeout(() => {
+    const startedAt = Date.now();
+
+    (async () => {
+      await new Promise((resolve) => {
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(resolve);
+        else setTimeout(resolve, 0);
+      });
       if (cancelled || aiHasSelectedAgent.current) return;
-      const result = selectEnemyAgentAndFocusRef.current?.();
-      // Latch solo dopo scelta riuscita: altrimenti un fallimento lascerebbe l'IA bloccata
+
+      const result = await selectEnemyAgentAndFocusAsyncRef.current?.();
+      const waitMs = delay - (Date.now() - startedAt);
+      if (waitMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+      if (cancelled || aiHasSelectedAgent.current) return;
       if (result?.agent) {
         aiHasSelectedAgent.current = true;
       }
-    }, delay);
+    })().catch((err) => {
+      console.error('[SATZE] IA selectAgent:', err);
+    });
+
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [
     gamePhase,
@@ -2040,17 +2114,26 @@ export default function SatzeGame() {
       setPlayerConfirmedAwaitingAI(true);
       aiHasSelectedAgent.current = true;
       const delay = ai.getThinkingTime?.() ?? 2000;
+      const startedAt = Date.now();
+      const scheduledGeneration = aiThinkGenerationRef.current;
       if (aiAgentThinkTimerRef.current) {
         clearTimeout(aiAgentThinkTimerRef.current);
         aiAgentThinkTimerRef.current = null;
       }
-      const scheduledGeneration = aiThinkGenerationRef.current;
-      aiAgentThinkTimerRef.current = setTimeout(() => {
-        aiAgentThinkTimerRef.current = null;
-        // Partita abbandonata / nuova partita: non applicare la scelta della sessione precedente
+      (async () => {
+        await new Promise((resolve) => {
+          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(resolve);
+          else setTimeout(resolve, 0);
+        });
         if (scheduledGeneration !== aiThinkGenerationRef.current) return;
-        ai.selectEnemyAgentAndFocus(false);
-      }, delay);
+        await ai.selectEnemyAgentAndFocusAsync(false);
+        const waitMs = delay - (Date.now() - startedAt);
+        if (waitMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+      })().catch((err) => {
+        console.error('[SATZE] IA risposta (giocatore primo):', err);
+      });
     }
   };
 
@@ -2353,8 +2436,8 @@ export default function SatzeGame() {
       }
     }
     
-    // Rivela campo nascosto se ce ne sono
-    if (revealedFields < 5) {
+    // Rivela campo nascosto se ce ne sono (il totale può essere <5 in campagna: fields per missione)
+    if (revealedFields < battlefields.length) {
       setRevealedFields(prev => prev + 1);
     }
     
@@ -2373,42 +2456,16 @@ export default function SatzeGame() {
     const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
     const suspendGuidedTerritorialWin = guidedMatch.active && !guidedMatch.freePlay;
     
-    // Check vittoria per campi conquistati (3 campi)
-    // In modalità classica: SOLO nei round 1-4 (al round 5+ cambia in "Supremazia")
-    // In modalità Bare Hands: SEMPRE attiva
+    // Check vittoria per campi conquistati (maggioranza: 3 su 5, 2 su 3, ...)
+    // Classic e Bare Hands: SOLO nei round 1-4 (al round 5+ cambia in "Supremazia" / più PV)
     // REKLAMAZIONE: ai round 3 o 4, chi vince per campi può reclamare la vittoria o continuare a giocare
+    const fieldsMajority = Math.floor(battlefields.length / 2) + 1;
     const canReclaim = (roundNumber === 3 || roundNumber === 4) && !suspendGuidedTerritorialWin;
     const skipTerritorialWin = forceContinueAfterClaimRef.current;
     if (skipTerritorialWin) {
       forceContinueAfterClaimRef.current = false;
-    } else if (!suspendGuidedTerritorialWin && gameMode === 'bareHands') {
-      // Bare Hands: sempre controlla vittoria per campi
-      if (playerFields >= 3 && !blockTerritorialPlayerWin) {
-        if (canReclaim) {
-          setShowClaimVictoryChoice({ winner: 'player', playerFields, enemyFields });
-          return;
-        }
-        setGameResult({ winner: 'player', reason: 'fields', playerFields, enemyFields });
-        setGamePhase('gameOver');
-        return;
-      }
-      if (enemyFields >= 3) {
-        if (canReclaim) {
-          if (isOnlinePvP) {
-            setOpponentClaimPending({ playerFields, enemyFields });
-            return;
-          }
-          setGameResult({ winner: 'enemy', reason: 'fields', playerFields, enemyFields });
-          setGamePhase('gameOver');
-          return;
-        }
-        setGameResult({ winner: 'enemy', reason: 'fields', playerFields, enemyFields });
-        setGamePhase('gameOver');
-        return;
-      }
     } else if (!suspendGuidedTerritorialWin && roundNumber < 5) {
-      // Classic mode: controlla vittoria per campi SOLO nei round 1-4
-      if (playerFields >= 3 && !blockTerritorialPlayerWin) {
+      if (playerFields >= fieldsMajority && !blockTerritorialPlayerWin) {
         if (canReclaim) {
           setShowClaimVictoryChoice({ winner: 'player', playerFields, enemyFields });
           return;
@@ -2417,7 +2474,7 @@ export default function SatzeGame() {
         setGamePhase('gameOver');
         return;
       }
-      if (enemyFields >= 3) {
+      if (enemyFields >= fieldsMajority) {
         if (canReclaim) {
           if (isOnlinePvP) {
             setOpponentClaimPending({ playerFields, enemyFields });
@@ -2432,7 +2489,7 @@ export default function SatzeGame() {
         return;
       }
     }
-    // Se siamo in classic mode e roundNumber >= 5, NON controlliamo la vittoria per campi
+    // Round 5+: niente vittoria per campi — decide Supremazia (PV) a carte esaurite
     
     // Check fine gioco per PV (a 0) - newPlayerHP / newEnemyHP già calcolati sopra
     if (newPlayerHP <= 0) {
@@ -2534,7 +2591,12 @@ export default function SatzeGame() {
     );
     nextRoundInFlightRef.current = false;
 
-    if (nextRoundNum === 5 && playerFields < 3 && enemyFields < 3 && gameMode === 'classic') {
+    if (
+      nextRoundNum === 5 &&
+      playerFields < 3 &&
+      enemyFields < 3 &&
+      (gameMode === 'classic' || gameMode === 'bareHands')
+    ) {
       r5VictoryTimersRef.current.forEach(clearTimeout);
       r5VictoryTimersRef.current = [];
       setVictoryCondFx('hold');
@@ -2696,27 +2758,13 @@ export default function SatzeGame() {
     );
   }
 
-  // Schermata Campagna — hub dedicato (non popup sul menu)
+  // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
   if (gamePhase === 'campaignHub') {
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
-        <CampaignWarHub
+        <CampaignAtto1Hub
           campaignSaveSlot={campaignSaveSlot}
-          onOpenDeckManager={() => {
-            setEditingDeckId(null);
-            setDeckManagerSource('menu');
-            setDeckManagerView('list');
-            setShowDeckManager(true);
-          }}
-          onStartMission={(mission) => {
-            markCampaignMissionStarted(mission.id, campaignSaveSlot);
-            setCampaignLevel(mission);
-            setSelectedMode('campaign');
-            setIsMultiplayer(false);
-            setSelectedArmy(null);
-            setSelectedDeckKey(null);
-            setGamePhase('selectArmy');
-          }}
+          onStartMission={startCampaignMission}
           onBack={() => setGamePhase('menu')}
         />
         {showDeckManager && deckManagerView === 'list' && (
@@ -2770,6 +2818,11 @@ export default function SatzeGame() {
       url.searchParams.set('overdriveLab', '1');
       window.location.href = url.toString();
     };
+    const openPerfectFocusLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('perfectFocusLab', '1');
+      window.location.href = url.toString();
+    };
     const launchArenaContesa = (playerArmy) => {
       const url = new URL(window.location.href);
       url.searchParams.set('arenaContesa', '1');
@@ -2814,7 +2867,7 @@ export default function SatzeGame() {
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', onClick: openTutorialSelector },
-      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => startTransition(() => setGamePhaseFromMainMenu('gallery')) },
+      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
       {
         label: 'STRUMENTI DEV',
         sub: 'LAB',
@@ -2823,6 +2876,7 @@ export default function SatzeGame() {
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
+          { label: 'PERFECT FC LAB', sub: 'VFX', meta: 'STAMP DUELLO', onClick: openPerfectFocusLab },
           {
             label: 'ARENA CONTESA',
             sub: 'GIOCA',
@@ -3038,12 +3092,9 @@ export default function SatzeGame() {
 
   // Durante la transizione post-difficoltà resta visibile la schermata esercito sotto l'iris (portal).
 
-  // Schermata Selezione Armata
+  // Schermata Selezione Armata (la campagna non passa più di qui: lancio diretto dall'hub)
   if (gamePhase === 'selectArmy') {
-    let availableArmies = Object.keys(ARMY_SETS);
-    if (campaignLevel && campaignLevel.playerArmy) {
-      availableArmies = [campaignLevel.playerArmy];
-    }
+    const availableArmies = Object.keys(ARMY_SETS);
     return (
       <ArmySelectCinematic
         onSelect={(armyName) => {
@@ -3118,47 +3169,10 @@ export default function SatzeGame() {
         )
       : null;
     const customDecks = loadCustomDecks();
-    const customDecksForArmy = isMixedMode
-      ? Object.entries(customDecks).filter(([_, deck]) => isMixedDeck(deck, ARMY_SETS))
-      : Object.entries(customDecks).filter(([_, deck]) => deck.army === selectedArmy);
+    // Armate: solo mazzi base. Eserciti personalizzati: tutti i mazzi creati dall'utente.
+    const customDecksForArmy = isMixedMode ? Object.entries(customDecks) : [];
     const predefinedDecks = isMixedMode ? {} : ARMY_DECKS[selectedArmy];
-    const campaignDeckSubtitle =
-      "Esercito precostruito (A, B, …) o esercito personalizzato — stesse regole del duello core.";
-    const campaignProg = loadCampaignProgress(campaignSaveSlot);
-    const campDeckIds = campaignProg.meta?.activeDeckCardIds;
-    const deckValidHub =
-      Array.isArray(campDeckIds) &&
-      campDeckIds.length >= 3 &&
-      campDeckIds.length <= 10 &&
-      totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte") <= 30;
-    const campaignHubDeckOnly =
-      selectedMode === 'campaign' &&
-      campaignLevel &&
-      campaignLevel.playerArmy === "Figli dell'Orizzonte" &&
-      selectedArmy === "Figli dell'Orizzonte" &&
-      !isMixedMode;
-    const figliCampaignDeckOk =
-      selectedMode !== 'campaign' &&
-      campaignLevel &&
-      campaignLevel.playerArmy === "Figli dell'Orizzonte" &&
-      selectedArmy === "Figli dell'Orizzonte" &&
-      !isMixedMode &&
-      deckValidHub;
     const deckOptions = [];
-    if (figliCampaignDeckOk) {
-      deckOptions.push({
-        key: 'campaign_figli',
-        name: 'Esercito campagna (Figli)',
-        armyLabel: 'Campagna',
-        description: 'Usa l\'esercito modificato nel segmento gestionale.',
-        meta: `${campDeckIds.length} carte • Lega ${totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30`,
-        accent: '#a78bfa',
-        onSelect: () => {
-          setSelectedDeckKey(campDeckIds);
-          goAfterDeckSelection(campDeckIds);
-        },
-      });
-    }
     if (!isMixedMode) {
       Object.entries(predefinedDecks).forEach(([key, deck]) => {
         const deckCards = resolveDeckCards(deck, ARMY_SETS);
@@ -3178,20 +3192,20 @@ export default function SatzeGame() {
       });
     }
     customDecksForArmy.forEach(([deckId, deck]) => {
-      const deckCards = isMixedMode ? resolveDeckCards(deck, ARMY_SETS) : ARMY_SETS[selectedArmy].filter(card => deck.cards.includes(card.id));
+      const deckCards = resolveDeckCards(deck, ARMY_SETS);
       const totalLeague = deckCards.reduce((sum, c) => sum + c.league, 0);
-      const deckMixed = isMixedMode || isMixedDeck(deck, ARMY_SETS);
+      const deckMixed = isMixedDeck(deck, ARMY_SETS);
       const { accent: deckAccent, armies: deckArmies } = getDeckVisualMeta(deckCards, {
         fallbackArmy: deck.army || selectedArmy,
         armyColors: ARMY_COLORS,
-        fallbackAccent: deckMixed ? MIXED_DECKS_COLOR : colors.accent,
+        fallbackAccent: deckMixed ? MIXED_DECKS_COLOR : ((ARMY_COLORS[deck.army] || {}).accent || MIXED_DECKS_COLOR),
       });
       deckOptions.push({
         key: `custom_${deckId}`,
         name: deck.name,
         armyLabel: deckMixed && deckArmies.length >= 2
           ? deckArmies.join(' · ')
-          : (deck.army || (isMixedMode ? 'Misto' : selectedArmy)),
+          : (deck.army || 'Personalizzato'),
         description: deck.description || 'Esercito personalizzato',
         meta: `${deck.cards.length} carte • Lega ${totalLeague}/30`,
         accent: deckAccent,
@@ -3201,46 +3215,6 @@ export default function SatzeGame() {
         },
       });
     });
-
-    if (campaignHubDeckOnly && !deckValidHub) {
-      const errBack = () => {
-        setSelectedArmy(null);
-        setSelectedDeckKey(null);
-        setGamePhase('campaignHub');
-      };
-      return (
-        <MenuScreenLayout title="Esercito campagna" subtitle="L'esercito nel comando non è valido (3–10 carte, Lega ≤30).">
-          <p className="text-slate-400 text-sm text-center max-w-md mb-6">
-            Modifica l&apos;esercito nel segmento gestionale dell&apos;hub campagna, poi riprova.
-          </p>
-          <MenuBackButton onClick={errBack}>Torna all&apos;hub campagna</MenuBackButton>
-        </MenuScreenLayout>
-      );
-    }
-
-    if (campaignHubDeckOnly && deckValidHub) {
-      return (
-        <MenuScreenLayout title="Esercito campagna" subtitle="Esercito costruito nel comando (Figli dell&apos;Orizzonte).">
-          <div className="w-full max-w-4xl px-4 mb-6">
-            <MenuCard
-              accentColor="#a78bfa"
-              onClick={() => {
-                setSelectedDeckKey(campDeckIds);
-                goAfterDeckSelection(campDeckIds);
-              }}
-              className="border-2 border-purple-500/50"
-            >
-              <div className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-2">Campagna</div>
-              <div className="text-xl font-black text-white mb-1">Esercito hub</div>
-              <p className="text-slate-400 text-sm mb-3">
-                {campDeckIds.length} carte · Lega {totalLeagueForCampaignDeck(campDeckIds, "Figli dell'Orizzonte")}/30
-              </p>
-            </MenuCard>
-          </div>
-          <MenuBackButton onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>Cambia Armata</MenuBackButton>
-        </MenuScreenLayout>
-      );
-    }
 
     const resolveArmyFromDeckSlug = (armySlug) =>
       Object.keys(ARMY_DECKS).find(
@@ -3261,7 +3235,7 @@ export default function SatzeGame() {
           gameDeckOptions={deckOptions}
           selectedArmy={selectedArmy}
           isMixedMode={isMixedMode}
-          campaignDeckIds={Array.isArray(campDeckIds) ? campDeckIds : null}
+          campaignDeckIds={null}
           onSelectDeck={(deckKey) => {
             let resolvedKey = deckKey;
             if (deckKey.includes('::')) {
@@ -3313,7 +3287,7 @@ export default function SatzeGame() {
         {difficultyPopupEl}
         <CosmicScreenLayout
         title={selectedArmy}
-        subtitle={campaignLevel ? campaignDeckSubtitle : (isMixedMode ? 'Eserciti con carte da più armate' : 'Scegli il tuo esercito')}
+        subtitle={isMixedMode ? 'I tuoi eserciti creati' : 'Scegli il tuo esercito'}
         footer={(
           <CosmicBannerButton accent={colors.accent} onClick={() => { setSelectedArmy(null); setGamePhase('selectArmy'); }}>
             Cambia armata
@@ -3326,14 +3300,14 @@ export default function SatzeGame() {
             onChooseDeck={(deckChoice) => deckChoice.onSelect()}
           />
         ) : null}
-        {campaignLevel && customDecksForArmy.length === 0 && (
+        {campaignLevel && !isMixedMode && (
           <p className="text-center text-slate-400 text-sm mb-2 max-w-lg mx-auto">
-            Nessun esercito salvato: puoi usare gli eserciti precostruiti sopra oppure crearne uno in Gestione eserciti.
+            Nessun esercito precostruito disponibile. Gli eserciti creati da te sono in &quot;Eserciti personalizzati&quot;.
           </p>
         )}
         {isMixedMode && customDecksForArmy.length === 0 && (
           <div className="text-center text-slate-400 mb-2">
-            Nessun esercito misto. Crea un esercito da &quot;Gestione Eserciti&quot; selezionando carte da armate diverse.
+            Nessun esercito personalizzato. Creane uno da &quot;Gestione Eserciti&quot;.
           </div>
         )}
       </CosmicScreenLayout>
@@ -3603,7 +3577,11 @@ export default function SatzeGame() {
       )}
       {/* Immagine campo con animazione reveal (effetto per tema armata) - galleria e duello */}
       {fieldBgImage && (
-        <div key={fieldBgImage} className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <div
+          key={fieldBgImage}
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 0, isolation: 'isolate', contain: 'paint' }}
+        >
           <BattlefieldReveal imageSrc={fieldBgImage} animationType={entranceAnimationType} />
         </div>
       )}
@@ -3863,8 +3841,7 @@ export default function SatzeGame() {
           {/* Condizione di vittoria */}
           {(() => {
             const holdOldVictory = victoryCondFx === 'hold';
-            const showAnnihilate =
-              gameMode !== 'bareHands' && roundNumber >= 5 && !holdOldVictory;
+            const showAnnihilate = roundNumber >= 5 && !holdOldVictory;
             return (
           <div 
             className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}`}
@@ -3878,20 +3855,16 @@ export default function SatzeGame() {
           >
             <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>Condizione di Vittoria</div>
             <div className="text-sm font-bold leading-tight" style={{ color: PALETTE.amber, textShadow: `0 1px 3px #000, 0 0 12px ${PALETTE.amber}44` }}>
-              {gameMode === 'bareHands' 
-                ? 'Conquista 3 campi!'
-                : (showAnnihilate
-                    ? "Annienta il nemico!"
-                    : 'Conquista 3 campi!')}
+              {showAnnihilate ? 'Annienta il nemico!' : `Conquista ${Math.floor(battlefields.length / 2) + 1} campi!`}
             </div>
-            {gameMode !== 'bareHands' && !showAnnihilate && (
+            {!showAnnihilate && playerHand.length >= 5 && (
               <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
                 {holdOldVictory
                   ? 'Sta per cambiare…'
                   : `Cambierà tra ${5 - roundNumber} turn${5 - roundNumber === 1 ? 'o' : 'i'}`}
               </div>
             )}
-            {gameMode !== 'bareHands' && showAnnihilate && (
+            {showAnnihilate && (
               <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
                 (Vince chi alla fine del turno ha più PV)
               </div>
@@ -4252,6 +4225,17 @@ export default function SatzeGame() {
         battleResult={battleResult}
         onContinue={nextRound}
         gameResult={gameResult}
+        aiDecisionLog={isOnlinePvP ? null : ai.aiDecisionLog}
+        onCopyAiDecisionLog={
+          isOnlinePvP || !ai.aiDecisionLog?.length
+            ? undefined
+            : () => {
+                const text = formatAIReasoningLogText(ai.aiDecisionLog);
+                if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(text).catch(() => {});
+                }
+              }
+        }
         onMenu={() => {
           resetGuidedTutorial();
           aiThinkGenerationRef.current += 1;
@@ -4262,8 +4246,8 @@ export default function SatzeGame() {
           aiHasSelectedAgent.current = false;
           setPlayerConfirmedAwaitingAI(false);
           setCampaignLevel(null);
-          if (selectedMode === 'campaign') {
-            ai.clearPendingDecision();
+            if (selectedMode === 'campaign') {
+            ai.resetAiSession();
             setSelectedAgent(null);
             setEnemyAgent(null);
             setEnemySelectedFocus(1);
@@ -4302,7 +4286,7 @@ export default function SatzeGame() {
                   setPlayerConfirmedAwaitingAI(false);
                   setVictoryCondFx(null);
                   setShowFinalRoundAnimation(false);
-                  ai.clearPendingDecision();
+                  ai.resetAiSession();
                   clearCardPreview();
                   startStandardGame(
                     selectedArmy,
@@ -4373,6 +4357,7 @@ export default function SatzeGame() {
           width: '240px', 
           height: '400px', 
           zIndex: 5,
+          overflow: 'visible',
           transitionProperty: 'transform, border-color, background-color, box-shadow',
           transitionDuration: `${duelVfx.zoomTransitionMs}ms`,
           transitionTimingFunction: 'ease-in-out',
@@ -4470,6 +4455,7 @@ export default function SatzeGame() {
           width: '240px', 
           height: '400px', 
           zIndex: 5,
+          overflow: 'visible',
           transitionProperty: 'transform, border-color, background-color, box-shadow',
           transitionDuration: `${duelVfx.zoomTransitionMs}ms`,
           transitionTimingFunction: 'ease-in-out',
@@ -4620,7 +4606,7 @@ export default function SatzeGame() {
           style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
           <span className="font-bold text-sm uppercase tracking-wider" style={{ color: PALETTE.amber }}>
-            Round {roundNumber}/5
+            Round {roundNumber}/{playerHand.length > 0 ? Math.max(playerHand.length, roundNumber) : 5}
           </span>
         </div>
 
@@ -4770,20 +4756,16 @@ export default function SatzeGame() {
         </div>
       )}
 
-      {/* Carta trascinata (floating) - portal su body per posizione corretta con viewport scalato */}
-      {draggingCard && createPortal(
-        (() => {
-          const hx = 115;
-          const hy = 165;
-          return (
-        <div 
+      {/* Carta trascinata: resta al punto di presa, lieve attrazione verso il cursore */}
+      {draggingCard && dragVisual && createPortal(
+        <div
           className="fixed pointer-events-none"
           style={{
-            left: dragPosition.x - hx,
-            top: dragPosition.y - hy,
-            transform: 'rotate(-5deg)',
+            left: dragVisual.left,
+            top: dragVisual.top,
+            transform: `rotate(${dragVisual.rot}deg)`,
             filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))',
-            zIndex: 9999
+            zIndex: 99990,
           }}
         >
           <GameCard
@@ -4791,9 +4773,7 @@ export default function SatzeGame() {
             showBonus={playerArmyBonuses[draggingCard.army] && isBonusTriggerSatisfied(draggingCard.army, true, draggingCard)}
             bonusBaseInactive={Boolean(ARMY_BONUSES[draggingCard.army]) && !playerArmyBonuses[draggingCard.army]}
           />
-        </div>
-          );
-        })(),
+        </div>,
         document.body
       )}
 

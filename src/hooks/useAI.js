@@ -2,14 +2,18 @@
 // HOOK: useAI — adapter React sul motore puro src/game/ai
 // ============================================
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   buildAIContext,
   buildPublicDecisionKey,
   chooseAIAction,
+  chooseAIActionAsync,
   chooseJointAIAction,
+  chooseJointAIActionAsync,
   defaultRng,
+  formatAIReasoningEntry,
 } from '../game/ai/index.js';
+import { isAiWorkerSupported, runAiDecisionInWorker } from '../game/ai/aiWorkerClient.js';
 import { getAvailableCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
 
 /**
@@ -25,10 +29,46 @@ export function useAI(gameState) {
   /** Decisione congiunta { fieldIndex, card, focus } da riusare nello stesso round. */
   const pendingDecisionRef = useRef(null);
   const pendingKeyRef = useRef(null);
+  /** Evita doppio log quando joint Campo viene riusata in selectAgent. */
+  const loggedDecisionKeyRef = useRef(null);
+
+  /** Log ragionamenti IA della partita corrente (UI post-match). */
+  const [aiDecisionLog, setAiDecisionLog] = useState([]);
 
   const clearPendingDecision = useCallback(() => {
     pendingDecisionRef.current = null;
     pendingKeyRef.current = null;
+  }, []);
+
+  /** Nuova partita / rematch: azzera cache e log ragionamenti. */
+  const resetAiSession = useCallback(() => {
+    clearPendingDecision();
+    loggedDecisionKeyRef.current = null;
+    setAiDecisionLog([]);
+  }, [clearPendingDecision]);
+
+  const recordDecision = useCallback((decision, context, kind, publicKey) => {
+    if (!decision?.card) return;
+    const round = context?.roundNumber ?? '?';
+    const contentKey = `R${round}-${kind}-${decision.cardId}-f${decision.focus}-fi${decision.fieldIndex ?? 'x'}`;
+    const dedupeKey = contentKey || publicKey;
+    if (loggedDecisionKeyRef.current === dedupeKey) return;
+    // Evita doppio log joint→agent sullo stesso schieramento
+    if (
+      kind !== 'joint' &&
+      loggedDecisionKeyRef.current?.startsWith(`R${round}-joint-${decision.cardId}-f${decision.focus}-fi`)
+    ) {
+      return;
+    }
+    loggedDecisionKeyRef.current = dedupeKey;
+
+    const entry = formatAIReasoningEntry(decision, {
+      context,
+      kind,
+      difficulty: context?.difficulty,
+      roundNumber: context?.roundNumber,
+    });
+    setAiDecisionLog((prev) => [...prev, entry].slice(-40));
   }, []);
 
   const storeDecision = useCallback((decision, key) => {
@@ -78,6 +118,50 @@ export function useAI(gameState) {
     return null;
   }, [clearPendingDecision, isPendingCardPlayable]);
 
+  const runDecisionEngineAsync = useCallback(async (context, needsJoint, rng) => {
+    if (isAiWorkerSupported()) {
+      try {
+        return await runAiDecisionInWorker(context, context.difficulty, needsJoint);
+      } catch {
+        /* fallback main thread */
+      }
+    }
+    return needsJoint
+      ? chooseJointAIActionAsync(context, context.difficulty, { rng })
+      : chooseAIActionAsync(context, context.difficulty, { rng });
+  }, []);
+
+  const computeDecisionAsync = useCallback(
+    async (options = {}) => {
+      if (!options.force) {
+        const reusable = getReusableDecision();
+        if (reusable) return reusable;
+      }
+
+      const context = buildAIContext(gameStateRef.current);
+      const key = buildPublicDecisionKey(context);
+
+      const needsJoint =
+        options.joint ||
+        (context.currentFieldIndex == null && context.isPlayerFirst === false);
+
+      const rng = options.rng || defaultRng;
+      const decision = await runDecisionEngineAsync(context, needsJoint, rng);
+
+      if (decision?.card && options.record !== false) {
+        const kind = needsJoint
+          ? 'joint'
+          : context.isPlayerFirst
+            ? 'response'
+            : 'lead';
+        recordDecision(decision, context, kind, key);
+      }
+
+      return storeDecision(decision, key);
+    },
+    [getReusableDecision, storeDecision, recordDecision, runDecisionEngineAsync]
+  );
+
   const computeDecision = useCallback(
     (options = {}) => {
       if (!options.force) {
@@ -101,9 +185,18 @@ export function useAI(gameState) {
             rng: options.rng || defaultRng,
           });
 
+      if (decision?.card && options.record !== false) {
+        const kind = needsJoint
+          ? 'joint'
+          : context.isPlayerFirst
+            ? 'response'
+            : 'lead';
+        recordDecision(decision, context, kind, key);
+      }
+
       return storeDecision(decision, key);
     },
-    [getReusableDecision, storeDecision]
+    [getReusableDecision, storeDecision, recordDecision]
   );
 
   const selectEnemyAgent = useCallback(() => {
@@ -135,11 +228,14 @@ export function useAI(gameState) {
       const state = gameStateRef.current;
       // Riusa decisione congiunta se presente (non forzare ricalcolo)
       let decision = getReusableDecision();
+      let fromCache = Boolean(decision?.card);
       if (!decision?.card) {
         decision = computeDecision({ force: false });
+        fromCache = false;
       }
       if (!decision?.card) {
         decision = computeDecision({ force: true });
+        fromCache = false;
       }
       if (!decision?.card) return null;
 
@@ -150,6 +246,7 @@ export function useAI(gameState) {
         decision.fieldIndex !== state.currentFieldIndex
       ) {
         decision = computeDecision({ force: true });
+        fromCache = false;
       }
       if (!decision?.card) return null;
 
@@ -157,6 +254,7 @@ export function useAI(gameState) {
       if (!isPendingCardPlayable(ctx, decision.card)) {
         clearPendingDecision();
         decision = computeDecision({ force: true });
+        fromCache = false;
       }
       if (!decision?.card || !isPendingCardPlayable(buildAIContext(state), decision.card)) {
         return null;
@@ -165,6 +263,12 @@ export function useAI(gameState) {
       const { maxFocus } = getLegalFocusRange(buildAIContext(state), 'ai');
       if (maxFocus < 1) return null;
       const focus = Math.max(1, Math.min(maxFocus, decision.focus));
+
+      // Se riusiamo la joint già loggata in selectEnemyField, non riloggare.
+      // Se è una risposta / lead senza joint precedente, computeDecision ha già registrato.
+      if (fromCache && decision.debug?.jointAction) {
+        // già in log
+      }
 
       state.setEnemyAgent(decision.card);
       state.setEnemySelectedFocus(focus);
@@ -185,6 +289,69 @@ export function useAI(gameState) {
       };
     },
     [getReusableDecision, computeDecision, isPendingCardPlayable, clearPendingDecision]
+  );
+
+  const selectEnemyAgentAndFocusAsync = useCallback(
+    async (logSelection = true) => {
+      const state = gameStateRef.current;
+      let decision = getReusableDecision();
+      let fromCache = Boolean(decision?.card);
+      if (!decision?.card) {
+        decision = await computeDecisionAsync({ force: false });
+        fromCache = false;
+      }
+      if (!decision?.card) {
+        decision = await computeDecisionAsync({ force: true });
+        fromCache = false;
+      }
+      if (!decision?.card) return null;
+
+      if (
+        state.currentFieldIndex != null &&
+        decision.fieldIndex != null &&
+        decision.fieldIndex !== state.currentFieldIndex
+      ) {
+        decision = await computeDecisionAsync({ force: true });
+        fromCache = false;
+      }
+      if (!decision?.card) return null;
+
+      const ctx = buildAIContext(state);
+      if (!isPendingCardPlayable(ctx, decision.card)) {
+        clearPendingDecision();
+        decision = await computeDecisionAsync({ force: true });
+        fromCache = false;
+      }
+      if (!decision?.card || !isPendingCardPlayable(buildAIContext(state), decision.card)) {
+        return null;
+      }
+
+      const { maxFocus } = getLegalFocusRange(buildAIContext(state), 'ai');
+      if (maxFocus < 1) return null;
+      const focus = Math.max(1, Math.min(maxFocus, decision.focus));
+
+      if (fromCache && decision.debug?.jointAction) {
+        /* già in log */
+      }
+
+      state.setEnemyAgent(decision.card);
+      state.setEnemySelectedFocus(focus);
+
+      if (logSelection) {
+        state.setLogs((prev) => [
+          ...prev.slice(-20),
+          `[R${state.roundNumber}] IA schiera ${decision.card.name}`,
+        ]);
+      }
+
+      return {
+        agent: decision.card,
+        focus,
+        fieldIndex: decision.fieldIndex ?? state.currentFieldIndex,
+        debug: decision.debug,
+      };
+    },
+    [getReusableDecision, computeDecisionAsync, isPendingCardPlayable, clearPendingDecision]
   );
 
   const selectEnemyAgentAdvanced = useCallback(() => {
@@ -210,8 +377,25 @@ export function useAI(gameState) {
     // Key basata sullo stato al momento della scelta Campo (senza field index)
     const key = buildPublicDecisionKey(fieldPickContext);
     storeDecision(joint, key);
+    recordDecision(joint, { ...fieldPickContext, battlefields: context.battlefields }, 'joint', key);
     return joint.fieldIndex;
-  }, [storeDecision]);
+  }, [storeDecision, recordDecision]);
+
+  const selectEnemyFieldAsync = useCallback(async () => {
+    const context = buildAIContext(gameStateRef.current);
+    const fieldPickContext = {
+      ...context,
+      currentFieldIndex: null,
+      field: null,
+    };
+    const joint = await runDecisionEngineAsync(fieldPickContext, true, defaultRng);
+    if (!joint) return null;
+
+    const key = buildPublicDecisionKey(fieldPickContext);
+    storeDecision(joint, key);
+    recordDecision(joint, { ...fieldPickContext, battlefields: context.battlefields }, 'joint', key);
+    return joint.fieldIndex;
+  }, [storeDecision, recordDecision, runDecisionEngineAsync]);
 
   const getThinkingTime = useCallback(() => {
     const difficulty =
@@ -232,9 +416,13 @@ export function useAI(gameState) {
     selectEnemyAgent,
     calculateEnemyFocus,
     selectEnemyAgentAndFocus,
+    selectEnemyAgentAndFocusAsync,
     selectEnemyAgentAdvanced,
     selectEnemyField,
+    selectEnemyFieldAsync,
     getThinkingTime,
     clearPendingDecision,
+    resetAiSession,
+    aiDecisionLog,
   };
 }

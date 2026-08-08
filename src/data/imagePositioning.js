@@ -296,7 +296,7 @@ export const IMAGE_POSITIONING = {
     1224: { objectPosition: 'center 62%' },
     1228: { containerLeft: '1.68%', objectPosition: 'center -11%', scale: 112 },
     1229: { objectPosition: 'center -39%' },
-    1230: { containerLeft: '-0.96%', objectPosition: 'center 112%', scale: 133 },
+    1227: { containerLeft: '-0.96%', objectPosition: 'center 112%', scale: 133 },
   }
 
 };

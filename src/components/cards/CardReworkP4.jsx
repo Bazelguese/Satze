@@ -115,12 +115,13 @@ function makeRng(seed) {
   };
 }
 
-function SashNameLabel({ name, accent, reserveTrailingPx = 0 }) {
+function SashNameLabel({ name, accent, reserveTrailingPx = 0, fastNameFit = false }) {
   const wrapRef = useRef(null);
   const ref = useRef(null);
   const [maxW, setMaxW] = useState(198);
 
   useLayoutEffect(() => {
+    if (fastNameFit) return undefined;
     const el = wrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const apply = () => setMaxW(Math.max(72, el.clientWidth - 10 - reserveTrailingPx));
@@ -128,9 +129,10 @@ function SashNameLabel({ name, accent, reserveTrailingPx = 0 }) {
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [reserveTrailingPx]);
+  }, [reserveTrailingPx, fastNameFit]);
 
   useLayoutEffect(() => {
+    if (fastNameFit) return undefined;
     const el = ref.current;
     if (!el) return;
     const maxH = 48;
@@ -160,7 +162,37 @@ function SashNameLabel({ name, accent, reserveTrailingPx = 0 }) {
     }
     el.style.fontSize = `${best}px`;
     applyTracking(best);
-  }, [name, maxW]);
+  }, [name, maxW, fastNameFit]);
+
+  if (fastNameFit) {
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ padding: '1px 6px', paddingRight: 6 + reserveTrailingPx }}
+      >
+        <div
+          style={{
+            maxWidth: 198,
+            color: '#f8fafc',
+            fontFamily: GAME_CARD_UI_FONT,
+            fontWeight: 800,
+            fontSize: 8,
+            letterSpacing: '0.08em',
+            lineHeight: 1.1,
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            textShadow: `${P4_SASH_NAME_OUTLINE}, 0 0 10px ${accent}77`,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {name}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -198,12 +230,13 @@ function SashNameLabel({ name, accent, reserveTrailingPx = 0 }) {
  * Nome in fascia HUD: nessun truncate; font ridotto finché testo sta in (maxW × maxH)
  * con a capo (word-break), come SashNameLabel ma con altezza data dal contenitore.
  */
-function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25 }) {
+function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25, fastNameFit = false }) {
   const wrapRef = useRef(null);
   const textRef = useRef(null);
   const [box, setBox] = useState({ w: 80, h: 48 });
 
   useLayoutEffect(() => {
+    if (fastNameFit) return undefined;
     const el = wrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const apply = () => {
@@ -216,9 +249,10 @@ function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25 }) {
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [fastNameFit]);
 
   useLayoutEffect(() => {
+    if (fastNameFit) return undefined;
     const el = textRef.current;
     if (!el) return;
     const maxW = box.w;
@@ -374,7 +408,15 @@ function SashHudStatCircle({
 }
 
 /** POT/DAN in cerchi ai lati del nome (nome sempre intero, a capo + font adattivo). */
-function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBaseDamage, suppressAnimations = false }) {
+function SashHudInlineRow({
+  agent,
+  accent,
+  showOperators,
+  duelBasePower,
+  duelBaseDamage,
+  suppressAnimations = false,
+  fastNameFit = false,
+}) {
   return (
     <div
       className="pointer-events-none absolute inset-0 flex items-stretch justify-between gap-1 px-1.5 py-0.5"
@@ -393,7 +435,7 @@ function SashHudInlineRow({ agent, accent, showOperators, duelBasePower, duelBas
         />
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 justify-center px-0.5">
-        <SashHudNameFit name={agent.name} accent={accent} maxFontPx={8} />
+        <SashHudNameFit name={agent.name} accent={accent} maxFontPx={8} fastNameFit={fastNameFit} />
       </div>
       <div className="flex flex-shrink-0 items-center pr-0.5">
         <SashHudStatCircle
@@ -684,6 +726,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   visualStepIndex = 0,
   copyAbilityAnim = false,
   copyBonusAnim = false,
+  /** Griglia galleria / catalogo: stesso layout P4, senza footer abilità e senza fit testo costoso. */
+  catalogPreview = false,
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
@@ -714,10 +758,17 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   const leagueTierColor = leagueTierColorHex(agent.league);
   const armyBarHeight = sashNameHud ? ARMY_BADGE_H_SASH : ARMY_BADGE_H;
 
-  const powerModified = isDuelStatModified(showOperators, duelBasePower, agent.power);
-  const damageModified = isDuelStatModified(showOperators, duelBaseDamage, agent.damage);
-  const powerAnimActive = powerModified && !suppressAnimations;
-  const damageAnimActive = damageModified && !suppressAnimations;
+  const previewMode = catalogPreview;
+  const animSuppressed = suppressAnimations || previewMode;
+
+  const powerModified = previewMode
+    ? false
+    : isDuelStatModified(showOperators, duelBasePower, agent.power);
+  const damageModified = previewMode
+    ? false
+    : isDuelStatModified(showOperators, duelBaseDamage, agent.damage);
+  const powerAnimActive = powerModified && !animSuppressed;
+  const damageAnimActive = damageModified && !animSuppressed;
   const powerAnim = useIncrementalStatAnimation(agent.power, powerAnimActive, duelBasePower);
   const damageAnim = useIncrementalStatAnimation(agent.damage, damageAnimActive, duelBaseDamage);
 
@@ -865,7 +916,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
                 showOperators={showOperators}
                 duelBasePower={duelBasePower}
                 duelBaseDamage={duelBaseDamage}
-                suppressAnimations={suppressAnimations}
+                suppressAnimations={animSuppressed}
+                fastNameFit={previewMode}
               />
             )
           ) : (
@@ -905,6 +957,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
         <P4FloatingStats layout={resolvedStatLayout} agent={agent} />
       )}
 
+      {!previewMode && (
       <div
         className="absolute left-0 right-0 pointer-events-none"
         style={{
@@ -1156,6 +1209,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
           )}
         </div>
       </div>
+      )}
 
       <div
         className="absolute bottom-0 left-0 right-0 pointer-events-none font-bold uppercase tracking-wide"
@@ -1226,13 +1280,13 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
 });
 
 /** CardReworkP4 ridimensionata (rapporto 230×330). Utile per liste e anteprime compatte. */
-export function CardReworkP4Scaled({ agent, width = 176, ...p4rest }) {
+export function CardReworkP4Scaled({ agent, width = 176, catalogPreview = false, ...p4rest }) {
   const scale = width / 230;
   const height = Math.round(330 * scale);
   return (
     <div className="overflow-hidden" style={{ width, height }}>
       <div style={{ width: 230, height: 330, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-        <CardReworkP4 agent={agent} {...p4rest} />
+        <CardReworkP4 agent={agent} catalogPreview={catalogPreview} suppressAnimations {...p4rest} />
       </div>
     </div>
   );

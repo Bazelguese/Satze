@@ -83,7 +83,6 @@ export function GameViewport({ children }) {
         '--satze-scale': scale,
       }}
     >
-      {/* Spacer: la box di layout coincide con la size visuale post-scale */}
       <div
         style={{
           width: layoutW,

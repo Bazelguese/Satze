@@ -1350,5 +1350,101 @@ export const RAW_BATTLEFIELDS = [
     "minTurn": 1,
     "flavour": "",
     "bgImage": "./campi_bg/campo-113.webp"
+  },
+  {
+    "id": 114,
+    "name": "Grande Arena di Ilesca",
+    "icon": "castle",
+    "effect": "Regola · Effetti Overdrive disattivati",
+    "category": "limit",
+    "rarita": "raro",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-114.webp"
+  },
+  {
+    "id": 115,
+    "name": "Anello di Kintaba",
+    "icon": "circle",
+    "effect": "Regola · Tossina disattivata",
+    "category": "limit",
+    "rarita": "raro",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-115.webp"
+  },
+  {
+    "id": 116,
+    "name": "Foro di Khorai",
+    "icon": "scales",
+    "effect": "Calcolo VA · Entrambi · max 6 FC conteggiati",
+    "category": "focus",
+    "rarita": "special",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-116.webp"
+  },
+  {
+    "id": 117,
+    "name": "Corte di Akitsuna",
+    "icon": "crown",
+    "effect": "In scontro · Agente con Potere o Bonus disattivato · +1 POT",
+    "category": "values",
+    "rarita": "raro",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-117.webp"
+  },
+  {
+    "id": 118,
+    "name": "Tribuna Nera di Vargard",
+    "icon": "mirror",
+    "effect": "Regola · Copia ↔ Imponi",
+    "category": "limit",
+    "rarita": "raro",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-118.webp"
+  },
+  {
+    "id": 119,
+    "name": "Viale delle Delegazioni",
+    "icon": "road",
+    "effect": "Conquista · FC totali spesi >10 · Entrambi +1 FC",
+    "category": "conditional",
+    "rarita": "comune",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-119.webp"
+  },
+  {
+    "id": 120,
+    "name": "Galleria Bellacqua",
+    "icon": "sparkle",
+    "effect": "Regola · Bonus Armata scambiati tra gli Agenti",
+    "category": "limit",
+    "rarita": "special",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-120.webp"
+  },
+  {
+    "id": 121,
+    "name": "Anfiteatro di Morrowgate",
+    "icon": "block",
+    "effect": "Regola · Effetti Conquista disattivati",
+    "category": "limit",
+    "rarita": "raro",
+    "tema": "Mascarada",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-121.webp"
   }
 ];

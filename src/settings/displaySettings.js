@@ -8,6 +8,12 @@ export const DISPLAY_MODES = /** @type {const} */ (['windowed', 'fullscreen', 'b
 export const VFX_QUALITY_LEVELS = /** @type {const} */ (['high', 'medium', 'low']);
 /** Densità UI menù (80–125%). Non zoomma/croppa il viewport. */
 export const UI_SCALE_PRESETS = /** @type {const} */ ([80, 90, 100, 110, 125]);
+/** Scala cursore custom (%). */
+export const CURSOR_SIZE_PRESETS = /** @type {const} */ ([75, 100, 125, 150]);
+/** Lunghezza scia (n. punti). */
+export const CURSOR_TRAIL_LENGTH_PRESETS = /** @type {const} */ ([5, 10, 16]);
+/** Durata scia in ms (quanto resta visibile a cursore fermo). */
+export const CURSOR_TRAIL_DURATION_PRESETS = /** @type {const} */ ([200, 400, 700]);
 /** Respiro layout duello 2.5D: off / soft (mov-1) / strong (mov-2). */
 export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', 'strong']);
 
@@ -30,6 +36,9 @@ export const RESOLUTION_PRESETS = [
  *   uiScale: typeof UI_SCALE_PRESETS[number],
  *   reduceMotion: boolean,
  *   duelLayoutBreath: typeof DUEL_LAYOUT_BREATH_LEVELS[number],
+ *   cursorSize: typeof CURSOR_SIZE_PRESETS[number],
+ *   cursorTrailLength: typeof CURSOR_TRAIL_LENGTH_PRESETS[number],
+ *   cursorTrailDuration: typeof CURSOR_TRAIL_DURATION_PRESETS[number],
  * }} DisplaySettings */
 
 /** @type {DisplaySettings} */
@@ -42,6 +51,9 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   uiScale: 100,
   reduceMotion: false,
   duelLayoutBreath: 'soft',
+  cursorSize: 100,
+  cursorTrailLength: 10,
+  cursorTrailDuration: 400,
 };
 
 function readStorage() {
@@ -66,6 +78,18 @@ function isDuelLayoutBreath(v) {
   return DUEL_LAYOUT_BREATH_LEVELS.includes(v);
 }
 
+function isCursorSize(v) {
+  return CURSOR_SIZE_PRESETS.includes(Number(v));
+}
+
+function isCursorTrailLength(v) {
+  return CURSOR_TRAIL_LENGTH_PRESETS.includes(Number(v));
+}
+
+function isCursorTrailDuration(v) {
+  return CURSOR_TRAIL_DURATION_PRESETS.includes(Number(v));
+}
+
 function isResolutionPreset(v) {
   return typeof v === 'string' && RESOLUTION_PRESETS.some((p) => p.key === v);
 }
@@ -87,6 +111,15 @@ export function normalizeDisplaySettings(raw) {
   }
   if (typeof o.reduceMotion === 'boolean') base.reduceMotion = o.reduceMotion;
   if (isDuelLayoutBreath(o.duelLayoutBreath)) base.duelLayoutBreath = o.duelLayoutBreath;
+  if (isCursorSize(o.cursorSize)) {
+    base.cursorSize = /** @type {typeof CURSOR_SIZE_PRESETS[number]} */ (Number(o.cursorSize));
+  }
+  if (isCursorTrailLength(o.cursorTrailLength)) {
+    base.cursorTrailLength = /** @type {typeof CURSOR_TRAIL_LENGTH_PRESETS[number]} */ (Number(o.cursorTrailLength));
+  }
+  if (isCursorTrailDuration(o.cursorTrailDuration)) {
+    base.cursorTrailDuration = /** @type {typeof CURSOR_TRAIL_DURATION_PRESETS[number]} */ (Number(o.cursorTrailDuration));
+  }
 
   if (
     o.customResolution &&

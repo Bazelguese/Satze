@@ -26,6 +26,8 @@ const ICON_BY_ID = {
   96: 'crown', 97: 'coin', 98: 'mirror', 99: 'block', 100: 'tower', 101: 'bridge',
   102: 'tower', 103: 'wave', 104: 'flame', 105: 'brick', 106: 'coin', 107: 'castle',
   108: 'bridge', 109: 'block', 110: 'mirror', 111: 'wind', 112: 'tree', 113: 'moon',
+  114: 'castle', 115: 'circle', 116: 'scales', 117: 'crown', 118: 'mirror', 119: 'road',
+  120: 'sparkle', 121: 'block',
 };
 
 /** @type {Array<{id:number,name:string,effect:string,category:string,rarita:string,tema:string,minTurn:number}>} */
@@ -145,6 +147,15 @@ const MASTER = [
   [111,'Gola dei Venti Rossi','In scontro · Chi ha meno PV · +4 VA','values','comune','generico',2],
   [112,'Foresta Pietrificata','Regola · POT finale non può superare 7','limit','raro','generico',1],
   [113,'Lago delle Sette Lune','Post-scontro · Perdente · +1 FC e +1 PV','conditional','raro','generico',1],
+  // Mascarada (8)
+  [114,'Grande Arena di Ilesca','Regola · Effetti Overdrive disattivati','limit','raro','Mascarada',1],
+  [115,'Anello di Kintaba','Regola · Tossina disattivata','limit','raro','Mascarada',1],
+  [116,'Foro di Khorai','Calcolo VA · Entrambi · max 6 FC conteggiati','focus','special','Mascarada',1],
+  [117,'Corte di Akitsuna','In scontro · Agente con Potere o Bonus disattivato · +1 POT','values','raro','Mascarada',1],
+  [118,'Tribuna Nera di Vargard','Regola · Copia ↔ Imponi','limit','raro','Mascarada',1],
+  [119,'Viale delle Delegazioni','Conquista · FC totali spesi >10 · Entrambi +1 FC','conditional','comune','Mascarada',1],
+  [120,'Galleria Bellacqua','Regola · Bonus Armata scambiati tra gli Agenti','limit','special','Mascarada',1],
+  [121,'Anfiteatro di Morrowgate','Regola · Effetti Conquista disattivati','limit','raro','Mascarada',1],
 ];
 
 const fields = MASTER.map(([id, name, effect, category, rarita, tema, minTurn]) => ({

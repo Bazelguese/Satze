@@ -30,7 +30,93 @@ export const BATTLEFIELD_TEMA = {
   PATTO: 'Patto degli Indocili',
   KHEMET: 'Khemet',
   APEX: 'Apex',
+  MASCARADA: 'Mascarada',
 };
+
+/** Ordine sezioni galleria / elenco (tipo meccanico). */
+export const BATTLEFIELD_CATEGORY_ORDER = [
+  'values',
+  'limit',
+  'conditional',
+  'focus',
+  'trigger',
+  'neutral',
+];
+
+export const BATTLEFIELD_CATEGORY_LABEL = {
+  values: 'Valori',
+  limit: 'Vincolo',
+  conditional: 'Condizionale',
+  focus: 'Focus',
+  trigger: 'Innesco',
+  neutral: 'Neutro',
+};
+
+/** Ordine temi come in CAMPI_MASTER (generico → armate → neutri in coda via category). */
+export const BATTLEFIELD_TEMA_ORDER = [
+  'generico',
+  "Figli dell'Orizzonte",
+  'Kethran',
+  'Corte Rossa',
+  'Calibri Pesanti',
+  'Orathai',
+  'Nati dalla Bocca',
+  'Enclave delle Scaglie',
+  'Ratti della Megera',
+  'Patto degli Indocili',
+  'Khemet',
+  'Apex',
+  'Mascarada',
+];
+
+/**
+ * Raggruppa i campi per category (tipo), ordinati per tema poi id.
+ * @param {Array<{ id: number, category?: string, tema?: string }>} fields
+ * @returns {Array<{ category: string, label: string, fields: typeof fields }>}
+ */
+export function groupBattlefieldsByCategory(fields) {
+  const byCat = new Map();
+  for (const f of fields || []) {
+    const cat = f.category || 'values';
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(f);
+  }
+  const temaRank = (tema) => {
+    const i = BATTLEFIELD_TEMA_ORDER.indexOf(tema);
+    return i === -1 ? 99 : i;
+  };
+  const sortFields = (list) =>
+    [...list].sort((a, b) => {
+      const td = temaRank(a.tema) - temaRank(b.tema);
+      if (td !== 0) return td;
+      return (a.id || 0) - (b.id || 0);
+    });
+
+  const groups = [];
+  for (const cat of BATTLEFIELD_CATEGORY_ORDER) {
+    const list = byCat.get(cat);
+    if (!list?.length) continue;
+    groups.push({
+      category: cat,
+      label: BATTLEFIELD_CATEGORY_LABEL[cat] || cat,
+      fields: sortFields(list),
+    });
+    byCat.delete(cat);
+  }
+  for (const [cat, list] of byCat) {
+    groups.push({
+      category: cat,
+      label: BATTLEFIELD_CATEGORY_LABEL[cat] || cat,
+      fields: sortFields(list),
+    });
+  }
+  return groups;
+}
+
+/** Lista piatta: tipi in ordine, dentro ogni tipo per tema/id. */
+export function flattenBattlefieldsByCategory(fields) {
+  return groupBattlefieldsByCategory(fields).flatMap((g) => g.fields);
+}
 
 /** @param {{ rarita?: string, category?: string }} field */
 export function getFieldRarita(field) {

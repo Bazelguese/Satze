@@ -16,6 +16,7 @@ import {
   getNextDuelPhase,
 } from '../../config/duelVisualTimeline.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../../utils/focusCoinGlow.js';
+import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 
 const ARMY_A = "Figli dell'Orizzonte";
 const ARMY_B = 'Kethran';
@@ -95,7 +96,7 @@ function makeMockBattle(playerFc, enemyFc, winner) {
       highlightEnemyBonus: false,
     },
   ];
-  return {
+  const result = {
     field,
     playerAgent,
     enemyAgent,
@@ -114,6 +115,8 @@ function makeMockBattle(playerFc, enemyFc, winner) {
     playerDamage,
     enemyPower,
     enemyDamage,
+    playerPowerAfterEffects: playerPower,
+    enemyPowerAfterEffects: enemyPower,
     damageDealt,
     playerHasBonus: true,
     enemyHasBonus: false,
@@ -131,8 +134,11 @@ function makeMockBattle(playerFc, enemyFc, winner) {
     enemyAbilityNotTriggered: false,
     playerBonusNotTriggered: false,
     enemyBonusNotTriggered: false,
+    isPlayerFirst: true,
     visualSteps,
   };
+  result.perfectFocusSide = getPerfectFocusSide(result);
+  return result;
 }
 
 function useStableTimeouts() {

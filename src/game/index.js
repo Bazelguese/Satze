@@ -26,4 +26,5 @@ export {
   applyCentraleOverdriveDamage,
 } from './duel/duelDamagePipeline.js';
 export { runDuelDamageAftermathAndFcAdjust, buildDuelBattleResult } from './duel/duelResolutionFinish.js';
+export { getPerfectFocusSide, isPerfectFocusBet } from './duel/perfectFocusBet.js';
 export * from './campaign/index.js';

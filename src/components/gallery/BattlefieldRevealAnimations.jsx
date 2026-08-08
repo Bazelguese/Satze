@@ -1,6 +1,6 @@
 /**
  * Satze — Animazioni d'ingresso campi di battaglia (reveal)
- * 11 reveal, una per armata: 6 storiche + 4 (occhio, sciame, rivolta, cerchi) + artigli (Apex).
+ * 12 reveal, una per armata: 6 storiche + 4 (occhio, sciame, rivolta, cerchi) + artigli (Apex) + ring (Mascarada).
  * L'accento è ricavato dall'armata via ARMY_COLORS — nessun colore hard-coded.
  *
  * <BattlefieldReveal imageSrc animationType />
@@ -23,17 +23,18 @@ const THEME_TO_ARMY = {
   indocili: 'Patto degli Indocili',
   khemet: 'Khemet',
   apex: 'Apex',
+  mascarada: 'Mascarada',
 };
 
 // tipo animazione → chiave tema (per ricavare l'accento dell'armata)
 const ANIM_TO_THEME = {
   swirl: 'figliOrizzonte', frammenti: 'kethran', sipario: 'corteRossa', hud: 'calibri',
   onda: 'orathai', morsi: 'natiBocca', occhio: 'enclave', sciame: 'ratti',
-  rivolta: 'indocili', cerchi: 'khemet', artigli: 'apex',
+  rivolta: 'indocili', cerchi: 'khemet', artigli: 'apex', ring: 'mascarada',
 };
 
 // accento di ripiego se l'armata non è (ancora) in ARMY_COLORS
-const THEME_FALLBACK = { apex: '#efe7d6' };
+const THEME_FALLBACK = { apex: '#d5ecf9', mascarada: '#437ef2' };
 
 const getAccent = (theme) => {
   const name = THEME_TO_ARMY[theme];
@@ -342,153 +343,166 @@ const CerchiReveal = ({ imageSrc, accent, f }) => {
   );
 };
 
-/* 11. ARTIGLI — Apex (agguato dall'alto: occhi verdi nel nero, colpo d'artiglio, strappi che si allargano e divorano il velo) */
+/* 11. ARTIGLI — Apex (agguato: occhi, strappi, velo). Versione alleggerita: meno path, un solo SVG, isolation. */
 const ArtigliReveal = ({ imageSrc, accent, f }) => {
   const id = useId();
   const ref = React.useRef(null);
   const [size, setSize] = useState(null);
+  const [fxDone, setFxDone] = useState(false);
   React.useLayoutEffect(() => {
     if (ref.current) {
       const r = ref.current.getBoundingClientRect();
       setSize({ w: Math.round(r.width) || 800, h: Math.round(r.height) || 450 });
     }
   }, []);
+  const veilMs = Math.round(1750 * f);
+  useEffect(() => {
+    const t = setTimeout(() => setFxDone(true), veilMs + 40);
+    return () => clearTimeout(t);
+  }, [veilMs]);
   const p = usePhases([40, Math.round(780 * f)]);
   const on = p >= 1;
   const widen = p >= 2;
   const EYE = '#5ce07a';
   const ANG = -24;
 
-  /** Strappo organico in spazio pixel: punte affilate, ventre carnoso, bordo fibroso + schegge. */
+  /** Geometria leggera e deterministica (seed fisso) — evita path da 100+ punti × 16. */
   const geo = useMemo(() => {
     if (!size) return null;
     const { w, h } = size;
-    const rnd = (a, b) => a + Math.random() * (b - a);
-    const shape = (cx, cy, len, maxT, seed, fibre) => {
-      const N = 108;
+    let seed = 0xA7E11 ^ (w * 31 + h);
+    const rnd = (a, b) => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return a + ((seed & 0xffff) / 0x10000) * (b - a);
+    };
+    const shape = (cx, cy, len, maxT, phase) => {
+      const N = 24;
       const top = [];
       const bot = [];
-      const p1 = rnd(0, 6.28);
-      const p2 = rnd(0, 6.28);
-      const p3 = rnd(0, 6.28);
       for (let k = 0; k <= N; k++) {
         const u = k / N;
         const x = cx - len / 2 + len * u;
-        const drift = Math.sin(u * 4.1 + p1) * maxT * 0.55 + Math.sin(u * 9.7 + p2) * maxT * 0.22;
-        const prof = Math.pow(Math.sin(Math.PI * u), 0.62);
-        const ripple = 1 + 0.3 * Math.sin(u * 21 + p3) + 0.16 * Math.sin(u * 43 + seed);
-        const t = prof * maxT * ripple;
-        top.push([x, cy + drift - Math.max(0, t * rnd(0.42, 0.62) + (Math.random() - 0.5) * maxT * fibre)]);
-        bot.push([x, cy + drift + Math.max(0, t * rnd(0.42, 0.62) + (Math.random() - 0.5) * maxT * fibre)]);
+        const drift = Math.sin(u * 4.1 + phase) * maxT * 0.5;
+        const t = Math.pow(Math.sin(Math.PI * u), 0.65) * maxT * (1 + 0.22 * Math.sin(u * 18 + phase));
+        top.push([x, cy + drift - t * 0.52]);
+        bot.push([x, cy + drift + t * 0.52]);
       }
-      const pts = top.concat(bot.reverse());
-      return `M${pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L')} Z`;
+      return `M${top.concat(bot.reverse()).map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L')} Z`;
     };
     const tears = [];
-    const splinters = [];
-    for (let i = 0; i < 4; i++) {
-      const cy = h * (0.15 + i * 0.222) + rnd(-h * 0.02, h * 0.02);
-      const len = w * rnd(1.24, 1.42);
-      const maxT = h * rnd(0.05, 0.078);
-      const delay = 0.4 + i * 0.055 + rnd(0, 0.02);
-      tears.push({ d: shape(w / 2, cy, len, maxT, i, 0.34), delay, cy, grow: rnd(4.2, 5.6) });
-      for (let j = 0; j < 3; j++) {
-        const scy = cy + rnd(-2.6, 2.6) * maxT;
-        splinters.push({
-          d: shape(w / 2 + rnd(-0.42, 0.42) * len, scy, w * rnd(0.1, 0.22), h * rnd(0.008, 0.017), i * 7 + j, 0.5),
-          delay: delay + rnd(0.02, 0.09),
-          cy: scy,
-          grow: rnd(5, 8),
-        });
-      }
+    for (let i = 0; i < 3; i++) {
+      const cy = h * (0.22 + i * 0.26) + rnd(-h * 0.015, h * 0.015);
+      const len = w * rnd(1.2, 1.35);
+      const maxT = h * rnd(0.045, 0.065);
+      tears.push({
+        d: shape(w / 2, cy, len, maxT, i * 1.7),
+        delay: 0.38 + i * 0.07,
+        cy,
+        grow: rnd(3.8, 5),
+      });
     }
-    return { tears, splinters, all: tears.concat(splinters) };
+    return { tears };
   }, [size]);
 
-  const cut = Math.round(320 * f);
-  const grow = Math.round(760 * f);
-  const veil = Math.round(1750 * f);
-  const veilAnim = `bf-apex-veil ${veil}ms linear forwards`;
+  const cut = Math.round(300 * f);
+  const grow = Math.round(700 * f);
+  const veilAnim = `bf-apex-veil ${veilMs}ms linear forwards`;
   const W = size ? size.w : 0;
   const H = size ? size.h : 0;
   const rot = `rotate(${ANG} ${W / 2} ${H / 2})`;
-  const clipStyle = (t) => ({
-    transition: `width ${cut}ms cubic-bezier(0.2,0.9,0.2,1) ${(t.delay * f).toFixed(2)}s`,
-  });
-  const growStyle = (t) => ({
-    transform: widen ? `translate(0px, ${t.cy}px) scale(1, ${t.grow}) translate(0px, ${-t.cy}px)` : 'none',
-    transition: `transform ${grow}ms cubic-bezier(0.22,0.85,0.25,1) ${(t.delay * f * 0.4).toFixed(2)}s`,
-  });
-  const clips = geo && (
-    <defs>
-      {geo.all.map((t, i) => (
-        <clipPath key={i} id={`${id}-c${i}`} clipPathUnits="userSpaceOnUse">
-          <rect x={-W * 0.3} y={-H * 0.3} height={H * 1.6} width={on ? W * 2 : 0} style={clipStyle(t)} />
-        </clipPath>
-      ))}
-    </defs>
-  );
-  return (
-    <div ref={ref} style={{ ...fill, overflow: 'hidden', background: '#000' }}>
-      <div style={{ ...fill, animation: `bf-apex-shake ${Math.round(420 * f)}ms ease-out ${(0.42 * f).toFixed(2)}s both` }}>
-        <Img
-          src={imageSrc}
-          style={{ transformOrigin: '50% 28%', animation: `bf-apex-pounce ${Math.round(1800 * f)}ms ${EASE_OUT} forwards` }}
-        />
+
+  if (fxDone) {
+    return (
+      <div style={{ ...fill, overflow: 'hidden', background: '#000', isolation: 'isolate' }}>
+        <Img src={imageSrc} />
       </div>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        ...fill,
+        overflow: 'hidden',
+        background: '#000',
+        isolation: 'isolate',
+        contain: 'paint',
+      }}
+    >
+      <Img
+        src={imageSrc}
+        style={{ transformOrigin: '50% 28%', animation: `bf-apex-pounce ${Math.round(1700 * f)}ms ${EASE_OUT} forwards` }}
+      />
       <div style={{ ...fill, pointerEvents: 'none', zIndex: 5, animation: geo ? veilAnim : 'none' }}>
         {geo ? (
           <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-            {clips}
-            <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
-              <rect width={W} height={H} fill="white" />
-              <g transform={rot}>
-                {geo.all.map((t, i) => (
-                  <g key={i} style={growStyle(t)}>
-                    <path d={t.d} fill="black" clipPath={`url(#${id}-c${i})`} />
-                  </g>
-                ))}
-              </g>
-            </mask>
+            <defs>
+              {geo.tears.map((t, i) => (
+                <clipPath key={i} id={`${id}-c${i}`} clipPathUnits="userSpaceOnUse">
+                  <rect
+                    x={-W * 0.3}
+                    y={-H * 0.3}
+                    height={H * 1.6}
+                    width={on ? W * 2 : 0}
+                    style={{
+                      transition: `width ${cut}ms cubic-bezier(0.2,0.9,0.2,1) ${(t.delay * f).toFixed(2)}s`,
+                    }}
+                  />
+                </clipPath>
+              ))}
+              <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
+                <rect width={W} height={H} fill="white" />
+                <g transform={rot}>
+                  {geo.tears.map((t, i) => (
+                    <g
+                      key={i}
+                      style={{
+                        transform: widen
+                          ? `translate(0px, ${t.cy}px) scale(1, ${t.grow}) translate(0px, ${-t.cy}px)`
+                          : 'none',
+                        transition: `transform ${grow}ms cubic-bezier(0.22,0.85,0.25,1) ${(t.delay * f * 0.4).toFixed(2)}s`,
+                      }}
+                    >
+                      <path d={t.d} fill="black" clipPath={`url(#${id}-c${i})`} />
+                    </g>
+                  ))}
+                </g>
+              </mask>
+            </defs>
             <rect width={W} height={H} fill="black" mask={`url(#${id})`} />
+            <g
+              transform={rot}
+              style={{ mixBlendMode: 'normal', opacity: 0.75, animation: `bf-apex-rim ${veilMs}ms linear forwards` }}
+            >
+              {geo.tears.map((t, i) => (
+                <g
+                  key={i}
+                  style={{
+                    transform: widen
+                      ? `translate(0px, ${t.cy}px) scale(1, ${t.grow}) translate(0px, ${-t.cy}px)`
+                      : 'none',
+                    transition: `transform ${grow}ms cubic-bezier(0.22,0.85,0.25,1) ${(t.delay * f * 0.4).toFixed(2)}s`,
+                  }}
+                >
+                  <path
+                    d={t.d}
+                    fill="none"
+                    stroke={accent}
+                    strokeWidth={Math.max(1, H * 0.003)}
+                    clipPath={`url(#${id}-c${i})`}
+                  />
+                </g>
+              ))}
+            </g>
           </svg>
         ) : (
           <div style={{ ...fill, background: '#000' }} />
         )}
       </div>
       {geo && (
-        <svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 ${W} ${H}`}
-          style={{
-            ...fill,
-            zIndex: 7,
-            pointerEvents: 'none',
-            mixBlendMode: 'screen',
-            animation: `bf-apex-rim ${veil}ms linear forwards`,
-          }}
-        >
-          {clips}
-          <g transform={rot}>
-            {geo.tears.map((t, i) => (
-              <g key={i} style={growStyle(t)}>
-                <path
-                  d={t.d}
-                  fill="none"
-                  stroke={accent}
-                  strokeWidth={Math.max(0.6, H * 0.0024)}
-                  vectorEffect="non-scaling-stroke"
-                  clipPath={`url(#${id}-c${i})`}
-                />
-              </g>
-            ))}
-          </g>
-        </svg>
-      )}
-      {geo && (
-        <div style={{ ...fill, zIndex: 8, pointerEvents: 'none', overflow: 'hidden', mixBlendMode: 'screen' }}>
-          <div style={{ ...fill, transform: `rotate(${ANG}deg) scale(1.6)` }}>
+        <div style={{ ...fill, zIndex: 8, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div style={{ ...fill, transform: `rotate(${ANG}deg) scale(1.5)` }}>
             {geo.tears.map((t, i) => (
               <div
                 key={i}
@@ -499,9 +513,8 @@ const ArtigliReveal = ({ imageSrc, accent, f }) => {
                   width: '55%',
                   height: '2px',
                   background: `linear-gradient(90deg, transparent, ${accent}, #fff, transparent)`,
-                  filter: 'blur(1.5px)',
                   opacity: 0,
-                  animation: `bf-apex-swipe ${Math.round(360 * f)}ms linear ${(t.delay * f).toFixed(2)}s both`,
+                  animation: `bf-apex-swipe ${Math.round(320 * f)}ms linear ${(t.delay * f).toFixed(2)}s both`,
                 }}
               />
             ))}
@@ -526,11 +539,11 @@ const ArtigliReveal = ({ imageSrc, accent, f }) => {
           <div
             key={k}
             style={{
-              width: '17px',
-              height: '17px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
-              background: `radial-gradient(circle at 50% 45%, #eaffe9 0%, ${EYE} 42%, ${EYE}00 72%)`,
-              boxShadow: `0 0 12px ${EYE}, 0 0 34px ${EYE}aa, 0 0 70px ${EYE}55`,
+              background: `radial-gradient(circle at 50% 45%, #eaffe9 0%, ${EYE} 45%, transparent 70%)`,
+              boxShadow: `0 0 10px ${EYE}aa`,
             }}
           />
         ))}
@@ -539,24 +552,144 @@ const ArtigliReveal = ({ imageSrc, accent, f }) => {
         style={{
           ...fill,
           background: accent,
-          mixBlendMode: 'screen',
           opacity: 0,
-          animation: `bf-apex-flash ${Math.round(950 * f)}ms ease-out forwards`,
+          animation: `bf-apex-flash ${Math.round(900 * f)}ms ease-out forwards`,
           zIndex: 8,
           pointerEvents: 'none',
+        }}
+      />
+      <style>{`@keyframes bf-apex-veil{0%,80%{opacity:1}100%{opacity:0}}@keyframes bf-apex-rim{0%,30%{opacity:.75}62%{opacity:.4}100%{opacity:0}}@keyframes bf-apex-pounce{0%{transform:scale(1.16)}100%{transform:scale(1)}}@keyframes bf-apex-eyes{0%{opacity:0;transform:translate(-50%,-50%) scale(.85)}18%{opacity:1}55%{opacity:.9}100%{opacity:0}}@keyframes bf-apex-flash{0%,44%{opacity:0}52%{opacity:.12}100%{opacity:0}}@keyframes bf-apex-swipe{0%{transform:translateX(0);opacity:0}20%{opacity:.9}100%{transform:translateX(190%);opacity:0}}`}</style>
+    </div>
+  );
+};
+
+/* 12. RING — Mascarada (lucha: i riflettori spazzano il telone, le corde si tendono, la campana e il telone strappato via a bande) */
+const RingReveal = ({ imageSrc, accent, f }) => {
+  const p = usePhases([40, Math.round(760 * f)]);
+  const lit = p >= 1;
+  const bell = p >= 2;
+  const HOT = accent;
+  const ropes = [26, 50, 74];
+  const bands = useMemo(
+    () => [
+      { top: 0, h: 26, dir: -1 },
+      { top: 26, h: 24, dir: 1 },
+      { top: 50, h: 24, dir: -1 },
+      { top: 74, h: 26, dir: 1 },
+    ],
+    []
+  );
+  const bandMs = Math.round(520 * f);
+  const ropeMs = Math.round(420 * f);
+  const spot = (x, dx, delay) => ({
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: '78%',
+    height: '150%',
+    marginLeft: `${x}%`,
+    transformOrigin: '50% 0%',
+    background: `radial-gradient(ellipse 50% 40% at 50% 78%, ${HOT}55, ${accent}33 45%, transparent 72%)`,
+    filter: 'blur(6px)',
+    mixBlendMode: 'screen',
+    opacity: 0,
+    animation: `bf-mask-spot${dx > 0 ? 'R' : 'L'} ${Math.round(1000 * f)}ms ${EASE_OUT} ${delay}s both`,
+  });
+  return (
+    <div style={{ ...fill, overflow: 'hidden', background: '#000' }}>
+      <div style={fill}>
+        <Img
+          src={imageSrc}
+          style={{ transformOrigin: '50% 55%', animation: `bf-mask-pounce ${Math.round(1750 * f)}ms ${EASE_OUT} forwards` }}
+        />
+      </div>
+      <div style={{ ...fill, zIndex: 5, pointerEvents: 'none', overflow: 'hidden' }}>
+        {bands.map((b, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: '-6%',
+              width: '112%',
+              top: `${b.top}%`,
+              height: `${b.h}%`,
+              background: 'linear-gradient(180deg,#07080c,#020306)',
+              boxShadow: `inset 0 0 60px ${accent}22`,
+              transform: bell ? `translateX(${b.dir * 128}%) skewX(${b.dir * -7}deg)` : 'none',
+              transition: `transform ${bandMs}ms cubic-bezier(0.5,0,0.2,1) ${(i * 0.055 * f).toFixed(2)}s`,
+            }}
+          >
+            {i === 1 && <div style={spot(-34, -1, (0.06 * f).toFixed(2))} />}
+            {i === 2 && <div style={spot(34, 1, (0.14 * f).toFixed(2))} />}
+          </div>
+        ))}
+      </div>
+      <div style={{ ...fill, zIndex: 7, pointerEvents: 'none' }}>
+        {ropes.map((y, i) => (
+          <div
+            key={y}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: `${y}%`,
+              height: '4px',
+              transform: lit ? 'scaleX(1)' : 'scaleX(0)',
+              transformOrigin: i % 2 ? '100% 50%' : '0% 50%',
+              transition: `transform ${ropeMs}ms cubic-bezier(0.16,1.3,0.3,1) ${(0.1 + i * 0.06).toFixed(2)}s`,
+              animation: `bf-mask-rope ${Math.round(1750 * f)}ms linear forwards`,
+            }}
+          >
+            <div
+              style={{
+                ...fill,
+                background: `linear-gradient(180deg,${HOT}, ${accent} 40%, #00204d)`,
+                borderRadius: '2px',
+                boxShadow: `0 0 12px ${accent}cc, 0 3px 10px #000a`,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          ...fill,
+          zIndex: 8,
+          pointerEvents: 'none',
+          background: HOT,
+          mixBlendMode: 'screen',
+          opacity: 0,
+          animation: `bf-mask-flash ${Math.round(900 * f)}ms ease-out forwards`,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          width: '30%',
+          aspectRatio: '1',
+          marginLeft: '-15%',
+          marginTop: '-15%',
+          borderRadius: '50%',
+          border: `2px solid ${HOT}`,
+          zIndex: 9,
+          pointerEvents: 'none',
+          mixBlendMode: 'screen',
+          opacity: 0,
+          animation: `bf-mask-ring ${Math.round(1750 * f)}ms ${EASE_OUT} forwards`,
         }}
       />
       <div
         style={{
           ...fill,
-          background: `linear-gradient(to bottom, ${accent}14, transparent 42%)`,
-          mixBlendMode: 'screen',
-          opacity: 0.9,
-          animation: veilAnim,
+          background: 'radial-gradient(ellipse 62% 52% at 50% 46%, transparent 40%, #000a 100%)',
+          zIndex: 6,
           pointerEvents: 'none',
+          opacity: 0.85,
         }}
       />
-      <style>{`@keyframes bf-apex-veil{0%,80%{opacity:1}100%{opacity:0}}@keyframes bf-apex-rim{0%,30%{opacity:.8}62%{opacity:.5}100%{opacity:0}}@keyframes bf-apex-pounce{0%{transform:scale(1.22)}100%{transform:scale(1)}}@keyframes bf-apex-eyes{0%{opacity:0;transform:translate(-50%,-50%) scale(.82)}16%{opacity:1;transform:translate(-50%,-50%) scale(1)}60%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(1.06)}}@keyframes bf-apex-flash{0%,44%{opacity:0}52%{opacity:.16}100%{opacity:0}}@keyframes bf-apex-swipe{0%{transform:translateX(0);opacity:0}18%{opacity:.95}100%{transform:translateX(190%);opacity:0}}@keyframes bf-apex-shake{0%{transform:translate(0,0)}22%{transform:translate(-0.9%,0.6%)}46%{transform:translate(0.7%,-0.5%)}72%{transform:translate(-0.35%,0.25%)}100%{transform:translate(0,0)}}`}</style>
+      <style>{`@keyframes bf-mask-pounce{0%{transform:scale(1.12) rotate(-0.6deg)}100%{transform:scale(1) rotate(0)}}@keyframes bf-mask-spotL{0%{transform:translate(-50%,-50%) rotate(26deg);opacity:0}25%{opacity:.9}100%{transform:translate(-50%,-50%) rotate(-9deg);opacity:.75}}@keyframes bf-mask-spotR{0%{transform:translate(-50%,-50%) rotate(-26deg);opacity:0}25%{opacity:.9}100%{transform:translate(-50%,-50%) rotate(9deg);opacity:.75}}@keyframes bf-mask-rope{0%,52%{opacity:1}70%{opacity:.55}100%{opacity:0}}@keyframes bf-mask-flash{0%,40%{opacity:0}45%{opacity:.26}62%{opacity:.05}100%{opacity:0}}@keyframes bf-mask-ring{0%,38%{transform:scale(.2);opacity:0}40%{transform:scale(.3);opacity:.85}80%,100%{transform:scale(2.9);opacity:0}}`}</style>
     </div>
   );
 };
@@ -574,13 +707,13 @@ const DefaultReveal = ({ imageSrc }) => {
 const REVEAL_MAP = {
   swirl: SwirlReveal, frammenti: FrammentiReveal, sipario: SiparioReveal, hud: HudReveal,
   onda: OndaReveal, morsi: MorsiReveal, occhio: OcchioReveal, sciame: SciameReveal,
-  rivolta: RivoltaReveal, cerchi: CerchiReveal, artigli: ArtigliReveal,
+  rivolta: RivoltaReveal, cerchi: CerchiReveal, artigli: ArtigliReveal, ring: RingReveal,
 };
 
 /**
  * Mostra l'immagine del campo con l'animazione d'ingresso appropriata.
  * @param {string} imageSrc  URL dell'immagine del campo (field.bgImage)
- * @param {'swirl'|'frammenti'|'sipario'|'hud'|'onda'|'morsi'|'occhio'|'sciame'|'rivolta'|'cerchi'|'artigli'|'default'} animationType
+ * @param {'swirl'|'frammenti'|'sipario'|'hud'|'onda'|'morsi'|'occhio'|'sciame'|'rivolta'|'cerchi'|'artigli'|'ring'|'default'} animationType
  */
 export function BattlefieldReveal({ imageSrc, animationType }) {
   const resolvedSrc = useMemo(

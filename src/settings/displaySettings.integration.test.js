@@ -41,12 +41,34 @@ describe('displaySettings', () => {
   });
 
   it('persists and reads settings', () => {
-    setDisplaySettings({ vfxQuality: 'low', uiScale: 90, reduceMotion: true, duelLayoutBreath: 'strong' });
+    setDisplaySettings({
+      vfxQuality: 'low',
+      uiScale: 90,
+      reduceMotion: true,
+      duelLayoutBreath: 'strong',
+      cursorSize: 125,
+      cursorTrailLength: 16,
+      cursorTrailDuration: 700,
+    });
     const s = getDisplaySettings();
     expect(s.vfxQuality).toBe('low');
     expect(s.uiScale).toBe(90);
     expect(s.reduceMotion).toBe(true);
     expect(s.duelLayoutBreath).toBe('strong');
+    expect(s.cursorSize).toBe(125);
+    expect(s.cursorTrailLength).toBe(16);
+    expect(s.cursorTrailDuration).toBe(700);
+  });
+
+  it('falls back cursor presets to defaults when invalid', () => {
+    const n = normalizeDisplaySettings({
+      cursorSize: 50,
+      cursorTrailLength: 99,
+      cursorTrailDuration: 10,
+    });
+    expect(n.cursorSize).toBe(DEFAULT_DISPLAY_SETTINGS.cursorSize);
+    expect(n.cursorTrailLength).toBe(DEFAULT_DISPLAY_SETTINGS.cursorTrailLength);
+    expect(n.cursorTrailDuration).toBe(DEFAULT_DISPLAY_SETTINGS.cursorTrailDuration);
   });
 
   it('resolves duel layout breath class', async () => {

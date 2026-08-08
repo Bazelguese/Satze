@@ -33,6 +33,7 @@ import { createBattleEventEmitter } from './duel/battleEventTypes.js';
 import {
   createBattleLogChannel,
   emitOutcome,
+  emitPerfectFocus,
   emitRoundHeader,
   toBattleSide,
 } from './duel/battleEventEmit.js';
@@ -222,11 +223,14 @@ export function computeDuelResolution({
       modifiersDisabled,
       positivePowerModifiersDisabled: fieldFlags.positivePowerModifiersDisabled === true,
       positiveDamageModifiersDisabled: fieldFlags.positiveDamageModifiersDisabled === true,
+      toxinDisabled: fieldFlags.toxinDisabled === true,
+      swapCopyImponi: fieldFlags.swapCopyImponi === true,
       directDamageDisabled,
       directDamageBonus,
       minFloorReduction: minFloorReduction || 0,
       conquestDouble: fieldFlags.conquestDouble === true,
       lastWishDouble: fieldFlags.lastWishDouble === true,
+      conquestDisabled: fieldFlags.conquestDisabled === true,
       triggersIgnored: triggersIgnored === true,
     };
 
@@ -376,13 +380,18 @@ export function computeDuelResolution({
     pAssaultMod = state.pAssaultMod;
     eAssaultMod = state.eAssaultMod;
 
+    const focusForVa = (fc) => {
+      let n = fieldFlags.focusHalvedInVa ? Math.ceil(fc / 2) : fc;
+      if (fieldFlags.maxFocusCountedInVa != null) n = Math.min(n, fieldFlags.maxFocusCountedInVa);
+      return n;
+    };
     const assault = runDuelAssaultCalculation(battleLog, {
       pAgent,
       eAgent,
       pPower,
       ePower,
-      pFocusUsed: fieldFlags.focusHalvedInVa ? Math.ceil(pFocusUsed / 2) : pFocusUsed,
-      eFocusUsed: fieldFlags.focusHalvedInVa ? Math.ceil(eFocusUsed / 2) : eFocusUsed,
+      pFocusUsed: focusForVa(pFocusUsed),
+      eFocusUsed: focusForVa(eFocusUsed),
       pAssaultMod,
       eAssaultMod,
       pMinAssault,
@@ -699,6 +708,24 @@ export function computeDuelResolution({
       isPlayerFirst,
       events: eventEmitter.events,
     });
+
+    if (battleResult.perfectFocusSide) {
+      const perfectSide = battleResult.perfectFocusSide;
+      const perfectAgent = perfectSide === 'player' ? pAgent : eAgent;
+      const perfectFocus =
+        perfectSide === 'player' ? pFocusUsed : eFocusUsed;
+      emitPerfectFocus(battleLog, {
+        engineSide: perfectSide,
+        agent: perfectAgent,
+        focusUsed: perfectFocus,
+      });
+      if (battleLog && typeof battleLog.push === 'function') {
+        battleLog.push(
+          `PERFECT! ${perfectAgent?.name || (perfectSide === 'player' ? 'Tu' : 'IA')} — scommessa FC esatta (${perfectFocus})`
+        );
+      }
+    }
+
     return { battleResult };
 
 }

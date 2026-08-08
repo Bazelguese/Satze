@@ -60,15 +60,21 @@ export function evaluateStrategicState(state, profile = {}) {
   if ((state.playerFieldsConquered || 0) >= 2) parts.fields -= 850;
   parts.fields += (state.availableFieldIndexes?.length || 0) * 15;
 
-  // Economia FC / carta
+  // Economia FC / carta — restare sotto quota a metà partita è grave
   const aiCards = state.aiRemainingCardIds?.length || 0;
   const playerCards = state.playerRemainingCardIds?.length || 0;
   const aiFpc = focusPerCard(state.aiFocus || 0, aiCards);
   const playerFpc = focusPerCard(state.playerFocus || 0, playerCards);
-  parts.focusEconomy += aiFpc * 55 - playerFpc * 40;
-  parts.focusEconomy += (state.aiFocus || 0) * 12 - (state.playerFocus || 0) * 9;
-  if (aiCards > 0 && aiFpc < 1.5) parts.focusEconomy -= 180;
-  if (aiCards > 0 && (state.aiFocus || 0) === 0) parts.focusEconomy -= 400;
+  parts.focusEconomy += aiFpc * 70 - playerFpc * 45;
+  parts.focusEconomy += (state.aiFocus || 0) * 14 - (state.playerFocus || 0) * 10;
+  if (aiCards >= 2 && aiFpc < 2.5) {
+    parts.focusEconomy -= (2.5 - aiFpc) * 260;
+  }
+  if (aiCards >= 3 && (state.aiFocus || 0) < aiCards * 2.5) {
+    parts.focusEconomy -= 420;
+  }
+  if (aiCards > 0 && aiFpc < 1.5) parts.focusEconomy -= 220;
+  if (aiCards > 0 && (state.aiFocus || 0) === 0) parts.focusEconomy -= 500;
 
   // Piano della mano derivato da trigger, effetti e stato proiettato.
   const plan = evaluateRemainingHandPlan(state, profile);

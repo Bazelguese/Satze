@@ -45,9 +45,9 @@ export const SCORE_TIE_EPSILON = 5;
 
 /** Moltiplicatori penalità sovrainvestimento per round. */
 export const OVERINVESTMENT_ROUND_MULTIPLIER = {
-  1: 1.5,
-  2: 1.25,
-  3: 1,
+  1: 1.55,
+  2: 1.5,
+  3: 1.1,
   4: 0.7,
   5: 0.35,
 };

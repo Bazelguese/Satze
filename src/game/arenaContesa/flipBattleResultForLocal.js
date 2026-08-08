@@ -72,6 +72,9 @@ export function flipBattleResultForLocal(battleResult) {
     out.finalEnemyFC = battleResult.finalPlayerFC;
   }
 
+  if (battleResult.perfectFocusSide === 'player') out.perfectFocusSide = 'enemy';
+  else if (battleResult.perfectFocusSide === 'enemy') out.perfectFocusSide = 'player';
+
   // Evita doppio swap su coppie già gestite — PAIR_PREFIXES tenuto per chiarezza
   void PAIR_PREFIXES;
 

@@ -21,29 +21,41 @@ import { ARMY_SETS } from '../../data/cards';
 import { ALL_BATTLEFIELDS } from '../../data';
 import { getDuelVisualConfig } from '../../config/duelVisualConfigStore.js';
 import { buildPhaseAdvanceDelaysMs, DUEL_PHASE_META } from '../../config/duelVisualTimeline.js';
+import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 
 function buildBattleResult(playerAssault, enemyAssault, playerFc, enemyFc, winner) {
   const playerAgent = { ...ARMY_SETS["Figli dell'Orizzonte"][2], army: "Figli dell'Orizzonte" };
   const enemyAgent = { ...ARMY_SETS.Kethran[0], army: 'Kethran' };
-  return {
+  const playerPower = playerAgent.power;
+  const enemyPower = enemyAgent.power;
+  const result = {
     field: ALL_BATTLEFIELDS[0],
     playerAgent,
     enemyAgent,
-    playerPower: playerAgent.power,
-    enemyPower: enemyAgent.power,
+    playerPower,
+    enemyPower,
+    playerPowerAfterEffects: playerPower,
+    enemyPowerAfterEffects: enemyPower,
     playerDamage: playerAgent.damage,
     enemyDamage: enemyAgent.damage,
     playerAssault,
     enemyAssault,
+    playerAssaultRaw: playerAssault,
+    enemyAssaultRaw: enemyAssault,
+    playerAssaultMinFinal: playerPower,
+    enemyAssaultMinFinal: enemyPower,
     playerFocusUsed: playerFc,
     enemyFocusUsed: enemyFc,
     damageDealt: winner === 'player' ? playerAgent.damage : winner === 'enemy' ? enemyAgent.damage : 0,
     winner,
+    isPlayerFirst: true,
     playerHasBonus: false,
     enemyHasBonus: false,
     playerBonusBlocked: false,
     enemyBonusBlocked: false,
   };
+  result.perfectFocusSide = getPerfectFocusSide(result);
+  return result;
 }
 
 const DIALOGUE_PHASES = DIALOGUE_DUEL_PHASE_SET;

@@ -5,14 +5,22 @@ import { ARMY_COLORS } from '../../../data/armies.js';
 import { ALL_AGENTS } from '../../../data/cards.js';
 import { getCardDisplayLabels } from '../../../data/cardArchetypes.js';
 import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
+import { CardPointerTilt, CardPointerTiltStyles } from '../../cards/CardPointerTilt.jsx';
 import { CardTagsRow } from '../../cards/CardTagBadges.jsx';
+import { useGalleryCardPool } from '../../../hooks/useGalleryCardPool.js';
+import { preloadCardImagesForAgents } from '../../../data/images.js';
+import { getCardSprite } from '../../../utils/cardUtils.js';
+import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
 
 const DEFAULT_GALLERY_ARMY = "Figli dell'Orizzonte";
 const TILE_WIDTH = 210;
+const TILE_PAD_X = 28; // spazio laterale per tilt 3D senza clip
+const TILE_PAD_Y = 22;
 const GRID_COLUMNS = 6;
-const GRID_GAP_X = 32;
-const GRID_GAP_Y = 52;
+const GRID_GAP_X = 20;
+const GRID_GAP_Y = 40;
+const GRID_COL_WIDTH = TILE_WIDTH + TILE_PAD_X * 2;
 const CARD_NATIVE_W = 230;
 const CARD_NATIVE_H = 330;
 const LIGHTBOX_SCALE = 1.35;
@@ -42,11 +50,25 @@ export default function CardGallery({
   const ARMIES = useMemo(() => armyList(SORTED_AGENTS), []);
   const [filter, setFilter] = useState(DEFAULT_GALLERY_ARMY);
   const [active, setActive] = useState(null);
+  const heavyOk = useCosmicHeavyContentReady();
 
   const shown = useMemo(
     () => SORTED_AGENTS.filter((a) => a.army === filter),
     [filter],
   );
+  const { mountedCount } = useGalleryCardPool(SORTED_AGENTS.length, {
+    batchSize: 14,
+    enabled: heavyOk,
+  });
+  const poolAgents = useMemo(
+    () => (heavyOk ? SORTED_AGENTS.slice(0, mountedCount) : []),
+    [heavyOk, mountedCount],
+  );
+
+  useEffect(() => {
+    if (!heavyOk || mountedCount <= 0) return;
+    preloadCardImagesForAgents(SORTED_AGENTS.slice(0, mountedCount), getCardSprite);
+  }, [heavyOk, mountedCount]);
   const headAccent = (ARMY_COLORS[filter] || {}).accent || '#f5f3eb';
 
   useEffect(() => {
@@ -107,11 +129,12 @@ export default function CardGallery({
         </div>
 
         <div className="cgl-grid">
-        {shown.map((agent) => (
+        {poolAgents.map((agent) => (
           <CardTile
             key={agent.id}
             agent={agent}
             accent={(ARMY_COLORS[agent.army] || {}).accent || '#94a3b8'}
+            hidden={agent.army !== filter}
             onClick={() => setActive(agent)}
           />
         ))}
@@ -121,23 +144,26 @@ export default function CardGallery({
       {active && <Lightbox agent={active} onClose={() => setActive(null)} />}
 
       <div className="cgl-scanlines" />
+      <CardPointerTiltStyles />
       <CardGalleryStyles />
     </div>
   );
 }
 
-function CardTile({ agent, accent, onClick }) {
+function CardTile({ agent, accent, hidden, onClick }) {
   return (
     <button
       type="button"
-      className="cgl-tile"
+      className={`cgl-tile${hidden ? ' cgl-tile--hidden' : ''}`}
       style={{ '--accent': accent }}
       onClick={onClick}
       aria-label={agent.name}
+      aria-hidden={hidden || undefined}
+      tabIndex={hidden ? -1 : 0}
     >
-      <div className="cgl-tile-card">
-        <CardReworkP4Scaled agent={agent} width={TILE_WIDTH} />
-      </div>
+      <CardPointerTilt shineAccent={accent} maxTilt={12} disabled={hidden}>
+        <CardReworkP4Scaled agent={agent} width={TILE_WIDTH} catalogPreview suppressAnimations />
+      </CardPointerTilt>
     </button>
   );
 }
@@ -158,14 +184,16 @@ function Lightbox({ agent, onClose }) {
         <button type="button" className="cgl-lb-close" onClick={onClose} aria-label="Chiudi">✕</button>
 
         <div className="cgl-lb-card-wrap">
-          <div
-            className="cgl-lb-card-scale-host"
+          <CardPointerTilt
+            shineAccent={accent}
+            maxTilt={16}
+            className="cgl-lb-tilt"
             style={{ width: LIGHTBOX_CARD_W, height: LIGHTBOX_CARD_H }}
           >
             <div className="cgl-lb-card-scale">
               <CardReworkP4 agent={agent} showBonus />
             </div>
-          </div>
+          </CardPointerTilt>
         </div>
 
         <div className="cgl-lb-details">
@@ -197,10 +225,10 @@ function CardGalleryStyles() {
   return (
     <style>{`
       .cgl {
-        position: fixed; inset: 0;
+        position: absolute; inset: 0;
         background: #050608; color: #f5f3eb;
         font-family: 'Chakra Petch', sans-serif;
-        overflow: hidden; isolation: isolate; z-index: 1000;
+        overflow: hidden; isolation: isolate; z-index: 2;
         display: flex; flex-direction: column;
       }
       .cgl * { box-sizing: border-box; }
@@ -280,32 +308,32 @@ function CardGalleryStyles() {
       .cgl-grid {
         position: relative; flex: 1; min-height: 0; z-index: 4;
         display: grid;
-        grid-template-columns: repeat(${GRID_COLUMNS}, ${TILE_WIDTH}px);
+        grid-template-columns: repeat(${GRID_COLUMNS}, ${GRID_COL_WIDTH}px);
         grid-auto-rows: auto;
         column-gap: ${GRID_GAP_X}px;
         row-gap: ${GRID_GAP_Y}px;
         justify-content: center; align-content: start;
         overflow-y: auto; overflow-x: hidden;
-        padding: 16px 32px 36px;
+        padding: 20px 40px 40px;
         scrollbar-gutter: stable;
       }
 
       .cgl-tile {
-        background: none; border: none; padding: 12px 6px 8px;
+        background: none; border: none;
+        padding: ${TILE_PAD_Y}px ${TILE_PAD_X}px;
         cursor: pointer; display: flex; flex-direction: column; align-items: center;
         position: relative; z-index: 1;
-        transition: transform .2s ease, z-index 0s;
+        perspective: 920px; perspective-origin: 50% 40%;
+        overflow: visible;
+        transition: z-index 0s;
+        -webkit-tap-highlight-color: transparent;
       }
-      .cgl-tile:hover {
+      .cgl-tile--hidden {
+        display: none;
+      }
+      .cgl-tile:hover,
+      .cgl-tile:focus-visible {
         z-index: 5;
-        transform: translateY(-6px);
-      }
-      .cgl-tile-card {
-        border-radius: 0 0 14px 14px;
-        transition: box-shadow .2s ease, filter .2s ease;
-      }
-      .cgl-tile:hover .cgl-tile-card {
-        filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 55%, transparent));
       }
 
       .cgl-lb {
@@ -334,16 +362,18 @@ function CardGalleryStyles() {
         display: flex; justify-content: center;
         padding-top: 12px;
         margin: 0;
+        perspective: 1200px;
+        perspective-origin: 50% 40%;
       }
-      .cgl-lb-card-scale-host {
-        position: relative; flex: none; overflow: visible;
-      }
+      .cgl-lb-tilt { cursor: grab; flex: none; }
+      .cgl-lb-tilt[data-tilt="1"] { cursor: grabbing; }
       .cgl-lb-card-scale {
         position: absolute; top: 0; left: 0;
         width: ${CARD_NATIVE_W}px; height: ${CARD_NATIVE_H}px;
         transform: scale(${LIGHTBOX_SCALE});
         transform-origin: top left;
-        filter: drop-shadow(0 0 48px color-mix(in srgb, var(--accent) 38%, transparent));
+        filter: drop-shadow(0 0 48px color-mix(in srgb, var(--accent) 38%, transparent))
+                drop-shadow(0 22px 34px rgba(0,0,0,0.55));
       }
       .cgl-lb-details {
         max-width: 720px; width: 100%; margin: 0 auto;
@@ -375,7 +405,6 @@ function CardGalleryStyles() {
 
       @media (prefers-reduced-motion: reduce) {
         .cgl *, .cgl *::after, .cgl *::before { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
-        .cgl-tile:hover { transform: none; }
       }
     `}</style>
   );

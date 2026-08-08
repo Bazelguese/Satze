@@ -177,7 +177,7 @@ export const ARMY_LORE = {
       "Maschere, heel e face sullo stesso ring. La Mascarada non combatte per ideali: combatte per il momento in cui il nemico ha già speso troppo Focus — e allora riscuote.\n\nOgni agente è un animal-spirit del main event: gru, cobra, mantide, pavone. Vincere è spettacolo; perdere è solo il setup del colpo basso successivo.\n\nSceglili se ami leggere lo spend del nemico, convertirlo in Focus Coin e chiudere con Imboscate, Gloria e Rese dei conti.",
     bonusWhen: 'Si attiva in Opportunista — il nemico ha speso 5+ Focus Coin questo turno.',
     bonusExplain:
-      'Guadagni +3 Focus Coin. Premia chi forza il nemico a overcommitare e poi riscuote la differenza.',
+      'Guadagni +2 Focus Coin. Premia chi forza il nemico a overcommitare e poi riscuote la differenza.',
     style:
       'Economia reattiva. Spingi il nemico a spendere, attiva Opportunista, poi reinvesti FC in Overdrive e picchi di midcard.',
     tips:
@@ -185,18 +185,18 @@ export const ARMY_LORE = {
   },
 };
 
-// Entry sintetica per "Eserciti Personalizzati" (multi-armata)
+// Entry sintetica per "Eserciti Personalizzati" (tutti i mazzi creati dall'utente)
 export const MIXED_ARMIES_LORE = {
   glyph: '⚔',
   bonusLabel: 'NESSUNO',
   motto: 'Nessun sigillo. Solo scelte.',
   synopsis:
-    "Coalizioni eterodosse di carte da armate diverse. Versatili, imprevedibili, difficili da pilotare: qui non c'è un sigillo unico a proteggerti, solo la tua capacità di unire poteri che non dovevano stare insieme.\n\nGli eserciti personalizzati offrono sinergie ibride e matchup creativi, ma rinunciano al bonus di fazione. Ogni lista è un esperimento — e ogni errore costa di più, perché non hai una rete di sicurezza meccanica.\n\nSceglili se conosci già le armate, ami costruire deck e vuoi massima flessibilità a costo di un piano più fragile.",
+    "Qui trovi tutti gli eserciti che hai costruito tu: liste mono-armata ritoccate e coalizioni con carte da fazioni diverse. Non c'è un catalogo ufficiale — solo le tue scelte.\n\nGli eserciti personalizzati rinunciano al bonus di fazione delle armate base. Il valore deve venire dalle carte e dalle sinergie che monti. Ogni lista è un esperimento: più sei preciso sul piano, meno ti pesa l'assenza del sigillo.\n\nSceglili se ami costruire deck, rifinire liste e testare matchup che i precostruiti non coprono.",
   bonusWhen: 'Nessun bonus armata.',
   bonusExplain:
     'Gli eserciti personalizzati non ricevono il passivo o il trigger di una singola fazione. Tutto il valore deve venire dalle carte e dalle sinergie che costruisci tu.',
   style:
-    'Massima flessibilità. Compensa l\'assenza di bonus con sinergie di carte, cover dei matchup e scelte di esercito precise. Richiede esperienza.',
+    'Costruzione libera. Mono-armata o misto: definisci un piano chiaro e compensa la mancanza di bonus con sinergie di carte e cover dei matchup.',
   tips:
     'Non improvvisare: definisci un piano (controllo, burst, attrito) anche senza bonus. Evita liste “un po\' di tutto”. Contro armate con passivi forti, serve un vantaggio di carte chiaro sin dallo schieramento.',
 };

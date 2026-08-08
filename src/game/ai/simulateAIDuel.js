@@ -50,7 +50,7 @@ export function resolveTerminalStatus(context, {
   const round = context.roundNumber || 1;
   const mode = context.mode || 'classic';
   const territorialAllowed =
-    mode === 'bareHands' || (mode === 'classic' && round < AI_SUPREMACY_ROUND);
+    (mode === 'bareHands' || mode === 'classic') && round < AI_SUPREMACY_ROUND;
 
   if (territorialAllowed) {
     if (aiFieldsAfter >= AI_FIELDS_TO_WIN) return 'ai_win_fields';

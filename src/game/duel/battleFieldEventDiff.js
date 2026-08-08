@@ -130,6 +130,13 @@ export function emitDuelFieldSetupEvents(log, field, pAgent, eAgent, before, aft
   if (flags.maxFinalPower != null) {
     rules.push({ ruleCode: 'maxFinalPower', params: { maxFinalPower: flags.maxFinalPower } });
   }
+  if (flags.maxFocusCountedInVa != null) {
+    rules.push({ ruleCode: 'maxFocusCountedInVa', params: { maxFocusCountedInVa: flags.maxFocusCountedInVa } });
+  }
+  if (flags.overdriveDisabled) rules.push({ ruleCode: 'overdriveDisabled', params: null });
+  if (flags.toxinDisabled) rules.push({ ruleCode: 'toxinDisabled', params: null });
+  if (flags.swapCopyImponi) rules.push({ ruleCode: 'swapCopyImponi', params: null });
+  if (flags.conquestDisabled) rules.push({ ruleCode: 'conquestDisabled', params: null });
 
   for (const rule of rules) {
     emitFieldRule(log, {

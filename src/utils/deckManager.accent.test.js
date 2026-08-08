@@ -29,7 +29,7 @@ function hexToHsl(hex) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-describe('getHandAccentColor — fusione HSL', () => {
+describe('getHandAccentColor — fusione oklch', () => {
   it('mono-armata: restituisce accent puro', () => {
     const hand = mockHand({ Kethran: 5 });
     expect(getHandAccentColor(hand, ARMY_COLORS)).toBe(ARMY_COLORS.Kethran.accent);

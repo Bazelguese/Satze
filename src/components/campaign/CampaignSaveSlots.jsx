@@ -2,14 +2,21 @@
 
 import React, { useCallback, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
+import { ACT } from '../../campaign/data/atto1.js';
 import {
   CAMPAIGN_SLOT_COUNT,
-  getCampaignSlotSummary,
-  initializeCampaignSlotFresh,
-  clearCampaignSlot,
-} from '../../data/campaign.js';
+  getCampaignRunSummary,
+  initializeCampaignRun,
+  clearCampaignRun,
+} from '../../campaign/state/persistence.js';
+import { NASCENTE_ID, poolCardById } from '../../campaign/state/campaignState.js';
 import { CAMPAIGN_UI, CAMPAIGN_FONTS } from '../../campaign/campaignTheme.js';
 import { MenuScreenLayout, MenuBackButton } from '../menu';
+import StartingArmySelection from './atto1/StartingArmySelection.jsx';
+import { getNascenteStageImageUrl } from '../../data/images.js';
+
+import '../../styles/campaign/colors_and_type.css';
+import '../../styles/campaign/atto1-components.css';
 
 /**
  * @param {{
@@ -19,13 +26,74 @@ import { MenuScreenLayout, MenuBackButton } from '../menu';
  */
 export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   const [summaries, setSummaries] = useState(() =>
-    Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignSlotSummary(i))
+    Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignRunSummary(i))
   );
   const [pendingDelete, setPendingDelete] = useState(null);
+  // Slot su cui è aperta la scelta dell'esercito iniziale (nuova campagna)
+  const [armySlot, setArmySlot] = useState(null);
+
+  // Pool compagni L2 dai dati dell'Atto (schierabili: 2 su 6)
+  const companionPool = (ACT.companions || [])
+    .map((id) => {
+      const c = poolCardById(id);
+      return c && {
+        id,
+        name: c.name,
+        role: 'Agente',
+        rarity: 'comune',
+        army: 'orizzonte',
+        level: c.league,
+        pot: c.power,
+        dan: c.damage,
+        power: c.description || 'Nessun potere.',
+      };
+    })
+    .filter(Boolean);
 
   const refresh = useCallback(() => {
-    setSummaries(Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignSlotSummary(i)));
+    setSummaries(Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignRunSummary(i)));
   }, []);
+
+  if (armySlot != null) {
+    return (
+      <div className="w-full h-full min-h-full overflow-hidden" style={{ position: 'relative', minHeight: '100%' }}>
+        <StartingArmySelection
+          pool={companionPool}
+          nascente={{
+            name: 'Nascente',
+            role: 'Protagonista',
+            level: ACT.nascente?.startLeague ?? 2,
+            pot: ACT.nascente?.startStats?.power ?? 2,
+            dan: ACT.nascente?.startStats?.damage ?? 2,
+            imageSrc: getNascenteStageImageUrl(0),
+          }}
+          companionSlots={2}
+          pv={25}
+          fc={10}
+          synergiesFor={() => []}
+          onConfirm={(picked) => {
+            const slot = armySlot;
+            initializeCampaignRun(ACT, slot, { deck: [NASCENTE_ID, ...picked.map((c) => c.id)] });
+            setArmySlot(null);
+            refresh();
+            onSlotChosen(slot);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setArmySlot(null)}
+          style={{
+            position: 'absolute', top: 18, right: 24, zIndex: 10,
+            fontFamily: CAMPAIGN_FONTS.ui, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+            padding: '8px 14px', cursor: 'pointer',
+            border: `1px solid ${CAMPAIGN_UI.border}`, background: 'rgba(7,7,7,.6)', color: CAMPAIGN_UI.textSec,
+          }}
+        >
+          ← Torna agli slot
+        </button>
+      </div>
+    );
+  }
 
   const fmtTime = (ts) => {
     if (ts == null || !Number.isFinite(ts)) return null;
@@ -75,17 +143,16 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
                 <div style={{ fontSize: 13, color: CAMPAIGN_UI.textSec, lineHeight: 1.6, marginBottom: 12 }}>
                   <div>
                     Giorno <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.day}</strong>
-                    {sum.hqIntegrity != null && (
-                      <>
-                        {' '}
-                        · HQ <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.hqIntegrity}</strong>
-                      </>
-                    )}
+                    {' '}di <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.daysLimit}</strong>
+                    {' '}· Missioni superate: <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.missionsCompleted}</strong>
                   </div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>
-                    Stato: <span style={{ color: CAMPAIGN_UI.textPri }}>{sum.segment}</span>
-                    {sum.storyComplete ? ' · Storia completata' : ''}
-                  </div>
+                  {sum.outcome != null && (
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      Esito: <span style={{ color: sum.outcome === 'won' ? CAMPAIGN_UI.greenLit : CAMPAIGN_UI.redLit }}>
+                        {sum.outcome === 'won' ? 'Atto I completato' : 'Tempo scaduto'}
+                      </span>
+                    </div>
+                  )}
                   {fmtTime(sum.savedAt) && (
                     <div style={{ fontSize: 11, color: CAMPAIGN_UI.textMuted, marginTop: 6 }}>
                       Ultimo salvataggio: {fmtTime(sum.savedAt)}
@@ -93,17 +160,17 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
                   )}
                 </div>
               )}
-              {empty && <p style={{ fontSize: 13, color: CAMPAIGN_UI.textSec, marginBottom: 12 }}>Vuoto</p>}
+              {empty && (
+                <p style={{ fontSize: 13, color: CAMPAIGN_UI.textSec, marginBottom: 12 }}>
+                  {sum.legacy ? 'Salvataggio del vecchio modello campagna — verrà sostituito.' : 'Vuoto'}
+                </p>
+              )}
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 {empty && (
                   <button
                     type="button"
-                    onClick={() => {
-                      initializeCampaignSlotFresh(idx);
-                      refresh();
-                      onSlotChosen(idx);
-                    }}
+                    onClick={() => setArmySlot(idx)}
                     style={{
                       fontFamily: CAMPAIGN_FONTS.ui,
                       fontWeight: 600,
@@ -202,7 +269,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
               <button
                 type="button"
                 onClick={() => {
-                  clearCampaignSlot(pendingDelete);
+                  clearCampaignRun(pendingDelete);
                   setPendingDelete(null);
                   refresh();
                 }}

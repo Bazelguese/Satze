@@ -102,17 +102,17 @@ const iconPublic = (filename) => `${import.meta.env.BASE_URL}icons/${filename}`;
 export const ARMY_ICONS = {
   'Figli dell\'Orizzonte': iconPublic('Orizzonte-nobg.webp'),
   'Kethran': iconPublic('ketrhan-nobg.webp'),
-  'Corte Rossa': iconPublic('corte-nobg.webp'),
+  'Corte Rossa': `${iconPublic('corte-nobg.webp')}?v=2`,
   'Calibri Pesanti': iconPublic('calibri-nobg.webp'),
   'Orathai': iconPublic('orethai-nobg.webp'),
   'Nati dalla Bocca': iconPublic('Mounthborn-nobg.webp'),
   'Mounthborn': iconPublic('Mounthborn-nobg.webp'), // chiave usata in campaign/cards/armies
   'L\'Enclave delle Scaglie': iconPublic('enclave-nobg.webp'),
   'Ratti della Megera': iconPublic('ratti-nobg.webp'),
-  'Patto degli Indocili': iconPublic('patto-indocili-icon.webp'),
+  'Patto degli Indocili': `${iconPublic('patto-indocili-icon.webp')}?v=2`,
   'Khemet': iconPublic('Khetan-nobg.webp'),
-  'Apex': iconPublic('apex-nobg.png'),
-  'Mascarada': iconPublic('Mascarada-nobg.png'),
+  'Apex': iconPublic('Apex-nobg.png'),
+  'Mascarada': `${iconPublic('Mascarada-nobg.png')}?v=2`,
 };
 
 // ============================================

@@ -224,11 +224,33 @@ function DetailPopover({ data }) {
   );
 }
 
-function DeckRow({ card, accent, onRemove }) {
+function DeckRow({
+  card,
+  accent,
+  onRemove,
+  index,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+}) {
   const lc = LEAGUE_COLORS[card.league] || accent;
 
   return (
-    <div className="dbl-row" style={{ '--c': accent }}>
+    <div
+      className={`dbl-row${isDragging ? ' dragging' : ''}${isDropTarget ? ' drop-target' : ''}`}
+      style={{ '--c': accent }}
+      draggable
+      onDragStart={(e) => onDragStart(e, index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+    >
+      <span className="dbl-row-grip" aria-hidden="true">
+        ⋮⋮
+      </span>
       <span className="dbl-row-lg" style={{ color: lc, borderColor: `${lc}80` }}>
         L{card.league}
       </span>
@@ -238,7 +260,14 @@ function DeckRow({ card, accent, onRemove }) {
       <span className="dbl-row-st">
         <b style={{ color: '#fde047' }}>{card.pot}</b>/<b style={{ color: '#c084fc' }}>{card.dan}</b>
       </span>
-      <button type="button" className="dbl-row-x" onClick={onRemove} aria-label="rimuovi">
+      <button
+        type="button"
+        className="dbl-row-x"
+        onClick={onRemove}
+        onMouseDown={(e) => e.stopPropagation()}
+        draggable={false}
+        aria-label="rimuovi"
+      >
         ✕
       </button>
     </div>
@@ -266,6 +295,9 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   const [flash, setFlash] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [showGlossary, setShowGlossary] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dropIndex, setDropIndex] = useState(null);
+  const dragIndexRef = useRef(null);
 
   const primaryFac = FACTIONS.find((f) => f.key === selectedArmyKeys[0]) || FACTIONS[0];
   const accent = primaryFac.accent;
@@ -352,6 +384,52 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   );
 
   const clear = useCallback(() => setDeck([]), [setDeck]);
+
+  const handleRosterDragStart = useCallback((e, index) => {
+    dragIndexRef.current = index;
+    setDragIndex(index);
+    setDropIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    if (e.currentTarget instanceof HTMLElement) {
+      e.dataTransfer.setDragImage(e.currentTarget, 24, 16);
+    }
+  }, []);
+
+  const handleRosterDragOver = useCallback((e, overIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const fromIndex = dragIndexRef.current;
+    if (fromIndex == null || fromIndex === overIndex) {
+      setDropIndex(overIndex);
+      return;
+    }
+    setDeckIds((prev) => {
+      if (fromIndex < 0 || fromIndex >= prev.length || overIndex < 0 || overIndex >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(overIndex, 0, moved);
+      return next;
+    });
+    dragIndexRef.current = overIndex;
+    setDragIndex(overIndex);
+    setDropIndex(overIndex);
+  }, []);
+
+  const handleRosterDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragIndex(null);
+    setDropIndex(null);
+    dragIndexRef.current = null;
+  }, []);
+
+  const handleRosterDragEnd = useCallback(() => {
+    setDragIndex(null);
+    setDropIndex(null);
+    dragIndexRef.current = null;
+  }, []);
 
   const schiera = useCallback(() => {
     if (!analysis.legal) return;
@@ -893,11 +971,18 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
             {deckCards.length === 0 ? (
               <p className="dbl-deck-empty">Nessuna carta selezionata.</p>
             ) : (
-              deckCards.map((c) => (
+              deckCards.map((c, index) => (
                 <DeckRow
                   key={c.id}
                   card={c}
                   accent={accentForArmy(c.army)}
+                  index={index}
+                  isDragging={dragIndex === index}
+                  isDropTarget={dropIndex === index && dragIndex !== null && dragIndex !== index}
+                  onDragStart={handleRosterDragStart}
+                  onDragOver={handleRosterDragOver}
+                  onDrop={handleRosterDrop}
+                  onDragEnd={handleRosterDragEnd}
                   onRemove={() => setDeck(deckIds.filter((i) => i !== c.id))}
                 />
               ))

@@ -7,6 +7,7 @@ import {
 } from './duelDamagePipeline.js';
 import { emitAftermathResourceEvents } from './battleFieldEventDiff.js';
 import { BATTLE_PHASES, BATTLE_REVEAL_AT } from './battleEventEmit.js';
+import { getPerfectFocusSide } from './perfectFocusBet.js';
 
 export function runDuelDamageAftermathAndFcAdjust({
   battleLog,
@@ -164,7 +165,7 @@ export function buildDuelBattleResult({
     eAssaultAfterFocus,
   } = assault;
 
-  return {
+  const result = {
     winner,
     playerAgent: pAgent,
     enemyAgent: eAgent,
@@ -226,4 +227,7 @@ export function buildDuelBattleResult({
     visualSteps,
     isPlayerFirst,
   };
+
+  result.perfectFocusSide = getPerfectFocusSide(result);
+  return result;
 }

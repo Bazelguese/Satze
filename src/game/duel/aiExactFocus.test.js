@@ -51,7 +51,7 @@ test('Normale enumera ogni Focus legale quando risponde a una carta visibile', (
 
   const result = generateStrategicFocusCandidates(context, context.ai.hand[0], profile);
   assert.equal(result.exactSearch, true);
-  assert.deepEqual(result.focuses, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(result.focuses, [1, 2, 3, 4, 5]);
 });
 
 test('Facile mantiene la potatura euristica', () => {
@@ -71,14 +71,14 @@ test('la shortlist conserva tutte le puntate durante la ricerca esatta', () => {
   const actions = generateStrategicActionsForSide(context, 'ai', profile, 0);
   const shortlist = buildBalancedShortlist(actions, context, profile);
 
-  assert.equal(actions.length, 18);
+  assert.equal(actions.length, 15);
   assert.equal(shortlist.length, actions.length);
 
   for (const card of context.ai.hand) {
     const focuses = shortlist
       .filter((action) => action.cardId === card.id)
       .map((action) => action.focus);
-    assert.deepEqual(focuses, [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(focuses, [1, 2, 3, 4, 5]);
   }
 });
 

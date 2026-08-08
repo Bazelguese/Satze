@@ -67,6 +67,11 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     const armyNames = Object.keys(ARMY_SETS);
     return cardIds
       .map((cardId) => {
+        // Estensione campagna: carte già assemblate (es. il Nascente, id 9001,
+        // che non esiste in cards.js) passano come oggetti carta completi.
+        if (cardId && typeof cardId === 'object') {
+          return { ...cardId, army: cardId.army || fallbackArmy };
+        }
         for (const army of armyNames) {
           const card = ARMY_SETS[army].find((c) => c.id === cardId);
           if (card) return { ...card, army: card.army || army };
@@ -86,7 +91,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
    * @param {Array} allBattlefields - Tutti i campi di battaglia disponibili
    * @param {string} [enemyArmy] - Armata nemica (opzionale, per campagna)
    * @param {string} [enemyDeckKey] - Deck nemico (opzionale, per campagna)
-   * @param {{ initiativeProfile?: 'assault'|'defense'|null, winCondition?: string }|null} [campaignDuelMod] - campagna
+   * @param {{ initiativeProfile?: 'assault'|'defense'|null, winCondition?: string, fields?: number, playerLife?: number, enemyLife?: number }|null} [campaignDuelMod] - campagna
    */
   const startGame = useCallback((selectedPlayerArmy, selectedDeckKey, mode = 'classic', difficulty = 'medium', allBattlefields, enemyArmy = null, enemyDeckKey = null, campaignDuelMod = null, startOptions = null) => {
     const skipShuffleDeal = startOptions?.skipShuffleDeal === true;
@@ -135,15 +140,20 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       playerSet = resolveCardIdsAcrossArmies(playerCardIds, playerArmy);
     }
     
-    // L'IA sceglie un deck random (o usa quello specificato per campagna)
-    let enemyDeckSelectedKey = enemyDeckKey;
-    if (!enemyDeckSelectedKey) {
-      const enemyDeckKeys = Object.keys(ARMY_DECKS[enemyArmySelected]);
-      enemyDeckSelectedKey = enemyDeckKeys[Math.floor(Math.random() * enemyDeckKeys.length)];
+    // L'IA sceglie un deck random (o usa quello specificato per campagna:
+    // chiave di ARMY_DECKS oppure array di card IDs per missione)
+    let enemySet;
+    if (Array.isArray(enemyDeckKey)) {
+      enemySet = resolveCardIdsAcrossArmies(enemyDeckKey, enemyArmySelected);
+    } else {
+      let enemyDeckSelectedKey = enemyDeckKey;
+      if (!enemyDeckSelectedKey) {
+        const enemyDeckKeys = Object.keys(ARMY_DECKS[enemyArmySelected]);
+        enemyDeckSelectedKey = enemyDeckKeys[Math.floor(Math.random() * enemyDeckKeys.length)];
+      }
+      const enemyDeck = ARMY_DECKS[enemyArmySelected][enemyDeckSelectedKey];
+      enemySet = resolveCardIdsAcrossArmies(enemyDeck.cards, enemyArmySelected);
     }
-    const enemyDeck = ARMY_DECKS[enemyArmySelected][enemyDeckSelectedKey];
-    const enemyCardIds = enemyDeck.cards;
-    const enemySet = resolveCardIdsAcrossArmies(enemyCardIds, enemyArmySelected);
     
     const deal = computeShuffleDealFromSets(
       playerSet,
@@ -197,13 +207,16 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setEnemyHand(eHand);
     }
     
-    const fields = selectBattlefields(mode, allBattlefields);
+    // Estensioni campagna: numero Campi e PV per missione (default 5 / 25)
+    const fields = selectBattlefields(mode, allBattlefields, {
+      fieldCount: campaignDuelMod?.fields ?? undefined,
+    });
     setBattlefields(fields);
     preloadBattlefieldImages(fields);
     setConqueredFields({});
     
-    setPlayerHP(25);
-    setEnemyHP(25);
+    setPlayerHP(campaignDuelMod?.playerLife ?? 25);
+    setEnemyHP(campaignDuelMod?.enemyLife ?? 25);
     setPlayerFocus(18);
     setEnemyFocus(18);
     
@@ -233,7 +246,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setEnemyToxin(null);
     
     // In Bare Hands tutti i campi sono visibili fin da subito
-    setRevealedFields(mode === 'bareHands' ? 5 : 3);
+    setRevealedFields(mode === 'bareHands' ? fields.length : Math.min(3, fields.length));
     
     setSelectedAgent(null);
     setEnemyAgent(null);

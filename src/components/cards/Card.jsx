@@ -46,7 +46,7 @@ export const Card = ({
   abilityCurrentValue = null // Per Attrizione/Escalation: valore attuale da mostrare tra parentesi
 }) => {
   const isUsed = usedCards.includes(agent?.id);
-  const colors = agent ? ARMY_COLORS[agent.army] || { bg: "from-gray-800 to-gray-700", accent: "#666", text: "text-gray-200" } : {};
+  const colors = agent ? ARMY_COLORS[agent.army] || { bg: "from-gray-800 to-gray-700", accent: "#a9a294", text: "text-gray-200" } : {};
   const armyBonus = agent ? ARMY_BONUSES[agent.army] : null;
   
   if (!agent) return null;

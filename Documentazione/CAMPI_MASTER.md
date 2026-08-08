@@ -1,6 +1,6 @@
 # SATZE — CAMPI DI BATTAGLIA · LISTA MASTER
 
-Tutti i 113 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEMA_POOL_CAMPI.md` per nomi e tag.
+Tutti i 121 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEMA_POOL_CAMPI.md` per nomi e tag.
 
 **Legenda tag**
 - `category`: tipo meccanico + mode-gate — values · limit · conditional · focus · trigger · neutral
@@ -8,7 +8,7 @@ Tutti i 113 campi con nome finale, effetto e tag. Sostituisce App. B di `SISTEMA
 - `minTurn`: turno minimo in cui il campo può essere attivo (1 / 2)
 - *tema* = intestazione di sezione (etichetta, non pesa lo spawn)
 
-**Totali:** comune 38 · raro 52 · special 18 · neutri 5 → **113**. Ogni armata: 6 campi a tema (inclusa Apex).
+**Totali:** comune 39 · raro 57 · special 20 · neutri 5 → **121**. Armate a tema 6 campi; Mascarada 8.
 
 Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)** Parte I (blocco ①/⑤) e Parte II §D.
 
@@ -181,6 +181,19 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 | 87 | Canyon Ghiacciato | In scontro · Chi ha meno Campi conquistati · −1 POT | values | comune | 2 |
 | 88 | Vulcano Dormiente Innevato | Regola · Invasione · sempre attivo | trigger | raro | 1 |
 | 89 | Meridiano del Sole Verde | Regola · Bonus → Invasione: +2 POT, +1 DAN | limit | raro | 1 |
+
+## Mascarada *(8)*
+
+| id | Nome | Effetto | category | rarità | minTurn |
+|----|------|---------|----------|--------|---------|
+| 114 | Grande Arena di Ilesca | Regola · Effetti Overdrive disattivati | limit | raro | 1 |
+| 115 | Anello di Kintaba | Regola · Tossina disattivata | limit | raro | 1 |
+| 116 | Foro di Khorai | Calcolo VA · Entrambi · max 6 FC conteggiati | focus | special | 1 |
+| 117 | Corte di Akitsuna | In scontro · Agente con Potere o Bonus disattivato · +1 POT | values | raro | 1 |
+| 118 | Tribuna Nera di Vargard | Regola · Copia ↔ Imponi | limit | raro | 1 |
+| 119 | Viale delle Delegazioni | Conquista · FC totali spesi >10 · Entrambi +1 FC | conditional | comune | 1 |
+| 120 | Galleria Bellacqua | Regola · Bonus Armata scambiati tra gli Agenti | limit | special | 1 |
+| 121 | Anfiteatro di Morrowgate | Regola · Effetti Conquista disattivati | limit | raro | 1 |
 
 ## Neutri *(5 — solo Bare Hands · battaglie del mondo di SATZE)*
 

@@ -18,7 +18,7 @@ export const MERIDIANO_SOLE_VERDE_BONUS = {
 };
 
 /**
- * Sostituisce i bonus armata su campi 70 / 89; altrimenti pass-through.
+ * Sostituisce / scambia i bonus armata su campi 70 / 89 / 120; altrimenti pass-through.
  */
 export function resolveFieldArmyBonuses(field, pHasBonus, eHasBonus, pArmyBonus, eArmyBonus) {
   if (field?.id === 70) {
@@ -33,6 +33,15 @@ export function resolveFieldArmyBonuses(field, pHasBonus, eHasBonus, pArmyBonus,
     return {
       pArmyBonus: pHasBonus ? MERIDIANO_SOLE_VERDE_BONUS : pArmyBonus,
       eArmyBonus: eHasBonus ? MERIDIANO_SOLE_VERDE_BONUS : eArmyBonus,
+      pHasBonus,
+      eHasBonus,
+    };
+  }
+  // Galleria Bellacqua (120): ciascun Agente con Bonus attivo usa il Bonus dell'altro
+  if (field?.id === 120) {
+    return {
+      pArmyBonus: eArmyBonus,
+      eArmyBonus: pArmyBonus,
       pHasBonus,
       eHasBonus,
     };
@@ -63,6 +72,7 @@ export function scaleConquestEffectValue(value, fieldOptions) {
 
 /** Camera Rituale (79): Overdrive attivo → +1 POT e +1 DAN prima del VA. */
 export function applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog) {
+  if (field?.id === 114) return; // Grande Arena: Overdrive disattivato
   if (field?.id !== 79) return;
   const threshold = overdriveThreshold ?? 5;
   if (state.pFocusUsed >= threshold) {
@@ -113,6 +123,18 @@ export function applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLo
     state.pPower = Math.min(state.pPower, cap);
     state.ePower = Math.min(state.ePower, cap);
     battleLog.push(`🌲 ${fn}: POT finale max ${cap}`);
+  }
+
+  // Corte di Akitsuna (117): +1 POT se Potere o Bonus disattivato
+  if (id === 117) {
+    if (state.pAbilityBlocked || state.pBonusBlocked) {
+      state.pPower += 1;
+      battleLog.push(`🎭 ${fn}: TU Potere/Bonus disattivato · +1 POT → ${state.pPower}`);
+    }
+    if (state.eAbilityBlocked || state.eBonusBlocked) {
+      state.ePower += 1;
+      battleLog.push(`🎭 ${fn}: IA Potere/Bonus disattivato · +1 POT → ${state.ePower}`);
+    }
   }
 
   if (id === 86) {

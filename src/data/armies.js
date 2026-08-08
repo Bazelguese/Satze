@@ -27,20 +27,21 @@ export const ARMY_SYMBOLS = {
 // Esporta anche le icone per uso diretto
 export { ARMY_ICONS };
   
-  // Colori e stili per ogni Armata
+  // Accenti su asse oklch controllato — L 0.61–0.87, tinte a ≥24° di distanza.
+  // `deep` (facoltativo): tinta di fondo/gradiente, non usata come accento UI.
   export const ARMY_COLORS = {
-    "Figli dell'Orizzonte": { bg: "from-purple-900 to-indigo-800", accent: "#a78bfa", text: "text-purple-200" },
-    "Kethran": { bg: "from-amber-900 to-yellow-800", accent: "#fbbf24", text: "text-amber-200" },
-    "Corte Rossa": { bg: "from-red-900 to-rose-800", accent: "#f43f5e", text: "text-red-200" },
-    "Calibri Pesanti": { bg: "from-slate-800 to-zinc-700", accent: "#94a3b8", text: "text-slate-200" },
-    "Orathai": { bg: "from-emerald-900 to-teal-800", accent: "#2dd4bf", text: "text-emerald-200" },
-    "Mounthborn": { bg: "from-lime-900 to-yellow-900", accent: "#a3e635", text: "text-lime-200" },
-    "L'Enclave delle Scaglie": { bg: "from-orange-900 to-amber-800", accent: "#f59e0b", text: "text-orange-200" },
-    "Ratti della Megera": { bg: "from-green-900 to-emerald-900", accent: "#10b981", text: "text-green-200" },
-    "Patto degli Indocili": { bg: "from-fuchsia-900 to-rose-900", accent: "#fb7185", text: "text-rose-100" },
-    "Khemet": { bg: "from-cyan-900 to-teal-900", accent: "#22d3ee", text: "text-cyan-100" },
-    "Apex": { bg: "from-slate-800 to-zinc-900", accent: "#f1f5f9", text: "text-slate-100" },
-    "Mascarada": { bg: "from-blue-950 to-blue-900", accent: "#0047AB", text: "text-blue-100" }
+    "Figli dell'Orizzonte":    { bg: "from-purple-900 to-indigo-800", accent: "#a288fb", text: "text-purple-200" },
+    "Kethran":                 { bg: "from-amber-900 to-yellow-800",  accent: "#eebf3c", text: "text-amber-200" },
+    "Corte Rossa":             { bg: "from-red-900 to-rose-800",      accent: "#f8504f", text: "text-red-200" },
+    "Calibri Pesanti":         { bg: "from-stone-800 to-zinc-700",    accent: "#a9a294", text: "text-stone-200" },
+    "Orathai":                 { bg: "from-teal-900 to-cyan-900",     accent: "#5ad4bc", text: "text-teal-200" },
+    "Mounthborn":              { bg: "from-lime-900 to-yellow-900",   accent: "#c9e238", text: "text-lime-200" },
+    "L'Enclave delle Scaglie": { bg: "from-orange-900 to-amber-800",  accent: "#fb912d", text: "text-orange-200" },
+    "Ratti della Megera":      { bg: "from-green-900 to-emerald-900", accent: "#40ad60", text: "text-green-200" },
+    "Patto degli Indocili":    { bg: "from-fuchsia-900 to-pink-900",  accent: "#e867c3", text: "text-fuchsia-100" },
+    "Khemet":                  { bg: "from-sky-900 to-cyan-900",      accent: "#26c4e8", text: "text-cyan-100" },
+    "Apex":                    { bg: "from-slate-800 to-zinc-900",    accent: "#d5ecf9", text: "text-slate-100" },
+    "Mascarada":               { bg: "from-blue-950 to-blue-900",     accent: "#437ef2", text: "text-blue-100", deep: "#0047AB" }
   };
   
   // Immagini armate - percorsi in public/Immagini_bg per gli sfondi sotto i triangoli delle mani
@@ -122,7 +123,7 @@ export { ARMY_ICONS };
     },
     "Mascarada": {
       trigger: "opportunista",
-      effects: [{ effect: "focusCoin", value: 3 }],
-      description: "Opportunista: +3 FC"
+      effects: [{ effect: "focusCoin", value: 2 }],
+      description: "Opportunista: +2 FC"
     }
   };

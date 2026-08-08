@@ -53,25 +53,28 @@ export function pickFromRaritaBucket(eligible, tier, rng) {
 }
 
 /**
- * Motore v2: 5 slot, rarità, vincolo minTurn su primi REVEAL_START slot.
+ * Motore v2: N slot (default 5), rarità, vincolo minTurn su primi REVEAL_START slot.
  *
  * @param {string} mode
  * @param {Array} allBattlefields
  * @param {() => number} rng
  * @param {typeof BATTLEFIELD_SELECTION_DEFAULTS} [config]
+ * @param {number} [fieldCount] - numero di campi da selezionare (estensione campagna; default 5)
  * @returns {Array}
  */
 export function pickBattlefieldsByRarity(
   mode,
   allBattlefields,
   rng = Math.random,
-  config = BATTLEFIELD_SELECTION_DEFAULTS
+  config = BATTLEFIELD_SELECTION_DEFAULTS,
+  fieldCount = CLASSIC_FIELD_COUNT
 ) {
   const random = typeof rng === 'function' ? rng : () => Math.random();
+  const count = Number.isInteger(fieldCount) && fieldCount > 0 ? fieldCount : CLASSIC_FIELD_COUNT;
 
   if (mode === 'bareHands') {
     const neutral = allBattlefields.filter((b) => b.category === 'neutral');
-    return shuffleArray(neutral).slice(0, CLASSIC_FIELD_COUNT);
+    return shuffleArray(neutral).slice(0, count);
   }
 
   const pool = allBattlefields.filter((b) => b.category !== 'neutral');
@@ -79,7 +82,7 @@ export function pickBattlefieldsByRarity(
   let raresPlaced = 0;
   let specialPlaced = false;
 
-  for (let slot = 0; slot < CLASSIC_FIELD_COUNT; slot++) {
+  for (let slot = 0; slot < count; slot++) {
     let eligible = pool.filter((f) => !selected.some((s) => s.id === f.id));
     if (slot < config.REVEAL_START) {
       eligible = eligible.filter((f) => f.minTurn === 1);
@@ -117,7 +120,7 @@ export const selectBattlefields = (
 ) => {
   const rng = options.rng ?? (() => Math.random());
   const config = { ...BATTLEFIELD_SELECTION_DEFAULTS, ...options.selectionConfig };
-  return pickBattlefieldsByRarity(mode, allBattlefields, rng, config);
+  return pickBattlefieldsByRarity(mode, allBattlefields, rng, config, options.fieldCount);
 };
 
 export { getFieldModifiers, fieldGrantsOverdriveBonus } from './battlefieldEffects.js';

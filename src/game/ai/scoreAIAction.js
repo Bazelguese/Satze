@@ -252,16 +252,33 @@ export function scoreAIAction(simulation, context, aiAction, profile, weights = 
   let score = scoreSimulationForSide(simulation, context, 'ai', weights);
 
   const standardFocus = aiAction?.meta?.standardFocus;
+  const cardsRemaining = aiAction?.meta?.cardsRemaining;
   const overinvest =
     standardFocus != null
       ? computeOverinvestmentPenalty(
           aiAction.focus,
           standardFocus,
           profile,
-          context.roundNumber
+          context.roundNumber,
+          cardsRemaining
         )
       : 0;
   score -= overinvest;
+
+  // Vittoria di Pirro: conquistare un Campo bruciando la riserva con ancora molti duelli
+  const futureDuels = Math.max(0, (cardsRemaining || 1) - 1);
+  const aiFields = context.enemyFieldsConquered || 0;
+  const excessVsStd = Math.max(0, (aiAction?.focus || 0) - (standardFocus || 1));
+  if (
+    futureDuels >= 2 &&
+    aiFields < 2 &&
+    excessVsStd >= 3 &&
+    simulation.winner === 'enemy' &&
+    !['ai_win_hp', 'ai_win_fields', 'ai_win_cards'].includes(simulation.terminalStatus)
+  ) {
+    const planW = profile?.futurePlanningWeight ?? 0.7;
+    score -= excessVsStd * futureDuels * 220 * planW;
+  }
 
   // Lieve costo Focus (non doppiare la penalità progressiva)
   const efficiency = profile?.focusEfficiencyWeight ?? 0.7;

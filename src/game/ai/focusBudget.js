@@ -139,13 +139,36 @@ export function getFocusCapException(context, action, profile, budget) {
 
 /**
  * Penalità progressiva oltre lo standard.
+ * Con ancora 2+ duelli davanti, bruciare FC costa molto di più (evita vittorie di Pirro).
+ *
+ * @param {number} focus
+ * @param {number} standardFocus
+ * @param {object} profile
+ * @param {number} roundNumber
+ * @param {number} [cardsRemaining]
  */
-export function computeOverinvestmentPenalty(focus, standardFocus, profile, roundNumber) {
+export function computeOverinvestmentPenalty(
+  focus,
+  standardFocus,
+  profile,
+  roundNumber,
+  cardsRemaining = 1
+) {
   const excess = Math.max(0, (focus || 0) - (standardFocus || 1));
   if (excess <= 0) return 0;
   const linear = profile?.overinvestmentLinearPenalty ?? 90;
   const quad = profile?.overinvestmentQuadraticPenalty ?? 45;
   const round = Math.min(5, Math.max(1, roundNumber || 1));
   const mult = OVERINVESTMENT_ROUND_MULTIPLIER[round] ?? 1;
-  return (excess * linear + excess * excess * quad) * mult;
+  let penalty = (excess * linear + excess * excess * quad) * mult;
+
+  const futureDuels = Math.max(0, (cardsRemaining || 1) - 1);
+  if (futureDuels >= 2 && excess >= 2) {
+    penalty *= 1 + futureDuels * 0.4 + Math.max(0, excess - 2) * 0.25;
+  }
+  if (futureDuels >= 2 && excess >= 3) {
+    // Costo extra esplicito: restare scoperti nei round dopo
+    penalty += excess * futureDuels * 180;
+  }
+  return penalty;
 }

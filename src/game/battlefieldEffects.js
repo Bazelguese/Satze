@@ -40,6 +40,12 @@ export function buildFieldModifiers(field) {
   if (id === 110) m.positiveDamageModifiersDisabled = true;
   if (id === 99) m.clampPowerDamageToBasePlusMinus2 = true;
   if (id === 100) m.maxFCByLeague = true;
+  if (id === 114) m.overdriveDisabled = true;
+  if (id === 115) m.toxinDisabled = true;
+  if (id === 116) m.maxFocusCountedInVa = 6;
+  if (id === 118) m.swapCopyImponi = true;
+  if (id === 120) m.swapArmyBonuses = true;
+  if (id === 121) m.conquestDisabled = true;
 
   return {
     ...m,
@@ -64,6 +70,7 @@ export function getFieldModifiers(field) {
 /** Campi che applicano un bonus quando Overdrive è attivo (FC ≥ soglia). */
 export function fieldGrantsOverdriveBonus(field) {
   if (!field?.id) return false;
+  if (getFieldModifiers(field).overdriveDisabled) return false;
   if (field.id === 44) return true; // Centrale Energetica: +1 DAN
   return Boolean(getFieldModifiers(field).overdriveExtraPowerAndDamage); // Camera Rituale (79)
 }
@@ -93,6 +100,11 @@ export function getFieldSetupFlags(field) {
     vaModifiersDouble: id === 86,
     winnerByFinalPowerThenVa: id === 85,
     winnerByFinalDamageThenVa: id === 108,
+    overdriveDisabled: id === 114,
+    toxinDisabled: id === 115,
+    maxFocusCountedInVa: id === 116 ? 6 : null,
+    swapCopyImponi: id === 118,
+    conquestDisabled: id === 121,
     ...getFieldModifiers(field),
   };
 }

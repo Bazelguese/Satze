@@ -40,3 +40,17 @@ test('rinforzi: true con 2+ altre carte della stessa Lega oltre alla carta gioca
   assert.equal(checkTrigger('rinforzi', { ...base, playerInitialLeagueCount: 3 }), true);
   assert.equal(checkTrigger('rinforzi', { ...base, playerInitialLeagueCount: 4 }), true);
 });
+
+test('overdriveDisabled: Overdrive non si attiva', () => {
+  assert.equal(
+    checkTrigger('overdrive', { ...base, focusCoins: 9, fieldModifiers: { overdriveDisabled: true } }),
+    false
+  );
+});
+
+test('conquestDisabled: Conquista non si attiva', () => {
+  assert.equal(
+    checkTrigger('conquest', { ...base, won: true, fieldModifiers: { conquestDisabled: true } }),
+    false
+  );
+});

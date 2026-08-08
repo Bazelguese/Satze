@@ -9,7 +9,7 @@ import {
 import { getAIProfile } from './aiProfiles.js';
 import { makeCard, makeAIContext, makeRound1BudgetFixture } from './aiTestFixtures.js';
 
-test('quota standard: 18 FC / 5 carte → Facile 4, Normale 5, Difficile 6', () => {
+test('quota standard: 18 FC / 5 carte → Facile 4, Normale 5, Difficile 5', () => {
   assert.equal(
     estimateStandardFocus({ focusPool: 18, cardsRemaining: 5, profile: getAIProfile('easy') }),
     4
@@ -20,18 +20,26 @@ test('quota standard: 18 FC / 5 carte → Facile 4, Normale 5, Difficile 6', () 
   );
   assert.equal(
     estimateStandardFocus({ focusPool: 18, cardsRemaining: 5, profile: getAIProfile('hard') }),
-    6
+    5
   );
 });
 
-test('cap ordinario round 1: Normale ≤6, Difficile ≤7', () => {
+test('cap ordinario round 1: Normale ≤6, Difficile ≤6 (stesso early share, buffer 2)', () => {
   const mediumCtx = makeRound1BudgetFixture('medium');
   const hardCtx = makeRound1BudgetFixture('hard');
   const med = getOrdinaryFocusCap(mediumCtx, 'ai', getAIProfile('medium'));
   const hard = getOrdinaryFocusCap(hardCtx, 'ai', getAIProfile('hard'));
   assert.equal(med.fairShare, 4);
   assert.equal(med.ordinaryCap, 6);
-  assert.equal(hard.ordinaryCap, 7);
+  assert.equal(hard.ordinaryCap, 6);
+});
+
+test('sovrainvestimento mid-game con carte residue pesa più che a fine partita', () => {
+  const profile = getAIProfile('hard');
+  const mid = computeOverinvestmentPenalty(10, 5, profile, 2, 4);
+  const end = computeOverinvestmentPenalty(10, 5, profile, 2, 1);
+  assert.ok(mid > end);
+  assert.ok(mid > 2000);
 });
 
 test('eccezione Overdrive soglia entro cap+1', () => {

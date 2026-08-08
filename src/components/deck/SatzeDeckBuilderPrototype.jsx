@@ -10,7 +10,6 @@ import { LEAGUE_TIER_COLORS as LEAGUE_COLORS } from "../../data/leagueColors";
 import { TRIGGER_NAMES } from "../../data/triggers";
 import { Icon } from "../ui";
 import { Glossary } from "../Glossary";
-import { HandCard } from "../cards";
 import { MenuCard, MenuBackButton, PALETTE } from "../menu";
 import { saveCustomDeck, loadCustomDeck, generateDeckId, resolveDeckCards } from "../../utils/deckManager";
 import { getCardSprite } from "../../utils";
@@ -24,6 +23,7 @@ import {
 } from "../../data/cardArchetypes";
 import { TagBadge } from "../cards/CardTagBadges";
 import { IS_PUBLIC_PLAYTEST_BUILD, createSingleClickHandlers } from "../../config/buildProfile.js";
+import { CardReworkP4Scaled } from "../cards/CardReworkP4.jsx";
 
 // Nomi effetti per filtro (italiano)
 const EFFECT_NAMES = {
@@ -228,10 +228,8 @@ const CatalogCardRow = ({ card, inDeck, onToggle, disabled, bgPositions }) => {
       <div style={{ flexShrink: 0 }}>
         <StatBadge label="LEGA" value={card.league} color={LEAGUE_COLORS[card.league] || PALETTE.slate} compact />
       </div>
-      <div style={{ width: 88, height: 128, flexShrink: 0, overflow: "hidden", borderRadius: 8, border: `1px solid ${PALETTE.slate}` }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ transform: "scale(0.611)", transformOrigin: "top left", width: 144, height: 208 }}>
-          <HandCard agent={card} disabled={true} />
-        </div>
+      <div style={{ width: 88, height: 128, flexShrink: 0, overflow: "hidden", borderRadius: 8, border: `1px solid ${PALETTE.slate}` }}>
+        <CardReworkP4Scaled agent={card} width={88} catalogPreview suppressAnimations />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 16, fontWeight: 600, color: inDeck ? PALETTE.textPrimary : PALETTE.textSecondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</div>

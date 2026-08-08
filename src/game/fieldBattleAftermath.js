@@ -263,6 +263,22 @@ export function applyBattlefieldRoundAftermath({
     }
   }
 
+  // Viale delle Delegazioni (119): se FC totali investiti > 10, entrambi +1 FC
+  if (field.id === 119) {
+    const totalFocus = (pFocusUsed || 0) + (eFocusUsed || 0);
+    if (totalFocus > 10) {
+      const pBefore = pFC;
+      const eBefore = eFC;
+      pFC += 1;
+      eFC += 1;
+      battleLog.push(
+        `🎭 Viale delle Delegazioni: FC totali ${totalFocus} > 10 · entrambi +1 FC (Tu ${pBefore}→${pFC} | IA ${eBefore}→${eFC})`
+      );
+    } else {
+      battleLog.push(`🎭 Viale delle Delegazioni: FC totali ${totalFocus} ≤ 10 · nessun recupero`);
+    }
+  }
+
   // Terme di Karsil (103): vincitore cura 2 PV
   if (field.id === 103) {
     if (winner === 'player') {

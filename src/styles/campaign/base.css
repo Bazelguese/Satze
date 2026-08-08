@@ -1,0 +1,81 @@
+/* Satze Design System — Base globale.
+ * DIREZIONE BRAND (rebrand 2026): monocromo sporco "inchiostro" + Luce pura primaria.
+ *   Sfondo in grigi con grana fitta (niente sfondo cosmico viola). Glow = luce bianca.
+ *   Accenti secondari magenta/cobalto vivono nei token (colors_and_type.css).
+ */
+
+/* ─────────── Reset (index.css) ─────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ─────────── Body / sfondo cosmico reale (index.css body) ─────────── */
+body {
+  font-family: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0e0e0f;
+  background-image:
+    radial-gradient(ellipse 120% 85% at 30% -12%, rgba(245,243,236,0.05), transparent 52%),
+    radial-gradient(ellipse 90% 70% at 88% 4%, rgba(245,243,236,0.03), transparent 48%),
+    radial-gradient(ellipse 80% 60% at 50% 108%, rgba(0,0,0,0.7), transparent 54%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  color: #ece9e2;
+  overflow-x: hidden;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+/* Sfondo "inchiostro" a strati riusabile (ex satze-cosmic-bg) —
+ * per LoadingScreen, pagine tool, qualunque superficie full-bleed. */
+.satze-cosmic-bg {
+  background:
+    radial-gradient(ellipse 90% 55% at 40% 32%, rgba(245,243,236,0.06) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 45% at 80% 26%, rgba(245,243,236,0.035) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 42% at 50% 100%, rgba(0,0,0,0.85) 0%, transparent 52%),
+    linear-gradient(180deg, #0e0e0f 0%, #161617 55%, #070707 100%);
+}
+
+/* ─────────── Button defaults (index.css button) ─────────── */
+button {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* ─────────── Numeri tabulari (index.css .font-mono) ─────────── */
+.satze-tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* ─────────── Pannello campo di battaglia ─────────── */
+.satze-battlefield-panel {
+  background: rgba(22, 22, 24, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 243, 236, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.satze-battlefield-panel:hover {
+  border-color: rgba(245, 243, 236, 0.34);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ─────────── Esito duello: testo bordato + risultati (index.css) ─────────── */
+.satze-outcome-text-border {
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.95);
+  paint-order: stroke fill;
+}
+.satze-va-number {
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.9);
+  paint-order: stroke fill;
+  text-shadow:
+    1px 1px 0 rgba(0,0,0,.95), -1px -1px 0 rgba(0,0,0,.95),
+    1px -1px 0 rgba(0,0,0,.95), -1px 1px 0 rgba(0,0,0,.95);
+}
+.satze-result-victory { color: #f5f3ec; text-shadow: 0 0 20px rgba(245,243,236,.6), 0 0 8px rgba(245,243,236,.35); }
+.satze-result-defeat  { color: #e8189a; text-shadow: 0 0 15px rgba(232,24,154,.5); }
+
+/* ─────────── Glow pulse (index.css .animate-glow-pulse) ─────────── */
+@keyframes satzeGlowPulse { 0%,100% { box-shadow: 0 0 10px rgba(245,243,236,.5); } 50% { box-shadow: 0 0 30px rgba(245,243,236,.85); } }
+.satze-glow-pulse { animation: satzeGlowPulse 2s ease-in-out infinite; }

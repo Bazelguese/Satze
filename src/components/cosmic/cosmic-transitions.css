@@ -1,109 +1,111 @@
-/* Cosmic flow transition keyframes & helpers */
-
-@keyframes p5-slide-in { from { opacity: 0; transform: translateX(40px) skewX(-12deg) } to { opacity: 1; transform: translateX(0) skewX(-12deg) } }
+/* Cosmic flow transition — cover 280ms + uncover lungo e morbido */
 
 .cosmic-stage { position: absolute; inset: 0; }
 .cosmic-scene { position: absolute; inset: 0; }
 
-/* ============================================================
-   TRANSITION TIMELINE (total ~720ms)
-   0       — click pulse
-   0–280   — phase A: outgoing scene exits + sweep covers 100%
-   280–320 — peak: full magenta cortina, scene-swap happens
-   320–720 — phase B: sweep retreats revealing the NEW scene
-   ============================================================ */
-
 @keyframes sweep-cover {
-  from { transform: skewX(-22deg) translateX(-140%); }
-  to   { transform: skewX(-22deg) translateX(0%); }
+  from { transform: skewX(-22deg) translate3d(-140%, 0, 0); }
+  to   { transform: skewX(-22deg) translate3d(0, 0, 0); }
 }
 @keyframes sweep-uncover {
-  from { transform: skewX(-22deg) translateX(0%); }
-  to   { transform: skewX(-22deg) translateX(140%); }
+  from { transform: skewX(-22deg) translate3d(0, 0, 0); }
+  to   { transform: skewX(-22deg) translate3d(145%, 0, 0); }
 }
+
 .sweep-panel {
   position: absolute; top: -10%; bottom: -10%; width: 75vw;
-  transform: skewX(-22deg) translateX(-140%);
+  transform: skewX(-22deg) translate3d(-140%, 0, 0);
   pointer-events: none;
   will-change: transform;
+  backface-visibility: hidden;
 }
 .sweep-panel--a {
   left: -25vw;
   background: linear-gradient(90deg, #ec4899 0%, #c026d3 100%);
-  box-shadow: 0 0 80px rgba(192,38,211,0.9);
-  animation: sweep-cover 0.28s cubic-bezier(0.5,0,0.2,1) forwards,
-             sweep-uncover 0.4s 0.32s cubic-bezier(0.6,0,0.3,1) forwards;
+  box-shadow: 0 0 64px rgba(192,38,211,0.75);
+  animation: sweep-cover 0.28s cubic-bezier(0.5, 0, 0.2, 1) forwards,
+             sweep-uncover 0.48s 0.3s cubic-bezier(0.22, 0.82, 0.18, 1) forwards;
 }
 .sweep-panel--b {
-  left:  25vw;
+  left: 25vw;
   background: linear-gradient(90deg, #c026d3 0%, #581c87 100%);
-  animation: sweep-cover 0.28s 0.04s cubic-bezier(0.5,0,0.2,1) forwards,
-             sweep-uncover 0.4s 0.36s cubic-bezier(0.6,0,0.3,1) forwards;
+  animation: sweep-cover 0.28s 0.04s cubic-bezier(0.5, 0, 0.2, 1) forwards,
+             sweep-uncover 0.48s 0.34s cubic-bezier(0.22, 0.82, 0.18, 1) forwards;
 }
 
-/* Outgoing scene */
-@keyframes scene-exit {
-  0%   { transform: scale(1) translateX(0); opacity: 1; filter: blur(0) brightness(1); }
-  100% { transform: scale(0.94) translateX(-30px); opacity: 0; filter: blur(6px) brightness(1.4); }
+.cosmic-transition--lite .sweep-panel--a {
+  animation: sweep-cover 0.28s cubic-bezier(0.5, 0, 0.2, 1) forwards,
+             sweep-uncover 0.48s 0.3s cubic-bezier(0.22, 0.82, 0.18, 1) forwards;
 }
-.cosmic-scene--exit { animation: scene-exit 0.28s cubic-bezier(0.6,0,0.8,0.2) forwards; }
+.cosmic-transition--lite .sweep-panel--b {
+  animation: sweep-cover 0.28s 0.04s cubic-bezier(0.5, 0, 0.2, 1) forwards,
+             sweep-uncover 0.48s 0.34s cubic-bezier(0.22, 0.82, 0.18, 1) forwards;
+}
 
-/* Incoming scene */
-@keyframes scene-enter {
-  0%   { opacity: 0; transform: scale(1.04); filter: blur(8px) brightness(1.3); }
-  100% { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
+.cosmic-scene--outgoing {
+  visibility: hidden;
+  pointer-events: none;
 }
-.cosmic-scene--enter {
+.cosmic-scene--under-curtain {
+  visibility: visible;
+  opacity: 1;
+}
+
+.cosmic-transition-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.satze-cosmic-transition-mount {
+  transform: translateZ(0);
+  opacity: 1;
+  transition: opacity 0.16s cubic-bezier(0.33, 1, 0.32, 1);
+}
+.satze-cosmic-transition-mount--out {
   opacity: 0;
-  animation: scene-enter 0.36s 0.28s cubic-bezier(0.2,0.7,0.2,1) forwards;
 }
 
-/* Black backdrop at peak so old/new scenes never bleed */
 .stage-backdrop {
   position: absolute; inset: 0; z-index: 90;
   background: #06030a;
   opacity: 0;
   pointer-events: none;
-  animation: backdrop-veil 0.72s ease-out forwards;
+  animation: backdrop-veil 0.82s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.stage-backdrop--lite {
+  animation-duration: 0.82s;
 }
 @keyframes backdrop-veil {
   0%   { opacity: 0; }
-  35%  { opacity: 1; }
-  65%  { opacity: 1; }
+  28%  { opacity: 1; }
+  52%  { opacity: 1; }
   100% { opacity: 0; }
 }
 
-/* Flash + scan lines */
-@keyframes flash-bloom {
-  0% { opacity: 0; }
-  30% { opacity: 1; }
+.transition-opaque-plate {
+  position: absolute;
+  inset: 0;
+  background: #06030a;
+  opacity: 0;
+  pointer-events: none;
+  animation: opaque-plate 0.82s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.cosmic-transition--lite .transition-opaque-plate {
+  animation-duration: 0.82s;
+}
+@keyframes opaque-plate {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  48%  { opacity: 1; }
   100% { opacity: 0; }
 }
-.flash-bloom {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, rgba(236,72,153,0.85) 0%, rgba(192,38,211,0.4) 30%, transparent 70%);
-  animation: flash-bloom 0.5s ease-out;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-@keyframes glitch-line {
-  0%   { transform: translateY(0); opacity: 0.0 }
-  20%  { opacity: 0.9 }
-  100% { transform: translateY(120vh); opacity: 0 }
-}
-.glitch-line {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, #ec4899, #c026d3, transparent);
-  box-shadow: 0 0 18px #ec4899;
-  animation: glitch-line 0.5s ease-out;
-  pointer-events: none;
-}
 
-/* Loading flash text — visible only at peak */
 @keyframes load-text-fade {
   0%   { opacity: 0; letter-spacing: 0.2em; }
-  40%  { opacity: 1; letter-spacing: 0.5em; }
-  70%  { opacity: 1; letter-spacing: 0.55em; }
+  35%  { opacity: 1; letter-spacing: 0.5em; }
+  65%  { opacity: 1; letter-spacing: 0.55em; }
   100% { opacity: 0; letter-spacing: 0.6em; }
 }
 .load-text {
@@ -111,7 +113,7 @@
   font-family: 'Cinzel', serif; font-weight: 900;
   font-size: 56px; letter-spacing: 0.5em;
   color: #06030a; text-shadow: 2px 2px 0 #f5f3eb;
-  animation: load-text-fade 0.65s 0.05s ease-out;
+  animation: load-text-fade 0.7s 0.05s ease-out;
   pointer-events: none; white-space: nowrap;
 }
 .load-sub {
@@ -119,28 +121,16 @@
   font-family: 'Share Tech Mono', monospace;
   font-size: 12px; letter-spacing: 0.5em;
   color: #06030a; opacity: 0;
-  animation: load-text-fade 0.65s 0.1s ease-out;
+  animation: load-text-fade 0.7s 0.1s ease-out;
   pointer-events: none; white-space: nowrap;
 }
 
-/* ============================================================
-   VARIANTE "DUELLO" — confine tra i due mondi visivi.
-   Entrando nel mondo duello (Cyber HUD) la cortina vira al
-   ciano/blu notte con dettagli oro, invece del magenta cosmic.
-   ============================================================ */
 .cosmic-transition--duel .sweep-panel--a {
   background: linear-gradient(90deg, #38bdf8 0%, #0891b2 100%);
-  box-shadow: 0 0 80px rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 64px rgba(56, 189, 248, 0.75);
 }
 .cosmic-transition--duel .sweep-panel--b {
   background: linear-gradient(90deg, #0891b2 0%, #0a1628 100%);
-}
-.cosmic-transition--duel .flash-bloom {
-  background: radial-gradient(ellipse at center, rgba(56,189,248,0.85) 0%, rgba(8,145,178,0.4) 30%, transparent 70%);
-}
-.cosmic-transition--duel .glitch-line {
-  background: linear-gradient(90deg, transparent, #38bdf8, #D4A847, transparent);
-  box-shadow: 0 0 18px #38bdf8;
 }
 .cosmic-transition--duel .load-text {
   color: #0a0e1a;

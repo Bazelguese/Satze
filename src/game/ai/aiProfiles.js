@@ -73,8 +73,9 @@ export const AI_PROFILES = {
     opponentScenarioCount: 4,
     ownVariantsPerCard: 3,
     allowMaxFocusScenario: false,
-    overinvestmentLinearPenalty: 90,
-    overinvestmentQuadraticPenalty: 45,
+    overinvestmentLinearPenalty: 100,
+    overinvestmentQuadraticPenalty: 50,
+    exactFocusSoftExtra: 1,
 
     opponentScenarioWeights: {
       economical: 0.2,
@@ -109,15 +110,17 @@ export const AI_PROFILES = {
     exactFocusEndgameCards: 2,
     exactFocusHpThreshold: 6,
 
-    standardFocusBuffer: 2,
-    ordinaryFocusBuffer: 3,
-    earlyPoolShareCap: 0.5,
+    standardFocusBuffer: 1,
+    ordinaryFocusBuffer: 2,
+    earlyPoolShareCap: 0.4,
     riskWeight: 0.35,
     opponentScenarioCount: 6,
     ownVariantsPerCard: 4,
     allowMaxFocusScenario: true,
-    overinvestmentLinearPenalty: 70,
-    overinvestmentQuadraticPenalty: 30,
+    overinvestmentLinearPenalty: 110,
+    overinvestmentQuadraticPenalty: 55,
+    /** In risposta/critico: quanti FC sopra il cap ordinario si possono ancora valutare */
+    exactFocusSoftExtra: 1,
 
     opponentScenarioWeights: {
       economical: 0.15,

@@ -22,6 +22,7 @@ import { scoreActionWithStrategicProjection } from './strategicScore.js';
 import { buildStrategicState } from './strategicState.js';
 import { strategicEvalWeight } from './evaluateStrategicState.js';
 import { evaluateActionWithSearch, resolveSearchDepth } from './searchGameTree.js';
+import { aiYieldIfNeeded, resetAiSchedulerTicks } from './aiScheduler.js';
 
 export { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 
@@ -217,6 +218,7 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
         transpositionTable,
         stats: searchStats,
         scenarios,
+        maxNodes: options.maxSearchNodes ?? 12000,
       });
       const weight = Math.min(0.85, strategicEvalWeight(profile) + 0.25);
       finalScore = agg.finalScore * (1 - weight) + searched.score * weight;
@@ -294,4 +296,14 @@ export function chooseWhenAILeads(context, profile, options = {}) {
  */
 export function chooseAIAction(context, difficulty, options = {}) {
   return chooseAIIndependentAction(context, difficulty, options);
+}
+
+export async function chooseAIIndependentActionAsync(context, difficulty, options = {}) {
+  resetAiSchedulerTicks();
+  await aiYieldIfNeeded({ force: true });
+  return chooseAIIndependentAction(context, difficulty, options);
+}
+
+export async function chooseAIActionAsync(context, difficulty, options = {}) {
+  return chooseAIIndependentActionAsync(context, difficulty, options);
 }

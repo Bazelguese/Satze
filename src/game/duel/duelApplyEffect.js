@@ -108,6 +108,8 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     modifiersDisabled: modDisabled = false,
     positivePowerModifiersDisabled = false,
     positiveDamageModifiersDisabled = false,
+    toxinDisabled = false,
+    swapCopyImponi = false,
     directDamageDisabled = false,
     directDamageBonus = 0,
     minFloorReduction = 0,
@@ -115,6 +117,31 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
 
   const targetName = target === 'player' ? 'TU' : 'IA';
   const enemyName = target === 'player' ? 'IA' : 'TU';
+
+  if (swapCopyImponi) {
+    const swapMap = {
+      copyPower: 'imponiPower',
+      imponiPower: 'copyPower',
+      copyDamage: 'imponiDamage',
+      imponiDamage: 'copyDamage',
+    };
+    if (swapMap[effect]) {
+      return applyDuelPowerEffect(swapMap[effect], value, target, source, log, { ...options, swapCopyImponi: false }, state, ctx);
+    }
+  }
+
+  if (toxinDisabled && effect === 'toxin') {
+    pushLog(log, `${source}: Tossina BLOCCATA da Anello di Kintaba`);
+    if (hasEmitter(log)) {
+      emitBlock(log, {
+        source: makeSource({ kind: 'field', id: 115, name: 'Anello di Kintaba', ownerSide: null }),
+        target: agentTarget(target, ctx),
+        blockedEffect: { kind: 'ability', sourceId: source, effectType: effect },
+        blockedBy: 'toxinDisabled',
+      });
+    }
+    return;
+  }
 
   if (
     modDisabled &&

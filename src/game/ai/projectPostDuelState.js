@@ -18,7 +18,7 @@ function resolveTerminalFromProjected(state) {
   // Il duello appena risolto era al round precedente; i Campi contano subito.
   const duelRound = Math.max(1, round - 1);
   const territorialAllowed =
-    mode === 'bareHands' || (mode === 'classic' && duelRound < AI_SUPREMACY_ROUND);
+    (mode === 'bareHands' || mode === 'classic') && duelRound < AI_SUPREMACY_ROUND;
 
   if (territorialAllowed) {
     if (state.enemyFieldsConquered >= AI_FIELDS_TO_WIN) return 'ai_win_fields';

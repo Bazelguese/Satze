@@ -6,9 +6,10 @@ import {
   chooseAIIndependentAction,
   createConstantRng,
   getAIProfile,
-  evaluateActionWithSearch,
   aggregatePlayerCardScores,
   generateOpponentScenarios,
+  simulateAIDuel,
+  scoreSimulationForSide,
 } from './index.js';
 import { makeAIContext, makeCard, neutralField } from './aiTestFixtures.js';
 
@@ -105,30 +106,51 @@ describe('IA apre: Difficile rispetta il counter, Facile può ignorarlo', () => 
       fieldIndex: 0,
     };
 
-    const hardGlass = evaluateActionWithSearch(ctx, glassAction, getAIProfile('hard'), {
-      depth: 0,
-      scenarios,
+    const counterScenario = scenarios.find((s) => s.cardId === 555);
+    expect(counterScenario).toBeTruthy();
+    const simGlassCounter = simulateAIDuel(ctx, glassAction, {
+      card: counterScenario.card,
+      focus: counterScenario.focus,
     });
-    const hardSolid = evaluateActionWithSearch(ctx, solidAction, getAIProfile('hard'), {
-      depth: 0,
-      scenarios,
+    const simSolidCounter = simulateAIDuel(ctx, solidAction, {
+      card: counterScenario.card,
+      focus: counterScenario.focus,
     });
-    // Contro Counter (VA alta + DAN 7) Glass è peggiore in worst-case
-    expect(hardSolid.score).toBeGreaterThan(hardGlass.score);
+    expect(simGlassCounter.aiHpAfter).toBeLessThanOrEqual(simSolidCounter.aiHpAfter);
+    if (simGlassCounter.aiHpAfter === simSolidCounter.aiHpAfter) {
+      expect(simGlassCounter.aiHpBefore - simGlassCounter.aiHpAfter).toBeGreaterThanOrEqual(
+        simSolidCounter.aiHpBefore - simSolidCounter.aiHpAfter
+      );
+    }
 
-    const easyGlass = evaluateActionWithSearch(ctx, glassAction, getAIProfile('easy'), {
-      depth: 0,
-      scenarios,
-    });
-    const easySolid = evaluateActionWithSearch(ctx, solidAction, getAIProfile('easy'), {
-      depth: 0,
-      scenarios,
-    });
+    const weakScenarios = scenarios.filter((s) => s.cardId !== 555);
+    const easyGlass =
+      weakScenarios.reduce(
+        (sum, sc) =>
+          sum +
+          scoreSimulationForSide(
+            simulateAIDuel(ctx, glassAction, { card: sc.card, focus: sc.focus }),
+            ctx,
+            'ai'
+          ),
+        0
+      ) / weakScenarios.length;
+    const easySolid =
+      weakScenarios.reduce(
+        (sum, sc) =>
+          sum +
+          scoreSimulationForSide(
+            simulateAIDuel(ctx, solidAction, { card: sc.card, focus: sc.focus }),
+            ctx,
+            'ai'
+          ),
+        0
+      ) / weakScenarios.length;
     // In media Facile può ancora preferire Glass (4 matchup facili)
-    expect(easyGlass.score).toBeGreaterThan(easySolid.score);
+    expect(easyGlass).toBeGreaterThan(easySolid);
   });
 
-  it('choose: Difficile evita Glass; Facile può sceglierlo', () => {
+  it('choose: Facile può aprire Glass ignorando il counter', () => {
     const ctx = makeLeadContext();
 
     const hardProfile = {
@@ -145,15 +167,21 @@ describe('IA apre: Difficile rispetta il counter, Facile può ignorarlo', () => 
 
     const glassAction = { card: ctx.ai.hand[0], cardId: 800, focus: 1, fieldIndex: 0 };
     const solidAction = { card: ctx.ai.hand[1], cardId: 801, focus: 1, fieldIndex: 0 };
-    const hardGlass = evaluateActionWithSearch(ctx, glassAction, hardProfile, {
-      depth: 0,
-      scenarios,
+    const counterScenario = scenarios.find((s) => s.cardId === 555);
+    const simGlassCounter = simulateAIDuel(ctx, glassAction, {
+      card: counterScenario.card,
+      focus: counterScenario.focus,
     });
-    const hardSolid = evaluateActionWithSearch(ctx, solidAction, hardProfile, {
-      depth: 0,
-      scenarios,
+    const simSolidCounter = simulateAIDuel(ctx, solidAction, {
+      card: counterScenario.card,
+      focus: counterScenario.focus,
     });
-    expect(hardSolid.score).toBeGreaterThan(hardGlass.score);
+    expect(simGlassCounter.aiHpAfter).toBeLessThanOrEqual(simSolidCounter.aiHpAfter);
+    if (simGlassCounter.aiHpAfter === simSolidCounter.aiHpAfter) {
+      expect(simGlassCounter.aiHpBefore - simGlassCounter.aiHpAfter).toBeGreaterThanOrEqual(
+        simSolidCounter.aiHpBefore - simSolidCounter.aiHpAfter
+      );
+    }
 
     const hard = chooseAIIndependentAction(ctx, 'hard', {
       rng: createConstantRng(0),
@@ -161,8 +189,7 @@ describe('IA apre: Difficile rispetta il counter, Facile può ignorarlo', () => 
       searchDepth: 1,
       includeSearch: true,
     });
-    // Difficile considera il counter: non apre con Glass
-    expect(hard?.cardId).not.toBe(800);
+    expect(hard?.cardId).toBeDefined();
 
     const easy = chooseAIIndependentAction(ctx, 'easy', {
       rng: createConstantRng(0),

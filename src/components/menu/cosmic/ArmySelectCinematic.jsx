@@ -23,14 +23,13 @@ import {
 } from '../../../data/armies.js';
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
-
 // ------------------------------------------------------------
 // Adapter: traduce i dati reali del gioco nel formato usato dal V3
 // ------------------------------------------------------------
 function buildArmies() {
   const list = [];
 
-  // Voce speciale "Eserciti Personalizzati" (multi-armata)
+  // Voce speciale "Eserciti Personalizzati" (tutti i mazzi creati dall'utente)
   list.push({
     id: 'mixed',
     name: 'Eserciti Personalizzati',
@@ -99,9 +98,15 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const rafRef = React.useRef(null);
   const queuedCursorRef = React.useRef({ x: 0, y: 0 });
   const lastCursorRef = React.useRef({ x: 0, y: 0 });
+  const wheelLockRef = React.useRef(0);
+  const phaseRef = React.useRef(phase);
+  const idxRef = React.useRef(idx);
+  const goRef = React.useRef(null);
 
   const total = ARMIES.length;
   const army = ARMIES[idx];
+  phaseRef.current = phase;
+  idxRef.current = idx;
 
   const updateCursor = useCallback((e) => {
     const w = window.innerWidth || 1;
@@ -130,22 +135,28 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     return () => clearTimeout(t);
   }, []);
 
-  const go = (delta) => {
-    setPrevIdx(idx);
+  const go = useCallback((delta) => {
+    const current = idxRef.current;
+    const next = (current + delta + total) % total;
+    setPrevIdx(current);
     setDirection(delta);
-    setIdx((idx + delta + total) % total);
+    setIdx(next);
     setAudioPulse((p) => p + 1);
-  };
-  const goTo = (i) => {
-    if (i === idx) return;
-    setPrevIdx(idx);
-    setDirection(i > idx ? 1 : -1);
+  }, [total]);
+
+  const goTo = useCallback((i) => {
+    const current = idxRef.current;
+    if (i === current) return;
+    setPrevIdx(current);
+    setDirection(i > current ? 1 : -1);
     setIdx(i);
     setAudioPulse((p) => p + 1);
-  };
+  }, []);
 
-  const confirmArmy = () => {
-    if (phase !== 'idle') return;
+  goRef.current = go;
+
+  const confirmArmy = useCallback(() => {
+    if (phaseRef.current !== 'idle') return;
     setPhase('confirming');
     setTimeout(() => {
       requestAnimationFrame(() => {
@@ -154,12 +165,12 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
         });
       });
     }, 1660);
-  };
+  }, [army.isMixed, army.name, onSelect]);
 
   // Keyboard
   useEffect(() => {
     const onKey = (e) => {
-      if (phase !== 'idle') return;
+      if (phaseRef.current !== 'idle') return;
       if (e.key === 'ArrowLeft') go(-1);
       if (e.key === 'ArrowRight') go(1);
       if (e.key === 'Enter') confirmArmy();
@@ -167,7 +178,41 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, onBack, go, confirmArmy]);
+  }, [onBack, go, confirmArmy]);
+
+  // Scroll / trackpad: scorre tra le armate
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      if (phaseRef.current !== 'idle') return;
+
+      const scrollable = e.target?.closest?.(
+        '.v3c-side-synopsis, .v3c-side-tech-body, .v3c-ticker-named'
+      );
+      if (scrollable && scrollable.scrollHeight > scrollable.clientHeight + 1) {
+        return;
+      }
+      if (scrollable?.classList?.contains('v3c-ticker-named')
+        && scrollable.scrollWidth > scrollable.clientWidth + 1) {
+        // ticker: scroll orizzontale nativo se serve; altrimenti naviga
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) return;
+      }
+
+      const dominant = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(dominant) < 6) return;
+
+      e.preventDefault();
+      const now = performance.now();
+      if (now - wheelLockRef.current < 260) return;
+      wheelLockRef.current = now;
+      goRef.current?.(dominant > 0 ? 1 : -1);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   // Cleanup rAF cursor scheduler
   useEffect(() => {
@@ -236,7 +281,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       </div>
 
       {/* Detail panel: lore + stats + bonus + confirm */}
-      <DetailPanel army={army} key={`d-${idx}`} onConfirm={confirmArmy}/>
+      <DetailPanel army={army} onConfirm={confirmArmy}/>
 
       {/* Ticker bottom */}
       <Ticker armies={ARMIES} idx={idx} onSelect={goTo}/>
@@ -421,12 +466,32 @@ function DetailPanel({ army, onConfirm }) {
 }
 
 function Ticker({ armies, idx, onSelect }) {
+  const railRef = React.useRef(null);
+  const activeRef = React.useRef(null);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    const active = activeRef.current;
+    if (!rail || !active) return;
+    const railRect = rail.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const delta =
+      activeRect.left + activeRect.width / 2 - (railRect.left + railRect.width / 2);
+    rail.scrollBy({ left: delta, behavior: 'smooth' });
+  }, [idx]);
+
   return (
-    <div className="v3c-ticker-named">
+    <div className="v3c-ticker-named" ref={railRef}>
       {armies.map((a, i) => {
         const active = i === idx;
         return (
-          <button key={a.id} className={`tkn ${active ? 'on' : ''}`} onClick={() => onSelect(i)} style={{ '--c': a.color }}>
+          <button
+            key={a.id}
+            ref={active ? activeRef : null}
+            className={`tkn ${active ? 'on' : ''}`}
+            onClick={() => onSelect(i)}
+            style={{ '--c': a.color }}
+          >
             <span className="num">{String(i+1).padStart(2,'0')}</span>
             <span className="nm">{a.name}</span>
           </button>
@@ -827,17 +892,21 @@ function V3CinematicStyles() {
         box-shadow:
           0 30px 80px rgba(0,0,0,0.5),
           inset 0 1px 0 rgba(255,255,255,0.06);
-        animation: v3c-panel-in .6s cubic-bezier(.2,.7,.2,1);
         overflow: hidden;
         display: flex;
         flex-direction: column;
       }
+      .v3c.phase-intro .v3c-side-inner {
+        animation: v3c-panel-in .6s cubic-bezier(.2,.7,.2,1);
+      }
       .v3c-side-l .v3c-side-inner {
+        --panel-ry: 14deg;
         transform: rotateY(14deg);
         transform-origin: left center;
         border-left: 2px solid var(--accent);
       }
       .v3c-side-r .v3c-side-inner {
+        --panel-ry: -14deg;
         transform: rotateY(-14deg);
         transform-origin: right center;
         border-right: 2px solid var(--accent);
@@ -849,7 +918,10 @@ function V3CinematicStyles() {
         background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 60%);
         pointer-events: none;
       }
-      @keyframes v3c-panel-in { from { opacity: 0; transform: translateY(8px); } }
+      @keyframes v3c-panel-in {
+        from { opacity: 0; transform: translateY(8px) rotateY(var(--panel-ry, 0deg)); }
+        to { opacity: 1; transform: translateY(0) rotateY(var(--panel-ry, 0deg)); }
+      }
 
       .v3c-side-eye {
         font-family: 'Share Tech Mono', monospace;
@@ -939,10 +1011,19 @@ function V3CinematicStyles() {
         background: rgba(0,0,0,0.45);
         backdrop-filter: blur(6px);
         border: 1px solid rgba(255,255,255,0.08);
-        flex-wrap: wrap;
-        max-width: 90vw;
-        justify-content: center;
+        flex-wrap: nowrap;
+        max-width: min(90vw, 1100px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--accent) 50%, transparent) transparent;
       }
+      .v3c-ticker-named::-webkit-scrollbar { height: 4px; }
+      .v3c-ticker-named::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--accent) 45%, transparent);
+      }
+      .v3c-ticker-named .tkn { flex: 0 0 auto; }
       .tkn {
         background: transparent; border: 1px solid transparent;
         cursor: pointer;

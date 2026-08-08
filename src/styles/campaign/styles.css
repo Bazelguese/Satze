@@ -1,0 +1,10 @@
+/* Satze Design System — root stylesheet.
+ *
+ * Single entry point for consumers: link THIS file and you get the whole
+ * token system (colors, type scale, spacing, radii, shadows, easing,
+ * z-index) plus the Google Fonts import and the semantic .ds-* classes,
+ * AND the real game base (cosmic background, body/button defaults, panel
+ * + outcome primitives) lifted verbatim from Bazelguese/Satze src/index.css.
+ */
+@import url('colors_and_type.css');
+@import url('base.css');

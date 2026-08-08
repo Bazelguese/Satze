@@ -18,6 +18,8 @@ import {
 import { DUEL_CLASH_START_OFFSET_PX } from '../../config/duelClashLayout.js';
 import { DUEL_ACCENTS } from '../../theme/duelAccents.js';
 import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
+import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
+import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 
 /** Armata con bonus in dati ma regola mazzo non soddisfatta (non trigger, non copia, non blocco). */
 function duelBonusBaseInactive(agent, hasBonus, bonusNotTriggered, bonusBlocked, bonusCopied) {
@@ -389,6 +391,9 @@ export function DuelResultEnemyResultBody({
     () => (particleCount > 0 ? vaParticleOffsets(particleSeed, particleCount) : []),
     [particleSeed, particleCount]
   );
+  const showPerfect =
+    duelPhase >= 4 &&
+    (battleResult.perfectFocusSide ?? getPerfectFocusSide(battleResult)) === 'enemy';
 
   return (
     <div className="relative w-full h-full flex flex-col items-center">
@@ -463,6 +468,7 @@ export function DuelResultEnemyResultBody({
             bonusNotTriggered={display.showEnemyBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
           />
+          <PerfectFocusStamp active={showPerfect} side="enemy" />
           <FocusCoinOrbitCountRing
             duelPhase={duelPhase}
             focusUsed={battleResult.enemyFocusUsed}
@@ -578,6 +584,9 @@ export function DuelResultPlayerResultBody({
     () => (particleCount > 0 ? vaParticleOffsets(particleSeed, particleCount) : []),
     [particleSeed, particleCount]
   );
+  const showPerfect =
+    duelPhase >= 4 &&
+    (battleResult.perfectFocusSide ?? getPerfectFocusSide(battleResult)) === 'player';
 
   return (
     <div className="relative w-full h-full flex flex-col items-center pointer-events-auto">
@@ -652,6 +661,7 @@ export function DuelResultPlayerResultBody({
             bonusNotTriggered={display.showPlayerBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}
           />
+          <PerfectFocusStamp active={showPerfect} side="player" />
           <FocusCoinOrbitCountRing
             duelPhase={duelPhase}
             focusUsed={battleResult.playerFocusUsed}

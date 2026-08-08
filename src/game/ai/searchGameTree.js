@@ -204,7 +204,12 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
     return { score: leafScore(rootState, profile), stats, depth };
   }
 
-  // Focus dentro la carta; tra carte: aggregatePlayerCardScores (Hard = peggiore)
+  const maxNodes = options.maxNodes ?? 12000;
+  if (stats.nodes >= maxNodes) {
+    return { score: leafScore(rootState, profile), stats, depth };
+  }
+
+  const searchCtx = { duelCache, tt, stats, maxNodes };
   const byCard = groupScenariosByCardId(scenarios);
   const cardScores = [];
   for (const [cardId, cardScenarios] of byCard) {
@@ -230,7 +235,7 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
       if (projected.terminalStatus || depth <= 0) {
         childScore = leafScore(projected, profile);
       } else {
-        childScore = valueState(projected, depth, profile, { duelCache, tt, stats });
+        childScore = valueState(projected, depth, profile, searchCtx);
       }
       values.push(childScore);
       const share = scenario.focusShare ?? scenario.probability ?? 0;
@@ -258,7 +263,8 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
     action.focus,
     budget.standardFocus,
     profile,
-    context.roundNumber
+    context.roundNumber,
+    budget.cardsRemaining
   );
 
   return { score, stats, depth };
@@ -268,6 +274,9 @@ export function evaluateActionWithSearch(context, action, profile, options = {})
  * Valore di uno stato in cui sta per iniziare un nuovo round (depth >= 1).
  */
 function valueState(state, depth, profile, ctx) {
+  if (ctx.stats.nodes >= (ctx.maxNodes ?? 12000)) {
+    return leafScore(state, profile);
+  }
   if (state.terminalStatus) {
     return leafScore(state, profile);
   }

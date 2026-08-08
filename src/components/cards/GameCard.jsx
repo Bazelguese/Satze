@@ -83,16 +83,21 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
     ? `satze-field-overdrive-card satze-card-overdrive-preview${overdriveVariant === 'prism-halo' ? ' satze-card-overdrive-preview--prism-halo' : ''}`
     : '';
 
+  const canDrag = Boolean(onDragStart && !disabled && !isUsed);
+  const canHot = Boolean(!canDrag && ((onClick && !disabled && !isUsed) || onHover));
+
   return (
     <div
       onClick={handleClick}
       onMouseDown={handleMouseDown}
+      data-drag={canDrag ? 'true' : undefined}
+      data-hot={canHot ? 'true' : undefined}
       className={`inline-block select-none ${selected ? 'rounded-[14px] ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''} ${isDragging ? 'opacity-40 scale-95 transition-transform' : ''} ${disabled || isUsed ? 'opacity-90' : ''}`}
       style={{
         cursor:
           disabled && !onHover
             ? 'not-allowed'
-            : onDragStart && !disabled && !isUsed
+            : canDrag
               ? 'grab'
               : 'pointer',
       }}

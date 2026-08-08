@@ -14,6 +14,8 @@ import {
 } from '../../config/duelClashLayout.js';
 import { getFocusCoinGlowColor } from '../../utils/focusCoinGlow';
 import { DUEL_ACCENTS, getArmyAccent } from '../../theme/duelAccents.js';
+import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
+import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
@@ -783,6 +785,8 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
   enemyClashAnchor,
   playerWrapRef,
   enemyWrapRef,
+  showPerfectPlayer = false,
+  showPerfectEnemy = false,
 }) {
   return (
     <>
@@ -796,6 +800,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           borderRadius: '0.75rem',
           willChange: 'transform, opacity, filter',
           pointerEvents: 'none',
+          overflow: 'visible',
         }}
       >
         <GameCard
@@ -827,6 +832,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           bonusNotTriggered={display.showPlayerBonusNotTriggered}
           suppressAnimations
         />
+        <PerfectFocusStamp active={showPerfectPlayer} side="player" compact holdMs={1500} />
       </div>
       <div
         ref={enemyWrapRef}
@@ -838,6 +844,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           borderRadius: '0.75rem',
           willChange: 'transform, opacity, filter',
           pointerEvents: 'none',
+          overflow: 'visible',
         }}
       >
         <GameCard
@@ -869,6 +876,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           bonusNotTriggered={display.showEnemyBonusNotTriggered}
           suppressAnimations
         />
+        <PerfectFocusStamp active={showPerfectEnemy} side="enemy" compact holdMs={1500} />
       </div>
     </>
   );
@@ -909,6 +917,8 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectSte
   if (!battleResult || !active) return null;
 
   const winner = battleResult.winner;
+  const perfectFocusSide =
+    battleResult.perfectFocusSide ?? getPerfectFocusSide(battleResult);
   const playerArmy = getArmyVisual(battleResult.playerAgent, '#a78bfa');
   const enemyArmy = getArmyVisual(battleResult.enemyAgent, '#fbbf24');
   const winArmy = winner === 'player' ? playerArmy : enemyArmy;
@@ -1169,6 +1179,8 @@ export function DuelClashAuroraSequence({ battleResult, duelPhase, duelEffectSte
         enemyClashAnchor={enemyClashAnchor}
         playerWrapRef={playerWrapRef}
         enemyWrapRef={enemyWrapRef}
+        showPerfectPlayer={t >= 0.58 && perfectFocusSide === 'player'}
+        showPerfectEnemy={t >= 0.58 && perfectFocusSide === 'enemy'}
       />
 
       {isN5 && (

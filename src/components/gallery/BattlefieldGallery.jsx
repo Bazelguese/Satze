@@ -1,17 +1,26 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Icon } from '../ui/Icon';
-import { FIELD_STYLES } from '../../utils';
-import { ALL_BATTLEFIELDS, getBattlefieldAnimationType } from '../../data';
+import {
+  ALL_BATTLEFIELDS,
+  getBattlefieldAnimationType,
+  getFieldStyle,
+  groupBattlefieldsByCategory,
+} from '../../data';
 import { BattlefieldReveal } from './BattlefieldRevealAnimations';
 
 /**
- * Griglia campi di battaglia + anteprima.
+ * Griglia campi di battaglia + anteprima, raggruppata per tipo (category).
  */
 export function BattlefieldGallery() {
   const [selectedFieldId, setSelectedFieldId] = useState(null);
   const selectedField = selectedFieldId != null
     ? ALL_BATTLEFIELDS.find(f => f.id === selectedFieldId) ?? null
     : null;
+
+  const groups = useMemo(
+    () => groupBattlefieldsByCategory(ALL_BATTLEFIELDS),
+    [],
+  );
 
   const handleSelect = useCallback((fieldId) => {
     setSelectedFieldId(fieldId);
@@ -61,60 +70,74 @@ export function BattlefieldGallery() {
           </div>
         )}
       </div>
-      {/* Griglia in contenitore scroll - i bottoni restano sotto l'anteprima, mai sopra */}
+      {/* Griglia in contenitore scroll - sezioni per tipo */}
       <div className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden satze-hide-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
-        {ALL_BATTLEFIELDS.map((field) => {
-          const fieldStyle = FIELD_STYLES[field.id] || {};
-          const isSelected = selectedField?.id === field.id;
-          return (
-            <div
-              key={field.id}
-              role="button"
-              tabIndex={0}
-              className={`relative w-full text-left border rounded-xl p-4 transition-all overflow-hidden cursor-pointer bg-transparent ${
-                isSelected ? 'border-fuchsia-500/80 ring-2 ring-fuchsia-500/35' : 'border-slate-600/60 hover:border-fuchsia-500/45'
-              }`}
-              onPointerDown={() => handleSelect(field.id)}
-              onClick={() => handleSelect(field.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleSelect(field.id);
-                }
-              }}
-            >
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: fieldStyle.gradient || 'linear-gradient(135deg, #1e293b, #0f172a)',
-                  opacity: 0.8,
-                }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: `radial-gradient(ellipse at 30% 30%, ${fieldStyle.glow || 'rgba(100,100,100,0.2)'} 0%, transparent 60%)`,
-                }}
-              />
-              <div className="relative z-10 flex items-start gap-3">
-                <div className="flex items-center justify-center drop-shadow-lg flex-shrink-0">
-                  <Icon name={field.icon} type="cardIcon" size={36} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-bold text-base mb-0.5 drop-shadow-md truncate">{field.name}</h3>
-                  <p className="text-amber-300 text-xs mb-1 drop-shadow-sm">{field.effect}</p>
-                  {field.rarita && (
-                    <p className="text-slate-500 text-[10px] mb-1">{field.rarita} · {field.tema}</p>
-                  )}
-                  {field.flavour && (
-                    <p className="text-slate-300 text-[10px] italic line-clamp-2">"{field.flavour}"</p>
-                  )}
-                </div>
+        <div className="flex flex-col gap-6 pb-4">
+          {groups.map((group) => (
+            <section key={group.category} className="flex flex-col gap-3">
+              <header className="sticky top-0 z-20 flex items-baseline gap-3 px-1 py-1.5 bg-slate-950/90 backdrop-blur-sm border-b border-slate-700/50">
+                <h2 className="text-fuchsia-300/90 font-bold text-xs tracking-[0.22em] uppercase">
+                  {group.label}
+                </h2>
+                <span className="text-slate-500 text-[10px] tabular-nums">
+                  {group.fields.length}
+                </span>
+              </header>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {group.fields.map((field) => {
+                  const fieldStyle = getFieldStyle(field.category);
+                  const isSelected = selectedField?.id === field.id;
+                  return (
+                    <div
+                      key={field.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`relative w-full text-left border rounded-xl p-4 transition-all overflow-hidden cursor-pointer bg-transparent ${
+                        isSelected ? 'border-fuchsia-500/80 ring-2 ring-fuchsia-500/35' : 'border-slate-600/60 hover:border-fuchsia-500/45'
+                      }`}
+                      onPointerDown={() => handleSelect(field.id)}
+                      onClick={() => handleSelect(field.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect(field.id);
+                        }
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: fieldStyle.gradient || 'linear-gradient(135deg, #1e293b, #0f172a)',
+                          opacity: 0.8,
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: `radial-gradient(ellipse at 30% 30%, ${fieldStyle.glow || 'rgba(100,100,100,0.2)'} 0%, transparent 60%)`,
+                        }}
+                      />
+                      <div className="relative z-10 flex items-start gap-3">
+                        <div className="flex items-center justify-center drop-shadow-lg flex-shrink-0">
+                          <Icon name={field.icon} type="cardIcon" size={36} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-bold text-base mb-0.5 drop-shadow-md truncate">{field.name}</h3>
+                          <p className="text-amber-300 text-xs mb-1 drop-shadow-sm">{field.effect}</p>
+                          {field.rarita && (
+                            <p className="text-slate-500 text-[10px] mb-1">{field.rarita} · {field.tema}</p>
+                          )}
+                          {field.flavour && (
+                            <p className="text-slate-300 text-[10px] italic line-clamp-2">"{field.flavour}"</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          );
-        })}
+            </section>
+          ))}
         </div>
       </div>
     </div>

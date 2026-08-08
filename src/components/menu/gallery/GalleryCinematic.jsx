@@ -24,9 +24,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ARMY_COLORS } from '../../../data/armies.js';
 import { ALL_BATTLEFIELDS, getBattlefieldAnimationType } from '../../../data/battlefields.js';
+import { flattenBattlefieldsByCategory } from '../../../data/battlefieldMeta.js';
 import { ARMY_LORE } from '../cosmic/armyLore.js';
 import { BattlefieldReveal } from '../../gallery/BattlefieldRevealAnimations.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
+import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
 import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
 
 const CATEGORY_LABEL = {
@@ -55,7 +57,7 @@ function resolveFieldImage(bgImage, fieldId) {
 }
 
 function buildFields() {
-  return ALL_BATTLEFIELDS.map((f) => {
+  return flattenBattlefieldsByCategory(ALL_BATTLEFIELDS).map((f) => {
     const army = f.tema && f.tema !== 'generico' ? f.tema : 'Neutro';
     return {
       id: f.id,
@@ -72,6 +74,20 @@ function buildFields() {
   });
 }
 
+/** Chip campi + separatori di tipo per il ticker. */
+function buildTickerItems(fields) {
+  const items = [];
+  let lastCat = null;
+  fields.forEach((f, i) => {
+    if (f.category !== lastCat) {
+      items.push({ type: 'sep', key: `sep-${f.category}`, label: f.catLabel });
+      lastCat = f.category;
+    }
+    items.push({ type: 'field', key: `f-${f.id}`, field: f, index: i });
+  });
+  return items;
+}
+
 export default function GalleryCinematic({
   onBack,
   totalFields = ALL_BATTLEFIELDS.length,
@@ -81,10 +97,12 @@ export default function GalleryCinematic({
   fieldCount = ALL_BATTLEFIELDS.length,
 }) {
   const FIELDS = useMemo(() => buildFields(), []);
+  const tickerItems = useMemo(() => buildTickerItems(FIELDS), [FIELDS]);
   const total = FIELDS.length;
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState('intro'); // intro -> idle
   const [token, setToken] = useState(0);
+  const heavyOk = useCosmicHeavyContentReady();
   const tickerRef = useRef(null);
   const chipRefs = useRef([]);
 
@@ -178,7 +196,15 @@ export default function GalleryCinematic({
       <div className="glc-stage">
         <div className="glc-viewer">
           <div className="glc-viewer-frame" key={`v-${idx}-${token}`}>
-            <BattlefieldReveal imageSrc={field.img} animationType={field.anim} />
+            {heavyOk ? (
+              <BattlefieldReveal imageSrc={field.img} animationType={field.anim} />
+            ) : (
+              <img
+                src={field.img}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            )}
           </div>
           <div className="glc-viewer-vignette" />
           <div className="glc-viewer-grid" />
@@ -202,15 +228,23 @@ export default function GalleryCinematic({
         </div>
       </div>
 
-      {/* Ticker: una riga scrollabile — non impila 83 voci sul viewer */}
+      {/* Ticker: una riga scrollabile, raggruppata per tipo */}
       <div className="glc-ticker-wrap">
-        <div className="glc-ticker-label">ELENCO CAMPI</div>
+        <div className="glc-ticker-label">ELENCO CAMPI · PER TIPO</div>
         <div className="glc-ticker" ref={tickerRef}>
-          {FIELDS.map((f, i) => {
+          {tickerItems.map((item) => {
+            if (item.type === 'sep') {
+              return (
+                <div key={item.key} className="gtk-sep" aria-hidden="true">
+                  {item.label}
+                </div>
+              );
+            }
+            const { field: f, index: i } = item;
             const active = i === idx;
             return (
               <button
-                key={f.id}
+                key={item.key}
                 type="button"
                 ref={(el) => { chipRefs.current[i] = el; }}
                 className={`gtk ${active ? 'on' : ''}`}
@@ -264,10 +298,10 @@ function GalleryStyles() {
   return (
     <style>{`
       .glc {
-        position: fixed; inset: 0;
+        position: absolute; inset: 0;
         background: #050608; color: #f5f3eb;
         font-family: 'Chakra Petch', sans-serif;
-        overflow: hidden; isolation: isolate; z-index: 1000;
+        overflow: hidden; isolation: isolate; z-index: 2;
       }
       .glc * { box-sizing: border-box; }
       .glc.phase-intro { cursor: wait; }
@@ -479,6 +513,20 @@ function GalleryStyles() {
         background: color-mix(in srgb, var(--c) 18%, rgba(5,6,8,0.9));
         color: #f5f3eb; box-shadow: 0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
       }
+      .gtk-sep {
+        flex: 0 0 auto;
+        align-self: center;
+        padding: 0 6px 0 14px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px; letter-spacing: 0.28em;
+        color: rgba(192, 38, 211, 0.85);
+        text-transform: uppercase;
+        white-space: nowrap;
+        pointer-events: none;
+        border-left: 1px solid rgba(255,255,255,0.14);
+        margin-left: 4px;
+      }
+      .gtk-sep:first-child { border-left: 0; margin-left: 0; padding-left: 4px; }
 
       /* Intro */
       .glc-intro { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.95) 80%); animation: glc-intro-fade 1.5s ease forwards; }

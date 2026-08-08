@@ -33,13 +33,15 @@ function field(id) {
   return ALL_BATTLEFIELDS.find((f) => f.id === id);
 }
 
-test('catalogo include campi 84–113', () => {
-  assert.equal(ALL_BATTLEFIELDS.length, 113);
+test('catalogo include campi 84–121', () => {
+  assert.equal(ALL_BATTLEFIELDS.length, 121);
   assert.equal(field(84).name, 'Cimitero dei Colossi');
   assert.equal(field(89).tema, 'Apex');
   assert.equal(field(101).name, 'Ponte dei Tre Piloni');
   assert.equal(field(102).name, 'Faro di Vetta Grigia');
   assert.equal(field(113).name, 'Lago delle Sette Lune');
+  assert.equal(field(114).tema, 'Mascarada');
+  assert.equal(field(121).name, 'Anfiteatro di Morrowgate');
 });
 
 test('84: +5 VA a Lega più alta', () => {
@@ -262,6 +264,59 @@ test('112: POT finale max 7', () => {
   applyDuelFieldLateEffects(field(112), state, {}, {}, []);
   assert.equal(state.pPower, 7);
   assert.equal(state.ePower, 7);
+});
+
+test('Mascarada flags 114–121', () => {
+  assert.equal(getFieldSetupFlags(field(114)).overdriveDisabled, true);
+  assert.equal(getFieldSetupFlags(field(115)).toxinDisabled, true);
+  assert.equal(getFieldSetupFlags(field(116)).maxFocusCountedInVa, 6);
+  assert.equal(getFieldSetupFlags(field(118)).swapCopyImponi, true);
+  assert.equal(getFieldSetupFlags(field(121)).conquestDisabled, true);
+});
+
+test('120 Galleria Bellacqua scambia Bonus Armata', () => {
+  const a = { trigger: 'invasione', effects: [{ effect: 'assaultValue', value: 5 }] };
+  const b = { trigger: 'opportunista', effects: [{ effect: 'focusCoin', value: 3 }] };
+  const r = resolveFieldArmyBonuses(field(120), true, true, a, b);
+  assert.equal(r.pArmyBonus, b);
+  assert.equal(r.eArmyBonus, a);
+});
+
+test('117 Corte di Akitsuna: +1 POT se bloccato', () => {
+  const state = {
+    pPower: 4,
+    ePower: 4,
+    pDamage: 2,
+    eDamage: 2,
+    pAssaultMod: 0,
+    eAssaultMod: 0,
+    pAbilityBlocked: true,
+    eAbilityBlocked: false,
+    pBonusBlocked: false,
+    eBonusBlocked: true,
+    pImmune: false,
+    eImmune: false,
+  };
+  applyDuelFieldLateEffects(field(117), state, {}, {}, []);
+  assert.equal(state.pPower, 5);
+  assert.equal(state.ePower, 5);
+});
+
+test('119 Viale: entrambi +1 FC se totale > 10', () => {
+  const r = applyBattlefieldRoundAftermath({
+    field: field(119),
+    winner: 'player',
+    damageDealt: 2,
+    pHPCurrent: 20,
+    eHPCurrent: 10,
+    pFCCurrent: 4,
+    eFCCurrent: 3,
+    pFocusUsed: 6,
+    eFocusUsed: 5,
+    battleLog: [],
+  });
+  assert.equal(r.pFCCurrent, 5);
+  assert.equal(r.eFCCurrent, 4);
 });
 
 test('103 / 106 / 113 aftermath', () => {

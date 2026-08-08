@@ -239,10 +239,14 @@ export function evaluateFieldControl(state, fieldIndex) {
   };
 }
 
+/**
+ * Pesi Campo: devono poter rivaleggiare con i punteggi duello (ordine ~10^3),
+ * altrimenti in classic l'IA ignora sinergie/denial e diventa più debole che in Bare Hands.
+ */
 const FIELD_WEIGHTS = {
-  easy: { denial: 5, use: 2, preserve: 4 },
-  medium: { denial: 20, use: 4, preserve: 12 },
-  hard: { denial: 30, use: 6, preserve: 18 },
+  easy: { denial: 10, use: 4, preserve: 6, scale: 1.25 },
+  medium: { denial: 48, use: 12, preserve: 26, scale: 2.1 },
+  hard: { denial: 75, use: 16, preserve: 36, scale: 2.75 },
 };
 
 /**
@@ -266,20 +270,54 @@ export function evaluateFieldSelectionAdjustment(
   const weights = FIELD_WEIGHTS[profile.id] || FIELD_WEIGHTS.medium;
   const reserveGap = Math.max(0, assessment.aiBestFit - Math.max(0, currentFit.score));
   const territorialUrgency =
-    (state.playerFieldsConquered || 0) >= 2 ? 1.35 : 1;
+    (state.playerFieldsConquered || 0) >= 2
+      ? 1.45
+      : (state.playerFieldsConquered || 0) >= 1
+        ? 1.15
+        : 1;
+
+  // Se il Campo aiuta molto più il giocatore di noi, denial conta di più.
+  const threatSkew =
+    assessment.playerThreat > assessment.aiOpportunity + 4 ? 1.25 : 1;
 
   const denialScore =
-    assessment.playerThreat * weights.denial * territorialUrgency;
+    assessment.playerThreat * weights.denial * territorialUrgency * threatSkew;
   const useScore = Math.max(0, currentFit.score) * weights.use;
   const preservePenalty = reserveGap * weights.preserve;
+  const raw = denialScore + useScore - preservePenalty;
+  const scale = weights.scale || 1;
+
+  const threatCardNames = (assessment.playerFits || [])
+    .filter((f) => f.score > 0)
+    .slice(0, 2)
+    .map((f) => findCardInState(state, 'player', f.cardId)?.name)
+    .filter(Boolean);
+
+  const opportunityCardNames = (assessment.aiFits || [])
+    .filter((f) => f.score > 0)
+    .slice(0, 2)
+    .map((f) => findCardInState(state, 'ai', f.cardId)?.name)
+    .filter(Boolean);
+
+  const bestReserve =
+    (assessment.aiFits || []).find(
+      (f) => f.cardId !== chosenCard?.id && f.score > Math.max(0, currentFit.score) + 0.5
+    ) || null;
+  const reserveCardName = bestReserve
+    ? findCardInState(state, 'ai', bestReserve.cardId)?.name || null
+    : null;
 
   return {
-    score: denialScore + useScore - preservePenalty,
-    denialScore,
-    useScore,
-    preservePenalty,
+    score: raw * scale,
+    denialScore: denialScore * scale,
+    useScore: useScore * scale,
+    preservePenalty: preservePenalty * scale,
     reserveGap,
     currentFit,
     assessment,
+    fitReasons: currentFit.reasons || [],
+    threatCardNames,
+    opportunityCardNames,
+    reserveCardName,
   };
 }

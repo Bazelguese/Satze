@@ -305,8 +305,13 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
       pBonusBlocked = true;
       eBonusBlocked = true;
       battleLog.push(`📡 ${fn}: Bonus Armata disattivati`);
-    } else if (id === 110) battleLog.push(`💧 ${fn}: modificatori positivi di DAN disattivati`);
+    }     else if (id === 110) battleLog.push(`💧 ${fn}: modificatori positivi di DAN disattivati`);
     else if (id === 112) battleLog.push(`🌲 ${fn}: POT finale max 7 (pre-VA)`);
+    else if (id === 114) battleLog.push(`🏟️ ${fn}: Effetti Overdrive disattivati`);
+    else if (id === 115) battleLog.push(`💍 ${fn}: Tossina disattivata`);
+    else if (id === 118) battleLog.push(`🖤 ${fn}: Copia ↔ Imponi`);
+    else if (id === 120) battleLog.push(`🖼️ ${fn}: Bonus Armata scambiati`);
+    else if (id === 121) battleLog.push(`🏛️ ${fn}: Effetti Conquista disattivati`);
   }
 
   if (id === 56) {
@@ -337,6 +342,14 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     if (pFocusUsed === 3) pAssaultMod += 4;
     if (eFocusUsed === 3) eAssaultMod += 4;
     battleLog.push(`🌉 ${fn}: +4 VA a chi investe esattamente 3 FC`);
+  }
+
+  if (id === 116) {
+    battleLog.push(`⚖️ ${fn}: Calcolo VA · max 6 FC conteggiati`);
+  }
+
+  if (id === 117) {
+    battleLog.push(`🎭 ${fn}: +1 POT se Potere o Bonus disattivato (pre-VA)`);
   }
 
   if (flags.imposeDamageFromPower) {
@@ -379,6 +392,11 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     positiveDamageModifiersDisabled: positiveDamageModifiersDisabled === true,
     clampPowerDamageToBasePlusMinus2: flags.clampPowerDamageToBasePlusMinus2 === true,
     maxFinalPower: flags.maxFinalPower ?? null,
+    maxFocusCountedInVa: flags.maxFocusCountedInVa ?? null,
+    overdriveDisabled: flags.overdriveDisabled === true,
+    toxinDisabled: flags.toxinDisabled === true,
+    swapCopyImponi: flags.swapCopyImponi === true,
+    conquestDisabled: flags.conquestDisabled === true,
     focusHalvedInVa: flags.focusHalvedInVa,
     conquestDouble: flags.conquestDouble === true,
     lastWishDouble: flags.lastWishDouble === true,

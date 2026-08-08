@@ -1,8 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import { CardReworkP4 } from '../cards/CardReworkP4';
+import { CardPointerTilt, CardPointerTiltStyles } from '../cards/CardPointerTilt.jsx';
 import { Icon } from '../ui/Icon';
 import { getCardDisplayLabels } from '../../data/cardArchetypes';
+
+/** Allineati a CardReworkP4 (cerchi POT/DAN + etichette Potere/Bonus). */
+const COLOR_POTENZA = '#fde047';
+const COLOR_DANNO = '#c084fc';
+const COLOR_POTERE = '#fb923c';
+const COLOR_BONUS = '#38bdf8';
+const COLOR_POTENZIALE = '#ff2d2d';
+const RAINBOW =
+  'linear-gradient(90deg, #ff3b6b, #ff8c1a, #ffe14a, #3dff8a, #38bdf8, #c084fc, #ff3b6b)';
 
 const TRIGGER_MULTIPLIERS = {
   default: 1.0,
@@ -165,6 +175,35 @@ function evaluateCardBalance(card) {
   };
 }
 
+function parseHex(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  if (!m) return null;
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+}
+
+function toHex(rgb) {
+  return `#${rgb.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
+}
+
+function mixRgb(a, b, t) {
+  return a.map((v, i) => v * (1 - t) + b[i] * t);
+}
+
+/** Palette chrome dell'anteprima: tinta dall'accento armata (non magenta menu). */
+function armyPreviewPalette(accentHex) {
+  const accent = parseHex(accentHex) || parseHex('#a288fb');
+  const voidRgb = [6, 3, 10];
+  const white = [255, 255, 255];
+  return {
+    accent: toHex(accent),
+    heat: toHex(mixRgb(accent, white, 0.22)),
+    soft: toHex(mixRgb(accent, white, 0.4)),
+    deep: toHex(mixRgb(accent, voidRgb, 0.72)),
+    wash: toHex(mixRgb(accent, voidRgb, 0.52)),
+    washDeep: toHex(mixRgb(accent, voidRgb, 0.78)),
+  };
+}
+
 function DeckPreviewCosmic({
   deck = null,
   onBack = () => {},
@@ -172,10 +211,6 @@ function DeckPreviewCosmic({
   onConfirm = null,
   showActions = true,
 }) {
-  const ACCENT = MENU_ACCENTS.magenta;
-  const HEAT = MENU_ACCENTS.pink;
-  const VIOLET = '#a78bfa';
-  const DEEP = '#581c87';
   const BG = MENU_ACCENTS.void;
 
   const fallbackDeck = useMemo(
@@ -183,7 +218,7 @@ function DeckPreviewCosmic({
       id: '__empty',
       name: 'Nessun esercito',
       army: 'Misto',
-      accentColor: '#a78bfa',
+      accentColor: '#a288fb',
       cards: [],
     }),
     []
@@ -213,7 +248,11 @@ function DeckPreviewCosmic({
     const mascot = scored.reduce((best, cur) => (cur.metrics.totalValue < best.metrics.totalValue ? cur : best), scored[0]);
     return { byPower, byDamage, byPotential, mascot };
   }, [cards]);
-  const accent = D.accentColor || '#fbbf24';
+  const palette = useMemo(
+    () => armyPreviewPalette(D.accentColor || '#a288fb'),
+    [D.accentColor],
+  );
+  const { accent, heat, soft, deep, wash, washDeep } = palette;
 
   const totalLega = cards.reduce((sum, c) => sum + (c?.league || c?.lega || 0), 0);
   const avgPot = cards.length ? (cards.reduce((sum, c) => sum + (c?.power || c?.pot || 0), 0) / cards.length).toFixed(1) : '0';
@@ -231,19 +270,20 @@ function DeckPreviewCosmic({
         fontFamily: 'Chakra Petch, sans-serif',
       }}
     >
+      <CardPointerTiltStyles />
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(ellipse at 50% 30%, #2a0a3a 0%, #14051f 52%, ${MENU_ACCENTS.void} 90%)`,
+          background: `radial-gradient(ellipse at 50% 30%, ${wash} 0%, ${washDeep} 52%, ${MENU_ACCENTS.void} 90%)`,
         }}
       />
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.08,
-          backgroundImage: `radial-gradient(${ACCENT} 1px, transparent 1.4px)`,
+          opacity: 0.1,
+          backgroundImage: `radial-gradient(${accent} 1px, transparent 1.4px)`,
           backgroundSize: '8px 8px',
         }}
       />
@@ -258,7 +298,7 @@ function DeckPreviewCosmic({
           lineHeight: 0.75,
           letterSpacing: '-0.04em',
           color: 'transparent',
-          WebkitTextStroke: `2px ${ACCENT}1f`,
+          WebkitTextStroke: `2px ${accent}22`,
           transform: 'skewX(-8deg) rotate(-2deg)',
           pointerEvents: 'none',
           userSelect: 'none',
@@ -275,7 +315,7 @@ function DeckPreviewCosmic({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: `1px solid ${ACCENT}33`,
+          borderBottom: `1px solid ${accent}33`,
         }}
       >
         <button
@@ -283,8 +323,8 @@ function DeckPreviewCosmic({
           style={{
             padding: '8px 14px',
             background: 'transparent',
-            border: `1px solid ${VIOLET}88`,
-            color: VIOLET,
+            border: `1px solid ${soft}88`,
+            color: soft,
             fontFamily: 'Share Tech Mono, monospace',
             fontSize: 10,
             letterSpacing: '0.3em',
@@ -301,7 +341,7 @@ function DeckPreviewCosmic({
             style={{
               width: 56,
               height: 62,
-              background: `linear-gradient(180deg, ${accent} 0%, ${DEEP} 100%)`,
+              background: `linear-gradient(180deg, ${accent} 0%, ${deep} 100%)`,
               clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)',
               display: 'flex',
               alignItems: 'center',
@@ -325,14 +365,14 @@ function DeckPreviewCosmic({
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, color: HEAT, letterSpacing: '0.45em' }}>· ANTEPRIMA ESERCITO ·</div>
+            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, color: heat, letterSpacing: '0.45em' }}>· ANTEPRIMA ESERCITO ·</div>
             <div
               style={{
                 fontFamily: 'Cinzel, serif',
                 fontWeight: 900,
                 fontSize: 28,
                 letterSpacing: '0.2em',
-                textShadow: `2px 2px 0 ${ACCENT}88`,
+                textShadow: `2px 2px 0 ${accent}88`,
               }}
             >
               «{(D.name || 'ESERCITO').toUpperCase()}»
@@ -344,9 +384,9 @@ function DeckPreviewCosmic({
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <MiniStat label="LEGA" value={`${totalLega}/30`} c="#22d3ee" />
-          <MiniStat label="POT MED" value={avgPot} c={HEAT} />
-          <MiniStat label="DAN MED" value={avgDan} c={VIOLET} />
+          <MiniStat label="LEGA" value={`${totalLega}/30`} c={soft} />
+          <MiniStat label="POT MED" value={avgPot} c={COLOR_POTENZA} />
+          <MiniStat label="DAN MED" value={avgDan} c={COLOR_DANNO} />
         </div>
       </div>
 
@@ -366,10 +406,11 @@ function DeckPreviewCosmic({
             display: 'grid',
             gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
             gridTemplateRows: 'repeat(2, 1fr)',
-            gap: '20px 16px',
+            gap: '28px 24px',
             alignItems: 'center',
             justifyItems: 'center',
             minHeight: 0,
+            overflow: 'visible',
           }}
         >
           {Array.from({ length: 10 }).map((_, i) => {
@@ -381,7 +422,7 @@ function DeckPreviewCosmic({
                   style={{
                     width: 220,
                     height: 320,
-                    border: `1px dashed ${ACCENT}44`,
+                    border: `1px dashed ${accent}44`,
                     background: 'rgba(8,5,14,0.45)',
                   }}
                 />
@@ -396,14 +437,19 @@ function DeckPreviewCosmic({
                 style={{
                   width: 220,
                   height: 320,
-                  border: active ? `2px solid ${HEAT}` : `1px solid ${ACCENT}55`,
-                  boxShadow: active ? `0 0 26px ${HEAT}99` : `0 0 12px ${ACCENT}44`,
-                  transform: active ? 'translateY(-4px)' : 'none',
-                  transition: 'all 0.2s ease',
+                  border: active ? `2px solid ${heat}` : `1px solid ${accent}66`,
+                  boxShadow: active
+                    ? `0 0 26px ${heat}99`
+                    : `0 0 12px ${accent}44`,
+                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                   padding: 0,
                   background: 'transparent',
                   cursor: 'pointer',
                   position: 'relative',
+                  overflow: 'visible',
+                  perspective: 900,
+                  perspectiveOrigin: '50% 40%',
+                  zIndex: active ? 3 : 1,
                 }}
               >
                 <div
@@ -411,10 +457,12 @@ function DeckPreviewCosmic({
                     position: 'absolute',
                     top: -10,
                     left: -8,
-                    zIndex: 4,
+                    zIndex: 6,
                     width: 30,
                     height: 34,
-                    background: active ? `linear-gradient(180deg, ${HEAT} 0%, ${DEEP} 100%)` : `linear-gradient(180deg, ${ACCENT} 0%, ${DEEP} 100%)`,
+                    background: active
+                      ? `linear-gradient(180deg, ${heat} 0%, ${deep} 100%)`
+                      : `linear-gradient(180deg, ${accent} 0%, ${deep} 100%)`,
                     clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)',
                     display: 'flex',
                     alignItems: 'center',
@@ -423,15 +471,28 @@ function DeckPreviewCosmic({
                     fontWeight: 900,
                     fontSize: 13,
                     color: MENU_ACCENTS.void,
+                    pointerEvents: 'none',
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
                 </div>
-                <div style={{ transform: 'scale(0.9565)', transformOrigin: 'top left', width: 230, height: 330 }}>
-                  <div style={{ pointerEvents: 'none' }}>
-                    <CardReworkP4 agent={c} />
+                <CardPointerTilt
+                  shineAccent={accent}
+                  maxTilt={12}
+                  style={{ width: 220, height: 320 }}
+                >
+                  <div
+                    style={{
+                      transform: 'scale(0.9565)',
+                      transformOrigin: 'top left',
+                      width: 230,
+                      height: 330,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <CardReworkP4 agent={c} suppressAnimations />
                   </div>
-                </div>
+                </CardPointerTilt>
               </button>
             );
           })}
@@ -439,8 +500,8 @@ function DeckPreviewCosmic({
 
         <div
           style={{
-            background: 'linear-gradient(180deg, rgba(14,5,24,0.88) 0%, rgba(6,3,10,0.84) 100%)',
-            border: `1px solid ${ACCENT}55`,
+            background: `linear-gradient(180deg, color-mix(in srgb, ${accent} 18%, rgba(6,3,10,0.92)) 0%, rgba(6,3,10,0.88) 100%)`,
+            border: `1px solid ${accent}55`,
             padding: 16,
             minHeight: 0,
             display: 'flex',
@@ -458,17 +519,17 @@ function DeckPreviewCosmic({
                   LEGA {selectedCard.league || selectedCard.lega || 0} · ARMATA {(selectedCard.army || D.army || '—').toUpperCase()}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-                  <BigStat label="POT" value={selectedCard.power ?? selectedCard.pot ?? 0} c={HEAT} />
-                  <BigStat label="DAN" value={selectedCard.damage ?? selectedCard.dan ?? 0} c={VIOLET} />
+                  <BigStat label="POT" value={selectedCard.power ?? selectedCard.pot ?? 0} c={COLOR_POTENZA} />
+                  <BigStat label="DAN" value={selectedCard.damage ?? selectedCard.dan ?? 0} c={COLOR_DANNO} />
                 </div>
-                <div style={{ marginTop: 12, padding: '10px 12px', border: `1px solid ${HEAT}55`, background: `${HEAT}12` }}>
-                  <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: HEAT, letterSpacing: '0.22em', marginBottom: 4 }}>POTERE — DETTAGLIO</div>
+                <div style={{ marginTop: 12, padding: '10px 12px', border: `1px solid ${COLOR_POTERE}55`, background: `${COLOR_POTERE}14` }}>
+                  <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: COLOR_POTERE, letterSpacing: '0.22em', marginBottom: 4 }}>POTERE — DETTAGLIO</div>
                   <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.35 }}>
                     {selectedCard.powerDesc || selectedCard.description || selectedCard.abilityText || selectedCard.powerEffect || '—'}
                   </div>
                 </div>
-                <div style={{ marginTop: 8, padding: '10px 12px', border: `1px solid ${VIOLET}55`, background: `${VIOLET}12` }}>
-                  <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: VIOLET, letterSpacing: '0.22em', marginBottom: 4 }}>BONUS — DETTAGLIO</div>
+                <div style={{ marginTop: 8, padding: '10px 12px', border: `1px solid ${COLOR_BONUS}55`, background: `${COLOR_BONUS}14` }}>
+                  <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: COLOR_BONUS, letterSpacing: '0.22em', marginBottom: 4 }}>BONUS — DETTAGLIO</div>
                   <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.35 }}>
                     {selectedCard.bonusDesc || selectedCard.bonusEffect || '—'}
                   </div>
@@ -514,20 +575,32 @@ function DeckPreviewCosmic({
                   </div>
                 ) : null}
                 {deckHighlights ? (
-                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${ACCENT}55` }}>
-                    <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: '#d8e1ee', letterSpacing: '0.2em', marginBottom: 10, textShadow: '0 0 10px rgba(192,38,211,0.35)' }}>
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${accent}55` }}>
+                    <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: '#d8e1ee', letterSpacing: '0.2em', marginBottom: 10, textShadow: `0 0 10px ${accent}59` }}>
                       PROFILO ESERCITO
                     </div>
                     <div style={{ display: 'grid', gap: 8 }}>
-                      <InfoLine label="Agente con Potenza più alta" value={deckHighlights.byPower.name} />
-                      <InfoLine label="Agente con Danno più alto" value={deckHighlights.byDamage.name} />
+                      <InfoLine
+                        label="Agente con Potenza più alta"
+                        value={deckHighlights.byPower.name}
+                        tone="power"
+                        armyAccent={accent}
+                      />
+                      <InfoLine
+                        label="Agente con Danno più alto"
+                        value={deckHighlights.byDamage.name}
+                        tone="damage"
+                        armyAccent={accent}
+                      />
                       <InfoLine
                         label="Agente con Potenziale più alto"
                         value={deckHighlights.byPotential.card.name}
+                        tone="potential"
                       />
                       <InfoLine
                         label="Agente Mascotte"
                         value={deckHighlights.mascot.card.name}
+                        tone="rainbow"
                       />
                     </div>
                   </div>
@@ -567,8 +640,8 @@ function DeckPreviewCosmic({
                 style={{
                   padding: '11px 22px',
                   background: 'transparent',
-                  border: `1px solid ${VIOLET}88`,
-                  color: VIOLET,
+                  border: `1px solid ${soft}88`,
+                  color: soft,
                   fontFamily: 'Share Tech Mono, monospace',
                   fontSize: 10,
                   letterSpacing: '0.3em',
@@ -585,7 +658,7 @@ function DeckPreviewCosmic({
                 onClick={() => onConfirm(D)}
                 style={{
                   padding: '12px 28px',
-                  background: `linear-gradient(90deg, ${ACCENT} 0%, ${HEAT} 100%)`,
+                  background: `linear-gradient(90deg, ${accent} 0%, ${heat} 100%)`,
                   border: 'none',
                   color: MENU_ACCENTS.void,
                   fontFamily: 'Cinzel, serif',
@@ -594,7 +667,7 @@ function DeckPreviewCosmic({
                   letterSpacing: '0.3em',
                   cursor: 'pointer',
                   clipPath: 'polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)',
-                  boxShadow: `0 0 24px ${HEAT}88, 0 4px 0 ${DEEP}`,
+                  boxShadow: `0 0 24px ${heat}88, 0 4px 0 ${deep}`,
                 }}
               >
                 SCHIERA ESERCITO ›
@@ -639,7 +712,54 @@ function BigStat({ label, value, c }) {
   );
 }
 
-function InfoLine({ label, value }) {
+function InfoLine({ label, value, tone = 'neutral', armyAccent = null }) {
+  const styles = (() => {
+    if (tone === 'power') {
+      return {
+        border: `1px solid ${COLOR_POTENZA}66`,
+        background: `linear-gradient(90deg, ${COLOR_POTENZA}22 0%, color-mix(in srgb, ${armyAccent || COLOR_POTENZA} 22%, transparent) 100%)`,
+        labelColor: COLOR_POTENZA,
+      };
+    }
+    if (tone === 'damage') {
+      return {
+        border: `1px solid ${COLOR_DANNO}66`,
+        background: `linear-gradient(90deg, ${COLOR_DANNO}22 0%, color-mix(in srgb, ${armyAccent || COLOR_DANNO} 22%, transparent) 100%)`,
+        labelColor: COLOR_DANNO,
+      };
+    }
+    if (tone === 'potential') {
+      return {
+        border: `1px solid ${COLOR_POTENZIALE}88`,
+        background: `${COLOR_POTENZIALE}18`,
+        labelColor: COLOR_POTENZIALE,
+      };
+    }
+    if (tone === 'rainbow') {
+      return {
+        border: '1px solid transparent',
+        backgroundImage: `linear-gradient(rgba(8,5,14,0.9), rgba(8,5,14,0.9)), ${RAINBOW}`,
+        backgroundOrigin: 'border-box',
+        backgroundClip: 'padding-box, border-box',
+        rainbowLabel: true,
+      };
+    }
+    return {
+      border: '1px solid rgba(148,163,184,0.26)',
+      background: 'rgba(15,23,42,0.32)',
+      labelColor: '#d1d9e6',
+    };
+  })();
+
+  // hue-rotate: ciclo chiuso senza salto (background-position clickava a ogni loop)
+  const rainbowLabel = {
+    backgroundImage: RAINBOW,
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+    animation: 'dpv-rainbow-hue 10s linear infinite',
+  };
+
   return (
     <div
       style={{
@@ -647,12 +767,39 @@ function InfoLine({ label, value }) {
         gridTemplateColumns: '1fr',
         gap: 4,
         padding: '8px 10px',
-        border: '1px solid rgba(148,163,184,0.26)',
-        background: 'rgba(15,23,42,0.32)',
+        border: styles.border,
+        background: styles.background,
+        backgroundImage: styles.backgroundImage,
+        backgroundOrigin: styles.backgroundOrigin,
+        backgroundClip: styles.backgroundClip,
       }}
     >
-      <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: '#d1d9e6', letterSpacing: '0.13em', textShadow: '0 0 6px rgba(148,163,184,0.25)' }}>{label}:</div>
-      <div style={{ fontSize: 17, color: '#ffffff', lineHeight: 1.2, fontWeight: 700, textShadow: '0 0 10px rgba(255,255,255,0.16)' }}>{value}</div>
+      {styles.rainbowLabel ? (
+        <style>{`@keyframes dpv-rainbow-hue{to{filter:hue-rotate(360deg)}}`}</style>
+      ) : null}
+      <div
+        style={{
+          fontFamily: 'Share Tech Mono, monospace',
+          fontSize: 11,
+          letterSpacing: '0.13em',
+          ...(styles.rainbowLabel
+            ? rainbowLabel
+            : { color: styles.labelColor, textShadow: `0 0 6px ${styles.labelColor}40` }),
+        }}
+      >
+        {label}:
+      </div>
+      <div
+        style={{
+          fontSize: 17,
+          lineHeight: 1.2,
+          fontWeight: 700,
+          color: '#ffffff',
+          textShadow: '0 0 10px rgba(255,255,255,0.16)',
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }

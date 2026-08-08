@@ -16,7 +16,8 @@ export function lightRankField(state, fieldIndex) {
 
   const control = evaluateFieldControl(state, fieldIndex);
   const mods = getFieldModifiers(field);
-  let score = control.netControl * 1.8;
+  // Più peso a netControl: in ricerca i Campi devono contare quasi quanto il duello immediato
+  let score = control.netControl * 3.2;
 
   // Piccoli correttivi generali; il nucleo del punteggio deriva dalle carte.
   if (field.category === 'neutral') score += 1;

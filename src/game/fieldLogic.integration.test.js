@@ -40,8 +40,8 @@ describe('fieldLogic — motore rarità v2', () => {
     fields.forEach((f) => expect(f.category).toBe('neutral'));
   });
 
-  it('catalogo master ha 113 campi', () => {
-    expect(ALL_BATTLEFIELDS).toHaveLength(113);
+  it('catalogo master ha 121 campi', () => {
+    expect(ALL_BATTLEFIELDS).toHaveLength(121);
   });
 
   it('stesso seed → stessa selezione', () => {

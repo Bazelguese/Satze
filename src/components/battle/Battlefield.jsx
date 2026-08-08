@@ -225,6 +225,9 @@ export const BattlefieldPanel = ({
   onOpenPlaytest,
   onReplayDuel,
   onSkipDuel,
+  /** Log ragionamenti IA della partita (post-match) */
+  aiDecisionLog = null,
+  onCopyAiDecisionLog = null,
 }) => {
   const oppWait = isOnlinePvP ? "L'avversario sta scegliendo..." : "L'IA sta scegliendo...";
   const oppThink = isOnlinePvP ? "In attesa dell'avversario..." : "L'IA sta pensando...";
@@ -232,12 +235,21 @@ export const BattlefieldPanel = ({
   // (ad esempio durante la fase selectField)
   const isDuelPhase = gamePhase === 'result' && battleResult;
   const [riepilogoOpen, setRiepilogoOpen] = useState(false);
+  const [aiLogOpen, setAiLogOpen] = useState(false);
+  const [aiLogCopied, setAiLogCopied] = useState(false);
   const riepilogoAnchorRef = useRef(null);
   const [riepilogoRect, setRiepilogoRect] = useState(null);
 
   useEffect(() => {
     setRiepilogoOpen(false);
   }, [duelPhase]);
+
+  useEffect(() => {
+    if (gamePhase !== 'gameOver') {
+      setAiLogOpen(false);
+      setAiLogCopied(false);
+    }
+  }, [gamePhase]);
 
   useEffect(() => {
     if (!riepilogoOpen || !riepilogoAnchorRef.current) {
@@ -591,6 +603,52 @@ export const BattlefieldPanel = ({
               >
                 {rematchChangeDeckLabel}
               </button>
+            )}
+            {!isOnlinePvP && Array.isArray(aiDecisionLog) && aiDecisionLog.length > 0 && (
+              <div className="w-full rounded-lg border border-sky-500/30 bg-sky-950/40 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAiLogOpen((v) => !v)}
+                  className="w-full py-2 px-3 text-sky-100 text-[11px] font-medium flex items-center justify-between gap-2 hover:bg-sky-900/40 transition-colors"
+                >
+                  <span>Ragionamenti IA ({aiDecisionLog.length})</span>
+                  <span className="text-sky-300/80">{aiLogOpen ? '▲' : '▼'}</span>
+                </button>
+                {aiLogOpen && (
+                  <div className="px-2 pb-2 max-h-44 overflow-y-auto space-y-2 border-t border-sky-500/20">
+                    {aiDecisionLog.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="rounded-md bg-slate-900/70 px-2 py-1.5 text-left"
+                      >
+                        <div className="text-[10px] font-semibold text-sky-200/95 mb-1">
+                          {entry.headline}
+                        </div>
+                        <ul className="space-y-0.5">
+                          {(entry.considerations || []).slice(0, 12).map((line, idx) => (
+                            <li key={`${entry.id}-${idx}`} className="text-[9px] leading-snug text-slate-300/90">
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    {onCopyAiDecisionLog && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onCopyAiDecisionLog();
+                          setAiLogCopied(true);
+                          window.setTimeout(() => setAiLogCopied(false), 1600);
+                        }}
+                        className="w-full mt-1 py-1.5 px-2 rounded border border-sky-400/30 text-[10px] text-sky-100/90 hover:bg-sky-900/50 transition-colors"
+                      >
+                        {aiLogCopied ? 'Copiato' : 'Copia log completo'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             <button
               type="button"

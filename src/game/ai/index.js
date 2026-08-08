@@ -71,14 +71,16 @@ export {
 } from './fieldStrategy.js';
 export {
   chooseAIAction,
+  chooseAIActionAsync,
   chooseAIIndependentAction,
+  chooseAIIndependentActionAsync,
   chooseWhenAIResponds,
   chooseWhenAILeads,
 } from './chooseAIAction.js';
 export { lightRankAction, buildBalancedShortlist } from './aiPruning.js';
 export { chooseAIField } from './chooseAIField.js';
 export { getLegalFieldIndexes } from './legalFields.js';
-export { chooseJointAIAction } from './chooseJointAIAction.js';
+export { chooseJointAIAction, chooseJointAIActionAsync } from './chooseJointAIAction.js';
 export { buildStrategicState, deriveOpeningPlayerFirst, findCardInState } from './strategicState.js';
 export {
   projectPostDuelState,
@@ -101,4 +103,10 @@ export {
   selectCandidateFields,
   playerFieldChoiceWeight,
 } from './rankFields.js';
-export { isAIDebugEnabled, buildAIDebugPayload, logAIDebug } from './aiDebug.js';
+export {
+  isAIDebugEnabled,
+  buildAIDebugPayload,
+  logAIDebug,
+  formatAIReasoningEntry,
+  formatAIReasoningLogText,
+} from './aiDebug.js';

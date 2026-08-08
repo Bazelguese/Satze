@@ -18,6 +18,7 @@ import {
   lightRankField,
   evaluateStrategicState,
 } from './index.js';
+import { evaluateRemainingHandPlan } from './strategyPlanner.js';
 import { makeAIContext, makeCard, neutralField } from './aiTestFixtures.js';
 
 function makeField(id, name, category = 'neutral') {
@@ -366,7 +367,7 @@ describe('comportamenti strategici', () => {
       },
     });
     const base = buildStrategicState(ctx);
-    const kept = evaluateStrategicState(
+    const keptPlan = evaluateRemainingHandPlan(
       {
         ...base,
         roundNumber: 4,
@@ -375,16 +376,10 @@ describe('comportamenti strategici', () => {
       },
       getAIProfile('hard')
     );
-    const spent = evaluateStrategicState(
-      {
-        ...base,
-        roundNumber: 4,
-        aiRemainingCardIds: [901],
-        aiUsedCardIds: [902],
-      },
-      getAIProfile('hard')
-    );
-    expect(kept.score).toBeGreaterThan(spent.score);
+    const ultimaPlan = keptPlan.aiPlans.find((p) => p.card.id === 902);
+    expect(ultimaPlan?.window.trigger).toBe('ultimaChance');
+    expect(ultimaPlan?.window.ready).toBe(false);
+    expect(ultimaPlan?.window.preserve).toBeGreaterThan(1.2);
   });
 
   it('sceglie un sacrificio realmente vantaggioso', () => {

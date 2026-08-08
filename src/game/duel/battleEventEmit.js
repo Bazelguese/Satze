@@ -192,6 +192,21 @@ export function emitOutcome(channel, payload) {
   });
 }
 
+/** Scommessa FC esatta del vincitore (stamp PERFECT in UI). */
+export function emitPerfectFocus(channel, { engineSide, agent, focusUsed }) {
+  if (!channel || typeof channel.emitAt !== 'function') return null;
+  return channel.emitAt(BATTLE_PHASES.result, BATTLE_REVEAL_AT.outcome, {
+    type: BATTLE_EVENT_TYPES.info,
+    infoCode: 'perfectFocus',
+    source: systemSource('perfectFocus', 'PERFECT'),
+    target: makeAgentTarget(engineSide, agent),
+    data: {
+      focusUsed: focusUsed ?? 0,
+      side: toBattleSide(engineSide),
+    },
+  });
+}
+
 export function abilitySource(name, ownerEngineSide, id = null) {
   return makeSource({
     kind: 'ability',

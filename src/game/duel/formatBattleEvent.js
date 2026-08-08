@@ -137,6 +137,11 @@ function getBattleEventText(event, context = DEFAULT_CONTEXT) {
       if (event.infoCode === 'copiedTriggerInactive') {
         return `${src} · trigger copiato non attivo`;
       }
+      if (event.infoCode === 'perfectFocus') {
+        const who = targetLabel(event, context) || sideLabel(event.data?.side, context);
+        const fc = event.data?.focusUsed;
+        return `PERFECT · ${who}${fc != null ? ` · ${fc} FC` : ''}`;
+      }
       return event.infoCode || 'info';
     }
     default:

@@ -34,6 +34,12 @@ test('Enclave, Ratti, Patto, Khemet, Apex → animazioni dedicate', () => {
   assert.equal(getBattlefieldAnimationType(88), 'artigli');
 });
 
+test('Mascarada → ring (mappa tematica)', () => {
+  assert.equal(BATTLEFIELD_TEMA_TO_ANIMATION.Mascarada, 'ring');
+  assert.equal(getBattlefieldAnimationType(114), 'ring');
+  assert.equal(getBattlefieldAnimationType(121), 'ring');
+});
+
 test('esempi armate con animazione attiva', () => {
   assert.equal(getBattlefieldAnimationType(22), 'frammenti');
   assert.equal(getBattlefieldAnimationType(19), 'swirl');

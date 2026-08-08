@@ -167,6 +167,11 @@ export const formatAbilityHelper = (ability, options = {}) => {
  */
 export const getCardSprite = (agent) => {
   if (!agent) return { type: 'cosmic_hero', palette: 'cosmic' };
+  // Nascente campagna (id 9001): arte per stadio visivo derivato dalla Lega
+  if (agent.id === 9001 || agent.evolving) {
+    const stage = Math.max(0, Math.min(3, (Number(agent.league) || 2) - 2));
+    return { type: 'specific', agentId: `9001-s${stage}`, palette: 'cosmic' };
+  }
   // Prima controlla se esiste un'immagine specifica per questo agente
   if (AGENT_IMAGES[agent.id]) {
     return { type: 'specific', agentId: agent.id, palette: 'cosmic' };

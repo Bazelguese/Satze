@@ -327,7 +327,11 @@ export function ArenaContesaDuelStage({
   return (
     <div className="relative overflow-hidden" style={STAGE_STYLE}>
       {fieldBgImage && (
-        <div key={fieldBgImage} className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <div
+          key={fieldBgImage}
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 0, isolation: 'isolate', contain: 'paint' }}
+        >
           <BattlefieldReveal imageSrc={fieldBgImage} animationType={entranceAnimationType} />
         </div>
       )}

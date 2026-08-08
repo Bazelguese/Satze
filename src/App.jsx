@@ -10,6 +10,7 @@ import { preloadAllAssets } from './utils/preloadAssets';
 import { GameViewport } from './components/GameViewport';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CosmicTransitionProvider } from './components/cosmic/ScreenTransition';
+import { SatzeCursorHost } from './components/cursor/SatzeCursorHost';
 import { IS_PUBLIC_PLAYTEST_BUILD } from './config/buildProfile';
 
 const SHOW_CARD_TEST = false; // true per pagina test carte
@@ -23,6 +24,9 @@ const StyleLabPage = lazy(() => import('./components/styleLab/StyleLabPage'));
 const DuelVfxLabPage = lazy(() => import('./components/duelVfxLab/DuelVfxLabPage').then((m) => ({ default: m.DuelVfxLabPage })));
 const DuelClashToolPage = lazy(() => import('./components/duelVfxLab/DuelClashToolPage').then((m) => ({ default: m.DuelClashToolPage })));
 const OverdriveLabPage = lazy(() => import('./components/overdriveLab/OverdriveLabPage').then((m) => ({ default: m.OverdriveLabPage })));
+const PerfectFocusLabPage = lazy(() =>
+  import('./components/perfectFocusLab/PerfectFocusLabPage').then((m) => ({ default: m.PerfectFocusLabPage }))
+);
 const DialogueLabPage = lazy(() => import('./components/dialogueLab/DialogueLabPage').then((m) => ({ default: m.DialogueLabPage })));
 const ArenaContesaLayoutPage = lazy(() =>
   import('./components/arenaContesaLab/ArenaContesaLayoutPage').then((m) => ({ default: m.ArenaContesaLayoutPage }))
@@ -99,6 +103,7 @@ function AppContent() {
   const showDuelVfxLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelVfxLab') === '1';
   const showDuelClashTool = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelClashTool') === '1';
   const showOverdriveLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('overdriveLab') === '1';
+  const showPerfectFocusLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perfectFocusLab') === '1';
   const showDialogueLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('dialogue1') === '1';
   const showArenaContesa = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('arenaContesa') === '1';
 
@@ -138,6 +143,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closePerfectFocusLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('perfectFocusLab');
+    window.location.href = url.toString();
+  };
+
   const closeDialogueLab = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('dialogue1');
@@ -162,6 +173,8 @@ function AppContent() {
         <DuelClashToolPage onClose={closeDuelClashTool} />
       ) : showOverdriveLab ? (
         <OverdriveLabPage onClose={closeOverdriveLab} />
+      ) : showPerfectFocusLab ? (
+        <PerfectFocusLabPage onClose={closePerfectFocusLab} />
       ) : showDialogueLab ? (
         <DialogueLabPage onClose={closeDialogueLab} />
       ) : showArenaContesa ? (
@@ -174,6 +187,7 @@ function AppContent() {
         <GameViewport>
           <CosmicTransitionProvider>
             <SatzeGame />
+            <SatzeCursorHost />
           </CosmicTransitionProvider>
         </GameViewport>
       )}

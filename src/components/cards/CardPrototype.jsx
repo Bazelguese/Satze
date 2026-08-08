@@ -31,7 +31,7 @@ export const CardPrototype = ({
 }) => {
   if (!agent) return null;
 
-  const colors = ARMY_COLORS[agent.army] || { bg: 'from-gray-800 to-gray-700', accent: '#666' };
+  const colors = ARMY_COLORS[agent.army] || { bg: 'from-gray-800 to-gray-700', accent: '#a9a294' };
   const armyBonus = ARMY_BONUSES[agent.army];
   const spriteInfo = getCardSprite(agent);
   const positioning = getImagePositioning(agent.id, agent.army);

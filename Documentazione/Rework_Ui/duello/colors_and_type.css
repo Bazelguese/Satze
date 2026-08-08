@@ -38,15 +38,20 @@
   --fc-danger:      #dc2626;
   --fc-info:        #38bdf8;
 
-  /* ─────────── Faction (Armata) accents ─────────── */
-  --army-orizzonte:       #a78bfa;  /* violet — comet/stellar */
-  --army-kethran:         #fbbf24;  /* amber — temples */
-  --army-corte-rossa:     #dc2626;  /* red — fire/blood */
-  --army-calibri-pesanti: #64748b;  /* slate — industrial */
-  --army-orathai:         #14b8a6;  /* teal — moon/tide */
-  --army-mounthborn:      #84cc16;  /* lime — spore/growth */
-  --army-enclave:         #ea580c;  /* orange — dragon/volcano */
-  --army-ratti:           #10b981;  /* emerald — plague/rat */
+  /* ─────────── Faction (Armata) accents — oklch L 0.61–0.87 ─────────── */
+  --army-orizzonte:       #a288fb;  /* violet — comet/stellar */
+  --army-kethran:         #eebf3c;  /* amber — temples */
+  --army-corte-rossa:     #f8504f;  /* red — fire/blood */
+  --army-calibri-pesanti: #a9a294;  /* stone — industrial */
+  --army-orathai:         #5ad4bc;  /* teal — moon/tide */
+  --army-mounthborn:      #c9e238;  /* lime — spore/growth */
+  --army-enclave:         #fb912d;  /* orange — dragon/volcano */
+  --army-ratti:           #40ad60;  /* green — plague/rat */
+  --army-indocili:        #e867c3;  /* fuchsia — revolt */
+  --army-khemet:          #26c4e8;  /* sky — desert/sun */
+  --army-apex:            #d5ecf9;  /* ice — apex */
+  --army-mascarada:       #437ef2;  /* cobalt — ring */
+  --army-mascarada-deep:  #0047AB;  /* deep cobalt — bg/gradient only */
 
   /* ─────────── Campaign chroma (missions) ─────────── */
   --camp-ass:       #f97316;  /* Assault  */

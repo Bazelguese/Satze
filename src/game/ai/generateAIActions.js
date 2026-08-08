@@ -143,10 +143,30 @@ export function generateStrategicFocusCandidates(context, card, profile) {
 
   const exactSearch = shouldUseExactFocusSearch(context, profile);
   if (exactSearch) {
+    // Risposta/critico: valuta Focus fini, ma non aprire tutto il pool a metà partita.
+    // Eccezioni (letale / 3° Campo / ultima carta) restano via getFocusCapException in generate.
+    const softExtra = profile?.exactFocusSoftExtra ?? 2;
+    let searchMax = maxFocus;
+    if (cardsRemaining >= 3) {
+      searchMax = Math.min(maxFocus, ordinaryCap + softExtra);
+    } else if (cardsRemaining === 2) {
+      searchMax = Math.min(maxFocus, ordinaryCap + softExtra + 1);
+    }
     const focuses = [];
-    for (let focus = minFocus; focus <= maxFocus; focus += 1) focuses.push(focus);
+    for (let focus = minFocus; focus <= searchMax; focus += 1) focuses.push(focus);
+    // Consentire comunque focus eccezionali sopra il soft max
+    for (let focus = searchMax + 1; focus <= maxFocus; focus += 1) {
+      const probe = {
+        card,
+        cardId: card?.id,
+        focus,
+        fieldIndex: context.currentFieldIndex,
+      };
+      const ex = getFocusCapException(context, probe, profile, budget);
+      if (ex.allowed) focuses.push(focus);
+    }
     return {
-      focuses,
+      focuses: [...new Set(focuses)].sort((a, b) => a - b),
       exactSearch: true,
       budget: {
         fairShare,
@@ -256,6 +276,7 @@ export function generateStrategicActionsForSide(context, side, profile, fieldInd
           fairShare: budget.fairShare,
           ordinaryCap: budget.ordinaryCap,
           standardFocus: budget.standardFocus,
+          cardsRemaining: budget.cardsRemaining,
           exceptionReason: exception.reason,
           exactFocusSearch: exactSearch,
         },

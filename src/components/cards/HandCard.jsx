@@ -27,7 +27,7 @@ export const HandCard = React.memo(({
   const hasOutcome = isUsed && Boolean(battleOutcome);
   const isWinner = battleOutcome === 'winner';
   const isLoser = battleOutcome === 'loser';
-  const colors = agent ? ARMY_COLORS[agent.army] || { bg: "from-gray-800 to-gray-700", accent: "#666", text: "text-gray-200" } : {};
+  const colors = agent ? ARMY_COLORS[agent.army] || { bg: "from-gray-800 to-gray-700", accent: "#a9a294", text: "text-gray-200" } : {};
   
   if (!agent) return null;
   
@@ -58,10 +58,15 @@ export const HandCard = React.memo(({
         flex flex-col overflow-hidden
       `;
 
+  const canDrag = Boolean(onDragStart && !disabled && !isUsed);
+  const canHot = Boolean(!canDrag && (onClick || onPreviewClick));
+
   return (
     <div
       onClick={handleClick}
       onMouseDown={handleMouseDown}
+      data-drag={canDrag ? 'true' : undefined}
+      data-hot={canHot ? 'true' : undefined}
       className={handShellClass}
       style={{ userSelect: 'none' }}
     >

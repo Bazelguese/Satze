@@ -6,6 +6,9 @@ import {
   DISPLAY_MODES,
   RESOLUTION_PRESETS,
   UI_SCALE_PRESETS,
+  CURSOR_SIZE_PRESETS,
+  CURSOR_TRAIL_LENGTH_PRESETS,
+  CURSOR_TRAIL_DURATION_PRESETS,
   VFX_QUALITY_LEVELS,
   DUEL_LAYOUT_BREATH_LEVELS,
   applyElectronDisplay,
@@ -31,6 +34,28 @@ const BREATH_LABELS = {
   off: 'Off',
   soft: 'Soft',
   strong: 'Forte',
+};
+
+const TRAIL_LENGTH_LABELS = {
+  5: 'Corta',
+  10: 'Media',
+  16: 'Lunga',
+};
+
+const TRAIL_DURATION_LABELS = {
+  200: 'Rapida',
+  400: 'Media',
+  700: 'Lunga',
+};
+
+const selectStyle = {
+  width: '100%',
+  padding: '0.65rem 0.75rem',
+  background: '#0f0a14',
+  border: `1.5px solid ${PALETTE.slate}`,
+  color: PALETTE.textPrimary,
+  fontFamily: HUD_ORATORIO_FONT_UI,
+  fontSize: '0.8rem',
 };
 
 const segmentBtnStyle = (active, accent = MENU_ACCENTS.magenta) => ({
@@ -309,15 +334,7 @@ export function OptionsScreen({ onClose }) {
             <select
               value={settings.uiScale}
               onChange={(e) => persistPresentation({ uiScale: Number(e.target.value) })}
-              style={{
-                width: '100%',
-                padding: '0.65rem 0.75rem',
-                background: '#0f0a14',
-                border: `1.5px solid ${PALETTE.slate}`,
-                color: PALETTE.textPrimary,
-                fontFamily: HUD_ORATORIO_FONT_UI,
-                fontSize: '0.8rem',
-              }}
+              style={selectStyle}
             >
               {UI_SCALE_PRESETS.map((n) => (
                 <option key={n} value={n}>
@@ -325,6 +342,74 @@ export function OptionsScreen({ onClose }) {
                 </option>
               ))}
             </select>
+          </Row>
+
+          <Row label="Scala cursore" hint="Dimensione del puntatore custom">
+            <select
+              value={settings.cursorSize}
+              onChange={(e) => persistPresentation({ cursorSize: Number(e.target.value) })}
+              style={selectStyle}
+            >
+              {CURSOR_SIZE_PRESETS.map((n) => (
+                <option key={n} value={n}>
+                  {n}%
+                </option>
+              ))}
+            </select>
+          </Row>
+
+          <Row
+            label="Lunghezza scia"
+            hint={
+              settings.reduceMotion
+                ? 'Disattivata da «Riduci animazioni»'
+                : 'Quanti segmenti lascia dietro il cursore'
+            }
+          >
+            <div style={{ display: 'flex', gap: 6 }}>
+              {CURSOR_TRAIL_LENGTH_PRESETS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={settings.reduceMotion}
+                  onClick={() => persistPresentation({ cursorTrailLength: n })}
+                  style={{
+                    ...segmentBtnStyle(settings.cursorTrailLength === n, MENU_ACCENTS.pink),
+                    opacity: settings.reduceMotion ? 0.55 : 1,
+                    cursor: settings.reduceMotion ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {TRAIL_LENGTH_LABELS[n]}
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          <Row
+            label="Durata scia"
+            hint={
+              settings.reduceMotion
+                ? 'Disattivata da «Riduci animazioni»'
+                : 'Quanto resta visibile a cursore fermo'
+            }
+          >
+            <div style={{ display: 'flex', gap: 6 }}>
+              {CURSOR_TRAIL_DURATION_PRESETS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={settings.reduceMotion}
+                  onClick={() => persistPresentation({ cursorTrailDuration: n })}
+                  style={{
+                    ...segmentBtnStyle(settings.cursorTrailDuration === n, '#38bdf8'),
+                    opacity: settings.reduceMotion ? 0.55 : 1,
+                    cursor: settings.reduceMotion ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {TRAIL_DURATION_LABELS[n]}
+                </button>
+              ))}
+            </div>
           </Row>
 
           <Row label="Riduci animazioni" hint="Forza profilo effetti Basso">

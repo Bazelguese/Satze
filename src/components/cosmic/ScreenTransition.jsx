@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+} from 'react';
+import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 import './cosmic-transitions.css';
 
-// Mappa gamePhase → label da mostrare durante la transizione
 const PHASE_LABELS = {
   menu: 'MENU PRINCIPALE',
   selectMode: 'PARTITA LOCALE',
@@ -24,15 +32,14 @@ const PHASE_LABELS = {
   options: 'OPZIONI',
 };
 
-// Sub-fasi del duello: NON innescano la transizione cosmic
-const SKIP_TRANSITION_PHASES = new Set([
-  'selectAgent', 'battle', 'result',
-]);
+const SKIP_TRANSITION_PHASES = new Set(['selectAgent', 'battle', 'result']);
 
-// Fasi del "mondo duello" (tema Cyber HUD): entrandoci la cortina vira
-// al ciano/oro per dichiarare il cambio di identità visiva.
 const DUEL_WORLD_PHASES = new Set([
-  'selectField', 'selectAgent', 'battle', 'result', 'gameOver',
+  'selectField',
+  'selectAgent',
+  'battle',
+  'result',
+  'gameOver',
 ]);
 
 const CosmicTransitionContext = createContext(null);
@@ -42,91 +49,216 @@ export function useCosmicTransition() {
 }
 
 /**
- * Hook che incapsula setGamePhase con la transizione automatica.
+ * True = ok montare contenuto pesante.
+ * Si attiva sotto cortina (dopo lo swap), non a fine animazione —
+ * così la coda dello sweep non coincide col montaggio carte.
  */
-export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
-  const ctx = useCosmicTransition();
-  return useCallback((nextPhase) => {
-    // Sub-fasi rapide del duello: cambio istantaneo, niente cortina
-    if (SKIP_TRANSITION_PHASES.has(nextPhase) || SKIP_TRANSITION_PHASES.has(currentPhase)) {
-      setGamePhase(nextPhase);
-      return;
-    }
-    if (!ctx) {
-      setGamePhase(nextPhase);
-      return;
-    }
-    ctx.requestPhaseChange({
-      label: PHASE_LABELS[nextPhase] || '',
-      variant: DUEL_WORLD_PHASES.has(nextPhase) ? 'duel' : 'cosmic',
-      onSwap: () => setGamePhase(nextPhase),
-    });
-  }, [ctx, setGamePhase, currentPhase]);
+export function useCosmicHeavyContentReady() {
+  const ctx = useContext(CosmicTransitionContext);
+  const allowHeavy = ctx ? ctx.heavyContentReady : true;
+  const isTransitioning = !!ctx?.isTransitioning;
+  const [ready, setReady] = useState(() => !isTransitioning);
+
+  useEffect(() => {
+    if (allowHeavy) setReady(true);
+  }, [allowHeavy]);
+
+  return ready;
 }
 
-/**
- * Provider da montare ad alto livello (App.jsx o main.jsx).
- */
+export function useReportCosmicScreenReady() {}
+
+export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
+  const ctx = useCosmicTransition();
+  const requestPhaseChange = ctx?.requestPhaseChange;
+
+  return useCallback(
+    (nextPhase) => {
+      if (SKIP_TRANSITION_PHASES.has(nextPhase) || SKIP_TRANSITION_PHASES.has(currentPhase)) {
+        setGamePhase(nextPhase);
+        return;
+      }
+      if (!requestPhaseChange) {
+        setGamePhase(nextPhase);
+        return;
+      }
+      requestPhaseChange({
+        label: PHASE_LABELS[nextPhase] || '',
+        variant: DUEL_WORLD_PHASES.has(nextPhase) ? 'duel' : 'cosmic',
+        onSwap: () => setGamePhase(nextPhase),
+      });
+    },
+    [requestPhaseChange, setGamePhase, currentPhase]
+  );
+}
+
 export function CosmicTransitionProvider({ children }) {
   const [transition, setTransition] = useState(null);
+  const [sceneSwapped, setSceneSwapped] = useState(false);
+  const [heavyContentReady, setHeavyContentReady] = useState(true);
   const busyRef = useRef(false);
+  const timersRef = useRef([]);
+  const runIdRef = useRef(0);
+  const vfxLite = getVfxQualityProfile().quality !== 'high';
 
-  const requestPhaseChange = useCallback(({ label, variant = 'cosmic', onSwap }) => {
-    if (busyRef.current) {
-      // Richiesta sovrapposta: esegui swap immediato per non bloccare il gioco
-      onSwap?.();
-      return;
-    }
-    busyRef.current = true;
-    setTransition({ label, variant, phase: 'covering' });
+  const SWAP_MS = 280;
+  /** Carte / reveal: subito dopo lo swap, ancora sotto copertura piena. */
+  const HEAVY_MS = 320;
+  /** Inizio dissolvenza overlay (CSS uncover già quasi finito). */
+  const FADE_MS = 760;
+  const TOTAL_MS = 920;
 
-    // T+280ms: la cortina copre tutto → fai lo swap della scena
-    setTimeout(() => {
-      try { onSwap?.(); } catch (e) { console.error('[CosmicTransition] onSwap error', e); }
-      setTransition((t) => t ? { ...t, phase: 'peak' } : null);
-    }, 280);
-
-    // T+720ms: la cortina è uscita → fine transizione
-    setTimeout(() => {
-      setTransition(null);
-      busyRef.current = false;
-    }, 720);
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
   }, []);
 
+  const requestPhaseChange = useCallback(
+    ({ label, variant = 'cosmic', onSwap }) => {
+      if (busyRef.current) return;
+
+      clearTimers();
+      busyRef.current = true;
+      setSceneSwapped(false);
+      setHeavyContentReady(false);
+      runIdRef.current += 1;
+      const runId = runIdRef.current;
+      setTransition({ label, variant, lite: vfxLite, runId, exiting: false });
+
+      timersRef.current.push(
+        setTimeout(() => {
+          try {
+            onSwap?.();
+          } catch (e) {
+            console.error('[CosmicTransition] onSwap error', e);
+          }
+          setSceneSwapped(true);
+        }, SWAP_MS)
+      );
+
+      timersRef.current.push(
+        setTimeout(() => {
+          setHeavyContentReady(true);
+        }, HEAVY_MS)
+      );
+
+      timersRef.current.push(
+        setTimeout(() => {
+          setTransition((t) => (t && t.runId === runId ? { ...t, exiting: true } : t));
+        }, FADE_MS)
+      );
+
+      timersRef.current.push(
+        setTimeout(() => {
+          setTransition(null);
+          setSceneSwapped(false);
+          setHeavyContentReady(true);
+          busyRef.current = false;
+        }, TOTAL_MS)
+      );
+    },
+    [clearTimers, vfxLite]
+  );
+
+  useEffect(
+    () => () => {
+      clearTimers();
+      busyRef.current = false;
+    },
+    [clearTimers]
+  );
+
+  const ctxValue = useMemo(
+    () => ({
+      requestPhaseChange,
+      isTransitioning: !!transition,
+      heavyContentReady,
+    }),
+    [requestPhaseChange, transition, heavyContentReady]
+  );
+
+  const sceneClass = [
+    'cosmic-scene',
+    transition && !sceneSwapped ? 'cosmic-scene--outgoing' : '',
+    transition && sceneSwapped ? 'cosmic-scene--under-curtain' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const overlayClass = [
+    transition?.variant === 'duel' ? 'cosmic-transition--duel' : '',
+    transition?.lite ? 'cosmic-transition--lite' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <CosmicTransitionContext.Provider value={{ requestPhaseChange, isTransitioning: !!transition }}>
-      <div
-        className={transition ? 'cosmic-scene cosmic-scene--enter' : ''}
-        style={{ position: 'absolute', inset: 0 }}
-      >
+    <CosmicTransitionContext.Provider value={ctxValue}>
+      <div className={sceneClass} style={{ position: 'absolute', inset: 0 }}>
         {children}
       </div>
 
-      {transition && (
-        <React.Fragment>
-          <div className="stage-backdrop" />
+      {transition ? (
+        <div
+          key={transition.runId}
+          className={
+            transition.exiting
+              ? 'satze-cosmic-transition-mount satze-cosmic-transition-mount--out'
+              : 'satze-cosmic-transition-mount'
+          }
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 50000,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+          }}
+        >
           <div
-            className={transition.variant === 'duel' ? 'cosmic-transition--duel' : ''}
-            style={{ position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none', overflow: 'hidden' }}
+            className={
+              transition.lite
+                ? 'cosmic-transition-stack cosmic-transition-stack--lite'
+                : 'cosmic-transition-stack'
+            }
           >
-            <div className="sweep-panel sweep-panel--a" />
-            <div className="sweep-panel sweep-panel--b" />
-            <div className="flash-bloom" />
-            <div className="glitch-line" style={{ top: '20%', animationDelay: '0.04s' }} />
-            <div className="glitch-line" style={{ top: '55%', animationDelay: '0.14s' }} />
-            <div className="glitch-line" style={{ top: '78%', animationDelay: '0.24s' }} />
-            {transition.label && (
-              <React.Fragment>
-                <div className="load-text">{transition.label}</div>
-                <div className="load-sub">&gt; CARICAMENTO</div>
-              </React.Fragment>
-            )}
+            <div
+              className={
+                transition.lite ? 'stage-backdrop stage-backdrop--lite' : 'stage-backdrop'
+              }
+            />
+            <div
+              className={overlayClass}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 100,
+                pointerEvents: 'none',
+                overflow: 'hidden',
+              }}
+            >
+              <div className="transition-opaque-plate" aria-hidden />
+              <div className="sweep-panel sweep-panel--a" />
+              <div className="sweep-panel sweep-panel--b" />
+              {transition.label ? (
+                <>
+                  <div className="load-text">{transition.label}</div>
+                  <div className="load-sub">&gt; CARICAMENTO</div>
+                </>
+              ) : null}
+            </div>
           </div>
-        </React.Fragment>
-      )}
+        </div>
+      ) : null}
     </CosmicTransitionContext.Provider>
   );
 }
 
-// Backward-compat: se il vecchio codice importava ScreenTransition come default
 export default CosmicTransitionProvider;
+
+export function useCosmicOutgoingRetainer() {
+  return null;
+}
+
+export function useCosmicIsRetainedScreen() {
+  return false;
+}

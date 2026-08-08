@@ -43,7 +43,7 @@ export const ARMY = {
   orizzonte: { name: "Figli dell'Orizzonte", fx: 'wave', color: '#a78bfa' },
   corte: { name: 'Corte Rossa', fx: 'shake', color: '#f43f5e' },
   kethran: { name: 'Kethran', fx: 'pulse', color: '#fbbf24' },
-  calibri: { name: 'Calibri Pesanti', fx: 'tremor', color: '#94a3b8' },
+  calibri: { name: 'Calibri Pesanti', fx: 'tremor', color: '#a9a294' },
   orathai: { name: 'Orathai', fx: 'sway', color: '#2dd4bf' },
   enclave: { name: "L'Enclave delle Scaglie", fx: 'flicker', color: '#22c55e' },
   ratti: { name: 'Ratti della Megera', fx: 'glitch', color: '#a3a3a3' },

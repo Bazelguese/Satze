@@ -2,6 +2,8 @@
 // DECK MANAGER - Gestione mazzi personalizzati
 // ============================================
 
+import { blendAccentsOklch } from './armyAccentBlend';
+
 const STORAGE_KEY = 'satze_custom_decks';
 
 /**
@@ -181,21 +183,12 @@ export function getHandAccentColor(hand, armyColors, fallback = '#94a3b8') {
     const accent = armyColors[armies[0]]?.accent;
     return accent || fallback;
   }
-  // Fusione pesata: media RGB per numero di carte
-  let totalR = 0, totalG = 0, totalB = 0, totalWeight = 0;
-  for (const army of armies) {
-    const accent = armyColors[army]?.accent;
-    if (!accent) continue;
-    const rgb = hexToRgb(accent);
-    if (!rgb) continue;
-    const w = counts[army];
-    totalR += rgb.r * w;
-    totalG += rgb.g * w;
-    totalB += rgb.b * w;
-    totalWeight += w;
-  }
-  if (totalWeight === 0) return fallback;
-  return rgbToHex(totalR / totalWeight, totalG / totalWeight, totalB / totalWeight);
+  // Fusione pesata in oklch: conserva croma e tinta dominante
+  const blended = blendAccentsOklch(
+    armies.map((army) => ({ accent: armyColors[army]?.accent, weight: counts[army] }))
+         .filter((p) => p.accent)
+  );
+  return blended || fallback;
 }
 
 /**

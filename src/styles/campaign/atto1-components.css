@@ -1,0 +1,38 @@
+/* Animazioni e stati hover/focus dei componenti Campagna Atto I
+   (keyframes copiate dai specimen del pacchetto 2 — i valori restano nei componenti). */
+
+/* HudBar */
+@keyframes hb-critborder{0%,100%{border-color:#c2473f;box-shadow:0 0 12px rgba(194,71,63,.55)}50%{border-color:#7a2b28;box-shadow:0 0 4px rgba(194,71,63,.2)}}
+@keyframes hb-threatpulse{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes hb-riftpulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
+
+/* MapNode */
+@keyframes cmn-sel{0%,100%{box-shadow:0 0 14px rgba(245,243,236,.5),inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 30px rgba(245,243,236,.9),inset 0 0 14px rgba(0,0,0,.6)}}
+@keyframes cmn-threat{0%,100%{box-shadow:0 0 8px rgba(194,71,63,.4),inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 26px rgba(194,71,63,.9),inset 0 0 14px rgba(0,0,0,.6)}}
+@keyframes cmn-pulse{0%,100%{box-shadow:0 0 8px rgba(245,243,236,.22),inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 20px rgba(245,243,236,.6),inset 0 0 14px rgba(0,0,0,.6)}}
+
+/* Rift */
+@keyframes rt-pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.16)}}
+@keyframes rt-tremor{0%{transform:translate(0,0)}25%{transform:translate(.7px,-.5px)}50%{transform:translate(-.6px,.6px)}75%{transform:translate(.5px,.6px)}100%{transform:translate(0,0)}}
+@keyframes rt-corefx{0%,100%{filter:blur(1px) brightness(1)}50%{filter:blur(1.6px) brightness(1.35)}}
+
+/* Edge */
+@keyframes cq-flow{to{stroke-dashoffset:-16}}
+
+/* MissionPanel */
+@keyframes mp-urg{0%,100%{opacity:.8}50%{opacity:1}}
+
+/* CampaignMapShell */
+@keyframes cm-scan{0%{transform:translateY(-100%)}100%{transform:translateY(2000%)}}
+
+@media (prefers-reduced-motion: reduce) {
+  .ca1-anim, .ca1-anim * { animation: none !important; transition: none !important; }
+}
+
+/* Stati hover/focus condivisi (dal markup style-hover / style-focus dei specimen) */
+.ca1-hover-soft:hover { background: rgba(245,243,236,.07) !important; }
+.ca1-focus-cyan:focus-visible { outline: 2px solid #58d9dc; outline-offset: 2px; }
+.ca1-focus-blue:focus-visible { outline: 2px solid #6a8cff; outline-offset: 2px; }
+.ca1-focus-violet:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+.ca1-focus-gold:focus-visible { outline: 2px solid #c9a23e; outline-offset: 2px; }
+.ca1-card-pick { transition: transform .18s, border-color .18s, box-shadow .18s; }

@@ -1,0 +1,244 @@
+/* Satze Design System — Colors & Type
+ * DIREZIONE BRAND (rebrand 2026): monocromo sporco "inchiostro" + un solo accento primario,
+ *   la LUCE PURA (bianco-osso, senza tinta). Secondari: MAGENTA #e8189a e COBALTO #2b5cff,
+ *   entrambi fuori dalla gamma dei 10 accenti-armata, che restano intatti per le carte.
+ *   Si stacca volutamente dalla vecchia palette viola cosmica (src/theme/hudOratorioPalette.js).
+ *   I 10 colori-armata derivano ancora da src/data/armies.js (ARMY_COLORS).
+ * Fonts: Chakra Petch, Cinzel, Share Tech Mono (Google Fonts)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  /* ─────────── Base / inchiostro (grigi sporchi) ─────────── */
+  --bg-void:        #070707;  /* abisso */
+  --bg-night:       #0e0e0f;  /* sfondo principale */
+  --bg-panel:       #161617;  /* superficie pannello */
+  --bg-panel-2:     #121213;  /* alt panel */
+  --bg-ember:       #1b1b1c;  /* underlay */
+  --bg-steel:       #262629;  /* raised surface */
+
+  /* ─────────── Foreground (osso / grigio) ─────────── */
+  --fg1:            #ece9e2;  /* testo primario — bianco-osso */
+  --fg2:            #9a988f;  /* testo secondario — grigio polvere */
+  --fg3:            #6d6b64;  /* dim */
+  --fg-disabled:    #49473f;
+
+  /* ─────────── Accento PRIMARIO — Luce pura (senza tinta) ─────────── */
+  --accent-light:    #f5f3ec;  /* LUCE PRIMARIA UI — bianco-osso incandescente */
+  --accent-light-dim:#cfccc2;  /* luce attenuata */
+  --accent-silver:   #f5f3ec;  /* alias storico → luce */
+
+  /* ─────────── Accenti SECONDARI — fuori dalla gamma-armate ─────────── */
+  --accent-magenta:  #e8189a;  /* secondario · magenta freddo */
+  --accent-magenta-l:#ff4fbf;
+  --accent-cobalt:   #2b5cff;  /* secondario · cobalto elettrico */
+  --accent-cobalt-l: #6a8cff;
+  --accent-cyan:     #2b5cff;  /* alias storico → cobalto */
+  --accent-cyan-d:   #1e40c8;
+  --accent-ice:      #6a8cff;
+
+  /* ─────────── Derivati neutri / funzionali ─────────── */
+  --accent-glow:    #f5f3ec;  /* glow primario = luce */
+  --accent-edge:    #4a4a50;  /* bordo evidenziato (grigio) */
+  --accent-gold:    #cfccc2;  /* ex-oro → bone */
+  --accent-gold-l:  #f5f3ec;  /* highlight → luce */
+  --accent-fire:    #c2473f;  /* calore / energia (rosso segnale) */
+  --accent-fire-d:  #8f2f2a;
+  --accent-blood:   #c2473f;  /* danger / HP */
+  --accent-slate:   #34343a;  /* bordo default (grigio) */
+
+  /* ─────────── Semantic (funzionali) ─────────── */
+  --fc-success:     #4a9e78;  /* smeraldo smorto */
+  --fc-warning:     #c9a23e;  /* ottone smorto */
+  --fc-danger:      #c2473f;  /* rosso segnale */
+  --fc-info:        #2b5cff;  /* cobalto (= secondario) */
+
+  /* ─────────── Faction (Armata) accents — da armies.js ARMY_COLORS ─────────── */
+  /* 12 tinte su asse oklch — L 0.61–0.87, distanza minima ~24° */
+  --army-corte-rossa:     #f8504f;  /* oklch(0.665 0.205  25) — fuoco/sangue */
+  --army-enclave:         #fb912d;  /* oklch(0.755 0.165  58) — scaglie/drago */
+  --army-kethran:         #eebf3c;  /* oklch(0.825 0.150  88) — oro/templi */
+  --army-mounthborn:      #c9e238;  /* oklch(0.865 0.185 118) — spore/crescita */
+  --army-ratti:           #40ad60;  /* oklch(0.665 0.150 150) — peste */
+  --army-orathai:         #5ad4bc;  /* oklch(0.795 0.115 178) — luna/marea */
+  --army-khemet:          #26c4e8;  /* oklch(0.760 0.130 218) — turchese */
+  --army-mascarada:       #437ef2;  /* oklch(0.615 0.185 262) — cobalto acceso */
+  --army-mascarada-deep:  #0047AB;  /* cobalto profondo — solo fondi, non accento */
+  --army-orizzonte:       #a288fb;  /* oklch(0.700 0.165 292) — cometa/stellare */
+  --army-indocili:        #e867c3;  /* oklch(0.700 0.190 340) — magenta */
+  --army-apex:            #d5ecf9;  /* oklch(0.930 0.030 232) — ghiaccio */
+  --army-calibri-pesanti: #a9a294;  /* oklch(0.715 0.022  85) — ottone/canna */
+
+  /* ─────────── Campaign chroma (missions) ─────────── */
+  --camp-ass:       #f97316;  /* Assault  */
+  --camp-dif:       #38bdf8;  /* Defence  */
+  --camp-dom:       #d4af37;  /* Domination */
+  --camp-ann:       #dc2626;  /* Annihilation */
+  --camp-spc:       #a78bfa;  /* Special */
+
+  /* ─────────── Type families ─────────── */
+  --font-display:   'Cinzel', 'Times New Roman', serif;       /* Menu banners, hero titles */
+  --font-ui:        'Chakra Petch', system-ui, sans-serif;    /* All UI — primary */
+  --font-mono:      'Share Tech Mono', 'Courier New', monospace;
+
+  /* ─────────── Type scale ─────────── */
+  --fs-xs:          11px;
+  --fs-sm:          13px;
+  --fs-base:        15px;
+  --fs-md:          17px;
+  --fs-lg:          20px;
+  --fs-xl:          28px;
+  --fs-2xl:         40px;
+  --fs-3xl:         56px;
+  --fs-4xl:         72px;   /* SATZE banner-scale */
+  --fs-5xl:         96px;
+
+  /* ─────────── Tracking (signature wide spacing) ─────────── */
+  --tracking-hud:    0.15em;
+  --tracking-wide:   0.22em;
+  --tracking-banner: 0.35em;
+
+  /* ─────────── Spacing (4px rhythm) ─────────── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+
+  /* ─────────── Radii (flat-first HUD) ─────────── */
+  --r-0:  0px;
+  --r-1:  2px;
+  --r-2:  4px;
+  --r-3:  8px;
+  --r-card: 12px;  /* rounded-xl — reserved for full-art cards */
+  --r-pill: 9999px;
+
+  /* ─────────── Borders ─────────── */
+  --border-hair:  1px solid var(--accent-slate);
+  --border-std:   1.5px solid var(--accent-slate);
+  --border-bold:  2px solid var(--accent-slate);
+
+  /* ─────────── Shadow system ─────────── */
+  --sh-flat:    0 2px 8px rgba(0,0,0,0.8);
+  --sh-drop:    0 4px 16px rgba(0,0,0,0.9);
+  --sh-inset:   inset 0 0 40px rgba(0,0,0,0.45);
+  --glow-light:   0 0 12px rgba(245,243,236,0.5), 0 0 26px rgba(245,243,236,0.22);  /* PRIMARIO */
+  --glow-magenta: 0 0 12px rgba(232,24,154,0.55), 0 0 24px rgba(232,24,154,0.28);
+  --glow-cobalt:  0 0 12px rgba(43,92,255,0.55), 0 0 24px rgba(43,92,255,0.28);
+  --glow-violet:  0 0 12px rgba(245,243,236,0.5), 0 0 28px rgba(245,243,236,0.22);  /* alias → luce */
+  --glow-cyan:  0 0 12px rgba(43,92,255,0.55), 0 0 24px rgba(43,92,255,0.28);        /* alias → cobalto */
+  --glow-gold:  0 0 12px rgba(207,204,194,0.55), 0 0 24px rgba(207,204,194,0.28);
+  --glow-fire:  0 0 12px rgba(194,71,63,0.6), 0 0 24px rgba(194,71,63,0.3);
+  --glow-blood: 0 0 12px rgba(194,71,63,0.55), 0 0 24px rgba(194,71,63,0.28);
+
+  /* ─────────── Easing ─────────── */
+  --ease-btn:    cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --ease-ambient: ease-in-out; /* @kind other */
+
+  /* ─────────── Z-index ─────────── */
+  --z-bg:       0;  /* @kind other */
+  --z-content:  10; /* @kind other */
+  --z-hud:      20; /* @kind other */
+  --z-overlay:  40; /* @kind other */
+  --z-modal:    60; /* @kind other */
+}
+
+/* ─────────── Semantic element styles ─────────── */
+
+.ds-h1, h1.ds {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-4xl);
+  letter-spacing: var(--tracking-banner);
+  color: var(--fg1);
+  text-transform: uppercase;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.9);
+}
+
+.ds-h2, h2.ds {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg1);
+  text-transform: uppercase;
+}
+
+.ds-h3, h3.ds {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-xl);
+  letter-spacing: var(--tracking-hud);
+  color: var(--fg1);
+}
+
+.ds-hud-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  color: var(--accent-silver);
+  text-transform: uppercase;
+}
+
+.ds-body, p.ds {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--fg1);
+}
+
+.ds-flavor {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--fg2);
+  line-height: 1.4;
+}
+
+.ds-mono, code.ds {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-cyan);
+  letter-spacing: 0.06em;
+}
+
+.ds-stat {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  color: var(--accent-gold-l);
+  letter-spacing: 0.05em;
+}
+
+/* ─────────── Button baseline (HUD) ─────────── */
+.ds-btn {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--fg1);
+  background: rgba(245, 243, 236, 0.05);
+  border: var(--border-std);
+  border-color: var(--accent-slate);
+  padding: 10px 20px;
+  transition: all 0.2s var(--ease-btn);
+  cursor: pointer;
+}
+.ds-btn:hover {
+  border-color: var(--accent-light);
+  background: rgba(245,243,236,0.12);
+  box-shadow: var(--glow-light);
+}
+/* Varianti secondarie */
+.ds-btn--magenta:hover { border-color: var(--accent-magenta); background: rgba(232,24,154,0.16); box-shadow: var(--glow-magenta); }
+.ds-btn--cobalt:hover  { border-color: var(--accent-cobalt);  background: rgba(43,92,255,0.16);  box-shadow: var(--glow-cobalt); }
+.ds-btn:active { transform: scale(0.98); }
+.ds-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }

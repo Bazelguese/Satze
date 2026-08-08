@@ -7,15 +7,16 @@
 //
 // Props:
 //   armyName(string|null)   nome armata scelta; null = Eserciti Personalizzati
-//   onSelectDeck(deckKey)   chiamato alla conferma. Per i personalizzati il
-//                           deckKey ha forma "<armySlug>::<key>"
+//   onSelectDeck(deckKey)   chiamato alla conferma
 //   onBack()                torna alla scelta armata
+//
+// Con gameDeckOptions: armate = solo precostruiti; Personalizzati = mazzi utente.
 
 // Si renderizza fullscreen (position: fixed). Renderizzala al livello
 // del routing, NON dentro CosmicScreenLayout o altri wrapper.
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ARMY_COLORS, ARMY_BONUSES, ARMY_GIFS, ARMY_ICONS } from '../../../data/armies.js';
 import { ARMY_DECKS, ARMY_SETS } from '../../../data/cards.js';
 import { CARD_IMAGES, AGENT_IMAGES } from '../../../data/images.js';
@@ -49,10 +50,10 @@ import {
 } from '../../../utils/placeFxPreference.js';
 import { CARD_BACK_IMAGES } from '../../../utils/cardBackPicker.js';
 import { CardBack } from '../../cards/CardBack.jsx';
+import { GameCard } from '../../cards/GameCard.jsx';
 import { CardShuffleDealStage } from '../../shuffle/CardShuffleDealStage.jsx';
 import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDealLayout.js';
 import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
-
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -319,12 +320,19 @@ export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
       ...getCardClassificationById(card.id),
     };
   });
+  const accentColor =
+    deck.accent
+    || (safeDeckArmy && ARMY_COLORS[safeDeckArmy]?.accent)
+    || (armies[0] && ARMY_COLORS[armies[0]]?.accent)
+    || (safeSelected && ARMY_COLORS[safeSelected]?.accent)
+    || '#a288fb';
+
   return {
     id: deck.deckKey,
     name: deck.name,
     description: deck.description || '',
     army: displayArmy,
-    accentColor: deck.accent,
+    accentColor,
     armies,
     cards: previewCards,
     _opt: deck.gameOption || null,
@@ -365,9 +373,16 @@ export default function DeckSelectCinematic({
   const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
   /** Anteprima attiva: shuffle | click | drop | effects */
   const [previewMode, setPreviewMode] = useState('shuffle');
+  const rootRef = useRef(null);
+  const wheelLockRef = useRef(0);
+  const phaseRef = useRef(phase);
+  const idxRef = useRef(idx);
+  const goRef = useRef(null);
 
   const deck = DECKS[idx] || DECKS[0];
   const accent = deck ? deck.accent : '#a78bfa';
+  phaseRef.current = phase;
+  idxRef.current = idx;
 
   // Offset lineare: ordine 01…N senza wrap (l'ultimo non compare a sinistra del primo)
   const computeOff = (i) => i - idx;
@@ -377,20 +392,25 @@ export default function DeckSelectCinematic({
     return () => clearTimeout(t);
   }, []);
 
-  const go = (delta) => {
-    if (phase !== 'idle' || total === 0) return;
-    const next = Math.max(0, Math.min(total - 1, idx + delta));
-    if (next === idx) return;
+  const go = useCallback((delta) => {
+    if (phaseRef.current !== 'idle' || total === 0) return;
+    const current = idxRef.current;
+    const next = Math.max(0, Math.min(total - 1, current + delta));
+    if (next === current) return;
     setIdx(next);
     setPulse((p) => p + 1);
-  };
-  const goTo = (i) => {
-    if (phase !== 'idle' || i === idx) return;
+  }, [total]);
+
+  const goTo = useCallback((i) => {
+    if (phaseRef.current !== 'idle' || i === idxRef.current) return;
     setIdx(i);
     setPulse((p) => p + 1);
-  };
-  const confirm = () => {
-    if (phase !== 'idle' || !deck) return;
+  }, []);
+
+  goRef.current = go;
+
+  const confirm = useCallback(() => {
+    if (phaseRef.current !== 'idle' || !deck) return;
     if (isManager) {
       setPhase('confirming');
       setTimeout(() => { onSelectDeck && onSelectDeck(deck.deckKey); }, 1500);
@@ -399,7 +419,7 @@ export default function DeckSelectCinematic({
     setShuffleStyle(shuffleKind);
     setPlaceFxPreference(placeFx);
     onSelectDeck && onSelectDeck(deck.deckKey);
-  };
+  }, [deck, isManager, onSelectDeck, placeFx, shuffleKind]);
 
   const pickShuffleKind = (key) => {
     setShuffleKind(key);
@@ -432,7 +452,7 @@ export default function DeckSelectCinematic({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (phase !== 'idle') return;
+      if (phaseRef.current !== 'idle') return;
       if (e.key === 'ArrowLeft') go(-1);
       if (e.key === 'ArrowRight') go(1);
       if (e.key === 'Enter') confirm();
@@ -440,7 +460,34 @@ export default function DeckSelectCinematic({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, [onBack, go, confirm]);
+
+  // Scroll / trackpad: scorre tra gli eserciti
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      if (phaseRef.current !== 'idle') return;
+
+      const scrollable = e.target?.closest?.('.dsk-prefstack');
+      if (scrollable && scrollable.scrollHeight > scrollable.clientHeight + 1) {
+        return;
+      }
+
+      const dominant = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(dominant) < 6) return;
+
+      e.preventDefault();
+      const now = performance.now();
+      if (now - wheelLockRef.current < 260) return;
+      wheelLockRef.current = now;
+      goRef.current?.(dominant > 0 ? 1 : -1);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   if (!deck) {
     return (
@@ -475,7 +522,7 @@ export default function DeckSelectCinematic({
   const compactPager = total > 12;
 
   return (
-    <div className={`dsk phase-${phase}`} style={{ '--accent': accent }}>
+    <div ref={rootRef} className={`dsk phase-${phase}`} style={{ '--accent': accent }}>
       {/* BG */}
       <div className="dsk-bg-layer">
         <div className="dsk-bg" key={`bg-${deck.army}-${pulse}`} style={{ backgroundImage: deck.bg ? `url('${deck.bg}')` : 'none' }}>
@@ -559,13 +606,7 @@ export default function DeckSelectCinematic({
             dropMeta={dropMeta}
             styleMeta={styleMeta}
             deckCards={deck.deckCards || []}
-            card={{
-              name: deck.leader?.name || deck.name,
-              img: deck.leader?.img || null,
-              power: deck.leader?.power ?? 0,
-              damage: deck.leader?.damage ?? 0,
-              army: deck.army,
-            }}
+            card={deck.leaderAgent || deck.deckCards?.[0] || null}
           />
           <aside className="dsk-prefpanel" aria-label="Preferenze animazioni duello">
             <div className="dsk-prefpanel-head">
@@ -982,35 +1023,6 @@ function PrefRow({ label, meta, rowKey, onPrev, onNext, prevLabel, nextLabel }) 
   );
 }
 
-function PlaceFxMiniCard({ card, accent, flat = false }) {
-  return (
-    <div
-      className="dsk-fxpreview-card"
-      style={{
-        '--acc': accent,
-        boxShadow: flat
-          ? `0 0 0 1px ${accent}66`
-          : `0 0 0 1px ${accent}66, 0 18px 34px rgba(0,0,0,0.6)`,
-      }}
-    >
-      {card?.img ? (
-        <img src={card.img} alt="" draggable={false} />
-      ) : (
-        <div className="dsk-fxpreview-card-fallback" style={{ background: `radial-gradient(circle at 40% 30%, ${accent}55, #0a0a0d 70%)` }} />
-      )}
-      <div className="dsk-fxpreview-card-shade" />
-      <div className="dsk-fxpreview-card-top" style={{ background: `${accent}cc` }}>
-        <span className="pod pot">{card?.power ?? 0}</span>
-        <span className="ttl">{card?.name || 'Agente'}</span>
-        <span className="pod dan">{card?.damage ?? 0}</span>
-      </div>
-      <div className="dsk-fxpreview-card-bot" style={{ background: accent }}>
-        {card?.army || 'SATZE'}
-      </div>
-    </div>
-  );
-}
-
 const PREVIEW_TABS = [
   { key: 'shuffle', label: 'MISCHIA' },
   { key: 'click', label: 'CLICK' },
@@ -1069,7 +1081,12 @@ function DuelAnimPreview({
     return () => clearTimeout(t);
   }, [mode, pose, placeFx.style, tick, duration]);
 
-  const face = <PlaceFxMiniCard card={card} accent={accent} flat={twoFaces} />;
+  const previewAgent = card?.id ? card : (previewDeck[0] || null);
+  const face = previewAgent ? (
+    <div className={twoFaces ? 'dsk-fxpreview-gamecard is-flat' : 'dsk-fxpreview-gamecard'}>
+      <GameCard agent={previewAgent} suppressAnimations />
+    </div>
+  ) : null;
 
   return (
     <div className="dsk-fxpreview" style={{ '--accent': accent, '--acc': accent }} aria-label="Anteprima animazioni duello">
@@ -1157,7 +1174,7 @@ function DuelAnimPreview({
                       <CardBack
                         deck={previewDeck}
                         backImage={cardBackSrc}
-                        fallbackArmy={card?.army}
+                        fallbackArmy={previewAgent?.army}
                         borderRadius={10}
                       />
                     </div>
@@ -1376,18 +1393,30 @@ function DeckSelectStyles() {
       .dsk-faction .ft-lbl { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 0.28em; color: #94a3b8; }
       .dsk-faction .ft-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 14px; letter-spacing: 0.12em; color: var(--accent); margin-top: 2px; }
 
-      /* Nav arrows */
+      /* Nav arrows — sopra il ticket centrale, forma orizzontale */
       .dsk-nav {
-        position: absolute; top: 56%; transform: translateY(-50%); z-index: 30;
-        width: 60px; height: 80px; background: rgba(5,6,8,0.6);
+        position: absolute;
+        top: calc(50% - 360px - 52px);
+        z-index: 30;
+        width: 96px; height: 42px;
+        background: rgba(5,6,8,0.6);
         backdrop-filter: blur(6px);
         border: 1.5px solid color-mix(in srgb, var(--accent) 50%, rgba(255,255,255,0.18));
         color: var(--accent); cursor: pointer;
-        font-family: 'Cinzel', serif; font-weight: 900; font-size: 40px;
+        font-family: 'Cinzel', serif; font-weight: 900; font-size: 28px;
+        line-height: 1;
         display: grid; place-items: center; transition: all .25s;
       }
-      .dsk-nav.left { left: 28px; clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%); }
-      .dsk-nav.right { right: 28px; clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%); }
+      .dsk-nav.left {
+        left: calc(50% - 120px);
+        transform: translateX(-100%);
+        clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
+      }
+      .dsk-nav.right {
+        left: calc(50% + 120px);
+        right: auto;
+        clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+      }
       .dsk-nav:hover { border-color: var(--accent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 60%, transparent); background: rgba(5,6,8,0.85); }
 
       /* Stage / carousel */
@@ -1709,16 +1738,17 @@ function DeckSelectStyles() {
       .dsk-prefstack {
         position: absolute;
         left: 28px;
-        top: 64px;
+        top: 50%;
         bottom: auto;
         z-index: 14;
         width: min(460px, calc(100vw - 56px));
-        max-height: calc(100% - 118px);
+        max-height: calc(100% - 200px);
         overflow-x: hidden;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 8px;
+        transform: translateY(-50%);
         animation: dsk-pref-in .4s cubic-bezier(.2,.7,.2,1) both;
         pointer-events: none;
         scrollbar-width: thin;
@@ -1726,8 +1756,8 @@ function DeckSelectStyles() {
       }
       .dsk-prefstack > * { pointer-events: auto; }
       @keyframes dsk-pref-in {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(calc(-50% + 16px)); }
+        to { opacity: 1; transform: translateY(-50%); }
       }
       .dsk-fxpreview {
         padding: 10px 12px 12px;
@@ -1824,81 +1854,16 @@ function DeckSelectStyles() {
         transform: scale(0.42);
         transform-origin: 50% 50%;
       }
-      .dsk-fxpreview-card {
+      .dsk-fxpreview-gamecard {
         width: 230px;
         height: 330px;
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-        background: #0a0a0d;
-        border: 2px solid rgba(255,255,255,0.28);
-      }
-      .dsk-fxpreview-card img,
-      .dsk-fxpreview-card-fallback {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .dsk-fxpreview-card-shade {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, rgba(0,0,0,0.62) 0%, transparent 22%, transparent 68%, rgba(0,0,0,0.6) 100%);
-      }
-      .dsk-fxpreview-card-top {
-        position: absolute;
-        left: 0; right: 0; top: 8px;
-        height: 42px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 8px;
-        gap: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-      }
-      .dsk-fxpreview-card-top .pod {
-        width: 28px; height: 28px; flex: none;
-        border-radius: 50%;
-        background: rgba(0,0,0,0.85);
-        border: 1.5px solid #fde047;
-        display: grid; place-items: center;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 12px; font-weight: 800; color: #fde047;
-      }
-      .dsk-fxpreview-card-top .pod.dan { border-color: #c084fc; color: #c084fc; }
-      .dsk-fxpreview-card-top .ttl {
-        flex: 1;
-        text-align: center;
-        color: #fff;
-        font-weight: 800;
-        font-size: 11px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        text-shadow: 0 1px 3px #000;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .dsk-fxpreview-card-bot {
-        position: absolute;
-        left: 0; right: 0; bottom: 0;
-        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
       }
-      .dsk-fxpreview-back {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 10px;
+      .dsk-fxpreview-gamecard.is-flat > * {
+        box-shadow: none !important;
+        filter: none !important;
       }
       .dsk-fxpreview-caption {
         display: flex;
