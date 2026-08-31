@@ -1,11 +1,13 @@
 # SATZE — Eminenze
-## Specifica unificata di design e implementazione v2
+## Specifica unificata di design e implementazione v2.1
 
 **Data:** 31 agosto 2026  
 **Stato:** **FONTE CANONICA UNICA PRE-IMPLEMENTAZIONE**  
-**Ambito:** regole di sistema, pipeline del round, modello tecnico, UI, test e catalogo completo delle 12 Eminenze
+**Ambito:** regole di sistema, formati e deckbuilding, pipeline del round, modello tecnico, IA, multiplayer online, UI, test e catalogo completo delle 12 Eminenze
 
 > **Autorità del documento.** Da questa versione, questo file sostituisce come fonte normativa sia `SATZE_EMINENZE_PROTOTIPI.md` sia `SATZE_EMINENZE_SPEC_TECNICA_v1.md`. I due documenti precedenti possono essere conservati come storico, ma non devono essere usati per implementare il sistema quando divergono da questa specifica.
+
+> **Aggiornamento v2.1.** Aggiunti formati con Eminenza obbligatoria in deckbuilding, snapshot globale della Presenza, integrazione IA, commit–reveal online a singolo commitment per round e chiarimento canonico di Corte Rossa −4 sul bersaglio avversario/Overdrive.
 
 ---
 
@@ -24,8 +26,11 @@ Questa specifica unifica le decisioni di design già approvate con i vincoli tec
 7. sostituzione/forzatura/divieto dei trigger;
 8. Lega effettiva e Ancorato;
 9. effetti persistenti, post-Duello e Fine Scontro;
-10. UI, logging, test e ordine di implementazione;
-11. testi canonici delle dodici Eminenze.
+10. formati e validazione della scelta Eminenza;
+11. integrazione IA senza accesso all'informazione segreta;
+12. commit–reveal per il multiplayer online;
+13. UI, logging, test e ordine di implementazione;
+14. testi canonici delle dodici Eminenze.
 
 Principio di design centrale:
 
@@ -55,15 +60,26 @@ Un'Eminenza:
 
 **Eccezione approvata:** la Corte Rossa possiede **4 abilità attive**. La struttura dati non deve assumere `abilities.length === 3`.
 
-## 1.2 Accesso
+## 1.2 Accesso, formati e deckbuilding
 
-Un Deck sblocca l'Eminenza di un'Armata se contiene almeno **5 carte di quell'Armata su 10**.
+Un Deck rende **eleggibile** l'Eminenza di un'Armata se contiene almeno **5 carte di quell'Armata su 10**.
 
-In un Deck 5–5:
+La presenza del sottosistema Eminenza dipende dal **formato**. La specifica riconosce due stati di formato:
 
-- entrambe le Eminenze sono disponibili;
-- prima dello Scontro il giocatore ne sceglie **una sola**;
-- non può cambiarla durante lo Scontro.
+- **Eminenze richieste:** ogni Deck deve registrare **esattamente una Eminenza valida già durante la costruzione del mazzo**;
+- **Eminenze disattivate:** il sottosistema Eminenza non viene usato e la relativa fase/gate non esiste.
+
+Nei formati con Eminenze richieste:
+
+- una partita non può iniziare se uno dei Deck non possiede un'Eminenza valida;
+- l'Eminenza scelta deve appartenere a un'Armata resa eleggibile dalla composizione del Deck;
+- in un Deck 5–5 entrambe le Eminenze sono eleggibili, ma **una sola viene scelta e salvata nella decklist**;
+- la scelta dell'Eminenza non avviene all'inizio dello Scontro e non può essere cambiata durante lo Scontro;
+- lo stato legale normale contiene quindi sempre un'Eminenza per entrambi i giocatori.
+
+Il codice deve comunque tollerare difensivamente `eminence: null` per vecchi salvataggi, test o stati corrotti, ma **non deve attribuire a tale fallback alcuna semantica competitiva**. In particolare non va trattato come “Presenza 0” per soddisfare Digiuno o confronti di Presenza.
+
+`blockEminenza` non rimuove l'Eminenza dal Deck e non crea uno stato “senza Eminenza”: impedisce soltanto di usarla nel round indicato.
 
 ## 1.3 Terminologia temporale
 
@@ -95,7 +111,7 @@ Ogni Eminenza deve avere almeno un'opzione non negativa, così da non rimanere s
 
 ## 2.2 Nessun Pass volontario
 
-> **Ogni giocatore che può utilizzare la propria Eminenza deve scegliere esattamente una capacità attiva a inizio round.**
+> **In un formato con Eminenze richieste, ogni giocatore la cui Eminenza non è bloccata deve scegliere esattamente una capacità attiva a inizio round.**
 
 Non esiste un comando Pass volontario.
 
@@ -198,6 +214,8 @@ Avviene **appena tutte le decisioni dei giocatori rilevanti per il Duello sono s
 Tutte le capacità che non devono influenzare Campo o scelta Agente restano nascoste fino a qui.
 
 ## 3.3 Pipeline normale
+
+Questa pipeline è attiva **solo nei formati con Eminenze richieste**. Se il formato disattiva le Eminenze, l'intero sottosistema viene saltato: nessuna scelta Eminenza, nessun gate `PRE_FIELD` / `PRE_AGENT` / `GENERAL`, nessun contatore Presenza. Il resto del round segue la pipeline ordinaria del formato.
 
 Senza effetti statici che cambiano l'ordine delle decisioni:
 
@@ -307,6 +325,7 @@ Schema consigliato:
 
 ```js
 eminenceState: {
+  // Non-null nello stato legale di un formato con Eminenze richieste.
   eminenceId: null,
 
   presence: 0,
@@ -329,7 +348,31 @@ eminenceState: {
 }
 ```
 
-La UI avversaria **non deve ricevere** `selectedAbilityId` o `selectedParams` prima del reveal appropriato.
+`selectedAbilityId`, `selectedParams`, `selectionSnapshotPresence` e ogni nonce/commitment privato sono **informazione segreta** fino al gate corretto. Non basta nasconderli nella UI: non devono entrare nell'information set dell'IA avversaria, nel public state usato dalle cache, né nei payload online destinati all'avversario prima del reveal.
+
+È consigliato separare logicamente:
+
+```js
+privateEminenceSelection = {
+  selectedAbilityId,
+  selectedParams,
+  selectionSnapshotPresence,
+  committedPresenceCost,
+  commitNonce
+}
+
+publicEminenceState = {
+  eminenceId,
+  presence,
+  totalPresenceSpent,
+  revealedAbilityId,
+  revealGateReached,
+  blockedThisRound,
+  persistentPublicState
+}
+```
+
+La separazione può essere fisica o ottenuta tramite selector/serializer dedicati, ma il confine informativo deve essere verificabile dai test.
 
 ## 4.2 Stato persistente
 
@@ -644,6 +687,39 @@ Nuovi effetti Agente:
 
 `blockEminenza` imposta il blocco per il round successivo.
 
+## 8.1 Snapshot canonico della Presenza
+
+I trigger di Presenza non devono leggere un contatore “live” che cambia durante la successiva risoluzione del Duello.
+
+> **Immediatamente prima della verifica dei normali trigger degli Agenti, dopo la risoluzione di tutti gli effetti Pre-Trigger del round, viene fissato uno snapshot della Presenza e dei contatori di spesa rilevanti. Tutti i trigger Eminenza di quel Duello usano quello snapshot e non vengono ricalcolati in seguito.**
+
+Il checkpoint semantico è `PRESENCE_SNAPSHOT`, collocato dopo:
+
+- tutti i reveal necessari, incluso `GENERAL`;
+- gli effetti Eminenza immediati che risolvono prima dei trigger;
+- la normale preparazione del Campo che deve precedere i trigger;
+- il controllo **Ancorato** e l'eventuale guadagno del +0 dei Figli.
+
+Vengono campionati almeno:
+
+```js
+playerPresence
+enemyPresence
+presenceSpent
+enemyPresenceSpent
+totalPresenceSpent
+enemyTotalPresenceSpent
+```
+
+Conseguenze canoniche:
+
+- una variazione di Presenza avvenuta **prima** di `PRESENCE_SNAPSHOT` può cambiare Digiuno, Grazia, Ascendente, Soggezione, Manifestazione, Blasfemia o Fervore del Duello corrente;
+- una variazione avvenuta **dopo** lo snapshot non modifica retroattivamente quei trigger;
+- la nuova Presenza resta comunque reale e sarà visibile ai checkpoint successivi e ai round futuri;
+- se in futuro verrà creato un trigger di Presenza esplicitamente post-Duello, dovrà dichiarare il proprio checkpoint invece di riusare implicitamente lo snapshot pre-trigger.
+
+Il `TriggerContext` deve ricevere i valori già campionati, non riferimenti ai contatori live.
+
 ---
 
 # 9. Lega effettiva e Ancorato
@@ -807,13 +883,139 @@ Devono essere persistenti e serializzabili:
 - pending effects;
 - debiti Fine Scontro.
 
+
+## 10.4 Integrazione IA
+
+L'Eminenza entra nel sottosistema IA come **azione segreta obbligatoria di round** e come insieme di regole che modificano il valore dei Duelli simulati. Non è sufficiente aggiungere un punteggio all'abilità: l'IA deve giocare con lo stesso information model del giocatore umano.
+
+File/sottosistemi già rilevanti nel progetto e da verificare/estendere durante l'implementazione:
+
+- `buildAIInformationSet.js`;
+- `simulateAIDuel.js`;
+- `strategyPlanner.js`;
+- `publicStateHash.js`;
+- `scoreAIAction.js`;
+- `projectPostDuelState.js`;
+- test di integrazione IA collegati.
+
+### Regola di non-cheating
+
+Alla **scelta segreta di inizio round**, l'IA:
+
+- conosce tutta l'informazione pubblica, inclusa la Presenza avversaria;
+- conosce le proprie scelte private;
+- **non conosce** `selectedAbilityId`, `selectedParams` o altri dati segreti della scelta Eminenza avversaria;
+- deve scegliere la propria abilità e gli eventuali parametri `AT_SELECTION` usando esclusivamente l'information set legittimo in quel momento.
+
+Quando l'avversario apre un commitment a `PRE_FIELD`, `PRE_AGENT` o `GENERAL`, l'informazione rivelata entra da quel momento nell'information set dell'IA e può essere usata per le decisioni che restano ancora aperte.
+
+I parametri `AT_REVEAL` vengono scelti dall'IA al relativo gate e possono usare tutta l'informazione legittimamente pubblica in quel momento.
+
+### Simulazione
+
+`simulateAIDuel` e le proiezioni collegate devono modellare le **stesse primitive del resolver reale**, almeno per:
+
+- `triggerRules` e ordine replacement → condition mods → force/forbid → disable → block;
+- FC temporanei e distinzione `focusInvested` / `effectiveFocus`;
+- Lega effettiva;
+- Ancorato;
+- stati persistenti pubblici come Preda, Frammenti, Debito, Maledizioni di slot e aumenti del requisito Ancorato;
+- effetti Campo/Eminenza che cambiano Conquista, trigger o proprietà del Campo;
+- pending effect rilevanti per la valutazione del Duello e della Fine Scontro.
+
+L'IA non deve simulare un Duello con regole diverse da quelle usate dal resolver effettivo. Dove possibile, condividere primitive pure invece di duplicarne la logica.
+
+### Hash e cache IA
+
+`publicStateHash` e ogni chiave di cache che influenza la valutazione devono distinguere stati pubblicamente diversi. Includere almeno, quando rilevanti:
+
+- Eminenza scelta in deckbuilding;
+- Presenza corrente di entrambi;
+- contatori pubblici/latch rilevanti, incluso lo stato di Fervore quando necessario;
+- abilità già rivelate nel round e relativo gate;
+- stati persistenti pubblici Eminenza;
+- modificatori pubblici di slot/Campo;
+- Lega temporanea già resa pubblica;
+- marker e debiti pubblici.
+
+Non includere nella parte **pubblica** dell'hash una scelta Eminenza avversaria ancora sigillata. Se una simulazione interna dell'IA valuta una propria azione candidata, quella candidata deve invece far parte della chiave privata della simulazione per evitare collisioni fra linee diverse.
+
+Per l'incertezza sulla scelta avversaria, l'IA può valutare/simulare più azioni Eminenza legalmente possibili dell'avversario secondo il proprio livello di difficoltà, ma non può usare la scelta reale ancora nascosta come scorciatoia.
+
+## 10.5 Multiplayer online — commit–reveal
+
+Il multiplayer remoto corrente usa un server WebSocket che inoltra i messaggi e **non è un arbitro autoritativo delle mosse di gioco**. Per impedire che un client cambi la propria scelta Eminenza dopo aver visto quella avversaria, la scelta segreta usa un protocollo commit–reveal lato client.
+
+### Un solo commitment per round
+
+I tre gate di reveal **non richiedono tre commit**. La scelta Eminenza viene effettuata una sola volta a inizio round e viene quindi sigillata con **un unico commitment**.
+
+Payload canonico da impegnare:
+
+```js
+commitPayload = {
+  protocolVersion,
+  matchId,
+  roundNumber,
+  playerRole,
+  eminenceId,
+  abilityId,
+  atSelectionParams, // solo parametri scelti segretamente a inizio round
+  nonce
+}
+
+commitHash = SHA256(canonicalSerialize(commitPayload))
+```
+
+Requisiti:
+
+- `nonce` deve provenire da una sorgente crittograficamente sicura;
+- `canonicalSerialize` deve avere ordine dei campi deterministico e identico sui due client;
+- il commitment deve coprire **tutti** i parametri `AT_SELECTION`, incluso il pronostico della Scommessa Mascarada;
+- i parametri `AT_REVEAL` non fanno parte del commitment perché non esistono ancora al momento della scelta e vengono scelti legittimamente al gate;
+- nessun client deve aprire il proprio commitment prima che entrambi i commitment del round siano stati ricevuti/confermati.
+
+### Apertura al gate corretto
+
+Quando l'abilità selezionata raggiunge il proprio `revealGate`, il client invia l'apertura:
+
+```js
+revealPayload = {
+  protocolVersion,
+  matchId,
+  roundNumber,
+  playerRole,
+  eminenceId,
+  abilityId,
+  atSelectionParams,
+  nonce
+}
+```
+
+Il client avversario ricalcola l'hash e verifica che coincida con il commitment ricevuto.
+
+- un'abilità `PRE_FIELD` apre il proprio commitment a `PRE_FIELD`;
+- una `PRE_AGENT` lo apre a `PRE_AGENT`;
+- una `GENERAL` resta sigillata fino a `GENERAL`;
+- se i due giocatori hanno gate diversi, ciascun commitment viene aperto **solo al proprio gate**;
+- una volta aperto, lo stesso commitment non viene “ricommesso” ai gate successivi.
+
+### Errori, riconnessione e limiti
+
+- hash non valido, payload incoerente o doppia apertura incompatibile devono produrre uno stato di **desync/partita non valida**, non un'accettazione silenziosa;
+- commitment e stato di apertura del round devono sopravvivere alla normale procedura di riconnessione della stanza;
+- messaggi duplicati dopo riconnessione devono essere idempotenti;
+- il commitment impedisce il cambio retroattivo della scelta Eminenza, ma **non trasforma il server relay in un server autoritativo** e non risolve da solo ogni forma di cheating su stato, RNG o altre mosse.
+
+Se in futuro un'abilità richiederà di rivelare l'abilità a un gate ma mantenere un suo parametro già scelto segreto fino a un gate successivo, servirà una struttura di sub-commitment/Merkle o equivalente. **Nessuna Eminenza attuale lo richiede.**
+
 ---
 
 # 11. UI, log e test
 
 ## 11.1 HUD Eminenza
 
-Mostrare sempre:
+Nei formati con Eminenze richieste, mostrare:
 - nome;
 - Presenza pubblica;
 - Statico;
@@ -833,7 +1035,7 @@ Servono almeno:
 6. **PENDING_EFFECT** — capacità rivelata ma con segmento ancora in attesa;
 7. **RESOLVED**.
 
-Non è obbligatorio mostrare tutti questi nomi al giocatore; sono stati utili per la macchina/UI.
+Non è obbligatorio mostrare tutti questi nomi al giocatore; sono stati utili per la macchina/UI. Nei formati con Eminenze disattivate l'intero HUD e questi stati non vengono istanziati.
 
 ## 11.3 Reveal
 
@@ -881,7 +1083,17 @@ Il log deve distinguere `REVEAL`, `PRESENCE_CHANGE`, `TRIGGER_OVERRIDE`, `PENDIN
 - impossibilità di scegliere costo superiore alla Presenza allo snapshot;
 - spesa e `totalPresenceSpent`;
 - perdita di Presenza che non conta come spesa;
-- reset del round.
+- reset del round;
+- `PRESENCE_SNAPSHOT` include le variazioni avvenute prima del checkpoint;
+- variazioni dopo `PRESENCE_SNAPSHOT` non cambiano retroattivamente i trigger del Duello corrente.
+
+### Formati e deckbuilding
+- formato Eminenza rifiuta Deck senza Eminenza;
+- Eminenza scelta deve appartenere a un'Armata con almeno 5 carte;
+- Deck 5–5 registra una sola Eminenza nella decklist;
+- la scelta non cambia all'avvio dello Scontro;
+- formato senza Eminenze salta completamente fase, gate e Presenza;
+- fallback tecnico `eminence: null` non viene interpretato come Presenza 0.
 
 ### Bluff e reveal
 - nessuna informazione avversaria prima del gate corretto;
@@ -912,6 +1124,25 @@ Il log deve distinguere `REVEAL`, `PRESENCE_CHANGE`, `TRIGGER_OVERRIDE`, `PENDIN
 - unblockable vs block;
 - unblockable non supera global disable.
 
+### IA
+- `buildAIInformationSet` non contiene scelta/parametri Eminenza avversari ancora nascosti;
+- un reveal anticipato entra nell'information set solo dal gate corretto;
+- l'IA sceglie `AT_SELECTION` senza leggere la selezione reale avversaria;
+- `publicStateHash` cambia quando cambia Presenza o uno stato Eminenza pubblico rilevante;
+- `publicStateHash` non cambia soltanto perché cambia una scelta avversaria ancora sigillata;
+- `simulateAIDuel` usa overlay trigger, FC temporanei, Lega effettiva e stati persistenti coerenti con il resolver reale;
+- cache diverse per candidate Eminenza proprie diverse.
+
+### Multiplayer commit–reveal
+- entrambi i commitment vengono ricevuti prima di qualsiasi apertura;
+- un solo commit per giocatore per round;
+- apertura valida a PRE_FIELD / PRE_AGENT / GENERAL secondo `revealGate`;
+- Mascarada Scommessa include il pronostico nel commitment;
+- parametri `AT_REVEAL` non sono precommittati;
+- modifica di abilityId, parametro `AT_SELECTION` o nonce causa verifica fallita;
+- reconnect conserva commit e stato di apertura;
+- replay di messaggi duplicati è idempotente.
+
 ### Fine Scontro
 - effetti END_MATCH prima del verdetto;
 - effetti END_MATCH possono essere letali;
@@ -927,7 +1158,7 @@ Devono essere mantenuti test per tutte le dodici. Casi minimi aggiuntivi partico
 - **Ratti −2:** può non produrre valore aggiuntivo se Tossina è già al proprio minimo; nessun fallback.
 - **Khemet:** inizializza a **2 Presenza**.
 - **Khemet + Apex:** `ignore field` non ignora le Maledizioni di slot.
-- **Corte −4:** 3 FC temporanei seguono esattamente la semantica invested/effective; POT finale viene registrata una volta.
+- **Corte −4:** può bersagliare il proprio Agente o quello avversario; 3 FC temporanei seguono esattamente la semantica invested/effective; possono soddisfare Overdrive del bersaglio anche se nemico; POT finale viene registrata una volta.
 - **Orathai:** `trigger:null` conta come requisito naturalmente soddisfatto.
 - **Enclave:** modifica Lega prima dell'Agente e ricomputa Alleato/Rinforzi.
 - **Mascarada:** ordine decisioni Agente → Campo senza anticipare indebitamente il GENERAL.
@@ -939,6 +1170,7 @@ Devono essere mantenuti test per tutte le dodici. Casi minimi aggiuntivi partico
 - `FORBID > FORCE`.
 
 ---
+
 
 # 12. Catalogo canonico delle 12 Eminenze
 
@@ -1097,7 +1329,7 @@ Si conta **l'evento di perdita**, non il numero di PV persi.
 - **−3 — Debito:** reveal Pre-Agente; scegli un Agente non ancora schierato. Per il resto dello Scontro il trigger del suo Potere diventa:
   > **Debito — Quando viene schierato, il suo controllore perde 2 PV; poi il Potere si attiva.**
   Il pagamento è obbligatorio e può essere letale. Viene sostituito soltanto il trigger: l'effetto del Potere resta quello originale. Una sostituzione temporanea del trigger può prevalere per un singolo Duello; poi Debito ritorna. La perdita di PV alimenta lo Statico.
-- **−4 — nome da definire:** al reveal generale scegli uno degli Agenti già confermati; riceve **3 FC temporanei** per questo Duello. Alla fine del Duello registra la **POT finale** di quell'Agente, dopo tutti i modificatori. Alla Fine Scontro il suo controllore perde PV pari alla POT registrata. La perdita può essere letale e viene risolta prima del verdetto definitivo dello Scontro; alimenta inoltre lo Statico prima della chiusura finale.
+- **−4 — nome da definire:** al reveal generale scegli **uno qualsiasi dei due Agenti già confermati, proprio o avversario**; riceve **3 FC temporanei** per questo Duello. I FC temporanei seguono la semantica `effectiveFocus` e possono quindi **soddisfare Overdrive anche sull'Agente avversario**: questo comportamento è intenzionale e fa parte del rischio/credito dell'abilità. Alla fine del Duello registra la **POT finale** dell'Agente bersagliato, dopo tutti i modificatori. Alla Fine Scontro il suo controllore perde PV pari alla POT registrata. La perdita può essere letale e viene risolta prima del verdetto definitivo dello Scontro; alimenta inoltre lo Statico prima della chiusura finale.
 
 **APERTI:** nome definitivo dell'Eminenza e nome dell'abilità −4.
 
@@ -1270,7 +1502,8 @@ Prossimo test consigliato: per ogni Eminenza simulare almeno tre sequenze comple
 Implementare senza ancora supportare tutte le Eminenze:
 
 - `src/data/eminences.js`;
-- scelta Eminenza pre-Scontro;
+- regola di formato `Eminenze richieste / disattivate`;
+- validazione dell'Eminenza in deckbuilding e salvataggio nella decklist;
 - stato Presenza;
 - scelta segreta;
 - gate `PRE_FIELD`, `PRE_AGENT`, `GENERAL`;
@@ -1279,6 +1512,11 @@ Implementare senza ancora supportare tutte le Eminenze:
 - pagamento atomico;
 - resolver in iniziativa;
 - pending effects;
+- checkpoint `PRESENCE_SNAPSHOT`;
+- separazione public/private della scelta Eminenza;
+- commit–reveal online a commitment singolo per round;
+- information set IA senza leakage della scelta avversaria;
+- estensione `publicStateHash` con stato Eminenza pubblico;
 - log;
 - estensione TriggerContext.
 
@@ -1293,6 +1531,11 @@ Motivo:
 - Apex testa Presence, modificatori numerici, `ignore field` e sostituzione del Campo;
 - Patto testa scelta segreta, reveal `GENERAL`, overlay globale sui trigger e precedenza;
 - nessuna delle due richiede subito Conquista forzata o ricalcolo complesso della Lega.
+
+L'MVP non è considerato completo finché Apex e Grande Semaforo non sono coerenti anche in:
+- partita umana vs IA, senza accesso IA alla scelta nascosta;
+- simulazione IA con gli stessi overlay del resolver;
+- multiplayer remoto con commit–reveal verificato.
 
 **Ratti ed Enclave non fanno parte del primo MVP.**
 
@@ -1378,7 +1621,7 @@ Metriche:
 - valore dello Statico;
 - win rate per Eminenza;
 - quante volte un reveal anticipato modifica concretamente Campo/Agente;
-- per Corte −4, confronto di playtest **3 FC temporanei vs eventuale variante 2**, senza cambiare il valore canonico finché i dati non lo giustificano.
+- per Corte −4, confronto di playtest **3 FC temporanei vs eventuale variante 2**, senza cambiare il valore canonico finché i dati non lo giustificano; registrare inoltre lato bersagliato (proprio/nemico), `effectiveFocus` prima/dopo, quante volte i FC temporanei accendono Overdrive, esito del Duello e POT finale/debito generato.
 
 ---
 
@@ -1409,7 +1652,13 @@ Non sono più aperti:
 - fine Scontro prima del verdetto;
 - risoluzione effetti in ordine d'iniziativa;
 - Calibri Campo Distrutto;
-- Ratti −2/−3 e Calibri −2 nei casi di valore negativo/intenzionale.
+- Ratti −2/−3 e Calibri −2 nei casi di valore negativo/intenzionale;
+- obbligatorietà dell'Eminenza nei formati che la utilizzano;
+- scelta Eminenza fissata in deckbuilding;
+- Corte −4 può bersagliare anche l'Agente avversario e i suoi FC temporanei possono attivarne Overdrive;
+- snapshot globale della Presenza prima dei trigger;
+- modello IA di informazione segreta;
+- commit–reveal online con un solo commitment per round.
 
 ---
 
@@ -1418,11 +1667,15 @@ Non sono più aperti:
 Qualunque futura modifica al sistema Eminenza deve essere applicata **prima a questo file**.
 
 Non creare una nuova fonte normativa parallela per:
+- formati/validazione Eminenza;
 - pipeline;
 - costi;
 - timing;
+- snapshot Presenza;
+- visibilità IA;
+- protocollo commit–reveal;
 - testi delle Eminenze.
 
 Documenti di analisi, playtest e UI possono riferirsi a questa specifica, ma non devono ridefinirne le regole senza aggiornare anche questa fonte canonica.
 
-**Fine specifica unificata v2.**
+**Fine specifica unificata v2.1.**
