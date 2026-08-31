@@ -10,6 +10,18 @@
  * @property {boolean} lostPrevious - Hai perso lo scontro precedente
  * @property {number} focusCoins - Focus Coin investiti
  * @property {number} enemyFocusCoins - Focus Coin investiti dal nemico
+ * @property {number} [focusInvested] - Alias esplicito di focusCoins
+ * @property {number} [enemyFocusInvested] - Alias esplicito di enemyFocusCoins
+ * @property {number} [effectiveFocus] - Investiti + temporanei concessi da effetti
+ * @property {number} [enemyEffectiveFocus] - Come sopra, lato nemico
+ * @property {boolean} [hasEminence] - Il lato possiede un'Eminenza attiva
+ * @property {boolean} [enemyHasEminence] - Il nemico possiede un'Eminenza attiva
+ * @property {number|null} [playerPresence] - Presenza campionata a PRESENCE_SNAPSHOT
+ * @property {number|null} [enemyPresence] - Presenza nemica campionata a PRESENCE_SNAPSHOT
+ * @property {number} [presenceSpent] - Presenza spesa nel round corrente
+ * @property {number} [enemyPresenceSpent] - Presenza spesa dal nemico nel round corrente
+ * @property {number} [totalPresenceSpent] - Presenza spesa dall'inizio dello Scontro
+ * @property {number} [enemyTotalPresenceSpent] - Come sopra, lato nemico
  * @property {number} cardsPlayed - Carte giocate da te in partita (inclusa la carta dello scontro corrente)
  * @property {number} enemyCardsPlayed - Carte giocate dal nemico in partita (inclusa la carta dello scontro corrente)
  * @property {number} playerHP - I tuoi PV
@@ -66,7 +78,10 @@ export const checkTrigger = (trigger, context) => {
       case 'overdrive': {
         if (fieldMods.overdriveDisabled) return false;
         const threshold = fieldMods.overdriveThreshold || 5;
-        return context.focusCoins >= threshold;
+        // Overdrive legge il Focus effettivo: gli FC temporanei concessi da un effetto
+        // contano come normali FC posseduti dall'Agente.
+        const focus = context.effectiveFocus ?? context.focusCoins;
+        return focus >= threshold;
       }
 
       case 'reckoning':
@@ -90,7 +105,8 @@ export const checkTrigger = (trigger, context) => {
         
       // NUOVI TRIGGER
       case 'opportunista': // Opportunista - nemico ha speso 5+ FC
-        return (context.enemyFocusCoins || 0) >= 5;
+        // Legge i soli FC realmente investiti dal nemico: i temporanei non sono stati spesi.
+        return (context.enemyFocusInvested ?? context.enemyFocusCoins ?? 0) >= 5;
         
       case 'sfida': // Sfida - tua Lega < Lega nemica
         return (context.playerLeague || 0) < (context.enemyLeague || 0);
@@ -122,11 +138,66 @@ export const checkTrigger = (trigger, context) => {
       case 'rinforzi':
         // Almeno 2 altre carte della stessa Lega in mano iniziale, oltre alla carta giocata.
         return Math.max(0, (context.playerInitialLeagueCount || 0) - 1) >= 2;
-        
+
+      // TRIGGER EMINENZA
+      //
+      // Leggono valori già campionati a PRESENCE_SNAPSHOT, non contatori vivi: una
+      // variazione di Presenza successiva allo snapshot non li ricalcola.
+      //
+      // Un lato privo di Eminenza non ha Presenza: non è "Presenza 0". Senza questa guardia
+      // il fallback tecnico `eminence: null` soddisfarebbe Digiuno.
+
+      case 'manifestazione': // Hai speso Presenza in questo round
+        if (!context.hasEminence) return false;
+        return (context.presenceSpent || 0) > 0;
+
+      case 'blasfemia': // Il nemico ha speso Presenza in questo round
+        if (!context.enemyHasEminence) return false;
+        return (context.enemyPresenceSpent || 0) > 0;
+
+      case 'fervore': { // Presenza spesa cumulativa oltre soglia; latch, non si perde
+        if (!context.hasEminence) return false;
+        const threshold = fieldMods.fervoreThreshold ?? 3;
+        return (context.totalPresenceSpent || 0) >= threshold;
+      }
+
+      case 'digiuno': // Presenza a 0
+        if (!context.hasEminence) return false;
+        return context.playerPresence === 0;
+
+      case 'grazia': { // Presenza alta
+        if (!context.hasEminence) return false;
+        const threshold = fieldMods.graziaThreshold ?? 5;
+        return (context.playerPresence ?? 0) >= threshold;
+      }
+
+      case 'ascendente': // Più Presenza del nemico
+        if (!context.hasEminence || !context.enemyHasEminence) return false;
+        return context.playerPresence > context.enemyPresence;
+
+      case 'soggezione': // Meno Presenza del nemico
+        if (!context.hasEminence || !context.enemyHasEminence) return false;
+        return context.playerPresence < context.enemyPresence;
+
       default: 
         return false;
     }
   };
+
+/** Trigger introdotti dal sottosistema Eminenza, tutti basati sulla Presenza. */
+export const EMINENCE_TRIGGERS = [
+  'manifestazione',
+  'blasfemia',
+  'fervore',
+  'digiuno',
+  'grazia',
+  'ascendente',
+  'soggezione',
+];
+
+export function isEminenceTrigger(trigger) {
+  return EMINENCE_TRIGGERS.includes(trigger);
+}
   
   /**
    * Crea il contesto per il controllo dei trigger
@@ -152,7 +223,24 @@ export const checkTrigger = (trigger, context) => {
       enemyFieldsConquered = 0,
       roundNumber = 1,
       playerInitialLeagueCount = 0,
-      fieldModifiers = {}
+      fieldModifiers = {},
+
+      // Focus: `focusCoins` resta l'investito storico; l'effettivo lo affianca senza
+      // sostituirlo, così i chiamanti che non conoscono gli FC temporanei sono invariati.
+      focusInvested = focusCoins,
+      enemyFocusInvested = enemyFocusCoins,
+      effectiveFocus = focusCoins,
+      enemyEffectiveFocus = enemyFocusCoins,
+
+      // Presenza: default nulli, mai 0, per non far scattare Digiuno su uno stato senza Eminenza.
+      hasEminence = false,
+      enemyHasEminence = false,
+      playerPresence = null,
+      enemyPresence = null,
+      presenceSpent = 0,
+      enemyPresenceSpent = 0,
+      totalPresenceSpent = 0,
+      enemyTotalPresenceSpent = 0,
     } = params;
     
     return {
@@ -173,6 +261,20 @@ export const checkTrigger = (trigger, context) => {
       enemyFieldsConquered,
       roundNumber,
       playerInitialLeagueCount,
-      fieldModifiers
+      fieldModifiers,
+
+      focusInvested,
+      enemyFocusInvested,
+      effectiveFocus,
+      enemyEffectiveFocus,
+
+      hasEminence,
+      enemyHasEminence,
+      playerPresence,
+      enemyPresence,
+      presenceSpent,
+      enemyPresenceSpent,
+      totalPresenceSpent,
+      enemyTotalPresenceSpent,
     };
   };
