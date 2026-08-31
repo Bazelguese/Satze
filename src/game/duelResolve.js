@@ -172,8 +172,10 @@ export function computeDuelResolution({
       ePower: deployStats.enemyPower,
       pDamage: deployStats.playerDamage,
       eDamage: deployStats.enemyDamage,
-      pFocusUsed: selectedFocus,
-      eFocusUsed: enemySelectedFocus,
+      // Gli FC temporanei si comportano come FC posseduti dall'Agente: contano per VA e
+      // Overdrive. Non entrano invece nella spesa dal pool, che resta `selectedFocus`.
+      pFocusUsed: selectedFocus + readTemporaryFocus(eminenceBundle, 'player'),
+      eFocusUsed: enemySelectedFocus + readTemporaryFocus(eminenceBundle, 'enemy'),
       pAssaultMod: deployStats.playerAssaultMod,
       eAssaultMod: deployStats.enemyAssaultMod,
       pHPCurrent: playerHPAtDeploy,

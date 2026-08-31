@@ -181,6 +181,23 @@ describe('Eminenze nel Duello reale', () => {
     expect(powerEvent.after - powerEvent.before).toBe(1);
   });
 
+  it('gli FC temporanei alzano il VA ma non intaccano il pool', () => {
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_fc_temporanei',
+        segment: { primitive: 'GRANT_TEMPORARY_FOCUS', target: 'SELF', amount: 2 },
+      },
+    ]);
+
+    const baseline = computeDuelResolution({ ...baseInput }).battleResult;
+    const withTemp = computeDuelResolution({ ...baseInput, eminenceBundle: bundle }).battleResult;
+
+    expect(withTemp.playerAssault).toBeGreaterThan(baseline.playerAssault);
+    // La spesa reale resta quella investita: il pool finale non cambia.
+    expect(withTemp.finalPlayerFC).toBe(baseline.finalPlayerFC);
+  });
+
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
     const bundle = bundleForAbility('semaforo_verde');
     // Regole di ambito globale: devono valere per entrambi i lati, non per il solo autore.
