@@ -4,6 +4,8 @@
  * @param {number} [depth]
  */
 
+import { buildEminenceHashParts } from '../eminence/eminenceAIView.js';
+
 function toxinHash(toxin) {
   if (!toxin) return '0';
   if (typeof toxin !== 'object') return String(toxin);
@@ -53,6 +55,9 @@ export function publicStateHash(state, depth = null) {
     toxinHash(state.playerToxin),
     toxinHash(state.aiToxin),
     state.terminalStatus ?? '',
+    // Solo la parte pubblica: due stati che differiscono per la sola scelta segreta sono
+    // indistinguibili da qui e devono condividere la stessa voce di transposition table.
+    buildEminenceHashParts(state.eminence),
   ];
   if (depth != null) parts.push(`d${depth}`);
   return parts.join('|');

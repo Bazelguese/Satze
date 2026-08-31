@@ -4,6 +4,12 @@
 
 import { countConqueredFields } from '../duel/duelHelpers.js';
 import { INFORMATION_POLICY } from './aiConstants.js';
+import {
+  buildEminenceAIView,
+  buildEminenceHashParts,
+  createDisabledEminenceView,
+  findEminenceViewLeaks,
+} from '../eminence/eminenceAIView.js';
 
 /**
  * Contesto decisionale IA senza informazioni private del Focus giocatore.
@@ -43,7 +49,14 @@ export function buildAIInformationSet(gameState) {
   const playerFocusPool = Number(gameState.playerFocus) || 0;
   const aiFocusPool = Number(gameState.enemyFocus) || 0;
 
+  // L'IA occupa il lato 'enemy' dello stato Eminenza: conosce la propria scelta segreta,
+  // dell'avversario solo il pubblico più le ipotesi ancora compatibili.
+  const eminence = gameState.eminenceState
+    ? buildEminenceAIView(gameState.eminenceState, { aiSide: 'enemy' })
+    : createDisabledEminenceView();
+
   return {
+    eminence,
     difficulty,
     mode: gameState.gameMode || 'classic',
     informationPolicy: INFORMATION_POLICY,
@@ -77,6 +90,7 @@ export function buildAIInformationSet(gameState) {
       armyBonuses: gameState.playerArmyBonuses || {},
       toxin: gameState.playerToxin ?? null,
       visibleCard,
+      eminence: eminence.player,
     },
 
     ai: {
@@ -87,6 +101,7 @@ export function buildAIInformationSet(gameState) {
       focus: aiFocusPool,
       armyBonuses: gameState.enemyArmyBonuses || {},
       toxin: gameState.enemyToxin ?? null,
+      eminence: eminence.ai,
     },
 
     campaignDuelMod: gameState.campaignDuelMod ?? null,
@@ -112,6 +127,7 @@ export function buildPublicDecisionKey(infoSet) {
     (infoSet.player.usedCardIds || []).join(','),
     infoSet.playerFieldsConquered,
     infoSet.enemyFieldsConquered,
+    buildEminenceHashParts(infoSet.eminence),
   ].join('|');
 }
 
@@ -144,6 +160,8 @@ export function validateAIInformationSet(infoSet, options = {}) {
   if (infoSet?.isPlayerFirst && !infoSet?.player?.visibleCard) {
     issues.push('IA seconda ma carta pubblica assente');
   }
+
+  issues.push(...findEminenceViewLeaks(infoSet?.eminence));
 
   for (const issue of issues) warn(issue);
   return issues;

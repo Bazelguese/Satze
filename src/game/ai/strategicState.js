@@ -3,6 +3,7 @@
 // ============================================
 
 import { normalizeUsedIdSet, getAvailableCards } from './generateAIActions.js';
+import { cloneEminenceView, createDisabledEminenceView } from '../eminence/eminenceAIView.js';
 
 function cardIds(hand) {
   return (hand || []).filter((c) => c && c.id != null).map((c) => c.id);
@@ -80,6 +81,8 @@ export function buildStrategicState(infoSet) {
     playerToxin: infoSet.player.toxin ?? null,
     aiToxin: infoSet.ai.toxin ?? null,
 
+    eminence: cloneEminenceView(infoSet.eminence),
+
     // Riferimenti sola lettura per valutazione / proiezione (non mutare)
     _refs: {
       playerHand: infoSet.player.hand,
@@ -144,6 +147,7 @@ export function rebuildContextFromStrategicState(state, fieldIndex = null) {
     difficulty: state.difficulty,
     mode: state.mode,
     informationPolicy: state.informationPolicy,
+    eminence: state.eminence ? cloneEminenceView(state.eminence) : createDisabledEminenceView(),
     roundNumber: state.roundNumber,
     lastWinner: state.lastWinner,
     isPlayerFirst: state.initiativeSide
@@ -168,6 +172,7 @@ export function rebuildContextFromStrategicState(state, fieldIndex = null) {
       toxin: state.playerToxin,
       // Carta pubblica solo se il giocatore ha già aperto in questo duello — in ricerca futura è nascosta.
       visibleCard: null,
+      eminence: state.eminence?.player ?? null,
     },
     ai: {
       hand: state._refs?.aiHand || [],
@@ -177,6 +182,7 @@ export function rebuildContextFromStrategicState(state, fieldIndex = null) {
       focus: state.aiFocus,
       armyBonuses: state._refs?.aiArmyBonuses || {},
       toxin: state.aiToxin,
+      eminence: state.eminence?.ai ?? null,
     },
     campaignDuelMod: state._refs?.campaignDuelMod ?? null,
   };
