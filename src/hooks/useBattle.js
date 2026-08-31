@@ -5,6 +5,9 @@
 
 import { useCallback } from 'react';
 import { computeDuelResolution } from '../game/duelResolve';
+import { prepareEminenceDuel, settleEminenceRound } from '../game/eminence/eminenceDuelGate';
+import { capturePresenceSnapshot } from '../game/eminence/presence';
+import { isEminenceSubsystemEnabled } from '../game/eminence/eminenceState';
 
 /**
  * Hook per gestire la logica di battaglia
@@ -36,6 +39,8 @@ export function useBattle(gameState, animations) {
     conqueredFields,
     playerHand,
     enemyHand,
+    eminenceMatchState,
+    setEminenceMatchState,
     setBattleResult,
     setPlayerFocus,
     setEnemyFocus,
@@ -66,6 +71,17 @@ export function useBattle(gameState, animations) {
       return;
     }
 
+    // Gate GENERAL e Duello devono cadere nello stesso istante sincrono: se il reveal
+    // passasse da un aggiornamento di stato React, il Duello girerebbe sullo stato
+    // precedente e ignorerebbe le abilità appena rivelate.
+    const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
+    const prepared = prepareEminenceDuel(eminenceMatchState, { initiativeSide });
+    if (prepared.blocked) {
+      console.error('resolveBattle: scelte Eminenza incomplete', prepared.blocked);
+      return;
+    }
+    const eminenceActive = isEminenceSubsystemEnabled(prepared.matchState);
+
     const { battleResult } = computeDuelResolution({
       field,
       selectedAgent: pAgent,
@@ -89,7 +105,15 @@ export function useBattle(gameState, animations) {
       playerHand,
       enemyHand,
       currentFieldIndex,
+      eminenceBundle: prepared.bundle,
+      presenceSnapshot: eminenceActive ? capturePresenceSnapshot(prepared.matchState) : null,
+      playerHasEminence: Boolean(prepared.matchState?.player?.eminenceId),
+      enemyHasEminence: Boolean(prepared.matchState?.enemy?.eminenceId),
     });
+
+    if (eminenceActive) {
+      setEminenceMatchState(settleEminenceRound(prepared.matchState, { initiativeSide }).matchState);
+    }
 
     setPlayerFocus(battleResult.finalPlayerFC);
     setEnemyFocus(battleResult.finalEnemyFC);
@@ -130,6 +154,8 @@ export function useBattle(gameState, animations) {
     conqueredFields,
     playerHand,
     enemyHand,
+    eminenceMatchState,
+    setEminenceMatchState,
     setBattleResult,
     setPlayerFocus,
     setEnemyFocus,
