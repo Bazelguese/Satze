@@ -9,6 +9,7 @@ import {
   getEligibleEminences,
   validateDeckEminence,
 } from './eminenceState.js';
+import { beginEminenceRound } from './eminenceRound.js';
 
 /**
  * Determina l'Eminenza di un lato a partire dal mazzo e dalla scelta registrata.
@@ -71,12 +72,16 @@ export function createMatchEminenceState({
   const playerResolution = resolveSideEminence(playerDeck, playerEminenceId, format);
   const enemyResolution = resolveSideEminence(enemyDeck, enemyEminenceId, format);
 
+  const created = createEminenceMatchState({
+    format,
+    playerEminenceId: playerResolution.eminenceId,
+    enemyEminenceId: enemyResolution.eminenceId,
+  });
+
   return {
-    matchState: createEminenceMatchState({
-      format,
-      playerEminenceId: playerResolution.eminenceId,
-      enemyEminenceId: enemyResolution.eminenceId,
-    }),
+    // Il primo round si apre subito: uno stato senza progressione dei gate non è
+    // utilizzabile, e restituirlo costringerebbe ogni chiamante a ricordarsene.
+    matchState: beginEminenceRound(created, { roundNumber: 1 }),
     playerResolution,
     enemyResolution,
   };
