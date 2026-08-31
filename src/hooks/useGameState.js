@@ -128,6 +128,12 @@ export function useGameState() {
   /** Campagna: modificatori duello da missione. */
   const [campaignDuelMod, setCampaignDuelMod] = useState(null);
 
+  /**
+   * Sottosistema Eminenze. `null` finché una partita non lo attiva esplicitamente:
+   * i formati che non lo richiedono girano come prima della sua introduzione.
+   */
+  const [eminenceMatchState, setEminenceMatchState] = useState(null);
+
   /** Setup animazione mischia & deal (fase shuffleDeal). */
   const [shuffleDealSetup, setShuffleDealSetup] = useState(null);
   /** Identità visiva mazzo (accent + armate dal deck da 10) — persiste per tutta la partita. */
@@ -276,6 +282,11 @@ export function useGameState() {
     setCampaignSaveSlot,
     campaignDuelMod,
     setCampaignDuelMod,
+
+    // Eminenze
+    eminenceMatchState,
+    setEminenceMatchState,
+
     shuffleDealSetup,
     setShuffleDealSetup,
     playerDeckVisual,

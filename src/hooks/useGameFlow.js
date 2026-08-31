@@ -13,6 +13,7 @@ import { resolveShuffleKindsForDuel } from '../utils/shuffleStylePreference';
 import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShuffleHands';
 import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { preloadBattlefieldImages } from '../utils/preloadAssets';
+import { createMatchEminenceState, resolveEminenceFormat } from '../game/eminence/eminenceSetup';
 
 /**
  * Hook per gestire il flusso del gioco
@@ -60,7 +61,36 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShuffleDealSetup,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
+    setEminenceMatchState,
   } = gameState;
+
+  /**
+   * Installa il sottosistema Eminenze per il nuovo Scontro.
+   * Fuori dai formati che lo richiedono resta disattivato.
+   */
+  const initEminences = useCallback((playerSet, enemySet, startOptions) => {
+    const format = resolveEminenceFormat(startOptions);
+    const { matchState, playerResolution, enemyResolution } = createMatchEminenceState({
+      format,
+      playerDeck: playerSet,
+      enemyDeck: enemySet,
+      playerEminenceId: startOptions?.playerEminenceId ?? null,
+      enemyEminenceId: startOptions?.enemyEminenceId ?? null,
+    });
+
+    for (const [label, resolution] of [['giocatore', playerResolution], ['avversario', enemyResolution]]) {
+      if (resolution.reason) {
+        console.warn(`Eminenza ${label} non valida per il mazzo: ${resolution.reason}`);
+      } else if (resolution.ambiguous) {
+        console.warn(
+          `Eminenza ${label} dedotta dal mazzo fra ${resolution.candidates.length} eleggibili: `
+          + 'la scelta spetta al deckbuilding.'
+        );
+      }
+    }
+
+    setEminenceMatchState(matchState);
+  }, [setEminenceMatchState]);
 
   const resolveCardIdsAcrossArmies = useCallback((cardIds, fallbackArmy = null) => {
     if (!Array.isArray(cardIds)) return [];
@@ -176,6 +206,9 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       fallbackArmy: deal.enemySet?.[0]?.army ?? enemyArmySelected,
       armyColors: ARMY_COLORS,
     }));
+
+    // L'eleggibilità si misura sul mazzo da 10, non sulla mano servita.
+    initEminences(deal.playerSet, deal.enemySet, startOptions);
 
     if (!skipShuffleDeal) {
       const { playerShuffleKind, enemyShuffleKind } = resolveShuffleKindsForDuel();
@@ -332,6 +365,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     animations,
     clearAiPendingDecision,
     resolveCardIdsAcrossArmies,
+    initEminences,
   ]);
 
   /**
@@ -365,6 +399,19 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setAiDifficulty('multiplayer');
 
       const shuffleSetup = buildShuffleDealSetupFromMatch(perspective, payload);
+      const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
+      const localEnemySet = perspective === 'host' ? payload.hostEnemySet : payload.hostPlayerSet;
+
+      // Le Eminenze arrivano dal payload concordato: i due client devono partire dallo
+      // stesso stato, quindi qui non si deduce nulla localmente.
+      const onlineEminence = rawPayload?.eminence ?? payload.eminence ?? null;
+      initEminences(localPlayerSet, localEnemySet, {
+        eminenceFormat: onlineEminence?.format ?? null,
+        playerEminenceId:
+          perspective === 'host' ? onlineEminence?.hostEminenceId : onlineEminence?.guestEminenceId,
+        enemyEminenceId:
+          perspective === 'host' ? onlineEminence?.guestEminenceId : onlineEminence?.hostEminenceId,
+      });
 
       if (shuffleSetup) {
         const enriched = attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS);
@@ -377,8 +424,6 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
         setEnemyHand([]);
       } else {
         setShuffleDealSetup(null);
-        const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
-        const localEnemySet = perspective === 'host' ? payload.hostEnemySet : payload.hostPlayerSet;
         setPlayerDeckVisual(buildDeckVisualIdentity(localPlayerSet, {
           fallbackArmy: localPlayerSet?.[0]?.army ?? playerArmy,
           armyColors: ARMY_COLORS,
@@ -495,6 +540,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setGamePhase,
       setCampaignDuelMod,
       setShuffleDealSetup,
+      initEminences,
     ]
   );
 
@@ -515,6 +561,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShuffleDealSetup(null);
     setPlayerDeckVisual(null);
     setEnemyDeckVisual(null);
+    setEminenceMatchState(null);
     setBattleEvents([]);
     setLogs([]);
     setGamePhase('menu');
@@ -532,6 +579,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShuffleDealSetup,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
+    setEminenceMatchState,
     setBattleEvents,
     setLogs,
     setGamePhase,
