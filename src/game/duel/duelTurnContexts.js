@@ -61,6 +61,9 @@ export function buildDuelTurnContexts({
 
   return {
     playerContext: {
+      // Identifica il lato anche nelle copie del contesto (fase post-Duello), dove il
+      // confronto per riferimento non basta più.
+      duelSide: 'player',
       isFirst: isPlayerFirst,
       wonPrevious: lastWinner === 'player',
       lostPrevious: lastWinner === 'enemy',
@@ -78,6 +81,7 @@ export function buildDuelTurnContexts({
       ...buildPresenceFields(presenceSnapshot?.player, playerHasEminence, enemyHasEminence),
     },
     enemyContext: {
+      duelSide: 'enemy',
       isFirst: !isPlayerFirst,
       wonPrevious: lastWinner === 'enemy',
       lostPrevious: lastWinner === 'player',

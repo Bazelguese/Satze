@@ -3,7 +3,11 @@
 // Fonte di verità per VA, poteri, bonus e esito scontro (locale e UI).
 // ============================================
 
-import { checkTrigger } from './triggerLogic.js';
+import { checkTrigger as baseCheckTrigger } from './triggerLogic.js';
+import {
+  bindCheckTriggerToOverlay,
+  readTemporaryFocus,
+} from './eminence/eminenceDuelBinding.js';
 import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
 import {
   createDuelCanTriggerAbility,
@@ -80,7 +84,18 @@ export function computeDuelResolution({
   playerHand,
   enemyHand,
   currentFieldIndex,
+
+  // Eminenze. Assenti nei chiamanti che non attivano il sottosistema: senza di essi la
+  // risoluzione percorre esattamente il codice di prima.
+  eminenceBundle = null,
+  presenceSnapshot = null,
+  playerHasEminence = false,
+  enemyHasEminence = false,
 }) {
+    // L'overlay entra qui una volta sola: tutti i sotto-moduli ricevono `checkTrigger` per
+    // iniezione e continuano a ignorare l'esistenza delle Eminenze.
+    const checkTrigger = bindCheckTriggerToOverlay(eminenceBundle?.triggerRules, baseCheckTrigger);
+
     const playerInitialLeagueCount = countInitialLeagueCards(playerUsedCards, playerHand, pAgent);
     const enemyInitialLeagueCount = countInitialLeagueCards(enemyUsedCards, enemyHand, eAgent);
 
@@ -106,6 +121,11 @@ export function computeDuelResolution({
       roundNumber,
       playerInitialLeagueCount,
       enemyInitialLeagueCount,
+      playerTemporaryFocus: readTemporaryFocus(eminenceBundle, 'player'),
+      enemyTemporaryFocus: readTemporaryFocus(eminenceBundle, 'enemy'),
+      presenceSnapshot,
+      playerHasEminence,
+      enemyHasEminence,
     });
 
     attachFieldModifiersToContexts(field, playerContext, enemyContext);
