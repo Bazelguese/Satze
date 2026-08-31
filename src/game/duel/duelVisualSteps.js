@@ -37,16 +37,19 @@ const POST_KINDS = new Set(['postPower', 'postBonus', 'postPowerBlocked']);
 /**
  * @param {object} pAgent
  * @param {object} eAgent
+ * @param {object|null} deployStats stat allo schieramento, se diverse da quelle di carta.
+ *   Un'Eminenza rivelata prima del Duello modifica l'Agente mentre viene schierato: la sua
+ *   modifica appartiene allo step di schieramento, non a un effetto successivo.
  */
-export function createDuelVisualRecorder(pAgent, eAgent) {
+export function createDuelVisualRecorder(pAgent, eAgent, deployStats = null) {
   const steps = [
     {
       kind: 'deploy',
       side: null,
-      playerPower: pAgent.power,
-      enemyPower: eAgent.power,
-      playerDamage: pAgent.damage,
-      enemyDamage: eAgent.damage,
+      playerPower: deployStats?.playerPower ?? pAgent.power,
+      enemyPower: deployStats?.enemyPower ?? eAgent.power,
+      playerDamage: deployStats?.playerDamage ?? pAgent.damage,
+      enemyDamage: deployStats?.enemyDamage ?? eAgent.damage,
       playerAssaultMod: 0,
       enemyAssaultMod: 0,
       ...noHighlights(),

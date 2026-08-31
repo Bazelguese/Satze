@@ -6,8 +6,11 @@
 import { checkTrigger as baseCheckTrigger } from './triggerLogic.js';
 import {
   bindCheckTriggerToOverlay,
+  readHpDelta,
+  readStatDeltas,
   readTemporaryFocus,
 } from './eminence/eminenceDuelBinding.js';
+import { emitEminenceDeployEvents } from './eminence/eminenceBattleEvents.js';
 import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
 import {
   createDuelCanTriggerAbility,
@@ -47,14 +50,14 @@ import {
   snapshotDuelFieldStats,
 } from './duel/battleFieldEventDiff.js';
 
-function combatStartDiffersFromDeploy(pAgent, eAgent, state) {
+function combatStartDiffersFromDeploy(deployStats, state) {
   return (
-    state.pPower !== pAgent.power ||
-    state.ePower !== eAgent.power ||
-    state.pDamage !== pAgent.damage ||
-    state.eDamage !== eAgent.damage ||
-    (state.pAssaultMod ?? 0) !== 0 ||
-    (state.eAssaultMod ?? 0) !== 0
+    state.pPower !== deployStats.playerPower ||
+    state.ePower !== deployStats.enemyPower ||
+    state.pDamage !== deployStats.playerDamage ||
+    state.eDamage !== deployStats.enemyDamage ||
+    (state.pAssaultMod ?? 0) !== deployStats.playerAssaultMod ||
+    (state.eAssaultMod ?? 0) !== deployStats.enemyAssaultMod
   );
 }
 
@@ -96,6 +99,22 @@ export function computeDuelResolution({
     // iniezione e continuano a ignorare l'esistenza delle Eminenze.
     const checkTrigger = bindCheckTriggerToOverlay(eminenceBundle?.triggerRules, baseCheckTrigger);
 
+    // Un'Eminenza rivelata prima del Duello modifica l'Agente mentre viene schierato e
+    // riscuote subito i propri costi in PV: entrambe le cose precedono il confronto, quindi
+    // trigger e Campo devono già vederle.
+    const pEminenceStats = readStatDeltas(eminenceBundle, 'player');
+    const eEminenceStats = readStatDeltas(eminenceBundle, 'enemy');
+    const deployStats = {
+      playerPower: pAgent.power + pEminenceStats.power,
+      enemyPower: eAgent.power + eEminenceStats.power,
+      playerDamage: pAgent.damage + pEminenceStats.damage,
+      enemyDamage: eAgent.damage + eEminenceStats.damage,
+      playerAssaultMod: pEminenceStats.assaultValue,
+      enemyAssaultMod: eEminenceStats.assaultValue,
+    };
+    const playerHPAtDeploy = Math.max(0, playerHP + readHpDelta(eminenceBundle, 'player'));
+    const enemyHPAtDeploy = Math.max(0, enemyHP + readHpDelta(eminenceBundle, 'enemy'));
+
     const playerInitialLeagueCount = countInitialLeagueCards(playerUsedCards, playerHand, pAgent);
     const enemyInitialLeagueCount = countInitialLeagueCards(enemyUsedCards, enemyHand, eAgent);
 
@@ -112,8 +131,8 @@ export function computeDuelResolution({
       enemySelectedFocus,
       playerUsedCards,
       enemyUsedCards,
-      playerHP,
-      enemyHP,
+      playerHP: playerHPAtDeploy,
+      enemyHP: enemyHPAtDeploy,
       pAgent,
       eAgent,
       playerFieldsConquered,
@@ -149,16 +168,16 @@ export function computeDuelResolution({
     const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
 
     const duel = {
-      pPower: pAgent.power,
-      ePower: eAgent.power,
-      pDamage: pAgent.damage,
-      eDamage: eAgent.damage,
+      pPower: deployStats.playerPower,
+      ePower: deployStats.enemyPower,
+      pDamage: deployStats.playerDamage,
+      eDamage: deployStats.enemyDamage,
       pFocusUsed: selectedFocus,
       eFocusUsed: enemySelectedFocus,
-      pAssaultMod: 0,
-      eAssaultMod: 0,
-      pHPCurrent: playerHP,
-      eHPCurrent: enemyHP,
+      pAssaultMod: deployStats.playerAssaultMod,
+      eAssaultMod: deployStats.enemyAssaultMod,
+      pHPCurrent: playerHPAtDeploy,
+      eHPCurrent: enemyHPAtDeploy,
       pFCCurrent: playerFocus,
       eFCCurrent: enemyFocus,
       pAbilityBlocked: false,
@@ -184,6 +203,15 @@ export function computeDuelResolution({
     battleLog.push(`Campo: ${field.name}`);
     battleLog.push(`Tu: ${pAgent.name} (${duel.pPower}P, ${duel.pDamage}D) + ${duel.pFocusUsed} FC`);
     battleLog.push(`IA: ${eAgent.name} (${duel.ePower}P, ${duel.eDamage}D) + ${duel.eFocusUsed} FC`);
+    emitEminenceDeployEvents(battleLog, eminenceBundle, {
+      playerHPBefore: playerHP,
+      enemyHPBefore: enemyHP,
+      playerHPAfter: playerHPAtDeploy,
+      enemyHPAfter: enemyHPAtDeploy,
+      pAgent,
+      eAgent,
+      statDeltas: { player: pEminenceStats, enemy: eEminenceStats },
+    });
     // Immune preventivo: non emesso (block solo al blocco reale).
 
     const fieldStatsBefore = snapshotDuelFieldStats(duel);
@@ -211,9 +239,9 @@ export function computeDuelResolution({
     );
 
     const state = createDuelCombatState(duel);
-    const visualRecorder = createDuelVisualRecorder(pAgent, eAgent);
+    const visualRecorder = createDuelVisualRecorder(pAgent, eAgent, deployStats);
     visualRecorder.syncDeployAssaultMods(state);
-    if (combatStartDiffersFromDeploy(pAgent, eAgent, state)) {
+    if (combatStartDiffersFromDeploy(deployStats, state)) {
       visualRecorder.pushFieldSetup(state);
     }
 

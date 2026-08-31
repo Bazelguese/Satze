@@ -68,10 +68,10 @@ const baseInput = {
  * Esegue il round Eminenza fino al Duello e restituisce il bundle dovuto prima
  * del controllo dei trigger.
  */
-function bundleForAbility(abilityId, { presence = null } = {}) {
+function bundleForAbility(abilityId, { presence = null, eminenceId = 'patto_grande_semaforo' } = {}) {
   let matchState = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
-    playerEminenceId: 'patto_grande_semaforo',
+    playerEminenceId: eminenceId,
     enemyEminenceId: null,
   });
 
@@ -135,6 +135,50 @@ describe('Eminenze nel Duello reale', () => {
 
     expect(battleResult.playerPower).toBe(4);
     expect(battleResult.enemyPower).toBe(6);
+  });
+
+  it('Apex Furia: +1 POT all\'Agente e 2 PV al controllore', () => {
+    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+
+    expect(battleResult.playerPower).toBe(5);
+    // Il costo in PV precede il Duello, quindi il danno della sconfitta parte da 18.
+    expect(battleResult.finalPlayerHP).toBeLessThanOrEqual(18);
+  });
+
+  it('Apex Cataclisma: +2 POT e +2 DAN entrano già nello schieramento', () => {
+    const bundle = bundleForAbility('apex_cataclisma', {
+      eminenceId: 'apex_sole_verde',
+      presence: 4,
+    });
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.playerDamage).toBe(5);
+
+    // Lo schieramento è il punto in cui l'Eminenza ha agito: non deve comparire uno step
+    // di setup Campo che attribuisca la modifica al Campo.
+    const deploy = battleResult.visualSteps[0];
+    expect(deploy.kind).toBe('deploy');
+    expect(deploy.playerPower).toBe(6);
+    expect(battleResult.visualSteps.some((step) => step.kind === 'fieldSetup')).toBe(false);
+  });
+
+  it('gli effetti dell\'Eminenza compaiono nel log come eventi di schieramento', () => {
+    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+
+    const eminenceEvents = battleResult.events.filter((e) => e.source?.kind === 'eminence');
+    expect(eminenceEvents.length).toBeGreaterThan(0);
+    // Classificati allo schieramento: il log non deve attribuirli a un Potere o al Campo.
+    expect(eminenceEvents.every((e) => e.phase === 'deploy')).toBe(true);
+
+    const hpEvent = eminenceEvents.find((e) => e.stat === 'PV');
+    expect(hpEvent.before - hpEvent.after).toBe(2);
+    expect(hpEvent.source.id).toBe('apex_furia');
+
+    const powerEvent = eminenceEvents.find((e) => e.stat === 'POT');
+    expect(powerEvent.after - powerEvent.before).toBe(1);
   });
 
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
