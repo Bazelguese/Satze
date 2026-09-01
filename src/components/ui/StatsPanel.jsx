@@ -59,7 +59,7 @@ function ToxinBadge({ toxin, hp, showAnimation }) {
 /**
  * Pannello statistiche duello — barra HUD orizzontale: nome, PV, FC, tossina.
  */
-export const StatsPanel = ({
+export const StatsPanel = React.memo(({
   label,
   hp,
   focus,
@@ -162,4 +162,5 @@ export const StatsPanel = ({
       </div>
     </div>
   );
-};
+});
+StatsPanel.displayName = 'StatsPanel';

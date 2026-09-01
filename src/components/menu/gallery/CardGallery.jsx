@@ -46,6 +46,7 @@ export default function CardGallery({
   onGalleryTabChange,
   agentCount = ALL_AGENTS.length,
   fieldCount,
+  eminenceCount,
 }) {
   const ARMIES = useMemo(() => armyList(SORTED_AGENTS), []);
   const [filter, setFilter] = useState(DEFAULT_GALLERY_ARMY);
@@ -99,6 +100,7 @@ export default function CardGallery({
               onTabChange={onGalleryTabChange}
               agentCount={agentCount}
               fieldCount={fieldCount}
+              eminenceCount={eminenceCount}
             />
           )}
           <div className="cgl-counter">

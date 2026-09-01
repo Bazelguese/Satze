@@ -14,6 +14,7 @@ import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShu
 import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { preloadBattlefieldImages } from '../utils/preloadAssets';
 import { createMatchEminenceState, resolveEminenceFormat } from '../game/eminence/eminenceSetup';
+import { EMINENCE_FORMAT } from '../game/eminence/eminenceConstants.js';
 
 /**
  * Hook per gestire il flusso del gioco
@@ -208,7 +209,10 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     }));
 
     // L'eleggibilità si misura sul mazzo da 10, non sulla mano servita.
-    initEminences(deal.playerSet, deal.enemySet, startOptions);
+    initEminences(deal.playerSet, deal.enemySet, {
+      ...startOptions,
+      eminenceFormat: startOptions?.eminenceFormat ?? EMINENCE_FORMAT.REQUIRED,
+    });
 
     if (!skipShuffleDeal) {
       const { playerShuffleKind, enemyShuffleKind } = resolveShuffleKindsForDuel();

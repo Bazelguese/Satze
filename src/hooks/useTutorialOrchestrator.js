@@ -61,6 +61,7 @@ export function useTutorialOrchestrator({
   setGamePhase,
   setPlayerConfirmedAwaitingAI,
   resetAiSelectionRef,
+  setEminenceMatchState,
 }) {
   const [isTutorialSelectorOpen, setIsTutorialSelectorOpen] = useState(false);
   const [activeTutorialSteps, setActiveTutorialSteps] = useState(
@@ -136,6 +137,7 @@ export function useTutorialOrchestrator({
     setShowClaimVictoryChoice(null);
     setCampaignLevel(null);
     setCampaignDuelMod(null);
+    setEminenceMatchState?.(null);
     setIsMultiplayer(false);
     setSelectedMode('classic');
     setGameMode('classic');
@@ -191,6 +193,7 @@ export function useTutorialOrchestrator({
     setShowClaimVictoryChoice,
     setCampaignLevel,
     setCampaignDuelMod,
+    setEminenceMatchState,
     setIsMultiplayer,
     setSelectedMode,
     setGameMode,
@@ -225,6 +228,7 @@ export function useTutorialOrchestrator({
     setPlayerConfirmedAwaitingAI,
     setGamePhase,
     resetAiSelectionRef,
+    setEminenceMatchState,
   ]);
 
   const handleTutorialTrackSelect = useCallback((mode) => {

@@ -2,12 +2,15 @@ const BASE = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL != 
   ? import.meta.env.BASE_URL
   : './';
 
-/** Dorsi carta in public/card-images/back/ */
+/**
+ * Dorsi carta in public/card-images/back/ — varianti webp generate da
+ * `npm run thumbs`: i PNG sorgente sono 1840×2640 per un uso a ~230×330.
+ */
 export const CARD_BACK_IMAGES = [
-  `${BASE}card-images/back/back1.png`,
-  `${BASE}card-images/back/back2.png`,
-  `${BASE}card-images/back/back3.png`,
-  `${BASE}card-images/back/back4.png`,
+  `${BASE}card-images/back/back1.webp`,
+  `${BASE}card-images/back/back2.webp`,
+  `${BASE}card-images/back/back3.webp`,
+  `${BASE}card-images/back/back4.webp`,
 ];
 
 function shuffleIndices(length) {

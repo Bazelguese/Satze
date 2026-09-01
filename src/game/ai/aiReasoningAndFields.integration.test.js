@@ -123,6 +123,114 @@ describe('formatAIReasoningEntry', () => {
     expect(entry.considerations.some((c) => c.includes('Non Agente Y'))).toBe(true);
     expect(entry.considerations.some((c) => c.includes('Tua Carta'))).toBe(true);
   });
+
+  it('non loda Overdrive se a pochi FC il potere non parte', () => {
+    const card = makeCard({
+      id: 9,
+      name: 'Draghetto Famelico',
+      ability: { trigger: 'overdrive', effect: 'power', value: 2 },
+      description: 'Overdrive: +2 POT',
+    });
+    const selected = {
+      action: { card, cardId: 9, focus: 1, fieldIndex: 0 },
+      score: 50,
+      winProbability: 0,
+      isTerminalWin: false,
+      isTerminalLoss: false,
+      simulation: { winner: 'player', aiAbilityTriggered: false },
+      budget: { fairShare: 3, ordinaryCap: 5 },
+    };
+    const ctx = makeAIContext({
+      roundNumber: 4,
+      isPlayerFirst: true,
+      currentFieldIndex: 0,
+      field: neutralField,
+      battlefields: [neutralField],
+      enemyFieldsConquered: 2,
+      ai: {
+        hand: [card, makeCard({ id: 10 }), makeCard({ id: 11 })],
+        usedCardIds: [],
+        focusPool: 2,
+        focus: 2,
+        hp: 14,
+        armyBonuses: {},
+        toxin: null,
+      },
+      player: {
+        hand: [makeCard({ id: 1, name: 'Tua' })],
+        usedCardIds: [],
+        focusPool: 8,
+        focus: 8,
+        hp: 16,
+        armyBonuses: {},
+        toxin: null,
+        visibleCard: makeCard({ id: 1, name: 'Carrozziere' }),
+      },
+    });
+    const debug = buildAIDebugPayload({
+      difficulty: 'hard',
+      selected,
+      candidates: [selected],
+      context: ctx,
+      extras: { fairShare: 3, ordinaryCap: 5 },
+    });
+    expect(debug.triggerReady).toBe(false);
+    expect(debug.abilityFired).toBe(false);
+
+    const entry = formatAIReasoningEntry(
+      { card, cardId: 9, focus: 1, fieldIndex: 0, score: 50, debug },
+      { kind: 'response', context: ctx }
+    );
+    expect(entry.considerations.some((c) => /Overdrive.*non parte/i.test(c))).toBe(true);
+    expect(entry.considerations.every((c) => !/potere di Draghetto Famelico parte/i.test(c))).toBe(
+      true
+    );
+  });
+
+  it('descrive Conquista come premio post-vittoria, non come trigger del confronto', () => {
+    const card = makeCard({
+      id: 11,
+      name: 'Piromante',
+      ability: { trigger: 'conquest', effect: 'directDamage', value: 3 },
+      description: 'Conquista: 3 Danni dir.',
+    });
+    const selected = {
+      action: { card, cardId: 11, focus: 5, fieldIndex: 0 },
+      score: 2000,
+      winProbability: 0.9,
+      simulation: { winner: 'enemy', aiAbilityTriggered: true },
+      budget: { fairShare: 4, ordinaryCap: 6 },
+    };
+    const debug = buildAIDebugPayload({
+      difficulty: 'medium',
+      selected,
+      candidates: [selected],
+      context: makeAIContext({
+        roundNumber: 2,
+        isPlayerFirst: true,
+        field: neutralField,
+        battlefields: [neutralField],
+        ai: {
+          hand: [card],
+          usedCardIds: [],
+          focusPool: 10,
+          focus: 10,
+          hp: 18,
+          armyBonuses: {},
+          toxin: null,
+        },
+      }),
+      extras: { fairShare: 4, ordinaryCap: 6 },
+    });
+    const entry = formatAIReasoningEntry(
+      { card, cardId: 11, focus: 5, debug },
+      { kind: 'response' }
+    );
+    expect(entry.considerations.some((c) => /dopo/i.test(c) && /Conquista/i.test(c))).toBe(true);
+    expect(entry.considerations.every((c) => !/potere di Piromante parte: è uno dei motivi/i.test(c))).toBe(
+      true
+    );
+  });
 });
 
 describe('field selection weights', () => {

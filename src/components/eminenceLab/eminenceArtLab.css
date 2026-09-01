@@ -1,0 +1,545 @@
+/* Eminence Art Lab — stile Arena rare: tilt 3D + parallax + foil */
+
+.eminence-lab-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 640px;
+  padding: 2rem 1rem;
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(40, 28, 72, 0.55), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(0, 0, 0, 0.5), transparent),
+    #08060f;
+  perspective: 900px;
+}
+
+.eminence-tarot {
+  --et-w: 340px;
+  --et-h: 588px;
+  --et-accent: #c9a227;
+  --et-rx: 0deg;
+  --et-ry: 0deg;
+  --et-mx: 50%;
+  --et-my: 50%;
+  --et-px: 0;
+  --et-py: 0;
+  --et-active: 0;
+  --et-roll: 0.5;
+  --et-intensity: 1;
+  position: relative;
+  width: var(--et-w);
+  height: var(--et-h);
+  border-radius: 14px;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--et-rx)) rotateY(var(--et-ry));
+  transition: transform 0.35s ease-out;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--et-accent) 45%, transparent),
+    0 0 0 3px rgba(8, 6, 16, 0.9),
+    0 28px 60px rgba(0, 0, 0, 0.65),
+    0 0 48px color-mix(in srgb, var(--et-accent) 22%, transparent);
+  cursor: grab;
+  user-select: none;
+}
+
+.eminence-tarot:active {
+  cursor: grabbing;
+}
+
+.eminence-tarot:hover,
+.eminence-tarot:focus-within {
+  transition: transform 0.08s ease-out;
+}
+
+.eminence-tarot__frame {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  background: #0a0814;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+.eminence-tarot__art-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+/* Piano fisso: l'arte scorre in 2D dentro il riquadro.
+   Niente rotateX/Y (scopre i neri) e niente scale extra (zoom). */
+.eminence-tarot[data-lock-plane='1'] {
+  transform: none;
+}
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__art-wrap {
+  transform: none;
+}
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__overlay,
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__chrome,
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__edge {
+  transform: none;
+}
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__art-parallax {
+  inset: -3%;
+}
+.eminence-tarot[data-lock-plane='1'][data-life='arena'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-lock-plane='1'][data-life='holo'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-lock-plane='1'][data-life='parallax'] .eminence-tarot__art-parallax {
+  transform: translate3d(
+      calc(var(--et-px) * -12px),
+      calc(var(--et-py) * -10px),
+      0
+    )
+    scale(1);
+}
+.eminence-tarot__art-parallax {
+  position: absolute;
+  inset: -3%;
+  transform: translateZ(0);
+  will-change: transform;
+  transition: transform 0.35s ease-out;
+}
+
+.eminence-tarot:hover .eminence-tarot__art-parallax {
+  transition: transform 0.08s ease-out;
+}
+
+.eminence-tarot__art {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--et-art-focus-x, 50%) var(--et-art-focus-y, 50%);
+  pointer-events: none;
+  filter: var(--et-art-filter, none);
+  transform: translate(-50%, -50%)
+    translate(var(--et-art-pan-x, 0px), var(--et-art-pan-y, 0px))
+    scale(calc(var(--et-art-zoom, 1) * var(--et-art-cover, 1)))
+    skewX(calc((var(--et-art-yn, 50) - 50) * 0.18deg))
+    skewY(calc((50 - var(--et-art-xn, 50)) * 0.18deg));
+  transform-origin: center center;
+}
+
+/* Parallax arte: l’immagine si sposta contro il tilt → finestra 3D */
+.eminence-tarot[data-life='parallax'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='arena'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='holo'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='barrel'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='rake'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='shade'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='roll'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='dual'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='comboA'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='comboB'] .eminence-tarot__art-parallax,
+.eminence-tarot[data-life='comboC'] .eminence-tarot__art-parallax {
+  transform: translate3d(
+      calc(var(--et-px) * -18px),
+      calc(var(--et-py) * -14px),
+      36px
+    )
+    scale(1.04);
+}
+
+.eminence-tarot[data-life='tilt'] .eminence-tarot__art-parallax {
+  transform: translateZ(18px) scale(1.04);
+}
+
+/* --- Dual-plane soft --- */
+.eminence-tarot__dual {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform 0.28s ease-out;
+}
+
+.eminence-tarot__dual img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--et-art-focus-x, 50%) var(--et-art-focus-y, 50%);
+  filter: var(--et-art-filter, none);
+  transform: translate(-50%, -50%)
+    translate(var(--et-art-pan-x, 0px), var(--et-art-pan-y, 0px))
+    scale(calc(var(--et-art-zoom, 1) * var(--et-art-cover, 1)))
+    skewX(calc((var(--et-art-yn, 50) - 50) * 0.18deg))
+    skewY(calc((50 - var(--et-art-xn, 50)) * 0.18deg));
+  transform-origin: center center;
+}
+
+.eminence-tarot__dual--deep {
+  z-index: 1;
+}
+
+.eminence-tarot[data-life='dual'] .eminence-tarot__dual--deep {
+  transform: translate3d(
+    calc(var(--et-px) * -3px),
+    calc(var(--et-py) * -2px),
+    0
+  );
+}
+
+.eminence-tarot__dual--near {
+  z-index: 2;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.35) 58%,
+    #000 78%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.35) 58%,
+    #000 78%
+  );
+}
+
+.eminence-tarot[data-life='dual'] .eminence-tarot__dual--near {
+  transform: translate3d(
+    calc(var(--et-px) * 3px),
+    calc(var(--et-py) * 2.5px),
+    0
+  );
+}
+
+.eminence-tarot__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* --- Shade ai lati (volume cilindrico finto) --- */
+.eminence-tarot__curve-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.45) 0%,
+    transparent 22%,
+    transparent 78%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  animation: et-shade-breathe 5.5s ease-in-out infinite;
+}
+
+/* Micro-roll: lo shade segue --et-roll (0…1) */
+.eminence-tarot[data-roll='1'] .eminence-tarot__curve-shade {
+  animation: none;
+  opacity: 0.7;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, calc(0.15 + (1 - var(--et-roll, 0.5)) * 0.5)) 0%,
+    transparent 28%,
+    transparent 72%,
+    rgba(0, 0, 0, calc(0.15 + var(--et-roll, 0.5) * 0.5)) 100%
+  );
+}
+
+@keyframes et-shade-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* --- Rake di luce sulla “curva” --- */
+.eminence-tarot__curve-rake {
+  position: absolute;
+  inset: -20%;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.08) 46%,
+    rgba(255, 248, 230, 0.32) 50%,
+    rgba(255, 255, 255, 0.1) 54%,
+    transparent 62%
+  );
+  mix-blend-mode: soft-light;
+  background-size: 220% 100%;
+  animation: et-rake-sweep 6.5s ease-in-out infinite;
+}
+
+@keyframes et-rake-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.45;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.85;
+  }
+}
+
+/* Glare specular (Arena / foil light rake) */
+.eminence-tarot__glare {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle 55% at var(--et-mx) var(--et-my),
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.12) 28%,
+    transparent 58%
+  );
+  mix-blend-mode: soft-light;
+  transition: opacity 0.35s ease;
+}
+
+.eminence-tarot[data-life='arena'] .eminence-tarot__glare,
+.eminence-tarot[data-life='holo'] .eminence-tarot__glare,
+.eminence-tarot[data-life='barrel'] .eminence-tarot__glare,
+.eminence-tarot[data-life='rake'] .eminence-tarot__glare,
+.eminence-tarot[data-life='shade'] .eminence-tarot__glare,
+.eminence-tarot[data-life='roll'] .eminence-tarot__glare,
+.eminence-tarot[data-life='dual'] .eminence-tarot__glare,
+.eminence-tarot[data-life='comboA'] .eminence-tarot__glare,
+.eminence-tarot[data-life='comboB'] .eminence-tarot__glare,
+.eminence-tarot[data-life='comboC'] .eminence-tarot__glare {
+  opacity: calc(0.25 + var(--et-active) * 0.55);
+}
+
+/* Sheen diagonale che rade la superficie */
+.eminence-tarot__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    calc(115deg + var(--et-px) * 25deg),
+    transparent 30%,
+    rgba(255, 255, 255, 0.18) 45%,
+    rgba(255, 240, 210, 0.28) 50%,
+    rgba(255, 255, 255, 0.12) 55%,
+    transparent 70%
+  );
+  mix-blend-mode: overlay;
+  background-size: 200% 200%;
+  background-position: var(--et-mx) var(--et-my);
+  transition: opacity 0.35s ease;
+}
+
+.eminence-tarot[data-life='arena'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='holo'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='parallax'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='barrel'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='rake'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='shade'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='roll'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='dual'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='comboA'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='comboB'] .eminence-tarot__sheen,
+.eminence-tarot[data-life='comboC'] .eminence-tarot__sheen {
+  opacity: calc(0.15 + var(--et-active) * 0.45);
+}
+
+/* Foil olografico */
+.eminence-tarot__foil {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgb(255, 119, 115) 0%,
+      rgba(255, 237, 95, 1) 8%,
+      rgba(168, 255, 95, 1) 16%,
+      rgba(131, 255, 247, 1) 24%,
+      rgba(120, 148, 255, 1) 32%,
+      rgb(216, 117, 255) 40%,
+      rgb(255, 119, 115) 48%
+    ),
+    repeating-linear-gradient(
+      133deg,
+      #0e152e 0%,
+      hsl(180, 10%, 60%) 4%,
+      hsl(180, 29%, 66%) 5%,
+      hsl(180, 10%, 60%) 7%,
+      #0e152e 9%,
+      #0e152e 14%
+    );
+  background-size: 400% 400%, 200% 200%;
+  background-position: var(--et-mx) var(--et-my), calc(var(--et-mx) * -0.4) calc(var(--et-my) * 0.6);
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.7) contrast(1.35) saturate(1.15);
+  transition: opacity 0.4s ease;
+}
+
+.eminence-tarot[data-life='holo'] .eminence-tarot__foil {
+  opacity: calc(0.35 + var(--et-active) * 0.45);
+}
+
+.eminence-tarot__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, transparent 18%, transparent 55%, rgba(0, 0, 0, 0.78) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+.eminence-tarot__edge {
+  position: absolute;
+  inset: 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--et-accent) 55%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    inset 0 0 24px rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  z-index: 7;
+  transform: translateZ(28px);
+}
+
+.eminence-tarot__chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 20px 18px;
+  pointer-events: none;
+  transform: translateZ(42px);
+}
+
+.eminence-tarot__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  transform: translateZ(42px);
+}
+
+.eminence-tarot__eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--et-accent) 90%, white);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
+  opacity: 0.9;
+}
+
+.eminence-tarot__title {
+  margin-top: 6px;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f7f2e8;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+  max-width: 92%;
+}
+
+.eminence-tarot__army {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 232, 0.72);
+}
+
+.eminence-tarot__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eminence-tarot__static {
+  flex: 1;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(247, 242, 232, 0.88);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+.eminence-tarot__presence {
+  flex-shrink: 0;
+  min-width: 52px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid color-mix(in srgb, var(--et-accent) 50%, transparent);
+  transform: translateZ(8px);
+}
+
+.eminence-tarot__presence-label {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 232, 0.55);
+}
+
+.eminence-tarot__presence-value {
+  display: block;
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--et-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.eminence-lab-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+.eminence-lab-compare .eminence-tarot {
+  --et-w: 200px;
+  --et-h: 346px;
+  margin: 0 auto;
+}
+
+.eminence-lab-compare .eminence-tarot__title {
+  font-size: 14px;
+}
+
+.eminence-lab-compare .eminence-tarot__static {
+  font-size: 9px;
+}
+
+.eminence-lab-compare .eminence-tarot__presence-value {
+  font-size: 15px;
+}
+
+.em-duel-lab-stage {
+  position: relative;
+  min-height: 720px;
+  overflow: auto;
+  padding: 28px 16px 48px;
+  border: 1px solid var(--st-border, rgba(255, 255, 255, 0.12));
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(40, 28, 72, 0.42), transparent 70%),
+    repeating-linear-gradient(135deg, #0c0a12, #0c0a12 10px, #09080e 10px, #09080e 20px);
+}

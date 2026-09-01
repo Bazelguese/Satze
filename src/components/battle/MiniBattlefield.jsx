@@ -1,13 +1,13 @@
 import React from 'react';
 import { ARMY_COLORS } from '../../data';
 import { FIELD_STYLES } from '../../utils/constants';
-import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
+import { resolveFieldThumbUrl, resolvePublicAssetUrl } from '../../utils/preloadAssets';
 
 /**
  * Componente campo di battaglia compatto
  * Versione ridotta per la visualizzazione nella lista campi
  */
-export const MiniBattlefield = ({ 
+export const MiniBattlefield = React.memo(({ 
   field, 
   selected, 
   onClick, 
@@ -46,7 +46,8 @@ export const MiniBattlefield = ({
   
   const conqueredStyle = getConqueredStyle();
   const fieldStyle = FIELD_STYLES[field.id] || {};
-  const bgUrl = field?.bgImage ? resolvePublicAssetUrl(field.bgImage) || field.bgImage : null;
+  const bgUrl = field?.bgImage ? resolveFieldThumbUrl(field.bgImage) : null;
+  const bgFullUrl = field?.bgImage ? resolvePublicAssetUrl(field.bgImage) || field.bgImage : null;
   
   return (
     <div
@@ -69,15 +70,29 @@ export const MiniBattlefield = ({
     >
       {/* Immagine campo (fallback: gradiente) */}
       {bgUrl ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `linear-gradient(90deg, rgba(8,10,18,0.55) 0%, rgba(8,10,18,0.25) 55%, rgba(8,10,18,0.45) 100%), url(${bgUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: conquered ? 0.85 : 1,
-          }}
-        />
+        <div className="absolute inset-0" style={{ opacity: conquered ? 0.85 : 1 }}>
+          <img
+            src={bgUrl}
+            alt=""
+            aria-hidden
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              // Miniatura assente (campo aggiunto senza rigenerare): usa l'originale.
+              const img = e.currentTarget;
+              if (!bgFullUrl || img.dataset.fullFallback === '1') return;
+              img.dataset.fullFallback = '1';
+              img.src = bgFullUrl;
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(8,10,18,0.55) 0%, rgba(8,10,18,0.25) 55%, rgba(8,10,18,0.45) 100%)',
+            }}
+          />
+        </div>
       ) : (
         <div
           className="absolute inset-0 opacity-60"
@@ -127,4 +142,5 @@ export const MiniBattlefield = ({
       </div>
     </div>
   );
-};
+});
+MiniBattlefield.displayName = 'MiniBattlefield';

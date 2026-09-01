@@ -8,25 +8,41 @@ import { getLegalFieldIndexes } from './legalFields.js';
 import { chooseAIIndependentAction, chooseAIIndependentActionAsync } from './chooseAIAction.js';
 import { buildStrategicState } from './strategicState.js';
 import { evaluateFieldSelectionAdjustment } from './fieldStrategy.js';
+import { selectCandidateFields } from './rankFields.js';
 import { aiYieldIfNeeded, resetAiSchedulerTicks } from './aiScheduler.js';
 
-function resolveJointFieldIndexes(context) {
+/**
+ * Campi da valutare in joint. Con multi-Campo non esplodere su tutti i rivelati:
+ * la UI si bloccava quando l'IA apriva (3+ Campi × search depth 1–2).
+ */
+function resolveJointFieldIndexes(context, profile) {
   if (context.currentFieldIndex != null) {
     return [context.currentFieldIndex];
   }
-  return getLegalFieldIndexes(context);
+  const legal = getLegalFieldIndexes(context);
+  if (legal.length <= 1) return legal;
+
+  const rootState = buildStrategicState(context);
+  const limit =
+    profile.jointFieldCandidateLimit ??
+    (profile.id === 'hard' ? 4 : profile.id === 'easy' ? 3 : 3);
+  const picked = selectCandidateFields(rootState, Math.min(limit, legal.length), profile, 'ai');
+  if (!picked.length) return legal.slice(0, limit);
+  return picked.map((p) => p.index);
 }
 
 function leanProfileForJoint(profile, multiField) {
   if (!multiField) {
     return { ...profile, selectionMode: profile.selectionMode };
   }
+  // Multi-Campo: budget ridotto — il confronto Campo è nell'adjustment, non nella deep search
   return {
     ...profile,
-    ownActionLimitWhenFirst: Math.min(profile.ownActionLimitWhenFirst || 10, 8),
-    opponentScenarioCount: Math.min(profile.opponentScenarioCount || 4, 4),
-    ownVariantsPerCard: Math.min(profile.ownVariantsPerCard || 3, 3),
-    beamWidth: Math.min(profile.beamWidth || 12, 8),
+    ownActionLimitWhenFirst: Math.min(profile.ownActionLimitWhenFirst || 12, 8),
+    opponentScenarioCount: Math.min(profile.opponentScenarioCount || 4, 3),
+    ownVariantsPerCard: Math.min(profile.ownVariantsPerCard || 3, 2),
+    beamWidth: Math.min(profile.beamWidth || 12, 6),
+    searchDepth: 0,
     selectionMode: 'best',
   };
 }
@@ -129,27 +145,38 @@ function packJointDecision(candidates, profile, rng, context) {
   };
 }
 
-function pickIndependentSync(fieldContext, leanProfile, options) {
-  return chooseAIIndependentAction(fieldContext, leanProfile.id, {
+function independentOpts(leanProfile, options, multiField) {
+  return {
     ...options,
     profile: leanProfile,
     rng: () => 0,
     includeStrategicProjection: true,
-  });
+    // Deep search × N Campi congelava la UI quando l'IA apriva
+    includeSearch: multiField ? false : options.includeSearch !== false,
+    searchDepth: multiField ? 0 : options.searchDepth,
+    maxSearchNodes: multiField ? 800 : options.maxSearchNodes,
+  };
+}
+
+function pickIndependentSync(fieldContext, leanProfile, options, multiField) {
+  return chooseAIIndependentAction(
+    fieldContext,
+    leanProfile.id,
+    independentOpts(leanProfile, options, multiField)
+  );
 }
 
 async function pickIndependentAsync(fieldContext, leanProfile, options, multiField) {
-  await aiYieldIfNeeded({ force: multiField });
-  return chooseAIIndependentActionAsync(fieldContext, leanProfile.id, {
-    ...options,
-    profile: leanProfile,
-    rng: () => 0,
-    includeStrategicProjection: true,
-  });
+  await aiYieldIfNeeded({ force: true });
+  return chooseAIIndependentActionAsync(
+    fieldContext,
+    leanProfile.id,
+    independentOpts(leanProfile, options, multiField)
+  );
 }
 
 function buildJointCandidatesSync(context, profile, options) {
-  const legalFields = resolveJointFieldIndexes(context);
+  const legalFields = resolveJointFieldIndexes(context, profile);
   if (!legalFields.length) {
     return { emptyLegal: true, candidates: [] };
   }
@@ -165,7 +192,7 @@ function buildJointCandidatesSync(context, profile, options) {
       field: context.battlefields[fieldIndex],
     };
     const leanProfile = leanProfileForJoint(profile, multiField);
-    const decision = pickIndependentSync(fieldContext, leanProfile, options);
+    const decision = pickIndependentSync(fieldContext, leanProfile, options, multiField);
     if (!decision?.card) continue;
 
     const fieldStrategy = evaluateFieldSelectionAdjustment(
@@ -193,7 +220,7 @@ function buildJointCandidatesSync(context, profile, options) {
 }
 
 async function buildJointCandidatesAsync(context, profile, options) {
-  const legalFields = resolveJointFieldIndexes(context);
+  const legalFields = resolveJointFieldIndexes(context, profile);
   if (!legalFields.length) {
     return { emptyLegal: true, candidates: [] };
   }
@@ -209,7 +236,12 @@ async function buildJointCandidatesAsync(context, profile, options) {
       field: context.battlefields[fieldIndex],
     };
     const leanProfile = leanProfileForJoint(profile, multiField);
-    const decision = await pickIndependentAsync(fieldContext, leanProfile, options, multiField);
+    const decision = await pickIndependentAsync(
+      fieldContext,
+      leanProfile,
+      options,
+      multiField
+    );
     if (!decision?.card) continue;
 
     const fieldStrategy = evaluateFieldSelectionAdjustment(

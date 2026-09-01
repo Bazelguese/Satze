@@ -9,7 +9,7 @@ import { HandCard } from './HandCard';
  * Visualizza le carte in mano con posizionamento assoluto e triangolo di sfondo
  * Supporta GIF armate sotto i triangoli (32-bit, in public/)
  */
-export const Hand = ({ 
+export const Hand = React.memo(({ 
   hand = [], 
   usedCards = [], 
   selectedAgent, 
@@ -252,4 +252,5 @@ export const Hand = ({
       </div>
     </>
   );
-};
+});
+Hand.displayName = 'Hand';

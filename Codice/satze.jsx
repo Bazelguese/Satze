@@ -27,6 +27,18 @@ import { checkTrigger } from '../src/game/triggerLogic';
 import { getFieldModifiers, fieldGrantsOverdriveBonus } from '../src/game/fieldLogic';
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
+import { needsEminenceRoundOpen, openEminenceRound, autoSelectForcedChoices, autoSelectFirstLegalAbility } from '../src/game/eminence/eminenceDuelGate.js';
+import { selectEminenceAbility } from '../src/game/eminence/eminenceRound.js';
+import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
+import {
+  buildEminenceChoiceView,
+  isAwaitingEminenceChoice,
+  shouldShowEminenceLayer,
+  isEminenceTableInspectable,
+  resolveEminenceChromeVisible,
+} from '../src/game/eminence/eminenceChoiceView.js';
+import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
+import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
 import { formatAIReasoningLogText } from '../src/game/ai/aiDebug.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
@@ -45,7 +57,7 @@ import {
   buildDialogueDuelArmyChoices,
 } from '../src/utils/devDialogueDuelMenu';
 import { IA_CARD_POSITIONS, PLAYER_CARD_POSITIONS } from '../src/config/battlefieldHandLayout';
-import { useGameState, useAnimations, useBattle, useDragAndDrop, useGameFlow, useAI, useTutorial, useCampaignGameOutcome, useGuidedTutorialFlow, useTutorialOrchestrator } from '../src/hooks';
+import { useGameState, useAnimations, useBattle, useDragAndDrop, useGameFlow, useAI, useTutorial, useCampaignGameOutcome, useGuidedTutorialFlow, useTutorialOrchestrator, useEventCallback } from '../src/hooks';
 import {
   ADV_STAGE_EPILOGUE,
   ADV_STAGE_TRIGGERS,
@@ -79,7 +91,9 @@ import { CosmicScreenLayout } from '../src/components/menu/cosmic/CosmicScreenLa
 import ArmySelectCinematic from '../src/components/menu/cosmic/ArmySelectCinematic.jsx';
 import DeckSelectCinematic, { buildDeckPreviewPayload } from '../src/components/menu/cosmic/DeckSelectCinematic.jsx';
 import CardGallery from '../src/components/menu/gallery/CardGallery.jsx';
+import EminenceGallery from '../src/components/menu/gallery/EminenceGallery.jsx';
 import GalleryCinematic from '../src/components/menu/gallery/GalleryCinematic.jsx';
+import { EMINENCE_IDS } from '../src/data/eminences.js';
 import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCarousel';
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
@@ -208,7 +222,87 @@ export default function SatzeGame() {
     setShuffleDealSetup,
     playerDeckVisual,
     enemyDeckVisual,
+    eminenceMatchState,
+    setEminenceMatchState,
   } = gameState;
+
+  /**
+   * Apertura del round Eminenza.
+   *
+   * Vive in un effetto e non dentro l'avanzamento di round perché la sostituzione del Campo
+   * ha bisogno di `conqueredFields` aggiornato, che nello stesso batch è ancora quello del
+   * round precedente. È di layout perché il tabellone non deve mostrare per un frame il Campo
+   * che sta per essere sostituito.
+   */
+  useLayoutEffect(() => {
+    if (!needsEminenceRoundOpen(eminenceMatchState, roundNumber)) return;
+
+    const { matchState: opened, bundle } = openEminenceRound(eminenceMatchState, {
+      roundNumber,
+      initiativeSide: isPlayerFirst ? 'player' : 'enemy',
+    });
+    let next = autoSelectForcedChoices(opened);
+    // Vs IA la scelta avversaria è simultanea e segreta: la sigilliamo qui, senza UI.
+    if (aiDifficulty !== 'multiplayer') {
+      next = autoSelectFirstLegalAbility(next, 'enemy');
+    }
+    setEminenceMatchState(next);
+
+    if (!bundle?.fieldOperations.length) return;
+    const replaced = applyFieldOperations(bundle.fieldOperations, {
+      battlefields,
+      conqueredFields,
+    });
+    if (replaced.changes.length) setBattlefields(replaced.battlefields);
+  }, [
+    eminenceMatchState,
+    roundNumber,
+    isPlayerFirst,
+    aiDifficulty,
+    battlefields,
+    conqueredFields,
+    setEminenceMatchState,
+    setBattlefields,
+  ]);
+
+  const [emDraftId, setEmDraftId] = useState(null);
+  const [peekCampo, setPeekCampo] = useState(false);
+  const [peekEminence, setPeekEminence] = useState(false);
+  const eminenceChoiceView = useMemo(
+    () => buildEminenceChoiceView(eminenceMatchState, 'player'),
+    [eminenceMatchState],
+  );
+  const awaitingEminenceChoice =
+    isAwaitingEminenceChoice(eminenceChoiceView) && gamePhase === 'selectField';
+  const eminenceInspectable = isEminenceTableInspectable(eminenceChoiceView, gamePhase);
+  const forcedEminenceView =
+    shouldShowEminenceLayer(eminenceChoiceView, { gamePhase }) && gamePhase === 'selectField';
+  const showEminenceLayer = resolveEminenceChromeVisible({
+    forced: forcedEminenceView,
+    peekCampo,
+    peekEminence,
+    inspectable: eminenceInspectable,
+  });
+
+  useEffect(() => {
+    setEmDraftId(null);
+  }, [roundNumber, eminenceMatchState?.player?.selectedAbilityId]);
+
+  useEffect(() => {
+    setPeekCampo(false);
+    setPeekEminence(false);
+  }, [roundNumber]);
+
+  useEffect(() => {
+    if (forcedEminenceView) setPeekCampo(false);
+  }, [forcedEminenceView]);
+
+  const confirmEminenceAbility = useCallback((abilityId) => {
+    setEminenceMatchState((prev) => {
+      const attempt = selectEminenceAbility(prev, 'player', abilityId);
+      return attempt.ok ? attempt.matchState : prev;
+    });
+  }, [setEminenceMatchState]);
 
   /** Solo STRUMENTI DEV → DIALOGUE DUELLO: fumetti durante il duello di test. */
   const [devDialogueDuelActive, setDevDialogueDuelActive] = useState(false);
@@ -857,6 +951,7 @@ export default function SatzeGame() {
     resetAiSelectionRef: () => {
       aiHasSelectedAgent.current = false;
     },
+    setEminenceMatchState,
   });
 
   const handleTutorialTrackSelectWithPreviewReset = useCallback((mode) => {
@@ -1347,6 +1442,15 @@ export default function SatzeGame() {
     setGuidedHint,
   ]);
 
+  // Handler a identità stabile per i componenti memoizzati del duello:
+  // un'arrow inline li farebbe re-renderizzare a ogni setState della radice.
+  const handleEnemyPreviewClick = useEventCallback((data) =>
+    handleCardPreviewClick({ ...data, isPlayer: false })
+  );
+  const handlePlayerPreviewClick = useEventCallback((data) =>
+    handleCardPreviewClick({ ...data, isPlayer: true })
+  );
+
   const handleGlossaryButtonClick = useCallback(() => {
     if (guidedMatch.active && guidedMatch.trackId === 'intro' && gamePhase === 'selectField') {
       if (guidedIntroStage < 4) {
@@ -1512,7 +1616,7 @@ export default function SatzeGame() {
     gameState,
   });
   
-  const { handleDragStart, dropZoneRef, dragVisual } = dragAndDrop;
+  const { handleDragStart, dropZoneRef, dragVisual, dragGhostRef } = dragAndDrop;
   
   // Ref per auto-scroll log - Gestito internamente da LogPanel
 
@@ -1673,6 +1777,7 @@ export default function SatzeGame() {
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
   useEffect(() => {
     if (isOnlinePvP) return;
+    if (awaitingEminenceChoice) return;
     const isGuidedScripted = guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound;
 
     if (isGuidedScripted) return;
@@ -1681,6 +1786,8 @@ export default function SatzeGame() {
       let cancelled = false;
       const delay = getThinkingTimeRef.current?.() ?? 2000;
       const startedAt = Date.now();
+      /** Hard cap: se il motore IA si blocca, la partita non deve restare su selectField. */
+      const HARD_TIMEOUT_MS = 12000;
 
       (async () => {
         await new Promise((resolve) => {
@@ -1694,7 +1801,24 @@ export default function SatzeGame() {
         );
         if (available.length === 0) return;
 
-        let fieldIdx = await selectEnemyFieldAsyncRef.current?.();
+        const fallbackIdx = battlefields.indexOf(available[0]);
+        let fieldIdx = fallbackIdx;
+
+        try {
+          const timed = Promise.race([
+            Promise.resolve(selectEnemyFieldAsyncRef.current?.()).then((v) =>
+              v == null ? fallbackIdx : v
+            ),
+            new Promise((resolve) => {
+              setTimeout(() => resolve(fallbackIdx), HARD_TIMEOUT_MS);
+            }),
+          ]);
+          fieldIdx = await timed;
+        } catch (err) {
+          console.error('[SATZE] IA selectField compute:', err);
+          fieldIdx = fallbackIdx;
+        }
+
         if (
           fieldIdx == null ||
           fieldIdx < 0 ||
@@ -1702,7 +1826,7 @@ export default function SatzeGame() {
           fieldIdx in conqueredFields ||
           fieldIdx >= revealedFields
         ) {
-          fieldIdx = battlefields.indexOf(available[0]);
+          fieldIdx = fallbackIdx;
         }
 
         const waitMs = delay - (Date.now() - startedAt);
@@ -1726,6 +1850,14 @@ export default function SatzeGame() {
         setGamePhase('selectAgent');
       })().catch((err) => {
         console.error('[SATZE] IA selectField:', err);
+        if (cancelled) return;
+        const available = battlefields.filter(
+          (_, i) => !(i in conqueredFields) && i < revealedFields
+        );
+        if (!available.length) return;
+        const fieldIdx = battlefields.indexOf(available[0]);
+        setCurrentFieldIndex(fieldIdx);
+        setGamePhase('selectAgent');
       });
 
       return () => {
@@ -1740,6 +1872,7 @@ export default function SatzeGame() {
     revealedFields,
     roundNumber,
     isOnlinePvP,
+    awaitingEminenceChoice,
     guidedMatch.active,
     guidedMatch.freePlay,
     currentGuidedRound,
@@ -1896,6 +2029,7 @@ export default function SatzeGame() {
 
   // Selezione campo giocatore
   const handleFieldSelect = (field) => {
+    if (awaitingEminenceChoice) return;
     if (isGuidedIntroEpiloguePhase || isGuidedAdvancedEpiloguePhase || isGuidedIntroFreePlayFinalPhase) {
       return;
     }
@@ -1955,6 +2089,23 @@ export default function SatzeGame() {
       setGamePhase('selectAgent');
     }
   };
+
+  // Un handler stabile per campo: evita di invalidare i 5 MiniBattlefield memoizzati
+  // (ognuno monta lo sfondo del campo) a ogni render del duello.
+  const handleFieldSelectStable = useEventCallback(handleFieldSelect);
+  const fieldSelectHandlers = useMemo(
+    () => battlefields.map((field) => () => handleFieldSelectStable(field)),
+    [battlefields, handleFieldSelectStable]
+  );
+
+  const logPanelBattleEvents = useMemo(() => {
+    if (gamePhase !== 'result' || !battleResult?.events) return battleEvents;
+    const resolvedRound = battleResult.events[0]?.round ?? roundNumber;
+    return [
+      ...battleEvents.filter((e) => e.round !== resolvedRound),
+      ...battleResult.events,
+    ];
+  }, [gamePhase, battleResult, battleEvents, roundNumber]);
 
   const handleFocusChange = useCallback((focusValue) => {
     setSelectedFocus(focusValue);
@@ -2823,6 +2974,11 @@ export default function SatzeGame() {
       url.searchParams.set('perfectFocusLab', '1');
       window.location.href = url.toString();
     };
+    const openEminenceArtLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('eminenceArtLab', '1');
+      window.location.href = url.toString();
+    };
     const launchArenaContesa = (playerArmy) => {
       const url = new URL(window.location.href);
       url.searchParams.set('arenaContesa', '1');
@@ -2867,7 +3023,7 @@ export default function SatzeGame() {
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', onClick: openTutorialSelector },
-      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
+      { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · EMINENZE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
       {
         label: 'STRUMENTI DEV',
         sub: 'LAB',
@@ -2877,6 +3033,7 @@ export default function SatzeGame() {
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
           { label: 'PERFECT FC LAB', sub: 'VFX', meta: 'STAMP DUELLO', onClick: openPerfectFocusLab },
+          { label: 'EMINENCE LAB', sub: 'DUELLO', meta: 'FORMA · CARTA', onClick: openEminenceArtLab },
           {
             label: 'ARENA CONTESA',
             sub: 'GIOCA',
@@ -3432,15 +3589,28 @@ export default function SatzeGame() {
       onGalleryTabChange: (tab) => startTransition(() => setGalleryTab(tab)),
       agentCount: ALL_AGENTS.length,
       fieldCount: ALL_BATTLEFIELDS.length,
+      eminenceCount: EMINENCE_IDS.length,
     };
 
-    return galleryTab === 'agents' ? (
-      <CardGallery
-        totalCards={ALL_AGENTS.length}
-        onBack={() => setGamePhase('menu')}
-        {...galleryTabProps}
-      />
-    ) : (
+    if (galleryTab === 'agents') {
+      return (
+        <CardGallery
+          totalCards={ALL_AGENTS.length}
+          onBack={() => setGamePhase('menu')}
+          {...galleryTabProps}
+        />
+      );
+    }
+    if (galleryTab === 'eminences') {
+      return (
+        <EminenceGallery
+          totalCards={EMINENCE_IDS.length}
+          onBack={() => setGamePhase('menu')}
+          {...galleryTabProps}
+        />
+      );
+    }
+    return (
       <GalleryCinematic
         totalFields={ALL_BATTLEFIELDS.length}
         onBack={() => setGamePhase('menu')}
@@ -3478,7 +3648,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-      className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}`}
+      className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -3903,7 +4073,8 @@ export default function SatzeGame() {
               const canSelectField = isPlayerFirst && 
                 !(idx in conqueredFields) && 
                 idx < revealedFields &&
-                (gamePhase === 'selectField' || gamePhase === 'selectAgent');
+                (gamePhase === 'selectField' || gamePhase === 'selectAgent') &&
+                !awaitingEminenceChoice;
               const locked = idx >= revealedFields;
               const rowCls = [
                 'imp-row',
@@ -3939,7 +4110,7 @@ export default function SatzeGame() {
                     }
                     hidden={idx >= revealedFields}
                     turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
-                    onClick={canSelectField ? () => handleFieldSelect(field) : undefined}
+                    onClick={canSelectField ? fieldSelectHandlers[idx] : undefined}
                     onHover={setHoveredField}
                     guidedHighlight={isGuidedIntroBattlefieldsPhase}
                   />
@@ -3956,16 +4127,7 @@ export default function SatzeGame() {
             <div className="satze-panel-flip-face">
               <LogPanel
                 logs={logs}
-                battleEvents={
-                  gamePhase === 'result' && battleResult?.events
-                    ? [
-                        ...battleEvents.filter(
-                          (e) => e.round !== (battleResult.events[0]?.round ?? roundNumber)
-                        ),
-                        ...battleResult.events,
-                      ]
-                    : battleEvents
-                }
+                battleEvents={logPanelBattleEvents}
                 duelPhase={duelPhase}
                 currentRound={roundNumber}
                 gamePhase={gamePhase}
@@ -4029,15 +4191,36 @@ export default function SatzeGame() {
         </div>
       </div>
 
+      {eminenceInspectable && (
+        <EminenzaTableToggle
+          viewingEminence={showEminenceLayer}
+          accent={playerIdentityColor}
+          onToggle={() => {
+            if (forcedEminenceView) setPeekCampo((v) => !v);
+            else setPeekEminence((v) => !v);
+          }}
+        />
+      )}
+
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
       <div className="imp-hand imp-hand-enemy">
+      {showEminenceLayer && eminenceChoiceView.opponent?.eminence && (
+        <EminenzaZone
+          side="enemy"
+          eminence={eminenceChoiceView.opponent.eminence}
+          presence={eminenceChoiceView.opponent.presence}
+          options={eminenceChoiceView.opponent.options}
+          pickedId={eminenceChoiceView.opponent.revealedAbilityId}
+          choiceState={eminenceChoiceView.opponent.state}
+        />
+      )}
       <Hand
         hand={enemyHand}
         usedCards={enemyUsedCards}
         selectedAgent={enemyAgent}
-        onPreviewClick={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+        onPreviewClick={handleEnemyPreviewClick}
         battleOutcomes={cardBattleOutcomes}
         battleOutcomeSide="enemy"
         cardPositions={iaCardPositions}
@@ -4062,12 +4245,24 @@ export default function SatzeGame() {
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
       <div className="imp-hand imp-hand-player">
+      {showEminenceLayer && eminenceChoiceView.self?.eminence && (
+        <EminenzaZone
+          side="player"
+          eminence={eminenceChoiceView.self.eminence}
+          presence={eminenceChoiceView.self.presence}
+          options={eminenceChoiceView.self.options}
+          pickedId={emDraftId || eminenceChoiceView.self.selectedAbilityId}
+          choiceState={eminenceChoiceView.self.state}
+          onPick={setEmDraftId}
+          onConfirm={confirmEminenceAbility}
+        />
+      )}
       <Hand
         hand={playerHand}
         usedCards={playerUsedCards}
         selectedAgent={selectedAgent}
         onAgentSelect={handleAgentSelect}
-        onPreviewClick={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+        onPreviewClick={handlePlayerPreviewClick}
         battleOutcomes={cardBattleOutcomes}
         battleOutcomeSide="player"
         cardPositions={playerCardPositions}
@@ -4198,15 +4393,23 @@ export default function SatzeGame() {
               Campo di Battaglia
             </div>
             <div className="text-xs leading-snug" style={{ color: PALETTE.textPrimary }}>
-              Scegli un campo dal tabellone
+              {awaitingEminenceChoice
+                ? 'Scegli un\'abilità Eminenza. Da qui puoi consultare il tabellone.'
+                : isPlayerFirst
+                  ? 'Scegli un campo dal tabellone'
+                  : isOnlinePvP
+                    ? "L'avversario sta scegliendo il campo di battaglia"
+                    : 'Il nemico sta scegliendo il campo di battaglia'}
             </div>
-            <div
-              className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider imp-arrow"
-              style={{ color: PALETTE.textSecondary }}
-            >
-              <span>Tabellone</span>
-              <span>→</span>
-            </div>
+            {isPlayerFirst && !awaitingEminenceChoice && (
+              <div
+                className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider imp-arrow"
+                style={{ color: PALETTE.textSecondary }}
+              >
+                <span>Tabellone</span>
+                <span>→</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -4394,7 +4597,7 @@ export default function SatzeGame() {
                         showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
                         bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
                         abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-                        onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+                        onHover={handleEnemyPreviewClick}
                       />
                     </div>
                     <div className="place-flip-face back">
@@ -4414,7 +4617,7 @@ export default function SatzeGame() {
                     showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
                     bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
                     abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-                    onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: false })}
+                    onHover={handleEnemyPreviewClick}
                   />
                 )}
               </div>
@@ -4497,7 +4700,7 @@ export default function SatzeGame() {
                         bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
                         abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                         overdrivePreview={playerOverdrivePreview}
-                        onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+                        onHover={handlePlayerPreviewClick}
                         onClick={() => setSelectedAgent(null)}
                         onDragStart={handleDragStart}
                         isDragging={draggingCard?.id === selectedAgent?.id}
@@ -4521,7 +4724,7 @@ export default function SatzeGame() {
                     bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
                     abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                     overdrivePreview={playerOverdrivePreview}
-                    onHover={(data) => handleCardPreviewClick({ ...data, isPlayer: true })}
+                    onHover={handlePlayerPreviewClick}
                     onClick={() => setSelectedAgent(null)}
                     onDragStart={handleDragStart}
                     isDragging={draggingCard?.id === selectedAgent?.id}
@@ -4759,6 +4962,7 @@ export default function SatzeGame() {
       {/* Carta trascinata: resta al punto di presa, lieve attrazione verso il cursore */}
       {draggingCard && dragVisual && createPortal(
         <div
+          ref={dragGhostRef}
           className="fixed pointer-events-none"
           style={{
             left: dragVisual.left,

@@ -1,0 +1,165 @@
+/* ============================================================
+   SATZE · Fase Eminenza — animazioni e stati della zona mano
+   Da importare DOPO satze-duello-2_5d.css.
+   Nessuna regola qui tocca la logica: solo apparizione e messa a fuoco.
+   ============================================================ */
+
+/* ── 1. Tavolo arretrato ────────────────────────────────────
+   La ricetta del ventaglio (desatura, spegne, sfoca) vale per tutto
+   il palco: colonne, campo, stats, badge. Le eminenze restano nitide
+   sopra il velo. Le carte in mano tengono anche opacità/scala. */
+.imp-hand > div > div[class="absolute"]{transition:opacity .5s ease,filter .5s ease,transform .5s ease}
+.em-on > *:not(.imp-hand):not(.em-table-toggle){filter:grayscale(.85) brightness(.62) blur(5px);transition:filter .5s ease}
+.em-on > .z-\[298\],
+.em-on > .z-\[299\],
+.em-on > .z-\[300\]{filter:none}
+.em-on .imp-hand > div > div[class="absolute"]{opacity:.34;filter:grayscale(.85) brightness(.62) blur(1.4px);transform:scale(.96)}
+.em-on .imp-hand > div > div[class="absolute"]:hover{opacity:.34;transform:scale(.96)}
+.em-on::before{content:'';position:absolute;inset:0;z-index:14;pointer-events:auto;background:rgba(4,3,8,.32);animation:emVeilIn .5s ease both}
+@keyframes emVeilIn{from{opacity:0}to{opacity:1}}
+
+/* ── 2. Piano 3D della zona ─────────────────────────────────
+   L'inclinazione 3/4 è la posa di riposo, non un ingresso.
+   Due animazioni su `transform` (slide-in + respiro) facevano
+   snap a identità e un secondo tilt. L'ingresso lo fanno carta
+   e rail (Apparizione). Il respiro parte già dalla posa 3/4. */
+@keyframes emZoneBreathR{0%,100%{transform:rotateY(-18deg) rotateX(6deg)}50%{transform:rotateY(-14deg) rotateX(4deg) translateY(-4px)}}
+@keyframes emZoneBreathL{0%,100%{transform:rotateY(18deg) rotateX(-6deg)}50%{transform:rotateY(14deg) rotateX(-4deg) translateY(4px)}}
+.em-zone-player .em-stage{transform-origin:100% 50%;transform:rotateY(-18deg) rotateX(6deg);animation:emZoneBreathR 9s ease-in-out infinite}
+.em-zone-enemy .em-stage{transform-origin:0% 50%;transform:rotateY(18deg) rotateX(-6deg);animation:emZoneBreathL 9s ease-in-out infinite}
+
+/* ── 3. Ingressi (uno per volta sul contenitore .em-stage) ──
+   La carta usa em-card-*, le losanghe em-rail-*. I due nomi vanno
+   sempre in coppia: sono tarati sullo stesso ritmo. */
+@keyframes emCardSlam{0%{opacity:0;transform:translateX(210px) skewX(-14deg) scale(1.1)}62%{opacity:1;transform:translateX(-16px) skewX(3deg) scale(1)}100%{opacity:1;transform:translateX(0) skewX(0) scale(1)}}
+@keyframes emCardStamp{0%{opacity:0;transform:scale(1.5) rotate(-7deg)}58%{opacity:1;transform:scale(.96) rotate(1.5deg)}78%{transform:scale(1.02) rotate(-.5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes emCardDeal{0%{opacity:0;transform:translate(-120px,-180px) rotate(-34deg)}100%{opacity:1;transform:translate(0,0) rotate(0)}}
+@keyframes emCardSlash{0%{opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)}100%{opacity:1;clip-path:polygon(0 0,140% 0,100% 100%,0 100%)}}
+@keyframes emCardFlip{0%{opacity:0;transform:rotateY(102deg) translateX(60px)}100%{opacity:1;transform:rotateY(0) translateX(0)}}
+@keyframes emCardRise{0%{opacity:0;transform:translateY(180px) scale(.88)}100%{opacity:1;transform:translateY(0) scale(1)}}
+
+@keyframes emRailSlam{0%{opacity:0;transform:translateX(var(--dx,320px)) skewX(-22deg)}64%{opacity:1;transform:translateX(-18px) skewX(6deg)}100%{opacity:1;transform:translateX(0) skewX(0)}}
+@keyframes emRailFan{0%{opacity:0;transform:rotate(-26deg) translate(90px,54px)}70%{opacity:1;transform:rotate(2.5deg) translate(0,0)}100%{opacity:1;transform:rotate(0) translate(0,0)}}
+@keyframes emRailDrop{0%{opacity:0;transform:translateY(-170px) rotate(-6deg)}56%{opacity:1;transform:translateY(14px) rotate(1.5deg)}76%{transform:translateY(-6px) rotate(-.5deg)}100%{opacity:1;transform:translateY(0) rotate(0)}}
+@keyframes emRailSlash{0%{opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)}20%{opacity:1}100%{opacity:1;clip-path:polygon(0 0,132% 0,100% 100%,0 100%)}}
+@keyframes emRailFlip{0%{opacity:0;transform:rotateX(-94deg) translateY(-24px)}72%{opacity:1;transform:rotateX(9deg) translateY(2px)}100%{opacity:1;transform:rotateX(0) translateY(0)}}
+@keyframes emRailSwarm{0%{opacity:0;transform:translate(var(--dx,240px),var(--dy,-120px)) rotate(var(--dr,10deg)) scale(.88)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+
+/* accessori: onda d'urto di "martello", lama di "taglio", sweep e pulsazione */
+@keyframes emRing{0%{opacity:.85;transform:scale(.3)}100%{opacity:0;transform:scale(2.6)}}
+@keyframes emSlashLine{0%{opacity:0;transform:translateX(-40%) scaleY(0)}18%{opacity:1;transform:translateX(-20%) scaleY(1)}100%{opacity:0;transform:translateX(120%) scaleY(1)}}
+@keyframes emSweep{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
+@keyframes emSelPulse{0%,100%{box-shadow:inset 0 2px 6px rgba(0,0,0,.5),3px 3px 0 rgba(0,0,0,.7),0 0 16px var(--em-sel)}50%{box-shadow:inset 0 2px 6px rgba(0,0,0,.5),3px 3px 0 rgba(0,0,0,.7),0 0 34px var(--em-sel)}}
+@keyframes emSelFill{0%,100%{opacity:.78}50%{opacity:1}}
+@keyframes emGlyph{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ── 4. Stati losanga ───────────────────────────────────────
+   Legale: nitida, hover la spinge in luce.
+   Illegale / non scelta: un velo; al mouse il testo torna leggibile. */
+.em-rail-item{transition:opacity .2s ease,filter .2s ease}
+.em-rail-hit{transition:transform .16s ease,filter .16s ease}
+.em-rail-hit::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(270deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 32%,transparent),transparent 72%);
+  opacity:0;transition:opacity .16s ease;
+}
+.em-rail-item:not(.em-rail-illegal):not(.em-rail-sel) .em-rail-hit:hover::after{opacity:1}
+.em-rail-hit:hover{transform:translateX(-6px);filter:brightness(1.16)}
+.em-zone-enemy .em-rail-hit:hover{transform:translateX(6px)}
+.em-rail-dim{opacity:.55;filter:saturate(.78)}
+.em-rail-dim:hover{opacity:1;filter:none;z-index:3}
+.em-rail-illegal{opacity:.6;filter:grayscale(.28) brightness(.9)}
+.em-rail-illegal:hover{opacity:1;filter:none;z-index:3}
+.em-rail-illegal .em-rail-hatch{opacity:1;transition:opacity .18s ease}
+.em-rail-illegal:hover .em-rail-hatch{opacity:.28}
+.em-rail-illegal .em-rail-hit:hover{transform:none;filter:brightness(1.08)}
+.em-rail-sel{z-index:2;opacity:1;filter:none}
+
+/* ── 5. Riduzione movimento ─────────────────────────────────
+   L'inclinazione resta (è informazione: dice di chi è la zona),
+   sparisce solo il moto. */
+@media(prefers-reduced-motion:reduce){
+  .em-zone-player .em-stage{animation:none;transform:rotateY(-18deg) rotateX(6deg)}
+  .em-zone-enemy .em-stage{animation:none;transform:rotateY(18deg) rotateX(-6deg)}
+  .em-stage *,.em-rail-hit{animation:none!important;transition:none!important}
+  .imp-hand > div > div[class="absolute"]{transition:none}
+  .em-on > *:not(.imp-hand):not(.em-table-toggle){transition:none}
+  .em-on::before{animation:none}
+}
+
+/* ── 6. Geometria d'innesto (README §5). Sagome e inchiostri vivono nel costruttore / JSX. ── */
+.em-layer{position:absolute;inset:0;z-index:16;pointer-events:none;perspective:1600px;transform-style:preserve-3d}
+.em-layer-player{perspective-origin:72% 58%}
+.em-layer-enemy{perspective-origin:28% 38%}
+.mov-1 .imp-hand > .em-layer,
+.mov-2 .imp-hand > .em-layer{animation:none!important}
+.em-zone{position:absolute;display:flex;flex-direction:column;align-items:flex-start;transform-style:preserve-3d}
+.em-zone-player{left:745px;top:auto;bottom:32px}
+.em-zone-enemy{left:36px;top:28px}
+.em-stage{display:flex;align-items:center;transform-style:preserve-3d}
+.em-zone-player .em-stage{flex-direction:row-reverse}
+.em-zone-enemy .em-stage{flex-direction:row}
+.em-rail{width:640px;margin-right:-20px;display:flex;flex-direction:column;justify-content:center;gap:12px;pointer-events:auto;transform-style:preserve-3d}
+.em-zone-enemy .em-rail{margin-right:0;margin-left:-20px;pointer-events:none}
+.em-rail-sel{z-index:2}
+.em-rail-sel .em-rail-hit{filter:brightness(1.1)}
+.em-rail-sel .em-rail-fill{animation:emSelFill 1.6s ease-in-out infinite}
+.em-rail-confirm-hint{
+  position:absolute;left:18px;right:108px;bottom:7px;margin:0;z-index:4;pointer-events:none;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  text-align:right;color:var(--em-sel,#d5ecf9);text-shadow:0 1px 6px #000,0 0 10px #000;
+}
+.em-locked-note{
+  position:absolute;left:0;top:calc(100% + 8px);
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:#6b7787;
+}
+.em-layer-embedded{
+  position:relative;inset:auto;width:100%;height:auto;min-height:640px;z-index:1;
+  display:grid;place-items:center;overflow:visible;
+}
+.em-layer-embedded .em-zone,
+.em-layer-embedded .em-zone-player,
+.em-layer-embedded .em-zone-enemy{
+  position:relative;left:auto;top:auto;bottom:auto;
+}
+.em-layer-embedded .em-zone-player .em-stage,
+.em-layer-embedded .em-zone-enemy .em-stage{
+  transform-origin:center center;
+}
+.em-layer-embedded .em-zone-enemy .em-rail{pointer-events:none}
+
+.em-card{
+  overflow:hidden;
+  background:transparent;
+  border:0;
+  border-radius:14px;
+  perspective:900px;
+  pointer-events:auto;
+  transform-style:preserve-3d;
+  z-index:1;
+}
+.em-card .eminence-tarot.em-card__arena{
+  --et-w:300px;
+  --et-h:525px;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  cursor:default;
+}
+.em-card .eminence-tarot.em-card__arena:active{cursor:default}
+
+/* ── 7. Scambio vista Campo / Eminenza ── */
+.em-table-toggle{
+  position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:18;
+  pointer-events:auto;padding:8px 18px;
+  border:1px solid var(--em-toggle-acc,#d5ecf9);
+  background:rgba(8,10,16,.82);
+  color:var(--em-toggle-acc,#d5ecf9);
+  font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  cursor:pointer;white-space:nowrap;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 16px color-mix(in srgb, var(--em-toggle-acc,#d5ecf9) 28%, transparent);
+}
+.em-table-toggle:hover{filter:brightness(1.12);background:rgba(12,16,24,.92)}

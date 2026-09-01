@@ -17,6 +17,8 @@ import {
   beginEminenceRound,
   collectPendingEffects,
   completeGate,
+  getNextGate,
+  isGateCompleted,
   mustChooseThisRound,
 } from './eminenceRound.js';
 import { applyEminenceSegments } from './primitiveHandlers.js';
@@ -110,6 +112,29 @@ export function autoSelectForcedChoices(matchState) {
   }
 
   return state;
+}
+
+/**
+ * Sigilla una scelta per un lato che non sta decidendo — IA, tutorial, o qualunque
+ * chiamante che non espone un punto di scelta.
+ *
+ * Non è una strategia: prende la prima abilità legale. Serve a non lasciare il round
+ * bloccato su `SELECTIONS_INCOMPLETE` quando l'altro lato non ha una UI. La vera IA
+ * sostituirà questa funzione senza toccare il resto del flusso.
+ */
+export function autoSelectFirstLegalAbility(matchState, side) {
+  if (!isEminenceSubsystemEnabled(matchState)) return matchState;
+  if (!mustChooseThisRound(matchState, side)) return matchState;
+  if (matchState[side].selectedAbilityId) return matchState;
+
+  const legal = getLegalAbilityIds(
+    matchState[side].eminenceId,
+    matchState[side].selectionCheckpointPresence
+  );
+  if (!legal.length) return matchState;
+
+  const attempt = selectEminenceAbility(matchState, side, legal[0]);
+  return attempt.ok ? attempt.matchState : matchState;
 }
 
 /**

@@ -19,6 +19,7 @@
     "preview": "vite preview",
     "update-images": "node scripts/update-card-images.js",
     "icons-nobg": "node scripts/remove-icon-backgrounds.js",
+    "thumbs": "node scripts/gen-image-thumbnails.mjs",
     "logo:transparent": "node scripts/process-brand-logo.mjs",
     "generate-menu-gif": "node scripts/generate-menu-gif-runner.cjs",
     "electron:dev": "concurrently -k \"vite\" \"npx wait-on http://localhost:5173 && electron .\"",

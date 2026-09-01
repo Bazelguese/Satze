@@ -181,7 +181,7 @@ function RoundBlock({
  * Pannello log battaglia: blocchi per round da eventi strutturati.
  * Fallback `logs` (stringhe) solo per messaggi non-duello / lab legacy.
  */
-export const LogPanel = ({
+export const LogPanel = React.memo(({
   logs = [],
   battleEvents = null,
   duelPhase = 99,
@@ -280,4 +280,5 @@ export const LogPanel = ({
       </div>
     </div>
   );
-};
+});
+LogPanel.displayName = 'LogPanel';

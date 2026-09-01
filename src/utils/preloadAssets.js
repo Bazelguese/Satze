@@ -36,6 +36,18 @@ export function resolvePublicAssetUrl(path) {
   return resolveUrl(path);
 }
 
+/**
+ * Variante ridotta di uno sfondo campo (public/campi_bg/thumbs/, generata da
+ * `npm run thumbs`). Da usare dove il campo è disegnato in miniatura: un
+ * 3376×1440 costa ~18,5 MB di memoria GPU anche in un chip alto 30 px.
+ */
+export function resolveFieldThumbUrl(path) {
+  if (!path || typeof path !== 'string') return null;
+  const slash = path.lastIndexOf('/');
+  if (slash < 0) return resolveUrl(path);
+  return resolveUrl(`${path.slice(0, slash)}/thumbs${path.slice(slash)}`);
+}
+
 function preloadImage(url) {
   return new Promise((resolve) => {
     if (!url) {
@@ -71,14 +83,19 @@ export function getAssetUrls() {
  * Precarica gli sfondi dei campi passati (tipicamente i campi estratti
  * per la partita corrente). Fire-and-forget: non blocca il flusso di gioco.
  */
-export function preloadBattlefieldImages(fields) {
-  if (!Array.isArray(fields)) return Promise.resolve();
-  const urls = [...new Set(
-    fields
-      .map((f) => resolveUrl(f?.bgImage))
-      .filter(Boolean)
-  )];
-  return Promise.all(urls.map(preloadImage));
+export async function preloadBattlefieldImages(fields) {
+  if (!Array.isArray(fields)) return;
+
+  // Prima le miniature del tabellone: sono ~20 kB l'una e servono subito.
+  const thumbs = [...new Set(fields.map((f) => resolveFieldThumbUrl(f?.bgImage)).filter(Boolean))];
+  await Promise.all(thumbs.map(preloadImage));
+
+  // Poi gli sfondi a piena risoluzione, a coppie: caricarli tutti insieme
+  // satura decode e memoria GPU proprio mentre parte la partita.
+  const full = [...new Set(fields.map((f) => resolveUrl(f?.bgImage)).filter(Boolean))];
+  for (let i = 0; i < full.length; i += 2) {
+    await Promise.all(full.slice(i, i + 2).map(preloadImage));
+  }
 }
 
 /**

@@ -31,6 +31,9 @@ const DialogueLabPage = lazy(() => import('./components/dialogueLab/DialogueLabP
 const ArenaContesaLayoutPage = lazy(() =>
   import('./components/arenaContesaLab/ArenaContesaLayoutPage').then((m) => ({ default: m.ArenaContesaLayoutPage }))
 );
+const EminenceArtLabPage = lazy(() =>
+  import('./components/eminenceLab/EminenceArtLabPage').then((m) => ({ default: m.EminenceArtLabPage }))
+);
 
 const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
 const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
@@ -106,6 +109,7 @@ function AppContent() {
   const showPerfectFocusLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perfectFocusLab') === '1';
   const showDialogueLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('dialogue1') === '1';
   const showArenaContesa = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('arenaContesa') === '1';
+  const showEminenceArtLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceArtLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -161,6 +165,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeEminenceArtLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('eminenceArtLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -179,6 +189,8 @@ function AppContent() {
         <DialogueLabPage onClose={closeDialogueLab} />
       ) : showArenaContesa ? (
         <ArenaContesaLayoutPage onClose={closeArenaContesa} />
+      ) : showEminenceArtLab ? (
+        <EminenceArtLabPage onClose={closeEminenceArtLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

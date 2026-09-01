@@ -4,6 +4,7 @@
 // ============================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { setSatzeCursorProps } from '../components/cursor/satzeCursorState';
 
 /** Carta floating ufficiale (GameCard) */
 const FLOAT_HALF_W = 115;
@@ -63,12 +64,24 @@ export function useDragAndDrop({
   const dropZoneRef = useRef(null);
   const dragOriginRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0 });
+  /** Nodo della carta fantasma: aggiornato via DOM, non via state. */
+  const dragGhostRef = useRef(null);
+  /** Posizione iniziale, usata solo per il primo paint del portal. */
   const [dragVisual, setDragVisual] = useState(null);
 
+  // Il flutter gira a 60fps: passare per setState farebbe riconciliare l'intero
+  // duello a ogni frame. Scriviamo direttamente sullo stile del nodo.
   const refreshVisual = useCallback(() => {
     const origin = dragOriginRef.current;
-    if (!origin) return;
-    setDragVisual(computeDragVisual(mouseRef.current.x, mouseRef.current.y, origin));
+    const node = dragGhostRef.current;
+    if (!origin || !node) return;
+    const v = computeDragVisual(mouseRef.current.x, mouseRef.current.y, origin);
+    node.style.left = `${v.left}px`;
+    node.style.top = `${v.top}px`;
+    node.style.transform = `rotate(${v.rot}deg)`;
+    // Il cursore custom vive fuori da SatzeGame: aggiornarlo qui non costa un
+    // re-render del duello.
+    setSatzeCursorProps({ dragCard: { cx: v.cx, cy: v.cy } });
   }, []);
 
   /**
@@ -102,19 +115,20 @@ export function useDragAndDrop({
   /**
    * Gestisce il movimento durante il drag
    */
+  // La posizione grezza del cursore non viene renderizzata da nessuno: tenerla in
+  // uno state globale costava un re-render dell'intero duello a ogni mousemove.
   const handleDragMove = useCallback((e) => {
     if (!draggingCard) return;
     mouseRef.current = { x: e.clientX, y: e.clientY };
-    setDragPosition({ x: e.clientX, y: e.clientY });
     refreshVisual();
 
     if (dropZoneRef.current) {
       const rect = dropZoneRef.current.getBoundingClientRect();
       const isOver = e.clientX >= rect.left && e.clientX <= rect.right &&
                      e.clientY >= rect.top && e.clientY <= rect.bottom;
-      setIsOverDropZone(isOver);
+      setIsOverDropZone((prev) => (prev === isOver ? prev : isOver));
     }
-  }, [draggingCard, setDragPosition, setIsOverDropZone, refreshVisual]);
+  }, [draggingCard, setIsOverDropZone, refreshVisual]);
 
   /**
    * Gestisce la fine del drag
@@ -131,6 +145,7 @@ export function useDragAndDrop({
     }
 
     dragOriginRef.current = null;
+    dragGhostRef.current = null;
     setDragVisual(null);
     setDraggingCard(null);
     setIsOverDropZone(false);
@@ -158,6 +173,7 @@ export function useDragAndDrop({
     draggingCard,
     dragPosition,
     dragVisual,
+    dragGhostRef,
     isOverDropZone,
     dropZoneRef,
     handleDragStart,

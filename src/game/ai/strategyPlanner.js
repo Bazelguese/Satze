@@ -462,7 +462,10 @@ export function scoreImmediateCardPlan(action, source, side = 'ai', profile = nu
   }
   if (chosen.roles.opener && chosen.window.ready) score += 5;
   if (chosen.roles.economy && chosen.window.ready) score += 4;
-  if (chosen.roles.sacrifice && !chosen.window.ready) score += 2;
+  // Non premiare il fodder di payoff fuori finestra (es. Ultima Chance in R1)
+  if (!chosen.window.ready && (chosen.window.preserve || 0) >= 0.75) {
+    score -= chosen.window.impact * chosen.window.preserve * 0.55;
+  }
 
   return {
     score: score * planningWeight,

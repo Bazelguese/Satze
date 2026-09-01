@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   autoSelectForcedChoices,
+  autoSelectFirstLegalAbility,
   prepareEminenceDuel,
   settleEminenceRound,
 } from './eminenceDuelGate.js';
@@ -57,6 +58,15 @@ test('scelta forzata: con una sola opzione legale viene registrata da sola', () 
     autoSelectForcedChoices(one)[SIDES.PLAYER].selectedAbilityId,
     'mounthborn_gorgoglio'
   );
+});
+
+test('placeholder: con più opzioni legali prende la prima e sblocca il Duello', () => {
+  const state = match({ player: 'patto_grande_semaforo' });
+  const sealed = autoSelectFirstLegalAbility(state, SIDES.PLAYER);
+
+  assert.equal(sealed[SIDES.PLAYER].selectedAbilityId, 'semaforo_verde');
+  const prepared = prepareEminenceDuel(sealed);
+  assert.equal(prepared.blocked, null);
 });
 
 test('gate GENERAL bloccato finché una scelta libera resta pendente', () => {

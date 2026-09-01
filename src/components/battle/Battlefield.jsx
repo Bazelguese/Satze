@@ -1,23 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { generateFieldParticles, FIELD_STYLES } from '../../utils';
 import { Icon } from '../ui/Icon';
 import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVisualTimeline.js';
 import { getDuelOutcomeSubtitle } from './DuelCinematicOverlays';
 
-/**
- * Componente sfondo campo di battaglia
- * Visualizza gradienti, glow e particelle tematiche per il campo attivo
- */
-export const BattlefieldBackground = ({ activeField }) => {
-  if (!activeField) return null;
-  
-  const fieldStyle = FIELD_STYLES[activeField.id] || {};
-  const glowColor = fieldStyle.glow || 'rgba(100,100,100,0.3)';
-  const particleConfig = generateFieldParticles(activeField.id, fieldStyle);
-  
-  // Genera particelle in base al tipo di campo
-  const generateParticleData = (config) => {
+// Le posizioni sono casuali: vanno calcolate una volta sola per campo, altrimenti
+// ogni re-render del duello teletrasporta le particelle e forza un repaint completo.
+const generateParticleData = (config) => {
     if (config.type === 'none') return [];
     
     return Array.from({ length: config.count }).map((_, i) => {
@@ -95,10 +85,28 @@ export const BattlefieldBackground = ({ activeField }) => {
         ...extraVars
       };
     });
-  };
-  
-  const particles = generateParticleData(particleConfig);
-  
+};
+
+/**
+ * Componente sfondo campo di battaglia
+ * Visualizza gradienti, glow e particelle tematiche per il campo attivo
+ */
+export const BattlefieldBackground = React.memo(({ activeField }) => {
+  const fieldId = activeField?.id ?? null;
+  const fieldStyle = fieldId != null ? (FIELD_STYLES[fieldId] || {}) : {};
+  const glowColor = fieldStyle.glow || 'rgba(100,100,100,0.3)';
+
+  const particleConfig = useMemo(
+    () => (fieldId != null ? generateFieldParticles(fieldId, FIELD_STYLES[fieldId] || {}) : null),
+    [fieldId]
+  );
+  const particles = useMemo(
+    () => (particleConfig ? generateParticleData(particleConfig) : []),
+    [particleConfig]
+  );
+
+  if (!activeField) return null;
+
   return (
     <div 
       className="absolute pointer-events-none overflow-hidden"
@@ -194,7 +202,8 @@ export const BattlefieldBackground = ({ activeField }) => {
       })}
     </div>
   );
-};
+});
+BattlefieldBackground.displayName = 'BattlefieldBackground';
 
 /**
  * Componente pannello campo di battaglia centrale
@@ -229,8 +238,10 @@ export const BattlefieldPanel = ({
   aiDecisionLog = null,
   onCopyAiDecisionLog = null,
 }) => {
-  const oppWait = isOnlinePvP ? "L'avversario sta scegliendo..." : "L'IA sta scegliendo...";
-  const oppThink = isOnlinePvP ? "In attesa dell'avversario..." : "L'IA sta pensando...";
+  const oppWait = isOnlinePvP
+    ? "L'avversario sta scegliendo il campo di battaglia"
+    : 'Il nemico sta scegliendo il campo di battaglia';
+  const oppThink = isOnlinePvP ? "In attesa dell'avversario..." : 'Il nemico sta pensando...';
   // Il pannello deve essere sempre visibile, anche quando non c'è un campo selezionato
   // (ad esempio durante la fase selectField)
   const isDuelPhase = gamePhase === 'result' && battleResult;

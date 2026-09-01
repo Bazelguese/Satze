@@ -57,8 +57,8 @@ export { ARMY_ICONS };
     "Ratti della Megera": './Immagini_bg/Ratti_bg1.webp',
     "Patto degli Indocili": './Immagini_bg/indocili-bg1.webp',
     "Khemet": './Immagini_bg/Khemet_bg1.webp',
-    "Apex": './Immagini_bg/Apex_bg1.png',
-    "Mascarada": './Immagini_bg/Mascarada_bg1.png'
+    "Apex": './Immagini_bg/Apex_bg1.webp',
+    "Mascarada": './Immagini_bg/Mascarada_bg1.webp'
   };
 
   // BONUS ARMATE (unico per ogni armata)

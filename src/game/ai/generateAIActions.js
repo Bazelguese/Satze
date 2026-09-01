@@ -145,7 +145,15 @@ export function generateStrategicFocusCandidates(context, card, profile) {
   if (exactSearch) {
     // Risposta/critico: valuta Focus fini, ma non aprire tutto il pool a metà partita.
     // Eccezioni (letale / 3° Campo / ultima carta) restano via getFocusCapException in generate.
-    const softExtra = profile?.exactFocusSoftExtra ?? 2;
+    let softExtra = profile?.exactFocusSoftExtra ?? 2;
+    // Già ha un Campo e risponde: niente FC sopra il cap salvo eccezione esplicita
+    if (
+      cardsRemaining >= 3 &&
+      context.isPlayerFirst === true &&
+      (context.enemyFieldsConquered || 0) >= 1
+    ) {
+      softExtra = 0;
+    }
     let searchMax = maxFocus;
     if (cardsRemaining >= 3) {
       searchMax = Math.min(maxFocus, ordinaryCap + softExtra);

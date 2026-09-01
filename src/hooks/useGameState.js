@@ -79,7 +79,7 @@ export function useGameState() {
   const [showGlossary, setShowGlossary] = useState(false);
   
   // Galleria
-  const [galleryTab, setGalleryTab] = useState('agents'); // 'agents' | 'battlefields'
+  const [galleryTab, setGalleryTab] = useState('agents'); // 'agents' | 'eminences' | 'battlefields'
   const [selectedArmyFilter, setSelectedArmyFilter] = useState("Figli dell'Orizzonte");
   const [galleryCardLayout, setGalleryCardLayout] = useState(readGalleryCardLayout);
 

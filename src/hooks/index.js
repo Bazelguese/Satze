@@ -13,3 +13,4 @@ export { useGuidedTutorialFlow } from './useGuidedTutorialFlow.jsx';
 export { useTutorialOrchestrator } from './useTutorialOrchestrator';
 export { useViewportLayout } from './useViewportLayout';
 export { useCampaignGameOutcome } from './useCampaignGameOutcome';
+export { useEventCallback } from './useEventCallback';

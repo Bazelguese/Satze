@@ -4,6 +4,9 @@
 
 import { INFORMATION_POLICY } from './aiConstants.js';
 import { TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation } from '../../data/triggers.js';
+import { evaluateTriggerWindow } from './strategyPlanner.js';
+
+const POST_BATTLE_TRIGGERS = new Set(['conquest', 'lastWish']);
 
 export function isAIDebugEnabled() {
   try {
@@ -80,6 +83,9 @@ export function buildAIDebugPayload({ difficulty, selected, candidates, context,
   const card = selected.action.card;
   const visible = context?.player?.visibleCard || null;
   const candList = candidates || [];
+  const triggerWindow = evaluateTriggerWindow(card, context, 'ai', selected.action);
+  const abilityFired = Boolean(sim?.aiAbilityTriggered);
+  const postBattle = POST_BATTLE_TRIGGERS.has(card?.ability?.trigger);
 
   const sameCard = candList.filter((c) => c.action?.cardId === selected.action.cardId);
   const lowerFocus = [...sameCard]
@@ -168,6 +174,10 @@ export function buildAIDebugPayload({ difficulty, selected, candidates, context,
     selectedTriggerLabel: card?.ability?.trigger
       ? TRIGGER_NAMES[card.ability.trigger] || card.ability.trigger
       : null,
+    abilityFired,
+    abilityPostBattle: postBattle,
+    triggerReady: triggerWindow?.ready !== false,
+    triggerWindowReason: triggerWindow?.reason || null,
     fairShare: extras.fairShare ?? selected.budget?.fairShare,
     ordinaryCap: extras.ordinaryCap ?? selected.budget?.ordinaryCap,
     searchDepth: extras.searchDepth ?? selected.searchDepth ?? 0,
@@ -298,6 +308,86 @@ function whyFocusLines(whyFocus, focus, fairShare, ordinaryCap) {
   return lines;
 }
 
+function abilityNarrativeLines(debug, cardName, focus) {
+  const lines = [];
+  const trigger = debug.selectedTrigger;
+  const label = debug.selectedTriggerLabel || trigger;
+  const blurb = debug.selectedAbility;
+  const fired = debug.abilityFired === true || debug.reasons?.includes('abilità attiva');
+  const ready = debug.triggerReady !== false;
+  const postBattle = debug.abilityPostBattle === true;
+
+  if (!blurb && !trigger) return lines;
+
+  // Evita "Trigger X: X: effetto"
+  let effectText = blurb || label || '';
+  if (label && effectText.toLowerCase().startsWith(String(label).toLowerCase())) {
+    effectText = effectText.slice(label.length).replace(/^:\s*/, '');
+  }
+
+  if (trigger === 'conquest') {
+    if (fired || debug.reasons?.includes('vince il Campo')) {
+      lines.push(
+        `Perché ${cardName}: punta a vincere il Campo; Conquista (${effectText || 'premio post-vittoria'}) scatta dopo, non durante il confronto.`
+      );
+    } else {
+      lines.push(
+        `Perché ${cardName}: ha Conquista, ma senza vittoria del Campo il premio post-duello non parte — qui la valuta soprattutto per i valori.`
+      );
+    }
+    return lines;
+  }
+
+  if (trigger === 'lastWish') {
+    if (fired || debug.reasons?.includes('sconfitta strategica possibile')) {
+      lines.push(
+        `Perché ${cardName}: Ultimo desiderio (${effectText || 'premio post-sconfitta'}) scatta dopo aver perso il Campo, non per vincere lo scontro.`
+      );
+    } else {
+      lines.push(
+        `Perché ${cardName}: ha Ultimo desiderio, utile solo se perde il Campo; non è un piano per vincere il confronto.`
+      );
+    }
+    return lines;
+  }
+
+  if (trigger === 'overdrive' && !fired && !ready) {
+    lines.push(
+      `Perché ${cardName}: la gioca per valori / contenimento — Overdrive a ${focus ?? '?'} FC non parte (serve Focus sufficienti).`
+    );
+    return lines;
+  }
+
+  if (!fired && !ready && trigger) {
+    lines.push(
+      `Perché ${cardName}: ${effectText || label} — in questa linea il potere non è pronto${
+        debug.triggerWindowReason ? ` (${debug.triggerWindowReason})` : ''
+      }; la sceglie per altro (stats / risparmio / setup).`
+    );
+    return lines;
+  }
+
+  if (effectText) {
+    lines.push(
+      label && !String(effectText).toLowerCase().includes(String(label).toLowerCase())
+        ? `Perché ${cardName}: ${label} — ${effectText}.`
+        : `Perché ${cardName}: ${effectText}.`
+    );
+  }
+
+  if (fired && !postBattle) {
+    lines.push(
+      `In questa linea il potere di ${cardName} parte: è uno dei motivi per cui l’ha preferita.`
+    );
+  } else if (fired && postBattle) {
+    lines.push(
+      `Il premio post-duello di ${cardName} risulta attivo in questa linea (dopo l’esito del Campo).`
+    );
+  }
+
+  return lines;
+}
+
 /**
  * Log post-match: spiega il PERCHÉ (Campo / carta / FC / alternative).
  */
@@ -389,21 +479,15 @@ export function formatAIReasoningEntry(decision, meta = {}) {
     }
   }
 
-  if (debug.selectedAbility) {
-    const trig = debug.selectedTriggerLabel ? `Trigger ${debug.selectedTriggerLabel}: ` : '';
-    lines.push(`Perché ${cardName}: ${trig}${debug.selectedAbility}.`);
-  }
-  if (debug.reasons?.includes('abilità attiva')) {
-    lines.push(
-      `In questa linea il potere di ${cardName} parte: è uno dei motivi per cui l’ha preferita.`
-    );
+  for (const line of abilityNarrativeLines(debug, cardName, focus)) {
+    lines.push(line);
   }
   if (debug.reasons?.includes('vince il Campo')) {
     lines.push(`Obiettivo primario: conquistare il Campo con questa linea.`);
   }
   if (debug.reasons?.includes('sconfitta strategica possibile')) {
     lines.push(
-      `Non è sicura di vincere lo scontro: sta scegliendo una linea di contenimento / abilità / risparmio, non un all-in sicuro.`
+      `Non è sicura di vincere lo scontro: sta scegliendo una linea di contenimento / risparmio, non un all-in sicuro.`
     );
   }
   if (debug.winProbability != null) {

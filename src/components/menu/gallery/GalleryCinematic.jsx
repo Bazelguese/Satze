@@ -95,6 +95,7 @@ export default function GalleryCinematic({
   onGalleryTabChange,
   agentCount,
   fieldCount = ALL_BATTLEFIELDS.length,
+  eminenceCount,
 }) {
   const FIELDS = useMemo(() => buildFields(), []);
   const tickerItems = useMemo(() => buildTickerItems(FIELDS), [FIELDS]);
@@ -170,6 +171,7 @@ export default function GalleryCinematic({
             onTabChange={onGalleryTabChange}
             agentCount={agentCount}
             fieldCount={fieldCount}
+            eminenceCount={eminenceCount}
           />
         )}
         <div className="glc-counter">

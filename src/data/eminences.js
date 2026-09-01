@@ -56,6 +56,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'apex_furia',
+        name: 'Furia',
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -79,6 +80,7 @@ export const EMINENCES = {
       },
       {
         id: 'apex_disprezzo',
+        name: 'Disprezzo',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -93,6 +95,7 @@ export const EMINENCES = {
       },
       {
         id: 'apex_cataclisma',
+        name: 'Cataclisma',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -132,6 +135,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'semaforo_verde',
+        name: 'Verde',
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -153,6 +157,7 @@ export const EMINENCES = {
       },
       {
         id: 'semaforo_giallo',
+        name: 'Giallo',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -161,6 +166,7 @@ export const EMINENCES = {
       },
       {
         id: 'semaforo_rosso',
+        name: 'Rosso',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -205,6 +211,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'mascarada_scommessa',
+        name: 'Scommessa',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_SELECTION,
@@ -214,6 +221,7 @@ export const EMINENCES = {
       },
       {
         id: 'mascarada_maschere',
+        name: 'Maschere Invertite',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -222,6 +230,7 @@ export const EMINENCES = {
       },
       {
         id: 'mascarada_incontro_truccato',
+        name: 'Incontro Truccato',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -253,6 +262,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'kethran_sacrificio',
+        name: 'Sacrificio',
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -261,6 +271,7 @@ export const EMINENCES = {
       },
       {
         id: 'kethran_innesto',
+        name: 'Innesto',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -269,6 +280,7 @@ export const EMINENCES = {
       },
       {
         id: 'kethran_opera_composita',
+        name: 'Opera Composita',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -300,6 +312,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'mounthborn_gorgoglio',
+        name: 'Gorgoglio dai Cento Occhi',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -308,6 +321,7 @@ export const EMINENCES = {
       },
       {
         id: 'mounthborn_frenesia',
+        name: 'Frenesia della Fame',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -316,6 +330,7 @@ export const EMINENCES = {
       },
       {
         id: 'mounthborn_cannibalismo',
+        name: 'Cannibalismo',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -348,6 +363,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'khemet_devozione',
+        name: 'Devozione',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -356,6 +372,7 @@ export const EMINENCES = {
       },
       {
         id: 'khemet_maledizione_va',
+        name: 'Maledizione dello Slot',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -364,6 +381,7 @@ export const EMINENCES = {
       },
       {
         id: 'khemet_maledizione_stat',
+        name: 'Maledizione Totale',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -394,6 +412,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'orathai_tacet',
+        name: 'Tacet',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -402,6 +421,7 @@ export const EMINENCES = {
       },
       {
         id: 'orathai_contrappunto',
+        name: 'Contrappunto',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -410,6 +430,7 @@ export const EMINENCES = {
       },
       {
         id: 'orathai_silenzio',
+        name: 'Silenzio',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -442,6 +463,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'corte_offerta',
+        name: 'Offerta',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -450,6 +472,7 @@ export const EMINENCES = {
       },
       {
         id: 'corte_salasso',
+        name: 'Salasso',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -458,6 +481,7 @@ export const EMINENCES = {
       },
       {
         id: 'corte_debito',
+        name: 'Debito',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -466,6 +490,7 @@ export const EMINENCES = {
       },
       {
         id: 'corte_credito_finale',
+        name: 'Credito Finale',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -497,6 +522,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'figli_deriva',
+        name: 'Deriva',
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -505,6 +531,7 @@ export const EMINENCES = {
       },
       {
         id: 'figli_leggerezza',
+        name: 'Leggerezza',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -513,6 +540,7 @@ export const EMINENCES = {
       },
       {
         id: 'figli_risposta',
+        name: 'Risposta',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -543,6 +571,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'ratti_sussurro',
+        name: 'Sussurro',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -551,6 +580,7 @@ export const EMINENCES = {
       },
       {
         id: 'ratti_veleno',
+        name: 'Veleno',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -559,6 +589,7 @@ export const EMINENCES = {
       },
       {
         id: 'ratti_conquista_forzata',
+        name: 'Conquista Forzata',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -589,6 +620,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'enclave_rinuncia',
+        name: 'Rinuncia al Privilegio',
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -597,6 +629,7 @@ export const EMINENCES = {
       },
       {
         id: 'enclave_ascesa',
+        name: 'Ascesa / Declassamento',
         presenceDelta: -1,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -605,6 +638,7 @@ export const EMINENCES = {
       },
       {
         id: 'enclave_ascensione',
+        name: 'Ascensione',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -635,6 +669,7 @@ export const EMINENCES = {
     abilities: [
       {
         id: 'calibri_guerra_attrito',
+        name: 'Guerra d\'Attrito',
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -643,6 +678,7 @@ export const EMINENCES = {
       },
       {
         id: 'calibri_contenimento',
+        name: 'Protocollo di Contenimento',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -651,6 +687,7 @@ export const EMINENCES = {
       },
       {
         id: 'calibri_terra_bruciata',
+        name: 'Protocollo Terra Bruciata',
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
@@ -664,6 +701,22 @@ export const EMINENCES = {
 /** Elenco stabile degli id, utile per iterazioni deterministiche e test. */
 export const EMINENCE_IDS = Object.keys(EMINENCES);
 
+/** Ordine canonico delle Armate (allineato a armies.js / galleria Agenti). */
+export const EMINENCE_ARMY_ORDER = [
+  "Figli dell'Orizzonte",
+  'Kethran',
+  'Corte Rossa',
+  'Calibri Pesanti',
+  'Orathai',
+  'Mounthborn',
+  "L'Enclave delle Scaglie",
+  'Ratti della Megera',
+  'Patto degli Indocili',
+  'Khemet',
+  'Apex',
+  'Mascarada',
+];
+
 /** Eminenze con segmenti eseguibili: l'unico insieme giocabile nella fase corrente. */
 export const IMPLEMENTED_EMINENCE_IDS = EMINENCE_IDS.filter((id) => EMINENCES[id].implemented);
 
@@ -672,6 +725,11 @@ export const EMINENCE_BY_ARMY = EMINENCE_IDS.reduce((acc, id) => {
   acc[EMINENCES[id].army] = EMINENCES[id];
   return acc;
 }, {});
+
+/** Id Eminenza nell'ordine delle Armate (galleria, deckbuilding UI). */
+export const EMINENCE_IDS_BY_ARMY_ORDER = EMINENCE_ARMY_ORDER.map(
+  (army) => EMINENCE_BY_ARMY[army].id,
+);
 
 export function getEminence(eminenceId) {
   return EMINENCES[eminenceId] || null;

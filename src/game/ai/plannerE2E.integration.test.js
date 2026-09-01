@@ -87,6 +87,79 @@ describe('planner E2E comportamentale', () => {
     expect(decision?.cardId).not.toBe(902);
   });
 
+  it('in apertura R1 non brucia Ultima Chance come fodder se c’è un filler', () => {
+    const filler = makeCard({
+      id: 920,
+      name: 'Filler',
+      power: 3,
+      damage: 2,
+      league: 2,
+      ability: null,
+    });
+    const ultima = makeCard({
+      id: 921,
+      name: 'Lettrice',
+      power: 2,
+      damage: 1,
+      league: 3,
+      ability: { trigger: 'ultimaChance', effect: 'enemyAssault', value: 13, minAssault: 5 },
+    });
+    const beater = makeCard({
+      id: 922,
+      name: 'Yata',
+      power: 4,
+      damage: 3,
+      league: 2,
+      ability: { trigger: 'turbo', effect: 'assaultValue', value: 7 },
+    });
+    const fields = [
+      field(1, 'Convergenza', 'trigger'),
+      field(2, 'Nebulosa', 'values'),
+      field(3, 'Vulcano', 'neutral'),
+    ];
+    const ctx = makeAIContext({
+      difficulty: 'hard',
+      roundNumber: 1,
+      isPlayerFirst: false,
+      openingPlayerFirst: false,
+      currentFieldIndex: null,
+      field: null,
+      battlefields: fields,
+      revealedFields: 3,
+      conqueredFields: {},
+      player: {
+        hand: [
+          makeCard({ id: 200, name: 'Belisa', power: 6, damage: 4 }),
+          makeCard({ id: 201, name: 'Dandelion', power: 5, damage: 5 }),
+          makeCard({ id: 202 }),
+          makeCard({ id: 203 }),
+          makeCard({ id: 204 }),
+        ],
+        usedCardIds: [],
+        hp: 20,
+        focusPool: 18,
+        focus: 18,
+        armyBonuses: {},
+        toxin: null,
+        visibleCard: null,
+      },
+      ai: {
+        hand: [filler, ultima, beater, makeCard({ id: 923 }), makeCard({ id: 924 })],
+        usedCardIds: [],
+        hp: 20,
+        focusPool: 18,
+        focus: 18,
+        armyBonuses: {},
+        toxin: null,
+      },
+    });
+    const joint = chooseJointAIAction(ctx, 'hard', {
+      rng: createConstantRng(0),
+      profile: hardBest(),
+    });
+    expect(joint?.cardId).not.toBe(921);
+  });
+
   it('usa Turbo prima della scadenza', () => {
     const turbo = makeCard({
       id: 910,

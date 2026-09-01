@@ -24,7 +24,8 @@ export function estimateFutureCardValue(card, context) {
       triggerFuture = round <= 2 ? 8 : 1;
       break;
     case 'ultimaChance':
-      triggerFuture = round >= 4 ? 14 : round >= 3 ? 8 : 3;
+      // Conservare UC fino a R5: valore futuro alto se bruciata presto
+      triggerFuture = round >= 5 ? 16 : round >= 4 ? 12 : round === 3 ? 10 : 14;
       break;
     case 'reckoning':
       triggerFuture = (context.ai.usedCardIds?.length || 0) >= 2 ? 10 : 4;
@@ -78,15 +79,21 @@ function futurePlanningPenalty(card, context, profile, weights) {
   const keptValue = remaining.reduce((sum, c) => sum + estimateFutureCardValue(c, context), 0);
   const consumed = estimateFutureCardValue(card, context);
   const trigger = card.ability?.trigger;
+  const round = context.roundNumber || 1;
   let setup = 0;
 
-  if (trigger === 'ultimaChance' && (context.roundNumber || 1) < 4) {
-    setup -= weights.futureTriggerSetup * 1.2;
+  // Ultima Chance fuori R5: costo alto (soprattutto R1–R2 opener/fodder)
+  if (trigger === 'ultimaChance' && round < 5) {
+    const early = round <= 2 ? 4.2 : round === 3 ? 2.8 : 1.8;
+    setup -= weights.futureTriggerSetup * early;
+    if (context.isPlayerFirst === false && round <= 2) {
+      setup -= weights.futureTriggerSetup * 1.6; // aprire bruciando UC
+    }
   }
   if (trigger === 'reckoning' && (context.ai.usedCardIds?.length || 0) < 2) {
-    setup -= weights.futureTriggerSetup * 0.8;
+    setup -= weights.futureTriggerSetup * 1.4;
   }
-  if (trigger === 'turbo' && (context.roundNumber || 1) > 2) {
+  if (trigger === 'turbo' && round > 2) {
     setup += weights.futureTriggerSetup * 0.3;
   }
   // Conserva Vendetta/Gloria finché il setup (sconfitta/vittoria) non è pronto
@@ -97,7 +104,40 @@ function futurePlanningPenalty(card, context, profile, weights) {
     setup -= weights.futureTriggerSetup * 1.1;
   }
 
-  return (setup - consumed * 0.35 + keptValue * 0.02) * futureWeight;
+  return (setup - consumed * 0.45 + keptValue * 0.02) * futureWeight;
+}
+
+/**
+ * Bruciare un payoff fuori finestra (e peggio se si perde comunque il Campo).
+ */
+function offWindowPayoffPenalty(card, context, simulation, profile, weights) {
+  const trigger = card?.ability?.trigger;
+  if (!trigger || !profile) return 0;
+  const round = context.roundNumber || 1;
+  const planW = profile.futurePlanningWeight ?? 0.5;
+  const lost = simulation?.winner === 'player';
+  let penalty = 0;
+
+  if (trigger === 'ultimaChance' && round < 5) {
+    penalty += weights.futureTriggerSetup * (round <= 2 ? 3.5 : round === 3 ? 2.2 : 1.4);
+    if (lost) penalty *= 1.5;
+  } else if (trigger === 'reckoning') {
+    const used = context.ai?.usedCardIds?.length || 0;
+    if (used < 2) {
+      penalty += weights.futureTriggerSetup * 1.2;
+      if (lost) penalty *= 1.35;
+    }
+  } else if (trigger === 'overdrive') {
+    if (!simulation?.aiAbilityTriggered && lost) {
+      penalty += weights.futureTriggerSetup * 0.6;
+    }
+  } else if (trigger === 'vendetta' && context.lastWinner !== 'player' && lost) {
+    penalty += weights.futureTriggerSetup * 0.9;
+  } else if (trigger === 'glory' && context.lastWinner !== 'enemy' && lost) {
+    penalty += weights.futureTriggerSetup * 0.75;
+  }
+
+  return -penalty * planW;
 }
 
 /**
@@ -265,19 +305,29 @@ export function scoreAIAction(simulation, context, aiAction, profile, weights = 
       : 0;
   score -= overinvest;
 
-  // Vittoria di Pirro: conquistare un Campo bruciando la riserva con ancora molti duelli
+  // Vittoria di Pirro / all-in risposta a metà partita
   const futureDuels = Math.max(0, (cardsRemaining || 1) - 1);
   const aiFields = context.enemyFieldsConquered || 0;
   const excessVsStd = Math.max(0, (aiAction?.focus || 0) - (standardFocus || 1));
+  const responding = context.isPlayerFirst === true;
+  const terminalOk = ['ai_win_hp', 'ai_win_fields', 'ai_win_cards'].includes(
+    simulation.terminalStatus
+  );
   if (
     futureDuels >= 2 &&
-    aiFields < 2 &&
-    excessVsStd >= 3 &&
+    excessVsStd >= 2 &&
     simulation.winner === 'enemy' &&
-    !['ai_win_hp', 'ai_win_fields', 'ai_win_cards'].includes(simulation.terminalStatus)
+    !terminalOk
   ) {
     const planW = profile?.futurePlanningWeight ?? 0.7;
-    score -= excessVsStd * futureDuels * 220 * planW;
+    if (responding && aiFields >= 1) {
+      score -= excessVsStd * futureDuels * 420 * planW;
+    } else if (responding && excessVsStd >= 3) {
+      // Anche a 0 Campi: coin-flip / Campo singolo non vale bruciare 3+ FC oltre quota
+      score -= excessVsStd * futureDuels * 320 * planW;
+    } else if (aiFields < 2 && excessVsStd >= 3) {
+      score -= excessVsStd * futureDuels * 220 * planW;
+    }
   }
 
   // Lieve costo Focus (non doppiare la penalità progressiva)
@@ -285,6 +335,7 @@ export function scoreAIAction(simulation, context, aiAction, profile, weights = 
   score += (aiAction?.focus || 0) * weights.focusSpentPerPoint * efficiency * 0.35;
 
   score += futurePlanningPenalty(aiAction?.card, context, profile, weights);
+  score += offWindowPayoffPenalty(aiAction?.card, context, simulation, profile, weights);
 
   const trigger = aiAction?.card?.ability?.trigger;
   if (trigger && POST_BATTLE.has(trigger)) {

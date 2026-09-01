@@ -1,11 +1,18 @@
 /**
- * Tab Agenti / Campi — controllo segmentato in evidenza (barra mode galleria).
+ * Tab Agenti / Eminenze / Campi — controllo segmentato in evidenza (barra mode galleria).
  */
-export function GalleryTabSwitcher({ activeTab, onTabChange, agentCount, fieldCount }) {
+export function GalleryTabSwitcher({
+  activeTab,
+  onTabChange,
+  agentCount,
+  fieldCount,
+  eminenceCount,
+}) {
   const tabs = [
     { id: 'agents', label: 'AGENTI', count: agentCount },
+    { id: 'eminences', label: 'EMINENZE', count: eminenceCount },
     { id: 'battlefields', label: 'CAMPI', count: fieldCount },
-  ];
+  ].filter((tab) => tab.count != null);
 
   return (
     <div className="gallery-mode-switch" role="tablist" aria-label="Sezione galleria">
@@ -35,7 +42,7 @@ export function GalleryTabSwitcher({ activeTab, onTabChange, agentCount, fieldCo
         }
         .gallery-mode-switch-btn {
           display: inline-flex; flex-direction: row; align-items: baseline; justify-content: center;
-          gap: 7px; min-width: 118px; padding: 7px 16px;
+          gap: 7px; min-width: 100px; padding: 7px 12px;
           background: transparent; border: none; cursor: pointer;
           font-family: 'Share Tech Mono', monospace;
           color: rgba(245,243,236,0.48);

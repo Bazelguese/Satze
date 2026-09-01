@@ -119,9 +119,11 @@ export function useAI(gameState) {
   }, [clearPendingDecision, isPendingCardPlayable]);
 
   const runDecisionEngineAsync = useCallback(async (context, needsJoint, rng) => {
-    if (isAiWorkerSupported()) {
+    // Joint multi-Campo sul worker poteva restare appeso senza risposta → UI bloccata.
+    // Sul main thread la joint è ora lean (no deep search) e fa yield tra Campi.
+    if (!needsJoint && isAiWorkerSupported()) {
       try {
-        return await runAiDecisionInWorker(context, context.difficulty, needsJoint);
+        return await runAiDecisionInWorker(context, context.difficulty, false);
       } catch {
         /* fallback main thread */
       }

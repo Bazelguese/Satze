@@ -12,11 +12,10 @@ export function hydrateAiDecision(stripped, context) {
   const cardId = stripped.cardId;
   let card = null;
   if (cardId != null) {
-    card =
-      context.ai?.hand?.find((c) => c.id === cardId) ??
-      context.player?.visibleCard?.id === cardId
-        ? context.player.visibleCard
-        : null;
+    const fromAi = context.ai?.hand?.find((c) => c.id === cardId) || null;
+    const fromVisible =
+      context.player?.visibleCard?.id === cardId ? context.player.visibleCard : null;
+    card = fromAi || fromVisible;
   }
   return { ...stripped, card };
 }
