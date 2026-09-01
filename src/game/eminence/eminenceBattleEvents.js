@@ -11,7 +11,7 @@ import {
   makePlayerTarget,
   makeSource,
 } from '../duel/battleEventTypes.js';
-import { emitResourceChange, emitStatChange } from '../duel/battleEventEmit.js';
+import { emitFieldRule, emitResourceChange, emitStatChange } from '../duel/battleEventEmit.js';
 import { SIDES } from './eminenceConstants.js';
 
 const STAT_LABELS = {
@@ -22,6 +22,35 @@ const STAT_LABELS = {
 
 function eminenceSource(ownerSide, abilityId = null) {
   return makeSource({ kind: 'eminence', id: abilityId, ownerSide });
+}
+
+/**
+ * Dichiara nel log quali lati non subiscono la parte per-Agente del Campo.
+ *
+ * Il setup del Campo scrive comunque le proprie righe («−2 DAN a entrambi») perché agisce su
+ * tutti e viene poi ripristinato sul lato velato. Senza questa dichiarazione il registro
+ * annuncerebbe effetti che uno dei due non ha mai subito.
+ */
+export function emitFieldVeilEvents(channel, veiledSides, { field, pAgent, eAgent }) {
+  if (!channel || !veiledSides?.length || !field) return;
+
+  const agentBySide = { [SIDES.PLAYER]: pAgent, [SIDES.ENEMY]: eAgent };
+
+  for (const side of veiledSides) {
+    const agent = agentBySide[side];
+    if (!agent) continue;
+
+    emitFieldRule(channel, {
+      phase: BATTLE_PHASES.deploy,
+      revealAt: BATTLE_REVEAL_AT.deploy,
+      source: eminenceSource(side),
+      target: makeAgentTarget(side, agent),
+      ruleCode: 'fieldIgnoredByAgent',
+      // Le regole strutturali restano: il log lo dice, così la differenza è leggibile
+      // quando il Campo decide comunque il vincitore.
+      params: { fieldId: field.id, fieldName: field.name, structuralRulesStillApply: true },
+    });
+  }
 }
 
 /**

@@ -210,6 +210,96 @@ describe('Eminenze nel Duello reale', () => {
 });
 
 /**
+ * «Il prossimo Agente ignora tutti gli effetti del Campo» ha una portata delimitata: cade
+ * ciò che il Campo fa all'Agente, resta ciò che decide chi vince.
+ */
+describe('Disprezzo: portata di “ignora gli effetti del Campo”', () => {
+  const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
+  const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: 'apex_sole_verde' });
+
+  it('i modificatori di statistica cadono sul lato velato e restano sull\'altro', () => {
+    // Nido dei Grifoni (5): −2 DAN a entrambi.
+    const input = { ...baseInput, field: fieldById(5) };
+
+    const plain = computeDuelResolution(input).battleResult;
+    const veiled = computeDuelResolution({ ...input, eminenceBundle: veil() }).battleResult;
+
+    expect(plain.playerDamage).toBe(1);
+    expect(veiled.playerDamage).toBe(3);
+    // L'avversario continua a subirlo: il velo è di un lato, non del tavolo.
+    expect(veiled.enemyDamage).toBe(plain.enemyDamage);
+  });
+
+  it('un trigger reso sempre attivo dal Campo non raggiunge il lato velato', () => {
+    // Ninfea di Miele (49): Imboscata sempre attiva. Il giocatore risponde, quindi senza
+    // Campo la sua Imboscata sarebbe falsa.
+    const input = { ...baseInput, field: fieldById(49) };
+
+    const plain = computeDuelResolution(input).battleResult;
+    const veiled = computeDuelResolution({ ...input, eminenceBundle: veil() }).battleResult;
+
+    expect(plain.playerPower).toBe(6);
+    expect(veiled.playerPower).toBe(4);
+  });
+
+  it('il cap di DAN del Campo non si applica al lato velato', () => {
+    // Nexus Arcano (15): DAN massimo 4.
+    const heavy = (name, army) => ({ name, army, power: 4, damage: 6, league: 2, ability: null });
+    const input = {
+      ...baseInput,
+      field: fieldById(15),
+      selectedAgent: heavy('Tu', 'Patto degli Indocili'),
+      enemyAgent: heavy('IA', 'Kethran'),
+    };
+
+    const plain = computeDuelResolution(input).battleResult;
+    const veiled = computeDuelResolution({ ...input, eminenceBundle: veil() }).battleResult;
+
+    expect(plain.playerDamage).toBe(4);
+    expect(veiled.playerDamage).toBe(6);
+    expect(veiled.enemyDamage).toBe(4);
+  });
+
+  it('il log dichiara chi ignora il Campo, perché le righe del Campo restano', () => {
+    const input = { ...baseInput, field: fieldById(5), eminenceBundle: veil() };
+    const { battleResult } = computeDuelResolution(input);
+
+    const declared = battleResult.events.find((e) => e.ruleCode === 'fieldIgnoredByAgent');
+    expect(declared).toBeDefined();
+    expect(declared.target.side).toBe('local');
+    expect(declared.params.structuralRulesStillApply).toBe(true);
+  });
+
+  it('la condizione di vittoria del Campo resta valida anche per il lato velato', () => {
+    // Arena delle Scaglie (62): vince chi ha investito più FC, non chi ha il VA più alto.
+    // Qui le due letture divergono: a VA vincerebbe l'avversario.
+    const quiet = (name, army, power) => ({
+      name,
+      army,
+      power,
+      damage: 3,
+      league: 2,
+      ability: { trigger: 'gloria', effect: 'power', value: 0 },
+    });
+    const input = {
+      ...baseInput,
+      field: fieldById(62),
+      selectedAgent: quiet('Tu', 'Patto degli Indocili', 1),
+      enemyAgent: quiet('IA', 'Kethran', 10),
+      selectedFocus: 5,
+      enemySelectedFocus: 1,
+      eminenceBundle: veil(),
+    };
+
+    const result = computeDuelResolution(input).battleResult;
+
+    expect(result.enemyAssault).toBeGreaterThan(result.playerAssault);
+    // Un Agente non può ignorare per conto proprio la regola che stabilisce chi vince.
+    expect(result.winner).toBe('player');
+  });
+});
+
+/**
  * L'Ora Verde è lo Statico di riferimento: nessuna scelta, nessun gate, nessun costo, e un
  * effetto che non tocca il Duello ma il tabellone su cui il Duello si combatte.
  */

@@ -10,7 +10,15 @@ import {
   readStatDeltas,
   readTemporaryFocus,
 } from './eminence/eminenceDuelBinding.js';
-import { emitEminenceDeployEvents } from './eminence/eminenceBattleEvents.js';
+import { emitEminenceDeployEvents, emitFieldVeilEvents } from './eminence/eminenceBattleEvents.js';
+import {
+  buildFocusForVa,
+  captureVeil,
+  isSideVeiled,
+  readVeiledSides,
+  restoreVeil,
+  veilContextModifiers,
+} from './eminence/fieldVeil.js';
 import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
 import {
   createDuelCanTriggerAbility,
@@ -99,6 +107,10 @@ export function computeDuelResolution({
     // iniezione e continuano a ignorare l'esistenza delle Eminenze.
     const checkTrigger = bindCheckTriggerToOverlay(eminenceBundle?.triggerRules, baseCheckTrigger);
 
+    // Lati che questo Duello ignorano la parte per-Agente del Campo. Le regole strutturali —
+    // condizione di vittoria e tie-break — restano fuori dal velo e valgono per entrambi.
+    const veiledSides = readVeiledSides(eminenceBundle);
+
     // Un'Eminenza rivelata prima del Duello modifica l'Agente mentre viene schierato e
     // riscuote subito i propri costi in PV: entrambe le cose precedono il confronto, quindi
     // trigger e Campo devono già vederle.
@@ -160,10 +172,12 @@ export function computeDuelResolution({
       pArmyBonusRaw,
       eArmyBonusRaw
     );
+    // Sostituire o scambiare il Bonus d'Armata è un effetto sull'Agente: il lato velato
+    // conserva il proprio.
     const pHasBonus = resolvedBonuses.pHasBonus;
     const eHasBonus = resolvedBonuses.eHasBonus;
-    const pArmyBonus = resolvedBonuses.pArmyBonus;
-    const eArmyBonus = resolvedBonuses.eArmyBonus;
+    const pArmyBonus = isSideVeiled(veiledSides, 'player') ? pArmyBonusRaw : resolvedBonuses.pArmyBonus;
+    const eArmyBonus = isSideVeiled(veiledSides, 'enemy') ? eArmyBonusRaw : resolvedBonuses.eArmyBonus;
 
     const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
 
@@ -217,7 +231,11 @@ export function computeDuelResolution({
     // Immune preventivo: non emesso (block solo al blocco reale).
 
     const fieldStatsBefore = snapshotDuelFieldStats(duel);
-        const fieldFlags = applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext);
+    const setupVeil = captureVeil(duel, veiledSides);
+    const fieldFlags = applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext);
+    restoreVeil(duel, setupVeil);
+    veilContextModifiers(veiledSides, playerContext, enemyContext);
+    emitFieldVeilEvents(battleLog, veiledSides, { field, pAgent, eAgent });
     const {
       blockDisabled,
       copyDisabled,
@@ -402,8 +420,10 @@ export function computeDuelResolution({
 
     const statsBeforeField = visualRecorder.readStats(state);
     const overdriveBefore = snapshotDuelFieldStats(state);
+    const lateVeil = captureVeil(state, veiledSides);
     applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
     applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog);
+    restoreVeil(state, lateVeil);
     emitDuelFieldSetupEvents(
       battleLog,
       field,
@@ -430,18 +450,14 @@ export function computeDuelResolution({
     pAssaultMod = state.pAssaultMod;
     eAssaultMod = state.eAssaultMod;
 
-    const focusForVa = (fc) => {
-      let n = fieldFlags.focusHalvedInVa ? Math.ceil(fc / 2) : fc;
-      if (fieldFlags.maxFocusCountedInVa != null) n = Math.min(n, fieldFlags.maxFocusCountedInVa);
-      return n;
-    };
+    const focusForVa = buildFocusForVa(fieldFlags, veiledSides);
     const assault = runDuelAssaultCalculation(battleLog, {
       pAgent,
       eAgent,
       pPower,
       ePower,
-      pFocusUsed: focusForVa(pFocusUsed),
-      eFocusUsed: focusForVa(eFocusUsed),
+      pFocusUsed: focusForVa(pFocusUsed, 'player'),
+      eFocusUsed: focusForVa(eFocusUsed, 'enemy'),
       pAssaultMod,
       eAssaultMod,
       pMinAssault,
@@ -703,6 +719,7 @@ export function computeDuelResolution({
         enemyUsedCards,
         eAgent?.id
       ),
+      fieldVeiledSides: veiledSides,
     });
 
     // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.

@@ -1253,11 +1253,22 @@ All'inizio del round 5, il Campo viene sostituito da un Campo Apex.
 - **−4:** il prossimo Agente ottiene +2 POT e +2 DAN.
 
 ### Portata di “ignora gli effetti del Campo” (−2)
-L'Agente ignora i soli effetti che agiscono **su di lui**: modificatori di POT, DAN e VA, trigger resi sempre attivi, disattivazioni e cap applicati all'Agente.
 
-Restano invece in vigore per entrambi i giocatori le **regole strutturali** del Campo, cioè quelle che definiscono come si determina il vincitore o che valgono simmetricamente sul Duello: condizione di vittoria alternativa (Arena delle Scaglie, Tana dei Tagliagole, Ponte di Roccaferma), tie-break, e cap globali come il DAN massimo del Nexus Arcano o il DAN = Lega della Lizza del Palazzo d'Onice.
+**Cade** tutto ciò che il Campo fa **all'Agente**, cioè ogni effetto che scrive una grandezza di un lato solo:
+- modificatori di POT, DAN e VA, inclusi quelli condizionali;
+- trigger resi sempre attivi, trigger scambiati, soglia di Overdrive alterata;
+- disattivazione di Potere, Bonus d'Armata o Immune;
+- cap e imposizioni sulle proprie statistiche (POT massima, DAN massimo, DAN = Lega, DAN = POT);
+- regole di conteggio dei propri FC nel VA (dimezzamento, tetto, moltiplicatori);
+- sostituzione o scambio del proprio Bonus d'Armata.
 
-La ragione è che un Duello ha **un solo** vincitore: un Agente non può ignorare per conto proprio la regola che stabilisce chi vince, perché il risultato non sarebbe più definito. “Disprezzo del terreno” significa non subirne gli effetti, non giocare a un gioco diverso da quello dell'avversario.
+**Resta** ciò che definisce **chi vince**, e vale per entrambi i giocatori: condizione di vittoria alternativa (Arena delle Scaglie, Tana dei Tagliagole, Ponte di Roccaferma) e tie-break.
+
+La ragione è che un Duello ha **un solo** vincitore: un Agente non può ignorare per conto proprio la regola che lo determina, perché il risultato non sarebbe più definito. “Disprezzo del terreno” significa non subirne gli effetti, non giocare a un gioco diverso da quello dell'avversario.
+
+**Criterio operativo.** La linea di taglio è «di chi è questo numero». Se l'effetto scrive una grandezza attribuibile a un lato, è per-Agente e cade; se stabilisce come si confrontano i due lati, è strutturale e resta. Il criterio è verificabile a colpo d'occhio e non va rideciso a ogni Campo nuovo.
+
+**Fuori portata.** L'aftermath di round del Campo — perdite di PV o FC dopo la determinazione del vincitore — non è velato: agisce sul **giocatore** dopo il Duello, mentre l'abilità parla dell'**Agente** e dura *per questo Duello*.
 
 ### Interazione Khemet
 Le Maledizioni Khemet appartengono allo **slot**, non alla carta Campo. Pertanto:

@@ -27,12 +27,15 @@ export function runDuelDamageAftermathAndFcAdjust({
   enemySelectedFocus,
   playerAgentsRemainingAfter = 0,
   enemyAgentsRemainingAfter = 0,
+  // Lati che non subiscono la parte per-Agente del Campo. L'aftermath di round resta fuori:
+  // agisce sul giocatore dopo il Duello, non sull'Agente durante il Duello.
+  fieldVeiledSides = [],
 }) {
   if (battleLog && typeof battleLog.setContext === 'function') {
     battleLog.setContext(BATTLE_PHASES.post, BATTLE_REVEAL_AT.postFx);
   }
 
-  let dm = applyDuelNexusMaxDamage(battleLog, maxDamage, pDamage, eDamage);
+  let dm = applyDuelNexusMaxDamage(battleLog, maxDamage, pDamage, eDamage, fieldVeiledSides);
   let pD = dm.pDamage;
   let eD = dm.eDamage;
   dm = applyCentraleOverdriveDamage(
@@ -42,7 +45,8 @@ export function runDuelDamageAftermathAndFcAdjust({
     pFocusUsed,
     eFocusUsed,
     pD,
-    eD
+    eD,
+    fieldVeiledSides
   );
   pD = dm.pDamage;
   eD = dm.eDamage;
