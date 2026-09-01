@@ -11,6 +11,8 @@
 
 > **Addendum pre-implementazione.** Generalizzata l'assegnazione di un gate per igiene informativa (§3.2), così che Khemet +0 sia l'applicazione di una regola e non una deroga. Precisato che la deduzione di legalità dell'IA usa la Presenza pubblica **al checkpoint di selezione**, non il contatore corrente (§10.4).
 
+> **Addendum di implementazione — Apex.** Fissati momento, bersaglio e carta della sostituzione operata dall'Ora Verde, e delimitata la portata di “ignora gli effetti del Campo” alla sola dimensione per-Agente, lasciando in vigore per entrambi i giocatori le regole strutturali del Campo (§12.1). Entrambe le precisazioni erano necessarie a rendere l'Eminenza eseguibile senza scelte di design lasciate al codice.
+
 ---
 
 # 0. Obiettivo e principi
@@ -1239,10 +1241,23 @@ Devono essere mantenuti test per tutte le dodici. Casi minimi aggiuntivi partico
 ### Statico — Cataclisma: Ora Verde
 All'inizio del round 5, il Campo viene sostituito da un Campo Apex.
 
+**Momento.** La sostituzione avviene **prima della scelta del Campo**, non alla risoluzione. Cambia le premesse di una decisione, quindi deve essere pubblica prima che la decisione avvenga: un giocatore non deve poter scegliere uno slot e trovarne un altro al momento di combattere.
+
+**Bersaglio.** Vengono sostituiti gli **slot non ancora conquistati**. Nel formato canonico — 5 Campi, 5 round, uno slot consumato per round — al round 5 ne resta esattamente uno, ed è "il Campo" del testo. La formulazione per slot aperti generalizza ai formati con un numero diverso di Campi senza cambiare il caso canonico.
+
+**Quale Campo Apex.** Il **Meridiano del Sole Verde** (id 89), che è l'Ora Verde stessa. La scelta è fissa e non casuale: i sei Campi a tema Apex sono molto diversi fra loro e uno di essi (Tana dei Tagliagole) cambia la condizione di vittoria, quindi un sorteggio nel round decisivo introdurrebbe varianza dove il design promette inevitabilità. La lettura indeterminata — "un Campo Apex qualsiasi" — resta esprimibile nel catalogo sostituendo `fieldId` con `fieldArmy`.
+
 ### Attive
 - **+1:** il prossimo Agente schierato questo round ottiene +1 POT; il controllore perde 2 PV.
 - **−2:** il prossimo Agente ignora tutti gli **effetti del Campo** per questo Duello.
 - **−4:** il prossimo Agente ottiene +2 POT e +2 DAN.
+
+### Portata di “ignora gli effetti del Campo” (−2)
+L'Agente ignora i soli effetti che agiscono **su di lui**: modificatori di POT, DAN e VA, trigger resi sempre attivi, disattivazioni e cap applicati all'Agente.
+
+Restano invece in vigore per entrambi i giocatori le **regole strutturali** del Campo, cioè quelle che definiscono come si determina il vincitore o che valgono simmetricamente sul Duello: condizione di vittoria alternativa (Arena delle Scaglie, Tana dei Tagliagole, Ponte di Roccaferma), tie-break, e cap globali come il DAN massimo del Nexus Arcano o il DAN = Lega della Lizza del Palazzo d'Onice.
+
+La ragione è che un Duello ha **un solo** vincitore: un Agente non può ignorare per conto proprio la regola che stabilisce chi vince, perché il risultato non sarebbe più definito. “Disprezzo del terreno” significa non subirne gli effetti, non giocare a un gioco diverso da quello dell'avversario.
 
 ### Interazione Khemet
 Le Maledizioni Khemet appartengono allo **slot**, non alla carta Campo. Pertanto:

@@ -160,7 +160,14 @@ const handlers = {
   },
 
   [P.REPLACE_FIELD]: (bundle, segment, ctx) => {
-    bundle.fieldOperations.push({ operation: 'REPLACE', fieldArmy: segment.fieldArmy ?? null, source: ctx.source });
+    // Due criteri alternativi: una carta precisa oppure un tema da cui pescare. Quale dei due
+    // usare è una scelta di design e vive nel catalogo, non qui.
+    bundle.fieldOperations.push({
+      operation: 'REPLACE',
+      fieldId: segment.fieldId ?? null,
+      fieldArmy: segment.fieldArmy ?? null,
+      source: ctx.source,
+    });
   },
 
   [P.DESTROY_FIELD]: (bundle, segment, ctx) => {

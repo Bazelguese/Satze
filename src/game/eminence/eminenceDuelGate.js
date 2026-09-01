@@ -14,6 +14,7 @@ import {
 } from './eminenceConstants.js';
 import {
   areSelectionsComplete,
+  beginEminenceRound,
   collectPendingEffects,
   completeGate,
   mustChooseThisRound,
@@ -50,6 +51,40 @@ function collectTimings(matchState, timings, initiativeSide) {
   }
 
   return { matchState: state, queue };
+}
+
+/**
+ * Apre il round e incassa i checkpoint che precedono la prima decisione.
+ *
+ * È qui che vive lo Statico capace di cambiare le premesse del round — la sostituzione del
+ * Campo su tutte le altre. Deve accadere prima della scelta del Campo, altrimenti il
+ * giocatore sceglierebbe uno slot e ne troverebbe un altro al momento di combattere.
+ *
+ * Il bundle restituito non è quello del Duello: contiene solo effetti di apertura, e il
+ * chiamante è tenuto a consumarne le `fieldOperations` prima di mostrare il tabellone.
+ *
+ * @returns {{ matchState: object, bundle: object|null }}
+ */
+export function openEminenceRound(matchState, { roundNumber = 1, initiativeSide = SIDES.PLAYER } = {}) {
+  if (!isEminenceSubsystemEnabled(matchState)) return { matchState, bundle: null };
+
+  const opened = beginEminenceRound(matchState, { roundNumber });
+  const collected = collectTimings(opened, [EFFECT_TIMINGS.ROUND_START], initiativeSide);
+  const bundle = collected.queue.length ? applyEminenceSegments(collected.queue) : null;
+
+  return {
+    // Il timbro rende l'apertura riconoscibile dallo stato stesso. Serve al lato React, dove
+    // il round avanza in un batch e l'apertura in quello successivo: senza un marcatore
+    // servirebbe una ref esterna, che una nuova partita non azzererebbe.
+    matchState: { ...applyBundleToState(collected.matchState, bundle), roundOpenedAt: roundNumber },
+    bundle,
+  };
+}
+
+/** Vero finché il round corrente non è stato aperto sullo stato Eminenza. */
+export function needsEminenceRoundOpen(matchState, roundNumber) {
+  if (!isEminenceSubsystemEnabled(matchState)) return false;
+  return matchState.roundOpenedAt !== roundNumber;
 }
 
 /**

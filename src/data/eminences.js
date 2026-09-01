@@ -36,13 +36,18 @@ export const EMINENCES = {
       id: 'ora_verde',
       name: 'Cataclisma: Ora Verde',
       text: 'All\'inizio del round 5, il Campo viene sostituito da un Campo Apex.',
-      implemented: false,
+      implemented: true,
       segments: [
         {
-          timing: EFFECT_TIMINGS.AFTER_REVEAL,
+          // ROUND_START e non AFTER_REVEAL: la sostituzione cambia le premesse della scelta
+          // del Campo, quindi deve essere pubblica prima che quella scelta avvenga.
+          timing: EFFECT_TIMINGS.ROUND_START,
           primitive: P.REPLACE_FIELD,
           target: T.GLOBAL,
-          fieldArmy: 'Apex',
+          // Il Meridiano è l'Ora Verde stessa: fissarlo evita di tirare a sorte fra sei Campi
+          // molto diversi — uno dei quali cambia la condizione di vittoria — nel round decisivo.
+          // Per la lettura indeterminata basta sostituire questa riga con `fieldArmy: 'Apex'`.
+          fieldId: 89,
           condition: { roundNumber: 5 },
         },
       ],

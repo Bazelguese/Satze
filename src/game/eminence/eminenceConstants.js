@@ -39,8 +39,13 @@ export const CHOICE_PARAMS_TIMING = {
  * Checkpoint di risoluzione dei segmenti (spec §3.7).
  * `revealGate` ed `effectTiming` sono due cose diverse: Calibri -4 si rivela al GENERAL
  * ma opera a BEFORE_CONQUEST.
+ *
+ * `ROUND_START` precede la prima decisione del round ed è quindi l'unico checkpoint
+ * raggiungibile da uno Statico che debba alterare il Campo o l'ordine delle scelte: ciò che
+ * modifica le premesse di una decisione deve essere pubblico prima che la decisione avvenga.
  */
 export const EFFECT_TIMINGS = {
+  ROUND_START: 'ROUND_START',
   AFTER_REVEAL: 'AFTER_REVEAL',
   BEFORE_FIELD_RESOLUTION: 'BEFORE_FIELD_RESOLUTION',
   BEFORE_TRIGGER_CHECK: 'BEFORE_TRIGGER_CHECK',
@@ -53,6 +58,7 @@ export const EFFECT_TIMINGS = {
 };
 
 export const EFFECT_TIMING_ORDER = [
+  EFFECT_TIMINGS.ROUND_START,
   EFFECT_TIMINGS.AFTER_REVEAL,
   EFFECT_TIMINGS.BEFORE_FIELD_RESOLUTION,
   EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,

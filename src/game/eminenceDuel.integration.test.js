@@ -15,6 +15,8 @@ import {
   selectEminenceAbility,
 } from './eminence/eminenceRound.js';
 import { applyEminenceSegments } from './eminence/primitiveHandlers.js';
+import { openEminenceRound } from './eminence/eminenceDuelGate.js';
+import { applyFieldOperations } from './eminence/fieldOperations.js';
 import {
   EFFECT_TIMINGS,
   EMINENCE_FORMAT,
@@ -204,5 +206,81 @@ describe('Eminenze nel Duello reale', () => {
     expect(bundle.triggerRules.forceSatisfied).toHaveLength(1);
     expect(bundle.triggerRules.forceForbidden).toHaveLength(1);
     expect(bundle.triggerRules.forceSatisfied[0].ownerSide).toBe(SIDES.PLAYER);
+  });
+});
+
+/**
+ * L'Ora Verde è lo Statico di riferimento: nessuna scelta, nessun gate, nessun costo, e un
+ * effetto che non tocca il Duello ma il tabellone su cui il Duello si combatte.
+ */
+describe('Statico: Ora Verde sul tabellone reale', () => {
+  const board = () => [1, 2, 3, 4, 5].map((id) => ALL_BATTLEFIELDS.find((f) => f.id === id));
+
+  // Quattro slot già giocati: al round 5 ne resta uno, ed è quello che verrà sostituito.
+  const conquered = {
+    0: { winner: 'player' },
+    1: { winner: 'enemy' },
+    2: { winner: 'player' },
+    3: { winner: 'enemy' },
+  };
+
+  function replaceAtRound(roundNumber) {
+    const matchState = createEminenceMatchState({
+      format: EMINENCE_FORMAT.REQUIRED,
+      playerEminenceId: 'apex_sole_verde',
+      enemyEminenceId: 'patto_grande_semaforo',
+    });
+
+    const { bundle } = openEminenceRound(matchState, { roundNumber });
+    return applyFieldOperations(bundle?.fieldOperations || [], {
+      battlefields: board(),
+      conqueredFields: conquered,
+    });
+  }
+
+  it('al round 5 lo slot superstite diventa un Campo Apex', () => {
+    const { battlefields, changes } = replaceAtRound(5);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].slot).toBe(4);
+    expect(battlefields[4].tema).toBe('Apex');
+    // Gli slot già conquistati appartengono a round giocati e non vengono riscritti.
+    expect(battlefields.slice(0, 4).map((f) => f.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('nei round precedenti il tabellone resta quello sorteggiato', () => {
+    for (const roundNumber of [1, 2, 3, 4]) {
+      expect(replaceAtRound(roundNumber).changes).toHaveLength(0);
+    }
+  });
+
+  it('il Duello si combatte davvero sul Campo sostituito', () => {
+    const { battlefields } = replaceAtRound(5);
+    const field = battlefields[4];
+
+    const duelInput = {
+      ...baseInput,
+      field,
+      currentFieldIndex: 4,
+      conqueredFields: conquered,
+      roundNumber: 5,
+      // Il Meridiano non aggiunge statistiche: sostituisce il Bonus d'Armata di chi ce l'ha
+      // attivo. Senza un Bonus attivo la sostituzione non sarebbe osservabile.
+      playerArmyBonuses: { [baseInput.selectedAgent.army]: true },
+    };
+
+    // Il Campo entrato in gioco non era fra quelli sorteggiati.
+    expect(board().some((f) => f.id === field.id)).toBe(false);
+
+    // Confronto a Campo costante: cambia solo se il Bonus d'Armata è attivo, così il delta
+    // isola il Bonus sostituito dal Meridiano invece di mescolarlo a quello del Campo uscito.
+    const withoutBonus = computeDuelResolution({ ...duelInput, playerArmyBonuses: {} }).battleResult;
+    const withBonus = computeDuelResolution(duelInput).battleResult;
+
+    // Invasione è soddisfatta: il giocatore ha conquistato due slot.
+    expect(withBonus.playerPower - withoutBonus.playerPower).toBe(2);
+    expect(withBonus.playerDamage - withoutBonus.playerDamage).toBe(1);
+    // La sostituzione riguarda chi ha il Bonus attivo, non entrambi.
+    expect(withBonus.enemyPower).toBe(withoutBonus.enemyPower);
   });
 });

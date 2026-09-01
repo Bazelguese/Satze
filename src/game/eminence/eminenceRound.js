@@ -17,6 +17,7 @@ import {
   getLegalAbilityIds,
 } from './eminenceState.js';
 import { changePresence } from './presence.js';
+import { createConditionContext, matchesCondition } from './effectConditions.js';
 
 const BOTH_SIDES = [SIDES.PLAYER, SIDES.ENEMY];
 
@@ -66,15 +67,57 @@ export function resolveGateSequenceName(matchState) {
 // ------------------------------------------------------------------
 
 /**
+ * Arma i segmenti dello Statico per il round che comincia.
+ *
+ * Uno Statico non ha gate, costo né scelta: non passa quindi da `completeGate`. Entra
+ * comunque nella stessa coda `pendingEffects` delle attive, così i checkpoint restano un
+ * meccanismo solo — e uno Statico e un'attiva che maturano insieme risultano ordinati per
+ * iniziativa come qualunque altra coppia di effetti (§2.5).
+ */
+function armStaticSegments(state, ownerSide) {
+  const eminence = getEminence(state?.eminenceId);
+  const segments = eminence?.static?.segments;
+  if (!Array.isArray(segments) || !segments.length) return state;
+
+  // Un'Eminenza bloccata non produce nulla, Statico incluso: il blocco spegne l'Eminenza,
+  // non solo la sua abilità di round.
+  if (state.blockedThisRound) return state;
+
+  return {
+    ...state,
+    round: {
+      ...state.round,
+      pendingEffects: [
+        ...state.round.pendingEffects,
+        ...segments.map((segment) => ({
+          sourceEminenceId: state.eminenceId,
+          abilityId: eminence.static.id,
+          isStatic: true,
+          ownerSide,
+          timing: segment.timing,
+          segment,
+          consumed: false,
+        })),
+      ],
+    },
+  };
+}
+
+/**
  * Apre il round: azzera lo stato di round, fissa il checkpoint pubblico di Presenza su cui
- * si misura la legalità delle scelte, e installa la progressione dei gate.
+ * si misura la legalità delle scelte, arma gli Statici e installa la progressione dei gate.
  */
 export function beginEminenceRound(matchState, { roundNumber = 1 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) return matchState;
 
   const reset = resetEminenceMatchRound(matchState);
+  const withStatics = { ...reset };
+  for (const side of BOTH_SIDES) {
+    withStatics[side] = armStaticSegments(reset[side], side);
+  }
+
   return {
-    ...reset,
+    ...withStatics,
     roundNumber,
     gateProgress: createGateProgress(resolveGateSequenceName(reset)),
   };
@@ -273,13 +316,24 @@ export function completeGeneralGate(matchState, options = {}) {
  * Il checkpoint appartiene alla pipeline del Duello, non all'Eminenza: è il chiamante a
  * sapere dove si trova, e questa funzione gli restituisce solo ciò che gli compete.
  *
+ * Un segmento la cui condizione non è soddisfatta viene comunque marcato consumato: il suo
+ * checkpoint è passato e non tornerà in questo round. Lasciarlo armato lo farebbe scattare
+ * al primo checkpoint successivo con un contesto diverso.
+ *
+ * @param {object} options.context termini per `matchesCondition`; `roundNumber` è sempre
+ *   presente, il resto lo aggiunge chi conosce il punto della pipeline
  * @returns {{ queue: object[], matchState: object }} i segmenti restituiti sono marcati
  *   come consumati, così un checkpoint non può eseguirli due volte.
  */
-export function collectPendingEffects(matchState, timing, { initiativeSide = SIDES.PLAYER } = {}) {
+export function collectPendingEffects(
+  matchState,
+  timing,
+  { initiativeSide = SIDES.PLAYER, context = null } = {}
+) {
   if (!isEminenceSubsystemEnabled(matchState)) return { queue: [], matchState };
 
   const order = [initiativeSide, OPPOSITE_SIDE[initiativeSide]];
+  const conditionContext = createConditionContext(matchState, context || {});
   const queue = [];
   const nextMatchState = { ...matchState };
 
@@ -290,7 +344,7 @@ export function collectPendingEffects(matchState, timing, { initiativeSide = SID
     const remaining = [];
     for (const entry of state.round.pendingEffects) {
       if (!entry.consumed && entry.timing === timing) {
-        queue.push(entry);
+        if (matchesCondition(entry.segment?.condition, conditionContext)) queue.push(entry);
         remaining.push({ ...entry, consumed: true });
       } else {
         remaining.push(entry);
