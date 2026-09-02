@@ -599,7 +599,7 @@ export const EMINENCES = {
 
     static: {
       id: 'orathai_risonanza',
-      name: 'Risonanza',
+      name: 'Consonanza',
       text: 'Se entrambi gli Agenti soddisfano il requisito di attivazione del proprio Potere nello stesso Duello, +1 Presenza.',
       implemented: false,
       segments: null,
@@ -612,7 +612,7 @@ export const EMINENCES = {
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Tacet: se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza.',
+        text: 'Se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza.',
         segments: null,
       },
       {
@@ -621,7 +621,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Contrappunto: se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti.',
+        text: 'Se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti.',
         segments: null,
       },
       {
@@ -630,7 +630,7 @@ export const EMINENCES = {
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Silenzio: se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto.',
+        text: 'Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto.',
         segments: null,
       },
     ],
@@ -862,7 +862,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Blocca il proprio Bonus d\'Armata per questo Duello; applica Tossina 1 all\'avversario, minimo 10 PV.',
+        text: 'Blocca il proprio Bonus d\'Armata per questo Duello; applica Tossina 1 (min 10) all\'avversario.',
         segments: null,
       },
       {
@@ -902,7 +902,7 @@ export const EMINENCES = {
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Rinuncia al Privilegio: il proprio Bonus d\'Armata è bloccato per questo Duello.',
+        text: 'Il proprio Bonus d\'Armata è bloccato per questo Duello.',
         segments: null,
       },
       {
@@ -911,7 +911,7 @@ export const EMINENCES = {
         presenceDelta: -1,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Ascesa / Declassamento: scegli pubblicamente un proprio Agente non ancora schierato e modifica la sua Lega di ±1 per questo round.',
+        text: 'Scegli pubblicamente un proprio Agente non ancora schierato e modifica la sua Lega di ±1 per questo round.',
         segments: null,
       },
       {
@@ -920,7 +920,7 @@ export const EMINENCES = {
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Ascensione: Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato.',
+        text: 'Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato.',
         segments: null,
       },
     ],
@@ -951,16 +951,17 @@ export const EMINENCES = {
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Guerra d\'Attrito: se perdi il Duello ma subisci 2 o meno danni della sconfitta, +1 Presenza.',
+        text: 'Se perdi il Duello ma subisci 2 o meno danni della sconfitta, +1 Presenza.',
         segments: null,
       },
       {
         id: 'calibri_contenimento',
+        // APERTO: "Contenimento" non descrive più l'effetto (sopprime Conquista, non "contiene").
         name: 'Protocollo di Contenimento',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Protocollo di Contenimento: se perdi il Duello, i trigger Conquista dell\'avversario non possono attivarsi.',
+        text: 'Se perdi il Duello, i trigger Conquista dell\'avversario non possono attivarsi.',
         segments: null,
       },
       {
@@ -969,7 +970,7 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Protocollo Terra Bruciata: se perdi il Duello, distruggi il Campo corrente dopo la determinazione del vincitore e prima della finestra Conquista.',
+        text: 'Se perdi il Duello, distruggi il Campo corrente dopo la determinazione del vincitore e prima della finestra Conquista.',
         segments: null,
       },
     ],

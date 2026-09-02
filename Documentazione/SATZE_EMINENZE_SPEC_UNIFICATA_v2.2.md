@@ -13,6 +13,8 @@
 
 > **Addendum di implementazione — Apex.** Fissati momento, bersaglio e carta della sostituzione operata dall'Ora Verde, e delimitata la portata di “ignora gli effetti del Campo” alla sola dimensione per-Agente, lasciando in vigore per entrambi i giocatori le regole strutturali del Campo (§12.1). Entrambe le precisazioni erano necessarie a rendere l'Eminenza eseguibile senza scelte di design lasciate al codice.
 
+> **Addendum di design — economia e timing.** (1) Ogni abilità di ricarica (slot non negativo) deve agire sul tavolo oppure essere una scommessa reale; non basta «se [osservazione], +N Presenza» senza decisione (§11.9). (2) Un guadagno di Presenza si risolve al primo checkpoint in cui la sua condizione è conoscibile; anticiparlo o posticiparlo rispetto a `PRESENCE_SNAPSHOT` (§8.1) è una leva di bilanciamento dichiarata, non un dettaglio implementativo (§8.1.1). (3) Invarianti di curva: esattamente una opzione non negativa; la top raggiungibile al più due volte per Scontro (§11.10).
+
 ---
 
 # 0. Obiettivo e principi
@@ -751,6 +753,16 @@ Conseguenze canoniche:
 - la nuova Presenza resta comunque reale e sarà visibile ai checkpoint successivi e ai round futuri;
 - se in futuro verrà creato un trigger di Presenza esplicitamente post-Duello, dovrà dichiarare il proprio checkpoint invece di riusare implicitamente lo snapshot pre-trigger.
 
+### 8.1.1 Timing dei guadagni di Presenza
+
+> **Un guadagno di Presenza si risolve al primo checkpoint in cui la sua condizione è conoscibile.** Anticiparlo o posticiparlo è una leva di bilanciamento **dichiarata** nella scheda dell'Eminenza, non una scelta silenziosa carta per carta.
+
+Conseguenze:
+
+- `BEFORE_TRIGGER_CHECK` (e qualunque timing prima di `PRESENCE_SNAPSHOT`) può accendere Digiuno, Grazia, Ascendente, ecc. nello stesso Duello;
+- `AFTER_DUEL_OUTCOME` e oltre **non** lo fanno: due «+1 Presenza» nominalmente identici valgono cifre diverse se gli Agenti leggono la Presenza;
+- oggi Leggerezza (Figli) è pre-snapshot per decisione esplicita del §12.9; Sacrificio, Convalida e lo Statico Khemet sono post — vanno trattati come scelte di bilanciamento documentate, non come default accidentale.
+
 Il `TriggerContext` deve ricevere i valori già campionati, non riferimenti ai contatori live.
 
 ---
@@ -1227,6 +1239,36 @@ Devono essere mantenuti test per tutte le dodici. Casi minimi aggiuntivi partico
 - effetti allo stesso checkpoint in ordine d'iniziativa;
 - `FORBID > FORCE`.
 
+## 11.9 Slot di ricarica
+
+> **Ogni abilità di ricarica (opzione non negativa della curva) deve agire sul tavolo oppure essere una scommessa reale.** Non basta «se [condizione osservata], +N Presenza» — quella è la grammatica di uno Statico, non di una scelta di round.
+
+Con cinque round non puoi permetterti round in cui l'Eminenza non fa niente: il giocatore non sta decidendo, sta guardando.
+
+| Forma ammessa | Esempi |
+|---|---|
+| Agisce sul tavolo | Furia, Verde/Rosso, Deriva, Accordo, Gorgoglio |
+| Scommessa reale (bluff / informazione / rischio) | Scommessa (Mascarada) |
+| **Non ammessa** | Solo osservazione → +Presenza |
+
+**Debito di design (inerte oggi):** Sacrificio (Kethran), Convalida (Khemet), Tacet (Orathai), Sussurro (Ratti), Leggerezza (Figli). Da riscrivere prima del bilanciamento Agenti-che-leggono-Presenza.
+
+## 11.10 Forma della curva
+
+I valori nominali restano eterogenei (identità). Due invarianti sì:
+
+1. **Esattamente una** opzione non negativa (`presenceDelta >= 0`), salvo eccezione documentata (Patto: Verde e Giallo; Figli: Deriva e Leggerezza — da rivedere alla luce del §11.9).
+2. La **top** della curva è raggiungibile **una o due volte** per Scontro (metrica normalizzata), non il costo nominale.
+
+**Nomi aperti (non standardizzare i registri liturgico/militare, ma chiudere le collisioni):**
+
+| Voce | Stato |
+|---|---|
+| Orathai Statico | Rinominato **Consonanza** (evita collisione con «Risonanza del Nono Sigillo») |
+| Eminenza Corte Rossa | APERTO (provvisorio in dati: *Sanguinaccio, il Registro*) |
+| Corte −4 | APERTO (provvisorio: *Debito Eterno*) |
+| Calibri −2 | APERTO (*Protocollo di Contenimento* non descrive più l'effetto) |
+
 ---
 
 
@@ -1375,8 +1417,10 @@ Implementazione concettuale consigliata: `slot = { field, eminenceModifiers[] }`
 **Presenza iniziale:** 1  
 **Curva:** +0 / −2 / −3
 
-### Statico — Risonanza
+### Statico — Consonanza
 Se entrambi gli Agenti soddisfano il requisito di attivazione del proprio Potere nello stesso Duello, +1 Presenza.
+
+*(Nome cambiato da «Risonanza» per evitare collisione con lo Statico Khemet «Risonanza del Nono Sigillo».)*
 
 ### Attive
 - **+0 — Tacet:** se nessuno dei due Agenti soddisfa il requisito di attivazione del Potere, +2 Presenza.

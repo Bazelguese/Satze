@@ -13,6 +13,26 @@
 // termine e va aggiunto in forma generica, non aggirato nel chiamante.
 
 /**
+ * Chiavi ammesse in `segment.condition`. Ogni chiave deve essere fornita dal checkpoint
+ * che valuta il segmento (`createConditionContext` + extra del gate).
+ * Un typo qui non viene catturato a runtime: il segmento semplicemente non scatta.
+ */
+export const CONDITION_KEYS = Object.freeze([
+  'roundNumber',
+  'duelWinnerRelative',
+  'aliasUsed',
+  'enemyAgentTrigger',
+  'deployedMarks',
+  'ownMarks',
+  'enemyMarks',
+  'ownActivatedTrigger',
+  'ownPowerResolved',
+  'hpLossCause',
+  'ownAnchored',
+  'winner',
+]);
+
+/**
  * Forme ammesse per il valore atteso di una chiave:
  *
  * - primitiva          → uguaglianza stretta            `{ roundNumber: 5 }`

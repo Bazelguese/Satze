@@ -27,6 +27,8 @@ Il campo `text` descrive **cosa fa** la regola, in linguaggio meccanico uniforme
 
 **Abbreviazioni sempre maiuscole:** POT, DAN, VA, PV, FC.
 
+**Pavimenti min:** stesso registro delle carte Agente — `Tossina 1 (min 10)`, non «minimo 10 PV». Il parser UI è `splitAbilityMinSuffix` in `cardUtils.js`.
+
 **Trigger:** usare i nomi UI da `src/data/triggers.js` → Imboscata, Intervento, Gloria, Vendetta, Conquista, Ultimo Desiderio, Turbo, Ultima Chance, Overdrive, …
 
 ---
@@ -167,6 +169,15 @@ Allineati a `eminenceAnnouncements.js`:
 | Leggerezza | (prefisso nome) | Se il proprio Agente non è Ancorato, +1 Presenza. |
 | Risposta | (prefisso nome) | Se il proprio Agente è Ancorato, il suo trigger è considerato soddisfatto. |
 
+### Orathai / Ratti / Enclave / Calibri (catalogo, anche se `implemented: false`)
+
+| | Prima | Dopo |
+|---|---|---|
+| Orathai Statico | Risonanza | **Consonanza** (anti-collisione con Khemet) |
+| Tacet / Contrappunto / Silenzio | `Nome: …` | prefisso rimosso |
+| Ratti Veleno | `…minimo 10 PV` | `Tossina 1 (min 10)` |
+| Enclave / Calibri | prefissi nome | rimossi; Calibri −2 nome **APERTO** |
+
 ---
 
 ## 7. Checklist (scheda implementazione)
@@ -176,9 +187,10 @@ Allineati a `eminenceAnnouncements.js`:
 - [ ] Durata con una delle 4 formule
 - [ ] Trigger da `TRIGGER_NAMES`
 - [ ] Stat in maiuscolo (POT, DAN, VA, PV, FC)
+- [ ] Pavimenti min come `(min N)`
 - [ ] Nessuna ridondanza col badge di fase
-- [ ] Test `eminenceCopy.test.js` verde
-
+- [ ] Test `eminenceCopy.test.js` verde (lista da `IMPLEMENTED_EMINENCE_IDS`)
+- [ ] Test `eminenceCatalogSchema.test.js` verde
 ---
 
 *Copy guide v1 — allineata ai badge di fase in `eminenceAnnounceLabels.js`.*

@@ -329,6 +329,23 @@ Un'Eminenza è **completa** quando:
 
 ---
 
+## 10bis. Invarianti di design (obbligatorie in scheda)
+
+Compilare esplicitamente prima di `implemented: true`:
+
+| Invariante | Domanda da rispondere |
+|---|---|
+| **Ricarica (§11.9)** | L'opzione non negativa agisce sul tavolo o è una scommessa reale? Se è solo «osservazione → +Presenza», riscrivere. |
+| **Snapshot Presenza (§8.1.1)** | Il guadagno è pre- o post-`PRESENCE_SNAPSHOT`? Motivo di bilanciamento dichiarato. |
+| **Curva (§11.10)** | Esattamente una non-negativa? Top raggiungibile ≤2× per Scontro? |
+| **Nomi** | Nessuna collisione con Statici/abilità di altre Eminenze; registri liturgico/militare eterogenei OK. |
+
+**Debito ricarica inerte:** Sacrificio, Convalida, Tacet, Sussurro, Leggerezza.
+
+**Nomi aperti:** Eminenza Corte Rossa · Corte −4 · Calibri −2 (ex Contenimento).
+
+---
+
 ## 11. Stato implementazione (aggiornare)
 
 | Eminenza | ID | Fase §16 | `implemented` | Test acceptance |
@@ -356,7 +373,8 @@ Un'Eminenza è **completa** quando:
 | Scelta, reveal, pending | `src/game/eminence/eminenceRound.js` |
 | Orchestrazione round | `src/game/eminence/eminenceDuelGate.js` |
 | Primitive → bundle | `src/game/eminence/primitiveHandlers.js` |
-| Condizioni segmenti | `src/game/eminence/effectConditions.js` |
+| Condizioni segmenti | `src/game/eminence/effectConditions.js` (`CONDITION_KEYS`) |
+| Schema catalogo | `src/game/eminence/eminenceCatalogSchema.test.js` |
 | Notifiche UI | `src/game/eminence/eminenceAnnouncements.js` |
 | Copy guide | `Documentazione/SATZE_EMINENZA_COPY_GUIDE.md` |
 | Lint copy | `src/game/eminence/eminenceCopy.test.js` |
