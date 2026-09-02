@@ -34,18 +34,40 @@ export function hasActiveTriggerRules(rules) {
  * Senza regole attive restituisce la funzione originale, così una partita senza Eminenze
  * percorre esattamente il codice di prima.
  */
-export function bindCheckTriggerToOverlay(triggerRules, checkTrigger = baseCheckTrigger) {
+export function bindCheckTriggerToOverlay(triggerRules, checkTrigger = baseCheckTrigger, trace = null) {
   if (!hasActiveTriggerRules(triggerRules)) return checkTrigger;
 
   return function checkTriggerWithOverlay(trigger, context) {
-    return resolveTriggerState({
+    const resolved = resolveTriggerState({
       originalTrigger: trigger,
       context,
+      card: context?.card ?? null,
       side: context?.duelSide === SIDES.ENEMY ? SIDES.ENEMY : SIDES.PLAYER,
       triggerRules,
       checkTrigger,
-    }).satisfied;
+    });
+    if (trace?.aliasUsedBySide && resolved.aliasUsed) {
+      const side = context?.duelSide === SIDES.ENEMY ? SIDES.ENEMY : SIDES.PLAYER;
+      trace.aliasUsedBySide[side] = true;
+    }
+    return resolved.satisfied;
   };
+}
+
+/**
+ * Applica un overlay di Potere depositato dal bundle: trigger e/o effetto temporanei
+ * per il Duello corrente, senza mutare la carta nel mazzo.
+ */
+export function applyAbilityOverlay(agent, bundle) {
+  if (!agent) return agent;
+  const overlay = bundle?.abilityOverlays?.[agent.id];
+  if (!overlay) return agent;
+
+  const ability = { ...(agent.ability || {}) };
+  for (const [key, value] of Object.entries(overlay)) {
+    ability[key] = value;
+  }
+  return { ...agent, ability };
 }
 
 /**
@@ -72,9 +94,65 @@ export function ignoresField(bundle, side) {
   return Boolean(bundle?.ignoreFieldSides?.includes(side));
 }
 
-/** Somma dei delta PV richiesti dal bundle per un lato. */
+/** Esito del Potere per i checkpoint post-Duello (Rito, Devozione). */
+export function powerResolutionFromDuel({ battleResult, playerAgent, enemyAgent } = {}) {
+  const playerResolved = Boolean(battleResult?.playerAbilityTriggered) && !battleResult?.playerAbilityBlocked;
+  const enemyResolved = Boolean(battleResult?.enemyAbilityTriggered) && !battleResult?.enemyAbilityBlocked;
+  return {
+    powerResolvedBySide: {
+      [SIDES.PLAYER]: playerResolved,
+      [SIDES.ENEMY]: enemyResolved,
+    },
+    activatedTriggerBySide: {
+      [SIDES.PLAYER]: playerResolved ? (playerAgent?.ability?.trigger ?? null) : null,
+      [SIDES.ENEMY]: enemyResolved ? (enemyAgent?.ability?.trigger ?? null) : null,
+    },
+  };
+}
 export function readHpDelta(bundle, side) {
   return (bundle?.hpDeltas || [])
     .filter((entry) => entry.side === side)
     .reduce((total, entry) => total + (entry.amount || 0), 0);
+}
+
+/**
+ * Toglie dal bundle i delta PV già riscossi (HUD), così il Duello non li ribatte.
+ */
+export function consumeHpDeltas(bundle, bySide = {}) {
+  if (!bundle) return bundle;
+  const rest = {
+    [SIDES.PLAYER]: bySide[SIDES.PLAYER] || bySide.player || 0,
+    [SIDES.ENEMY]: bySide[SIDES.ENEMY] || bySide.enemy || 0,
+  };
+  if (!rest[SIDES.PLAYER] && !rest[SIDES.ENEMY]) return bundle;
+  const hpDeltas = [];
+  for (const entry of bundle.hpDeltas || []) {
+    const leftover = rest[entry.side] || 0;
+    if (!leftover || !entry.amount || Math.sign(entry.amount) !== Math.sign(leftover)) {
+      hpDeltas.push(entry);
+      continue;
+    }
+    if (Math.abs(leftover) >= Math.abs(entry.amount)) {
+      rest[entry.side] = leftover - entry.amount;
+      continue;
+    }
+    hpDeltas.push({ ...entry, amount: entry.amount - leftover });
+    rest[entry.side] = 0;
+  }
+  return { ...bundle, hpDeltas };
+}
+
+/** Applica overlay sul Bonus d'Armata: forzato, soppresso, non bloccabile. */
+export function applyArmyBonusOverlay({ hasBonus, armyBonus, bonusBlocked = false, sideState = null } = {}) {
+  const overlay = sideState || {};
+  let nextHas = hasBonus;
+  let nextBonus = armyBonus;
+  let nextBlocked = bonusBlocked;
+  if (overlay.suppressed) nextHas = false;
+  if (overlay.forcedActive) {
+    nextHas = true;
+    if (nextBonus) nextBonus = { ...nextBonus, trigger: null };
+  }
+  if (overlay.unblockable) nextBlocked = false;
+  return { hasBonus: nextHas, armyBonus: nextBonus, bonusBlocked: nextBlocked };
 }

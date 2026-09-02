@@ -2,6 +2,7 @@ import React from 'react';
 import { ARMY_COLORS } from '../../data';
 import { FIELD_STYLES } from '../../utils/constants';
 import { resolveFieldThumbUrl, resolvePublicAssetUrl } from '../../utils/preloadAssets';
+import { FieldCurseOverlay } from './FieldCurseOverlay.jsx';
 
 /**
  * Componente campo di battaglia compatto
@@ -18,12 +19,24 @@ export const MiniBattlefield = React.memo(({
   turnsUntilReveal, 
   onHover,
   guidedHighlight = false,
+  cursed = false,
+  curseAccent = null,
+  curseArriving = false,
 }) => {
   if (hidden) {
     return (
-      <div className="h-full min-h-[2rem] rounded bg-slate-800/30 border border-slate-700/50 flex items-center justify-center px-2">
+      <div
+        onClick={onClick}
+        className={`h-full min-h-[2rem] rounded bg-slate-800/30 border border-slate-700/50 flex items-center justify-center px-2 relative overflow-hidden ${
+          cursed ? 'satze-field-curse' : ''
+        } ${
+          onClick ? 'cursor-pointer hover:border-yellow-400/50' : ''
+        } ${selected ? 'border-2 border-yellow-400' : ''}`}
+        style={cursed && curseAccent ? { '--curse-accent': curseAccent, borderColor: curseAccent } : undefined}
+      >
+        {cursed && <FieldCurseOverlay accent={curseAccent} arriving={curseArriving} />}
         <span 
-          className="text-slate-200 text-sm font-semibold text-center" 
+          className="text-slate-200 text-sm font-semibold text-center relative z-10" 
           style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.5)' }}
         >
           🔒 Si rivela tra {turnsUntilReveal} {turnsUntilReveal === 1 ? 'turno' : 'turni'}
@@ -57,6 +70,7 @@ export const MiniBattlefield = React.memo(({
       className={`
         h-full min-h-[2rem] rounded px-2 py-0.5 transition-all duration-300 flex items-center relative overflow-hidden
         ${guidedHighlight ? 'animate-satze-guided-twinkle ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.45)]' : ''}
+        ${cursed ? 'satze-field-curse' : ''}
         ${conquered 
           ? 'border-2 shadow-lg' 
           : selected 
@@ -66,7 +80,10 @@ export const MiniBattlefield = React.memo(({
               : 'border border-slate-700/50'
         }
       `}
-      style={conquered ? conqueredStyle : {}}
+      style={{
+        ...(conquered ? conqueredStyle : {}),
+        ...(cursed && curseAccent ? { '--curse-accent': curseAccent, borderColor: curseAccent } : {}),
+      }}
     >
       {/* Immagine campo (fallback: gradiente) */}
       {bgUrl ? (
@@ -99,7 +116,6 @@ export const MiniBattlefield = React.memo(({
           style={{ background: fieldStyle.gradient || 'linear-gradient(135deg, #1a1a2e, #2a2a4e)' }}
         />
       )}
-      {/* Glow accent */}
       <div 
         className="absolute inset-0 opacity-30"
         style={{ 
@@ -140,6 +156,7 @@ export const MiniBattlefield = React.memo(({
           {conquered ? 'CONQUISTATO' : field.effect}
         </p>
       </div>
+      {cursed && <FieldCurseOverlay accent={curseAccent} arriving={curseArriving} />}
     </div>
   );
 });

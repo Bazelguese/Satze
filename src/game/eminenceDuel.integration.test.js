@@ -374,3 +374,44 @@ describe('Statico: Ora Verde sul tabellone reale', () => {
     expect(withBonus.enemyPower).toBe(withoutBonus.enemyPower);
   });
 });
+
+describe('Maledizioni di slot nel Duello reale', () => {
+  it('restano dopo il velo Campo e colpiscono entrambi i lati', () => {
+    const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
+    const input = {
+      ...baseInput,
+      field: fieldById(5),
+      selectedAgent: { ...baseInput.selectedAgent, damage: 3, league: 4 },
+      enemyAgent: { ...baseInput.enemyAgent, damage: 3, league: 2 },
+    };
+    const plain = computeDuelResolution(input).battleResult;
+    expect(plain.playerDamage).toBe(1);
+    expect(plain.enemyDamage).toBe(1);
+
+    const cursed = computeDuelResolution({
+      ...input,
+      eminenceBundle: {
+        ignoreFieldSides: ['player'],
+        slotModifiers: [{ deltas: { damage: -1 }, leagueScaled: false }],
+      },
+    }).battleResult;
+
+    // Il velo toglie il −2 DAN del Campo al giocatore; la maledizione resta.
+    expect(cursed.playerDamage).toBe(2);
+    expect(cursed.enemyDamage).toBe(0);
+  });
+
+  it('−VA scala sulla Lega anche se il Campo è ignorato', () => {
+    const plain = computeDuelResolution(baseInput).battleResult;
+    const cursed = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: {
+        ignoreFieldSides: ['player'],
+        slotModifiers: [{ deltas: {}, leagueScaled: true }],
+      },
+    }).battleResult;
+
+    expect(cursed.playerAssault).toBe(plain.playerAssault - baseInput.selectedAgent.league);
+    expect(cursed.enemyAssault).toBe(plain.enemyAssault - baseInput.enemyAgent.league);
+  });
+});

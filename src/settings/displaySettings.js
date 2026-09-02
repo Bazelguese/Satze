@@ -39,6 +39,7 @@ export const RESOLUTION_PRESETS = [
  *   cursorSize: typeof CURSOR_SIZE_PRESETS[number],
  *   cursorTrailLength: typeof CURSOR_TRAIL_LENGTH_PRESETS[number],
  *   cursorTrailDuration: typeof CURSOR_TRAIL_DURATION_PRESETS[number],
+ *   eminenceFoil: boolean,
  * }} DisplaySettings */
 
 /** @type {DisplaySettings} */
@@ -54,6 +55,8 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   cursorSize: 100,
   cursorTrailLength: 10,
   cursorTrailDuration: 400,
+  /** Lamina foil sulle Eminenze del giocatore in partita. */
+  eminenceFoil: false,
 };
 
 function readStorage() {
@@ -110,6 +113,7 @@ export function normalizeDisplaySettings(raw) {
     base.uiScale = /** @type {typeof UI_SCALE_PRESETS[number]} */ (Number(o.uiScale));
   }
   if (typeof o.reduceMotion === 'boolean') base.reduceMotion = o.reduceMotion;
+  if (typeof o.eminenceFoil === 'boolean') base.eminenceFoil = o.eminenceFoil;
   if (isDuelLayoutBreath(o.duelLayoutBreath)) base.duelLayoutBreath = o.duelLayoutBreath;
   if (isCursorSize(o.cursorSize)) {
     base.cursorSize = /** @type {typeof CURSOR_SIZE_PRESETS[number]} */ (Number(o.cursorSize));
@@ -197,6 +201,20 @@ export function applyDisplaySettingsToDom(settings = getDisplaySettings()) {
   root.style.setProperty('--satze-ui-scale', String(s.uiScale / 100));
   root.classList.toggle('satze-reduce-motion', s.reduceMotion);
   document.body?.classList.toggle('satze-reduce-motion', s.reduceMotion);
+}
+
+/**
+ * Trattamento visuale Eminenza in partita per lato.
+ * Il giocatore locale usa la preferenza; l'avversario solo se `opponentFoil` è true (es. MP).
+ * @param {'player'|'enemy'} side
+ * @param {DisplaySettings | null | undefined} [settings]
+ * @param {{ opponentFoil?: boolean }} [opts]
+ * @returns {'arena'|'holo'}
+ */
+export function resolveEminenceCardLife(side, settings, opts = {}) {
+  const s = normalizeDisplaySettings(settings || getDisplaySettings());
+  if (side === 'player') return s.eminenceFoil ? 'holo' : 'arena';
+  return opts.opponentFoil ? 'holo' : 'arena';
 }
 
 /**

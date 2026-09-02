@@ -22,9 +22,9 @@ function CornerBrackets() {
   );
 }
 
-function StatCell({ label, value, valueClass = '' }) {
+function StatCell({ label, value, valueClass = '', dataEmHp = null }) {
   return (
-    <div className="satze-stats-cell">
+    <div className="satze-stats-cell" data-em-hp={dataEmHp || undefined}>
       <span className="satze-stats-cell__label">{label}</span>
       <span className={`satze-stats-cell__value ${valueClass}`}>{value}</span>
     </div>
@@ -147,7 +147,7 @@ export const StatsPanel = React.memo(({
 
         <span className="satze-stats-panel__divider" aria-hidden />
 
-        <StatCell label="PV" value={hp} valueClass="satze-stats-cell__value--pv" />
+        <StatCell label="PV" value={hp} valueClass="satze-stats-cell__value--pv" dataEmHp={side} />
 
         <span className="satze-stats-panel__divider" aria-hidden />
 

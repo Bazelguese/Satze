@@ -6,6 +6,8 @@
 import { checkTrigger as baseCheckTrigger } from './triggerLogic.js';
 import {
   bindCheckTriggerToOverlay,
+  applyAbilityOverlay,
+  applyArmyBonusOverlay,
   readHpDelta,
   readStatDeltas,
   readTemporaryFocus,
@@ -19,7 +21,8 @@ import {
   restoreVeil,
   veilContextModifiers,
 } from './eminence/fieldVeil.js';
-import { countConqueredFields, checkImmunity, countInitialLeagueCards } from './duel/duelHelpers.js';
+import { applySlotCursesToDuel, createEmptySlotCurseStatDeltas } from './eminence/slotCurses.js';
+import { applyImmuneSlotCurseFinalization } from './duel/duelImmuneSlotCurseFinalization.js';
 import {
   createDuelCanTriggerAbility,
   resolveFieldArmyBonuses,
@@ -34,6 +37,8 @@ import { createDuelEffectContext } from './duel/duelEffectContext.js';
 import { applyDuelBlockPrescan } from './duel/duelBlockPrescan.js';
 import { applyDuelMainAbilities } from './duel/duelMainAbilities.js';
 import { applyDuelArmyBonusPhases } from './duel/duelArmyBonusPhases.js';
+import { applyInversionFieldFinalization } from './duel/duelInversionFinalization.js';
+import { createEmptyFieldStatDeltas } from './duel/duelFieldStatTracking.js';
 import { runDuelAssaultCalculation } from './duel/duelAssaultPhase.js';
 import { resolveDuelWinnerByAssault } from './duel/duelWinnerResolve.js';
 import { computeDuelTriggerUiFlags } from './duel/duelTriggerUiFlags.js';
@@ -44,6 +49,7 @@ import { ARMY_BONUSES } from '../data/index.js';
 import { attachFieldModifiersToContexts } from './battlefieldEffects.js';
 import { buildDuelTurnContexts } from './duel/duelTurnContexts.js';
 import { createDuelVisualRecorder } from './duel/duelVisualSteps.js';
+import { checkImmunity, countConqueredFields, countInitialLeagueCards } from './duel/duelHelpers.js';
 import { createBattleEventEmitter } from './duel/battleEventTypes.js';
 import {
   createBattleLogChannel,
@@ -74,8 +80,8 @@ function combatStartDiffersFromDeploy(deployStats, state) {
  */
 export function computeDuelResolution({
   field,
-  selectedAgent: pAgent,
-  enemyAgent: eAgent,
+  selectedAgent: pAgentInput,
+  enemyAgent: eAgentInput,
   selectedFocus,
   enemySelectedFocus,
   playerHP,
@@ -105,7 +111,17 @@ export function computeDuelResolution({
 }) {
     // L'overlay entra qui una volta sola: tutti i sotto-moduli ricevono `checkTrigger` per
     // iniezione e continuano a ignorare l'esistenza delle Eminenze.
-    const checkTrigger = bindCheckTriggerToOverlay(eminenceBundle?.triggerRules, baseCheckTrigger);
+    const overlayTrace = {
+      aliasUsedBySide: { player: false, enemy: false },
+    };
+    const checkTrigger = bindCheckTriggerToOverlay(
+      eminenceBundle?.triggerRules,
+      baseCheckTrigger,
+      overlayTrace
+    );
+
+    const pAgent = applyAbilityOverlay(pAgentInput, eminenceBundle);
+    const eAgent = applyAbilityOverlay(eAgentInput, eminenceBundle);
 
     // Lati che questo Duello ignorano la parte per-Agente del Campo. Le regole strutturali —
     // condizione di vittoria e tie-break — restano fuori dal velo e valgono per entrambi.
@@ -174,10 +190,20 @@ export function computeDuelResolution({
     );
     // Sostituire o scambiare il Bonus d'Armata è un effetto sull'Agente: il lato velato
     // conserva il proprio.
-    const pHasBonus = resolvedBonuses.pHasBonus;
-    const eHasBonus = resolvedBonuses.eHasBonus;
-    const pArmyBonus = isSideVeiled(veiledSides, 'player') ? pArmyBonusRaw : resolvedBonuses.pArmyBonus;
-    const eArmyBonus = isSideVeiled(veiledSides, 'enemy') ? eArmyBonusRaw : resolvedBonuses.eArmyBonus;
+    const pBonusOverlay = applyArmyBonusOverlay({
+      hasBonus: resolvedBonuses.pHasBonus,
+      armyBonus: isSideVeiled(veiledSides, 'player') ? pArmyBonusRaw : resolvedBonuses.pArmyBonus,
+      sideState: eminenceBundle?.armyBonusState?.player,
+    });
+    const eBonusOverlay = applyArmyBonusOverlay({
+      hasBonus: resolvedBonuses.eHasBonus,
+      armyBonus: isSideVeiled(veiledSides, 'enemy') ? eArmyBonusRaw : resolvedBonuses.eArmyBonus,
+      sideState: eminenceBundle?.armyBonusState?.enemy,
+    });
+    const pHasBonus = pBonusOverlay.hasBonus;
+    const eHasBonus = eBonusOverlay.hasBonus;
+    const pArmyBonus = pBonusOverlay.armyBonus;
+    const eArmyBonus = eBonusOverlay.armyBonus;
 
     const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
 
@@ -234,6 +260,11 @@ export function computeDuelResolution({
     const setupVeil = captureVeil(duel, veiledSides);
     const fieldFlags = applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext);
     restoreVeil(duel, setupVeil);
+    const slotCurseStatDeltas = createEmptySlotCurseStatDeltas();
+    applySlotCursesToDuel(duel, eminenceBundle?.slotModifiers, {
+      player: (pAgent.league || 0) + (pEminenceStats.league || 0),
+      enemy: (eAgent.league || 0) + (eEminenceStats.league || 0),
+    }, slotCurseStatDeltas);
     veilContextModifiers(veiledSides, playerContext, enemyContext);
     emitFieldVeilEvents(battleLog, veiledSides, { field, pAgent, eAgent });
     const {
@@ -258,7 +289,11 @@ export function computeDuelResolution({
       fieldFlags
     );
 
-    const state = createDuelCombatState(duel);
+    const state = createDuelCombatState(
+      duel,
+      fieldFlags.fieldStatDeltas ?? createEmptyFieldStatDeltas(),
+      slotCurseStatDeltas
+    );
     const visualRecorder = createDuelVisualRecorder(pAgent, eAgent, deployStats);
     visualRecorder.syncDeployAssaultMods(state);
     if (combatStartDiffersFromDeploy(deployStats, state)) {
@@ -329,6 +364,8 @@ export function computeDuelResolution({
       isPlayerFirst,
       visualRecorder,
     });
+    if (eminenceBundle?.armyBonusState?.player?.unblockable) state.pBonusBlocked = false;
+    if (eminenceBundle?.armyBonusState?.enemy?.unblockable) state.eBonusBlocked = false;
 
     applyDuelMainAbilities({
       state,
@@ -421,9 +458,20 @@ export function computeDuelResolution({
     const statsBeforeField = visualRecorder.readStats(state);
     const overdriveBefore = snapshotDuelFieldStats(state);
     const lateVeil = captureVeil(state, veiledSides);
-    applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog);
-    applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog);
+    applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog, state.fieldStatDeltas);
+    applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog, state.fieldStatDeltas);
     restoreVeil(state, lateVeil);
+    const inversionFieldChanged = applyInversionFieldFinalization(
+      state,
+      state.fieldStatDeltas,
+      battleLog,
+      field.name
+    );
+    const immuneSlotCurseChanged = applyImmuneSlotCurseFinalization(
+      state,
+      state.slotCurseStatDeltas,
+      battleLog
+    );
     emitDuelFieldSetupEvents(
       battleLog,
       field,
@@ -438,7 +486,9 @@ export function computeDuelResolution({
       statsBeforeField.playerPower !== statsAfterField.playerPower ||
       statsBeforeField.enemyPower !== statsAfterField.enemyPower ||
       statsBeforeField.playerDamage !== statsAfterField.playerDamage ||
-      statsBeforeField.enemyDamage !== statsAfterField.enemyDamage
+      statsBeforeField.enemyDamage !== statsAfterField.enemyDamage ||
+      inversionFieldChanged ||
+      immuneSlotCurseChanged
     ) {
       visualRecorder.pushField(state);
     }
@@ -754,6 +804,8 @@ export function computeDuelResolution({
       eCopiedAbilityNotTriggered,
       pBonusCopied,
       eBonusCopied,
+      pEffectiveArmyBonus: pArmyBonus,
+      eEffectiveArmyBonus: eArmyBonus,
       pCopiedBonusNotTriggered,
       eCopiedBonusNotTriggered,
       pAbilityNotTriggered,
@@ -793,6 +845,6 @@ export function computeDuelResolution({
       }
     }
 
-    return { battleResult };
+    return { battleResult: { ...battleResult, aliasUsedBySide: overlayTrace.aliasUsedBySide } };
 
 }

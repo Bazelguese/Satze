@@ -4,6 +4,7 @@ import { generateFieldParticles, FIELD_STYLES } from '../../utils';
 import { Icon } from '../ui/Icon';
 import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVisualTimeline.js';
 import { getDuelOutcomeSubtitle } from './DuelCinematicOverlays';
+import { FieldCurseOverlay } from './FieldCurseOverlay.jsx';
 
 // Le posizioni sono casuali: vanno calcolate una volta sola per campo, altrimenti
 // ogni re-render del duello teletrasporta le particelle e forza un repaint completo.
@@ -91,7 +92,7 @@ const generateParticleData = (config) => {
  * Componente sfondo campo di battaglia
  * Visualizza gradienti, glow e particelle tematiche per il campo attivo
  */
-export const BattlefieldBackground = React.memo(({ activeField }) => {
+export const BattlefieldBackground = React.memo(({ activeField, cursed = false, curseAccent = null }) => {
   const fieldId = activeField?.id ?? null;
   const fieldStyle = fieldId != null ? (FIELD_STYLES[fieldId] || {}) : {};
   const glowColor = fieldStyle.glow || 'rgba(100,100,100,0.3)';
@@ -200,6 +201,13 @@ export const BattlefieldBackground = React.memo(({ activeField }) => {
           />
         );
       })}
+      {cursed && (
+        <div
+          className="satze-bf-curse-wash"
+          style={{ '--curse-accent': curseAccent || '#26c4e8' }}
+          aria-hidden
+        />
+      )}
     </div>
   );
 });
@@ -237,6 +245,8 @@ export const BattlefieldPanel = ({
   /** Log ragionamenti IA della partita (post-match) */
   aiDecisionLog = null,
   onCopyAiDecisionLog = null,
+  cursed = false,
+  curseAccent = null,
 }) => {
   const oppWait = isOnlinePvP
     ? "L'avversario sta scegliendo il campo di battaglia"
@@ -375,20 +385,41 @@ export const BattlefieldPanel = ({
         </div>
       )}
       
-      {(gamePhase === 'selectAgent' || gamePhase === 'result') && field && (
+      {(gamePhase === 'selectAgent' || (gamePhase === 'result' && field)) && (
         <>
           <div className="text-center w-full flex flex-col items-center justify-between h-full py-1 relative">
             <div className="flex-1 flex flex-col items-center justify-center group">
-              <div className="text-amber-400/90 text-[10px] font-medium mb-2 tracking-widest uppercase">Campo</div>
-              <div className={`mb-2 transition-all duration-300 flex items-center justify-center ${
-                isZoomed ? 'scale-110' : 'hover:scale-105'
-              }`}>
-                <Icon name={field.icon} type="cardIcon" size={32} color="#D4A847" />
-              </div>
-              <div className="text-white text-sm font-semibold mb-1.5">{field.name}</div>
-              <div className="text-slate-400 text-[11px] leading-relaxed px-1 text-center">
-                {field.effect}
-              </div>
+              {field ? (
+                <>
+                  <div className="text-amber-400/90 text-[10px] font-medium mb-2 tracking-widest uppercase">Campo</div>
+                  <div className={`mb-2 transition-all duration-300 flex items-center justify-center ${
+                    isZoomed ? 'scale-110' : 'hover:scale-105'
+                  }`}>
+                    <Icon name={field.icon} type="cardIcon" size={32} color="#D4A847" />
+                  </div>
+                  <div className="text-white text-sm font-semibold mb-1.5">{field.name}</div>
+                  <div className="text-slate-400 text-[11px] leading-relaxed px-1 text-center">
+                    {field.effect}
+                  </div>
+                  {cursed && (
+                    <div className="satze-bf-curse-mark" style={{ '--curse-accent': curseAccent || '#26c4e8' }}>
+                      <FieldCurseOverlay accent={curseAccent} variant="panel" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-amber-400/90 text-[10px] font-medium mb-2 tracking-widest uppercase">Schieramento</div>
+                  <div className="text-white text-sm font-semibold mb-1.5">
+                    {selectedAgent ? selectedAgent.name : 'Scegli un Agente'}
+                  </div>
+                  <div className="text-slate-400 text-[11px] leading-relaxed px-1 text-center">
+                    {selectedAgent
+                      ? 'Conferma lo schieramento. Il Campo si sceglie dopo.'
+                      : 'Scegli un Agente dalla mano, poi conferma.'}
+                  </div>
+                </>
+              )}
             </div>
             
             {/* Pulsante CONFERMA o "L'IA sta pensando..." (solo durante selectAgent) */}

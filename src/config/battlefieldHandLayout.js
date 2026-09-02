@@ -19,6 +19,22 @@ export const IA_CARD_POSITIONS = [
   { left: 27, top: 150 },
 ];
 
+/**
+ * Id degli Agenti IA non schierati, da sinistra a destra come in tavolo.
+ * L'indice 0 della mano è il più vicino al centro, quindi l'ordine array è l'inverso.
+ */
+export function enemyHandIdsLeftToRight(hand = [], usedCardIds = []) {
+  const used = new Set(usedCardIds);
+  return (hand || [])
+    .map((card, index) => ({
+      id: card?.id,
+      left: IA_CARD_POSITIONS[index]?.left ?? index,
+    }))
+    .filter((entry) => entry.id != null && !used.has(entry.id))
+    .sort((a, b) => a.left - b.left)
+    .map((entry) => entry.id);
+}
+
 /** Posizioni carte giocatore — angolo basso-destra (right/bottom nel triangolo). */
 export const PLAYER_CARD_POSITIONS = [
   { right: 667, bottom: 30 },

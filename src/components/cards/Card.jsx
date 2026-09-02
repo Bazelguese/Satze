@@ -41,6 +41,7 @@ export const Card = ({
   highlightBonus = false, 
   copiedAbility = null, 
   copiedBonus = null, 
+  effectiveArmyBonus = null,
   abilityNotTriggered = false, 
   bonusNotTriggered = false,
   abilityCurrentValue = null // Per Attrizione/Escalation: valore attuale da mostrare tra parentesi
@@ -48,6 +49,7 @@ export const Card = ({
   const isUsed = usedCards.includes(agent?.id);
   const colors = agent ? ARMY_COLORS[agent.army] || { bg: "from-gray-800 to-gray-700", accent: "#a9a294", text: "text-gray-200" } : {};
   const armyBonus = agent ? ARMY_BONUSES[agent.army] : null;
+  const displayArmyBonus = copiedBonus || effectiveArmyBonus || armyBonus;
   
   if (!agent) return null;
   
@@ -306,7 +308,7 @@ export const Card = ({
                     : 'text-white'
           }`}>
             <BonusFormattedFromString
-              text={copiedBonus ? copiedBonus.description : armyBonus?.description || '—'}
+              text={displayArmyBonus?.description || '—'}
             />
           </div>
           </div>

@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeDuelResolution } from './duelResolve.js';
 import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
+import { ALL_AGENTS } from '../data/cards.js';
 import {
   hasBlock,
   hasCopy,
@@ -211,6 +212,7 @@ describe('computeDuelResolution (integrazione)', () => {
     expect(battleResult.enemyToxinActivated).toEqual(
       expect.objectContaining({ value: 2, minHealth: 10 })
     );
+    expect(battleResult.playerEffectiveArmyBonus?.description).toMatch(/Tossina 2/);
   });
 
   it('Il Circuito fa attivare il Potere del primo con trigger Sfida', () => {
@@ -518,5 +520,48 @@ describe('computeDuelResolution (integrazione)', () => {
     });
     expect(battleResult.playerPower).toBe(3);
     expect(hasFieldRule(battleResult.events, 'positivePowerModifiersDisabled', 98)).toBe(true);
+  });
+
+  it('Inversione: Undicesima Megalopoli malus campo invertiti per il giocatore', () => {
+    const megalopoli = ALL_BATTLEFIELDS.find((f) => f.id === 75);
+    const mezzanotte = ALL_AGENTS.find((c) => c.id === 220);
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      field: megalopoli,
+      selectedFocus: 3,
+      enemySelectedFocus: 4,
+      selectedAgent: mezzanotte,
+      enemyAgent: agent('IA', 'Kethran', { power: 4, damage: 3, league: 5 }),
+    });
+    // Campo −1 POT, −3 VA → con Inversione: +1 POT, +3 VA rispetto al base 3
+    expect(battleResult.playerPower).toBe(4);
+    expect(battleResult.playerAssault).toBe(15); // 4 POT × 3 FC + 3 VA mod
+    // Nemico senza Inversione: 4 − 1 = 3 POT, VA 3×4 − 3 = 9
+    expect(battleResult.enemyPower).toBe(3);
+    expect(battleResult.enemyAssault).toBe(9);
+  });
+
+  it('Khemet Overdrive Immune annulla retroattivamente le Maledizioni di slot', () => {
+    const curseBundle = {
+      slotModifiers: [{ leagueScaled: true, deltas: {} }],
+    };
+    const khemetAgent = agent('Tu', 'Khemet', {
+      power: 5,
+      damage: 3,
+      league: 2,
+      ability: { trigger: 'intervention', effect: 'power', value: 0 },
+    });
+    const common = {
+      ...baseInput,
+      selectedAgent: khemetAgent,
+      enemyAgent: agent('IA', 'Kethran', { power: 5, damage: 3, league: 2 }),
+      playerArmyBonuses: { Khemet: true },
+      eminenceBundle: curseBundle,
+    };
+    const withoutImmune = computeDuelResolution({ ...common, selectedFocus: 2 }).battleResult;
+    const withImmune = computeDuelResolution({ ...common, selectedFocus: 5 }).battleResult;
+
+    expect(withoutImmune.playerAssaultMod).toBe(-2);
+    expect(withImmune.playerAssaultMod).toBe(0);
   });
 });

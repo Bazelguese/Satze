@@ -717,6 +717,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   copiedBonus = null,
   copiedAbilityNotTriggered = false,
   copiedBonusNotTriggered = false,
+  effectiveArmyBonus = null,
   abilityNotTriggered = false,
   bonusNotTriggered = false,
   bonusBaseInactive = false,
@@ -732,6 +733,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
   const armyBonus = ARMY_BONUSES[agent.army];
+  const displayArmyBonus = copiedBonus || effectiveArmyBonus || armyBonus;
   const spriteInfo = getCardSprite(agent);
   const basePositioning = getImagePositioning(agent.id, agent.army);
   const positioning = positioningOverride ? { ...basePositioning, ...positioningOverride } : basePositioning;
@@ -1187,9 +1189,9 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
                     : P4_FOOTER_COPY_OUTLINE,
               }}
             >
-              {copiedBonus || !(bonusBaseInactive && armyBonus) ? (
+              {copiedBonus || effectiveArmyBonus || !(bonusBaseInactive && armyBonus) ? (
                 <BonusFormattedFromString
-                  text={copiedBonus ? copiedBonus.description : armyBonus?.description || '—'}
+                  text={displayArmyBonus?.description || '—'}
                   minClassName={
                     bonusCopyText || (!bonusFooterInactive && !bonusBlocked)
                       ? DEFAULT_MIN_CLASS

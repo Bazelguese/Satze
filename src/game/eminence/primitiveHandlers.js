@@ -32,10 +32,12 @@ export function createEffectBundle() {
     armyBonusState: {},
     fieldOperations: [],
     marks: [],
+    abilityOverlays: {},
     endMatchDebts: [],
     blockedEminences: [],
     toxinApplications: [],
     slotModifiers: [],
+    anchoredThresholdChanges: [],
     logs: [],
   };
 }
@@ -44,6 +46,15 @@ export function createEffectBundle() {
  * Risolve il bersaglio di un segmento in una lista di lati.
  * `CHOSEN` legge il lato dai parametri scelti dal giocatore, non da una regola fissa.
  */
+export function inferTargetSide(params, agentIdBySide = {}) {
+  if (params?.targetSide) return params.targetSide;
+  const cardId = params?.cardId;
+  if (cardId == null || !agentIdBySide) return null;
+  if (agentIdBySide[SIDES.PLAYER] === cardId) return SIDES.PLAYER;
+  if (agentIdBySide[SIDES.ENEMY] === cardId) return SIDES.ENEMY;
+  return null;
+}
+
 export function resolveTargetSides(target, ownerSide, params = null) {
   const other = OPPOSITE_SIDE[ownerSide];
   switch (target) {
@@ -56,11 +67,42 @@ export function resolveTargetSides(target, ownerSide, params = null) {
     case T.BOTH:
     case T.GLOBAL:
       return [ownerSide, other];
-    case T.CHOSEN:
-      return params?.targetSide ? [params.targetSide] : [];
+    case T.CHOSEN: {
+      const side = inferTargetSide(params);
+      return side ? [side] : [];
+    }
     default:
       return [ownerSide];
   }
+}
+
+function resolveMarkCardIds(segment, ctx) {
+  if (segment.target === T.OWN_AGENT) {
+    const id = ctx.agentIdBySide?.[ctx.ownerSide];
+    return id == null ? [] : [id];
+  }
+  if (segment.target === T.ENEMY_AGENT) {
+    const id = ctx.agentIdBySide?.[OPPOSITE_SIDE[ctx.ownerSide]];
+    return id == null ? [] : [id];
+  }
+
+  if (Array.isArray(ctx.params?.cardIds)) return [...ctx.params.cardIds];
+  if (Array.isArray(ctx.params?.fragmentCardIds)) return [...ctx.params.fragmentCardIds];
+  if (ctx.params?.fragmentCardId != null) return [ctx.params.fragmentCardId];
+  if (ctx.params?.preyCardId != null) return [ctx.params.preyCardId];
+  if (ctx.params?.cardId != null) return [ctx.params.cardId];
+  const named = [ctx.params?.triggerFragmentId, ctx.params?.effectFragmentId].filter((id) => id != null);
+  if (named.length) return [...new Set(named)];
+  return [...(segment.cardIds || [])];
+}
+
+function overlayAbilityFields(ability) {
+  if (!ability || typeof ability !== 'object') return {};
+  const overlay = {};
+  for (const key of ['effect', 'value', 'minPower', 'minDamage', 'minAssault', 'minHealth', 'stat']) {
+    if (Object.prototype.hasOwnProperty.call(ability, key)) overlay[key] = ability[key];
+  }
+  return overlay;
 }
 
 const handlers = {
@@ -97,6 +139,16 @@ const handlers = {
         side,
         amount: Math.abs(segment.amount || 0),
         cause: segment.cause || HP_LOSS_CAUSES.OTHER,
+        source: ctx.source,
+      });
+    }
+  },
+
+  [P.MODIFY_ANCHORED_THRESHOLD]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.anchoredThresholdChanges.push({
+        side,
+        delta: segment.delta || 0,
         source: ctx.source,
       });
     }
@@ -152,10 +204,11 @@ const handlers = {
   [P.APPLY_SLOT_MODIFIER]: (bundle, segment, ctx) => {
     bundle.slotModifiers.push({
       slot: ctx.params?.slot ?? segment.slot ?? null,
-      side: segment.side ?? ctx.ownerSide,
       deltas: { ...(segment.deltas || {}) },
       leagueScaled: Boolean(segment.leagueScaled),
+      persistent: segment.persistent !== false,
       source: ctx.source,
+      ownerSide: ctx.ownerSide,
     });
   },
 
@@ -175,26 +228,60 @@ const handlers = {
   },
 
   [P.MARK_CARD]: (bundle, segment, ctx) => {
+    const cardIds = resolveMarkCardIds(segment, ctx);
+    if (!cardIds.length) return;
     bundle.marks.push({
       mark: segment.mark,
-      cardIds: [...(ctx.params?.cardIds || segment.cardIds || [])],
+      cardIds,
       persistent: Boolean(segment.persistent),
+      consume: Boolean(segment.consume),
+      side: ctx.ownerSide,
       source: ctx.source,
     });
   },
 
   [P.REGISTER_END_MATCH_DEBT]: (bundle, segment, ctx) => {
+    const side = inferTargetSide(ctx.params, ctx.agentIdBySide);
+    if (!side) return;
     bundle.endMatchDebts.push({
-      side: ctx.params?.targetSide ?? ctx.ownerSide,
-      basis: segment.basis ?? null,
+      side,
+      basis: segment.basis ?? 'FINAL_POWER',
       cardId: ctx.params?.cardId ?? null,
+      amount: segment.amount ?? null,
       source: ctx.source,
+      ownerSide: ctx.ownerSide,
     });
   },
 
   [P.BLOCK_EMINENCE]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       bundle.blockedEminences.push({ side, scope: segment.duration ?? 'NEXT_ROUND', source: ctx.source });
+    }
+  },
+
+  [P.COMPOSE_ABILITY]: (bundle, segment, ctx) => {
+    const cardIds = resolveMarkCardIds({ ...segment, target: segment.target || T.OWN_AGENT }, ctx);
+    const cardId = cardIds[0];
+    if (cardId == null) return;
+
+    const overlay = { ...((bundle.abilityOverlays ||= {})[cardId] || {}) };
+    const params = ctx.params || {};
+
+    if (Object.prototype.hasOwnProperty.call(params, 'composedTrigger')) {
+      overlay.trigger = params.composedTrigger;
+      bundle.triggerRules = applyPrimitiveToTriggerRules(bundle.triggerRules, {
+        primitive: P.REPLACE_TRIGGER,
+        cardIds: [cardId],
+        trigger: params.composedTrigger,
+      }, { ownerSide: ctx.ownerSide, source: ctx.source, params });
+    }
+
+    if (params.composedAbility) {
+      Object.assign(overlay, overlayAbilityFields(params.composedAbility));
+    }
+
+    if (Object.keys(overlay).length) {
+      bundle.abilityOverlays[cardId] = overlay;
     }
   },
 };
@@ -218,23 +305,30 @@ const TRIGGER_PRIMITIVES = new Set([
  * @param {object[]} queue voci prodotte da `completeGate` o dai pendingEffects
  * @param {object} [bundle] accumulatore su cui comporre; ne viene creato uno se assente
  */
-export function applyEminenceSegments(queue, bundle = null) {
+export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
   const target = bundle || createEffectBundle();
 
   for (const entry of queue || []) {
     const segment = entry.segment;
     if (!segment?.primitive) continue;
 
+    const agentIdBySide = entry.agentIdBySide || applyContext.agentIdBySide || {};
+    const params = { ...(entry.params || {}) };
+    const inferredSide = inferTargetSide(params, agentIdBySide);
+    if (inferredSide && !params.targetSide) params.targetSide = inferredSide;
+
     const ctx = {
       ownerSide: entry.ownerSide,
-      params: entry.params ?? null,
+      params,
       source: entry.abilityId ?? entry.sourceEminenceId ?? null,
+      agentIdBySide,
     };
 
     if (TRIGGER_PRIMITIVES.has(segment.primitive)) {
       target.triggerRules = applyPrimitiveToTriggerRules(target.triggerRules, segment, {
         ownerSide: ctx.ownerSide,
         source: ctx.source,
+        params: ctx.params,
       });
       target.logs.push({ primitive: segment.primitive, source: ctx.source, ownerSide: ctx.ownerSide });
       continue;

@@ -1359,6 +1359,121 @@ button:disabled {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
+.satze-hand-fragment-card {
+  box-shadow:
+    0 0 0 1px rgba(213, 236, 249, 0.45),
+    0 0 16px rgba(125, 211, 252, 0.28);
+}
+
+.satze-hand-fragment-mark {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 8px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(8, 16, 28, 0.82);
+  border: 1px solid rgba(186, 230, 253, 0.55);
+  color: #e0f2fe;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.satze-hand-fragment-shard {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #f8fafc, #7dd3fc);
+  box-shadow: 0 0 8px rgba(125, 211, 252, 0.8);
+}
+
+.satze-hand-prey-card {
+  box-shadow:
+    0 0 0 1px rgba(201, 226, 56, 0.5),
+    0 0 16px rgba(201, 226, 56, 0.28);
+}
+
+.satze-hand-prey-mark {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 8px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(16, 20, 8, 0.84);
+  border: 1px solid rgba(201, 226, 56, 0.55);
+  color: #ecfccb;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.satze-hand-prey-fang {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #c9e238;
+  filter: drop-shadow(0 0 6px rgba(201, 226, 56, 0.8));
+}
+
+.satze-hand-prey-card.is-prey-forging {
+  animation: satzePreyCardForge .76s ease-out both;
+}
+.satze-hand-prey-mark.is-arrive {
+  animation: satzePreyForge .76s cubic-bezier(.16,1.12,.28,1) both;
+}
+.satze-hand-prey-mark.is-arrive::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: inherit;
+  border: 2px solid rgba(201, 226, 56, 0.85);
+  box-shadow: 0 0 18px rgba(201, 226, 56, 0.55);
+  pointer-events: none;
+  animation: satzePreyForgeRing .76s ease-out both;
+}
+.satze-hand-prey-mark.is-arrive .satze-hand-prey-fang {
+  animation: satzePreyForgeFang .76s cubic-bezier(.18,1.2,.32,1) both;
+}
+@keyframes satzePreyCardForge {
+  0%{box-shadow:0 0 0 0 rgba(201,226,56,0)}
+  28%{box-shadow:0 0 0 3px rgba(201,226,56,.85), 0 0 28px rgba(201,226,56,.55)}
+  100%{box-shadow:0 0 0 1px rgba(201,226,56,.5), 0 0 16px rgba(201,226,56,.28)}
+}
+@keyframes satzePreyForge {
+  0%{opacity:0;transform:scale(.15) rotate(-22deg);filter:brightness(2.4)}
+  22%{opacity:1;transform:scale(1.28) rotate(8deg);filter:brightness(1.8)}
+  48%{transform:scale(.9) rotate(-3deg);filter:brightness(1.15)}
+  72%{transform:scale(1.08) rotate(1deg)}
+  100%{opacity:1;transform:none;filter:none}
+}
+@keyframes satzePreyForgeRing {
+  0%{opacity:0;transform:scale(.4)}
+  24%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:scale(1.7)}
+}
+@keyframes satzePreyForgeFang {
+  0%{transform:scale(0) translateY(-8px)}
+  30%{transform:scale(1.4) translateY(0)}
+  100%{transform:none}
+}
+
 /* ═══ Anteprima Overdrive — carta sul campo durante scelta FC ═══ */
 .satze-field-overdrive-card {
   z-index: 1;

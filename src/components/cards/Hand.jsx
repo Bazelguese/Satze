@@ -11,7 +11,9 @@ import { HandCard } from './HandCard';
  */
 export const Hand = React.memo(({ 
   hand = [], 
-  usedCards = [], 
+  usedCards = [],
+  fragmentCardIds = [],
+  preyCardIds = [], 
   selectedAgent, 
   onAgentSelect, 
   onPreviewClick, 
@@ -43,6 +45,9 @@ export const Hand = React.memo(({
   zoneColorHand = null,
   /** Armate esplicite per sfondo zona (max 2), es. da shuffleDealSetup. */
   zoneArmies = null,
+  /** Porta le carte sopra il velo Eminenza, così restano cliccabili (anteprima Preda). */
+  elevateCards = false,
+  arrivingPreyId = null,
 }) => {
   const [gifError, setGifError] = useState(false);
   const army = hand?.[0]?.army ?? zoneArmy;
@@ -184,7 +189,10 @@ export const Hand = React.memo(({
         }`}
         style={{
           ...style.container,
-          zIndex: (gamePhase === 'selectAgent' && position === 'bottom-right') ? 8 : 4,
+          zIndex: elevateCards
+            ? 21
+            : ((gamePhase === 'selectAgent' && position === 'bottom-right') ? 8 : 4),
+          pointerEvents: elevateCards ? 'auto' : undefined,
           willChange: 'transform',
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
@@ -221,6 +229,7 @@ export const Hand = React.memo(({
               key={agent.id}
               ref={isSelected && selectedCardRef ? selectedCardRef : undefined}
               className="absolute"
+              data-hand-agent={agent.id}
               style={cardStyle}
             >
               <HandCard
@@ -228,11 +237,14 @@ export const Hand = React.memo(({
                 cardLayout={handCardLayout}
                 selected={isSelected}
                 highlighted={highlightedAgentId === agent.id}
+                preyArriving={arrivingPreyId === agent.id}
                 onClick={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled 
                   ? () => onAgentSelect?.(agent) 
                   : undefined}
                 disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent) || disabled}
                 usedCards={usedCards}
+                fragmentCardIds={fragmentCardIds}
+                preyCardIds={preyCardIds}
                 onPreviewClick={onPreviewClick}
                 showBonus={armyBonuses[agent?.army] && isBonusTriggerSatisfied
                   ? isBonusTriggerSatisfied(agent?.army, position === 'bottom-right', agent)

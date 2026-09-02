@@ -55,6 +55,7 @@ export const EFFECT_TIMINGS = {
   POST_BATTLE: 'POST_BATTLE',
   END_ROUND: 'END_ROUND',
   END_MATCH: 'END_MATCH',
+  ON_HP_LOSS: 'ON_HP_LOSS',
 };
 
 export const EFFECT_TIMING_ORDER = [
@@ -68,6 +69,7 @@ export const EFFECT_TIMING_ORDER = [
   EFFECT_TIMINGS.POST_BATTLE,
   EFFECT_TIMINGS.END_ROUND,
   EFFECT_TIMINGS.END_MATCH,
+  EFFECT_TIMINGS.ON_HP_LOSS,
 ];
 
 /** Stato del formato rispetto al sottosistema Eminenza (spec §1.2). */
@@ -106,8 +108,22 @@ export const EMINENCE_PRIMITIVES = {
   DESTROY_FIELD: 'DESTROY_FIELD',
   APPLY_TOXIN: 'APPLY_TOXIN',
   MARK_CARD: 'MARK_CARD',
+  COMPOSE_ABILITY: 'COMPOSE_ABILITY',
   REGISTER_END_MATCH_DEBT: 'REGISTER_END_MATCH_DEBT',
   BLOCK_EMINENCE: 'BLOCK_EMINENCE',
+  MODIFY_ANCHORED_THRESHOLD: 'MODIFY_ANCHORED_THRESHOLD',
+};
+
+/**
+ * Origini dinamiche per `paramsSchema`. Il catalogo dichiara la fonte; la vista della
+ * scelta la materializza sullo stato persistente pubblico (es. gli id già marcati).
+ */
+export const PARAM_SOURCES = {
+  OWN_FRAGMENTS: 'OWN_FRAGMENTS',
+  ENEMY_UNDEPLOYED: 'ENEMY_UNDEPLOYED',
+  UNDEPLOYED_AGENTS: 'UNDEPLOYED_AGENTS',
+  CONFIRMED_AGENTS: 'CONFIRMED_AGENTS',
+  BATTLEFIELD_SLOTS: 'BATTLEFIELD_SLOTS',
 };
 
 /** Bersagli ammessi dalle primitive. */

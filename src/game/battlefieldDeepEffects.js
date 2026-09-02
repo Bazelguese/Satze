@@ -71,13 +71,17 @@ export function scaleConquestEffectValue(value, fieldOptions) {
 }
 
 /** Camera Rituale (79): Overdrive attivo → +1 POT e +1 DAN prima del VA. */
-export function applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog) {
+export function applyFieldOverdriveBonuses(field, state, overdriveThreshold, battleLog, fieldStatDeltas = null) {
   if (field?.id === 114) return; // Grande Arena: Overdrive disattivato
   if (field?.id !== 79) return;
   const threshold = overdriveThreshold ?? 5;
   if (state.pFocusUsed >= threshold) {
     state.pPower += 1;
     state.pDamage += 1;
+    if (fieldStatDeltas) {
+      fieldStatDeltas.player.power += 1;
+      fieldStatDeltas.player.damage += 1;
+    }
     battleLog.push(
       `🔮 Camera Rituale: TU Overdrive attivo! +1 POT, +1 DAN → ${state.pPower}P/${state.pDamage}D`
     );
@@ -85,6 +89,10 @@ export function applyFieldOverdriveBonuses(field, state, overdriveThreshold, bat
   if (state.eFocusUsed >= threshold) {
     state.ePower += 1;
     state.eDamage += 1;
+    if (fieldStatDeltas) {
+      fieldStatDeltas.enemy.power += 1;
+      fieldStatDeltas.enemy.damage += 1;
+    }
     battleLog.push(
       `🔮 Camera Rituale: IA Overdrive attivo! +1 POT, +1 DAN → ${state.ePower}P/${state.eDamage}D`
     );
@@ -95,13 +103,18 @@ export function applyFieldOverdriveBonuses(field, state, overdriveThreshold, bat
  * Effetti campo che dipendono da POT/DAN finali o che chiudono il pre-VA:
  * 92 (DAN più alta → −4 VA), 99 (±2 da base), 86 (×2 mod VA).
  */
-export function applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog) {
+export function applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLog, fieldStatDeltas = null) {
   const id = field?.id ?? 0;
   const fn = field?.name || 'Campo';
 
   if (id === 92) {
-    if (state.pDamage > state.eDamage && !state.pImmune) state.pAssaultMod -= 4;
-    else if (state.eDamage > state.pDamage && !state.eImmune) state.eAssaultMod -= 4;
+    if (state.pDamage > state.eDamage && !state.pImmune) {
+      state.pAssaultMod -= 4;
+      if (fieldStatDeltas) fieldStatDeltas.player.assaultMod -= 4;
+    } else if (state.eDamage > state.pDamage && !state.eImmune) {
+      state.eAssaultMod -= 4;
+      if (fieldStatDeltas) fieldStatDeltas.enemy.assaultMod -= 4;
+    }
     battleLog.push(`🏚️ ${fn}: −4 VA a chi ha DAN più alta`);
   }
 
@@ -129,10 +142,12 @@ export function applyDuelFieldLateEffects(field, state, pAgent, eAgent, battleLo
   if (id === 117) {
     if (state.pAbilityBlocked || state.pBonusBlocked) {
       state.pPower += 1;
+      if (fieldStatDeltas) fieldStatDeltas.player.power += 1;
       battleLog.push(`🎭 ${fn}: TU Potere/Bonus disattivato · +1 POT → ${state.pPower}`);
     }
     if (state.eAbilityBlocked || state.eBonusBlocked) {
       state.ePower += 1;
+      if (fieldStatDeltas) fieldStatDeltas.enemy.power += 1;
       battleLog.push(`🎭 ${fn}: IA Potere/Bonus disattivato · +1 POT → ${state.ePower}`);
     }
   }

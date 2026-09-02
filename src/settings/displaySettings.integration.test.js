@@ -71,6 +71,19 @@ describe('displaySettings', () => {
     expect(n.cursorTrailDuration).toBe(DEFAULT_DISPLAY_SETTINGS.cursorTrailDuration);
   });
 
+  it('resolves eminence card life per side', async () => {
+    const { resolveEminenceCardLife } = await import('./displaySettings.js');
+    expect(resolveEminenceCardLife('player', { eminenceFoil: false })).toBe('arena');
+    expect(resolveEminenceCardLife('player', { eminenceFoil: true })).toBe('holo');
+    expect(resolveEminenceCardLife('enemy', { eminenceFoil: true })).toBe('arena');
+    expect(resolveEminenceCardLife('enemy', { eminenceFoil: false }, { opponentFoil: true })).toBe('holo');
+  });
+
+  it('persists eminence foil preference', () => {
+    setDisplaySettings({ eminenceFoil: true });
+    expect(getDisplaySettings().eminenceFoil).toBe(true);
+  });
+
   it('resolves duel layout breath class', async () => {
     const { resolveDuelLayoutBreathClass } = await import('./displaySettings.js');
     expect(resolveDuelLayoutBreathClass({ duelLayoutBreath: 'soft', reduceMotion: false }, {})).toBe('mov-1');

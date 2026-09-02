@@ -11,6 +11,7 @@ import {
   PLAYER_CARD_POSITIONS,
   getHandAxis,
   BATTLEFIELD_VIEWPORT,
+  enemyHandIdsLeftToRight,
 } from './battlefieldHandLayout';
 import { getDuelAgentCardCenter } from './duelClashLayout';
 
@@ -70,5 +71,11 @@ describe('battlefieldHandLayout', () => {
     expect(playerExit.y).toBeGreaterThan(BATTLEFIELD_VIEWPORT.height * 0.75);
     expect(enemyExit.x).toBeLessThan(0);
     expect(enemyExit.y).toBeLessThan(BATTLEFIELD_VIEWPORT.height * 0.35);
+  });
+
+  it('scegli la Preda elenca gli Agenti IA da sinistra a destra come in mano', () => {
+    const hand = [10, 20, 30, 40, 50].map((id) => ({ id }));
+    expect(enemyHandIdsLeftToRight(hand)).toEqual([50, 40, 30, 20, 10]);
+    expect(enemyHandIdsLeftToRight(hand, [30])).toEqual([50, 40, 20, 10]);
   });
 });

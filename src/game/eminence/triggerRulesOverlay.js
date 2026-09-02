@@ -47,11 +47,23 @@ function cloneTriggerRules(rules) {
 // Costruzione dell'overlay a partire dalle primitive
 // ------------------------------------------------------------------
 
+function cardIdsFromParams(params) {
+  if (!params) return [];
+  if (Array.isArray(params.cardIds)) return params.cardIds.filter((id) => id != null);
+  if (params.cardId != null) return [params.cardId];
+  if (params.preyCardId != null) return [params.preyCardId];
+  if (params.fragmentCardId != null) {
+    return Array.isArray(params.fragmentCardId) ? params.fragmentCardId : [params.fragmentCardId];
+  }
+  return [];
+}
+
 function buildEntry(segment, ownerSide, source) {
   return {
     scope: segment.scope || TRIGGER_SCOPES.OWN,
     ownerSide,
     triggers: segment.triggers ? [...segment.triggers] : null,
+    excludeTriggers: segment.excludeTriggers ? [...segment.excludeTriggers] : null,
     cardIds: segment.cardIds ? [...segment.cardIds] : null,
     source,
   };
@@ -68,7 +80,7 @@ function buildEntry(segment, ownerSide, source) {
  * @param {'player'|'enemy'} options.ownerSide lato che ha attivato l'abilità
  * @param {string} options.source id abilità/statico, per tracciabilità nel log
  */
-export function applyPrimitiveToTriggerRules(rules, segment, { ownerSide = SIDES.PLAYER, source = null } = {}) {
+export function applyPrimitiveToTriggerRules(rules, segment, { ownerSide = SIDES.PLAYER, source = null, params = null } = {}) {
   const next = cloneTriggerRules(rules || createTriggerRules());
   const entry = buildEntry(segment, ownerSide, source ?? segment.source ?? null);
 
@@ -99,15 +111,26 @@ export function applyPrimitiveToTriggerRules(rules, segment, { ownerSide = SIDES
       const target = segment.persistent
         ? next.persistentReplacementsByCardId
         : next.replacementsByCardId;
-      for (const cardId of segment.cardIds || []) {
-        target[cardId] = { trigger: segment.trigger, source: entry.source };
+      const cardIds = segment.cardIds?.length
+        ? segment.cardIds
+        : cardIdsFromParams(params);
+      for (const cardId of cardIds) {
+        target[cardId] = { trigger: segment.trigger, source: entry.source, ownerSide };
       }
       break;
     }
 
-    case P.ALIAS_TRIGGER:
-      next.aliases.push({ ...entry, map: { ...(segment.map || {}) } });
+    case P.ALIAS_TRIGGER: {
+      const map = { ...(segment.map || {}) };
+      // `aliasParam` deposita l'alternativa su `*`: vale per qualunque trigger effettivo,
+      // così il catalogo non deve conoscere il trigger dell'Agente al momento della scelta.
+      const fromParam = segment.aliasParam ? params?.[segment.aliasParam] : null;
+      if (fromParam) {
+        map['*'] = [...(map['*'] || []), fromParam];
+      }
+      next.aliases.push({ ...entry, map });
       break;
+    }
 
     default:
       // Le primitive non attinenti ai trigger non toccano questo overlay.
@@ -157,6 +180,7 @@ function scopeMatches(entry, side) {
 function entryMatches(entry, { side, effectiveTrigger, card }) {
   if (!scopeMatches(entry, side)) return false;
   if (entry.triggers && !entry.triggers.includes(effectiveTrigger)) return false;
+  if (entry.excludeTriggers && entry.excludeTriggers.includes(effectiveTrigger)) return false;
   if (entry.cardIds && !entry.cardIds.includes(card?.id)) return false;
   return true;
 }
@@ -211,13 +235,18 @@ export function resolveTriggerState({
 
   // --- 2. Condizione naturale + alias --------------------------------------
   // Un alias aggiunge una condizione alternativa valida: non cambia il trigger posseduto
-  // dal Potere né il timing della sua sorgente.
+  // dal Potere né il timing della sua sorgente. `*` vale per qualunque trigger effettivo.
   let naturalSatisfied = checkTrigger(effectiveTrigger, context);
+  let aliasUsed = false;
 
   const alias = findMatch(rules.aliases, match);
   if (!naturalSatisfied && alias) {
-    const alternatives = alias.map?.[effectiveTrigger] || [];
-    naturalSatisfied = alternatives.some((alternative) => checkTrigger(alternative, context));
+    const alternatives = [
+      ...(alias.map?.[effectiveTrigger] || []),
+      ...(alias.map?.['*'] || []),
+    ];
+    aliasUsed = alternatives.some((alternative) => checkTrigger(alternative, context));
+    if (aliasUsed) naturalSatisfied = true;
   }
 
   // --- 3. Force / Forbid ---------------------------------------------------
@@ -253,6 +282,7 @@ export function resolveTriggerState({
     originalTrigger: originalTrigger ?? null,
     effectiveTrigger: effectiveTrigger ?? null,
     naturalSatisfied,
+    aliasUsed,
     satisfied,
     forced,
     forbidden,

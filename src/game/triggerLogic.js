@@ -139,6 +139,10 @@ export const checkTrigger = (trigger, context) => {
         // Almeno 2 altre carte della stessa Lega in mano iniziale, oltre alla carta giocata.
         return Math.max(0, (context.playerInitialLeagueCount || 0) - 1) >= 2;
 
+      case 'debt':
+        // Debito: "quando viene schierato" — al controllo del Potere l'Agente è già in campo.
+        return true;
+
       // TRIGGER EMINENZA
       //
       // Leggono valori già campionati a PRESENCE_SNAPSHOT, non contatori vivi: una

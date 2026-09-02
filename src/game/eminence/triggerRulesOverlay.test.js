@@ -141,25 +141,43 @@ test('alias: aggiunge una condizione alternativa valida', () => {
   assert.equal(state.forced, false);
 });
 
-test('alias: non inventa soddisfazione quando nemmeno l\'alternativa regge', () => {
+test('alias: la mappa * vale per qualunque trigger effettivo', () => {
   const rules = withRule(P.ALIAS_TRIGGER, {
-    scope: TRIGGER_SCOPES.GLOBAL,
-    map: { glory: ['vendetta'] },
+    scope: TRIGGER_SCOPES.OWN,
+    map: { '*': ['imboscata'] },
   });
-  assert.equal(resolve('glory', rules).naturalSatisfied, false);
+
+  const state = resolve('turbo', rules, { context: { isFirst: true, roundNumber: 3 } });
+  assert.equal(state.naturalSatisfied, true);
+  assert.equal(state.aliasUsed, true);
+});
+
+test('alias: aliasParam deposita l\'alternativa letta dai parametri', () => {
+  const rules = applyPrimitiveToTriggerRules(
+    createTriggerRules(),
+    segment(P.ALIAS_TRIGGER, { scope: TRIGGER_SCOPES.OWN, aliasParam: 'fragmentTrigger' }),
+    { ownerSide: SIDES.PLAYER, source: 'test', params: { fragmentTrigger: 'imboscata' } }
+  );
+
+  const state = resolve('glory', rules, { context: { isFirst: true } });
+  assert.equal(state.aliasUsed, true);
+  assert.equal(state.naturalSatisfied, true);
 });
 
 // ------------------------------------------------------------------
 // Force / Forbid (§7.3 passo 3)
 // ------------------------------------------------------------------
 
-test('force: rende soddisfatto un trigger che non lo era', () => {
-  const rules = withRule(P.FORCE_TRIGGER, { scope: TRIGGER_SCOPES.OWN, triggers: ['turbo'] });
-  const state = resolve('turbo', rules);
+test('force: senza elenco di trigger vale per tutti, salvo excludeTriggers', () => {
+  const rules = withRule(P.FORCE_TRIGGER, {
+    scope: TRIGGER_SCOPES.OWN,
+    excludeTriggers: ['conquest', 'lastWish'],
+  });
 
-  assert.equal(state.naturalSatisfied, false);
-  assert.equal(state.satisfied, true);
-  assert.equal(state.forced, true);
+  assert.equal(resolve('turbo', rules).forced, true);
+  assert.equal(resolve('glory', rules).forced, true);
+  assert.equal(resolve('conquest', rules).forced, false);
+  assert.equal(resolve('lastWish', rules).forced, false);
 });
 
 test('forbid: annulla un trigger naturalmente soddisfatto', () => {

@@ -412,6 +412,22 @@ export function OptionsScreen({ onClose }) {
             </div>
           </Row>
 
+          <Row label="Eminenze foil" hint="Lamina olografica sulle tue Eminenze in partita">
+            <button
+              type="button"
+              onClick={() => persistPresentation({ eminenceFoil: !settings.eminenceFoil })}
+              style={{
+                ...segmentBtnStyle(settings.eminenceFoil, '#c084fc'),
+                flex: '0 0 auto',
+                minWidth: 120,
+                paddingLeft: '1.25rem',
+                paddingRight: '1.25rem',
+              }}
+            >
+              {settings.eminenceFoil ? 'Attivo' : 'Disattivo'}
+            </button>
+          </Row>
+
           <Row label="Riduci animazioni" hint="Forza profilo effetti Basso">
             <button
               type="button"

@@ -78,6 +78,7 @@ export function buildDuelTurnContexts({
       enemyFieldsConquered,
       roundNumber: rn,
       playerInitialLeagueCount,
+      card: pAgent,
       ...buildPresenceFields(presenceSnapshot?.player, playerHasEminence, enemyHasEminence),
     },
     enemyContext: {
@@ -96,6 +97,7 @@ export function buildDuelTurnContexts({
       enemyFieldsConquered: playerFieldsConquered,
       roundNumber: rn,
       playerInitialLeagueCount: enemyInitialLeagueCount,
+      card: eAgent,
       ...buildPresenceFields(presenceSnapshot?.enemy, enemyHasEminence, playerHasEminence),
     },
   };

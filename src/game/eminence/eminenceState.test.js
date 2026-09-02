@@ -159,6 +159,15 @@ test('igiene informativa: Khemet apre tutte e tre le attive a PRE_FIELD', () => 
   ]);
 });
 
+test('igiene informativa: i Figli aprono tutte e tre le attive a GENERAL', () => {
+  const gates = EMINENCES.figli_domanda_senza_fine.abilities.map((a) => a.revealGate);
+  assert.deepEqual(gates, [
+    REVEAL_GATES.GENERAL,
+    REVEAL_GATES.GENERAL,
+    REVEAL_GATES.GENERAL,
+  ]);
+});
+
 // ------------------------------------------------------------------
 // Eleggibilità e deckbuilding (§1.2)
 // ------------------------------------------------------------------

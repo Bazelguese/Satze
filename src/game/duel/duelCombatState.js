@@ -34,7 +34,7 @@ export function pickPostBattleFields(state) {
   };
 }
 
-export function createDuelCombatState(duel) {
+export function createDuelCombatState(duel, fieldStatDeltas = null, slotCurseStatDeltas = null) {
   return {
     pPower: duel.pPower,
     ePower: duel.ePower,
@@ -68,5 +68,7 @@ export function createDuelCombatState(duel) {
     enemyToxinActivated: null,
     pModifierInversion: false,
     eModifierInversion: false,
+    fieldStatDeltas,
+    slotCurseStatDeltas,
   };
 }

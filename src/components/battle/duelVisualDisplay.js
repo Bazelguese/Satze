@@ -10,6 +10,18 @@ import {
 
 const POST_DUEL_TRIGGERS = new Set(['conquest', 'lastWish']);
 
+/** Bonus armata mostrato in duello: Copia Bonus > bonus risolto dal Campo > dati armata. */
+export function resolveDuelArmyBonusDisplay(battleResult, isPlayer) {
+  const copied = isPlayer ? battleResult?.playerBonusCopied : battleResult?.enemyBonusCopied;
+  if (copied) return copied;
+  const effective = isPlayer
+    ? battleResult?.playerEffectiveArmyBonus
+    : battleResult?.enemyEffectiveArmyBonus;
+  if (effective) return effective;
+  const agent = isPlayer ? battleResult?.playerAgent : battleResult?.enemyAgent;
+  return agent?.army ? ARMY_BONUSES[agent.army] : null;
+}
+
 function fallbackSteps(battleResult) {
   if (!battleResult?.playerAgent || !battleResult?.enemyAgent) return [];
   const p = battleResult.playerAgent;
@@ -246,12 +258,8 @@ export function getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep = 1
 
   const playerAbility = battleResult.playerAbilityCopied || battleResult.playerAgent?.ability;
   const enemyAbility = battleResult.enemyAbilityCopied || battleResult.enemyAgent?.ability;
-  const playerBonusDef =
-    battleResult.playerBonusCopied ||
-    (battleResult.playerAgent?.army ? ARMY_BONUSES[battleResult.playerAgent.army] : null);
-  const enemyBonusDef =
-    battleResult.enemyBonusCopied ||
-    (battleResult.enemyAgent?.army ? ARMY_BONUSES[battleResult.enemyAgent.army] : null);
+  const playerBonusDef = resolveDuelArmyBonusDisplay(battleResult, true);
+  const enemyBonusDef = resolveDuelArmyBonusDisplay(battleResult, false);
 
   const playerAbilityFirstPre = findFirstAbilityTriggerStep(steps, true, { preOnly: true });
   const enemyAbilityFirstPre = findFirstAbilityTriggerStep(steps, false, { preOnly: true });

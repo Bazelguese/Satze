@@ -9,6 +9,7 @@ import {
   SIDES,
 } from './eminenceConstants.js';
 import { EMINENCES, getEminence, getEminenceForArmy } from '../../data/eminences.js';
+import { cloneSlotCurses } from './slotCurses.js';
 
 // ------------------------------------------------------------------
 // Eleggibilità e deckbuilding (§1.2)
@@ -111,6 +112,7 @@ export function createEminencePersistentState() {
     fragmentCardIds: [],
     preyCardIds: [],
     debitoByCardId: {},
+    triggerReplacementsByCardId: {},
     endMatchDebts: [],
     slotCurses: {},
     custom: {},
@@ -152,6 +154,9 @@ export function createEminenceState(eminenceId = null) {
     blockedThisRound: false,
     blockedNextRound: false,
 
+    setupCommitted: false,
+    setupParams: null,
+
     persistent: createEminencePersistentState(),
     round: createEminenceRoundState(),
   };
@@ -172,6 +177,7 @@ export function createEminenceMatchState({
   return {
     format,
     enabled: true,
+    setupRevealed: false,
     [SIDES.PLAYER]: createEminenceState(playerEminenceId),
     [SIDES.ENEMY]: createEminenceState(enemyEminenceId),
   };
@@ -237,6 +243,7 @@ export function selectPublicEminenceState(state) {
     revealGateReached: state.revealGateReached,
     blockedThisRound: state.blockedThisRound,
     hasSealedSelection: Boolean(state.selectedAbilityId) && !state.revealedAbilityId,
+    hasSealedSetup: Boolean(state.setupCommitted),
     persistent: selectPublicPersistentState(state.persistent),
   };
 }
@@ -254,8 +261,9 @@ export function selectPublicPersistentState(persistent) {
     fragmentCardIds: [...persistent.fragmentCardIds],
     preyCardIds: [...persistent.preyCardIds],
     debitoByCardId: { ...persistent.debitoByCardId },
-    endMatchDebts: persistent.endMatchDebts.map((debt) => ({ ...debt })),
-    slotCurses: { ...persistent.slotCurses },
+    triggerReplacementsByCardId: { ...(persistent.triggerReplacementsByCardId || {}) },
+    endMatchDebts: (persistent.endMatchDebts || []).map((debt) => ({ ...debt })),
+    slotCurses: cloneSlotCurses(persistent.slotCurses),
   };
 }
 
@@ -268,6 +276,7 @@ export function selectPrivateEminenceSelection(state) {
     selectedParams: state.selectedParams,
     selectionSnapshotPresence: state.selectionSnapshotPresence,
     committedPresenceCost: state.committedPresenceCost,
+    setupParams: state.setupParams,
   };
 }
 

@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   getDuelVisualDisplay,
   buildVaModProgressionLines,
+  resolveDuelArmyBonusDisplay,
 } from '../../components/battle/duelVisualDisplay.js';
+import { MERIDIANO_SOLE_VERDE_BONUS } from '../../game/battlefieldDeepEffects.js';
 
 const preVaStep = {
   kind: 'preVa',
@@ -471,5 +473,22 @@ describe('buildVaModProgressionLines', () => {
     expect(lines).toHaveLength(2);
     expect(lines[0].main).toBe('+2 mod VA');
     expect(lines[1].main).toBe('+3 mod VA');
+  });
+
+  it('resolveDuelArmyBonusDisplay: bonus Campo sostitutivo prima del fallback armata', () => {
+    const br = {
+      playerAgent: { army: "Figli dell'Orizzonte" },
+      playerEffectiveArmyBonus: MERIDIANO_SOLE_VERDE_BONUS,
+    };
+    expect(resolveDuelArmyBonusDisplay(br, true)?.description).toMatch(/Invasione/);
+  });
+
+  it('resolveDuelArmyBonusDisplay: Copia Bonus prevale sul bonus Campo', () => {
+    const br = {
+      playerAgent: { army: "Figli dell'Orizzonte" },
+      playerEffectiveArmyBonus: MERIDIANO_SOLE_VERDE_BONUS,
+      playerBonusCopied: { description: 'Rimonta: +2 POT', trigger: 'rimonta', effects: [] },
+    };
+    expect(resolveDuelArmyBonusDisplay(br, true)?.description).toMatch(/Rimonta/);
   });
 });

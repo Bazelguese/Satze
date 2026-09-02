@@ -27,18 +27,39 @@ import { checkTrigger } from '../src/game/triggerLogic';
 import { getFieldModifiers, fieldGrantsOverdriveBonus } from '../src/game/fieldLogic';
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
-import { needsEminenceRoundOpen, openEminenceRound, autoSelectForcedChoices, autoSelectFirstLegalAbility } from '../src/game/eminence/eminenceDuelGate.js';
-import { selectEminenceAbility } from '../src/game/eminence/eminenceRound.js';
+import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice } from '../src/game/eminence/eminenceDuelGate.js';
+import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
+import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
+import { readHpDelta } from '../src/game/eminence/eminenceDuelBinding.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
+import { noticesFromRoundStart, noticesFromSetupPending } from '../src/game/eminence/eminenceAnnouncements.js';
+import { resolveNoticeCinematics, playNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
+import { isEminenceSubsystemEnabled } from '../src/game/eminence/eminenceState.js';
+import { stampComposeParams } from '../src/game/eminence/composeAbilityParams.js';
+import { mergeSlotCurseCounts } from '../src/game/eminence/slotCurses.js';
+import { REVEAL_GATES } from '../src/game/eminence/eminenceConstants.js';
 import {
   buildEminenceChoiceView,
   isAwaitingEminenceChoice,
+  isAwaitingRevealParams,
+  shouldHoldDuelForEminence,
+  canSelectBattlefield,
+  shouldShowEminenceAbilityRail,
+  shouldShowEminenceSideZone,
   shouldShowEminenceLayer,
+  shouldRevealEnemyHandForEminenceChoice,
+  shouldRevealBoardForEminenceChoice,
   isEminenceTableInspectable,
   resolveEminenceChromeVisible,
+  legalPreyIdsForChoice,
+  legalFragmentIdsForChoice,
+  legalCardIdsForChoice,
+  legalSlotIndicesForChoice,
 } from '../src/game/eminence/eminenceChoiceView.js';
 import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
+import { EminenceMarkFlight, useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence/EminenceMarkFlight.jsx';
+import { waitForFieldAgentEntrance } from '../src/components/eminence/eminenceMarkCinematic.js';
 import { formatAIReasoningLogText } from '../src/game/ai/aiDebug.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
@@ -56,7 +77,7 @@ import {
   armyMenuLabel,
   buildDialogueDuelArmyChoices,
 } from '../src/utils/devDialogueDuelMenu';
-import { IA_CARD_POSITIONS, PLAYER_CARD_POSITIONS } from '../src/config/battlefieldHandLayout';
+import { IA_CARD_POSITIONS, PLAYER_CARD_POSITIONS, enemyHandIdsLeftToRight } from '../src/config/battlefieldHandLayout';
 import { useGameState, useAnimations, useBattle, useDragAndDrop, useGameFlow, useAI, useTutorial, useCampaignGameOutcome, useGuidedTutorialFlow, useTutorialOrchestrator, useEventCallback } from '../src/hooks';
 import {
   ADV_STAGE_EPILOGUE,
@@ -151,6 +172,13 @@ function getGuidedEnemyDeployDelayMs() {
   return 500 + Math.floor(Math.random() * 501);
 }
 
+function phaseForEminenceGate(gate) {
+  if (gate === REVEAL_GATES.PRE_AGENT) return 'selectAgent';
+  if (gate === REVEAL_GATES.PRE_FIELD) return 'selectField';
+  if (gate === REVEAL_GATES.GENERAL) return 'battle';
+  return null;
+}
+
 // ============================================
 // COMPONENTE PRINCIPALE
 // ============================================
@@ -226,6 +254,26 @@ export default function SatzeGame() {
     setEminenceMatchState,
   } = gameState;
 
+  const [emDraftId, setEmDraftId] = useState(null);
+  const [emDraftParams, setEmDraftParams] = useState(null);
+  const [eminenceNotices, setEminenceNotices] = useState([]);
+  const [pendingEminencePhase, setPendingEminencePhase] = useState(null);
+  const setupAnnounceShownRef = useRef(false);
+  const eminenceSetupSceneRef = useRef(null);
+  const playerZoneKeptRef = useRef(false);
+  const enemyZoneKeptRef = useRef(false);
+  const eminenceChoiceFlushedRoundRef = useRef(null);
+  const outcomeNoticesShownKeyRef = useRef(null);
+  const [peekCampo, setPeekCampo] = useState(false);
+  const [peekEminence, setPeekEminence] = useState(false);
+  const [focusedMark, setFocusedMark] = useState(null);
+  const [announceHeldId, setAnnounceHeldId] = useState(null);
+  const noticeSparkRef = useRef(new Set());
+  const awaitingRevealParamsRef = useRef(false);
+  const pendingDuelAfterRevealRef = useRef(false);
+  const revealHpCommittedRef = useRef({ player: 0, enemy: 0 });
+  const openedEminenceGatesRef = useRef(new Set());
+
   /**
    * Apertura del round Eminenza.
    *
@@ -233,20 +281,29 @@ export default function SatzeGame() {
    * ha bisogno di `conqueredFields` aggiornato, che nello stesso batch è ancora quello del
    * round precedente. È di layout perché il tabellone non deve mostrare per un frame il Campo
    * che sta per essere sostituito.
+   *
+   * Non apre durante lo shuffle: la scelta Eminenza è il primo passo del round a carte in
+   * mano, dopo la consegna. Sigillarla prima del deal saltava la fase.
    */
   useLayoutEffect(() => {
+    if (gamePhase === 'shuffleDeal') return;
+    if (animations.showFinalRoundAnimation) return;
     if (!needsEminenceRoundOpen(eminenceMatchState, roundNumber)) return;
 
-    const { matchState: opened, bundle } = openEminenceRound(eminenceMatchState, {
+    openedEminenceGatesRef.current = new Set();
+    revealHpCommittedRef.current = { player: 0, enemy: 0 };
+    const { matchState: opened, bundle, appliedEffects } = openEminenceRound(eminenceMatchState, {
       roundNumber,
       initiativeSide: isPlayerFirst ? 'player' : 'enemy',
     });
-    let next = autoSelectForcedChoices(opened);
+    let next = opened;
     // Vs IA la scelta avversaria è simultanea e segreta: la sigilliamo qui, senza UI.
+    // Il giocatore sceglie dalla rail, anche se resta una sola abilità legale.
     if (aiDifficulty !== 'multiplayer') {
       next = autoSelectFirstLegalAbility(next, 'enemy');
     }
     setEminenceMatchState(next);
+    setEminenceNotices(noticesFromRoundStart(next, appliedEffects));
 
     if (!bundle?.fieldOperations.length) return;
     const replaced = applyFieldOperations(bundle.fieldOperations, {
@@ -255,6 +312,8 @@ export default function SatzeGame() {
     });
     if (replaced.changes.length) setBattlefields(replaced.battlefields);
   }, [
+    gamePhase,
+    animations.showFinalRoundAnimation,
     eminenceMatchState,
     roundNumber,
     isPlayerFirst,
@@ -265,44 +324,312 @@ export default function SatzeGame() {
     setBattlefields,
   ]);
 
-  const [emDraftId, setEmDraftId] = useState(null);
-  const [peekCampo, setPeekCampo] = useState(false);
-  const [peekEminence, setPeekEminence] = useState(false);
-  const eminenceChoiceView = useMemo(
-    () => buildEminenceChoiceView(eminenceMatchState, 'player'),
-    [eminenceMatchState],
+  const enemyUndeployedCardIds = useMemo(
+    () => enemyHandIdsLeftToRight(enemyHand, enemyUsedCards),
+    [enemyHand, enemyUsedCards],
   );
+  const playerUndeployedCardIds = useMemo(
+    () => (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)).map((card) => card.id),
+    [playerHand, playerUsedCards],
+  );
+  const slotCurseCounts = useMemo(
+    () => mergeSlotCurseCounts(
+      eminenceMatchState?.player?.persistent?.slotCurses,
+      eminenceMatchState?.enemy?.persistent?.slotCurses,
+    ),
+    [eminenceMatchState?.player?.persistent?.slotCurses, eminenceMatchState?.enemy?.persistent?.slotCurses],
+  );
+  const eminenceChoiceView = useMemo(
+    () => buildEminenceChoiceView(eminenceMatchState, 'player', {
+      enemyUndeployedCardIds,
+      ownUndeployedCardIds: playerUndeployedCardIds,
+      confirmedAgents: [
+        selectedAgent ? { id: selectedAgent.id, side: 'player', label: selectedAgent.name } : null,
+        enemyAgent ? { id: enemyAgent.id, side: 'enemy', label: enemyAgent.name } : null,
+      ].filter(Boolean),
+      slotCount: battlefields.length,
+      slots: battlefields.map((field, index) => ({
+        index,
+        name: field?.name ?? null,
+        revealed: index < revealedFields,
+        conquered: index in conqueredFields,
+        cursed: Boolean(slotCurseCounts[index] || slotCurseCounts[String(index)]),
+      })),
+    }),
+    [
+      eminenceMatchState,
+      enemyUndeployedCardIds,
+      playerUndeployedCardIds,
+      selectedAgent,
+      enemyAgent,
+      battlefields,
+      revealedFields,
+      conqueredFields,
+      slotCurseCounts,
+    ],
+  );
+  const playerSlotKeys = useMemo(
+    () => curseSlotKeys(eminenceMatchState?.player?.persistent?.slotCurses),
+    [eminenceMatchState?.player?.persistent?.slotCurses],
+  );
+  const enemySlotKeys = useMemo(
+    () => curseSlotKeys(eminenceMatchState?.enemy?.persistent?.slotCurses),
+    [eminenceMatchState?.enemy?.persistent?.slotCurses],
+  );
+  const slotCurseAccent = ARMY_COLORS.Khemet?.accent || '#26c4e8';
+  const pendingCurseSlot = emDraftParams?.slot != null
+    ? Number(emDraftParams.slot)
+    : eminenceMatchState?.player?.selectedParams?.slot != null
+      ? Number(eminenceMatchState.player.selectedParams.slot)
+      : null;
+  const slotIsCursed = (idx) => Boolean(
+    idx != null
+    && (
+      slotCurseCounts[idx]
+      || slotCurseCounts[String(idx)]
+      || pendingCurseSlot === Number(idx)
+    ),
+  );
+  const r5Cinematic = Boolean(animations.showFinalRoundAnimation);
   const awaitingEminenceChoice =
-    isAwaitingEminenceChoice(eminenceChoiceView) && gamePhase === 'selectField';
-  const eminenceInspectable = isEminenceTableInspectable(eminenceChoiceView, gamePhase);
+    !r5Cinematic
+    && isAwaitingEminenceChoice(eminenceChoiceView)
+    && (gamePhase === 'selectField' || gamePhase === 'selectAgent');
+  const awaitingRevealParams = !r5Cinematic && isAwaitingRevealParams(eminenceChoiceView);
+  awaitingRevealParamsRef.current = awaitingRevealParams;
+  const eminenceAnnounceHold = eminenceNotices.length > 0;
+  const holdForConfirmedAgentPick = Boolean(
+    awaitingRevealParams && selectedAgent && enemyAgent && !eminenceAnnounceHold,
+  );
+  const preyFlight = useEminencePreyFlight({
+    playerPreyIds: eminenceChoiceView.self?.persistent?.preyCardIds,
+    enemyPreyIds: eminenceChoiceView.opponent?.persistent?.preyCardIds,
+    playerFragmentIds: eminenceChoiceView.self?.persistent?.fragmentCardIds,
+    enemyFragmentIds: eminenceChoiceView.opponent?.persistent?.fragmentCardIds,
+    playerSlotKeys,
+    enemySlotKeys,
+    playerAccent: ARMY_COLORS[eminenceChoiceView.self?.eminence?.army]?.accent || '#c9e238',
+    enemyAccent: ARMY_COLORS[eminenceChoiceView.opponent?.eminence?.army]?.accent || '#c9e238',
+    waitForNotice: eminenceAnnounceHold && eminenceNotices.some((notice) => notice.kind !== 'setup'),
+    resetKey: eminenceMatchState?.roundOpenedAt ?? `off-${roundNumber}`,
+  });
+  const eminenceRoundPending =
+    gamePhase !== 'shuffleDeal'
+    && isEminenceSubsystemEnabled(eminenceMatchState)
+    && needsEminenceRoundOpen(eminenceMatchState, roundNumber);
+  const eminenceSetupPending =
+    gamePhase !== 'shuffleDeal'
+    && Boolean(eminenceChoiceView.setupPending);
+  const eminenceBlocksMatch = shouldHoldDuelForEminence({
+    awaitingChoice: awaitingEminenceChoice,
+    announceHold: eminenceAnnounceHold,
+    cinematic: r5Cinematic,
+    roundPending: eminenceRoundPending,
+    setupPending: eminenceSetupPending,
+    markFlightHold: preyFlight.busy,
+  });
+  const playerEminenceNotice = eminenceNotices.find((notice) => notice.side === 'player') || null;
+  const enemyEminenceNotice = eminenceNotices.find((notice) => notice.side === 'enemy') || null;
+  const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
-    shouldShowEminenceLayer(eminenceChoiceView, { gamePhase }) && gamePhase === 'selectField';
+    !r5Cinematic
+    && (
+      eminenceAnnounceHold
+      || preyFlight.busy
+      || shouldShowEminenceLayer(eminenceChoiceView, { gamePhase })
+    );
   const showEminenceLayer = resolveEminenceChromeVisible({
     forced: forcedEminenceView,
-    peekCampo,
+    peekCampo: eminenceAnnounceHold ? false : peekCampo,
     peekEminence,
     inspectable: eminenceInspectable,
   });
+  const revealEnemyHandForPrey = shouldRevealEnemyHandForEminenceChoice(eminenceChoiceView, {
+    announcing: eminenceAnnounceHold,
+    draftId: emDraftId,
+  }) || (preyFlight.busy && preyFlight.activeKind === 'prey');
+  const revealBoardForSlot = shouldRevealBoardForEminenceChoice(eminenceChoiceView, {
+    announcing: eminenceAnnounceHold,
+    draftId: emDraftId,
+  }) || (preyFlight.busy && preyFlight.activeKind === 'slot');
+  if (eminenceChoiceView.self?.setup?.pending) {
+    eminenceSetupSceneRef.current = eminenceChoiceView.self.setup;
+  } else if (!preyFlight.busy) {
+    eminenceSetupSceneRef.current = null;
+  }
+  const playerSetupScene = eminenceChoiceView.self?.setup?.pending
+    ? eminenceChoiceView.self.setup
+    : (preyFlight.busy ? eminenceSetupSceneRef.current : null);
+  const holdSetupScene = Boolean(playerSetupScene && preyFlight.busy);
+  const showPlayerEminenceZone = shouldShowEminenceSideZone({
+    layerVisible: showEminenceLayer && Boolean(eminenceChoiceView.self?.eminence),
+    announcing: eminenceAnnounceHold,
+    hasNotice: Boolean(playerEminenceNotice),
+    setupPending: eminenceSetupPending,
+    isSetupActor: Boolean(eminenceChoiceView.self?.setup?.pending) || holdSetupScene,
+    markFlightHold: holdSetupScene,
+  });
+  const showEnemyEminenceZone = shouldShowEminenceSideZone({
+    layerVisible: showEminenceLayer && Boolean(eminenceChoiceView.opponent?.eminence),
+    announcing: eminenceAnnounceHold,
+    hasNotice: Boolean(enemyEminenceNotice),
+    setupPending: eminenceSetupPending,
+    isSetupActor: false,
+    concealForEnemyHandRead: revealEnemyHandForPrey,
+    markFlightHold: holdSetupScene,
+  });
+  if (showPlayerEminenceZone) playerZoneKeptRef.current = true;
+  if (showEnemyEminenceZone) enemyZoneKeptRef.current = true;
+  useEffect(() => {
+    const notices = [playerEminenceNotice, enemyEminenceNotice]
+      .filter((notice) => notice && notice.kind !== 'setup' && !noticeSparkRef.current.has(notice.id));
+    if (!notices.length) return undefined;
+    notices.forEach((notice) => noticeSparkRef.current.add(notice.id));
+    let cancelled = false;
+
+    const accents = {
+      player: ARMY_COLORS[eminenceChoiceView.self?.eminence?.army]?.accent || '#c9e238',
+      enemy: ARMY_COLORS[eminenceChoiceView.opponent?.eminence?.army]?.accent || '#c9e238',
+    };
+    const context = {
+      accents,
+      agentsDeployed: {
+        player: Boolean(selectedAgent),
+        enemy: Boolean(enemyAgent),
+      },
+      agentIds: {
+        player: selectedAgent?.id ?? null,
+        enemy: enemyAgent?.id ?? null,
+      },
+    };
+
+    const playOne = (notice) => playNoticeCinematics(resolveNoticeCinematics(notice, context), {
+      playLink: (flight, onDone) => {
+        if (cancelled) {
+          onDone?.();
+          return;
+        }
+        preyFlight.playLink(flight, onDone);
+      },
+      noticeId: notice.id,
+      setAnnounceHeldId,
+      waitForEntrance: (anchor) => waitForFieldAgentEntrance(anchor?.side),
+    });
+
+    (async () => {
+      for (const notice of notices) {
+        if (cancelled) return;
+        await playOne(notice);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [
+    playerEminenceNotice,
+    enemyEminenceNotice,
+    eminenceChoiceView.self?.eminence?.army,
+    eminenceChoiceView.opponent?.eminence?.army,
+    selectedAgent?.id,
+    enemyAgent?.id,
+    preyFlight.playLink,
+  ]);
+  const slotShowsCurse = (idx) => {
+    const persisted = Boolean(slotCurseCounts[idx] || slotCurseCounts[String(idx)]);
+    if (persisted && !preyFlight.visibleSlotKeys.includes(Number(idx))) return false;
+    return slotIsCursed(idx);
+  };
 
   useEffect(() => {
     setEmDraftId(null);
+    setEmDraftParams(null);
   }, [roundNumber, eminenceMatchState?.player?.selectedAbilityId]);
+
+  useEffect(() => {
+    setEmDraftParams(null);
+  }, [emDraftId]);
 
   useEffect(() => {
     setPeekCampo(false);
     setPeekEminence(false);
+    setFocusedMark(null);
+    noticeSparkRef.current = new Set();
   }, [roundNumber]);
 
   useEffect(() => {
     if (forcedEminenceView) setPeekCampo(false);
   }, [forcedEminenceView]);
 
-  const confirmEminenceAbility = useCallback((abilityId) => {
+  const confirmEminenceAbility = useCallback((abilityId, params = null) => {
     setEminenceMatchState((prev) => {
-      const attempt = selectEminenceAbility(prev, 'player', abilityId);
+      const stamped = stampComposeParams(params);
+      if (stamped?.cardId != null && !stamped.targetSide) {
+        if (selectedAgent?.id === stamped.cardId) stamped.targetSide = 'player';
+        else if (enemyAgent?.id === stamped.cardId) stamped.targetSide = 'enemy';
+      }
+      if (prev?.player?.selectedAbilityId === abilityId && !prev.player.revealedAbilityId) {
+        const updated = setEminenceAbilityParams(prev, 'player', stamped);
+        return updated.ok ? updated.matchState : prev;
+      }
+      const attempt = selectEminenceAbility(prev, 'player', abilityId, stamped);
+      return attempt.ok ? attempt.matchState : prev;
+    });
+  }, [setEminenceMatchState, selectedAgent, enemyAgent]);
+
+  const confirmEminenceSetup = useCallback((params) => {
+    setEminenceMatchState((prev) => {
+      const attempt = commitEminenceSetupChoice(prev, 'player', params);
       return attempt.ok ? attempt.matchState : prev;
     });
   }, [setEminenceMatchState]);
+
+  const focusMarkToken = useCallback((cardId, sourceSide, kind = 'prey') => {
+    setFocusedMark((prev) => {
+      if (prev?.id === cardId && prev.source === sourceSide && prev.kind === kind) return null;
+      return { id: cardId, source: sourceSide, kind };
+    });
+  }, []);
+
+  const highlightIdForHand = useCallback((handSide) => {
+    if (!focusedMark?.id) return null;
+    if (focusedMark.kind === 'fragment') {
+      return focusedMark.source === handSide ? focusedMark.id : null;
+    }
+    return focusedMark.source !== handSide ? focusedMark.id : null;
+  }, [focusedMark]);
+
+  useLayoutEffect(() => {
+    if (gamePhase === 'shuffleDeal') return;
+    if (aiDifficulty === 'multiplayer') return;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
+    setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', playerUndeployedCardIds));
+  }, [
+    gamePhase,
+    aiDifficulty,
+    eminenceMatchState,
+    playerUndeployedCardIds,
+    setEminenceMatchState,
+  ]);
+
+  useLayoutEffect(() => {
+    if (gamePhase === 'shuffleDeal') {
+      setupAnnounceShownRef.current = false;
+      playerZoneKeptRef.current = false;
+      enemyZoneKeptRef.current = false;
+      eminenceSetupSceneRef.current = null;
+      noticeSparkRef.current = new Set();
+      openedEminenceGatesRef.current = new Set();
+      revealHpCommittedRef.current = { player: 0, enemy: 0 };
+      return;
+    }
+    if (!eminenceChoiceView.setupPending) return;
+    if (setupAnnounceShownRef.current) return;
+    const notices = noticesFromSetupPending(eminenceMatchState);
+    if (!notices.length) return;
+    setupAnnounceShownRef.current = true;
+    setEminenceNotices((prev) => {
+      if (prev.some((notice) => notice.kind === 'setup')) return prev;
+      return [...notices, ...prev];
+    });
+  }, [gamePhase, eminenceChoiceView.setupPending, eminenceMatchState]);
 
   /** Solo STRUMENTI DEV → DIALOGUE DUELLO: fumetti durante il duello di test. */
   const [devDialogueDuelActive, setDevDialogueDuelActive] = useState(false);
@@ -350,6 +677,151 @@ export default function SatzeGame() {
     }
     setGamePhaseRaw(nextPhase);
   }, [gamePhase, setGamePhaseAnimated, setGamePhaseRaw]);
+
+  const dismissEminenceNotice = useCallback((id) => {
+    setEminenceNotices((prev) => prev.filter((notice) => notice.id !== id));
+  }, []);
+
+  const commitEminenceAdvance = useCallback((matchState, { announceDeployedMarks = false } = {}) => {
+    if (!isEminenceSubsystemEnabled(matchState)) {
+      return { gate: null, notices: [], blocked: null };
+    }
+    const agentsReady = Boolean(selectedAgent?.id && enemyAgent?.id);
+    const nextGate = getNextGate(matchState.gateProgress);
+    if (nextGate) {
+      const gateKey = `${matchState.roundOpenedAt || 0}:${nextGate}`;
+      if (openedEminenceGatesRef.current.has(gateKey)) {
+        return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: null };
+      }
+      openedEminenceGatesRef.current.add(gateKey);
+    }
+    const result = advanceToNextRevealGate(matchState, {
+      initiativeSide: isPlayerFirst ? 'player' : 'enemy',
+      announceDeployedMarks,
+      agentIdBySide: {
+        player: selectedAgent?.id ?? null,
+        enemy: enemyAgent?.id ?? null,
+      },
+      focusInvestedBySide: agentsReady
+        ? { player: selectedFocus || 0, enemy: enemySelectedFocus || 0 }
+        : null,
+      leagueBySide: agentsReady
+        ? { player: selectedAgent.league ?? 0, enemy: enemyAgent.league ?? 0 }
+        : null,
+    });
+    if (result.blocked) return result;
+    setEminenceMatchState(result.matchState);
+    const playerHp = readHpDelta(result.bundle, 'player');
+    const enemyHp = readHpDelta(result.bundle, 'enemy');
+    if (playerHp || enemyHp) {
+      if (playerHp) setPlayerHP((hp) => Math.max(0, hp + playerHp));
+      if (enemyHp) setEnemyHP((hp) => Math.max(0, hp + enemyHp));
+      revealHpCommittedRef.current = {
+        player: (revealHpCommittedRef.current.player || 0) + playerHp,
+        enemy: (revealHpCommittedRef.current.enemy || 0) + enemyHp,
+      };
+    }
+    const phase = phaseForEminenceGate(result.gate);
+    if (result.notices.length) {
+      setEminenceNotices(result.notices);
+      if (phase) setPendingEminencePhase(phase);
+    } else if (phase) {
+      setGamePhase(phase);
+    }
+    return result;
+  }, [
+    isPlayerFirst,
+    selectedAgent,
+    enemyAgent,
+    selectedFocus,
+    enemySelectedFocus,
+    setEminenceMatchState,
+    setPlayerHP,
+    setEnemyHP,
+    setGamePhase,
+  ]);
+
+  const afterFieldLocked = useCallback(() => {
+    if (!isEminenceSubsystemEnabled(eminenceMatchState)) {
+      setGamePhase('selectAgent');
+      return;
+    }
+    commitEminenceAdvance(eminenceMatchState);
+  }, [eminenceMatchState, commitEminenceAdvance, setGamePhase]);
+
+  const afterAgentsLocked = useCallback(() => {
+    if (awaitingRevealParamsRef.current) {
+      pendingDuelAfterRevealRef.current = true;
+      return;
+    }
+    pendingDuelAfterRevealRef.current = false;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState)) {
+      setGamePhase('battle');
+      return;
+    }
+    const nextGate = getNextGate(eminenceMatchState.gateProgress);
+    if (!nextGate) {
+      setGamePhase('battle');
+      return;
+    }
+    commitEminenceAdvance(eminenceMatchState, { announceDeployedMarks: true });
+  }, [eminenceMatchState, commitEminenceAdvance, setGamePhase]);
+
+  useEffect(() => {
+    if (!pendingDuelAfterRevealRef.current) return;
+    if (awaitingRevealParams) return;
+    pendingDuelAfterRevealRef.current = false;
+    afterAgentsLocked();
+  }, [awaitingRevealParams, afterAgentsLocked]);
+
+  useLayoutEffect(() => {
+    if (eminenceNotices.length > 0) return;
+    if (!pendingEminencePhase) return;
+    const nextPhase = pendingEminencePhase;
+    setPendingEminencePhase(null);
+    setGamePhase(nextPhase);
+  }, [eminenceNotices, pendingEminencePhase, setGamePhase]);
+
+  useLayoutEffect(() => {
+    if (gamePhase === 'shuffleDeal') return;
+    if (r5Cinematic) return;
+    if (eminenceAnnounceHold) return;
+    if (awaitingEminenceChoice) return;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
+    if (!areSelectionsComplete(eminenceMatchState)) return;
+    if (eminenceChoiceFlushedRoundRef.current === roundNumber) return;
+    const nextGate = getNextGate(eminenceMatchState.gateProgress);
+    if (nextGate !== REVEAL_GATES.PRE_AGENT && nextGate !== REVEAL_GATES.PRE_FIELD) return;
+    eminenceChoiceFlushedRoundRef.current = roundNumber;
+    commitEminenceAdvance(eminenceMatchState);
+  }, [
+    gamePhase,
+    r5Cinematic,
+    eminenceAnnounceHold,
+    awaitingEminenceChoice,
+    eminenceMatchState,
+    roundNumber,
+    commitEminenceAdvance,
+  ]);
+
+  useLayoutEffect(() => {
+    if (r5Cinematic) return;
+    if (eminenceAnnounceHold) return;
+    if (awaitingEminenceChoice || awaitingRevealParams) return;
+    if (!selectedAgent || !enemyAgent) return;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
+    if (getNextGate(eminenceMatchState.gateProgress) !== REVEAL_GATES.GENERAL) return;
+    commitEminenceAdvance(eminenceMatchState, { announceDeployedMarks: true });
+  }, [
+    r5Cinematic,
+    eminenceAnnounceHold,
+    awaitingEminenceChoice,
+    awaitingRevealParams,
+    selectedAgent,
+    enemyAgent,
+    eminenceMatchState,
+    commitEminenceAdvance,
+  ]);
 
   useEffect(() => {
     if (!IS_PUBLIC_PLAYTEST_BUILD) return;
@@ -545,7 +1017,7 @@ export default function SatzeGame() {
   );
 
   // Hook per la logica di battaglia
-  const { resolveBattle } = useBattle(gameState, animations);
+  const { resolveBattle } = useBattle(gameState, animations, { revealHpCommittedRef });
 
   // Hook per l'IA (prima di useGameFlow: serve resetAiSession al reset/start partita)
   const ai = useAI(gameState);
@@ -1444,12 +1916,54 @@ export default function SatzeGame() {
 
   // Handler a identità stabile per i componenti memoizzati del duello:
   // un'arrow inline li farebbe re-renderizzare a ogni setState della radice.
-  const handleEnemyPreviewClick = useEventCallback((data) =>
-    handleCardPreviewClick({ ...data, isPlayer: false })
-  );
-  const handlePlayerPreviewClick = useEventCallback((data) =>
-    handleCardPreviewClick({ ...data, isPlayer: true })
-  );
+  const tryPickEminencePrey = useCallback((cardId) => {
+    if (eminenceAnnounceHold || preyFlight.busy || cardId == null) return false;
+    const legal = legalPreyIdsForChoice(eminenceChoiceView, { draftId: emDraftId });
+    if (!legal.includes(cardId)) return false;
+    if (emDraftParams?.preyCardId === cardId) return true;
+    setEmDraftParams({ preyCardId: cardId });
+    return true;
+  }, [eminenceAnnounceHold, preyFlight.busy, eminenceChoiceView, emDraftId, emDraftParams]);
+
+  const tryPickEminenceFragment = useCallback((cardId) => {
+    if (eminenceAnnounceHold || preyFlight.busy || cardId == null) return false;
+    const legal = legalFragmentIdsForChoice(eminenceChoiceView, { draftId: emDraftId });
+    if (!legal.includes(cardId)) return false;
+    setEmDraftParams((prev) => ({ ...(prev || {}), fragmentCardId: cardId }));
+    return true;
+  }, [eminenceAnnounceHold, preyFlight.busy, eminenceChoiceView, emDraftId]);
+
+  const tryPickEminenceSlot = useCallback((slotIndex) => {
+    if (eminenceAnnounceHold || preyFlight.busy || slotIndex == null) return false;
+    const legal = legalSlotIndicesForChoice(eminenceChoiceView, { draftId: emDraftId });
+    if (!legal.includes(slotIndex)) return false;
+    if (emDraftParams?.slot === slotIndex) return true;
+    setEmDraftParams({ slot: slotIndex });
+    return true;
+  }, [eminenceAnnounceHold, preyFlight.busy, eminenceChoiceView, emDraftId, emDraftParams]);
+
+  const tryPickEminenceCard = useCallback((cardId) => {
+    if (eminenceAnnounceHold || preyFlight.busy || cardId == null) return false;
+    const abilityId = emDraftId || eminenceChoiceView.self?.selectedAbilityId;
+    const legal = legalCardIdsForChoice(eminenceChoiceView, { draftId: abilityId });
+    if (!legal.includes(cardId)) return false;
+    if (!abilityId) return false;
+    const next = { ...(emDraftParams || {}), cardId };
+    setEmDraftParams(next);
+    confirmEminenceAbility(abilityId, next);
+    return true;
+  }, [eminenceAnnounceHold, preyFlight.busy, eminenceChoiceView, emDraftId, emDraftParams, confirmEminenceAbility]);
+
+  const handleEnemyPreviewClick = useEventCallback((data) => {
+    if (tryPickEminencePrey(data?.agent?.id)) return;
+    if (awaitingRevealParams && tryPickEminenceCard(data?.agent?.id)) return;
+    handleCardPreviewClick({ ...data, isPlayer: false });
+  });
+  const handlePlayerPreviewClick = useEventCallback((data) => {
+    if (tryPickEminenceFragment(data?.agent?.id)) return;
+    if (awaitingRevealParams && tryPickEminenceCard(data?.agent?.id)) return;
+    handleCardPreviewClick({ ...data, isPlayer: true });
+  });
 
   const handleGlossaryButtonClick = useCallback(() => {
     if (guidedMatch.active && guidedMatch.trackId === 'intro' && gamePhase === 'selectField') {
@@ -1587,6 +2101,7 @@ export default function SatzeGame() {
   }, [enemyAgent?.id, isPlayerFirst]);
 
   const handleAgentSelect = useCallback((agent, via = 'click') => {
+    if (eminenceBlocksMatch) return;
     if (
       guidedMatch.active &&
       !guidedMatch.freePlay &&
@@ -1604,7 +2119,7 @@ export default function SatzeGame() {
       setAgentPlaceFxStyle(prefs.style);
     }
     setSelectedAgent((prev) => (prev?.id === agent?.id ? null : agent));
-  }, [guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, setSelectedAgent, setGuidedHint]);
+  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, setSelectedAgent, setGuidedHint]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
@@ -1674,6 +2189,20 @@ export default function SatzeGame() {
       return keepLastRounds([...withoutRound, ...battleResult.events], 10);
     });
   }, [battleResult, gamePhase, duelPhase, setBattleEvents]);
+
+  useEffect(() => {
+    if (gamePhase !== 'result') {
+      outcomeNoticesShownKeyRef.current = null;
+      return;
+    }
+    if (duelPhase < 5) return;
+    const incoming = battleResult?.eminenceOutcomeNotices;
+    if (!Array.isArray(incoming) || incoming.length === 0) return;
+    const key = incoming.map((notice) => notice.id).join('|');
+    if (outcomeNoticesShownKeyRef.current === key) return;
+    outcomeNoticesShownKeyRef.current = key;
+    setEminenceNotices(incoming);
+  }, [gamePhase, duelPhase, battleResult]);
 
   
   // Helper per calcolare se il bonus armata sarà attivo (per preview durante selectAgent)
@@ -1773,11 +2302,13 @@ export default function SatzeGame() {
   selectEnemyAgentAndFocusRef.current = ai.selectEnemyAgentAndFocus;
   selectEnemyAgentAndFocusAsyncRef.current = ai.selectEnemyAgentAndFocusAsync;
   getThinkingTimeRef.current = ai.getThinkingTime;
+  const holdDuelForEminenceRef = useRef(false);
+  holdDuelForEminenceRef.current = eminenceBlocksMatch;
 
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
   useEffect(() => {
     if (isOnlinePvP) return;
-    if (awaitingEminenceChoice) return;
+    if (eminenceBlocksMatch) return;
     const isGuidedScripted = guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound;
 
     if (isGuidedScripted) return;
@@ -1833,7 +2364,7 @@ export default function SatzeGame() {
         if (waitMs > 0) {
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
-        if (cancelled) return;
+        if (cancelled || holdDuelForEminenceRef.current) return;
 
         setCurrentFieldIndex(fieldIdx);
         setBattleEvents((prev) => {
@@ -1847,17 +2378,17 @@ export default function SatzeGame() {
           });
           return keepLastRounds([...prev, ...emitter.events], 10);
         });
-        setGamePhase('selectAgent');
+        afterFieldLocked();
       })().catch((err) => {
         console.error('[SATZE] IA selectField:', err);
-        if (cancelled) return;
+        if (cancelled || holdDuelForEminenceRef.current) return;
         const available = battlefields.filter(
           (_, i) => !(i in conqueredFields) && i < revealedFields
         );
         if (!available.length) return;
         const fieldIdx = battlefields.indexOf(available[0]);
         setCurrentFieldIndex(fieldIdx);
-        setGamePhase('selectAgent');
+        afterFieldLocked();
       });
 
       return () => {
@@ -1872,13 +2403,14 @@ export default function SatzeGame() {
     revealedFields,
     roundNumber,
     isOnlinePvP,
-    awaitingEminenceChoice,
+    eminenceBlocksMatch,
     guidedMatch.active,
     guidedMatch.freePlay,
     currentGuidedRound,
     setCurrentFieldIndex,
     setLogs,
     setGamePhase,
+    afterFieldLocked,
   ]);
 
   // Tilt Tabellone: una volta che il cursore ci passa sopra, si ferma e non riparte
@@ -1899,10 +2431,14 @@ export default function SatzeGame() {
 
   // Anteprima vuota all'apertura di ogni nuovo duello / round / mischia iniziale
   useLayoutEffect(() => {
-    if (gamePhase === 'selectField' || gamePhase === 'shuffleDeal') {
+    if (gamePhase === 'shuffleDeal') {
+      clearCardPreview();
+      return;
+    }
+    if (gamePhase === 'selectField' && !selectedAgent && !enemyAgent) {
       clearCardPreview();
     }
-  }, [gamePhase, clearCardPreview]);
+  }, [gamePhase, selectedAgent, enemyAgent, clearCardPreview]);
 
   // Reset ref quando si passa a selectAgent (nuovo round/giro)
   useEffect(() => {
@@ -1919,6 +2455,7 @@ export default function SatzeGame() {
   // (re-render / cleanup) il flag resterebbe true e l'IA non sceglierebbe più.
   useEffect(() => {
     if (isOnlinePvP) return;
+    if (eminenceBlocksMatch) return;
     if (guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound) return;
     if (gamePhase !== 'selectAgent' || isPlayerFirst || enemyHand.length === 0 || enemyAgent) {
       return;
@@ -1941,7 +2478,7 @@ export default function SatzeGame() {
       if (waitMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, waitMs));
       }
-      if (cancelled || aiHasSelectedAgent.current) return;
+      if (cancelled || holdDuelForEminenceRef.current || aiHasSelectedAgent.current) return;
       if (result?.agent) {
         aiHasSelectedAgent.current = true;
       }
@@ -1958,6 +2495,7 @@ export default function SatzeGame() {
     enemyHand.length,
     enemyAgent,
     isOnlinePvP,
+    eminenceBlocksMatch,
     guidedMatch.active,
     guidedMatch.freePlay,
     currentGuidedRound,
@@ -2029,7 +2567,7 @@ export default function SatzeGame() {
 
   // Selezione campo giocatore
   const handleFieldSelect = (field) => {
-    if (awaitingEminenceChoice) return;
+    if (eminenceBlocksMatch) return;
     if (isGuidedIntroEpiloguePhase || isGuidedAdvancedEpiloguePhase || isGuidedIntroFreePlayFinalPhase) {
       return;
     }
@@ -2084,9 +2622,9 @@ export default function SatzeGame() {
         fieldIndex: idx,
       });
     }
-    // Passa alla fase selectAgent solo se non siamo già lì
+    // Dopo il Campo: o si scelgono gli Agenti, o (sequenza Agenti-prima) si apre il reveal GENERAL.
     if (gamePhase === 'selectField') {
-      setGamePhase('selectAgent');
+      afterFieldLocked();
     }
   };
 
@@ -2156,7 +2694,7 @@ export default function SatzeGame() {
           : `[R${roundNumber}] L'avversario cambia campo: ${fieldName}`,
       ]);
       if (gamePhase === 'selectField') {
-        setGamePhase('selectAgent');
+        afterFieldLocked();
       }
       setIncomingPeerMoveQueue((q) => q.slice(1));
       return;
@@ -2185,10 +2723,12 @@ export default function SatzeGame() {
     setGamePhase,
     setEnemyAgent,
     setEnemySelectedFocus,
+    afterFieldLocked,
   ]);
 
   // Conferma scelta giocatore
   const confirmPlayerChoice = () => {
+    if (eminenceBlocksMatch) return;
     if (guidedMatch.active && currentGuidedRound && !guidedMatch.freePlay) {
       const expectedFieldName = battlefields[currentGuidedRound.fieldIndex]?.name || `Campo ${currentGuidedRound.fieldIndex + 1}`;
       const expectedAgentName = playerHand.find((c) => c.id === currentGuidedRound.playerAgentId)?.name || 'agente richiesto';
@@ -2236,7 +2776,7 @@ export default function SatzeGame() {
           agentId: selectedAgent.id,
           focus: selectedFocus,
         });
-        setGamePhase('battle');
+        afterAgentsLocked();
         return;
       }
       if (isPlayerFirst) {
@@ -2254,9 +2794,9 @@ export default function SatzeGame() {
       return;
     }
 
-    // Se l'IA ha già scelto (IA inizia), passa subito al duello
+    // Se l'IA ha già scelto (IA inizia), avanza il flusso Eminenza o passa al duello
     if (enemyAgent) {
-      setGamePhase('battle');
+      afterAgentsLocked();
       return;
     }
 
@@ -2292,12 +2832,13 @@ export default function SatzeGame() {
   useEffect(() => {
     if (gamePhase === 'selectAgent' && selectedAgent && enemyAgent && isPlayerFirst && playerConfirmedAwaitingAI) {
       setPlayerConfirmedAwaitingAI(false);
-      setGamePhase('battle');
+      afterAgentsLocked();
     }
-  }, [gamePhase, selectedAgent, enemyAgent, isPlayerFirst, playerConfirmedAwaitingAI]);
+  }, [gamePhase, selectedAgent, enemyAgent, isPlayerFirst, playerConfirmedAwaitingAI, afterAgentsLocked]);
 
   // Trigger risoluzione battaglia (deve rieseguire quando enemyAgent viene impostato dopo il delay)
   useEffect(() => {
+    if (eminenceAnnounceHold || (awaitingRevealParams && gamePhase === 'battle')) return;
     if (gamePhase === 'battle' && selectedAgent && enemyAgent) {
       const isGuidedDuelPaused =
         guidedMatch.active &&
@@ -2307,7 +2848,7 @@ export default function SatzeGame() {
       if (isGuidedDuelPaused) return;
       resolveBattle();
     }
-  }, [gamePhase, selectedAgent, enemyAgent, resolveBattle, guidedMatch.active, guidedMatch.freePlay, guidedIntroStage, guidedPause]);
+  }, [gamePhase, selectedAgent, enemyAgent, resolveBattle, guidedMatch.active, guidedMatch.freePlay, guidedIntroStage, guidedPause, eminenceAnnounceHold, awaitingRevealParams]);
 
   // Pausa guidata: attende OK prima di avviare il duello
   useEffect(() => {
@@ -2531,34 +3072,6 @@ export default function SatzeGame() {
       if (toxinResult.logs.length > 0) {
         toxinResult.logs.forEach(log => addLog(`[R${roundNumber}] ${log}`));
       }
-      
-      // Check vittoria dopo tossina
-      if (currentPlayerHP <= 0) {
-        const playerFields = Object.values(conqueredFields).filter(f => 
-          (typeof f === 'object' && f?.winner === 'player') || (typeof f === 'string' && playerHand.some(c => c.army === f))
-        ).length;
-        const enemyFields = Object.values(conqueredFields).filter(f => 
-          (typeof f === 'object' && f?.winner === 'enemy') || (typeof f === 'string' && enemyHand.some(c => c.army === f))
-        ).length;
-        setGameResult({ winner: 'enemy', reason: 'hp', playerFields, enemyFields });
-        setPlayerHP(currentPlayerHP);
-        setEnemyHP(currentEnemyHP);
-        setGamePhase('gameOver');
-        return;
-      }
-      if (currentEnemyHP <= 0) {
-        const playerFields = Object.values(conqueredFields).filter(f => 
-          (typeof f === 'object' && f?.winner === 'player') || (typeof f === 'string' && playerHand.some(c => c.army === f))
-        ).length;
-        const enemyFields = Object.values(conqueredFields).filter(f => 
-          (typeof f === 'object' && f?.winner === 'enemy') || (typeof f === 'string' && enemyHand.some(c => c.army === f))
-        ).length;
-        setGameResult({ winner: 'player', reason: 'hp', playerFields, enemyFields });
-        setPlayerHP(currentPlayerHP);
-        setEnemyHP(currentEnemyHP);
-        setGamePhase('gameOver');
-        return;
-      }
     }
     
     // Aggiorna HP dopo aver applicato la tossina
@@ -2600,11 +3113,7 @@ export default function SatzeGame() {
       (typeof f === 'object' && f?.winner === 'enemy') || (typeof f === 'string' && enemyHand.some(c => c.army === f))
     ).length;
 
-    // Usa i PV già aggiornati (duello + tossina a fine turno), non final* pre-tossina
-    const newPlayerHP = currentPlayerHP;
-    const newEnemyHP = currentEnemyHP;
     const annihilationOnly = gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only';
-    const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
     const suspendGuidedTerritorialWin = guidedMatch.active && !guidedMatch.freePlay;
     
     // Check vittoria per campi conquistati (maggioranza: 3 su 5, 2 su 3, ...)
@@ -2613,6 +3122,38 @@ export default function SatzeGame() {
     const fieldsMajority = Math.floor(battlefields.length / 2) + 1;
     const canReclaim = (roundNumber === 3 || roundNumber === 4) && !suspendGuidedTerritorialWin;
     const skipTerritorialWin = forceContinueAfterClaimRef.current;
+    const playerAvailable = playerHand.filter(c => !playerUsedCards.includes(c.id));
+    const enemyAvailable = enemyHand.filter(c => !enemyUsedCards.includes(c.id));
+    const matchClosing = currentPlayerHP <= 0 || currentEnemyHP <= 0
+      || playerAvailable.length === 0 || enemyAvailable.length === 0
+      || (
+        !suspendGuidedTerritorialWin
+        && !canReclaim
+        && !skipTerritorialWin
+        && roundNumber < 5
+        && (playerFields >= fieldsMajority || enemyFields >= fieldsMajority)
+      );
+    if (matchClosing && isEminenceSubsystemEnabled(eminenceMatchState)) {
+      const settled = settleEminenceMatch(eminenceMatchState, {
+        finalPowerByCardId: battleResult?.playerAgent && battleResult?.enemyAgent
+          ? { [battleResult.playerAgent.id]: battleResult.pPower, [battleResult.enemyAgent.id]: battleResult.ePower }
+          : null,
+        finalPowerBySide: battleResult
+          ? { player: battleResult.pPower, enemy: battleResult.ePower }
+          : null,
+        agentIdBySide: battleResult?.playerAgent && battleResult?.enemyAgent
+          ? { player: battleResult.playerAgent.id, enemy: battleResult.enemyAgent.id }
+          : null,
+      });
+      setEminenceMatchState(settled.matchState);
+      currentPlayerHP = Math.max(0, currentPlayerHP + readHpDelta(settled.bundle, 'player'));
+      currentEnemyHP = Math.max(0, currentEnemyHP + readHpDelta(settled.bundle, 'enemy'));
+      setPlayerHP(currentPlayerHP);
+      setEnemyHP(currentEnemyHP);
+    }
+    const newPlayerHP = currentPlayerHP;
+    const newEnemyHP = currentEnemyHP;
+    const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
     if (skipTerritorialWin) {
       forceContinueAfterClaimRef.current = false;
     } else if (!suspendGuidedTerritorialWin && roundNumber < 5) {
@@ -2653,9 +3194,6 @@ export default function SatzeGame() {
       setGamePhase('gameOver');
       return;
     }
-    
-    const playerAvailable = playerHand.filter(c => !playerUsedCards.includes(c.id));
-    const enemyAvailable = enemyHand.filter(c => !enemyUsedCards.includes(c.id));
     
     // Check fine gioco per carte esaurite (fine round 5)
     if (playerAvailable.length === 0 || enemyAvailable.length === 0) {
@@ -3624,6 +4162,10 @@ export default function SatzeGame() {
   const iaCardPositions = IA_CARD_POSITIONS;
   const playerCardPositions = PLAYER_CARD_POSITIONS;
   const isShuffleDealPhase = gamePhase === 'shuffleDeal' && !!shuffleDealSetup;
+  const agentsLockedAwaitingField =
+    gamePhase === 'selectField' && Boolean(selectedAgent && enemyAgent);
+  const showDeployedEnemyAgent = (gamePhase === 'selectAgent' || agentsLockedAwaitingField) && Boolean(enemyAgent);
+  const showDeployedPlayerAgent = (gamePhase === 'selectAgent' || agentsLockedAwaitingField) && Boolean(selectedAgent);
   const isPreviewEntranceBlocked =
     Boolean(pendingGameLaunch) ||
     isShuffleDealPhase;
@@ -3648,7 +4190,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-      className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -3767,7 +4309,7 @@ export default function SatzeGame() {
         style={{
           width: '428px',
           height: '1080px',
-          zIndex: 1,
+          zIndex: revealEnemyHandForPrey ? 18 : 1,
           fontFamily: HUD_ORATORIO_FONT_UI,
           background: 'rgba(10, 14, 26, 0.4)',
         }}
@@ -4070,15 +4612,17 @@ export default function SatzeGame() {
             }`}
           >
             {battlefields.map((field, idx) => {
-              const canSelectField = isPlayerFirst && 
-                !(idx in conqueredFields) && 
-                idx < revealedFields &&
-                (gamePhase === 'selectField' || gamePhase === 'selectAgent') &&
-                !awaitingEminenceChoice;
+              const canSelectField = canSelectBattlefield({
+                isPlayerFirst,
+                eminenceBlocked: eminenceBlocksMatch,
+                gamePhase,
+                gateSequenceName: eminenceChoiceView.gateSequenceName,
+              }) && !(idx in conqueredFields) && idx < revealedFields;
               const locked = idx >= revealedFields;
               const rowCls = [
                 'imp-row',
-                locked ? 'imp-row-locked' : currentFieldIndex === idx ? 'imp-row-sel' : '',
+                locked && !slotShowsCurse(idx) ? 'imp-row-locked' : currentFieldIndex === idx ? 'imp-row-sel' : '',
+                slotShowsCurse(idx) ? 'imp-row-cursed' : '',
                 justRevealedFieldIdx === idx ? 'imp-row-reveal' : '',
               ].filter(Boolean).join(' ');
               
@@ -4086,17 +4630,18 @@ export default function SatzeGame() {
                 <div
                   key={field.id}
                   className={rowCls}
+                  data-field-slot={idx}
                   style={{
                     position: 'relative',
                     display: 'flex',
                     width: '100%',
                     overflow: 'hidden',
-                    '--imp-accent': locked ? PALETTE.slate : PALETTE.amber,
+                    '--imp-accent': slotShowsCurse(idx) ? slotCurseAccent : (locked ? PALETTE.slate : PALETTE.amber),
+                    '--curse-accent': slotShowsCurse(idx) ? slotCurseAccent : undefined,
                   }}
                 >
                   <MiniBattlefield
                     field={field}
-                    selected={currentFieldIndex === idx}
                     conquered={idx in conqueredFields}
                     conqueredBy={typeof conqueredFields[idx] === 'object' ? conqueredFields[idx]?.army : conqueredFields[idx]}
                     conqueredAccent={
@@ -4110,9 +4655,19 @@ export default function SatzeGame() {
                     }
                     hidden={idx >= revealedFields}
                     turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
-                    onClick={canSelectField ? fieldSelectHandlers[idx] : undefined}
+                    selected={currentFieldIndex === idx}
+                    onClick={
+                      legalSlotIndicesForChoice(eminenceChoiceView, { draftId: emDraftId }).includes(idx)
+                        && !eminenceAnnounceHold
+                        && !preyFlight.busy
+                        ? () => { tryPickEminenceSlot(idx); }
+                        : (canSelectField ? fieldSelectHandlers[idx] : undefined)
+                    }
                     onHover={setHoveredField}
                     guidedHighlight={isGuidedIntroBattlefieldsPhase}
+                    cursed={slotShowsCurse(idx)}
+                    curseAccent={slotCurseAccent}
+                    curseArriving={preyFlight.arrivingSlot === idx}
                   />
                 </div>
               );
@@ -4195,6 +4750,8 @@ export default function SatzeGame() {
         <EminenzaTableToggle
           viewingEminence={showEminenceLayer}
           accent={playerIdentityColor}
+          fragmentCount={(eminenceChoiceView.self?.persistent?.fragmentCardIds || []).length}
+          preyCount={(eminenceChoiceView.self?.persistent?.preyCardIds || []).length}
           onToggle={() => {
             if (forcedEminenceView) setPeekCampo((v) => !v);
             else setPeekEminence((v) => !v);
@@ -4206,19 +4763,16 @@ export default function SatzeGame() {
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
       <div className="imp-hand imp-hand-enemy">
-      {showEminenceLayer && eminenceChoiceView.opponent?.eminence && (
-        <EminenzaZone
-          side="enemy"
-          eminence={eminenceChoiceView.opponent.eminence}
-          presence={eminenceChoiceView.opponent.presence}
-          options={eminenceChoiceView.opponent.options}
-          pickedId={eminenceChoiceView.opponent.revealedAbilityId}
-          choiceState={eminenceChoiceView.opponent.state}
-        />
-      )}
       <Hand
         hand={enemyHand}
         usedCards={enemyUsedCards}
+        fragmentCardIds={eminenceChoiceView.opponent?.persistent?.fragmentCardIds || []}
+        preyCardIds={[
+          ...preyFlight.visibleHandPreyIds(eminenceChoiceView.self?.persistent?.preyCardIds || []),
+          ...(revealEnemyHandForPrey && emDraftParams?.preyCardId != null ? [emDraftParams.preyCardId] : []),
+        ]}
+        arrivingPreyId={preyFlight.preyLandId}
+        highlightedAgentId={highlightIdForHand('enemy') ?? (revealEnemyHandForPrey ? emDraftParams?.preyCardId ?? null : null)}
         selectedAgent={enemyAgent}
         onPreviewClick={handleEnemyPreviewClick}
         battleOutcomes={cardBattleOutcomes}
@@ -4230,7 +4784,7 @@ export default function SatzeGame() {
         disabled={true}
         armyBonuses={enemyArmyBonuses}
         isBonusTriggerSatisfied={isBonusTriggerSatisfied}
-        isActive={gamePhase === 'selectField' && !isPlayerFirst || (gamePhase === 'selectAgent' && !isPlayerFirst && !enemyAgent)}
+        isActive={!eminenceBlocksMatch && (gamePhase === 'selectField' && !isPlayerFirst || (gamePhase === 'selectAgent' && !isPlayerFirst && !enemyAgent))}
         handCardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
         hideCards={shouldHideHandsForGuidedSetup}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
@@ -4238,6 +4792,7 @@ export default function SatzeGame() {
         zoneArmy={shuffleDealSetup?.enemyArmy}
         zoneColorHand={enemyDeckVisual?.deckCards}
         zoneArmies={enemyDeckVisual?.armies}
+        elevateCards={revealEnemyHandForPrey}
       />
       </div>
 
@@ -4245,21 +4800,12 @@ export default function SatzeGame() {
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
       <div className="imp-hand imp-hand-player">
-      {showEminenceLayer && eminenceChoiceView.self?.eminence && (
-        <EminenzaZone
-          side="player"
-          eminence={eminenceChoiceView.self.eminence}
-          presence={eminenceChoiceView.self.presence}
-          options={eminenceChoiceView.self.options}
-          pickedId={emDraftId || eminenceChoiceView.self.selectedAbilityId}
-          choiceState={eminenceChoiceView.self.state}
-          onPick={setEmDraftId}
-          onConfirm={confirmEminenceAbility}
-        />
-      )}
       <Hand
         hand={playerHand}
         usedCards={playerUsedCards}
+        fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
+        preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
+        arrivingPreyId={preyFlight.preyLandId}
         selectedAgent={selectedAgent}
         onAgentSelect={handleAgentSelect}
         onPreviewClick={handlePlayerPreviewClick}
@@ -4269,7 +4815,7 @@ export default function SatzeGame() {
         position="bottom-right"
         label={mpSelfHandLabel}
         gamePhase={gamePhase}
-        disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent)}
+        disabled={eminenceBlocksMatch || gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent)}
         onDragStart={handleDragStart}
         draggingCard={draggingCard}
         isPlayerFirst={isPlayerFirst}
@@ -4277,10 +4823,10 @@ export default function SatzeGame() {
         armyBonuses={playerArmyBonuses}
         isBonusTriggerSatisfied={isBonusTriggerSatisfied}
         selectedCardRef={selectedCardInHandRef}
-        isActive={gamePhase === 'selectField' && isPlayerFirst || (gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent))}
+        isActive={!eminenceBlocksMatch && (gamePhase === 'selectField' && isPlayerFirst || (gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent)))}
         handCardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
         hideCards={shouldHideHandsForGuidedSetup}
-        highlightedAgentId={isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : null}
+        highlightedAgentId={isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : highlightIdForHand('player')}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
         zoneArmy={shuffleDealSetup?.playerArmy}
@@ -4288,6 +4834,64 @@ export default function SatzeGame() {
         zoneArmies={playerDeckVisual?.armies}
       />
       </div>
+
+      {(showEnemyEminenceZone || enemyZoneKeptRef.current) && (
+        <EminenzaZone
+          side="enemy"
+          stowed={!showEnemyEminenceZone}
+          announceHeld={announceHeldId != null && announceHeldId === enemyEminenceNotice?.id}
+          eminence={eminenceChoiceView.opponent.eminence}
+          presence={eminenceChoiceView.opponent.presence}
+          options={eminenceChoiceView.opponent.options}
+          pickedId={eminenceChoiceView.opponent.revealedAbilityId}
+          choiceState={eminenceChoiceView.opponent.state}
+          fragments={preyFlight.visibleEnemyFragmentIds}
+          prey={preyFlight.visibleEnemyPreyIds}
+          arrivingMarkId={preyFlight.preyLandId}
+          focusedMarkId={focusedMark?.source === 'enemy' ? focusedMark.id : null}
+          onMarkFocus={(cardId, kind) => focusMarkToken(cardId, 'enemy', kind)}
+          announce={enemyEminenceNotice}
+          hideRail={!shouldShowEminenceAbilityRail(eminenceChoiceView, {
+            announcing: eminenceAnnounceHold,
+            peeking: peekEminence,
+            side: 'enemy',
+            markFlightHold: holdSetupScene,
+          })}
+          onDismissAnnounce={dismissEminenceNotice}
+        />
+      )}
+      {(showPlayerEminenceZone || playerZoneKeptRef.current) && (
+        <EminenzaZone
+          side="player"
+          stowed={!showPlayerEminenceZone}
+          announceHeld={announceHeldId != null && announceHeldId === playerEminenceNotice?.id}
+          eminence={eminenceChoiceView.self.eminence}
+          presence={eminenceChoiceView.self.presence}
+          options={eminenceChoiceView.self.options}
+          pickedId={emDraftId || eminenceChoiceView.self.selectedAbilityId}
+          choiceState={eminenceChoiceView.self.state}
+          fragments={preyFlight.visiblePlayerFragmentIds}
+          prey={preyFlight.visiblePlayerPreyIds}
+          arrivingMarkId={preyFlight.preyLandId}
+          setup={playerSetupScene}
+          focusedMarkId={focusedMark?.source === 'player' ? focusedMark.id : null}
+          onMarkFocus={(cardId, kind) => focusMarkToken(cardId, 'player', kind)}
+          onSetupConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceSetup}
+          onPick={eminenceAnnounceHold || preyFlight.busy ? undefined : setEmDraftId}
+          onConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceAbility}
+          draftParams={emDraftParams}
+          onDraftParams={setEmDraftParams}
+          paramMeta={eminenceChoiceView.paramMeta}
+          announce={playerEminenceNotice}
+          hideRail={!shouldShowEminenceAbilityRail(eminenceChoiceView, {
+            announcing: eminenceAnnounceHold,
+            peeking: peekEminence,
+            side: 'player',
+            markFlightHold: holdSetupScene,
+          })}
+          onDismissAnnounce={dismissEminenceNotice}
+        />
+      )}
 
       {isShuffleDealPhase && (
         <div className="absolute inset-0 z-[24] pointer-events-auto" aria-hidden />
@@ -4328,7 +4932,11 @@ export default function SatzeGame() {
       <BattlefieldBackground 
         activeField={(currentFieldIndex !== null && battlefields[currentFieldIndex]) 
           ? battlefields[currentFieldIndex] 
-          : battleResult?.field} 
+          : battleResult?.field}
+        cursed={slotShowsCurse(currentFieldIndex) && (
+          gamePhase === 'selectAgent' || gamePhase === 'battle' || gamePhase === 'result'
+        )}
+        curseAccent={slotCurseAccent}
       />
 
       {/* Badge turno — dopo shuffle; segue iniziativa, poi si scambia dopo Conferma / scelta avversario */}
@@ -4393,15 +5001,19 @@ export default function SatzeGame() {
               Campo di Battaglia
             </div>
             <div className="text-xs leading-snug" style={{ color: PALETTE.textPrimary }}>
-              {awaitingEminenceChoice
+              {eminenceAnnounceHold
+                ? 'Un\'abilità Eminenza è in rivelazione. Il resto del round è in pausa.'
+                : awaitingEminenceChoice
                 ? 'Scegli un\'abilità Eminenza. Da qui puoi consultare il tabellone.'
+                : eminenceBlocksMatch
+                ? 'Le Eminenze stanno per entrare in scena.'
                 : isPlayerFirst
                   ? 'Scegli un campo dal tabellone'
                   : isOnlinePvP
                     ? "L'avversario sta scegliendo il campo di battaglia"
                     : 'Il nemico sta scegliendo il campo di battaglia'}
             </div>
-            {isPlayerFirst && !awaitingEminenceChoice && (
+            {isPlayerFirst && !eminenceBlocksMatch && (
               <div
                 className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider imp-arrow"
                 style={{ color: PALETTE.textSecondary }}
@@ -4417,6 +5029,10 @@ export default function SatzeGame() {
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
         field={battlefields[currentFieldIndex]}
+        cursed={slotShowsCurse(currentFieldIndex) && (
+          gamePhase === 'selectAgent' || gamePhase === 'battle' || gamePhase === 'result'
+        )}
+        curseAccent={slotCurseAccent}
         gamePhase={gamePhase}
         isPlayerFirst={isPlayerFirst}
         isZoomed={isZoomed}
@@ -4570,8 +5186,8 @@ export default function SatzeGame() {
         {gamePhase !== 'result' && (
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
         )}
-        {gamePhase === 'selectAgent' && enemyAgent && (
-          <div className="relative flex items-center justify-center flex-shrink-0" style={{ transformStyle: 'flat' }}>
+        {showDeployedEnemyAgent && (
+          <div className="relative flex items-center justify-center flex-shrink-0" data-field-agent="enemy" style={{ transformStyle: 'flat' }}>
             <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}-${enemyPlaceFxStyle || 'default'}`}>
               <div className={`place-fx fx-${enemyPlaceFx}${placeFxStyleClass(enemyPlaceFxStyle)}`}>
                 <div className="place-shadow" />
@@ -4668,10 +5284,11 @@ export default function SatzeGame() {
         {gamePhase !== 'result' && (
           <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
         )}
-        {gamePhase === 'selectAgent' && selectedAgent && (
+        {showDeployedPlayerAgent && (
           <div
             ref={playerCardZoneRef}
             className="relative flex items-center justify-center pointer-events-auto flex-shrink-0"
+            data-field-agent="player"
             style={{ transformStyle: 'flat' }}
           >
             <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}-${agentPlaceFxStyle || 'default'}`}>
@@ -4701,8 +5318,8 @@ export default function SatzeGame() {
                         abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                         overdrivePreview={playerOverdrivePreview}
                         onHover={handlePlayerPreviewClick}
-                        onClick={() => setSelectedAgent(null)}
-                        onDragStart={handleDragStart}
+                        onClick={gamePhase === 'selectAgent' ? () => setSelectedAgent(null) : undefined}
+                        onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                         isDragging={draggingCard?.id === selectedAgent?.id}
                       />
                     </div>
@@ -4725,8 +5342,8 @@ export default function SatzeGame() {
                     abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                     overdrivePreview={playerOverdrivePreview}
                     onHover={handlePlayerPreviewClick}
-                    onClick={() => setSelectedAgent(null)}
-                    onDragStart={handleDragStart}
+                    onClick={gamePhase === 'selectAgent' ? () => setSelectedAgent(null) : undefined}
+                    onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                     isDragging={draggingCard?.id === selectedAgent?.id}
                   />
                 )}
@@ -4790,6 +5407,48 @@ export default function SatzeGame() {
           isZoomed={isZoomed}
           paused={isGuidedDuelPause}
         />
+      )}
+
+      {holdForConfirmedAgentPick && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-6"
+          style={{
+            zIndex: 40,
+            background: 'rgba(4, 3, 8, 0.55)',
+            pointerEvents: 'auto',
+            fontFamily: HUD_ORATORIO_FONT_UI,
+          }}
+        >
+          <div className="text-center px-6">
+            <div className="text-sm font-extrabold uppercase tracking-[0.16em]" style={{ color: PALETTE.amber }}>
+              {eminenceChoiceView.self?.options?.find((option) => option.id === eminenceChoiceView.self.selectedAbilityId)?.name || 'Eminenza'}
+            </div>
+            <div className="mt-2 text-xs font-semibold uppercase tracking-wider" style={{ color: PALETTE.textPrimary }}>
+              Scegli l'Agente
+            </div>
+          </div>
+          <div className="flex items-end justify-center gap-16">
+            {[
+              { agent: selectedAgent, side: 'player', label: 'Il tuo' },
+              { agent: enemyAgent, side: 'enemy', label: 'Avversario' },
+            ].map(({ agent, side, label }) => (
+              <button
+                key={`${side}-${agent.id}`}
+                type="button"
+                onClick={() => tryPickEminenceCard(agent.id)}
+                className="flex flex-col items-center gap-3 bg-transparent border-0 p-0 cursor-pointer"
+              >
+                <GameCard
+                  cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                  agent={agent}
+                />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: PALETTE.amber }}>
+                  {label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ============================================ */}
@@ -5000,6 +5659,8 @@ export default function SatzeGame() {
         onComplete={tutorial.completeTutorial}
         steps={activeTutorialSteps}
       />
+
+      <EminenceMarkFlight flight={preyFlight.markFlight} onComplete={preyFlight.onFlightComplete} />
 
       <div className="dep-vignette" aria-hidden />
     </div>

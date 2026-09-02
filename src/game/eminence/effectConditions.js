@@ -19,14 +19,29 @@
  * - array              → appartenenza                   `{ winner: ['player', 'draw'] }`
  * - `{ min, max }`     → intervallo numerico inclusivo  `{ roundNumber: { min: 3 } }`
  * - `{ not }`          → negazione della forma interna  `{ winner: { not: 'draw' } }`
+ * - `{ param, map }`   → valore scelto dal giocatore    `{ duelWinnerRelative: { param: 'pronostico', map: { … } } }`
+ *
+ * `{ param, map }` confronta il termine del checkpoint con il parametro fissato alla
+ * selezione (o al reveal), opzionalmente tradotto. Un parametro assente non è un errore:
+ * la condizione fallisce, come una scommessa senza pronostico.
  */
-function matchesValue(expected, actual) {
+function matchesValue(expected, actual, context = {}) {
   if (Array.isArray(expected)) {
     return expected.includes(actual);
   }
 
   if (expected && typeof expected === 'object') {
-    if ('not' in expected) return !matchesValue(expected.not, actual);
+    if ('param' in expected) {
+      const raw = context?.params?.[expected.param];
+      const mapped = expected.map ? expected.map[raw] : raw;
+      return mapped === actual;
+    }
+
+    if ('not' in expected) return !matchesValue(expected.not, actual, context);
+
+    if ('has' in expected) {
+      return Array.isArray(actual) && actual.includes(expected.has);
+    }
 
     if ('min' in expected || 'max' in expected) {
       if (typeof actual !== 'number' || Number.isNaN(actual)) return false;
@@ -59,7 +74,7 @@ export function matchesCondition(condition, context = {}) {
     if (!(key in context)) {
       throw new Error(`Condizione su un termine non disponibile a questo checkpoint: ${key}`);
     }
-    if (!matchesValue(expected, context[key])) return false;
+    if (!matchesValue(expected, context[key], context)) return false;
   }
 
   return true;

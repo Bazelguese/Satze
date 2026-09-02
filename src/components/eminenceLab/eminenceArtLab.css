@@ -65,6 +65,7 @@
 .eminence-tarot__art-wrap {
   position: absolute;
   inset: 0;
+  z-index: 1;
   overflow: hidden;
   transform-style: preserve-3d;
 }
@@ -81,6 +82,9 @@
 .eminence-tarot[data-lock-plane='1'] .eminence-tarot__chrome,
 .eminence-tarot[data-lock-plane='1'] .eminence-tarot__edge {
   transform: none;
+}
+.eminence-tarot[data-lock-plane='1'] .eminence-tarot__overlay {
+  z-index: 20;
 }
 .eminence-tarot[data-lock-plane='1'] .eminence-tarot__art-parallax {
   inset: -3%;
@@ -421,7 +425,7 @@
 .eminence-tarot__chrome {
   position: absolute;
   inset: 0;
-  z-index: 8;
+  z-index: 12;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -433,7 +437,7 @@
 .eminence-tarot__overlay {
   position: absolute;
   inset: 0;
-  z-index: 8;
+  z-index: 12;
   pointer-events: none;
   transform: translateZ(42px);
 }

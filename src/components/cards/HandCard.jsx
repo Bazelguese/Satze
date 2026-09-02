@@ -14,6 +14,8 @@ export const HandCard = React.memo(({
   onClick,
   disabled,
   usedCards = [],
+  fragmentCardIds = [],
+  preyCardIds = [],
   onPreviewClick,
   battleOutcome = null,
   onDragStart,
@@ -21,9 +23,12 @@ export const HandCard = React.memo(({
   showBonus = false,
   bonusBaseInactive = false,
   highlighted = false,
+  preyArriving = false,
   cardLayout: _legacyCardLayout,
 }) => {
   const isUsed = usedCards.includes(agent?.id);
+  const isFragment = fragmentCardIds.includes(agent?.id);
+  const isPrey = preyCardIds.includes(agent?.id);
   const hasOutcome = isUsed && Boolean(battleOutcome);
   const isWinner = battleOutcome === 'winner';
   const isLoser = battleOutcome === 'loser';
@@ -50,9 +55,12 @@ export const HandCard = React.memo(({
         border-2 relative flex-shrink-0
         ${hasOutcome ? 'satze-hand-outcome-card transition-transform duration-300' : 'transition-all duration-300'}
         ${selected ? 'border-yellow-400 shadow-2xl shadow-yellow-400/60 scale-105 -translate-y-2 z-20 ring-4 ring-yellow-400/30' : 'border-white/30 shadow-lg'}
-        ${highlighted ? 'ring-4 ring-amber-300/80 border-amber-200 shadow-2xl shadow-amber-300/45 animate-pulse' : ''}
+        ${highlighted ? 'satze-hand-focus ring-4 ring-amber-300/80 border-amber-200 shadow-2xl shadow-amber-300/45 animate-pulse' : ''}
         ${hasOutcome && isWinner ? 'satze-card-winner' : ''}
         ${hasOutcome && isLoser ? 'satze-card-loser satze-hand-outcome-loser' : ''}
+        ${isFragment ? 'satze-hand-fragment-card' : ''}
+        ${isPrey ? 'satze-hand-prey-card' : ''}
+        ${preyArriving ? 'is-prey-forging' : ''}
         ${disabled || isUsed ? (onPreviewClick || hasOutcome ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60') : onDragStart ? 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-grab active:cursor-grabbing active:scale-95' : 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-pointer active:scale-95'}
         ${isDragging ? 'scale-90 shadow-2xl' : ''}
         flex flex-col overflow-hidden
@@ -101,6 +109,21 @@ export const HandCard = React.memo(({
             </div>
             <span className="text-white/70 font-bold text-sm tracking-wider">USATO</span>
           </div>
+        </div>
+      )}
+      {isFragment && (
+        <div className="satze-hand-fragment-mark pointer-events-none" aria-label="Frammento">
+          <span className="satze-hand-fragment-shard" aria-hidden />
+          <span>Frammento</span>
+        </div>
+      )}
+      {isPrey && !isFragment && (
+        <div
+          className={['satze-hand-prey-mark', 'pointer-events-none', preyArriving ? 'is-arrive' : ''].filter(Boolean).join(' ')}
+          aria-label="Preda"
+        >
+          <span className="satze-hand-prey-fang" aria-hidden />
+          <span>Preda</span>
         </div>
       )}
     </div>

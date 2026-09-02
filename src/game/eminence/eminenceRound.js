@@ -11,6 +11,7 @@ import {
   OPPOSITE_SIDE,
 } from './eminenceConstants.js';
 import { getEminence, getEminenceAbility } from '../../data/eminences.js';
+import { ALL_AGENTS } from '../../data/cards.js';
 import {
   isEminenceSubsystemEnabled,
   resetEminenceMatchRound,
@@ -176,6 +177,31 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
   };
 }
 
+/**
+ * Completa o sostituisce i parametri di una scelta già sigillata.
+ * Serve ai bersagli fissati al reveal (Agenti confermati) senza riaprire la scelta.
+ */
+export function setEminenceAbilityParams(matchState, side, params) {
+  if (!isEminenceSubsystemEnabled(matchState)) {
+    return { matchState, ok: false, reason: 'SUBSYSTEM_DISABLED' };
+  }
+  const state = matchState[side];
+  if (!state?.selectedAbilityId) return { matchState, ok: false, reason: 'NO_SELECTION' };
+  if (state.revealedAbilityId) return { matchState, ok: false, reason: 'ALREADY_REVEALED' };
+
+  return {
+    matchState: {
+      ...matchState,
+      [side]: {
+        ...state,
+        selectedParams: { ...(state.selectedParams || {}), ...(params || {}) },
+      },
+    },
+    ok: true,
+    reason: null,
+  };
+}
+
 /** Nessun commitment può essere aperto finché entrambi i lati non hanno concluso (§10.5). */
 export function areSelectionsComplete(matchState) {
   if (!isEminenceSubsystemEnabled(matchState)) return true;
@@ -190,7 +216,7 @@ export function areSelectionsComplete(matchState) {
 // Reveal a un gate
 // ------------------------------------------------------------------
 
-function collectSegments(ability, ownerSide) {
+function collectSegments(ability, ownerSide, params = null) {
   if (!ability?.segments) return { immediate: [], pending: [] };
 
   const immediate = [];
@@ -203,6 +229,7 @@ function collectSegments(ability, ownerSide) {
       ownerSide,
       timing: segment.timing,
       segment,
+      params,
       consumed: false,
     };
     if (segment.timing === EFFECT_TIMINGS.AFTER_REVEAL) immediate.push(entry);
@@ -268,7 +295,7 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
       roundNumber: matchState.roundNumber ?? null,
     });
 
-    const { immediate, pending } = collectSegments(ability, side);
+    const { immediate, pending } = collectSegments(ability, side, state.selectedParams);
     const stamp = (entry) => ({ ...entry, sourceEminenceId: state.eminenceId });
 
     nextMatchState[side] = {
@@ -288,6 +315,7 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
       eminenceId: state.eminenceId,
       abilityId: ability.id,
       presenceDelta: ability.presenceDelta,
+      params: state.selectedParams ?? null,
     });
     if (event) events.push({ ...event, side });
 
@@ -325,27 +353,97 @@ export function completeGeneralGate(matchState, options = {}) {
  * @returns {{ queue: object[], matchState: object }} i segmenti restituiti sono marcati
  *   come consumati, così un checkpoint non può eseguirli due volte.
  */
+function relativeDuelOutcome(winner, side) {
+  if (winner === 'draw') return 'draw';
+  if (winner === SIDES.PLAYER || winner === SIDES.ENEMY) {
+    return winner === side ? 'self' : 'opponent';
+  }
+  return null;
+}
+
+function agentTriggerOf(cardId) {
+  if (cardId == null) return null;
+  return ALL_AGENTS.find((agent) => agent.id === cardId)?.ability?.trigger ?? null;
+}
+
+function markNamesOn(persistent, cardId) {
+  if (cardId == null || !persistent) return [];
+  const names = [];
+  for (const [key, ids] of Object.entries(persistent)) {
+    if (!key.endsWith('CardIds') || !Array.isArray(ids)) continue;
+    if (ids.includes(cardId)) names.push(key.slice(0, -'CardIds'.length));
+  }
+  return names;
+}
+
+/** Marchi pubblici sugli Agenti schierati, per condizioni e avvisi. */
+export function createSideMarkContext(persistent, ownId, enemyId) {
+  const ownMarks = markNamesOn(persistent, ownId);
+  const enemyMarks = markNamesOn(persistent, enemyId);
+  return {
+    ownMarks,
+    enemyMarks,
+    deployedMarks: [...new Set([...ownMarks, ...enemyMarks])],
+  };
+}
+
 export function collectPendingEffects(
   matchState,
   timing,
   { initiativeSide = SIDES.PLAYER, context = null } = {}
 ) {
-  if (!isEminenceSubsystemEnabled(matchState)) return { queue: [], matchState };
+  if (!isEminenceSubsystemEnabled(matchState)) return { queue: [], skipped: [], matchState };
 
   const order = [initiativeSide, OPPOSITE_SIDE[initiativeSide]];
-  const conditionContext = createConditionContext(matchState, context || {});
+  const extra = context || {};
+  const knownWinner = extra.winner === SIDES.PLAYER
+    || extra.winner === SIDES.ENEMY
+    || extra.winner === 'draw';
   const queue = [];
+  const skipped = [];
   const nextMatchState = { ...matchState };
 
   for (const side of order) {
     const state = nextMatchState[side];
     if (!state?.round?.pendingEffects.length) continue;
 
+    const sideExtra = { ...extra };
+    if (knownWinner) sideExtra.duelWinnerRelative = relativeDuelOutcome(extra.winner, side);
+    sideExtra.aliasUsed = Boolean(extra.aliasUsedBySide?.[side]);
+    sideExtra.ownPowerResolved = Boolean(extra.powerResolvedBySide?.[side]);
+    sideExtra.ownActivatedTrigger = extra.activatedTriggerBySide?.[side] ?? null;
+
+    const ownId = extra.agentIdBySide?.[side] ?? null;
+    const enemyId = extra.agentIdBySide?.[OPPOSITE_SIDE[side]] ?? null;
+    Object.assign(sideExtra, createSideMarkContext(state.persistent, ownId, enemyId));
+    sideExtra.ownAgentTrigger = agentTriggerOf(ownId);
+    sideExtra.enemyAgentTrigger = agentTriggerOf(enemyId);
+    if (extra.anchoredBySide) {
+      sideExtra.ownAnchored = Boolean(extra.anchoredBySide[side]);
+    }
+
     const remaining = [];
     for (const entry of state.round.pendingEffects) {
       if (!entry.consumed && entry.timing === timing) {
-        if (matchesCondition(entry.segment?.condition, conditionContext)) queue.push(entry);
-        remaining.push({ ...entry, consumed: true });
+        const entryContext = createConditionContext(matchState, {
+          ...sideExtra,
+          params: entry.params ?? null,
+        });
+        if (matchesCondition(entry.segment?.condition, entryContext)) {
+          queue.push({
+            ...entry,
+            agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
+          });
+        } else if (entry.segment?.condition) {
+          skipped.push({
+            ...entry,
+            agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
+          });
+        }
+        remaining.push({
+          ...entry,
+          consumed: entry.segment?.repeatable ? Boolean(entry.consumed) : true,
+        });
       } else {
         remaining.push(entry);
       }
@@ -357,7 +455,7 @@ export function collectPendingEffects(
     };
   }
 
-  return { queue, matchState: nextMatchState };
+  return { queue, skipped, matchState: nextMatchState };
 }
 
 // ------------------------------------------------------------------

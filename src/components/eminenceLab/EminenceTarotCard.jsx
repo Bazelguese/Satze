@@ -65,6 +65,7 @@ export function EminenceTarotCard({
   const needsRoll = life === 'roll' || life === 'comboC';
   // In modalità SATZE il tilt è sull'immagine (CurvedParallaxImage), non sulla carta intera
   const cardTilt = tiltEnabled && !useSatzeCurve && life !== 'flat';
+  const idleMotion = idleOrbit && (cardTilt || lockPlane);
 
   const setVars = useCallback(
     (px, py, active) => {
@@ -95,7 +96,7 @@ export function EminenceTarotCard({
   }, [idleOrbit, setVars]);
 
   useEffect(() => {
-    if (!idleOrbit || !cardTilt) return undefined;
+    if (!idleMotion) return undefined;
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return undefined;
     }
@@ -110,11 +111,11 @@ export function EminenceTarotCard({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [idleOrbit, cardTilt, setVars]);
+  }, [idleMotion, setVars]);
 
   const onPointerMove = useCallback(
     (e) => {
-      if (!cardTilt) return;
+      if (!cardTilt && !lockPlane) return;
       const el = rootRef.current;
       if (!el) return;
       hoveringRef.current = true;
@@ -124,7 +125,7 @@ export function EminenceTarotCard({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => setVars(px, py, true));
     },
-    [cardTilt, setVars]
+    [cardTilt, lockPlane, setVars]
   );
 
   const barrelFilter = needsBarrel ? `url(#et-barrel-${filterUid})` : '';

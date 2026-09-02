@@ -84,6 +84,28 @@ export function useAI(gameState) {
     return available.some((c) => c.id === card.id);
   }, []);
 
+  /** Agente+FC minimi se il motore non produce una carta (es. Campo ancora assente). */
+  const fallbackAiAgentDecision = useCallback((state) => {
+    const ctx = buildAIContext(state);
+    const available = getAvailableCards(ctx.ai?.hand, ctx.ai?.usedCardIds);
+    const card = available[0] || null;
+    if (!card) return null;
+    const { maxFocus } = getLegalFocusRange(ctx, 'ai');
+    const focus = maxFocus < 1 ? 1 : Math.max(1, Math.min(maxFocus, 1));
+    return {
+      card,
+      cardId: card.id,
+      focus,
+      fieldIndex: state.currentFieldIndex ?? null,
+    };
+  }, []);
+
+  /** Senza Campo fissato l'IA deve valutare i Campi in ipotesi: l'azione indipendente richiede già il Campo. */
+  const needsJointDecision = useCallback((context, options = {}) => {
+    if (options.joint) return true;
+    return context.currentFieldIndex == null;
+  }, []);
+
   /**
    * Riusa la decisione congiunta se ancora valida per lo stato pubblico corrente.
    */
@@ -143,9 +165,7 @@ export function useAI(gameState) {
       const context = buildAIContext(gameStateRef.current);
       const key = buildPublicDecisionKey(context);
 
-      const needsJoint =
-        options.joint ||
-        (context.currentFieldIndex == null && context.isPlayerFirst === false);
+      const needsJoint = needsJointDecision(context, options);
 
       const rng = options.rng || defaultRng;
       const decision = await runDecisionEngineAsync(context, needsJoint, rng);
@@ -161,7 +181,7 @@ export function useAI(gameState) {
 
       return storeDecision(decision, key);
     },
-    [getReusableDecision, storeDecision, recordDecision, runDecisionEngineAsync]
+    [getReusableDecision, storeDecision, recordDecision, runDecisionEngineAsync, needsJointDecision]
   );
 
   const computeDecision = useCallback(
@@ -174,10 +194,7 @@ export function useAI(gameState) {
       const context = buildAIContext(gameStateRef.current);
       const key = buildPublicDecisionKey(context);
 
-      // Se il Campo non è ancora scelto e l'IA apre, decisione congiunta
-      const needsJoint =
-        options.joint ||
-        (context.currentFieldIndex == null && context.isPlayerFirst === false);
+      const needsJoint = needsJointDecision(context, options);
 
       const decision = needsJoint
         ? chooseJointAIAction(context, context.difficulty, {
@@ -198,7 +215,7 @@ export function useAI(gameState) {
 
       return storeDecision(decision, key);
     },
-    [getReusableDecision, storeDecision, recordDecision]
+    [getReusableDecision, storeDecision, recordDecision, needsJointDecision]
   );
 
   const selectEnemyAgent = useCallback(() => {
@@ -259,12 +276,13 @@ export function useAI(gameState) {
         fromCache = false;
       }
       if (!decision?.card || !isPendingCardPlayable(buildAIContext(state), decision.card)) {
-        return null;
+        decision = fallbackAiAgentDecision(state);
+        fromCache = false;
       }
+      if (!decision?.card) return null;
 
       const { maxFocus } = getLegalFocusRange(buildAIContext(state), 'ai');
-      if (maxFocus < 1) return null;
-      const focus = Math.max(1, Math.min(maxFocus, decision.focus));
+      const focus = Math.max(1, Math.min(Math.max(1, maxFocus), Number(decision.focus) || 1));
 
       // Se riusiamo la joint già loggata in selectEnemyField, non riloggare.
       // Se è una risposta / lead senza joint precedente, computeDecision ha già registrato.
@@ -290,47 +308,68 @@ export function useAI(gameState) {
         debug: decision.debug,
       };
     },
-    [getReusableDecision, computeDecision, isPendingCardPlayable, clearPendingDecision]
+    [getReusableDecision, computeDecision, isPendingCardPlayable, clearPendingDecision, fallbackAiAgentDecision]
   );
 
   const selectEnemyAgentAndFocusAsync = useCallback(
     async (logSelection = true) => {
       const state = gameStateRef.current;
-      let decision = getReusableDecision();
-      let fromCache = Boolean(decision?.card);
-      if (!decision?.card) {
-        decision = await computeDecisionAsync({ force: false });
-        fromCache = false;
-      }
-      if (!decision?.card) {
-        decision = await computeDecisionAsync({ force: true });
-        fromCache = false;
-      }
-      if (!decision?.card) return null;
+      const AI_AGENT_DECIDE_MS = 12000;
+      let expired = false;
 
-      if (
-        state.currentFieldIndex != null &&
-        decision.fieldIndex != null &&
-        decision.fieldIndex !== state.currentFieldIndex
-      ) {
-        decision = await computeDecisionAsync({ force: true });
-        fromCache = false;
-      }
-      if (!decision?.card) return null;
+      const compute = async () => {
+        let decision = getReusableDecision();
+        let fromCache = Boolean(decision?.card);
+        if (!decision?.card) {
+          decision = await computeDecisionAsync({ force: false });
+          fromCache = false;
+        }
+        if (!decision?.card) {
+          decision = await computeDecisionAsync({ force: true });
+          fromCache = false;
+        }
+        if (
+          decision?.card &&
+          state.currentFieldIndex != null &&
+          decision.fieldIndex != null &&
+          decision.fieldIndex !== state.currentFieldIndex
+        ) {
+          decision = await computeDecisionAsync({ force: true });
+          fromCache = false;
+        }
+        if (decision?.card && !isPendingCardPlayable(buildAIContext(state), decision.card)) {
+          clearPendingDecision();
+          decision = await computeDecisionAsync({ force: true });
+          fromCache = false;
+        }
+        return { decision, fromCache };
+      };
 
-      const ctx = buildAIContext(state);
-      if (!isPendingCardPlayable(ctx, decision.card)) {
-        clearPendingDecision();
-        decision = await computeDecisionAsync({ force: true });
-        fromCache = false;
+      let packed = null;
+      try {
+        packed = await Promise.race([
+          compute().then((result) => (expired ? null : result)),
+          new Promise((resolve) => {
+            setTimeout(() => {
+              expired = true;
+              resolve(null);
+            }, AI_AGENT_DECIDE_MS);
+          }),
+        ]);
+      } catch (err) {
+        console.error('[SATZE] IA selectAgent compute:', err);
       }
+
+      let decision = packed?.decision;
+      let fromCache = Boolean(packed?.fromCache);
       if (!decision?.card || !isPendingCardPlayable(buildAIContext(state), decision.card)) {
-        return null;
+        decision = fallbackAiAgentDecision(state);
+        fromCache = false;
       }
+      if (!decision?.card) return null;
 
       const { maxFocus } = getLegalFocusRange(buildAIContext(state), 'ai');
-      if (maxFocus < 1) return null;
-      const focus = Math.max(1, Math.min(maxFocus, decision.focus));
+      const focus = Math.max(1, Math.min(Math.max(1, maxFocus), Number(decision.focus) || 1));
 
       if (fromCache && decision.debug?.jointAction) {
         /* già in log */
@@ -353,7 +392,13 @@ export function useAI(gameState) {
         debug: decision.debug,
       };
     },
-    [getReusableDecision, computeDecisionAsync, isPendingCardPlayable, clearPendingDecision]
+    [
+      getReusableDecision,
+      computeDecisionAsync,
+      isPendingCardPlayable,
+      clearPendingDecision,
+      fallbackAiAgentDecision,
+    ]
   );
 
   const selectEnemyAgentAdvanced = useCallback(() => {
@@ -385,6 +430,10 @@ export function useAI(gameState) {
 
   const selectEnemyFieldAsync = useCallback(async () => {
     const context = buildAIContext(gameStateRef.current);
+    const reusable = getReusableDecision();
+    if (reusable?.fieldIndex != null && context.currentFieldIndex == null) {
+      return reusable.fieldIndex;
+    }
     const fieldPickContext = {
       ...context,
       currentFieldIndex: null,
@@ -397,7 +446,7 @@ export function useAI(gameState) {
     storeDecision(joint, key);
     recordDecision(joint, { ...fieldPickContext, battlefields: context.battlefields }, 'joint', key);
     return joint.fieldIndex;
-  }, [storeDecision, recordDecision, runDecisionEngineAsync]);
+  }, [storeDecision, recordDecision, runDecisionEngineAsync, getReusableDecision]);
 
   const getThinkingTime = useCallback(() => {
     const difficulty =

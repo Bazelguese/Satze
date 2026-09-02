@@ -87,6 +87,9 @@ function refillCycleDeck(pool, excludeIds) {
   return [...buildCycleDeck(available), ...buildCycleDeck(deferred)];
 }
 
+/** Probabilità che una carta in cascata sia foil (fronte olografico). */
+const FOIL_SPAWN_CHANCE = 0.01;
+
 const CSS = `
 .menu-rain{position:absolute;inset:-12% -6%;z-index:1;perspective:1700px;perspective-origin:50% 38%;pointer-events:none;overflow:hidden}
 .menu-rain__card{position:absolute;top:0;left:var(--x);width:var(--w);aspect-ratio:230/330;transform-style:preserve-3d;animation:menu-rain-drop var(--dur) linear var(--d) infinite;will-change:transform;filter:var(--f)}
@@ -99,14 +102,31 @@ const CSS = `
 .menu-rain__edge--l{left:0;transform-origin:0 50%;transform:translateZ(calc(var(--t)/-2)) rotateY(-90deg)}
 .menu-rain__edge--r{right:0;transform-origin:100% 50%;transform:translateZ(calc(var(--t)/-2)) rotateY(90deg)}
 .menu-rain__sheen{position:absolute;inset:0;border-radius:0 0 14px 14px;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.5) 46%,rgba(255,255,255,.08) 56%,transparent 74%);mix-blend-mode:screen;opacity:0;animation:menu-rain-sheen var(--sdur) linear var(--d) infinite}
+.menu-rain__foil{position:absolute;inset:0;border-radius:0 0 14px 14px;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgb(255,119,115) 0%,rgba(255,237,95,1) 8%,rgba(168,255,95,1) 16%,rgba(131,255,247,1) 24%,rgba(120,148,255,1) 32%,rgb(216,117,255) 40%,rgb(255,119,115) 48%),repeating-linear-gradient(133deg,#0e152e 0%,hsl(180,10%,60%) 4%,hsl(180,29%,66%) 5%,hsl(180,10%,60%) 7%,#0e152e 9%,#0e152e 14%);background-size:400% 400%,200% 200%;mix-blend-mode:color-dodge;filter:brightness(.82) contrast(1.28) saturate(1.12);opacity:.52;animation:menu-rain-foil var(--sdur) linear var(--d) infinite}
+.menu-rain__card--foil .menu-rain__sheen{animation-duration:calc(var(--sdur)*.9)}
 .menu-rain::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 38% 42%,rgba(6,3,10,.25) 12%,rgba(6,3,10,.72) 62%,rgba(6,3,10,.97) 100%)}
 @keyframes menu-rain-drop{from{transform:translate3d(0,-75vh,0) rotate(var(--tilt))}to{transform:translate3d(var(--dx),135vh,0) rotate(var(--tilt))}}
 @keyframes menu-rain-spin{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
 @keyframes menu-rain-sheen{0%{opacity:0}12%{opacity:.42}26%{opacity:0}50%{opacity:0}62%{opacity:.42}76%{opacity:0}100%{opacity:0}}
+@keyframes menu-rain-foil{0%{background-position:0% 50%,0% 50%}50%{background-position:100% 50%,100% 0%}100%{background-position:0% 50%,0% 0%}}
 `;
 
 function pickBack(backs) {
   return backs[Math.floor(Math.random() * backs.length)];
+}
+
+/** @returns {boolean} */
+export function rollMenuRainFoilSpawn(chance = FOIL_SPAWN_CHANCE) {
+  return Math.random() < chance;
+}
+
+function buildRainSlot(agent, backs, gen = 0) {
+  return {
+    agent,
+    backImage: pickBack(backs),
+    gen,
+    foil: rollMenuRainFoilSpawn(),
+  };
 }
 
 export function MenuAgentRain() {
@@ -138,10 +158,7 @@ export function MenuAgentRain() {
   };
 
   const [slots, setSlots] = useState(() => {
-    const initial = Array.from({ length: DROPS.length }, () => {
-      const agent = drawAgent();
-      return { agent, backImage: pickBack(backsRef.current), gen: 0 };
-    });
+    const initial = Array.from({ length: DROPS.length }, () => buildRainSlot(drawAgent(), backsRef.current));
     slotsRef.current = initial;
     return initial;
   });
@@ -168,11 +185,7 @@ export function MenuAgentRain() {
       const agent = drawAgent();
       if (!agent) return prev;
       const next = prev.slice();
-      next[slotIndex] = {
-        agent,
-        backImage: pickBack(backsRef.current),
-        gen: (prev[slotIndex]?.gen ?? 0) + 1,
-      };
+      next[slotIndex] = buildRainSlot(agent, backsRef.current, (prev[slotIndex]?.gen ?? 0) + 1);
       slotsRef.current = next;
       return next;
     });
@@ -184,13 +197,13 @@ export function MenuAgentRain() {
       {drops.map(({ drop: [tier, x, dur, sdur, d, dx, tilt], i }) => {
         const slot = slots[i];
         if (!slot?.agent) return null;
-        const { agent, backImage, gen } = slot;
+        const { agent, backImage, gen, foil } = slot;
         const T = TIERS[tier];
         const accent = ARMY_COLORS[agent.army]?.accent || '#94a3b8';
         return (
           <div
             key={`rain-slot-${i}`}
-            className="menu-rain__card"
+            className={`menu-rain__card${foil ? ' menu-rain__card--foil' : ''}`}
             style={{
               '--x': x, '--w': `${T.w}px`, '--k': T.k, '--t': `${T.t}px`, '--f': T.filter,
               '--a': accent, '--dur': `${dur}s`, '--sdur': `${sdur}s`, '--d': `${d}s`,
@@ -210,6 +223,7 @@ export function MenuAgentRain() {
                   <CardReworkP4 key={`${agent.id}-${gen}`} agent={agent} showBonus suppressAnimations />
                 </div>
                 <div className="menu-rain__sheen" />
+                {foil ? <div className="menu-rain__foil" /> : null}
               </div>
               <div className="menu-rain__face menu-rain__face--back">
                 <div className="menu-rain__scale">

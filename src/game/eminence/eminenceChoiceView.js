@@ -11,14 +11,16 @@
 // La scelta propria arriva dal ramo privato che la proiezione riserva al `viewerSide`: chi
 // guarda vede la propria selezione sigillata, non quella dell'altro.
 
-import { SIDES, OPPOSITE_SIDE, REVEAL_GATES } from './eminenceConstants.js';
+import { SIDES, OPPOSITE_SIDE, REVEAL_GATES, PARAM_SOURCES, CHOICE_PARAMS_TIMING } from './eminenceConstants.js';
 import { getEminence } from '../../data/eminences.js';
+import { ALL_AGENTS } from '../../data/cards.js';
 import {
   isEminenceSubsystemEnabled,
   selectPublicEminenceMatchState,
   getLegalAbilityIds,
 } from './eminenceState.js';
 import { getSealedAbilityHypotheses, getNextGate, mustChooseThisRound } from './eminenceRound.js';
+import { isEminenceSetupPending, needsEminenceSetup } from './eminenceDuelGate.js';
 
 /**
  * Stati della scelta (§11.2).
@@ -49,6 +51,7 @@ const DISABLED_VIEW = Object.freeze({
   enabled: false,
   gate: null,
   completedGates: [],
+  setupPending: false,
   self: null,
   opponent: null,
 });
@@ -83,6 +86,116 @@ function describeEminence(eminenceId) {
   };
 }
 
+function agentHasTrigger(cardId) {
+  return Boolean(ALL_AGENTS.find((agent) => agent.id === cardId)?.ability?.trigger);
+}
+
+export const SCHEMA_LIMITS_KEY = '__limits';
+
+export function paramLimits(schema, key) {
+  return schema?.[SCHEMA_LIMITS_KEY]?.[key] || { min: 1, max: 1 };
+}
+
+function idsFromParam(value) {
+  if (Array.isArray(value)) return value.filter((id) => id != null);
+  if (value != null) return [value];
+  return [];
+}
+
+/**
+ * True quando i params scelti in UI coprono lo schema risolto.
+ * `__limits` non è un parametro: `fragmentCardId` può essere scalare o lista;
+ * `composeComponent` non serve se sono già stati scelti due Frammenti.
+ */
+export function selectionParamsReady(schema, params) {
+  if (!schema) return true;
+  const fragmentIds = idsFromParam(params?.fragmentCardId);
+  return Object.keys(schema).every((key) => {
+    if (key === SCHEMA_LIMITS_KEY) return true;
+    const values = schema[key];
+    if (!Array.isArray(values)) return true;
+    if (values.length === 0) return true;
+    if (key === 'fragmentCardId') {
+      const { min, max } = paramLimits(schema, key);
+      return fragmentIds.length >= min && fragmentIds.length <= max;
+    }
+    if (key === 'composeComponent') {
+      if (fragmentIds.length >= 2) return true;
+      return params?.composeComponent != null;
+    }
+    return params?.[key] != null;
+  });
+}
+
+function resolveSlotIndexes(paramContext) {
+  const slots = paramContext?.slots;
+  if (Array.isArray(slots) && slots.length) {
+    return slots.filter((slot) => !slot.conquered).map((slot) => slot.index);
+  }
+  const count = Math.max(1, paramContext?.slotCount || 5);
+  return Array.from({ length: count }, (_, index) => index);
+}
+
+function buildAgentParamMeta(paramContext) {
+  const meta = {};
+  for (const entry of paramContext?.confirmedAgents || []) {
+    if (entry && typeof entry === 'object' && entry.id != null) {
+      meta[entry.id] = { side: entry.side, label: entry.label || null };
+    }
+  }
+  return Object.keys(meta).length ? meta : null;
+}
+
+function buildSlotParamMeta(paramContext) {
+  const slots = paramContext?.slots;
+  if (!Array.isArray(slots) || !slots.length) return null;
+  const meta = {};
+  for (const slot of slots) {
+    if (slot.conquered) continue;
+    const index = slot.index;
+    meta[index] = {
+      label: slot.revealed && slot.name ? slot.name : `Campo ${index + 1}`,
+      cursed: Boolean(slot.cursed),
+    };
+  }
+  return Object.keys(meta).length ? meta : null;
+}
+
+function resolveParamsSchema(schema, persistent, paramContext = null) {
+  if (!schema) return null;
+
+  const resolved = {};
+  for (const [key, spec] of Object.entries(schema)) {
+    if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_FRAGMENTS) {
+      const ids = [...(persistent?.fragmentCardIds || [])];
+      resolved[key] = spec.requireTrigger ? ids.filter(agentHasTrigger) : ids;
+      if (spec.min != null || spec.max != null) {
+        resolved[SCHEMA_LIMITS_KEY] = {
+          ...(resolved[SCHEMA_LIMITS_KEY] || {}),
+          [key]: { min: spec.min ?? 1, max: spec.max ?? 1 },
+        };
+      }
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.ENEMY_UNDEPLOYED) {
+      const alreadyPrey = new Set(persistent?.preyCardIds || []);
+      resolved[key] = (paramContext?.enemyUndeployedCardIds || []).filter((id) => !alreadyPrey.has(id));
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.UNDEPLOYED_AGENTS) {
+      const already = new Set(Object.keys(persistent?.debitoByCardId || {}).map(Number));
+      const own = paramContext?.ownUndeployedCardIds || [];
+      const enemy = paramContext?.enemyUndeployedCardIds || [];
+      resolved[key] = [...own, ...enemy].filter((id) => !already.has(id));
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.CONFIRMED_AGENTS) {
+      resolved[key] = (paramContext?.confirmedAgents || []).map((entry) => (
+        entry && typeof entry === 'object' ? entry.id : entry
+      )).filter((id) => id != null);
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.BATTLEFIELD_SLOTS) {
+      resolved[key] = resolveSlotIndexes(paramContext);
+    } else {
+      resolved[key] = spec;
+    }
+  }
+  return resolved;
+}
+
 /**
  * Opzioni del lato che sta guardando, con legalità già risolta.
  *
@@ -90,7 +203,7 @@ function describeEminence(eminenceId) {
  * corrente: è lo stesso valore che vincola il motore in `selectEminenceAbility`, quindi la
  * UI non può offrire una scelta che poi verrebbe rifiutata (§2.3).
  */
-function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId) {
+function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, paramContext = null) {
   const eminence = getEminence(eminenceId);
   if (!eminence) return [];
 
@@ -117,6 +230,8 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId) {
       // `[]` è un'abilità implementata che non fa nulla (es. il giallo del Semaforo).
       // `null` è il segnaposto di catalogo per un'attiva ancora senza segmenti.
       implemented: ability.segments != null,
+      paramsSchema: resolveParamsSchema(ability.paramsSchema, publicSide.persistent, paramContext),
+      choiceParamsTiming: ability.choiceParamsTiming,
       selectable: !blocker,
       blocker,
       selected: selectedAbilityId === ability.id,
@@ -132,7 +247,7 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId) {
  * @returns {{ enabled: boolean, gate: string|null, completedGates: string[],
  *   self: object|null, opponent: object|null }}
  */
-export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER) {
+export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER, paramContext = null) {
   if (!isEminenceSubsystemEnabled(matchState)) return DISABLED_VIEW;
 
   const projected = selectPublicEminenceMatchState(matchState, viewerSide);
@@ -143,13 +258,21 @@ export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER) {
   const opponentPublic = projected[opponentSide];
 
   const selectedAbilityId = selfPublic?.private?.selectedAbilityId ?? null;
+  const selfEminence = selfPublic ? getEminence(selfPublic.eminenceId) : null;
+  const setupPending = isEminenceSetupPending(matchState, viewerSide);
 
   return {
     enabled: true,
     roundNumber: matchState.roundNumber ?? null,
     gate: getNextGate(gateProgress),
     gateSequence: gateProgress?.sequence ?? [],
+    gateSequenceName: gateProgress?.sequenceName ?? 'FIELD_FIRST',
     completedGates: gateProgress?.completedGates ?? [],
+    setupPending: needsEminenceSetup(matchState),
+    paramMeta: {
+      slot: buildSlotParamMeta(paramContext),
+      cardId: buildAgentParamMeta(paramContext),
+    },
 
     self: selfPublic
       ? {
@@ -162,10 +285,23 @@ export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER) {
         mustChoose: mustChooseThisRound(matchState, viewerSide),
         state: sideState(selfPublic),
         selectedAbilityId,
+        selectedParams: selfPublic.private?.selectedParams ?? null,
         revealedAbilityId: selfPublic.revealedAbilityId,
         revealGate: selfPublic.revealGateReached,
-        options: buildOptions(selfPublic.eminenceId, selfPublic, gateProgress, selectedAbilityId),
+        options: buildOptions(selfPublic.eminenceId, selfPublic, gateProgress, selectedAbilityId, paramContext),
         persistent: selfPublic.persistent,
+        setup: setupPending || needsEminenceSetup(matchState)
+          ? {
+            pending: setupPending,
+            name: selfEminence?.static?.name ?? null,
+            text: selfEminence?.static?.text ?? null,
+            paramsSchema: resolveParamsSchema(
+              selfEminence?.static?.setupParamsSchema,
+              selfPublic.persistent,
+              paramContext,
+            ),
+          }
+          : null,
       }
       : null,
 
@@ -200,12 +336,186 @@ export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER) {
   };
 }
 
+/**
+ * Campo e Agenti restano fermi finché le Eminenze non sono in scena.
+ *
+ * `cinematic` è il tendone R5: la fase è già `selectField` ma le zone non sono montate.
+ * `roundPending` è il frame in cui `openEminenceRound` non ha ancora corso per questo round.
+ */
+export function shouldHoldDuelForEminence({
+  awaitingChoice = false,
+  announceHold = false,
+  cinematic = false,
+  roundPending = false,
+  setupPending = false,
+  markFlightHold = false,
+  awaitingRevealParams = false,
+} = {}) {
+  return Boolean(
+    awaitingChoice
+    || announceHold
+    || cinematic
+    || roundPending
+    || setupPending
+    || markFlightHold
+    || awaitingRevealParams,
+  );
+}
+
+/**
+ * Finestra in cui il tabellone accetta la scelta del Campo.
+ *
+ * Dopo il flush del primo gate, in sequenza Campo-prima il prossimo gate è
+ * `PRE_AGENT`: è proprio allora che si sceglie il Campo. Non si può quindi
+ * usare “prossimo gate === PRE_AGENT” come divieto — quello spegne il
+ * tabellone per ogni Eminenza che non riordina le decisioni.
+ */
+export function canSelectBattlefield({
+  isPlayerFirst = false,
+  eminenceBlocked = false,
+  gamePhase = null,
+  gateSequenceName = 'FIELD_FIRST',
+} = {}) {
+  if (!isPlayerFirst || eminenceBlocked) return false;
+  if (gateSequenceName === 'AGENTS_FIRST') return gamePhase === 'selectField';
+  return gamePhase === 'selectField' || gamePhase === 'selectAgent';
+}
+
 /** Vero quando la UI deve fermare il gioco e chiedere: c'è una decisione reale da prendere. */
 export function isAwaitingEminenceChoice(view) {
   if (!view?.enabled || !view.self) return false;
+  if (view.setupPending) return false;
   if (!view.self.mustChoose) return false;
   if (view.self.selectedAbilityId) return false;
   return view.self.options.some((option) => option.selectable);
+}
+
+/**
+ * Bersaglio fissato al reveal: l'abilità è già sigillata, ma le opzioni
+ * (Agenti confermati) esistono solo dopo il lock di entrambi i lati.
+ */
+export function isAwaitingRevealParams(view) {
+  if (!view?.enabled || !view.self?.selectedAbilityId) return false;
+  if (view.self.revealedAbilityId) return false;
+  const option = view.self.options?.find((entry) => entry.id === view.self.selectedAbilityId);
+  if (!option || option.choiceParamsTiming !== CHOICE_PARAMS_TIMING.AT_REVEAL) return false;
+  const schema = option.paramsSchema;
+  if (!schema) return false;
+  const hasChoices = Object.keys(schema).some((key) => (
+    key !== SCHEMA_LIMITS_KEY && Array.isArray(schema[key]) && schema[key].length > 0
+  ));
+  if (!hasChoices) return false;
+  return !selectionParamsReady(schema, view.self.selectedParams);
+}
+
+/**
+ * Le losanghe sono la UI della scelta, non un riepilogo dell'avviso.
+ *
+ * Restano chiuse mentre un messaggio è in scena, e dopo il lock non tornano da sole:
+ * solo un peek esplicito le riapre per consultazione.
+ */
+export function shouldShowEminenceAbilityRail(view, {
+  announcing = false,
+  peeking = false,
+  side = null,
+  markFlightHold = false,
+} = {}) {
+  if (announcing) return false;
+  if (markFlightHold) {
+    if (side && side !== view.self?.side) return false;
+    return true;
+  }
+  if (view?.setupPending) {
+    if (side && side !== view.self?.side) return false;
+    return Boolean(view.self?.setup?.pending) || peeking;
+  }
+  if (isAwaitingEminenceChoice(view)) return true;
+  return Boolean(peeking);
+}
+
+/**
+ * Durante un avviso la scena è solo messaggi: una zona esiste solo se quel lato
+ * ha un messaggio. Durante il setup, dopo l'avviso, resta solo chi deve
+ * scegliere il bersaglio: l'altra Eminenza entra dopo la chiusura.
+ */
+export function shouldShowEminenceSideZone({
+  layerVisible = false,
+  announcing = false,
+  hasNotice = false,
+  setupPending = false,
+  isSetupActor = false,
+  concealForEnemyHandRead = false,
+  markFlightHold = false,
+} = {}) {
+  if (!layerVisible) return false;
+  if (announcing) return Boolean(hasNotice);
+  if (setupPending || markFlightHold) return Boolean(isSetupActor);
+  if (concealForEnemyHandRead) return false;
+  return true;
+}
+
+function schemaSelectsEnemyUndeployed(schema) {
+  return (Array.isArray(schema?.preyCardId) && schema.preyCardId.length > 0)
+    || (Array.isArray(schema?.cardId) && schema.cardId.length > 0);
+}
+
+function schemaSelectsFragments(schema) {
+  return Array.isArray(schema?.fragmentCardId) && schema.fragmentCardId.length > 0;
+}
+
+/**
+ * Il drop sotto la losanga è solo per i Frammenti.
+ * Preda e slot usano le chip in riga, come il +0.
+ */
+export function abilityRailExpandsDown(schema, { isLastOption = false } = {}) {
+  return Boolean(isLastOption && schemaSelectsFragments(schema));
+}
+
+function schemaOfChoice(view, draftId = null) {
+  if (view?.self?.setup?.pending) return view.self.setup.paramsSchema || null;
+  const pick = draftId || view?.self?.selectedAbilityId;
+  return view?.self?.options?.find((entry) => entry.id === pick)?.paramsSchema || null;
+}
+
+export function legalPreyIdsForChoice(view, { draftId = null } = {}) {
+  const schema = schemaOfChoice(view, draftId);
+  return Array.isArray(schema?.preyCardId) ? schema.preyCardId : [];
+}
+
+export function legalCardIdsForChoice(view, { draftId = null } = {}) {
+  const schema = schemaOfChoice(view, draftId);
+  return Array.isArray(schema?.cardId) ? schema.cardId : [];
+}
+
+export function legalFragmentIdsForChoice(view, { draftId = null } = {}) {
+  const schema = schemaOfChoice(view, draftId);
+  return Array.isArray(schema?.fragmentCardId) ? schema.fragmentCardId : [];
+}
+
+export function legalSlotIndicesForChoice(view, { draftId = null } = {}) {
+  const schema = schemaOfChoice(view, draftId);
+  return Array.isArray(schema?.slot) ? schema.slot : [];
+}
+
+/**
+ * Durante la scelta di una Preda le carte avversarie devono restare leggibili:
+ * il velo Eminenza non può offuscarle.
+ */
+export function shouldRevealEnemyHandForEminenceChoice(view, {
+  announcing = false,
+  draftId = null,
+} = {}) {
+  if (announcing) return false;
+  return schemaSelectsEnemyUndeployed(schemaOfChoice(view, draftId));
+}
+
+export function shouldRevealBoardForEminenceChoice(view, {
+  announcing = false,
+  draftId = null,
+} = {}) {
+  if (announcing) return false;
+  const schema = schemaOfChoice(view, draftId);
+  return Array.isArray(schema?.slot) && schema.slot.length > 0;
 }
 
 /**
@@ -215,6 +525,8 @@ export function isAwaitingEminenceChoice(view) {
 export function shouldShowEminenceLayer(view, { gamePhase } = {}) {
   if (!view?.enabled || !view.self) return false;
   if (gamePhase && gamePhase !== 'selectField') return false;
+
+  if (view.setupPending) return true;
 
   const selfChoosing = view.self.state === CHOICE_STATES.CHOOSING && view.self.mustChoose;
   const waitingOnOpponent =

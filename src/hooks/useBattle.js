@@ -8,6 +8,7 @@ import { computeDuelResolution } from '../game/duelResolve';
 import { prepareEminenceDuel, settleEminenceRound } from '../game/eminence/eminenceDuelGate';
 import { capturePresenceSnapshot } from '../game/eminence/presence';
 import { isEminenceSubsystemEnabled } from '../game/eminence/eminenceState';
+import { readHpDelta, consumeHpDeltas, powerResolutionFromDuel } from '../game/eminence/eminenceDuelBinding';
 
 /**
  * Hook per gestire la logica di battaglia
@@ -15,7 +16,7 @@ import { isEminenceSubsystemEnabled } from '../game/eminence/eminenceState';
  * @param {Object} animations - Stato delle animazioni da useAnimations
  * @returns {Function} resolveBattle - Funzione per risolvere una battaglia
  */
-export function useBattle(gameState, animations) {
+export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) {
   const {
     battlefields,
     currentFieldIndex,
@@ -42,6 +43,8 @@ export function useBattle(gameState, animations) {
     eminenceMatchState,
     setEminenceMatchState,
     setBattleResult,
+    setPlayerHP,
+    setEnemyHP,
     setPlayerFocus,
     setEnemyFocus,
     setPlayerUsedCards,
@@ -71,16 +74,25 @@ export function useBattle(gameState, animations) {
       return;
     }
 
-    // Gate GENERAL e Duello devono cadere nello stesso istante sincrono: se il reveal
-    // passasse da un aggiornamento di stato React, il Duello girerebbe sullo stato
-    // precedente e ignorerebbe le abilità appena rivelate.
+    // I PV del reveal sono già sull'HUD. Il bundle del Duello tiene FC/stat;
+    // i delta PV già riscossi vengono tolti per non ribatterli.
     const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
-    const prepared = prepareEminenceDuel(eminenceMatchState, { initiativeSide });
+    const prepared = prepareEminenceDuel(eminenceMatchState, {
+      initiativeSide,
+      agentIdBySide: { player: pAgent.id, enemy: eAgent.id },
+      currentFieldIndex,
+      focusInvestedBySide: { player: selectedFocus || 0, enemy: enemySelectedFocus || 0 },
+      leagueBySide: { player: pAgent.league ?? 0, enemy: eAgent.league ?? 0 },
+    });
     if (prepared.blocked) {
       console.error('resolveBattle: scelte Eminenza incomplete', prepared.blocked);
       return;
     }
     const eminenceActive = isEminenceSubsystemEnabled(prepared.matchState);
+    const committedHp = revealHpCommittedRef?.current || { player: 0, enemy: 0 };
+    if (revealHpCommittedRef) {
+      revealHpCommittedRef.current = { player: 0, enemy: 0 };
+    }
 
     const { battleResult } = computeDuelResolution({
       field,
@@ -105,22 +117,47 @@ export function useBattle(gameState, animations) {
       playerHand,
       enemyHand,
       currentFieldIndex,
-      eminenceBundle: prepared.bundle,
+      eminenceBundle: consumeHpDeltas(prepared.bundle, committedHp),
       presenceSnapshot: eminenceActive ? capturePresenceSnapshot(prepared.matchState) : null,
       playerHasEminence: Boolean(prepared.matchState?.player?.eminenceId),
       enemyHasEminence: Boolean(prepared.matchState?.enemy?.eminenceId),
     });
 
+    let outcomeNotices = prepared.notices || [];
+    let result = battleResult;
     if (eminenceActive) {
-      setEminenceMatchState(settleEminenceRound(prepared.matchState, { initiativeSide }).matchState);
+      const settled = settleEminenceRound(prepared.matchState, {
+        initiativeSide,
+        winner: battleResult.winner,
+        agentIdBySide: { player: pAgent.id, enemy: eAgent.id },
+        aliasUsedBySide: battleResult.aliasUsedBySide,
+        finalPowerByCardId: {
+          [pAgent.id]: battleResult.pPower,
+          [eAgent.id]: battleResult.ePower,
+        },
+        finalPowerBySide: { player: battleResult.pPower, enemy: battleResult.ePower },
+        ...powerResolutionFromDuel({ battleResult, playerAgent: pAgent, enemyAgent: eAgent }),
+      });
+      setEminenceMatchState(settled.matchState);
+      outcomeNotices = [...outcomeNotices, ...(settled.notices || [])];
+      result = {
+        ...battleResult,
+        finalPlayerHP: Math.max(0, battleResult.finalPlayerHP + readHpDelta(settled.bundle, 'player')),
+        finalEnemyHP: Math.max(0, battleResult.finalEnemyHP + readHpDelta(settled.bundle, 'enemy')),
+      };
     }
 
-    setPlayerFocus(battleResult.finalPlayerFC);
-    setEnemyFocus(battleResult.finalEnemyFC);
+    setPlayerHP(result.finalPlayerHP);
+    setEnemyHP(result.finalEnemyHP);
+    setPlayerFocus(result.finalPlayerFC);
+    setEnemyFocus(result.finalEnemyFC);
     setPlayerUsedCards((prev) => [...prev, pAgent.id]);
     setEnemyUsedCards((prev) => [...prev, eAgent.id]);
-    setLastWinner(battleResult.winner);
-    setBattleResult(battleResult);
+    setLastWinner(result.winner);
+    setBattleResult({
+      ...result,
+      eminenceOutcomeNotices: outcomeNotices,
+    });
 
     setDuelPhase(0);
     setDuelEffectStep(1);
@@ -157,6 +194,8 @@ export function useBattle(gameState, animations) {
     eminenceMatchState,
     setEminenceMatchState,
     setBattleResult,
+    setPlayerHP,
+    setEnemyHP,
     setPlayerFocus,
     setEnemyFocus,
     setPlayerUsedCards,

@@ -3,6 +3,7 @@
 // ============================================
 
 import { applyFieldMinFloor, attachFieldModifiersToContexts, getFieldSetupFlags } from '../battlefieldEffects.js';
+import { computeFieldStatDeltas } from './duelFieldStatTracking.js';
 
 export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, playerContext, enemyContext) {
   const id = field?.id ?? 0;
@@ -64,6 +65,14 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
   }
 
   const { pImmune, eImmune } = duel;
+  const fieldStatBaseline = {
+    pPower: duel.pPower,
+    ePower: duel.ePower,
+    pDamage: duel.pDamage,
+    eDamage: duel.eDamage,
+    pAssaultMod: duel.pAssaultMod,
+    eAssaultMod: duel.eAssaultMod,
+  };
   let pPower = duel.pPower;
   let ePower = duel.ePower;
   let pDamage = duel.pDamage;
@@ -373,7 +382,20 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
     eBonusBlocked,
   });
 
+  const fieldStatDeltas = computeFieldStatDeltas(fieldStatBaseline, {
+    pPower,
+    ePower,
+    pDamage,
+    eDamage,
+    pAssaultMod,
+    eAssaultMod,
+  });
+  if (id === 7 || id === 20) {
+    fieldStatDeltas.invertible = false;
+  }
+
   return {
+    fieldStatDeltas,
     blockDisabled,
     copyDisabled,
     directDamageDisabled,

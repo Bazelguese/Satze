@@ -37,12 +37,51 @@ test('condizione: uguaglianza, appartenenza, intervallo e negazione', () => {
 
   assert.equal(matchesCondition({ winner: { not: 'draw' } }, { winner: 'player' }), true);
   assert.equal(matchesCondition({ winner: { not: 'draw' } }, { winner: 'draw' }), false);
+
+  assert.equal(matchesCondition({ deployedMarks: { has: 'prey' } }, { deployedMarks: ['prey'] }), true);
+  assert.equal(matchesCondition({ deployedMarks: { has: 'prey' } }, { deployedMarks: [] }), false);
+});
+
+test('condizione: Overdrive attivato e Potere risolto sono termini di checkpoint', () => {
+  assert.equal(matchesCondition({ ownActivatedTrigger: 'overdrive' }, { ownActivatedTrigger: 'overdrive' }), true);
+  assert.equal(matchesCondition({ ownActivatedTrigger: 'overdrive' }, { ownActivatedTrigger: 'imboscata' }), false);
+  assert.equal(matchesCondition({ ownActivatedTrigger: 'overdrive' }, { ownActivatedTrigger: null }), false);
+  assert.equal(matchesCondition({ ownPowerResolved: true }, { ownPowerResolved: true }), true);
+  assert.equal(matchesCondition({ ownPowerResolved: true }, { ownPowerResolved: false }), false);
 });
 
 test('condizione: più chiavi vanno soddisfatte tutte', () => {
   const context = { roundNumber: 5, winner: 'player' };
   assert.equal(matchesCondition({ roundNumber: 5, winner: 'player' }, context), true);
   assert.equal(matchesCondition({ roundNumber: 5, winner: 'enemy' }, context), false);
+});
+
+test('condizione: { param, map } traduce il valore scelto', () => {
+  const expected = {
+    param: 'pronostico',
+    map: {
+      VITTORIA_PROPRIA: 'self',
+      VITTORIA_AVVERSARIA: 'opponent',
+      PAREGGIO: 'draw',
+    },
+  };
+
+  assert.equal(matchesCondition(
+    { duelWinnerRelative: expected },
+    { duelWinnerRelative: 'self', params: { pronostico: 'VITTORIA_PROPRIA' } }
+  ), true);
+  assert.equal(matchesCondition(
+    { duelWinnerRelative: expected },
+    { duelWinnerRelative: 'self', params: { pronostico: 'PAREGGIO' } }
+  ), false);
+  assert.equal(matchesCondition(
+    { duelWinnerRelative: expected },
+    { duelWinnerRelative: 'draw', params: { pronostico: 'PAREGGIO' } }
+  ), true);
+  assert.equal(matchesCondition(
+    { duelWinnerRelative: expected },
+    { duelWinnerRelative: 'self', params: null }
+  ), false);
 });
 
 test('condizione: un termine ignoto al checkpoint fallisce in modo rumoroso', () => {

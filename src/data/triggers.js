@@ -28,6 +28,7 @@ export const TRIGGER_NAMES = {
   ultimaChance: 'Ultima Chance',
   alleato: 'Alleato',
   rinforzi: 'Rinforzi',
+  debt: 'Debito',
 };
 
 export const TRIGGER_DESCRIPTIONS = {
@@ -50,6 +51,7 @@ export const TRIGGER_DESCRIPTIONS = {
   ultimaChance: 'se è il Round 5 o successivo',
   alleato: 'se nella tua mano iniziale c era almeno 1 altra carta della stessa Lega della carta giocata',
   rinforzi: 'se nella tua mano iniziale c erano almeno 2 altre carte della stessa Lega della carta giocata',
+  debt: 'quando viene schierato, il suo giocatore perde 2 PV; poi il Potere si attiva',
 };
 
 export const getAbilityExplanation = (ability) => {
