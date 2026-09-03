@@ -1,0 +1,321 @@
+{
+  "ability": {
+    "id": "apex_furia",
+    "name": "Furia",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      4
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "apex_furia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "apex_disprezzo",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 4,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": 1,
+    "selected": "apex_furia"
+  },
+  "eminence": {
+    "army": "Apex",
+    "id": "apex_sole_verde",
+    "name": "Il Sole Verde"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:apex_furia:GENERAL",
+      "kind": "reveal",
+      "name": "Furia",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "OWN_AGENT"
+        },
+        {
+          "primitive": "LOSE_HP",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "apex_furia_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:apex_furia:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:apex_furia:GENERAL",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            },
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "player",
+                "type": "hp"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:apex_furia:GENERAL",
+          "kind": "reveal",
+          "name": "Furia",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "OWN_AGENT"
+            },
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "roundNumber: 5 (obs 3) → falsa",
+            "keys": [
+              "roundNumber"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_FIELD",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma: Ora Verde",
+          "target": "GLOBAL",
+          "timing": "ROUND_START"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "MODIFY_STAT",
+          "source": "ability",
+          "sourceId": "apex_furia",
+          "sourceName": "Furia",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "apex_furia",
+          "sourceName": "Furia",
+          "target": "SELF",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

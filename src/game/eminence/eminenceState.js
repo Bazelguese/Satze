@@ -115,6 +115,7 @@ export function createEminencePersistentState() {
     triggerReplacementsByCardId: {},
     endMatchDebts: [],
     slotCurses: {},
+    abilityPresenceDeltas: {},
     custom: {},
   };
 }
@@ -245,6 +246,7 @@ export function selectPublicEminenceState(state) {
     hasSealedSelection: Boolean(state.selectedAbilityId) && !state.revealedAbilityId,
     hasSealedSetup: Boolean(state.setupCommitted),
     persistent: selectPublicPersistentState(state.persistent),
+    leagueByCardId: { ...(state.round?.temporaryLeagueByCardId || {}) },
   };
 }
 
@@ -264,6 +266,7 @@ export function selectPublicPersistentState(persistent) {
     triggerReplacementsByCardId: { ...(persistent.triggerReplacementsByCardId || {}) },
     endMatchDebts: (persistent.endMatchDebts || []).map((debt) => ({ ...debt })),
     slotCurses: cloneSlotCurses(persistent.slotCurses),
+    abilityPresenceDeltas: { ...(persistent.abilityPresenceDeltas || {}) },
   };
 }
 
@@ -309,6 +312,20 @@ export function selectPublicEminenceMatchState(matchState, viewerSide = null) {
 // ------------------------------------------------------------------
 
 /**
+ * Costo effettivo di un'abilità: catalogo + delta persistenti dello Scontro.
+ * `presenceDeltaMin` è il pavimento del costo effettivo, non del solo extra.
+ */
+export function resolveAbilityPresenceDelta(ability, persistent = null) {
+  if (!ability) return 0;
+  const extra = persistent?.abilityPresenceDeltas?.[ability.id] || 0;
+  const raw = (ability.presenceDelta || 0) + extra;
+  if (typeof ability.presenceDeltaMin === 'number') {
+    return Math.max(ability.presenceDeltaMin, raw);
+  }
+  return raw;
+}
+
+/**
  * Abilità selezionabili data una certa Presenza.
  *
  * Usata sia per la UI del giocatore sia per le deduzioni dell'IA. Nel secondo caso il
@@ -316,19 +333,23 @@ export function selectPublicEminenceMatchState(matchState, viewerSide = null) {
  *
  * @param {string} eminenceId
  * @param {number} presence
+ * @param {object|null} [persistent] stato persistente del lato (costi cresciuti)
  * @returns {string[]} id delle abilità legali
  */
-export function getLegalAbilityIds(eminenceId, presence) {
+export function getLegalAbilityIds(eminenceId, presence, persistent = null) {
   const eminence = getEminence(eminenceId);
   if (!eminence) return [];
 
   return eminence.abilities
-    .filter((ability) => ability.presenceDelta >= 0 || presence >= Math.abs(ability.presenceDelta))
+    .filter((ability) => {
+      const delta = resolveAbilityPresenceDelta(ability, persistent);
+      return delta >= 0 || presence >= Math.abs(delta);
+    })
     .map((ability) => ability.id);
 }
 
-export function isAbilitySelectable(eminenceId, abilityId, presence) {
-  return getLegalAbilityIds(eminenceId, presence).includes(abilityId);
+export function isAbilitySelectable(eminenceId, abilityId, presence, persistent = null) {
+  return getLegalAbilityIds(eminenceId, presence, persistent).includes(abilityId);
 }
 
 /**

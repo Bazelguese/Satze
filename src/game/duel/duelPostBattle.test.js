@@ -36,6 +36,41 @@ test('conquista: applica potere post-battaglia al giocatore se vince', () => {
   assert.ok(effects.some((e) => e.effect === 'power' && e.target === 'player'));
 });
 
+test('conquista: conquestDisabled salta Conquista e lascia Ultimo Desiderio', () => {
+  const effects = [];
+  const applyEffect = (effect, value, target) => {
+    effects.push({ effect, target });
+  };
+  applyDuelPostBattleEffects({
+    pAbilityBlocked: false,
+    eAbilityBlocked: false,
+    pBonusBlocked: false,
+    eBonusBlocked: false,
+    pHasBonus: false,
+    eHasBonus: false,
+    pArmyBonus: null,
+    eArmyBonus: null,
+    pAgent: {
+      name: 'P',
+      ability: { trigger: 'lastWish', effect: 'power', value: 1 },
+    },
+    eAgent: {
+      name: 'E',
+      ability: { trigger: 'conquest', effect: 'power', value: 2 },
+    },
+    applyEffect,
+    applyBonusEffects: () => {},
+    checkTrigger,
+    fieldOptions: { conquestDisabled: true },
+    playerContextPost: { won: false, lost: true },
+    enemyContextPost: { won: true, lost: false },
+    battleLog: [],
+    state: { pBonusCopied: null, eBonusCopied: null },
+  });
+  assert.ok(effects.some((e) => e.effect === 'power' && e.target === 'player'));
+  assert.equal(effects.some((e) => e.target === 'enemy'), false);
+});
+
 test('conquista: non applica potere post se il giocatore perde', () => {
   const effects = [];
   const applyEffect = (effect, value, target) => effects.push(effect);

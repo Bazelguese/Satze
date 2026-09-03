@@ -1,0 +1,497 @@
+{
+  "ability": {
+    "id": "corte_salasso",
+    "name": "Salasso",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
+  },
+  "bilance": {
+    "cinematicCues": 4,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 3,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      2
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_accordo",
+        "presenceDelta": 0
+      },
+      {
+        "id": "corte_salasso",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "corte_salasso"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:corte_salasso:GENERAL",
+      "kind": "reveal",
+      "name": "Salasso",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "LOSE_HP",
+          "slot": null,
+          "target": "SELF"
+        },
+        {
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "kind": "effect",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "kind": "effect",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "corte_salasso_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_salasso:GENERAL",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_salasso:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "player",
+                "type": "hp"
+              },
+              "waitFor": null
+            },
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:corte_salasso:GENERAL",
+          "kind": "reveal",
+          "name": "Salasso",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "SELF"
+            },
+            {
+              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
+        },
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "kind": "effect",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "kind": "effect",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "hpLossCause: (assente) → non ancora valutabile",
+            "keys": [
+              "hpLossCause"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "corte_pagare_debiti",
+          "sourceName": "Pagare i Debiti",
+          "target": "SELF",
+          "timing": "ON_HP_LOSS"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "corte_salasso",
+          "sourceName": "Salasso",
+          "target": "SELF",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "source": "ability",
+          "sourceId": "corte_salasso",
+          "sourceName": "Salasso",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

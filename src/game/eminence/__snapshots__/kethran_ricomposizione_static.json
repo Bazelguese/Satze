@@ -1,0 +1,249 @@
+{
+  "ability": {
+    "id": "kethran_sacrificio",
+    "name": "Sacrificio",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "Se il proprio Agente perde il Duello, +1 Presenza."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      1
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      4
+    ],
+    "segmentsWithoutCue": 1,
+    "segmentsWithoutNotice": 1
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "kethran_sacrificio",
+        "presenceDelta": 1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 3,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": 1,
+    "selected": "kethran_sacrificio"
+  },
+  "eminence": {
+    "army": "Kethran",
+    "id": "kethran_altare",
+    "name": "L'Altare della Ricomposizione"
+  },
+  "notices": [
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:kethran_sacrificio:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Sacrificio",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "kethran_ricomposizione_static",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:kethran_sacrificio:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:kethran_sacrificio:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Sacrificio",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"opponent\" (obs \"opponent\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"opponent\" (obs \"opponent\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "kethran_sacrificio",
+          "sourceName": "Sacrificio",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

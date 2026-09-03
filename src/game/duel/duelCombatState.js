@@ -34,8 +34,36 @@ export function pickPostBattleFields(state) {
   };
 }
 
+const WATCHED_COMBAT_STATS = ['pPower', 'ePower', 'pDamage', 'eDamage', 'pAssaultMod', 'eAssaultMod'];
+
+function watchCombatStatReductions(state) {
+  let occurred = Boolean(state.statReductionOccurred);
+  const values = {};
+  for (const key of WATCHED_COMBAT_STATS) values[key] = state[key];
+  Object.defineProperty(state, 'statReductionOccurred', {
+    get: () => occurred,
+    set: (value) => { occurred = Boolean(value); },
+    enumerable: true,
+    configurable: true,
+  });
+  for (const key of WATCHED_COMBAT_STATS) {
+    Object.defineProperty(state, key, {
+      get: () => values[key],
+      set: (next) => {
+        if (typeof next === 'number' && typeof values[key] === 'number' && next < values[key]) {
+          occurred = true;
+        }
+        values[key] = next;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+  }
+  return state;
+}
+
 export function createDuelCombatState(duel, fieldStatDeltas = null, slotCurseStatDeltas = null) {
-  return {
+  return watchCombatStatReductions({
     pPower: duel.pPower,
     ePower: duel.ePower,
     pDamage: duel.pDamage,
@@ -70,5 +98,5 @@ export function createDuelCombatState(duel, fieldStatDeltas = null, slotCurseSta
     eModifierInversion: false,
     fieldStatDeltas,
     slotCurseStatDeltas,
-  };
+  });
 }

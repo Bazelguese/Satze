@@ -206,7 +206,11 @@ export async function applyRemoteGateMessage(state, message, { digest = sha256He
 
   if (remotePublicState) {
     if (remotePublicState.eminenceId !== opening.eminenceId) return reject('EMINENCE_MISMATCH');
-    const legal = getLegalAbilityIds(opening.eminenceId, remotePublicState.selectionCheckpointPresence);
+    const legal = getLegalAbilityIds(
+      opening.eminenceId,
+      remotePublicState.selectionCheckpointPresence,
+      remotePublicState.persistent,
+    );
     if (!legal.includes(opening.abilityId)) return reject('ILLEGAL_AT_SELECTION');
   }
 

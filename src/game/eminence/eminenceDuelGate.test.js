@@ -103,8 +103,10 @@ test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
   // Il costo si paga al reveal, non alla scelta.
   assert.equal(result.matchState[SIDES.PLAYER].presence, 0);
   assert.equal(result.matchState[SIDES.PLAYER].presenceSpentThisRound, 4);
-  assert.equal(result.bundle.statDeltas[SIDES.PLAYER].power, 2);
-  assert.equal(result.bundle.statDeltas[SIDES.PLAYER].damage, 2);
+  assert.deepEqual(result.bundle.grantedPowers[SIDES.PLAYER].effects, [
+    { effect: 'power', value: 2 },
+    { effect: 'damage', value: 2 },
+  ]);
 });
 
 test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non prima', () => {
@@ -241,6 +243,32 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
   });
   assert.equal(prepared.blocked, null);
   assert.equal(prepared.matchState.enemy.selectedParams.cardId, 301);
+});
+
+test('GENERAL già aperto: Accordo e Salasso tengono i FC temporanei nel Duello', () => {
+  let salasso = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 3 } });
+  salasso = choose(salasso, SIDES.PLAYER, 'corte_salasso');
+  salasso = choose(salasso, SIDES.ENEMY, 'semaforo_giallo');
+  salasso = advanceToNextRevealGate(salasso).matchState;
+  salasso = advanceToNextRevealGate(salasso).matchState;
+  salasso = advanceToNextRevealGate(salasso).matchState;
+  const salassoDuel = prepareEminenceDuel(salasso, {
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  });
+  assert.equal(salassoDuel.bundle.temporaryFocus[SIDES.PLAYER], 1);
+  assert.equal(salassoDuel.bundle.temporaryFocus[SIDES.ENEMY], 0);
+
+  let accordo = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
+  accordo = choose(accordo, SIDES.PLAYER, 'corte_accordo');
+  accordo = choose(accordo, SIDES.ENEMY, 'semaforo_giallo');
+  accordo = advanceToNextRevealGate(accordo).matchState;
+  accordo = advanceToNextRevealGate(accordo).matchState;
+  accordo = advanceToNextRevealGate(accordo).matchState;
+  const accordoDuel = prepareEminenceDuel(accordo, {
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  });
+  assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.ENEMY], 1);
+  assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.PLAYER], 0);
 });
 
 test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', () => {

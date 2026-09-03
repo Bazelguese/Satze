@@ -26,6 +26,9 @@ export function createTriggerRules() {
     forceSatisfied: [],
     forceForbidden: [],
     unblockable: [],
+    xorSync: [],
+    xorSnapshot: null,
+    equalLeagueSatisfies: [],
 
     custom: {},
   };
@@ -39,6 +42,9 @@ function cloneTriggerRules(rules) {
     forceSatisfied: [...rules.forceSatisfied],
     forceForbidden: [...rules.forceForbidden],
     unblockable: [...rules.unblockable],
+    xorSync: [...(rules.xorSync || [])],
+    xorSnapshot: rules.xorSnapshot ? { ...rules.xorSnapshot } : null,
+    equalLeagueSatisfies: [...(rules.equalLeagueSatisfies || [])],
     custom: { ...rules.custom },
   };
 }
@@ -120,6 +126,19 @@ export function applyPrimitiveToTriggerRules(rules, segment, { ownerSide = SIDES
       break;
     }
 
+    case P.SYNC_TRIGGERS_ON_XOR:
+      next.xorSync.push({
+        mode: segment.mode === 'FORBID_BOTH' ? 'FORBID_BOTH' : 'FORCE_BOTH',
+        excludeTriggers: segment.excludeTriggers ? [...segment.excludeTriggers] : null,
+        ownerSide,
+        source: entry.source,
+      });
+      break;
+
+    case P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE:
+      next.equalLeagueSatisfies.push(entry);
+      break;
+
     case P.ALIAS_TRIGGER: {
       const map = { ...(segment.map || {}) };
       // `aliasParam` deposita l'alternativa su `*`: vale per qualunque trigger effettivo,
@@ -189,6 +208,10 @@ function findMatch(entries, params) {
   return (entries || []).find((entry) => entryMatches(entry, params)) || null;
 }
 
+function leaguesEqual(context) {
+  return (context?.playerLeague || 0) === (context?.enemyLeague || 0);
+}
+
 // ------------------------------------------------------------------
 // Resolver
 // ------------------------------------------------------------------
@@ -249,13 +272,30 @@ export function resolveTriggerState({
     if (aliasUsed) naturalSatisfied = true;
   }
 
+  if (!naturalSatisfied && leaguesEqual(context) && findMatch(rules.equalLeagueSatisfies, match)) {
+    naturalSatisfied = true;
+  }
+
   // --- 3. Force / Forbid ---------------------------------------------------
   const forbidEntry = findMatch(rules.forceForbidden, match);
   const forceEntry = findMatch(rules.forceSatisfied, match);
 
-  const forbidden = Boolean(forbidEntry);
+  let xorForced = false;
+  let xorForbidden = false;
+  const xorCount = rules.xorSnapshot
+    ? Number(Boolean(rules.xorSnapshot[SIDES.PLAYER])) + Number(Boolean(rules.xorSnapshot[SIDES.ENEMY]))
+    : null;
+  if (xorCount === 1) {
+    for (const xor of rules.xorSync || []) {
+      if (xor.excludeTriggers && xor.excludeTriggers.includes(effectiveTrigger)) continue;
+      if (xor.mode === 'FORBID_BOTH') xorForbidden = true;
+      if (xor.mode === 'FORCE_BOTH') xorForced = true;
+    }
+  }
+
+  const forbidden = Boolean(forbidEntry) || xorForbidden;
   // FORBID prevale su FORCE in conflitto diretto.
-  const forced = Boolean(forceEntry) && !forbidden;
+  const forced = (Boolean(forceEntry) || xorForced) && !forbidden;
 
   let satisfied = naturalSatisfied;
   if (forced) satisfied = true;
@@ -301,4 +341,42 @@ export function resolveTriggerState({
 export function resolveActivationRequirement(params) {
   const state = resolveTriggerState(params);
   return { effectiveTrigger: state.effectiveTrigger, naturalSatisfied: state.naturalSatisfied };
+}
+
+/**
+ * Fissa il conteggio 0/1/2 sul requisito naturale, dopo sostituzioni e Campo,
+ * prima di FORCE/FORBID condizionati all'XOR. Una sola volta per Duello.
+ */
+export function snapshotXorActivation(rules, {
+  playerAgent,
+  enemyAgent,
+  playerContext,
+  enemyContext,
+  checkTrigger = defaultCheckTrigger,
+} = {}) {
+  if (!rules?.xorSync?.length) return rules;
+  if (rules.xorSnapshot) return rules;
+
+  const player = resolveActivationRequirement({
+    originalTrigger: playerAgent?.ability?.trigger ?? null,
+    context: playerContext,
+    card: playerAgent,
+    side: SIDES.PLAYER,
+    triggerRules: rules,
+    checkTrigger,
+  });
+  const enemy = resolveActivationRequirement({
+    originalTrigger: enemyAgent?.ability?.trigger ?? null,
+    context: enemyContext,
+    card: enemyAgent,
+    side: SIDES.ENEMY,
+    triggerRules: rules,
+    checkTrigger,
+  });
+
+  rules.xorSnapshot = {
+    [SIDES.PLAYER]: Boolean(player.naturalSatisfied),
+    [SIDES.ENEMY]: Boolean(enemy.naturalSatisfied),
+  };
+  return rules;
 }

@@ -8,7 +8,14 @@ import { computeDuelResolution } from '../game/duelResolve';
 import { prepareEminenceDuel, settleEminenceRound } from '../game/eminence/eminenceDuelGate';
 import { capturePresenceSnapshot } from '../game/eminence/presence';
 import { isEminenceSubsystemEnabled } from '../game/eminence/eminenceState';
-import { readHpDelta, consumeHpDeltas, powerResolutionFromDuel } from '../game/eminence/eminenceDuelBinding';
+import {
+  readHpDelta,
+  consumeHpDeltas,
+  powerResolutionFromDuel,
+  collectRoundLeagueByCardId,
+  readCardLeagueDelta,
+  isLowestEffectiveLeague,
+} from '../game/eminence/eminenceDuelBinding';
 
 /**
  * Hook per gestire la logica di battaglia
@@ -77,12 +84,21 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     // I PV del reveal sono già sull'HUD. Il bundle del Duello tiene FC/stat;
     // i delta PV già riscossi vengono tolti per non ribatterli.
     const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
+    const leagueByCardId = collectRoundLeagueByCardId(eminenceMatchState);
+    const deployedIsLowestLeagueBySide = {
+      player: isLowestEffectiveLeague(pAgent, playerHand, leagueByCardId),
+      enemy: isLowestEffectiveLeague(eAgent, enemyHand, leagueByCardId),
+    };
     const prepared = prepareEminenceDuel(eminenceMatchState, {
       initiativeSide,
       agentIdBySide: { player: pAgent.id, enemy: eAgent.id },
       currentFieldIndex,
       focusInvestedBySide: { player: selectedFocus || 0, enemy: enemySelectedFocus || 0 },
-      leagueBySide: { player: pAgent.league ?? 0, enemy: eAgent.league ?? 0 },
+      leagueBySide: {
+        player: (pAgent.league ?? 0) + readCardLeagueDelta(leagueByCardId, pAgent.id),
+        enemy: (eAgent.league ?? 0) + readCardLeagueDelta(leagueByCardId, eAgent.id),
+      },
+      deployedIsLowestLeagueBySide,
     });
     if (prepared.blocked) {
       console.error('resolveBattle: scelte Eminenza incomplete', prepared.blocked);
@@ -132,10 +148,17 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
         agentIdBySide: { player: pAgent.id, enemy: eAgent.id },
         aliasUsedBySide: battleResult.aliasUsedBySide,
         finalPowerByCardId: {
-          [pAgent.id]: battleResult.pPower,
-          [eAgent.id]: battleResult.ePower,
+          [pAgent.id]: battleResult.playerPower,
+          [eAgent.id]: battleResult.enemyPower,
         },
-        finalPowerBySide: { player: battleResult.pPower, enemy: battleResult.ePower },
+        finalPowerBySide: { player: battleResult.playerPower, enemy: battleResult.enemyPower },
+        finalDamageBySide: { player: battleResult.playerDamage, enemy: battleResult.enemyDamage },
+        activationSatisfiedBySide: {
+          player: battleResult.playerActivationSatisfied,
+          enemy: battleResult.enemyActivationSatisfied,
+        },
+        focusInvestedBySide: { player: selectedFocus || 0, enemy: enemySelectedFocus || 0 },
+        statReductionOccurred: Boolean(battleResult.statReductionOccurred),
         ...powerResolutionFromDuel({ battleResult, playerAgent: pAgent, enemyAgent: eAgent }),
       });
       setEminenceMatchState(settled.matchState);

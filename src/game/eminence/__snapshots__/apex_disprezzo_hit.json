@@ -1,0 +1,255 @@
+{
+  "ability": {
+    "id": "apex_disprezzo",
+    "name": "Disprezzo",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "apex_furia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "apex_disprezzo",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -2,
+    "selected": "apex_disprezzo"
+  },
+  "eminence": {
+    "army": "Apex",
+    "id": "apex_sole_verde",
+    "name": "Il Sole Verde"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:apex_disprezzo:GENERAL",
+      "kind": "reveal",
+      "name": "Disprezzo",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "IGNORE_FIELD",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "apex_disprezzo_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:apex_disprezzo:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:apex_disprezzo:GENERAL",
+          "kind": "reveal",
+          "name": "Disprezzo",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "IGNORE_FIELD",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "roundNumber: 5 (obs 3) → falsa",
+            "keys": [
+              "roundNumber"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_FIELD",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma: Ora Verde",
+          "target": "GLOBAL",
+          "timing": "ROUND_START"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "IGNORE_FIELD",
+          "source": "ability",
+          "sourceId": "apex_disprezzo",
+          "sourceName": "Disprezzo",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

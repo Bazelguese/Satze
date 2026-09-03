@@ -1,0 +1,260 @@
+{
+  "ability": {
+    "id": "orathai_silenzio",
+    "name": "Silenzio",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "orathai_tacet",
+        "presenceDelta": 0
+      },
+      {
+        "id": "orathai_contrappunto",
+        "presenceDelta": -2
+      },
+      {
+        "id": "orathai_silenzio",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "orathai_silenzio"
+  },
+  "eminence": {
+    "army": "Orathai",
+    "id": "orathai_primo_canto",
+    "name": "Il Primo Canto"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:orathai_silenzio:GENERAL",
+      "kind": "reveal",
+      "name": "Silenzio",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "orathai_silenzio_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:orathai_silenzio:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:orathai_silenzio:GENERAL",
+          "kind": "reveal",
+          "name": "Silenzio",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "SYNC_TRIGGERS_ON_XOR",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "keys": [
+              "ownActivationSatisfied",
+              "enemyActivationSatisfied"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "orathai_risonanza",
+          "sourceName": "Consonanza",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "source": "ability",
+          "sourceId": "orathai_silenzio",
+          "sourceName": "Silenzio",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

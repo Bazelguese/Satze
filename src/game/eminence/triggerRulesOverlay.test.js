@@ -8,6 +8,7 @@ import {
   expireDuelReplacements,
   resolveTriggerState,
   resolveActivationRequirement,
+  snapshotXorActivation,
 } from './triggerRulesOverlay.js';
 import {
   EMINENCE_PRIMITIVES as P,
@@ -201,6 +202,26 @@ test('precedenza: FORBID prevale su FORCE in conflitto diretto', () => {
   assert.equal(state.forbidden, true);
   assert.equal(state.forced, false);
   assert.equal(state.satisfied, false);
+});
+
+test('SATISFY_TRIGGER_ON_EQUAL_LEAGUE: a Leghe uguali Sfida e Sopraffare sono naturali', () => {
+  const rules = withRule(P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE, {
+    scope: TRIGGER_SCOPES.OWN,
+    triggers: ['sfida', 'sopraffare'],
+  });
+  const equal = { playerLeague: 3, enemyLeague: 3 };
+  const behind = { playerLeague: 2, enemyLeague: 4 };
+
+  const sfidaEqual = resolve('sfida', rules, { context: equal });
+  assert.equal(sfidaEqual.naturalSatisfied, true);
+  assert.equal(sfidaEqual.satisfied, true);
+
+  const sopraEqual = resolve('sopraffare', rules, { context: equal });
+  assert.equal(sopraEqual.naturalSatisfied, true);
+
+  const sopraBehind = resolve('sopraffare', rules, { context: behind });
+  assert.equal(sopraBehind.naturalSatisfied, false);
+  assert.equal(sopraBehind.satisfied, false);
 });
 
 test('ambito: OWN non tocca l\'avversario, ENEMY non tocca sé stessi', () => {
@@ -398,6 +419,87 @@ test('immutabilità: depositare una regola non muta l\'overlay di partenza', () 
 
   assert.equal(base.forceSatisfied.length, 0);
   assert.equal(next.forceSatisfied.length, 1);
+});
+
+test('XOR: con esattamente uno soddisfatto FORCE_BOTH considera entrambi soddisfatti', () => {
+  const rules = applyPrimitiveToTriggerRules(
+    createTriggerRules(),
+    segment(P.SYNC_TRIGGERS_ON_XOR, { mode: 'FORCE_BOTH', excludeTriggers: ['conquest'] }),
+    { ownerSide: SIDES.PLAYER, source: 'test' },
+  );
+  snapshotXorActivation(rules, {
+    playerAgent: { ability: { trigger: 'imboscata' } },
+    enemyAgent: { ability: { trigger: 'imboscata' } },
+    playerContext: ctx({ isFirst: true }),
+    enemyContext: ctx({ isFirst: false }),
+  });
+  assert.deepEqual(rules.xorSnapshot, { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false });
+
+  const own = resolve('imboscata', rules, { side: SIDES.PLAYER, context: { isFirst: true } });
+  const foe = resolve('imboscata', rules, { side: SIDES.ENEMY, context: { isFirst: false } });
+  assert.equal(own.naturalSatisfied, true);
+  assert.equal(foe.naturalSatisfied, false);
+  assert.equal(own.satisfied, true);
+  assert.equal(foe.satisfied, true);
+  assert.equal(foe.forced, true);
+
+  const conquest = resolve('conquest', rules, { side: SIDES.ENEMY, context: { won: false } });
+  assert.equal(conquest.forced, false);
+  assert.equal(conquest.satisfied, false);
+});
+
+test('XOR: con esattamente uno soddisfatto FORBID_BOTH spegne entrambi', () => {
+  const rules = applyPrimitiveToTriggerRules(
+    createTriggerRules(),
+    segment(P.SYNC_TRIGGERS_ON_XOR, { mode: 'FORBID_BOTH' }),
+    { ownerSide: SIDES.PLAYER, source: 'test' },
+  );
+  snapshotXorActivation(rules, {
+    playerAgent: { ability: { trigger: 'imboscata' } },
+    enemyAgent: { ability: { trigger: 'imboscata' } },
+    playerContext: ctx({ isFirst: true }),
+    enemyContext: ctx({ isFirst: false }),
+  });
+  assert.equal(resolve('imboscata', rules, { side: SIDES.PLAYER, context: { isFirst: true } }).satisfied, false);
+  assert.equal(resolve('imboscata', rules, { side: SIDES.ENEMY, context: { isFirst: false } }).satisfied, false);
+});
+
+test('XOR: due null contano 2 e non sincronizzano', () => {
+  const rules = applyPrimitiveToTriggerRules(
+    createTriggerRules(),
+    segment(P.SYNC_TRIGGERS_ON_XOR, { mode: 'FORCE_BOTH' }),
+    { ownerSide: SIDES.PLAYER, source: 'test' },
+  );
+  snapshotXorActivation(rules, {
+    playerAgent: { ability: { trigger: null } },
+    enemyAgent: { ability: { trigger: null } },
+    playerContext: ctx(),
+    enemyContext: ctx(),
+  });
+  assert.deepEqual(rules.xorSnapshot, { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true });
+  assert.equal(resolve(null, rules).forced, false);
+});
+
+test('XOR: un Blocca successivo non cambia il requisito soddisfatto', () => {
+  const rules = applyPrimitiveToTriggerRules(
+    createTriggerRules(),
+    segment(P.SYNC_TRIGGERS_ON_XOR, { mode: 'FORCE_BOTH' }),
+    { ownerSide: SIDES.PLAYER, source: 'test' },
+  );
+  snapshotXorActivation(rules, {
+    playerAgent: { ability: { trigger: 'imboscata' } },
+    enemyAgent: { ability: { trigger: 'imboscata' } },
+    playerContext: ctx({ isFirst: true }),
+    enemyContext: ctx({ isFirst: false }),
+  });
+  const blocked = resolve('imboscata', rules, {
+    side: SIDES.ENEMY,
+    context: { isFirst: false },
+    powerBlocked: true,
+  });
+  assert.equal(blocked.satisfied, true);
+  assert.equal(blocked.blocked, true);
+  assert.equal(blocked.resolves, false);
 });
 
 test('immutabilità: una primitiva estranea ai trigger lascia l\'overlay invariato', () => {

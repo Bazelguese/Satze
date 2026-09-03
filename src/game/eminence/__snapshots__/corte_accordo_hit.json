@@ -1,0 +1,493 @@
+{
+  "ability": {
+    "id": "corte_accordo",
+    "name": "Accordo Unilaterale",
+    "presenceDelta": 0,
+    "revealGate": "GENERAL",
+    "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
+  },
+  "bilance": {
+    "cinematicCues": 4,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 3,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      3
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_accordo",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 0,
+    "selected": "corte_accordo"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "enemy",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:corte_accordo:GENERAL",
+      "kind": "reveal",
+      "name": "Accordo Unilaterale",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "LOSE_HP",
+          "slot": null,
+          "target": "OPPONENT"
+        },
+        {
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "slot": null,
+          "target": "ENEMY_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 0,
+      "side": "player",
+      "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "kind": "effect",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "kind": "effect",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "corte_accordo_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_accordo:GENERAL",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "enemy",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_accordo:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "enemy",
+                "type": "hp"
+              },
+              "waitFor": null
+            },
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "enemy",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "enemy",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:corte_accordo:GENERAL",
+          "kind": "reveal",
+          "name": "Accordo Unilaterale",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "OPPONENT"
+            },
+            {
+              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "slot": null,
+              "target": "ENEMY_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 0,
+          "side": "player",
+          "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
+        },
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "kind": "effect",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "kind": "effect",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "hpLossCause: (assente) → non ancora valutabile",
+            "keys": [
+              "hpLossCause"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "corte_pagare_debiti",
+          "sourceName": "Pagare i Debiti",
+          "target": "SELF",
+          "timing": "ON_HP_LOSS"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "corte_accordo",
+          "sourceName": "Accordo Unilaterale",
+          "target": "OPPONENT",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "source": "ability",
+          "sourceId": "corte_accordo",
+          "sourceName": "Accordo Unilaterale",
+          "target": "ENEMY_AGENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

@@ -37,6 +37,7 @@ import { ALL_AGENTS } from '../../data/cards.js';
 import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployedMarkResolution } from './eminenceAnnouncements.js';
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
 import { snapshotAnchoredBySide } from './anchored.js';
+import { collectRoundLeagueByCardId } from './eminenceDuelBinding.js';
 
 /** Costo di schieramento legato al trigger effettivo, non a una singola Eminenza. */
 const DEPLOY_TRIGGER_HP_COSTS = {
@@ -129,7 +130,11 @@ export function autoSelectForcedChoices(matchState) {
     if (!mustChooseThisRound(state, side)) continue;
     if (state[side].selectedAbilityId) continue;
 
-    const legal = getLegalAbilityIds(state[side].eminenceId, state[side].selectionCheckpointPresence);
+    const legal = getLegalAbilityIds(
+      state[side].eminenceId,
+      state[side].selectionCheckpointPresence,
+      state[side].persistent,
+    );
     if (legal.length !== 1) continue;
 
     const ability = getEminenceAbility(state[side].eminenceId, legal[0]);
@@ -162,7 +167,8 @@ export function autoSelectFirstLegalAbility(matchState, side) {
 
   const legal = getLegalAbilityIds(
     matchState[side].eminenceId,
-    matchState[side].selectionCheckpointPresence
+    matchState[side].selectionCheckpointPresence,
+    matchState[side].persistent,
   );
   if (!legal.length) return matchState;
 
@@ -235,16 +241,63 @@ function applyBundleToState(matchState, bundle) {
     state = { ...state, [block.side]: { ...state[block.side], blockedNextRound: true } };
   }
 
-  return persistEndMatchDebts(
-    persistTriggerReplacements(
-      applySlotCursesToState(
-        applyAnchoredThresholdToState(applyMarksToState(state, bundle.marks), bundle.anchoredThresholdChanges),
-        bundle.slotModifiers,
+  return persistLeagueByCardId(
+    persistEndMatchDebts(
+      persistAbilityCostChanges(
+        persistTriggerReplacements(
+          applySlotCursesToState(
+            applyAnchoredThresholdToState(applyMarksToState(state, bundle.marks), bundle.anchoredThresholdChanges),
+            bundle.slotModifiers,
+          ),
+          bundle.triggerRules?.persistentReplacementsByCardId,
+        ),
+        bundle.abilityCostChanges,
       ),
-      bundle.triggerRules?.persistentReplacementsByCardId,
+      bundle.endMatchDebts,
     ),
-    bundle.endMatchDebts,
+    bundle.leagueChanges,
   );
+}
+
+function persistLeagueByCardId(matchState, changes) {
+  if (!changes?.length) return matchState;
+  let state = matchState;
+  for (const change of changes) {
+    const side = change.ownerSide;
+    const cardId = change.cardId;
+    if (!side || !state[side]?.round || cardId == null) continue;
+    const current = state[side];
+    const nextMap = { ...(current.round.temporaryLeagueByCardId || {}) };
+    nextMap[cardId] = (nextMap[cardId] || 0) + (Number(change.delta) || 0);
+    state = {
+      ...state,
+      [side]: {
+        ...current,
+        round: { ...current.round, temporaryLeagueByCardId: nextMap },
+      },
+    };
+  }
+  return state;
+}
+
+function persistAbilityCostChanges(matchState, changes) {
+  if (!changes?.length) return matchState;
+  let state = matchState;
+  for (const change of changes) {
+    const side = change.side;
+    if (!side || !state[side] || !change.abilityId) continue;
+    const persistent = state[side].persistent || {};
+    const current = { ...(persistent.abilityPresenceDeltas || {}) };
+    current[change.abilityId] = (current[change.abilityId] || 0) + (change.delta || 0);
+    state = {
+      ...state,
+      [side]: {
+        ...state[side],
+        persistent: { ...persistent, abilityPresenceDeltas: current },
+      },
+    };
+  }
+  return state;
 }
 
 function persistTriggerReplacements(matchState, replacements) {
@@ -556,6 +609,11 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.MODIFY_LEAGUE,
   P.IGNORE_FIELD,
   P.SET_ARMY_BONUS_STATE,
+  P.CONVERT_STAT,
+  P.ARM_CONQUEST_OVERRIDE,
+  P.ARM_VA_TIE_WIN,
+  P.APPLY_TOXIN,
+  P.GRANT_POWER,
 ]);
 
 function replayOpenedGeneralCombat(matchState, agentIdBySide) {
@@ -604,7 +662,22 @@ function mergeDuelReplay(bundle, replay) {
     },
     ignoreFieldSides: [...new Set([...(target.ignoreFieldSides || []), ...(replay.ignoreFieldSides || [])])],
     armyBonusState: { ...(replay.armyBonusState || {}), ...(target.armyBonusState || {}) },
+    statConverts: [...(target.statConverts || []), ...(replay.statConverts || [])],
+    conquestOverrides: [...(target.conquestOverrides || []), ...(replay.conquestOverrides || [])],
+    abilityCostChanges: [...(target.abilityCostChanges || []), ...(replay.abilityCostChanges || [])],
+    leagueByCardId: { ...(target.leagueByCardId || {}), ...(replay.leagueByCardId || {}) },
+    vaTieWinnerSides: [...(target.vaTieWinnerSides || []), ...(replay.vaTieWinnerSides || [])],
+    toxinApplications: [...(target.toxinApplications || []), ...(replay.toxinApplications || [])],
+    grantedPowers: { ...(target.grantedPowers || {}), ...(replay.grantedPowers || {}) },
   };
+}
+
+function mergeRoundLeagues(bundle, matchState) {
+  const stored = collectRoundLeagueByCardId(matchState);
+  const fromBundle = bundle?.leagueByCardId || {};
+  const leagueByCardId = { ...stored, ...fromBundle };
+  if (!Object.keys(leagueByCardId).length) return bundle;
+  return { ...(bundle || createEffectBundle()), leagueByCardId };
 }
 
 /**
@@ -624,6 +697,7 @@ export function prepareEminenceDuel(matchState, {
   currentFieldIndex = null,
   focusInvestedBySide = null,
   leagueBySide = null,
+  deployedIsLowestLeagueBySide = null,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, bundle: null, events: [], notices: [], blocked: null };
@@ -654,12 +728,14 @@ export function prepareEminenceDuel(matchState, {
   const collected = collectTimings(opened.matchState, PRE_DUEL_TIMINGS, initiativeSide, {
     agentIdBySide,
     anchoredBySide,
+    deployedIsLowestLeagueBySide: deployedIsLowestLeagueBySide || {},
   });
   let bundle = applyEminenceSegments([...opened.resolutionQueue, ...collected.queue], null, { agentIdBySide });
   if (generalWasAlreadyOpen) {
     bundle = mergeDuelReplay(bundle, replayOpenedGeneralCombat(filled, agentIdBySide));
   }
   bundle = mergePersistentReplacements(bundle, collected.matchState);
+  bundle = mergeRoundLeagues(bundle, collected.matchState);
   applyOnDeployTriggerCosts(bundle, { agentIdBySide });
   const withCurses = attachPersistentSlotCurses(bundle, collected.matchState, currentFieldIndex);
   const evalContextBySide = {
@@ -672,16 +748,16 @@ export function prepareEminenceDuel(matchState, {
     matchState: applied.matchState,
     bundle: withCurses,
     events: opened.events,
-    notices: generalWasAlreadyOpen
-      ? [...applied.notices]
-      : [
-        ...noticesFromRevealEvents(opened.events, { evalContextBySide }),
-        ...noticesFromAppliedEffects(collected.matchState, collected.queue, {
-          skipped: collected.skipped,
-          evalContextBySide,
-        }),
-        ...applied.notices,
-      ],
+    notices: [
+      ...(generalWasAlreadyOpen
+        ? []
+        : noticesFromRevealEvents(opened.events, { evalContextBySide })),
+      ...noticesFromAppliedEffects(collected.matchState, collected.queue, {
+        skipped: collected.skipped,
+        evalContextBySide,
+      }),
+      ...applied.notices,
+    ],
     blocked: null,
   };
 }
@@ -751,6 +827,10 @@ export function settleEminenceRound(matchState, {
   activatedTriggerBySide = null,
   finalPowerByCardId = null,
   finalPowerBySide = null,
+  finalDamageBySide = null,
+  activationSatisfiedBySide = null,
+  focusInvestedBySide = null,
+  statReductionOccurred = null,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, bundle: null, notices: [] };
@@ -763,17 +843,24 @@ export function settleEminenceRound(matchState, {
     aliasUsedBySide: aliasUsedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     powerResolvedBySide: powerResolvedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: activatedTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
+    finalDamageBySide: finalDamageBySide || {},
+    activationSatisfiedBySide: activationSatisfiedBySide || {},
+    focusInvestedBySide: focusInvestedBySide || {},
+    statReductionOccurred,
   };
   const collected = collectTimings(recorded, POST_DUEL_TIMINGS, initiativeSide, context);
-  const bundle = collected.queue.length
-    ? applyEminenceSegments(collected.queue, null, { agentIdBySide: context.agentIdBySide })
+  const debtQueue = storedDebtsToHpQueue(recorded);
+  const queue = [...collected.queue, ...debtQueue];
+  const bundle = queue.length
+    ? applyEminenceSegments(queue, null, { agentIdBySide: context.agentIdBySide })
     : null;
-  const applied = applyBundleAndReactions(collected.matchState, bundle, { initiativeSide });
+  const stateAfterDebts = debtQueue.length ? clearEndMatchDebts(collected.matchState) : collected.matchState;
+  const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
   return {
     matchState: applied.matchState,
     bundle,
     notices: [
-      ...noticesFromAppliedEffects(collected.matchState, collected.queue, {
+      ...noticesFromAppliedEffects(collected.matchState, queue, {
         skipped: collected.skipped,
       }),
       ...applied.notices,
@@ -819,10 +906,31 @@ function collectStoredEndMatchDebts(matchState) {
   const debts = [];
   for (const side of BOTH_SIDES) {
     for (const debt of matchState[side]?.persistent?.endMatchDebts || []) {
-      debts.push(debt);
+      debts.push({ ...debt, ownerSide: debt.ownerSide ?? side });
     }
   }
   return debts;
+}
+
+function storedDebtsToHpQueue(matchState) {
+  return collectStoredEndMatchDebts(matchState)
+    .filter((debt) => (debt.amount || 0) > 0)
+    .map((debt) => {
+      const ownerSide = debt.ownerSide;
+      const victimSide = debt.side;
+      return {
+        segment: {
+          primitive: P.LOSE_HP,
+          target: victimSide === ownerSide ? T.SELF : T.OPPONENT,
+          amount: debt.amount,
+          cause: HP_LOSS_CAUSES.END_MATCH_DEBT,
+        },
+        ownerSide,
+        abilityId: debt.source,
+        sourceEminenceId: matchState[ownerSide]?.eminenceId ?? null,
+        timing: EFFECT_TIMINGS.POST_BATTLE,
+      };
+    });
 }
 
 function clearEndMatchDebts(matchState) {
@@ -842,7 +950,8 @@ function clearEndMatchDebts(matchState) {
 }
 
 /**
- * Riscuote i debiti di Fine Scontro prima del verdetto.
+ * Checkpoint di Fine Scontro: segmenti END_MATCH e debiti PV non ancora riscossi
+ * a fine Duello (rete di sicurezza se il round non ha registrato la POT).
  * La perdita può essere letale e alimenta gli Statici sugli eventi di perdita PV.
  */
 export function settleEminenceMatch(matchState, {
@@ -857,26 +966,21 @@ export function settleEminenceMatch(matchState, {
 
   const recorded = recordEndMatchDebtAmounts(matchState, { finalPowerByCardId, finalPowerBySide, agentIdBySide });
   const collected = collectTimings(recorded, [EFFECT_TIMINGS.END_MATCH], initiativeSide);
-  const debtQueue = collectStoredEndMatchDebts(collected.matchState)
-    .filter((debt) => (debt.amount || 0) > 0)
-    .map((debt) => ({
-      segment: {
-        primitive: P.LOSE_HP,
-        target: T.SELF,
-        amount: debt.amount,
-        cause: HP_LOSS_CAUSES.END_MATCH_DEBT,
-      },
-      ownerSide: debt.side,
-      abilityId: debt.source,
-    }));
+  const debtQueue = storedDebtsToHpQueue(recorded);
   const queue = [...collected.queue, ...debtQueue];
   const bundle = queue.length ? applyEminenceSegments(queue) : null;
-  const applied = applyBundleAndReactions(clearEndMatchDebts(collected.matchState), bundle, { initiativeSide });
+  const applied = applyBundleAndReactions(
+    debtQueue.length ? clearEndMatchDebts(collected.matchState) : collected.matchState,
+    bundle,
+    { initiativeSide },
+  );
   return {
     matchState: applied.matchState,
     bundle,
     notices: [
-      ...noticesFromAppliedEffects(collected.matchState, collected.queue),
+      ...noticesFromAppliedEffects(collected.matchState, queue, {
+        skipped: collected.skipped,
+      }),
       ...applied.notices,
     ],
   };

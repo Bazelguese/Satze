@@ -1,0 +1,204 @@
+{
+  "ability": {
+    "id": "semaforo_giallo",
+    "name": "Giallo",
+    "presenceDelta": 0,
+    "revealGate": "GENERAL",
+    "text": "Tutti i trigger seguono le condizioni normali."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      0,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "semaforo_verde",
+        "presenceDelta": 1
+      },
+      {
+        "id": "semaforo_giallo",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 0,
+    "presenceAvailable": 0,
+    "presenceDelta": 0,
+    "selected": "semaforo_giallo"
+  },
+  "eminence": {
+    "army": "Patto degli Indocili",
+    "id": "patto_grande_semaforo",
+    "name": "Il Grande Semaforo"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:semaforo_giallo:GENERAL",
+      "kind": "reveal",
+      "name": "Giallo",
+      "outcome": null,
+      "payoffs": [],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 0,
+      "side": "player",
+      "text": "Tutti i trigger seguono le condizioni normali."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "semaforo_giallo_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:semaforo_giallo:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:semaforo_giallo:GENERAL",
+          "kind": "reveal",
+          "name": "Giallo",
+          "outcome": null,
+          "payoffs": [],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 0,
+          "side": "player",
+          "text": "Tutti i trigger seguono le condizioni normali."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

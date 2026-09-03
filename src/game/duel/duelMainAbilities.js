@@ -110,11 +110,29 @@ export function applyDuelMainAbilities({
         visualRecorder?.pushCopyAbility(sideKey, state);
       }
       visualRecorder?.pushPower(sideKey, state);
+    }
+
+    const granted = agent?.grantedAbility;
+    if (
+      !state[side.abilityBlocked]
+      && granted
+      && canTriggerPreBattleAbility({ ability: granted }, side.context)
+    ) {
+      const grantedSource = `${side.labelSelf} (${agent.name})`;
+      for (const eff of granted.effects || []) {
+        const grantedValue =
+          granted.trigger === 'conquest'
+            ? scaleConquestEffectValue(eff.value, fieldOptions)
+            : eff.value;
+        applyEffect(eff.effect, grantedValue, sideKey, grantedSource, battleLog, opt(eff));
+      }
+      visualRecorder?.pushPower(sideKey, state);
     } else if (
       state[side.abilityBlocked] &&
-      ability &&
-      ability.effect !== 'blockAbility' &&
-      ability.effect !== 'blockBonus'
+      (
+        (ability && ability.effect !== 'blockAbility' && ability.effect !== 'blockBonus')
+        || granted
+      )
     ) {
       battleLog.push(
         sideKey === 'player'

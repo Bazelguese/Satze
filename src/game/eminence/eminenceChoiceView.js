@@ -18,6 +18,7 @@ import {
   isEminenceSubsystemEnabled,
   selectPublicEminenceMatchState,
   getLegalAbilityIds,
+  resolveAbilityPresenceDelta,
 } from './eminenceState.js';
 import { getSealedAbilityHypotheses, getNextGate, mustChooseThisRound } from './eminenceRound.js';
 import { isEminenceSetupPending, needsEminenceSetup } from './eminenceDuelGate.js';
@@ -136,11 +137,24 @@ function resolveSlotIndexes(paramContext) {
   return Array.from({ length: count }, (_, index) => index);
 }
 
+function agentName(cardId) {
+  return ALL_AGENTS.find((agent) => agent.id === cardId)?.name || null;
+}
+
 function buildAgentParamMeta(paramContext) {
   const meta = {};
+  for (const id of paramContext?.ownUndeployedCardIds || []) {
+    meta[id] = { side: SIDES.PLAYER, label: agentName(id) };
+  }
+  for (const id of paramContext?.enemyUndeployedCardIds || []) {
+    meta[id] = { side: SIDES.ENEMY, label: agentName(id) };
+  }
   for (const entry of paramContext?.confirmedAgents || []) {
     if (entry && typeof entry === 'object' && entry.id != null) {
-      meta[entry.id] = { side: entry.side, label: entry.label || null };
+      meta[entry.id] = {
+        side: entry.side,
+        label: entry.label || agentName(entry.id) || meta[entry.id]?.label || null,
+      };
     }
   }
   return Object.keys(meta).length ? meta : null;
@@ -178,6 +192,8 @@ function resolveParamsSchema(schema, persistent, paramContext = null) {
     } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.ENEMY_UNDEPLOYED) {
       const alreadyPrey = new Set(persistent?.preyCardIds || []);
       resolved[key] = (paramContext?.enemyUndeployedCardIds || []).filter((id) => !alreadyPrey.has(id));
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_UNDEPLOYED) {
+      resolved[key] = [...(paramContext?.ownUndeployedCardIds || [])];
     } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.UNDEPLOYED_AGENTS) {
       const already = new Set(Object.keys(persistent?.debitoByCardId || {}).map(Number));
       const own = paramContext?.ownUndeployedCardIds || [];
@@ -207,12 +223,13 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
   const eminence = getEminence(eminenceId);
   if (!eminence) return [];
 
-  const legal = new Set(getLegalAbilityIds(eminenceId, publicSide.selectionCheckpointPresence));
+  const legal = new Set(getLegalAbilityIds(eminenceId, publicSide.selectionCheckpointPresence, publicSide.persistent));
   const completed = gateProgress?.completedGates || [];
 
   return eminence.abilities.map((ability) => {
     const gatePassed = completed.includes(ability.revealGate);
     const affordable = legal.has(ability.id);
+    const presenceDelta = resolveAbilityPresenceDelta(ability, publicSide.persistent);
 
     let blocker = null;
     if (!affordable) blocker = OPTION_BLOCKERS.INSUFFICIENT_PRESENCE;
@@ -223,9 +240,9 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
       name: ability.name ?? null,
       nameProvisional: Boolean(ability.nameProvisional),
       text: ability.text,
-      presenceDelta: ability.presenceDelta,
-      presenceCost: Math.max(0, -ability.presenceDelta),
-      isGain: ability.presenceDelta >= 0,
+      presenceDelta,
+      presenceCost: Math.max(0, -presenceDelta),
+      isGain: presenceDelta >= 0,
       revealGate: ability.revealGate,
       // `[]` è un'abilità implementata che non fa nulla (es. il giallo del Semaforo).
       // `null` è il segnaposto di catalogo per un'attiva ancora senza segmenti.
@@ -272,6 +289,10 @@ export function buildEminenceChoiceView(matchState, viewerSide = SIDES.PLAYER, p
     paramMeta: {
       slot: buildSlotParamMeta(paramContext),
       cardId: buildAgentParamMeta(paramContext),
+      leagueDelta: {
+        1: { label: '+1 Lega' },
+        [-1]: { label: '−1 Lega' },
+      },
     },
 
     self: selfPublic
@@ -375,10 +396,25 @@ export function canSelectBattlefield({
   eminenceBlocked = false,
   gamePhase = null,
   gateSequenceName = 'FIELD_FIRST',
+  agentsReady = false,
 } = {}) {
   if (!isPlayerFirst || eminenceBlocked) return false;
-  if (gateSequenceName === 'AGENTS_FIRST') return gamePhase === 'selectField';
+  if (gateSequenceName === 'AGENTS_FIRST') {
+    return gamePhase === 'selectField' && agentsReady;
+  }
   return gamePhase === 'selectField' || gamePhase === 'selectAgent';
+}
+
+/**
+ * GENERAL è l'ultimo gate prima dello scontro: Agenti e Campo devono
+ * essere già fissati. Con `AGENTS_FIRST` il Campo arriva dopo il lock
+ * Agenti; aprirlo prima salterebbe la scelta (e l'IA non la farebbe).
+ */
+export function canAdvanceEminenceGeneralGate({
+  agentsLocked = false,
+  fieldIndex = null,
+} = {}) {
+  return Boolean(agentsLocked && fieldIndex != null);
 }
 
 /** Vero quando la UI deve fermare il gioco e chiedere: c'è una decisione reale da prendere. */

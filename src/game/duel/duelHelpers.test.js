@@ -33,4 +33,5 @@ test('countInitialLeagueCards: conta carte stessa Lega in mano iniziale (Rinforz
   assert.equal(countInitialLeagueCards([l4b], [l2a, l2b, l2c, l2d], l4a), 2);
   assert.equal(countInitialLeagueCards([], hand, l2a), 4);
   assert.equal(countInitialLeagueCards([], [l4a, l2b, l2c, l2d, l2e], l4a), 1);
+  assert.equal(countInitialLeagueCards([], hand, l4a, null, { 903: -2 }), 1);
 });

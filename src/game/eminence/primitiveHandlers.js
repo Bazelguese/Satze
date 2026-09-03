@@ -38,6 +38,13 @@ export function createEffectBundle() {
     toxinApplications: [],
     slotModifiers: [],
     anchoredThresholdChanges: [],
+    statConverts: [],
+    conquestOverrides: [],
+    abilityCostChanges: [],
+    leagueByCardId: {},
+    leagueChanges: [],
+    vaTieWinnerSides: [],
+    grantedPowers: {},
     logs: [],
   };
 }
@@ -117,8 +124,24 @@ const handlers = {
   },
 
   [P.MODIFY_LEAGUE]: (bundle, segment, ctx) => {
+    const cardId = ctx.params?.cardId;
+    const persistOnCard = segment.persistOnCard || (segment.target === T.CHOSEN && cardId != null);
+    if (persistOnCard && cardId != null) {
+      const delta = Number(ctx.params?.leagueDelta ?? segment.delta ?? 0);
+      if (!delta) return;
+      bundle.leagueByCardId = { ...(bundle.leagueByCardId || {}) };
+      bundle.leagueByCardId[cardId] = (bundle.leagueByCardId[cardId] || 0) + delta;
+      bundle.leagueChanges = [...(bundle.leagueChanges || []), {
+        cardId,
+        delta,
+        ownerSide: ctx.ownerSide,
+        source: ctx.source,
+      }];
+      return;
+    }
+    const delta = Number(segment.delta ?? ctx.params?.leagueDelta ?? 0);
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
-      bundle.statDeltas[side].league += segment.delta || 0;
+      bundle.statDeltas[side].league += delta;
     }
   },
 
@@ -259,6 +282,46 @@ const handlers = {
     }
   },
 
+  [P.ADJUST_ABILITY_COST]: (bundle, segment, ctx) => {
+    const abilityId = segment.abilityId || ctx.source;
+    if (!abilityId) return;
+    bundle.abilityCostChanges.push({
+      side: ctx.ownerSide,
+      abilityId,
+      delta: segment.delta || 0,
+      min: segment.min,
+      source: ctx.source,
+    });
+  },
+
+  [P.CONVERT_STAT]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.statConverts.push({
+        side,
+        stat: segment.stat || 'damage',
+        factor: segment.factor ?? 0.5,
+        round: segment.round || 'ceil',
+        dest: segment.dest || 'DIRECT_DAMAGE',
+        zeroStat: segment.zeroStat !== false,
+        source: ctx.source,
+      });
+    }
+  },
+
+  [P.ARM_CONQUEST_OVERRIDE]: (bundle, segment, ctx) => {
+    bundle.conquestOverrides.push({
+      ownerSide: ctx.ownerSide,
+      when: segment.when || 'LOSS',
+      destroyField: Boolean(segment.destroyField),
+      suppressConquest: Boolean(segment.suppressConquest),
+      source: ctx.source,
+    });
+  },
+
+  [P.ARM_VA_TIE_WIN]: (bundle, segment, ctx) => {
+    bundle.vaTieWinnerSides = [...(bundle.vaTieWinnerSides || []), ctx.ownerSide];
+  },
+
   [P.COMPOSE_ABILITY]: (bundle, segment, ctx) => {
     const cardIds = resolveMarkCardIds({ ...segment, target: segment.target || T.OWN_AGENT }, ctx);
     const cardId = cardIds[0];
@@ -284,6 +347,20 @@ const handlers = {
       bundle.abilityOverlays[cardId] = overlay;
     }
   },
+
+  [P.GRANT_POWER]: (bundle, segment, ctx) => {
+    const effects = Array.isArray(segment.effects) && segment.effects.length
+      ? segment.effects.map((entry) => ({ ...entry }))
+      : (segment.effect ? [{ effect: segment.effect, value: segment.value }] : []);
+    if (!effects.length) return;
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.grantedPowers[side] = {
+        trigger: Object.prototype.hasOwnProperty.call(segment, 'trigger') ? segment.trigger : null,
+        effects,
+        source: ctx.source,
+      };
+    }
+  },
 };
 
 /** Primitive che agiscono sull'overlay dei trigger e non sull'accumulatore. */
@@ -294,6 +371,8 @@ const TRIGGER_PRIMITIVES = new Set([
   P.UNBLOCKABLE_POWER,
   P.REPLACE_TRIGGER,
   P.ALIAS_TRIGGER,
+  P.SYNC_TRIGGERS_ON_XOR,
+  P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE,
 ]);
 
 /**

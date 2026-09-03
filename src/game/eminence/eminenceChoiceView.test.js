@@ -7,6 +7,7 @@ import {
   isAwaitingRevealParams,
   shouldHoldDuelForEminence,
   canSelectBattlefield,
+  canAdvanceEminenceGeneralGate,
   shouldShowEminenceAbilityRail,
   shouldShowEminenceSideZone,
   shouldShowEminenceLayer,
@@ -96,6 +97,18 @@ test('giallo a segmenti vuoti resta un\'opzione implementata', () => {
   assert.equal(yellow.selectable, true);
 });
 
+test('vista: il costo mostrato segue i delta persistenti', () => {
+  const opened = match('calibri_quattro_fronti', 'patto_grande_semaforo');
+  opened.player.persistent.abilityPresenceDeltas = { calibri_guerra_attrito: -2 };
+  opened.player.selectionCheckpointPresence = 1;
+  const view = buildEminenceChoiceView(opened, SIDES.PLAYER);
+  const guerra = view.self.options.find((o) => o.id === 'calibri_guerra_attrito');
+  assert.equal(guerra.presenceDelta, -2);
+  assert.equal(guerra.presenceCost, 2);
+  assert.equal(guerra.selectable, false);
+  assert.equal(guerra.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
+});
+
 test('vista: lo schema AT_SELECTION è pubblico, il valore scelto no', () => {
   const view = buildEminenceChoiceView(match('mascarada_organizzatore', 'patto_grande_semaforo'), SIDES.PLAYER);
   const scommessa = view.self.options.find((o) => o.id === 'mascarada_scommessa');
@@ -181,6 +194,21 @@ test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o conf
   assert.deepEqual(clausola.paramsSchema.cardId, [201, 301, 302]);
   assert.deepEqual(eterno.paramsSchema.cardId, [201, 301]);
   assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'corte_clausola' }), [201, 301, 302]);
+  assert.equal(view.paramMeta.cardId[201].side, SIDES.PLAYER);
+  assert.equal(view.paramMeta.cardId[301].side, SIDES.ENEMY);
+});
+
+test('vista: Ascesa materializza solo i propri Agenti non schierati e ±1 Lega', () => {
+  const view = buildEminenceChoiceView(match('enclave_ascensione', 'patto_grande_semaforo'), SIDES.PLAYER, {
+    ownUndeployedCardIds: [201, 202],
+    enemyUndeployedCardIds: [301, 302],
+  });
+  const ascesa = view.self.options.find((o) => o.id === 'enclave_ascesa');
+  assert.deepEqual(ascesa.paramsSchema.cardId, [201, 202]);
+  assert.deepEqual(ascesa.paramsSchema.leagueDelta, [1, -1]);
+  assert.equal(view.paramMeta.leagueDelta[1].label, '+1 Lega');
+  assert.equal(selectionParamsReady(ascesa.paramsSchema, { cardId: 201 }), false);
+  assert.equal(selectionParamsReady(ascesa.paramsSchema, { cardId: 201, leagueDelta: 1 }), true);
 });
 
 test('vista: la Preda di setup e gli Agenti non schierati diventano opzioni', () => {
@@ -457,5 +485,19 @@ test('tabellone: dopo il flush Campo-prima il Campo resta cliccabile', () => {
     isPlayerFirst: true,
     gamePhase: 'selectField',
     gateSequenceName: 'AGENTS_FIRST',
+    agentsReady: true,
   }), true);
+  assert.equal(canSelectBattlefield({
+    isPlayerFirst: true,
+    gamePhase: 'selectField',
+    gateSequenceName: 'AGENTS_FIRST',
+    agentsReady: false,
+  }), false);
+});
+
+test('GENERAL: non si apre prima del Campo, anche con gli Agenti già lockati', () => {
+  assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: true, fieldIndex: 2 }), true);
+  assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: true, fieldIndex: 0 }), true);
+  assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: true, fieldIndex: null }), false);
+  assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: false, fieldIndex: 1 }), false);
 });

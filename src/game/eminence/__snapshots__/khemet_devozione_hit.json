@@ -1,0 +1,249 @@
+{
+  "ability": {
+    "id": "khemet_devozione",
+    "name": "Convalida",
+    "presenceDelta": 0,
+    "revealGate": "PRE_FIELD",
+    "text": "Se il Potere del proprio Agente si attiva realmente e non viene bloccato, +1 Presenza."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      3
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "khemet_devozione",
+        "presenceDelta": 0
+      },
+      {
+        "id": "khemet_maledizione_va",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": 0,
+    "selected": "khemet_devozione"
+  },
+  "eminence": {
+    "army": "Khemet",
+    "id": "khemet_maledizioni",
+    "name": "Il Castello dei Sigillatori"
+  },
+  "notices": [
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Convalida",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Il Potere si è attivato: +1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "khemet_devozione_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Convalida",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Il Potere si è attivato: +1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownActivatedTrigger: \"overdrive\" (obs null) → falsa",
+            "keys": [
+              "ownActivatedTrigger"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "khemet_rito_overdrive",
+          "sourceName": "Risonanza del Nono Sigillo",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "ownPowerResolved: true (obs true) → vera",
+            "keys": [
+              "ownPowerResolved"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "khemet_devozione",
+          "sourceName": "Convalida",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

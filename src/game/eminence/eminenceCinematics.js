@@ -36,6 +36,11 @@ const AGENT_PRIMITIVES = new Set([
   P.APPLY_TOXIN,
   P.SUPPRESS_CONQUEST,
   P.MODIFY_ANCHORED_THRESHOLD,
+  P.CONVERT_STAT,
+  P.SYNC_TRIGGERS_ON_XOR,
+  P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE,
+  P.ARM_VA_TIE_WIN,
+  P.GRANT_POWER,
 ]);
 
 /**
@@ -85,7 +90,13 @@ function cueFromPayoff(payoff, notice, context, accent) {
       },
     };
   }
-  if (prim === P.REPLACE_FIELD || prim === P.DESTROY_FIELD) {
+  if (prim === P.ADJUST_ABILITY_COST) {
+    return {
+      recipe: CINEMATIC_RECIPES.PRESENCE_PULSE,
+      flight: { accent, from: { type: 'card', side }, to: { type: 'presence', side } },
+    };
+  }
+  if (prim === P.REPLACE_FIELD || prim === P.DESTROY_FIELD || prim === P.ARM_CONQUEST_OVERRIDE) {
     return {
       recipe: CINEMATIC_RECIPES.FIELD_RULE,
       flight: {
@@ -170,19 +181,31 @@ export function resolveNoticeCinematics(notice, context = {}) {
   return [];
 }
 
-function runCue(cue, { playLink, noticeId, setAnnounceHeldId }, onDone) {
-  if (!cue.flight) {
-    onDone?.();
-    return;
-  }
-  if (cue.holdAnnounce) {
-    playLink(cue.flight, () => {
-      setAnnounceHeldId((id) => (id === noticeId ? null : id));
+function runCue(cue, { playLink, noticeId, setAnnounceHeldId, waitForEntrance }, onDone) {
+  const playFlight = () => {
+    if (!cue.flight) {
       onDone?.();
-    });
+      return;
+    }
+    if (cue.holdAnnounce) {
+      playLink(cue.flight, () => {
+        setAnnounceHeldId((id) => (id === noticeId ? null : id));
+        onDone?.();
+      });
+      return;
+    }
+    playLink(cue.flight, onDone);
+  };
+
+  const waitSide = cue.waitFor?.side
+    ?? (cue.flight?.to?.type === 'field-agent' ? cue.flight.to.side : null);
+
+  if (waitSide && typeof waitForEntrance === 'function') {
+    Promise.resolve(waitForEntrance({ type: 'field-agent', side: waitSide })).then(playFlight);
     return;
   }
-  playLink(cue.flight, onDone);
+
+  playFlight();
 }
 
 /**
@@ -210,14 +233,14 @@ export function playNoticeCinematics(cues, {
         resolve();
         return;
       }
-      runCue(flights[index], { playLink, noticeId, setAnnounceHeldId }, () => playFrom(index + 1));
+      runCue(
+        flights[index],
+        { playLink, noticeId, setAnnounceHeldId, waitForEntrance },
+        () => playFrom(index + 1),
+      );
     };
 
-    if (flights[0].holdAnnounce) setAnnounceHeldId(noticeId);
-    if (flights[0].waitFor && typeof waitForEntrance === 'function') {
-      Promise.resolve(waitForEntrance(flights[0].waitFor)).then(() => playFrom(0));
-      return;
-    }
+    if (flights[0]?.holdAnnounce) setAnnounceHeldId(noticeId);
     playFrom(0);
   });
 }

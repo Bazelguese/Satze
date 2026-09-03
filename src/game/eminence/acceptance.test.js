@@ -42,7 +42,7 @@ import {
   notifyHpLossEvents,
 } from './eminenceDuelGate.js';
 import { collectSlotCurses } from './slotCurses.js';
-import { powerResolutionFromDuel } from './eminenceDuelBinding.js';
+import { powerResolutionFromDuel, isLowestEffectiveLeague } from './eminenceDuelBinding.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -154,7 +154,7 @@ test('Apex -2: il proprio Agente ignora il Campo e la spesa alimenta Manifestazi
   })), true);
 });
 
-test('Apex -4: due modifiche di statistica dalla stessa abilità', () => {
+test('Apex -4: concede un Potere +2 POT e +2 DAN, non un buff di schieramento', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: 'apex_sole_verde',
     enemyEminenceId: 'patto_grande_semaforo',
@@ -163,8 +163,15 @@ test('Apex -4: due modifiche di statistica dalla stessa abilità', () => {
     presence: { player: 4 },
   });
 
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 2);
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].damage, 2);
+  assert.deepEqual(bundle.grantedPowers[SIDES.PLAYER], {
+    trigger: null,
+    effects: [
+      { effect: 'power', value: 2 },
+      { effect: 'damage', value: 2 },
+    ],
+    source: 'apex_cataclisma',
+  });
+  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 0);
   assert.equal(matchState.player.presence, 0);
   // Presenza a 0 dopo la spesa: Digiuno è soddisfatto nello stesso round.
   assert.equal(checkTrigger('digiuno', duelContext({ hasEminence: true, playerPresence: 0 })), true);
@@ -285,9 +292,8 @@ test('incrocio: il Semaforo Rosso spegne l\'Imboscata di un Agente potenziato da
     presence: { player: 4, enemy: 2 },
   });
 
-  // Le statistiche arrivano lo stesso: sono due primitive indipendenti.
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 2);
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].damage, 2);
+  // Il Potere concesso non passa dai trigger del Semaforo: resta depositato.
+  assert.equal(bundle.grantedPowers[SIDES.PLAYER].effects.length, 2);
 
   const state = resolveTriggerState({
     originalTrigger: 'imboscata',
@@ -1114,30 +1120,428 @@ test('Corte −3: Clausola sostituisce il trigger in Debito e al schieramento co
   )));
 });
 
-test('Corte −4: Debito Eterno dà 3 FC al bersaglio e riscuote la POT a Fine Scontro', () => {
+test('Corte −4: Debito Eterno dà 2 FC al bersaglio e riscuote la POT a fine Duello', () => {
   const prepared = prepareCorte('corte_debito_eterno', {
     presence: 4,
     playerParams: { cardId: CORTE_ENEMY, targetSide: SIDES.ENEMY },
     agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
   });
-  assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 3);
+  assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 2);
   assert.equal(prepared.matchState.player.persistent.endMatchDebts.length, 1);
   assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].side, SIDES.ENEMY);
   assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].cardId, CORTE_ENEMY);
+
+  assert.equal(prepared.notices.some((notice) => notice.name === 'Debito Eterno'), false);
 
   const settled = settleEminenceRound(prepared.matchState, {
     winner: SIDES.PLAYER,
     agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
     finalPowerByCardId: { [CORTE_ENEMY]: 5 },
   });
-  assert.equal(settled.matchState.player.persistent.endMatchDebts[0].amount, 5);
-
-  const closed = settleEminenceMatch(settled.matchState);
-  assert.deepEqual(closed.bundle.hpDeltas, [
+  assert.deepEqual(settled.bundle.hpDeltas, [
     { side: SIDES.ENEMY, amount: -5, cause: HP_LOSS_CAUSES.END_MATCH_DEBT, source: 'corte_debito_eterno' },
   ]);
-  assert.equal(closed.matchState.player.presence, 1);
-  assert.deepEqual(closed.matchState.player.persistent.endMatchDebts, []);
+  assert.equal(settled.matchState.player.presence, 1);
+  assert.deepEqual(settled.matchState.player.persistent.endMatchDebts, []);
+  const debtNotice = settled.notices.find((notice) => notice.name === 'Debito Eterno');
+  assert.equal(debtNotice?.kind, 'effect');
+  assert.equal(debtNotice?.phaseDetail, 'Dopo il Duello');
+  assert.equal(debtNotice?.side, SIDES.PLAYER);
+  assert.equal(debtNotice?.sourceName, 'Sanguinaccio, il Registro');
+
+  const closed = settleEminenceMatch(settled.matchState);
+  assert.equal(closed.bundle, null);
+});
+
+// ------------------------------------------------------------------
+// Calibri — Il Comando dei Quattro Fronti
+// ------------------------------------------------------------------
+
+const CALIBRI = 'calibri_quattro_fronti';
+
+test('Calibri statico: +1 Presenza solo se perdi e il DAN nemico finale è ≤ 2', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+
+  const hit = settleEminenceRound(base, {
+    winner: SIDES.ENEMY,
+    finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 2 },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+
+  const missHigh = settleEminenceRound(base, {
+    winner: SIDES.ENEMY,
+    finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 3 },
+  });
+  assert.equal(missHigh.matchState.player.presence, 1);
+
+  const missWin = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    finalDamageBySide: { [SIDES.PLAYER]: 1, [SIDES.ENEMY]: 1 },
+  });
+  assert.equal(missWin.matchState.player.presence, 1);
+});
+
+test('Calibri +0: Guerra d\'Attrito dà 1 FC e alza il costo solo se vinci', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: CALIBRI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'calibri_guerra_attrito',
+    enemyAbility: 'semaforo_giallo',
+  });
+
+  assert.equal(bundle.temporaryFocus[SIDES.PLAYER], 1);
+  assert.equal(matchState.player.presence, 1);
+  assert.equal(matchState.player.presenceSpentThisRound, 0);
+
+  const afterWin = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
+  assert.equal(afterWin.matchState.player.persistent.abilityPresenceDeltas.calibri_guerra_attrito, -1);
+
+  const afterLoss = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
+  assert.deepEqual(afterLoss.matchState.player.persistent.abilityPresenceDeltas, {});
+
+  const next = beginEminenceRound(afterWin.matchState, { roundNumber: 4 });
+  const enemy = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_giallo');
+  const replay = selectEminenceAbility(enemy.matchState, SIDES.PLAYER, 'calibri_guerra_attrito');
+  assert.equal(replay.ok, true);
+  assert.equal(replay.matchState.player.committedPresenceCost, 1);
+});
+
+test('Calibri −2: Contenimento registra la conversione DAN e +2 Presenza in vittoria', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: CALIBRI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'calibri_contenimento',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 3 },
+  });
+
+  assert.equal(bundle.statConverts.length, 1);
+  assert.equal(bundle.statConverts[0].stat, 'damage');
+  assert.equal(bundle.statConverts[0].dest, 'DIRECT_DAMAGE');
+  assert.equal(bundle.statConverts[0].zeroStat, true);
+  assert.equal(matchState.player.presence, 1);
+
+  const win = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
+  assert.equal(win.matchState.player.presence, 3);
+
+  const lose = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
+  assert.equal(lose.matchState.player.presence, 1);
+});
+
+test('Calibri −4: Terra Bruciata arma la distruzione Campo solo in sconfitta', () => {
+  const { bundle } = playRound({
+    playerEminenceId: CALIBRI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'calibri_terra_bruciata',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 4 },
+  });
+
+  assert.equal(bundle.conquestOverrides.length, 1);
+  assert.equal(bundle.conquestOverrides[0].when, 'LOSS');
+  assert.equal(bundle.conquestOverrides[0].destroyField, true);
+  assert.equal(bundle.conquestOverrides[0].suppressConquest, true);
+});
+
+test('Calibri: Fine Scontro non ribatte i delta già risolti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: CALIBRI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'calibri_guerra_attrito',
+    enemyAbility: 'semaforo_giallo',
+  });
+  const settled = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
+  const closed = settleEminenceMatch(settled.matchState);
+  assert.equal(closed.bundle, null);
+});
+
+// ------------------------------------------------------------------
+// Orathai — Il Primo Canto
+// ------------------------------------------------------------------
+
+const ORATHAI = 'orathai_primo_canto';
+
+test('Orathai statico: +1 Presenza solo se entrambi i requisiti sono soddisfatti', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: ORATHAI, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+
+  const hit = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+
+  const missOne = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  assert.equal(missOne.matchState.player.presence, 1);
+});
+
+test('Orathai +0: Tacet paga +2 solo se nessuno dei due soddisfa il requisito', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_tacet',
+    enemyAbility: 'semaforo_giallo',
+  });
+  assert.equal(matchState.player.presence, 1);
+
+  const hit = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+  });
+  assert.equal(hit.matchState.player.presence, 3);
+
+  const miss = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Orathai −2: Contrappunto deposita SYNC XOR in FORCE_BOTH', () => {
+  const { bundle } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_contrappunto',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 3 },
+  });
+  assert.equal(bundle.triggerRules.xorSync.length, 1);
+  assert.equal(bundle.triggerRules.xorSync[0].mode, 'FORCE_BOTH');
+});
+
+test('Orathai −3: Silenzio deposita SYNC XOR in FORBID_BOTH', () => {
+  const { bundle } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_silenzio',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 3 },
+  });
+  assert.equal(bundle.triggerRules.xorSync.length, 1);
+  assert.equal(bundle.triggerRules.xorSync[0].mode, 'FORBID_BOTH');
+});
+
+test('Orathai: Fine Scontro non ribatte i delta già risolti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_tacet',
+    enemyAbility: 'semaforo_giallo',
+  });
+  const settled = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+  });
+  const closed = settleEminenceMatch(settled.matchState);
+  assert.equal(closed.bundle, null);
+});
+
+// ------------------------------------------------------------------
+// Enclave — L'Enclave dell'Ascensione
+// ------------------------------------------------------------------
+
+const ENCLAVE = 'enclave_ascensione';
+
+test('Enclave statico: Accumulo paga solo con almeno 3 FC investiti', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: ENCLAVE, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+
+  const hit = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+
+  const miss = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    focusInvestedBySide: { [SIDES.PLAYER]: 2, [SIDES.ENEMY]: 4 },
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Enclave +1: Rinuncia sopprime il Bonus e Accumulo resta spendibile', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_rinuncia',
+    enemyAbility: 'semaforo_giallo',
+  });
+  assert.equal(bundle.armyBonusState[SIDES.PLAYER].suppressed, true);
+  assert.equal(matchState.player.presence, 2);
+
+  const settled = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
+  });
+  assert.equal(settled.matchState.player.presence, 3);
+});
+
+test('Enclave −1: Ascesa deposita ±1 Lega sulla carta e scade al round successivo', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_ascesa',
+    enemyAbility: 'semaforo_giallo',
+    playerParams: { cardId: 201, leagueDelta: 1 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(matchState.player.round.temporaryLeagueByCardId[201], 1);
+  assert.equal(bundle.leagueByCardId?.[201] ?? null, null);
+
+  const prepared = prepareEminenceDuel(matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  });
+  assert.equal(prepared.bundle.leagueByCardId[201], 1);
+
+  const next = beginEminenceRound(matchState, { roundNumber: 4 });
+  assert.deepEqual(next.player.round.temporaryLeagueByCardId, {});
+});
+
+test('Enclave −3: Ascensione deposita SATISFY a Leghe uguali e ARM_VA_TIE_WIN', () => {
+  const { bundle } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_ascensione',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 3 },
+  });
+  assert.equal(bundle.triggerRules.equalLeagueSatisfies.length, 1);
+  assert.deepEqual(bundle.triggerRules.equalLeagueSatisfies[0].triggers, ['sfida', 'sopraffare']);
+  assert.deepEqual(bundle.vaTieWinnerSides, [SIDES.PLAYER]);
+});
+
+test('Enclave: Fine Scontro non ribatte i delta già risolti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_rinuncia',
+    enemyAbility: 'semaforo_giallo',
+  });
+  const settled = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
+  });
+  const closed = settleEminenceMatch(settled.matchState);
+  assert.equal(closed.bundle, null);
+});
+
+// ------------------------------------------------------------------
+// Ratti della Megera
+// ------------------------------------------------------------------
+
+const RATTI = 'ratti_bella_malelabbra';
+
+function sealRatti(playerAbility, { presence } = {}) {
+  let matchState = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+  if (presence != null) matchState.player.presence = presence;
+  const p = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility);
+  assert.equal(p.ok, true, p.reason);
+  const e = selectEminenceAbility(p.matchState, SIDES.ENEMY, 'semaforo_giallo');
+  assert.equal(e.ok, true, e.reason);
+  return e.matchState;
+}
+
+test('lega minima: pareggio e ultima carta pagano, una Lega più bassa in mano no', () => {
+  const deployed = { id: 10, league: 2 };
+  assert.equal(isLowestEffectiveLeague(deployed, [{ id: 11, league: 4 }]), true);
+  assert.equal(isLowestEffectiveLeague(deployed, [{ id: 11, league: 2 }]), true);
+  assert.equal(isLowestEffectiveLeague(deployed, []), true);
+  assert.equal(isLowestEffectiveLeague(deployed, [{ id: 11, league: 1 }]), false);
+  assert.equal(
+    isLowestEffectiveLeague({ id: 10, league: 3 }, [{ id: 11, league: 1 }], { 10: -3 }),
+    true,
+  );
+});
+
+test('Ratti statico: Male Crescente paga solo se l\'Agente schierato ha la Lega minima', () => {
+  const sealed = sealRatti('ratti_sussurro');
+
+  const hit = prepareEminenceDuel(sealed, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+
+  const miss = prepareEminenceDuel(sealed, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Ratti +0: Sussurro paga una sola volta se c\'è stata una riduzione', () => {
+  const { matchState } = playRound({
+    playerEminenceId: RATTI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'ratti_sussurro',
+    enemyAbility: 'semaforo_giallo',
+  });
+
+  const hit = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    statReductionOccurred: true,
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+
+  const miss = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    statReductionOccurred: false,
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Ratti −2: Veleno sopprime il Bonus e deposita Tossina sull\'avversario', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: RATTI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'ratti_veleno',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 2 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(bundle.armyBonusState[SIDES.PLAYER].suppressed, true);
+  assert.deepEqual(bundle.toxinApplications, [
+    { side: SIDES.ENEMY, value: 1, minHealth: 10, source: 'ratti_veleno' },
+  ]);
+});
+
+test('Ratti −3: Conquista Forzata forza Conquista sul proprio lato', () => {
+  const { bundle } = playRound({
+    playerEminenceId: RATTI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'ratti_conquista_forzata',
+    enemyAbility: 'semaforo_giallo',
+    presence: { player: 3 },
+  });
+  assert.equal(bundle.triggerRules.forceSatisfied.length, 1);
+  assert.deepEqual(bundle.triggerRules.forceSatisfied[0].triggers, ['conquest']);
+  assert.equal(bundle.triggerRules.forceSatisfied[0].scope, TRIGGER_SCOPES.OWN);
+});
+
+test('Ratti: Fine Scontro non ribatte i delta già risolti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: RATTI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'ratti_sussurro',
+    enemyAbility: 'semaforo_giallo',
+  });
+  const settled = settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    statReductionOccurred: true,
+  });
+  const closed = settleEminenceMatch(settled.matchState);
+  assert.equal(closed.bundle, null);
 });
 
 test('Khemet: il binding del Duello non conta un Potere bloccato come Overdrive', () => {

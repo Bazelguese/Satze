@@ -1,0 +1,273 @@
+{
+  "ability": {
+    "id": "kethran_opera_composita",
+    "name": "Opera Composita",
+    "presenceDelta": -4,
+    "revealGate": "GENERAL",
+    "text": "Il proprietario sceglie uno o due Frammenti: in questo Duello sostituiscono trigger, effetto o entrambi del proprio Agente."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      4,
+      0
+    ],
+    "segmentsWithoutCue": 1,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "kethran_sacrificio",
+        "presenceDelta": 1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
+      },
+      {
+        "id": "kethran_opera_composita",
+        "presenceDelta": -4
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 4,
+    "presenceAvailable": 4,
+    "presenceDelta": -4,
+    "selected": "kethran_opera_composita"
+  },
+  "eminence": {
+    "army": "Kethran",
+    "id": "kethran_altare",
+    "name": "L'Altare della Ricomposizione"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:kethran_opera_composita:GENERAL",
+      "kind": "reveal",
+      "name": "Opera Composita",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "COMPOSE_ABILITY",
+          "slot": null,
+          "target": "OWN_AGENT"
+        },
+        {
+          "primitive": "MARK_CARD",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -4,
+      "side": "player",
+      "text": "Il proprietario sceglie uno o due Frammenti: in questo Duello sostituiscono trigger, effetto o entrambi del proprio Agente."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "kethran_opera_composita_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:kethran_opera_composita:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:kethran_opera_composita:GENERAL",
+          "kind": "reveal",
+          "name": "Opera Composita",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "COMPOSE_ABILITY",
+              "slot": null,
+              "target": "OWN_AGENT"
+            },
+            {
+              "primitive": "MARK_CARD",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -4,
+          "side": "player",
+          "text": "Il proprietario sceglie uno o due Frammenti: in questo Duello sostituiscono trigger, effetto o entrambi del proprio Agente."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"opponent\" (obs \"self\") → falsa",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "COMPOSE_ABILITY",
+          "source": "ability",
+          "sourceId": "kethran_opera_composita",
+          "sourceName": "Opera Composita",
+          "target": "OWN_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "ability",
+          "sourceId": "kethran_opera_composita",
+          "sourceName": "Opera Composita",
+          "target": null,
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "ability": {
+    "id": "corte_debito_eterno",
+    "name": "Debito Eterno",
+    "presenceDelta": -4,
+    "revealGate": "GENERAL",
+    "text": "Il proprietario sceglie uno dei due Agenti confermati: in questo Duello riceve 2 FC temporanei. Alla Fine Scontro il giocatore che lo controlla perde PV pari alla POT finale registrata."
+  },
+  "bilance": {
+    "cinematicCues": 0,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 0,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      4,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_accordo",
+        "presenceDelta": 0
+      },
+      {
+        "id": "corte_salasso",
+        "presenceDelta": -2
+      },
+      {
+        "id": "corte_clausola",
+        "presenceDelta": -3
+      },
+      {
+        "id": "corte_debito_eterno",
+        "presenceDelta": -4
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 4,
+    "presenceAvailable": 4,
+    "presenceDelta": -4,
+    "selected": "corte_debito_eterno"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "corte_debito_eterno_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "hpLossCause: (assente) → non ancora valutabile",
+            "keys": [
+              "hpLossCause"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "corte_pagare_debiti",
+          "sourceName": "Pagare i Debiti",
+          "target": "SELF",
+          "timing": "ON_HP_LOSS"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "source": "ability",
+          "sourceId": "corte_debito_eterno",
+          "sourceName": "Debito Eterno",
+          "target": "CHOSEN",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "REGISTER_END_MATCH_DEBT",
+          "source": "ability",
+          "sourceId": "corte_debito_eterno",
+          "sourceName": "Debito Eterno",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

@@ -61,7 +61,7 @@ export const EMINENCES = {
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Il prossimo Agente che schieri ottiene +1 POT. Perdi 2 PV.',
+        text: 'Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -85,7 +85,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Il prossimo Agente ignora gli effetti del Campo in questo Duello.',
+        text: 'Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -100,21 +100,17 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Il prossimo Agente ottiene +2 POT e +2 DAN.',
+        text: 'Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.MODIFY_STAT,
+            primitive: P.GRANT_POWER,
             target: T.OWN_AGENT,
-            stat: 'power',
-            delta: 2,
-          },
-          {
-            timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.MODIFY_STAT,
-            target: T.OWN_AGENT,
-            stat: 'damage',
-            delta: 2,
+            trigger: null,
+            effects: [
+              { effect: 'power', value: 2 },
+              { effect: 'damage', value: 2 },
+            ],
           },
         ],
       },
@@ -218,7 +214,7 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_SELECTION,
         paramsSchema: { pronostico: ['VITTORIA_PROPRIA', 'VITTORIA_AVVERSARIA', 'PAREGGIO'] },
-        text: 'Pronostica segretamente l\'esito del Duello. Se il pronostico è corretto, +2 Presenza.',
+        text: 'Il proprietario pronostica segretamente l\'esito del Duello. Se il pronostico è corretto, +2 Presenza.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
@@ -265,7 +261,7 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Il trigger del proprio Agente è considerato soddisfatto. Il Potere non può essere bloccato.',
+        text: 'In questo Duello, il trigger del proprio Agente è considerato soddisfatto e il suo Potere non può essere bloccato.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
@@ -321,7 +317,7 @@ export const EMINENCES = {
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello, +1 Presenza.',
+        text: 'Se il proprio Agente perde il Duello, +1 Presenza.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
@@ -341,7 +337,7 @@ export const EMINENCES = {
         paramsSchema: {
           fragmentCardId: { source: PARAM_SOURCES.OWN_FRAGMENTS, requireTrigger: true },
         },
-        text: 'Scegli un Frammento: il Potere può attivarsi con il trigger proprio o con quello del Frammento.',
+        text: 'Il proprietario sceglie un Frammento: in questo Duello il Potere del proprio Agente può attivarsi con il trigger proprio o con quello del Frammento.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
@@ -365,7 +361,7 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Scegli uno o due Frammenti per sostituire trigger, effetto o entrambi.',
+        text: 'Il proprietario sceglie uno o due Frammenti: in questo Duello sostituiscono trigger, effetto o entrambi del proprio Agente.',
         paramsSchema: {
           fragmentCardId: { source: PARAM_SOURCES.OWN_FRAGMENTS, max: 2 },
           composeComponent: ['TRIGGER', 'EFFECT'],
@@ -401,7 +397,7 @@ export const EMINENCES = {
     static: {
       id: 'mounthborn_istinto_predatorio',
       name: 'Istinto Predatorio',
-      text: 'All\'inizio dello Scontro, scegli un Agente nemico: diventa Preda.',
+      text: 'All\'inizio dello Scontro, il proprietario sceglie un Agente nemico: diventa Preda per il resto dello Scontro.',
       implemented: true,
       setupChoice: true,
       setupParamsSchema: {
@@ -446,7 +442,7 @@ export const EMINENCES = {
         paramsSchema: {
           preyCardId: { source: PARAM_SOURCES.ENEMY_UNDEPLOYED },
         },
-        text: 'Scegli un Agente nemico non schierato: diventa Preda. Se una Preda è schierata in questo round, +2 Presenza.',
+        text: 'Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -469,7 +465,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se una Preda è schierata, il Bonus d\'Armata è considerato attivo e non può essere bloccato.',
+        text: 'Se una Preda è schierata, in questo Duello il Bonus d\'Armata del proprietario è considerato attivo e non può essere bloccato.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
@@ -487,7 +483,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello contro una Preda, Cura 3 PV.',
+        text: 'Se il proprio Agente perde il Duello contro una Preda, il proprietario Cura 3 PV.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
@@ -555,7 +551,7 @@ export const EMINENCES = {
         paramsSchema: {
           slot: { source: PARAM_SOURCES.BATTLEFIELD_SLOTS },
         },
-        text: 'Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega.',
+        text: 'Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -574,7 +570,7 @@ export const EMINENCES = {
         paramsSchema: {
           slot: { source: PARAM_SOURCES.BATTLEFIELD_SLOTS },
         },
-        text: 'Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA.',
+        text: 'Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -595,14 +591,26 @@ export const EMINENCES = {
     army: 'Orathai',
     name: 'Il Primo Canto',
     initialPresence: 1,
-    implemented: false,
+    implemented: true,
 
     static: {
       id: 'orathai_risonanza',
       name: 'Consonanza',
       text: 'Se entrambi gli Agenti soddisfano il requisito di attivazione del proprio Potere nello stesso Duello, +1 Presenza.',
-      implemented: false,
-      segments: null,
+      implemented: true,
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          repeatable: true,
+          condition: {
+            ownActivationSatisfied: true,
+            enemyActivationSatisfied: true,
+          },
+        },
+      ],
     },
 
     abilities: [
@@ -612,8 +620,20 @@ export const EMINENCES = {
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        announceAtReveal: false,
         text: 'Se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.CHANGE_PRESENCE,
+            target: T.SELF,
+            delta: 2,
+            condition: {
+              ownActivationSatisfied: false,
+              enemyActivationSatisfied: false,
+            },
+          },
+        ],
       },
       {
         id: 'orathai_contrappunto',
@@ -622,7 +642,14 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.SYNC_TRIGGERS_ON_XOR,
+            mode: 'FORCE_BOTH',
+            excludeTriggers: ['conquest', 'lastWish'],
+          },
+        ],
       },
       {
         id: 'orathai_silenzio',
@@ -631,7 +658,14 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.SYNC_TRIGGERS_ON_XOR,
+            mode: 'FORBID_BOTH',
+            excludeTriggers: ['conquest', 'lastWish'],
+          },
+        ],
       },
     ],
   },
@@ -671,7 +705,7 @@ export const EMINENCES = {
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'L\'avversario perde 2 PV; in questo Duello il suo Agente riceve 1 FC temporaneo.',
+        text: 'L\'avversario perde 2 PV; in questo Duello l\'Agente nemico riceve 1 FC temporaneo.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -694,7 +728,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Perdi 3 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.',
+        text: 'Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -720,7 +754,7 @@ export const EMINENCES = {
         paramsSchema: {
           cardId: { source: PARAM_SOURCES.UNDEPLOYED_AGENTS },
         },
-        text: 'Scegli un Agente non ancora schierato. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il suo giocatore perde 2 PV; poi il Potere si attiva.',
+        text: 'Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -739,13 +773,14 @@ export const EMINENCES = {
         paramsSchema: {
           cardId: { source: PARAM_SOURCES.CONFIRMED_AGENTS },
         },
-        text: 'Scegli uno dei due Agenti confermati: riceve 3 FC temporanei. Alla Fine Scontro il suo giocatore perde PV pari alla POT finale registrata.',
+        text: 'Il proprietario sceglie uno dei due Agenti confermati: in questo Duello riceve 2 FC temporanei. Alla Fine Scontro il giocatore che lo controlla perde PV pari alla POT finale registrata.',
+        announceAtReveal: false,
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.GRANT_TEMPORARY_FOCUS,
             target: T.CHOSEN,
-            amount: 3,
+            amount: 2,
           },
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -782,7 +817,7 @@ export const EMINENCES = {
         presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Aumenta di 1 il requisito di Ancorato, per il resto dello Scontro, già da questo round.',
+        text: 'Il requisito di Ancorato aumenta di 1, per il resto dello Scontro, già da questo round.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -815,7 +850,7 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se il proprio Agente è Ancorato, il suo trigger è considerato soddisfatto.',
+        text: 'In questo Duello, se il proprio Agente è Ancorato, il suo trigger è considerato soddisfatto.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
@@ -836,14 +871,22 @@ export const EMINENCES = {
     army: 'Ratti della Megera',
     name: 'Bella dalle Malelabbra, l\'Erede della Megera',
     initialPresence: 1,
-    implemented: false,
+    implemented: true,
 
     static: {
       id: 'ratti_male_crescente',
       name: 'Male Crescente',
       text: 'Quando schieri un Agente con la Lega effettiva più bassa tra quelli che ti restano in mano, +1 Presenza.',
-      implemented: false,
-      segments: null,
+      implemented: true,
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          condition: { ownDeployedIsLowestLeague: true },
+        },
+      ],
     },
 
     abilities: [
@@ -853,8 +896,17 @@ export const EMINENCES = {
         presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        announceAtReveal: false,
         text: 'Se durante il Duello almeno un Agente subisce una riduzione a POT, DAN o VA, +1 Presenza.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.CHANGE_PRESENCE,
+            target: T.SELF,
+            delta: 1,
+            condition: { statReductionOccurred: true },
+          },
+        ],
       },
       {
         id: 'ratti_veleno',
@@ -863,7 +915,21 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Blocca il proprio Bonus d\'Armata per questo Duello; applica Tossina 1 (min 10) all\'avversario.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.SET_ARMY_BONUS_STATE,
+            target: T.SELF,
+            suppressed: true,
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.APPLY_TOXIN,
+            target: T.OPPONENT,
+            value: 1,
+            minHealth: 10,
+          },
+        ],
       },
       {
         id: 'ratti_conquista_forzata',
@@ -871,8 +937,15 @@ export const EMINENCES = {
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall\'esito.',
-        segments: null,
+        text: 'In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall\'esito.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.FORCE_TRIGGER,
+            scope: TRIGGER_SCOPES.OWN,
+            triggers: ['conquest'],
+          },
+        ],
       },
     ],
   },
@@ -885,14 +958,23 @@ export const EMINENCES = {
     army: 'L\'Enclave delle Scaglie',
     name: 'L\'Enclave dell\'Ascensione',
     initialPresence: 1,
-    implemented: false,
+    implemented: true,
 
     static: {
       id: 'enclave_accumulo',
       name: 'Accumulo',
       text: 'Quando investi almeno 3 FC reali sul tuo Agente in un Duello, +1 Presenza. Gli FC temporanei non contano.',
-      implemented: false,
-      segments: null,
+      implemented: true,
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          repeatable: true,
+          condition: { ownFocusInvested: { min: 3 } },
+        },
+      ],
     },
 
     abilities: [
@@ -903,7 +985,14 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Il proprio Bonus d\'Armata è bloccato per questo Duello.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.SET_ARMY_BONUS_STATE,
+            target: T.SELF,
+            suppressed: true,
+          },
+        ],
       },
       {
         id: 'enclave_ascesa',
@@ -911,8 +1000,19 @@ export const EMINENCES = {
         presenceDelta: -1,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Scegli pubblicamente un proprio Agente non ancora schierato e modifica la sua Lega di ±1 per questo round.',
-        segments: null,
+        text: 'Scegli un proprio Agente non ancora schierato: la sua Lega cambia di +1 o −1 per questo round. Se non lo schieri, la modifica scade a fine round.',
+        paramsSchema: {
+          cardId: { source: PARAM_SOURCES.OWN_UNDEPLOYED },
+          leagueDelta: [1, -1],
+        },
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.MODIFY_LEAGUE,
+            target: T.CHOSEN,
+            persistOnCard: true,
+          },
+        ],
       },
       {
         id: 'enclave_ascensione',
@@ -921,7 +1021,18 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato.',
-        segments: null,
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE,
+            scope: TRIGGER_SCOPES.OWN,
+            triggers: ['sfida', 'sopraffare'],
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.ARM_VA_TIE_WIN,
+          },
+        ],
       },
     ],
   },
@@ -934,14 +1045,26 @@ export const EMINENCES = {
     army: 'Calibri Pesanti',
     name: 'Il Comando dei Quattro Fronti',
     initialPresence: 1,
-    implemented: false,
+    implemented: true,
 
     static: {
       id: 'calibri_tenere_la_linea',
       name: 'Tenere la Linea',
-      text: 'Quando perdi un Duello e l\'Agente nemico ha 2 DAN o meno alla fine del Duello, +1 Presenza.',
-      implemented: false,
-      segments: null,
+      text: 'Quando perdi un Duello e l\'Agente nemico termina con 2 DAN o meno, +1 Presenza.',
+      implemented: true,
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          repeatable: true,
+          condition: {
+            duelWinnerRelative: 'opponent',
+            enemyFinalDamage: { max: 2 },
+          },
+        },
+      ],
     },
 
     abilities: [
@@ -949,20 +1072,52 @@ export const EMINENCES = {
         id: 'calibri_guerra_attrito',
         name: 'Guerra d\'Attrito',
         presenceDelta: 0,
+        presenceDeltaMin: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello ma subisci 2 o meno danni della sconfitta, +1 Presenza.',
-        segments: null,
+        text: 'Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4).',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.GRANT_TEMPORARY_FOCUS,
+            target: T.OWN_AGENT,
+            amount: 1,
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.ADJUST_ABILITY_COST,
+            delta: -1,
+            min: -4,
+            condition: { duelWinnerRelative: 'self' },
+          },
+        ],
       },
       {
         id: 'calibri_contenimento',
-        // APERTO: "Contenimento" non descrive più l'effetto (sopprime Conquista, non "contiene").
         name: 'Protocollo di Contenimento',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello, i trigger Conquista dell\'avversario non possono attivarsi.',
-        segments: null,
+        text: 'Dopo i Bonus d\'Armata, registra il DAN del tuo Agente come X: il suo DAN diventa 0 e infliggi metà di X in Danni diretti, arrotondata per eccesso. Se vinci il Duello, +2 Presenza.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.CONVERT_STAT,
+            target: T.OWN_AGENT,
+            stat: 'damage',
+            factor: 0.5,
+            round: 'ceil',
+            dest: 'DIRECT_DAMAGE',
+            zeroStat: true,
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.CHANGE_PRESENCE,
+            target: T.SELF,
+            delta: 2,
+            condition: { duelWinnerRelative: 'self' },
+          },
+        ],
       },
       {
         id: 'calibri_terra_bruciata',
@@ -970,8 +1125,16 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello, distruggi il Campo corrente dopo la determinazione del vincitore e prima della finestra Conquista.',
-        segments: null,
+        text: 'Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.ARM_CONQUEST_OVERRIDE,
+            when: 'LOSS',
+            destroyField: true,
+            suppressConquest: true,
+          },
+        ],
       },
     ],
   },

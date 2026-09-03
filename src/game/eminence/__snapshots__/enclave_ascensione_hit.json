@@ -1,0 +1,282 @@
+{
+  "ability": {
+    "id": "enclave_ascensione",
+    "name": "Ascensione",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "enclave_rinuncia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "enclave_ascesa",
+        "presenceDelta": -1
+      },
+      {
+        "id": "enclave_ascensione",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "enclave_ascensione"
+  },
+  "eminence": {
+    "army": "L'Enclave delle Scaglie",
+    "id": "enclave_ascensione",
+    "name": "L'Enclave dell'Ascensione"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:enclave_ascensione:GENERAL",
+      "kind": "reveal",
+      "name": "Ascensione",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "ARM_VA_TIE_WIN",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "enclave_ascensione_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:enclave_ascensione:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:enclave_ascensione:GENERAL",
+          "kind": "reveal",
+          "name": "Ascensione",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "ARM_VA_TIE_WIN",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownFocusInvested: (assente) → non ancora valutabile",
+            "keys": [
+              "ownFocusInvested"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "enclave_accumulo",
+          "sourceName": "Accumulo",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+          "source": "ability",
+          "sourceId": "enclave_ascensione",
+          "sourceName": "Ascensione",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "ARM_VA_TIE_WIN",
+          "source": "ability",
+          "sourceId": "enclave_ascensione",
+          "sourceName": "Ascensione",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

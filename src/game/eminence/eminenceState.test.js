@@ -32,6 +32,7 @@ import {
   getLegalAbilityIds,
   isAbilitySelectable,
   hasAlwaysLegalOption,
+  resolveAbilityPresenceDelta,
 } from './eminenceState.js';
 
 // Le 12 Armate canoniche. Duplicate qui di proposito: `src/data/armies.js` importa un modulo
@@ -362,6 +363,30 @@ test('legalità: il Grande Semaforo a 0 Presenza non può scegliere Rosso', () =
 test('legalità: il costo esatto è pagabile', () => {
   assert.equal(isAbilitySelectable('apex_sole_verde', 'apex_cataclisma', 4), true);
   assert.equal(isAbilitySelectable('apex_sole_verde', 'apex_cataclisma', 3), false);
+});
+
+test('legalità: i delta persistenti alzano il costo effettivo', () => {
+  const guerra = getEminenceAbility('calibri_quattro_fronti', 'calibri_guerra_attrito');
+  assert.equal(resolveAbilityPresenceDelta(guerra), 0);
+  assert.equal(
+    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -1 } }),
+    -1,
+  );
+  assert.equal(
+    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -6 } }),
+    -4,
+  );
+  assert.deepEqual(getLegalAbilityIds('calibri_quattro_fronti', 0), ['calibri_guerra_attrito']);
+  assert.deepEqual(
+    getLegalAbilityIds('calibri_quattro_fronti', 0, { abilityPresenceDeltas: { calibri_guerra_attrito: -4 } }),
+    [],
+  );
+  assert.equal(
+    isAbilitySelectable('calibri_quattro_fronti', 'calibri_guerra_attrito', 1, {
+      abilityPresenceDeltas: { calibri_guerra_attrito: -1 },
+    }),
+    true,
+  );
 });
 
 // ------------------------------------------------------------------

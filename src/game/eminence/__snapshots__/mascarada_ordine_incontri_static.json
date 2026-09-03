@@ -1,0 +1,139 @@
+{
+  "ability": {
+    "id": "mascarada_scommessa",
+    "name": "Scommessa",
+    "presenceDelta": 0,
+    "revealGate": "GENERAL",
+    "text": "Il proprietario pronostica segretamente l'esito del Duello. Se il pronostico è corretto, +2 Presenza."
+  },
+  "bilance": {
+    "cinematicCues": 0,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 0,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "mascarada_scommessa",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 0,
+    "selected": "mascarada_scommessa"
+  },
+  "eminence": {
+    "army": "Mascarada",
+    "id": "mascarada_organizzatore",
+    "name": "L'Organizzatore degli Incontri"
+  },
+  "notices": [],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "mascarada_ordine_incontri_static",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: {\"param\":\"pronostico\",\"map\":{\"VITTORIA_PROPRIA\":\"self\",\"VITTORIA_AVVERSARIA\":\"opponent\",\"PAREGGIO\":\"draw\"}} (obs \"opponent\") → falsa",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "mascarada_scommessa",
+          "sourceName": "Scommessa",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

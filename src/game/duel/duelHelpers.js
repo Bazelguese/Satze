@@ -89,8 +89,21 @@ export function countAttritionPriorCards(usedCards, currentAgentId) {
  * (inclusa la carta giocata). Alleato: ≥1 oltre; Rinforzi: ≥2 oltre.
  * `usedCards` può essere un array di id o di oggetti carta.
  */
-export function countInitialLeagueCards(usedCards, currentHand, selectedAgent, lookupCardById = defaultLookupCardById) {
+export function countInitialLeagueCards(
+  usedCards,
+  currentHand,
+  selectedAgent,
+  lookupCardById,
+  leagueByCardId = null,
+) {
   if (selectedAgent?.league == null) return 0;
+  const resolveLookup = lookupCardById || defaultLookupCardById;
+
+  const leagueOf = (card) => {
+    if (!card) return null;
+    const raw = leagueByCardId?.[card.id] ?? leagueByCardId?.[String(card.id)];
+    return (card.league || 0) + (Number(raw) || 0);
+  };
 
   const handById = new Map();
   [...(currentHand || []), selectedAgent].filter(Boolean).forEach((card) => {
@@ -102,7 +115,7 @@ export function countInitialLeagueCards(usedCards, currentHand, selectedAgent, l
     if (typeof entry === 'object' && entry.league != null && entry.id != null) return entry;
     const id = resolveUsedCardId(entry);
     if (id == null) return null;
-    return handById.get(id) ?? lookupCardById?.(id) ?? null;
+    return handById.get(id) ?? resolveLookup?.(id) ?? null;
   };
 
   const byId = new Map();
@@ -113,9 +126,10 @@ export function countInitialLeagueCards(usedCards, currentHand, selectedAgent, l
       if (card?.id != null) byId.set(card.id, card);
     });
 
+  const selectedLeague = leagueOf(selectedAgent);
   let count = 0;
   byId.forEach((card) => {
-    if (card.league === selectedAgent.league) count += 1;
+    if (leagueOf(card) === selectedLeague) count += 1;
   });
   return count;
 }

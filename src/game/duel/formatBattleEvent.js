@@ -142,6 +142,10 @@ function getBattleEventText(event, context = DEFAULT_CONTEXT) {
         const fc = event.data?.focusUsed;
         return `PERFECT · ${who}${fc != null ? ` · ${fc} FC` : ''}`;
       }
+      if (event.infoCode === 'temporaryFocus') {
+        const who = tgt || src;
+        return `${who}: ${formatFocusBreakdown(event.data?.invested, event.data?.temporary)}`;
+      }
       return event.infoCode || 'info';
     }
     default:
@@ -197,4 +201,13 @@ export function formatBattleEvent(event, context = DEFAULT_CONTEXT) {
 
 export function formatTransition(before, after, stat) {
   return transition(before, after, stat);
+}
+
+/** `2 FC` senza temporanei; `3 FC (2 investiti + 1 temporanei)` se ce ne sono. */
+export function formatFocusBreakdown(invested, temporary) {
+  const inv = Math.max(0, Number(invested) || 0);
+  const tmp = Math.max(0, Number(temporary) || 0);
+  const total = inv + tmp;
+  if (!tmp) return `${total} FC`;
+  return `${total} FC (${inv} investiti + ${tmp} temporanei)`;
 }

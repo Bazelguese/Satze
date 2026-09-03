@@ -20,6 +20,12 @@ const BOTH_SIDES = [SIDES.PLAYER, SIDES.ENEMY];
 /** Tempo di permanenza dell'avviso prima della chiusura automatica. */
 export const EMINENCE_ANNOUNCE_HOLD_MS = 10000;
 
+/** @deprecated Non governa più la chiusura banner; resta per il lab. */
+export const EMINENCE_SPARK_READ_MS = 1400;
+
+/** Gap visivo tra un avviso e il successivo nella coda scintille. */
+export const EMINENCE_SPARK_NOTICE_GAP_MS = 320;
+
 /** Checkpoint in cui l'effetto non esiste ancora: un avviso al reveal sarebbe vuoto. */
 const POST_DUEL_TIMINGS = new Set([
   EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
@@ -119,6 +125,22 @@ function describeConditionResolution(condition, hit) {
   if (condition.ownAnchored === true) {
     return hit ? "L'Agente è Ancorato" : "L'Agente non è Ancorato";
   }
+  if (condition.ownActivationSatisfied === true && condition.enemyActivationSatisfied === true) {
+    return hit ? 'Entrambi i Poteri soddisfatti' : 'Non entrambi i Poteri';
+  }
+  if (condition.ownActivationSatisfied === false && condition.enemyActivationSatisfied === false) {
+    return hit ? 'Nessun Potere soddisfatto' : 'Almeno un Potere soddisfatto';
+  }
+  if (condition.ownFocusInvested?.min != null) {
+    const min = condition.ownFocusInvested.min;
+    return hit ? `Almeno ${min} FC investiti` : `Meno di ${min} FC investiti`;
+  }
+  if (condition.ownDeployedIsLowestLeague === true) {
+    return hit ? 'Lega effettiva più bassa' : 'Lega non la più bassa';
+  }
+  if (condition.statReductionOccurred === true) {
+    return hit ? 'Riduzione a POT, DAN o VA' : 'Nessuna riduzione';
+  }
   return null;
 }
 
@@ -128,10 +150,25 @@ function formatPayoff(segment) {
     return `${formatPresenceDelta(segment.delta)} Presenza`;
   }
   if (segment.primitive === 'SET_ARMY_BONUS_STATE') {
+    if (segment.suppressed) return 'Bonus d\'Armata bloccato';
     return 'Bonus d\'Armata attivo e non bloccabile';
   }
   if (segment.primitive === 'HEAL_HP' && segment.amount) {
     return `Cura ${segment.amount} PV`;
+  }
+  if (segment.primitive === 'APPLY_TOXIN') {
+    const value = segment.value || 0;
+    const minHealth = segment.minHealth ?? 0;
+    return `Tossina ${value} (min ${minHealth})`;
+  }
+  if (segment.primitive === 'GRANT_POWER') {
+    const effects = Array.isArray(segment.effects) ? segment.effects : [];
+    const parts = effects.map((entry) => {
+      if (entry.effect === 'power') return `+${entry.value} POT`;
+      if (entry.effect === 'damage') return `+${entry.value} DAN`;
+      return null;
+    }).filter(Boolean);
+    return parts.length ? `Potere: ${parts.join(', ')}` : 'Potere';
   }
   return '';
 }
@@ -221,6 +258,7 @@ function preDuelConditionsAreEvaluable(ability, evalContext) {
  * il reveal resta muto: parla l'esito del controllo, non la formula.
  */
 export function abilityAnnouncesAtReveal(ability, evalContext = null) {
+  if (ability?.announceAtReveal === false) return false;
   const segments = ability?.segments;
   if (!Array.isArray(segments) || segments.length === 0) return true;
   const pre = preDuelSegments(ability);
@@ -231,6 +269,9 @@ export function abilityAnnouncesAtReveal(ability, evalContext = null) {
 
 /** Un segmento condizionale si annuncia di nuovo quando (e se) matura davvero. */
 function segmentAnnouncesWhenApplied(ability, entry, evalContext = null) {
+  if (ability?.announceAtReveal === false) {
+    return POST_DUEL_TIMINGS.has(entry?.timing) || POST_DUEL_TIMINGS.has(entry?.segment?.timing);
+  }
   if (preDuelConditionsAreEvaluable(ability, evalContext)) return false;
   if (!abilityAnnouncesAtReveal(ability)) return true;
   return Boolean(entry?.segment?.condition);
@@ -431,21 +472,25 @@ export function noticesFromAppliedEffects(matchState, queue = [], { skipped = []
 
   const pushNotice = (entry, hit) => {
     if (entry?.isStatic) {
-      if (!POST_DUEL_TIMINGS.has(entry.timing)) return;
+      if (entry.timing === EFFECT_TIMINGS.ROUND_START) return;
       if (entry.segment?.primitive !== 'CHANGE_PRESENCE') return;
+      if (!hit && POST_DUEL_TIMINGS.has(entry.timing)) return;
     }
     const side = entry.ownerSide;
     const eminence = getEminence(matchState?.[side]?.eminenceId);
-    const ability = getEminenceAbility(eminence?.id ?? entry.sourceEminenceId, entry.abilityId)
+    const ability = getEminenceAbility(entry.sourceEminenceId ?? eminence?.id, entry.abilityId)
+      || getEminenceAbility(eminence?.id, entry.abilityId)
       || (entry.isStatic ? eminence?.static : null);
     if (!ability) return;
     if (isPublicMarkCondition(entry.segment?.condition)) return;
     const evalContext = evalContextBySide?.[side] ?? null;
     if (hit && !segmentAnnouncesWhenApplied(ability, entry, evalContext)) return;
-    if (!hit) {
+    if (!hit && !entry?.isStatic) {
       if (preDuelConditionsAreEvaluable(ability, evalContext)) return;
       if (abilityAnnouncesAtReveal(ability, evalContext)) return;
-      if (!conditionHasPublicMark(entry.segment?.condition)) return;
+      const outcomeOnly = ability?.announceAtReveal === false
+        && POST_DUEL_TIMINGS.has(entry.timing);
+      if (!outcomeOnly && !conditionHasPublicMark(entry.segment?.condition)) return;
     }
 
     const id = `effect:${side}:${entry.abilityId}:${entry.timing}:${hit ? 'hit' : 'miss'}`;

@@ -1,0 +1,266 @@
+{
+  "ability": {
+    "id": "semaforo_rosso",
+    "name": "Rosso",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "semaforo_verde",
+        "presenceDelta": 1
+      },
+      {
+        "id": "semaforo_giallo",
+        "presenceDelta": 0
+      },
+      {
+        "id": "semaforo_rosso",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "semaforo_rosso"
+  },
+  "eminence": {
+    "army": "Patto degli Indocili",
+    "id": "patto_grande_semaforo",
+    "name": "Il Grande Semaforo"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:semaforo_rosso:GENERAL",
+      "kind": "reveal",
+      "name": "Rosso",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "FORCE_TRIGGER",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "FORBID_TRIGGER",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "semaforo_rosso_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:semaforo_rosso:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:semaforo_rosso:GENERAL",
+          "kind": "reveal",
+          "name": "Rosso",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "FORCE_TRIGGER",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "FORBID_TRIGGER",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORCE_TRIGGER",
+          "source": "ability",
+          "sourceId": "semaforo_rosso",
+          "sourceName": "Rosso",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORBID_TRIGGER",
+          "source": "ability",
+          "sourceId": "semaforo_rosso",
+          "sourceName": "Rosso",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

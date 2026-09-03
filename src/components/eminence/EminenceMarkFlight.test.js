@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { addedIds, curseSlotKeys, normalizeFlight } from './eminenceMarkCinematic.js';
+import { addedIds, curseSlotKeys, normalizeFlight, sparkFocusSceneClasses, sparkFocusFromAnchor } from './eminenceMarkCinematic.js';
 
 test('marchi: solo gli id nuovi contano come prima creazione', () => {
   assert.deepEqual(addedIds(new Set([102]), [102, 116]), [116]);
@@ -21,4 +21,15 @@ test('scia: normalizza un volo marchio verso la mano', () => {
   });
   assert.deepEqual(buff.from, { type: 'card', side: 'player' });
   assert.deepEqual(buff.to, { type: 'hand', id: 7 });
+});
+
+test('focus scena: classi dal bersaglio del volo', () => {
+  assert.equal(
+    sparkFocusSceneClasses(sparkFocusFromAnchor({ type: 'field-agent', side: 'player' })),
+    'em-spark-focus-field-agent em-spark-focus-field-agent-player',
+  );
+  assert.equal(
+    sparkFocusSceneClasses(sparkFocusFromAnchor({ type: 'slot', id: 2 })),
+    'em-spark-focus-slot em-spark-focus-slot-2',
+  );
 });

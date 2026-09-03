@@ -1,0 +1,215 @@
+{
+  "ability": {
+    "id": "figli_leggerezza",
+    "name": "Leggerezza",
+    "presenceDelta": 0,
+    "revealGate": "GENERAL",
+    "text": "Se il proprio Agente non è Ancorato, +1 Presenza."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      2
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "figli_deriva",
+        "presenceDelta": 1
+      },
+      {
+        "id": "figli_leggerezza",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": 0,
+    "selected": "figli_leggerezza"
+  },
+  "eminence": {
+    "army": "Figli dell'Orizzonte",
+    "id": "figli_domanda_senza_fine",
+    "name": "La Domanda Senza Fine"
+  },
+  "notices": [
+    {
+      "badgeText": "Mancato · Condizione non soddisfatta",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+      "kind": "effect",
+      "name": "Leggerezza",
+      "outcome": "miss",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "MISS",
+      "phaseDetail": "Condizione non soddisfatta",
+      "phaseLabel": "Mancato",
+      "presenceDelta": null,
+      "side": "player",
+      "text": "L'Agente è Ancorato."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "figli_leggerezza_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Mancato · Condizione non soddisfatta",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "noticeId": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Mancato · Condizione non soddisfatta",
+          "cues": [
+            {
+              "flight": false,
+              "from": null,
+              "holdAnnounce": false,
+              "recipe": "MISS_DIM",
+              "to": null,
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+          "kind": "effect",
+          "name": "Leggerezza",
+          "outcome": "miss",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "MISS",
+          "phaseDetail": "Condizione non soddisfatta",
+          "phaseLabel": "Mancato",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "L'Agente è Ancorato."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownAnchored: false (obs true) → falsa",
+            "keys": [
+              "ownAnchored"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "figli_leggerezza",
+          "sourceName": "Leggerezza",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

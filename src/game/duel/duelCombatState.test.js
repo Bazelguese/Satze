@@ -37,6 +37,35 @@ test('createDuelCombatState copia il duello e azzera il tracking', () => {
   assert.equal(s.enemyToxinActivated, null);
 });
 
+test('createDuelCombatState marca una riduzione a POT, DAN o VA', () => {
+  const duel = {
+    pPower: 4,
+    ePower: 4,
+    pDamage: 3,
+    eDamage: 3,
+    pFocusUsed: 2,
+    eFocusUsed: 2,
+    pAssaultMod: 0,
+    eAssaultMod: 0,
+    pHPCurrent: 20,
+    eHPCurrent: 20,
+    pFCCurrent: 5,
+    eFCCurrent: 5,
+    pAbilityBlocked: false,
+    eAbilityBlocked: false,
+    pBonusBlocked: false,
+    eBonusBlocked: false,
+    pImmune: false,
+    eImmune: false,
+  };
+  const s = createDuelCombatState(duel);
+  assert.equal(s.statReductionOccurred, false);
+  s.pPower = 5;
+  assert.equal(s.statReductionOccurred, false);
+  s.eDamage = 2;
+  assert.equal(s.statReductionOccurred, true);
+});
+
 test('pickPostBattleFields legge i campi aggiornati su state', () => {
   const duel = {
     pPower: 1,

@@ -1,0 +1,321 @@
+{
+  "ability": {
+    "id": "calibri_guerra_attrito",
+    "name": "Guerra d'Attrito",
+    "presenceDelta": 0,
+    "revealGate": "GENERAL",
+    "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "calibri_guerra_attrito",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 0,
+    "selected": "calibri_guerra_attrito"
+  },
+  "eminence": {
+    "army": "Calibri Pesanti",
+    "id": "calibri_quattro_fronti",
+    "name": "Il Comando dei Quattro Fronti"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:calibri_guerra_attrito:GENERAL",
+      "kind": "reveal",
+      "name": "Guerra d'Attrito",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "slot": null,
+          "target": "OWN_AGENT"
+        },
+        {
+          "primitive": "ADJUST_ABILITY_COST",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 0,
+      "side": "player",
+      "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "calibri_guerra_attrito_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:calibri_guerra_attrito:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:calibri_guerra_attrito:GENERAL",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            },
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:calibri_guerra_attrito:GENERAL",
+          "kind": "reveal",
+          "name": "Guerra d'Attrito",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "slot": null,
+              "target": "OWN_AGENT"
+            },
+            {
+              "primitive": "ADJUST_ABILITY_COST",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 0,
+          "side": "player",
+          "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
+            "keys": [
+              "duelWinnerRelative",
+              "enemyFinalDamage"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "calibri_tenere_la_linea",
+          "sourceName": "Tenere la Linea",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "source": "ability",
+          "sourceId": "calibri_guerra_attrito",
+          "sourceName": "Guerra d'Attrito",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"self\" (obs \"opponent\") → falsa",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "ADJUST_ABILITY_COST",
+          "source": "ability",
+          "sourceId": "calibri_guerra_attrito",
+          "sourceName": "Guerra d'Attrito",
+          "target": null,
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

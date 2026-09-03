@@ -25,6 +25,7 @@ export function resolveDuelWinnerByAssault({
   ePower,
   isPlayerFirst,
   battleLog,
+  vaTieWinnerSide = null,
 }) {
   const pPot = pPower ?? pAgent.power;
   const ePot = ePower ?? eAgent.power;
@@ -37,6 +38,12 @@ export function resolveDuelWinnerByAssault({
     pushLog(battleLog, `${eAssault} > ${pAssault} → Vince l'IA`);
     emitWinner(battleLog, 'enemy', pAssault, eAssault, null, null);
     return 'enemy';
+  }
+  if (vaTieWinnerSide === 'player' || vaTieWinnerSide === 'enemy') {
+    const ownWin = vaTieWinnerSide === 'player';
+    pushLog(battleLog, ownWin ? 'Parità VA! Vinci tu' : "Parità VA! Vince l'IA");
+    emitWinner(battleLog, vaTieWinnerSide, pAssault, eAssault, 'vaTieSide', null);
+    return vaTieWinnerSide;
   }
   if (pAgent.league < eAgent.league) {
     pushLog(battleLog, 'Parità VA! Vinci tu (Lega più bassa)');

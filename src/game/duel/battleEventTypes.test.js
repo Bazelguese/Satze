@@ -5,7 +5,7 @@ import {
   BATTLE_REVEAL_AT,
   createBattleEventEmitter,
 } from './battleEventTypes.js';
-import { formatBattleEvent } from './formatBattleEvent.js';
+import { formatBattleEvent, formatFocusBreakdown } from './formatBattleEvent.js';
 import {
   aggregateBattleEvents,
   filterVisibleByReveal,
@@ -123,6 +123,29 @@ test('aggregate groups same source/target statChanges and caps compact rows', ()
   assert.ok(rows.length <= 8); // 7 + overflow
   const overflow = rows.find((r) => r.kind === 'overflow');
   if (rows.length > 7) assert.ok(overflow);
+});
+
+test('formatBattleEvent distinguishes invested and temporary FC', () => {
+  assert.equal(formatFocusBreakdown(2, 0), '2 FC');
+  assert.equal(formatFocusBreakdown(2, 1), '3 FC (2 investiti + 1 temporanei)');
+  const formatted = formatBattleEvent({
+    type: BATTLE_EVENT_TYPES.info,
+    infoCode: 'temporaryFocus',
+    source: { kind: 'eminence', id: 'grant', name: null, ownerSide: 'local' },
+    target: { kind: 'agent', side: 'local', id: '1', name: 'Lama' },
+    data: { invested: 2, temporary: 1, effective: 3 },
+  });
+  assert.equal(formatted.text, 'Lama: 3 FC (2 investiti + 1 temporanei)');
+});
+
+test('isCompactEligible includes temporaryFocus info', () => {
+  assert.equal(
+    isCompactEligible({
+      type: BATTLE_EVENT_TYPES.info,
+      infoCode: 'temporaryFocus',
+    }),
+    true
+  );
 });
 
 test('isCompactEligible excludes assaultCalculation and no-ops', () => {

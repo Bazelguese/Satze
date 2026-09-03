@@ -32,7 +32,7 @@ export function isCompactEligible(event) {
   }
   if (event.type === BATTLE_EVENT_TYPES.info) {
     // Compact: only opponent field choice when exclusive to the log.
-    return event.infoCode === 'opponentFieldChosen';
+    return event.infoCode === 'opponentFieldChosen' || event.infoCode === 'temporaryFocus';
   }
   return COMPACT_TYPES.has(event.type);
 }

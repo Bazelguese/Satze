@@ -148,22 +148,27 @@ describe('Eminenze nel Duello reale', () => {
     expect(battleResult.finalPlayerHP).toBeLessThanOrEqual(18);
   });
 
-  it('Apex Cataclisma: +2 POT e +2 DAN entrano già nello schieramento', () => {
+  it('Apex Cataclisma: +2 POT e +2 DAN arrivano come Potere, non allo schieramento', () => {
     const bundle = bundleForAbility('apex_cataclisma', {
       eminenceId: 'apex_sole_verde',
       presence: 4,
     });
-    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        ability: { trigger: 'glory', effect: 'power', value: 0 },
+      },
+      eminenceBundle: bundle,
+    });
 
     expect(battleResult.playerPower).toBe(6);
     expect(battleResult.playerDamage).toBe(5);
 
-    // Lo schieramento è il punto in cui l'Eminenza ha agito: non deve comparire uno step
-    // di setup Campo che attribuisca la modifica al Campo.
     const deploy = battleResult.visualSteps[0];
     expect(deploy.kind).toBe('deploy');
-    expect(deploy.playerPower).toBe(6);
-    expect(battleResult.visualSteps.some((step) => step.kind === 'fieldSetup')).toBe(false);
+    expect(deploy.playerPower).toBe(4);
+    expect(battleResult.visualSteps.some((step) => step.kind === 'power')).toBe(true);
   });
 
   it('gli effetti dell\'Eminenza compaiono nel log come eventi di schieramento', () => {
@@ -198,6 +203,11 @@ describe('Eminenze nel Duello reale', () => {
     expect(withTemp.playerAssault).toBeGreaterThan(baseline.playerAssault);
     // La spesa reale resta quella investita: il pool finale non cambia.
     expect(withTemp.finalPlayerFC).toBe(baseline.finalPlayerFC);
+    expect(withTemp.playerFocusInvested).toBe(2);
+    expect(withTemp.playerTemporaryFocus).toBe(2);
+    expect(withTemp.playerFocusUsed).toBe(4);
+    const focusEvent = withTemp.events.find((event) => event.infoCode === 'temporaryFocus');
+    expect(focusEvent?.data).toEqual({ invested: 2, temporary: 2, effective: 4 });
   });
 
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
@@ -413,5 +423,311 @@ describe('Maledizioni di slot nel Duello reale', () => {
 
     expect(cursed.playerAssault).toBe(plain.playerAssault - baseInput.selectedAgent.league);
     expect(cursed.enemyAssault).toBe(plain.enemyAssault - baseInput.enemyAgent.league);
+  });
+});
+
+describe('Conversioni e override Conquista nel Duello', () => {
+  it('CONVERT_STAT azzera il DAN post-bonus e infligge metà X per eccesso', () => {
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_convert',
+        segment: {
+          primitive: 'CONVERT_STAT',
+          target: 'OWN_AGENT',
+          stat: 'damage',
+          factor: 0.5,
+          round: 'ceil',
+          dest: 'DIRECT_DAMAGE',
+          zeroStat: true,
+        },
+      },
+    ]);
+
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    expect(battleResult.playerDamage).toBe(0);
+    expect(battleResult.finalEnemyHP).toBe(18);
+  });
+
+  it('ARM_CONQUEST_OVERRIDE in sconfitta distrugge il Campo e spegne Conquista', () => {
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_override',
+        segment: {
+          primitive: 'ARM_CONQUEST_OVERRIDE',
+          when: 'LOSS',
+          destroyField: true,
+          suppressConquest: true,
+        },
+      },
+    ]);
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: bundle,
+      enemyAgent: {
+        ...agent('IA', 'Kethran', {
+          trigger: 'conquest',
+          effect: 'power',
+          value: 2,
+        }),
+        power: 8,
+      },
+    });
+
+    expect(battleResult.winner).toBe('enemy');
+    expect(battleResult.fieldDestroyed).toBe(true);
+    expect(battleResult.skipConquest).toBe(true);
+    expect(battleResult.enemyAbilityTriggered).toBe(false);
+  });
+
+  it('ARM_CONQUEST_OVERRIDE in vittoria lascia conquistare il Campo', () => {
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_override',
+        segment: {
+          primitive: 'ARM_CONQUEST_OVERRIDE',
+          when: 'LOSS',
+          destroyField: true,
+          suppressConquest: true,
+        },
+      },
+    ]);
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      isPlayerFirst: true,
+      selectedFocus: 5,
+      enemySelectedFocus: 0,
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.winner).toBe('player');
+    expect(battleResult.fieldDestroyed).toBe(false);
+    expect(battleResult.skipConquest).toBe(false);
+  });
+});
+
+describe('Sincronizzazione trigger XOR nel Duello', () => {
+  it('FORCE_BOTH con XOR accende il Potere spento', () => {
+    const bundle = bundleForAbility('orathai_contrappunto', {
+      eminenceId: 'orathai_primo_canto',
+      presence: 3,
+    });
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.enemyPower).toBe(6);
+    expect(battleResult.playerActivationSatisfied).toBe(true);
+    expect(battleResult.enemyActivationSatisfied).toBe(true);
+  });
+
+  it('FORBID_BOTH con XOR spegne il Potere acceso', () => {
+    const bundle = bundleForAbility('orathai_silenzio', {
+      eminenceId: 'orathai_primo_canto',
+      presence: 3,
+    });
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.playerPower).toBe(4);
+    expect(battleResult.enemyPower).toBe(4);
+    expect(battleResult.playerActivationSatisfied).toBe(false);
+    expect(battleResult.enemyActivationSatisfied).toBe(false);
+  });
+});
+
+describe('Lega effettiva e parità VA nel Duello', () => {
+  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE accende solo il lato proprietario a Leghe uguali', () => {
+    const bundle = bundleForAbility('enclave_ascensione', {
+      eminenceId: 'enclave_ascensione',
+      presence: 3,
+    });
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      isPlayerFirst: true,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        ability: { trigger: 'sfida', effect: 'power', value: 2 },
+      },
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        ability: { trigger: 'sopraffare', effect: 'power', value: 2 },
+      },
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.playerActivationSatisfied).toBe(true);
+    expect(battleResult.enemyActivationSatisfied).toBe(false);
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.winner).toBe('player');
+  });
+
+  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE non forza Sopraffare se la Lega è inferiore', () => {
+    const bundle = bundleForAbility('enclave_ascensione', {
+      eminenceId: 'enclave_ascensione',
+      presence: 3,
+    });
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        league: 1,
+        ability: { trigger: 'sopraffare', effect: 'power', value: 2 },
+      },
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        league: 4,
+        ability: { trigger: 'sfida', effect: 'power', value: 2 },
+      },
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.playerActivationSatisfied).toBe(false);
+    expect(battleResult.playerPower).toBe(4);
+  });
+
+  it('MODIFY_LEAGUE su carta cambia la Lega effettiva di Sfida', () => {
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_league',
+        params: { cardId: 77, leagueDelta: 1 },
+        segment: {
+          primitive: 'MODIFY_LEAGUE',
+          target: 'CHOSEN',
+          persistOnCard: true,
+        },
+      },
+    ]);
+
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        id: 77,
+        league: 2,
+        ability: { trigger: 'sopraffare', effect: 'power', value: 2 },
+      },
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        league: 2,
+        ability: { trigger: 'sfida', effect: 'power', value: 2 },
+      },
+      eminenceBundle: bundle,
+    });
+
+    expect(battleResult.playerActivationSatisfied).toBe(true);
+    expect(battleResult.playerPower).toBe(6);
+  });
+});
+
+describe('Riduzioni in Duello e Tossina del bundle', () => {
+  it('una maledizione di slot che abbassa il DAN marca la riduzione', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: {
+        slotModifiers: [{ slot: 0, deltas: { damage: -1 } }],
+      },
+    });
+    expect(battleResult.statReductionOccurred).toBe(true);
+    expect(battleResult.playerDamage).toBe(2);
+  });
+
+  it('senza perdite di POT, DAN o VA la riduzione non risulta', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput });
+    expect(battleResult.statReductionOccurred).toBe(false);
+  });
+
+  it('APPLY_TOXIN deposita Tossina sull\'avversario e sopprime il Bonus proprio', () => {
+    const bundle = bundleForAbility('ratti_veleno', {
+      eminenceId: 'ratti_bella_malelabbra',
+      presence: 2,
+    });
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        army: 'Ratti della Megera',
+        ability: { trigger: 'conquest', effect: 'power', value: 1 },
+      },
+      playerArmyBonuses: { 'Ratti della Megera': true },
+      eminenceBundle: bundle,
+    });
+    expect(battleResult.playerHasBonus).toBe(false);
+    expect(battleResult.enemyToxinActivated).toEqual(
+      expect.objectContaining({ value: 1, minHealth: 10 }),
+    );
+  });
+
+  it('FORCE conquest sul proprio lato accende Conquista anche in sconfitta, senza Ultimo Desiderio', () => {
+    const bundle = bundleForAbility('ratti_conquista_forzata', {
+      eminenceId: 'ratti_bella_malelabbra',
+      presence: 3,
+    });
+    const loss = {
+      ...baseInput,
+      isPlayerFirst: true,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        army: 'Ratti della Megera',
+        ability: { trigger: 'conquest', effect: 'power', value: 2 },
+      },
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        ability: { trigger: 'lastWish', effect: 'focusCoin', value: 2 },
+      },
+      playerArmyBonuses: { 'Ratti della Megera': true },
+    };
+
+    const natural = computeDuelResolution(loss).battleResult;
+    expect(natural.winner).toBe('enemy');
+    expect(natural.playerAbilityTriggered).toBe(false);
+    expect(natural.enemyToxinActivated).toBeNull();
+
+    const { battleResult } = computeDuelResolution({
+      ...loss,
+      eminenceBundle: bundle,
+    });
+    expect(battleResult.winner).toBe('enemy');
+    expect(battleResult.skipConquest).toBeFalsy();
+    expect(battleResult.playerAbilityTriggered).toBe(true);
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.enemyToxinActivated).toEqual(
+      expect.objectContaining({ value: 1, minHealth: 10 }),
+    );
+    expect(battleResult.enemyAbilityTriggered).toBe(false);
+  });
+
+  it('FORCE conquest non accende Ultimo Desiderio su una vittoria', () => {
+    const bundle = bundleForAbility('ratti_conquista_forzata', {
+      eminenceId: 'ratti_bella_malelabbra',
+      presence: 3,
+    });
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: {
+        ...baseInput.selectedAgent,
+        ability: { trigger: 'lastWish', effect: 'focusCoin', value: 2 },
+      },
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        ability: { trigger: 'glory', effect: 'power', value: 0 },
+      },
+      eminenceBundle: bundle,
+    });
+    expect(battleResult.winner).toBe('player');
+    expect(battleResult.playerAbilityTriggered).toBe(false);
   });
 });

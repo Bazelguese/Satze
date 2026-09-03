@@ -1,0 +1,61 @@
+{
+  "roundNumber": 3,
+  "initiativeSide": "player",
+  "player": {
+    "eminenceId": "corte_rossa",
+    "presence": 3,
+    "abilityId": "corte_clausola",
+    "params": {
+      "cardId": 231
+    },
+    "agent": {
+      "cardId": 231,
+      "league": 4,
+      "power": 3,
+      "damage": 2,
+      "trigger": "rimonta",
+      "focusInvested": 2,
+      "anchored": false
+    },
+    "fragments": [],
+    "prey": []
+  },
+  "enemy": {
+    "eminenceId": null,
+    "presence": 1,
+    "abilityId": null,
+    "params": null,
+    "agent": {
+      "cardId": 118,
+      "league": 4,
+      "power": 5,
+      "damage": 3,
+      "trigger": "glory",
+      "focusInvested": 3,
+      "anchored": false
+    }
+  },
+  "outcome": {
+    "winner": "enemy",
+    "powerResolvedBySide": {
+      "player": false,
+      "enemy": true
+    },
+    "activatedTriggerBySide": {
+      "player": null,
+      "enemy": "glory"
+    },
+    "aliasUsedBySide": {
+      "player": false,
+      "enemy": false
+    },
+    "hpDeltas": {
+      "player": -3,
+      "enemy": 0
+    },
+    "finalPowerBySide": null,
+    "finalPowerByCardId": null
+  },
+  "name": "corte_clausola_hit",
+  "branch": "hit"
+}

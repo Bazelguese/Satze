@@ -555,3 +555,76 @@ test('avviso: se GENERAL si apre nel Duello, Leggerezza parla una sola volta', (
   assert.equal(notices[0].outcome, 'hit');
   assert.match(notices[0].text, /non è Ancorato/);
 });
+
+test('avviso: Sussurro parla solo a fine Duello, con esito', () => {
+  const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
+  const chosen = bothChosen(matchState, 'ratti_sussurro', 'semaforo_giallo');
+  let state = chosen;
+  for (let i = 0; i < 3; i += 1) {
+    const step = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER });
+    assert.equal(step.notices.some((notice) => notice.name === 'Sussurro'), false);
+    state = step.matchState;
+  }
+
+  const hit = settleEminenceRound(state, {
+    initiativeSide: SIDES.PLAYER,
+    winner: SIDES.PLAYER,
+    statReductionOccurred: true,
+  });
+  const hitNotice = hit.notices.find((entry) => entry.name === 'Sussurro');
+  assert.ok(hitNotice);
+  assert.equal(hitNotice.outcome, 'hit');
+  assert.match(hitNotice.text, /Riduzione/);
+
+  const miss = settleEminenceRound(state, {
+    initiativeSide: SIDES.PLAYER,
+    winner: SIDES.PLAYER,
+    statReductionOccurred: false,
+  });
+  const missNotice = miss.notices.find((entry) => entry.name === 'Sussurro');
+  assert.ok(missNotice);
+  assert.equal(missNotice.outcome, 'miss');
+  assert.match(missNotice.text, /Nessuna riduzione/);
+});
+
+test('avviso: Male Crescente parla al prepare, hit o miss', () => {
+  const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
+  const chosen = bothChosen(matchState, 'ratti_sussurro', 'semaforo_giallo');
+  let state = chosen;
+  for (let i = 0; i < 2; i += 1) {
+    state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
+  }
+
+  const hit = prepareEminenceDuel(state, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  const hitNotice = hit.notices.find((entry) => entry.name === 'Male Crescente');
+  assert.ok(hitNotice);
+  assert.equal(hitNotice.outcome, 'hit');
+  assert.match(hitNotice.text, /più bassa/);
+
+  const miss = prepareEminenceDuel(state, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+  });
+  const missNotice = miss.notices.find((entry) => entry.name === 'Male Crescente');
+  assert.ok(missNotice);
+  assert.equal(missNotice.outcome, 'miss');
+  assert.match(missNotice.text, /non la più bassa/);
+});
+
+test('avviso: Veleno al GENERAL nomina Bonus e Tossina', () => {
+  const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
+  matchState.player.presence = 2;
+  matchState.player.selectionCheckpointPresence = 2;
+  const chosen = bothChosen(matchState, 'ratti_veleno', 'semaforo_giallo');
+  let state = chosen;
+  for (let i = 0; i < 2; i += 1) {
+    state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
+  }
+  const general = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER });
+  const notice = general.notices.find((entry) => entry.name === 'Veleno');
+  assert.ok(notice);
+  assert.equal(notice.kind, 'reveal');
+  assert.match(notice.text, /Bonus/);
+  assert.match(notice.text, /Tossina/);
+});

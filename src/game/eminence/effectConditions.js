@@ -30,6 +30,13 @@ export const CONDITION_KEYS = Object.freeze([
   'hpLossCause',
   'ownAnchored',
   'winner',
+  'ownFinalDamage',
+  'enemyFinalDamage',
+  'ownActivationSatisfied',
+  'enemyActivationSatisfied',
+  'ownFocusInvested',
+  'ownDeployedIsLowestLeague',
+  'statReductionOccurred',
 ]);
 
 /**

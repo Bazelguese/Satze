@@ -16,6 +16,7 @@ import {
   isEminenceSubsystemEnabled,
   resetEminenceMatchRound,
   getLegalAbilityIds,
+  resolveAbilityPresenceDelta,
 } from './eminenceState.js';
 import { changePresence } from './presence.js';
 import { createConditionContext, matchesCondition } from './effectConditions.js';
@@ -157,10 +158,11 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
   if (!ability) return { matchState, ok: false, reason: 'UNKNOWN_ABILITY' };
 
   const checkpointPresence = state.selectionCheckpointPresence;
-  if (!getLegalAbilityIds(state.eminenceId, checkpointPresence).includes(abilityId)) {
+  if (!getLegalAbilityIds(state.eminenceId, checkpointPresence, state.persistent).includes(abilityId)) {
     return { matchState, ok: false, reason: 'INSUFFICIENT_PRESENCE' };
   }
 
+  const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
   return {
     matchState: {
       ...matchState,
@@ -169,7 +171,7 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
         selectedAbilityId: abilityId,
         selectedParams: params,
         selectionSnapshotPresence: checkpointPresence,
-        committedPresenceCost: Math.max(0, -ability.presenceDelta),
+        committedPresenceCost: Math.max(0, -presenceDelta),
       },
     },
     ok: true,
@@ -288,9 +290,10 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
 
   for (const { side, ability } of openings) {
     const state = nextMatchState[side];
-    const { state: paid, event } = changePresence(state, ability.presenceDelta, {
+    const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
+    const { state: paid, event } = changePresence(state, presenceDelta, {
       reason: `reveal:${ability.id}`,
-      countsAsSpend: ability.presenceDelta < 0,
+      countsAsSpend: presenceDelta < 0,
       source: ability.id,
       roundNumber: matchState.roundNumber ?? null,
     });
@@ -314,7 +317,7 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
       gate,
       eminenceId: state.eminenceId,
       abilityId: ability.id,
-      presenceDelta: ability.presenceDelta,
+      presenceDelta,
       params: state.selectedParams ?? null,
     });
     if (event) events.push({ ...event, side });
@@ -421,6 +424,13 @@ export function collectPendingEffects(
     if (extra.anchoredBySide) {
       sideExtra.ownAnchored = Boolean(extra.anchoredBySide[side]);
     }
+    sideExtra.ownFinalDamage = extra.finalDamageBySide?.[side] ?? null;
+    sideExtra.enemyFinalDamage = extra.finalDamageBySide?.[OPPOSITE_SIDE[side]] ?? null;
+    sideExtra.ownActivationSatisfied = extra.activationSatisfiedBySide?.[side] ?? null;
+    sideExtra.enemyActivationSatisfied = extra.activationSatisfiedBySide?.[OPPOSITE_SIDE[side]] ?? null;
+    sideExtra.ownFocusInvested = extra.focusInvestedBySide?.[side] ?? null;
+    sideExtra.ownDeployedIsLowestLeague = extra.deployedIsLowestLeagueBySide?.[side] ?? null;
+    sideExtra.statReductionOccurred = extra.statReductionOccurred ?? null;
 
     const remaining = [];
     for (const entry of state.round.pendingEffects) {
@@ -486,7 +496,7 @@ export function getSealedAbilityHypotheses(publicSide, gateProgress) {
   if (!eminence) return [];
 
   const legalAtSelection = new Set(
-    getLegalAbilityIds(publicSide.eminenceId, publicSide.selectionCheckpointPresence)
+    getLegalAbilityIds(publicSide.eminenceId, publicSide.selectionCheckpointPresence, publicSide.persistent)
   );
   const completed = gateProgress?.completedGates || [];
 

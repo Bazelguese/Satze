@@ -1,0 +1,259 @@
+{
+  "ability": {
+    "id": "apex_cataclisma",
+    "name": "Cataclisma",
+    "presenceDelta": -4,
+    "revealGate": "GENERAL",
+    "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      4,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "apex_furia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "apex_disprezzo",
+        "presenceDelta": -2
+      },
+      {
+        "id": "apex_cataclisma",
+        "presenceDelta": -4
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 4,
+    "presenceAvailable": 4,
+    "presenceDelta": -4,
+    "selected": "apex_cataclisma"
+  },
+  "eminence": {
+    "army": "Apex",
+    "id": "apex_sole_verde",
+    "name": "Il Sole Verde"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:apex_cataclisma:GENERAL",
+      "kind": "reveal",
+      "name": "Cataclisma",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "GRANT_POWER",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -4,
+      "side": "player",
+      "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "apex_cataclisma_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:apex_cataclisma:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:apex_cataclisma:GENERAL",
+          "kind": "reveal",
+          "name": "Cataclisma",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "GRANT_POWER",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -4,
+          "side": "player",
+          "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "roundNumber: 5 (obs 3) → falsa",
+            "keys": [
+              "roundNumber"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_FIELD",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma: Ora Verde",
+          "target": "GLOBAL",
+          "timing": "ROUND_START"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_POWER",
+          "source": "ability",
+          "sourceId": "apex_cataclisma",
+          "sourceName": "Cataclisma",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

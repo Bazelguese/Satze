@@ -142,3 +142,34 @@ export function waitForFieldAgentEntrance(side, { timeoutMs = 1800 } = {}) {
     watch(0);
   });
 }
+
+/** Attende l'ingresso di tutti gli Agenti schierati indicati (in parallelo). */
+export async function waitForDeployedAgentsEntrance(sides = [], options = {}) {
+  const unique = [...new Set((sides || []).filter(Boolean))];
+  if (!unique.length) return;
+  await Promise.all(unique.map((side) => waitForFieldAgentEntrance(side, options)));
+}
+
+/**
+ * Classi da applicare alla scena `.em-on` per mettere a fuoco il bersaglio della scintilla.
+ * @param {{ type?: string, side?: string|null, id?: number|null }|null} focus
+ */
+export function sparkFocusSceneClasses(focus) {
+  if (!focus?.type) return '';
+  const classes = [`em-spark-focus-${focus.type}`];
+  if (focus.side) classes.push(`em-spark-focus-${focus.type}-${focus.side}`);
+  if (focus.type === 'slot' && focus.id != null) {
+    classes.push(`em-spark-focus-slot-${focus.id}`);
+  }
+  return classes.join(' ');
+}
+
+/** Deriva il focus scena dall'ancora di arrivo di un volo. */
+export function sparkFocusFromAnchor(anchor) {
+  if (!anchor?.type) return null;
+  return {
+    type: anchor.type,
+    side: anchor.side ?? null,
+    id: anchor.id ?? null,
+  };
+}

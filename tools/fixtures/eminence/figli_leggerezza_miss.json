@@ -1,0 +1,59 @@
+{
+  "roundNumber": 3,
+  "initiativeSide": "player",
+  "player": {
+    "eminenceId": "figli_domanda_senza_fine",
+    "presence": 2,
+    "abilityId": "figli_leggerezza",
+    "params": null,
+    "agent": {
+      "cardId": 231,
+      "league": 3,
+      "power": 3,
+      "damage": 2,
+      "trigger": "rimonta",
+      "focusInvested": 3,
+      "anchored": true
+    },
+    "fragments": [],
+    "prey": []
+  },
+  "enemy": {
+    "eminenceId": null,
+    "presence": 1,
+    "abilityId": null,
+    "params": null,
+    "agent": {
+      "cardId": 118,
+      "league": 4,
+      "power": 5,
+      "damage": 3,
+      "trigger": "glory",
+      "focusInvested": 3,
+      "anchored": false
+    }
+  },
+  "outcome": {
+    "winner": "player",
+    "powerResolvedBySide": {
+      "player": false,
+      "enemy": false
+    },
+    "activatedTriggerBySide": {
+      "player": null,
+      "enemy": null
+    },
+    "aliasUsedBySide": {
+      "player": false,
+      "enemy": false
+    },
+    "hpDeltas": {
+      "player": 0,
+      "enemy": 0
+    },
+    "finalPowerBySide": null,
+    "finalPowerByCardId": null
+  },
+  "name": "figli_leggerezza_miss",
+  "branch": "miss"
+}

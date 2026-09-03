@@ -1,0 +1,248 @@
+{
+  "ability": {
+    "id": "calibri_terra_bruciata",
+    "name": "Protocollo Terra Bruciata",
+    "presenceDelta": -4,
+    "revealGate": "GENERAL",
+    "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      4,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "calibri_guerra_attrito",
+        "presenceDelta": 0
+      },
+      {
+        "id": "calibri_contenimento",
+        "presenceDelta": -2
+      },
+      {
+        "id": "calibri_terra_bruciata",
+        "presenceDelta": -4
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 4,
+    "presenceAvailable": 4,
+    "presenceDelta": -4,
+    "selected": "calibri_terra_bruciata"
+  },
+  "eminence": {
+    "army": "Calibri Pesanti",
+    "id": "calibri_quattro_fronti",
+    "name": "Il Comando dei Quattro Fronti"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "FIELD_RULE",
+          "to": {
+            "type": "slot"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:calibri_terra_bruciata:GENERAL",
+      "kind": "reveal",
+      "name": "Protocollo Terra Bruciata",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "ARM_CONQUEST_OVERRIDE",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -4,
+      "side": "player",
+      "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "calibri_terra_bruciata_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:calibri_terra_bruciata:GENERAL",
+          "recipe": "FIELD_RULE",
+          "to": {
+            "type": "slot"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "FIELD_RULE",
+              "to": {
+                "type": "slot"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:calibri_terra_bruciata:GENERAL",
+          "kind": "reveal",
+          "name": "Protocollo Terra Bruciata",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "ARM_CONQUEST_OVERRIDE",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -4,
+          "side": "player",
+          "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
+            "keys": [
+              "duelWinnerRelative",
+              "enemyFinalDamage"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "calibri_tenere_la_linea",
+          "sourceName": "Tenere la Linea",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "ARM_CONQUEST_OVERRIDE",
+          "source": "ability",
+          "sourceId": "calibri_terra_bruciata",
+          "sourceName": "Protocollo Terra Bruciata",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

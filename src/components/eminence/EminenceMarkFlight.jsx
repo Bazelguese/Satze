@@ -1,9 +1,14 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addedIds, curseSlotKeys, queryFlightAnchor, normalizeFlight } from './eminenceMarkCinematic.js';
+import {
+  getEminenceMarkFlightMs,
+  getEminenceMarkTrailLingerMs,
+} from '../../utils/eminenceSystemPreference.js';
 
 export { addedIds, curseSlotKeys };
 export const EMINENCE_MARK_FLIGHT_MS = 900;
+export const EMINENCE_MARK_TRAIL_LINGER_MS = 560;
 export const EMINENCE_MARK_SPAWN_MS = 760;
 
 const EMPTY_SEEN = () => ({
@@ -90,10 +95,12 @@ function flightGeometry(flight) {
 
 export function EminenceMarkFlight({ flight, onComplete }) {
   const [geometry, setGeometry] = useState(null);
+  const [phase, setPhase] = useState(null);
 
   useLayoutEffect(() => {
     if (!flight) {
       setGeometry(null);
+      setPhase(null);
       return undefined;
     }
     if (reducedMotion()) {
@@ -102,12 +109,24 @@ export function EminenceMarkFlight({ flight, onComplete }) {
     }
     let tries = 0;
     let raf = 0;
-    let done = 0;
+    let flyTimer = 0;
+    let lingerTimer = 0;
+    const flightMs = getEminenceMarkFlightMs() || EMINENCE_MARK_FLIGHT_MS;
+    const lingerMs = getEminenceMarkTrailLingerMs() || EMINENCE_MARK_TRAIL_LINGER_MS;
     const measure = () => {
       const next = flightGeometry(flight);
       if (next) {
+        next.ms = flightMs;
         setGeometry(next);
-        done = window.setTimeout(() => onComplete?.(), EMINENCE_MARK_FLIGHT_MS);
+        setPhase('flying');
+        flyTimer = window.setTimeout(() => {
+          setPhase('lingering');
+          lingerTimer = window.setTimeout(() => {
+            setPhase(null);
+            setGeometry(null);
+            onComplete?.();
+          }, lingerMs);
+        }, flightMs);
         return;
       }
       tries += 1;
@@ -120,14 +139,19 @@ export function EminenceMarkFlight({ flight, onComplete }) {
     measure();
     return () => {
       window.cancelAnimationFrame(raf);
-      window.clearTimeout(done);
+      window.clearTimeout(flyTimer);
+      window.clearTimeout(lingerTimer);
     };
   }, [flight, onComplete]);
 
   if (!flight || !geometry) return null;
 
   const layer = (
-    <div className="em-mark-flight" aria-hidden>
+    <div
+      className="em-mark-flight"
+      style={{ '--em-flight-ms': `${geometry.ms || EMINENCE_MARK_FLIGHT_MS}ms` }}
+      aria-hidden
+    >
       <svg
         className="em-mark-flight-svg"
         width={geometry.w}
@@ -135,20 +159,28 @@ export function EminenceMarkFlight({ flight, onComplete }) {
         viewBox={`0 0 ${geometry.w} ${geometry.h}`}
       >
         <path
-          className="em-mark-flight-trail"
+          className={[
+            'em-mark-flight-trail',
+            phase === 'lingering' ? 'is-linger' : '',
+            phase === 'flying' ? 'is-flying' : '',
+          ].filter(Boolean).join(' ')}
           d={geometry.d}
           pathLength="1"
           style={{ '--em-acc': flight.accent }}
         />
       </svg>
-      <span
-        className="em-mark-flight-spark"
-        style={{ offsetPath: `path('${geometry.d}')`, '--em-acc': flight.accent }}
-      />
-      <span
-        className="em-mark-flight-burst"
-        style={{ left: geometry.x2, top: geometry.y2, '--em-acc': flight.accent }}
-      />
+      {phase === 'flying' && (
+        <>
+          <span
+            className="em-mark-flight-spark"
+            style={{ offsetPath: `path('${geometry.d}')`, '--em-acc': flight.accent }}
+          />
+          <span
+            className="em-mark-flight-burst"
+            style={{ left: geometry.x2, top: geometry.y2, '--em-acc': flight.accent }}
+          />
+        </>
+      )}
     </div>
   );
 
@@ -200,12 +232,13 @@ export function useEminencePreyFlight({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
+  // Saette disabilitate: i marchi compaiono subito, senza coda/voli.
   useEffect(() => {
-    const fresh = collectFresh(seenRef.current, marks, playerAccent, enemyAccent);
     seenRef.current = remember(marks);
-    if (!fresh.length) return;
-    setConcealed((prev) => [...new Set([...prev, ...fresh.map((entry) => `${entry.kind}:${entry.id}`)])]);
-    queueRef.current.push(...fresh);
+    queueRef.current = [];
+    setConcealed([]);
+    setMarkFlight(null);
+    setLinkFlight(null);
   }, [
     playerPreyIds,
     enemyPreyIds,
@@ -217,68 +250,31 @@ export function useEminencePreyFlight({
     enemyAccent,
   ]);
 
-  useEffect(() => {
-    if (markFlight || waitForNotice || landed || !queueRef.current.length) return;
-    setMarkFlight(queueRef.current.shift());
-  }, [markFlight, waitForNotice, concealed, landed]);
-
   const linkQueueRef = useRef([]);
 
   const kickLink = useCallback(() => {
-    if (linkFlightRef.current || !linkQueueRef.current.length) return;
-    const next = linkQueueRef.current.shift();
-    linkDoneRef.current = typeof next.onDone === 'function' ? next.onDone : null;
-    setLinkFlight(next.flight);
+    // no-op: saette spente
   }, []);
 
   const onFlightComplete = useCallback(() => {
-    if (linkFlightRef.current) {
-      const done = linkDoneRef.current;
-      linkDoneRef.current = null;
-      setLinkFlight(null);
-      done?.();
-      window.setTimeout(() => kickLink(), 0);
-      return;
-    }
-    setMarkFlight((current) => {
-      if (!current) return null;
-      const key = `${current.kind}:${current.id}`;
-      setConcealed((prev) => prev.filter((entry) => entry !== key));
-      setLanded(current);
-      window.setTimeout(() => {
-        setLanded((item) => (item && item.kind === current.kind && item.id === current.id ? null : item));
-      }, EMINENCE_MARK_SPAWN_MS);
-      return null;
-    });
-  }, [kickLink]);
+    setMarkFlight(null);
+    setLinkFlight(null);
+  }, []);
 
   const linkDoneRef = useRef(null);
-  const playLink = useCallback((flight, onDone) => {
-    if (!flight) {
-      onDone?.();
-      return;
-    }
-    linkQueueRef.current.push({ flight, onDone });
-    kickLink();
-  }, [kickLink]);
+  const playLink = useCallback((_flight, onDone) => {
+    onDone?.();
+  }, []);
 
-  const incomingNow = collectFresh(seenRef.current, marks, playerAccent, enemyAccent);
-  const hideKeys = (kind, ids) => (ids || []).filter((id) => !concealed.includes(`${kind}:${id}`));
-  const busy = Boolean(
-    markFlight
-    || linkFlight
-    || concealed.length
-    || landed
-    || queueRef.current.length
-    || incomingNow.length,
-  );
+  const hideKeys = (kind, ids) => (ids || []);
+  const busy = false;
 
   return {
-    markFlight: linkFlight || markFlight,
+    markFlight: null,
     playLink,
-    preyLandId: landed?.kind === 'prey' || landed?.kind === 'fragment' ? landed.id : null,
-    arrivingSlot: landed?.kind === 'slot' ? landed.id : null,
-    activeKind: markFlight?.kind || landed?.kind || incomingNow[0]?.kind || queueRef.current[0]?.kind || null,
+    preyLandId: null,
+    arrivingSlot: null,
+    activeKind: null,
     busy,
     onFlightComplete,
     visiblePlayerPreyIds: hideKeys('prey', playerPreyIds),

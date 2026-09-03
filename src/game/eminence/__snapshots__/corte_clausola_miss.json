@@ -1,0 +1,348 @@
+{
+  "ability": {
+    "id": "corte_clausola",
+    "name": "Clausola Capestro",
+    "presenceDelta": -3,
+    "revealGate": "PRE_AGENT",
+    "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_accordo",
+        "presenceDelta": 0
+      },
+      {
+        "id": "corte_salasso",
+        "presenceDelta": -2
+      },
+      {
+        "id": "corte_clausola",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "corte_clausola"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:corte_clausola:PRE_AGENT",
+      "kind": "reveal",
+      "name": "Clausola Capestro",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "REPLACE_TRIGGER",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima dell'Agente",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "kind": "effect",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "corte_clausola_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_clausola:PRE_AGENT",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima dell'Agente",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:corte_clausola:PRE_AGENT",
+          "kind": "reveal",
+          "name": "Clausola Capestro",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "REPLACE_TRIGGER",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima dell'Agente",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "kind": "effect",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "hpLossCause: (assente) → non ancora valutabile",
+            "keys": [
+              "hpLossCause"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "corte_pagare_debiti",
+          "sourceName": "Pagare i Debiti",
+          "target": "SELF",
+          "timing": "ON_HP_LOSS"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_TRIGGER",
+          "source": "ability",
+          "sourceId": "corte_clausola",
+          "sourceName": "Clausola Capestro",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

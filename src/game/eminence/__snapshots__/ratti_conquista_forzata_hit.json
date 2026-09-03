@@ -1,0 +1,330 @@
+{
+  "ability": {
+    "id": "ratti_conquista_forzata",
+    "name": "Conquista Forzata",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "ratti_sussurro",
+        "presenceDelta": 0
+      },
+      {
+        "id": "ratti_veleno",
+        "presenceDelta": -2
+      },
+      {
+        "id": "ratti_conquista_forzata",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "ratti_conquista_forzata"
+  },
+  "eminence": {
+    "army": "Ratti della Megera",
+    "id": "ratti_bella_malelabbra",
+    "name": "Bella dalle Malelabbra, l'Erede della Megera"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:ratti_conquista_forzata:GENERAL",
+      "kind": "reveal",
+      "name": "Conquista Forzata",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "FORCE_TRIGGER",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+    },
+    {
+      "badgeText": "Mancato · Condizione non soddisfatta",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+      "kind": "effect",
+      "name": "Male Crescente",
+      "outcome": "miss",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "MISS",
+      "phaseDetail": "Condizione non soddisfatta",
+      "phaseLabel": "Mancato",
+      "presenceDelta": null,
+      "side": "player",
+      "text": "Lega non la più bassa."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "ratti_conquista_forzata_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:ratti_conquista_forzata:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:ratti_conquista_forzata:GENERAL",
+          "kind": "reveal",
+          "name": "Conquista Forzata",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "FORCE_TRIGGER",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Mancato · Condizione non soddisfatta",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "noticeId": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Mancato · Condizione non soddisfatta",
+          "cues": [
+            {
+              "flight": false,
+              "from": null,
+              "holdAnnounce": false,
+              "recipe": "MISS_DIM",
+              "to": null,
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+          "kind": "effect",
+          "name": "Male Crescente",
+          "outcome": "miss",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "MISS",
+          "phaseDetail": "Condizione non soddisfatta",
+          "phaseLabel": "Mancato",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "Lega non la più bassa."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownDeployedIsLowestLeague: (assente) → non ancora valutabile",
+            "keys": [
+              "ownDeployedIsLowestLeague"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "ratti_male_crescente",
+          "sourceName": "Male Crescente",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORCE_TRIGGER",
+          "source": "ability",
+          "sourceId": "ratti_conquista_forzata",
+          "sourceName": "Conquista Forzata",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

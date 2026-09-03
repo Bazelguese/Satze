@@ -5,18 +5,20 @@
    ============================================================ */
 
 /* ── 1. Tavolo arretrato ────────────────────────────────────
-   La ricetta del ventaglio (desatura, spegne, sfoca) vale per tutto
-   il palco: colonne, campo, stats, badge. Le eminenze restano nitide
-   sopra il velo. Le carte in mano tengono anche opacità/scala, salvo
-   la mano avversaria durante la scelta di una Preda (`.em-prey-read`). */
-.imp-hand > div > div[class="absolute"]{transition:opacity .5s ease,filter .5s ease,transform .5s ease}
-.em-on > *:not(.imp-hand):not(.em-layer):not(.em-table-toggle):not(.ov):not(.em-mark-flight){filter:grayscale(.85) brightness(.62) blur(5px);transition:filter .5s ease}
-.em-on > .ov,
-.em-on > .z-\[298\],
-.em-on > .z-\[299\],
-.em-on > .z-\[300\]{filter:none}
-.em-on .imp-hand > div > div[class="absolute"]{opacity:.34;filter:grayscale(.85) brightness(.62) blur(1.4px);transform:scale(.96)}
+   Soft-focus SENZA filter:blur (troppo caro su colonne 1920×1080).
+   Il tavolo resta arretrato via velo ::before (solo opacity/colore);
+   le carte in mano si spengono con opacity/scala. Le eminenze restano
+   nitide sopra il velo. Preda: `.em-prey-read` riaccende la mano IA. */
+.imp-hand > div > div[class="absolute"]{transition:opacity .5s ease,transform .5s ease}
+.em-on > *:not(.imp-hand):not(.em-layer):not(.em-table-toggle):not(.ov):not(.em-mark-flight){filter:none}
+.em-on .imp-hand > div > div[class="absolute"]{opacity:.34;filter:none;transform:scale(.96)}
 .em-on .imp-hand > div > div[class="absolute"]:hover{opacity:.34;transform:scale(.96)}
+/* Infobox isolati (fine round): niente velo sul tavolo */
+.em-on:has(.em-stage-announce-only) .imp-hand > div > div[class="absolute"],
+.em-on:has(.em-stage-announce-only) .imp-hand > div > div[class="absolute"]:hover{
+  opacity:1;filter:none;transform:none;
+}
+.em-on:has(.em-stage-announce-only)::before{opacity:0;pointer-events:none;animation:none}
 .em-on.em-prey-read > .imp-hand-enemy{z-index:20}
 .em-on.em-prey-read .imp-hand-enemy > div > div[class="absolute"]{opacity:1;filter:none;transform:none}
 .em-on.em-prey-read .imp-hand-enemy > div > div[class="absolute"]:hover{
@@ -27,7 +29,91 @@
 .em-on.em-slot-pick::before{pointer-events:none}
 .em-on.em-slot-pick > .imp-colR{filter:none;z-index:16}
 .em-on.em-slot-pick > .imp-colR .imp-fields{pointer-events:auto}
-.em-on::before{content:'';position:absolute;inset:0;z-index:14;pointer-events:auto;background:rgba(4,3,8,.32);animation:emVeilIn .5s ease both}
+
+/* Bersaglio scintilla: togli sfocatura dal punto di arrivo */
+.em-on.em-spark-focus-field-agent-player > :has([data-field-agent="player"]),
+.em-on.em-spark-focus-field-agent-enemy > :has([data-field-agent="enemy"]){
+  filter:none!important;
+  z-index:22;
+}
+.em-on.em-spark-focus-field-agent-player [data-field-agent="player"] .place-card,
+.em-on.em-spark-focus-field-agent-enemy [data-field-agent="enemy"] .place-card,
+.em-on.em-spark-focus-field-agent-player [data-field-agent="player"] .place-fx,
+.em-on.em-spark-focus-field-agent-enemy [data-field-agent="enemy"] .place-fx{
+  filter:none!important;
+}
+.em-on.em-spark-focus-slot > .imp-colR,
+.em-on.em-spark-focus-slot .imp-fields{
+  filter:none!important;
+  z-index:16;
+}
+.em-on.em-spark-focus-slot [data-field-slot]{
+  filter:none!important;
+}
+.em-on.em-spark-focus-hp-player > .imp-colL,
+.em-on.em-spark-focus-hp-enemy > .imp-colR{
+  filter:none!important;
+  z-index:16;
+}
+.em-on.em-spark-focus-hand > .imp-hand{
+  filter:none!important;
+  z-index:20;
+}
+.em-on.em-spark-focus-hand .imp-hand > div > div[class="absolute"]{
+  opacity:1;
+  filter:none!important;
+  transform:none;
+}
+.em-on.em-spark-focus-hand .imp-hand > div > div[class="absolute"]:hover{
+  opacity:1;
+  transform:none;
+}
+.em-on.em-spark-focus-presence-player > .em-layer-player,
+.em-on.em-spark-focus-presence-enemy > .em-layer-enemy{
+  z-index:25;
+}
+.em-agent-pick::before{
+  content:'';position:absolute;inset:0;z-index:36;pointer-events:auto;
+  background:rgba(4,3,8,.48);animation:emVeilIn .35s ease both;
+}
+.em-agent-pick > .em-agent-pick-target{
+  z-index:38!important;pointer-events:auto;filter:none;
+}
+.em-agent-pick [data-field-agent]{
+  pointer-events:auto;cursor:pointer;
+}
+.em-agent-pick [data-field-agent]::after{
+  content:'';position:absolute;inset:-14px;border-radius:18px;pointer-events:none;
+  border:2px solid rgba(240,193,75,.88);
+  box-shadow:0 0 28px rgba(240,193,75,.38), inset 0 0 18px rgba(240,193,75,.12);
+  animation:emAgentPickPulse 1.6s ease-in-out infinite;
+}
+@keyframes emAgentPickPulse{
+  0%,100%{opacity:.82}
+  50%{opacity:1}
+}
+.em-agent-pick-hud{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-290px);
+  z-index:40;pointer-events:none;min-width:280px;max-width:440px;padding:12px 22px;
+  text-align:center;
+}
+.em-agent-pick-hud-name{
+  font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+}
+.em-agent-pick-hud-title{
+  margin-top:4px;font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+}
+.em-agent-pick-hud-note{
+  margin-top:6px;font-size:11px;font-weight:700;letter-spacing:.04em;line-height:1.35;
+}
+/* Velo compositor-friendly: sostituisce il vecchio blur(5px) sui figli. */
+.em-on::before{
+  content:'';position:absolute;inset:0;z-index:14;pointer-events:auto;
+  background:
+    radial-gradient(ellipse 78% 70% at 50% 48%, rgba(4,3,8,.28) 0%, rgba(4,3,8,.62) 100%),
+    rgba(4,3,8,.42);
+  animation:emVeilIn .5s ease both;
+}
 @keyframes emVeilIn{from{opacity:0}to{opacity:1}}
 
 /* ── 2. Piano 3D della zona ─────────────────────────────────
@@ -41,7 +127,8 @@
 .em-zone-enemy .em-stage{transform-origin:0% 50%;transform:rotateY(18deg) rotateX(-6deg);animation:emZoneBreathL 9s ease-in-out infinite}
 .em-zone-player:has(.em-announce) .em-stage,
 .em-zone-enemy:has(.em-announce) .em-stage,
-.em-stage-announce{
+.em-stage-announce,
+.em-stage-announce-only{
   animation:none;
   transform:none;
   transform-origin:center center;
@@ -102,8 +189,25 @@
   .em-zone-enemy .em-stage{animation:none;transform:rotateY(18deg) rotateX(-6deg)}
   .em-stage *,.em-rail-hit{animation:none!important;transition:none!important}
   .imp-hand > div > div[class="absolute"]{transition:none}
-  .em-on > *:not(.imp-hand):not(.em-layer):not(.em-table-toggle):not(.ov){transition:none}
   .em-on::before{animation:none}
+  .em-agent-pick::before,.em-agent-pick [data-field-agent]::after{animation:none}
+}
+/* Qualità Media/Bassa + reduce-motion in-app: niente respiro 3D delle zone */
+html.satze-reduce-motion .em-zone-player .em-stage,
+body.satze-reduce-motion .em-zone-player .em-stage,
+html.satze-vfx-medium .em-zone-player .em-stage,
+body.satze-vfx-medium .em-zone-player .em-stage,
+html.satze-vfx-low .em-zone-player .em-stage,
+body.satze-vfx-low .em-zone-player .em-stage{
+  animation:none;transform:rotateY(-18deg) rotateX(6deg)
+}
+html.satze-reduce-motion .em-zone-enemy .em-stage,
+body.satze-reduce-motion .em-zone-enemy .em-stage,
+html.satze-vfx-medium .em-zone-enemy .em-stage,
+body.satze-vfx-medium .em-zone-enemy .em-stage,
+html.satze-vfx-low .em-zone-enemy .em-stage,
+body.satze-vfx-low .em-zone-enemy .em-stage{
+  animation:none;transform:rotateY(18deg) rotateX(-6deg)
 }
 
 /* ── 6. Geometria d'innesto (README §5). Sagome e inchiostri vivono nel costruttore / JSX. ── */
@@ -113,11 +217,26 @@
 .em-layer-enemy{perspective-origin:28% 38%}
 .mov-1 .imp-hand > .em-layer,
 .mov-2 .imp-hand > .em-layer{animation:none!important}
-.em-zone{position:absolute;display:flex;flex-direction:column;align-items:flex-start;transform-style:preserve-3d;overflow:visible}
+.em-zone{
+  position:absolute;display:flex;flex-direction:column;align-items:flex-start;
+  transform-style:preserve-3d;overflow:visible;
+  transition:
+    left .55s cubic-bezier(.16,.84,.24,1),
+    right .55s cubic-bezier(.16,.84,.24,1),
+    top .55s cubic-bezier(.16,.84,.24,1),
+    bottom .55s cubic-bezier(.16,.84,.24,1);
+}
 /* Ancora la CARTA, non il gruppo losanga+carta. Così al +0 (losanga chiusa)
    l'Eminenza resta nello stesso angolo del tavolo, 745 + binario 920. */
 .em-zone-player{left:auto;right:255px;top:auto;bottom:32px}
 .em-zone-enemy{left:255px;right:auto;top:32px;bottom:auto}
+/* Fine round (dopo il duello): carte ai bordi laterali; l'infobox sta nel .em-stage e le segue. */
+.em-zone-player:has(.em-announce[data-post-duel="1"]){
+  right:12px;
+}
+.em-zone-enemy:has(.em-announce[data-post-duel="1"]){
+  left:12px;
+}
 .em-stage{display:flex;align-items:center;transform-style:preserve-3d}
 .em-zone-player .em-stage{flex-direction:row-reverse}
 .em-zone-enemy .em-stage{flex-direction:row}
@@ -183,6 +302,37 @@
   color:rgba(247,244,238,.86);
 }
 .em-rail-drop-recap.is-ready{color:var(--em-sel,#d5ecf9);font-size:16px}
+.em-rail-agent-open{
+  flex-direction:column;
+  align-items:stretch;
+  z-index:5;
+}
+.em-rail-agent-open .em-rail-hit{flex:none}
+.em-rail-agent-picks{
+  position:relative;z-index:6;pointer-events:auto;
+  display:flex;flex-direction:column;gap:8px;align-items:stretch;
+  width:min(520px,94%);margin:8px auto 0;padding:12px 14px 14px;
+  background:rgba(8,10,16,.88);
+  box-shadow:inset 0 0 0 1px rgba(247,244,238,.16), 0 10px 22px rgba(0,0,0,.45);
+}
+.em-rail-agent-picks-label{
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  text-align:center;color:rgba(247,244,238,.72);
+}
+.em-rail-agent-picks-row{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:10px;
+}
+.em-rail-agent-picks .em-mark-token{
+  flex:0 0 76px;width:76px;max-width:76px;
+}
+.em-rail-agent-side{
+  display:block;margin-bottom:4px;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  text-align:center;color:color-mix(in srgb, var(--em-acc,#f8504f) 70%, #f7f4ee);
+  text-shadow:0 1px 4px #000;
+}
 .em-rail-params{
   position:absolute;inset:0;z-index:6;
   display:flex;align-items:stretch;gap:0;pointer-events:auto;
@@ -387,9 +537,14 @@
 .em-announce[data-phase="miss"]{--em-ann-phase:#c97878}
 .em-zone-player .em-announce{margin-right:8px;--em-ann-from-x:210px;--em-ann-from-y:300px}
 .em-zone-enemy .em-announce{margin-left:8px;--em-ann-from-x:-210px;--em-ann-from-y:-300px}
+.em-zone-player:has(.em-announce[data-post-duel="1"]) .em-announce{
+  --em-ann-from-x:140px;--em-ann-from-y:24px;
+}
+.em-zone-enemy:has(.em-announce[data-post-duel="1"]) .em-announce{
+  --em-ann-from-x:-140px;--em-ann-from-y:-24px;
+}
 .em-announce.is-held{
-  opacity:0;
-  animation:none;
+  /* holdAnnounce ritarda solo la chiusura coda; il box resta leggibile durante la saetta */
   pointer-events:none;
 }
 .em-announce-burst{
@@ -473,6 +628,17 @@
   58%{opacity:1;filter:blur(0);transform:translate(-10px,-16px) scale(1.08)}
   78%{transform:translate(5px,6px) scale(.98)}
   100%{opacity:1;transform:none;filter:none}
+}
+@keyframes emAnnounceRiseClear{
+  0%{opacity:0;transform:translate(var(--em-ann-from-x),var(--em-ann-from-y)) scale(.92)}
+  58%{opacity:1;transform:translate(-10px,-16px) scale(1.04)}
+  78%{transform:translate(5px,6px) scale(.99)}
+  100%{opacity:1;transform:none}
+}
+.em-stage-announce-only .em-announce{
+  animation:
+    emAnnounceRiseClear .72s cubic-bezier(.16,.84,.24,1) both,
+    emAnnounceGlow 1.4s ease-in-out .55s 2 both;
 }
 @keyframes emAnnounceGlow{
   0%,100%{box-shadow:0 18px 40px rgba(0,0,0,.78),0 0 0 1px #000,0 0 22px color-mix(in srgb, var(--em-ann-acc,#d5ecf9) 36%, transparent)}
@@ -682,12 +848,19 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
 .em-mark-flight-trail{
   fill:none;
   stroke:var(--em-acc,#c9e238);
-  stroke-width:2.4;
+  stroke-width:2.8;
   stroke-linecap:round;
   stroke-dasharray:1;
   stroke-dashoffset:1;
   filter:drop-shadow(0 0 6px var(--em-acc,#c9e238));
-  animation:emMarkTrail .9s cubic-bezier(.18,.82,.2,1) forwards;
+}
+.em-mark-flight-trail.is-flying{
+  animation:emMarkTrail var(--em-flight-ms, .9s) cubic-bezier(.18,.82,.2,1) forwards;
+}
+.em-mark-flight-trail.is-linger{
+  stroke-dashoffset:0;
+  opacity:.78;
+  animation:emMarkTrailLinger .56s ease-out forwards;
 }
 .em-mark-flight-spark{
   position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;
@@ -699,7 +872,7 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
     0 0 36px 14px color-mix(in srgb, var(--em-acc,#c9e238) 55%, transparent);
   offset-anchor:center;
   offset-rotate:0deg;
-  animation:emMarkSpark .9s cubic-bezier(.18,.82,.2,1) forwards;
+  animation:emMarkSpark var(--em-flight-ms, .9s) cubic-bezier(.18,.82,.2,1) forwards;
 }
 .em-mark-flight-burst{
   position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;
@@ -707,13 +880,17 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
   border:2px solid #fff;
   box-shadow:0 0 16px 4px var(--em-acc,#c9e238);
   opacity:0;
-  animation:emMarkBurst .4s .82s ease-out forwards;
+  animation:emMarkBurst .4s calc(var(--em-flight-ms, .9s) * .92) ease-out forwards;
 }
 @keyframes emMarkTrail{
-  0%{stroke-dashoffset:1;opacity:.15}
+  0%{stroke-dashoffset:1;opacity:.2}
   18%{opacity:1}
-  88%{opacity:.9}
-  100%{stroke-dashoffset:0;opacity:.55}
+  88%{opacity:.95}
+  100%{stroke-dashoffset:0;opacity:.78}
+}
+@keyframes emMarkTrailLinger{
+  0%{stroke-dashoffset:0;opacity:.78}
+  100%{stroke-dashoffset:0;opacity:0}
 }
 @keyframes emMarkSpark{
   0%{offset-distance:0%;opacity:0;transform:scale(.4)}

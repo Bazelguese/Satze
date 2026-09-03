@@ -1,0 +1,473 @@
+{
+  "ability": {
+    "id": "mounthborn_gorgoglio",
+    "name": "Gorgoglio dai Cento Occhi",
+    "presenceDelta": 0,
+    "revealGate": "PRE_AGENT",
+    "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+  },
+  "bilance": {
+    "cinematicCues": 3,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 3,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      3
+    ],
+    "segmentsWithoutCue": 2,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "mounthborn_gorgoglio",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 0,
+    "selected": "mounthborn_gorgoglio"
+  },
+  "eminence": {
+    "army": "Mounthborn",
+    "id": "mounthborn_fame",
+    "name": "La Fame"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
+      "kind": "reveal",
+      "name": "Gorgoglio dai Cento Occhi",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "MARK_CARD",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima dell'Agente",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 0,
+      "side": "player",
+      "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+    },
+    {
+      "badgeText": "Verifica · Agenti schierati",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+      "kind": "effect",
+      "name": "Gorgoglio dai Cento Occhi",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "VERIFY",
+      "phaseDetail": "Agenti schierati",
+      "phaseLabel": "Verifica",
+      "presenceDelta": 2,
+      "side": "player",
+      "text": "Una Preda è schierata: +2 Presenza."
+    },
+    {
+      "badgeText": "Verifica · Agenti schierati",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+      "kind": "effect",
+      "name": "Gorgoglio dai Cento Occhi",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "VERIFY",
+      "phaseDetail": "Agenti schierati",
+      "phaseLabel": "Verifica",
+      "presenceDelta": 2,
+      "side": "player",
+      "text": "Una Preda è schierata: +2 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "mounthborn_istinto_predatorio_static",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima dell'Agente",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
+          "kind": "reveal",
+          "name": "Gorgoglio dai Cento Occhi",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "MARK_CARD",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima dell'Agente",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 0,
+          "side": "player",
+          "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+        },
+        {
+          "badgeText": "Verifica · Agenti schierati",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+          "kind": "effect",
+          "name": "Gorgoglio dai Cento Occhi",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "VERIFY",
+          "phaseDetail": "Agenti schierati",
+          "phaseLabel": "Verifica",
+          "presenceDelta": 2,
+          "side": "player",
+          "text": "Una Preda è schierata: +2 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica · Agenti schierati",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Verifica · Agenti schierati",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+          "kind": "effect",
+          "name": "Gorgoglio dai Cento Occhi",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "VERIFY",
+          "phaseDetail": "Agenti schierati",
+          "phaseLabel": "Verifica",
+          "presenceDelta": 2,
+          "side": "player",
+          "text": "Una Preda è schierata: +2 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
+            "keys": [
+              "enemyAgentTrigger"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "ENEMY_AGENT",
+          "timing": "POST_BATTLE"
+        },
+        {
+          "condition": {
+            "detail": "enemyAgentTrigger: \"turbo\" (obs \"glory\") → falsa",
+            "keys": [
+              "enemyAgentTrigger"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "ENEMY_AGENT",
+          "timing": "END_ROUND"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static-setup",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": null,
+          "timing": null
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "ability",
+          "sourceId": "mounthborn_gorgoglio",
+          "sourceName": "Gorgoglio dai Cento Occhi",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "deployedMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "mounthborn_gorgoglio",
+          "sourceName": "Gorgoglio dai Cento Occhi",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

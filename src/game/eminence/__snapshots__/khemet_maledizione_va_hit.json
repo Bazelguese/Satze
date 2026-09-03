@@ -1,0 +1,246 @@
+{
+  "ability": {
+    "id": "khemet_maledizione_va",
+    "name": "Sigillo della Misura",
+    "presenceDelta": -2,
+    "revealGate": "PRE_FIELD",
+    "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "khemet_devozione",
+        "presenceDelta": 0
+      },
+      {
+        "id": "khemet_maledizione_va",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "khemet_maledizione_va"
+  },
+  "eminence": {
+    "army": "Khemet",
+    "id": "khemet_maledizioni",
+    "name": "Il Castello dei Sigillatori"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "SLOT_CURSE",
+          "to": {
+            "id": 2,
+            "type": "slot"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:khemet_maledizione_va:PRE_FIELD",
+      "kind": "reveal",
+      "name": "Sigillo della Misura",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "APPLY_SLOT_MODIFIER",
+          "slot": 2,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Campo",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "khemet_maledizione_va_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:khemet_maledizione_va:PRE_FIELD",
+          "recipe": "SLOT_CURSE",
+          "to": {
+            "id": 2,
+            "type": "slot"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Campo",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "SLOT_CURSE",
+              "to": {
+                "id": 2,
+                "type": "slot"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:khemet_maledizione_va:PRE_FIELD",
+          "kind": "reveal",
+          "name": "Sigillo della Misura",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "APPLY_SLOT_MODIFIER",
+              "slot": 2,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Campo",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownActivatedTrigger: \"overdrive\" (obs null) → falsa",
+            "keys": [
+              "ownActivatedTrigger"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "khemet_rito_overdrive",
+          "sourceName": "Risonanza del Nono Sigillo",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "APPLY_SLOT_MODIFIER",
+          "source": "ability",
+          "sourceId": "khemet_maledizione_va",
+          "sourceName": "Sigillo della Misura",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

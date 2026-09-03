@@ -7,10 +7,19 @@ import { checkTrigger as baseCheckTrigger } from './triggerLogic.js';
 import {
   bindCheckTriggerToOverlay,
   applyAbilityOverlay,
+  applyGrantedPower,
+  applyLeagueOverlay,
   applyArmyBonusOverlay,
+  readVaTieWinnerSide,
   readHpDelta,
   readStatDeltas,
   readTemporaryFocus,
+  applyStatConverts,
+  applyToxinApplications,
+  snapshotHasStatReduction,
+  resolveConquestOverride,
+  snapshotXorActivation,
+  readActivationSatisfied,
 } from './eminence/eminenceDuelBinding.js';
 import { emitEminenceDeployEvents, emitFieldVeilEvents } from './eminence/eminenceBattleEvents.js';
 import {
@@ -63,6 +72,7 @@ import {
   emitDuelFieldSetupEvents,
   snapshotDuelFieldStats,
 } from './duel/battleFieldEventDiff.js';
+import { formatFocusBreakdown } from './duel/formatBattleEvent.js';
 
 function combatStartDiffersFromDeploy(deployStats, state) {
   return (
@@ -120,8 +130,32 @@ export function computeDuelResolution({
       overlayTrace
     );
 
-    const pAgent = applyAbilityOverlay(pAgentInput, eminenceBundle);
-    const eAgent = applyAbilityOverlay(eAgentInput, eminenceBundle);
+    const pAgentAbility = applyAbilityOverlay(pAgentInput, eminenceBundle);
+    const eAgentAbility = applyAbilityOverlay(eAgentInput, eminenceBundle);
+    const playerInitialLeagueCount = countInitialLeagueCards(
+      playerUsedCards,
+      playerHand,
+      pAgentAbility,
+      undefined,
+      eminenceBundle?.leagueByCardId,
+    );
+    const enemyInitialLeagueCount = countInitialLeagueCards(
+      enemyUsedCards,
+      enemyHand,
+      eAgentAbility,
+      undefined,
+      eminenceBundle?.leagueByCardId,
+    );
+    const pAgent = applyGrantedPower(
+      applyLeagueOverlay(pAgentAbility, eminenceBundle, 'player'),
+      eminenceBundle,
+      'player',
+    );
+    const eAgent = applyGrantedPower(
+      applyLeagueOverlay(eAgentAbility, eminenceBundle, 'enemy'),
+      eminenceBundle,
+      'enemy',
+    );
 
     // Lati che questo Duello ignorano la parte per-Agente del Campo. Le regole strutturali —
     // condizione di vittoria e tie-break — restano fuori dal velo e valgono per entrambi.
@@ -142,9 +176,6 @@ export function computeDuelResolution({
     };
     const playerHPAtDeploy = Math.max(0, playerHP + readHpDelta(eminenceBundle, 'player'));
     const enemyHPAtDeploy = Math.max(0, enemyHP + readHpDelta(eminenceBundle, 'enemy'));
-
-    const playerInitialLeagueCount = countInitialLeagueCards(playerUsedCards, playerHand, pAgent);
-    const enemyInitialLeagueCount = countInitialLeagueCards(enemyUsedCards, enemyHand, eAgent);
 
     const { playerFieldsConquered, enemyFieldsConquered } = countConqueredFields(
       conqueredFields,
@@ -243,8 +274,10 @@ export function computeDuelResolution({
       initiativeSide: toBattleSide(isPlayerFirst ? 'player' : 'enemy'),
     });
     battleLog.push(`Campo: ${field.name}`);
-    battleLog.push(`Tu: ${pAgent.name} (${duel.pPower}P, ${duel.pDamage}D) + ${duel.pFocusUsed} FC`);
-    battleLog.push(`IA: ${eAgent.name} (${duel.ePower}P, ${duel.eDamage}D) + ${duel.eFocusUsed} FC`);
+    const playerTemporaryFocus = readTemporaryFocus(eminenceBundle, 'player');
+    const enemyTemporaryFocus = readTemporaryFocus(eminenceBundle, 'enemy');
+    battleLog.push(`Tu: ${pAgent.name} (${duel.pPower}P, ${duel.pDamage}D) + ${formatFocusBreakdown(selectedFocus, playerTemporaryFocus)}`);
+    battleLog.push(`IA: ${eAgent.name} (${duel.ePower}P, ${duel.eDamage}D) + ${formatFocusBreakdown(enemySelectedFocus, enemyTemporaryFocus)}`);
     emitEminenceDeployEvents(battleLog, eminenceBundle, {
       playerHPBefore: playerHP,
       enemyHPBefore: enemyHP,
@@ -253,6 +286,7 @@ export function computeDuelResolution({
       pAgent,
       eAgent,
       statDeltas: { player: pEminenceStats, enemy: eEminenceStats },
+      focusInvestedBySide: { player: selectedFocus, enemy: enemySelectedFocus },
     });
     // Immune preventivo: non emesso (block solo al blocco reale).
 
@@ -262,10 +296,19 @@ export function computeDuelResolution({
     restoreVeil(duel, setupVeil);
     const slotCurseStatDeltas = createEmptySlotCurseStatDeltas();
     applySlotCursesToDuel(duel, eminenceBundle?.slotModifiers, {
-      player: (pAgent.league || 0) + (pEminenceStats.league || 0),
-      enemy: (eAgent.league || 0) + (eEminenceStats.league || 0),
+      player: pAgent.league || 0,
+      enemy: eAgent.league || 0,
     }, slotCurseStatDeltas);
     veilContextModifiers(veiledSides, playerContext, enemyContext);
+    if (eminenceBundle?.triggerRules) {
+      snapshotXorActivation(eminenceBundle.triggerRules, {
+        playerAgent: pAgent,
+        enemyAgent: eAgent,
+        playerContext,
+        enemyContext,
+        checkTrigger: baseCheckTrigger,
+      });
+    }
     emitFieldVeilEvents(battleLog, veiledSides, { field, pAgent, eAgent });
     const {
       blockDisabled,
@@ -294,6 +337,28 @@ export function computeDuelResolution({
       fieldFlags.fieldStatDeltas ?? createEmptyFieldStatDeltas(),
       slotCurseStatDeltas
     );
+    const toxins = applyToxinApplications(eminenceBundle, {
+      playerToxin,
+      enemyToxin,
+      toxinDisabled: fieldFlags.toxinDisabled === true,
+    });
+    if (eminenceBundle?.toxinApplications?.length && !fieldFlags.toxinDisabled) {
+      state.playerToxinActivated = toxins.playerToxin;
+      state.enemyToxinActivated = toxins.enemyToxin;
+      if (toxins.enemyToxin && toxins.enemyToxin !== enemyToxin) {
+        battleLog.push(
+          `${toxins.enemyToxin.source || 'Tossina'}: Tossina ${toxins.enemyToxin.value} attiva sull'IA (min ${toxins.enemyToxin.minHealth} PV)`
+        );
+      }
+      if (toxins.playerToxin && toxins.playerToxin !== playerToxin) {
+        battleLog.push(
+          `${toxins.playerToxin.source || 'Tossina'}: Tossina ${toxins.playerToxin.value} attiva su TE (min ${toxins.playerToxin.minHealth} PV)`
+        );
+      }
+    }
+    if (snapshotHasStatReduction(deployStats, duel)) {
+      state.statReductionOccurred = true;
+    }
     const visualRecorder = createDuelVisualRecorder(pAgent, eAgent, deployStats);
     visualRecorder.syncDeployAssaultMods(state);
     if (combatStartDiffersFromDeploy(deployStats, state)) {
@@ -310,8 +375,8 @@ export function computeDuelResolution({
       eArmyBonus,
       pHasBonus,
       eHasBonus,
-      playerToxin,
-      enemyToxin,
+      playerToxin: toxins.playerToxin,
+      enemyToxin: toxins.enemyToxin,
       playerUsedCards,
       enemyUsedCards,
       playerFieldsConquered,
@@ -423,6 +488,8 @@ export function computeDuelResolution({
       isPlayerFirst,
       visualRecorder,
     });
+
+    applyStatConverts(state, eminenceBundle, { directDamageDisabled, battleLog });
 
     let pPower = state.pPower;
     let ePower = state.ePower;
@@ -556,6 +623,7 @@ export function computeDuelResolution({
           ePower,
           isPlayerFirst,
           battleLog,
+          vaTieWinnerSide: readVaTieWinnerSide(eminenceBundle),
         });
       }
     } else if (fieldFlags.winnerByFinalPowerThenVa) {
@@ -609,6 +677,7 @@ export function computeDuelResolution({
           ePower,
           isPlayerFirst,
           battleLog,
+          vaTieWinnerSide: readVaTieWinnerSide(eminenceBundle),
         });
       }
     } else if (fieldFlags.winnerByFinalDamageThenVa) {
@@ -662,6 +731,7 @@ export function computeDuelResolution({
           ePower,
           isPlayerFirst,
           battleLog,
+          vaTieWinnerSide: readVaTieWinnerSide(eminenceBundle),
         });
       }
     } else {
@@ -674,12 +744,18 @@ export function computeDuelResolution({
         ePower,
         isPlayerFirst,
         battleLog,
+        vaTieWinnerSide: readVaTieWinnerSide(eminenceBundle),
       });
     }
 
     const playerWon = winner === 'player';
     const playerContextPost = { ...playerContext, won: playerWon, lost: !playerWon };
     const enemyContextPost = { ...enemyContext, won: !playerWon, lost: playerWon };
+    const conquestOverride = resolveConquestOverride(eminenceBundle, winner);
+    const postFieldOptions = {
+      ...fieldOptions,
+      conquestDisabled: fieldOptions.conquestDisabled || conquestOverride.suppressConquest,
+    };
 
     battleLog.setContext('post', 'postFx');
     const {
@@ -701,7 +777,7 @@ export function computeDuelResolution({
       applyEffect,
       applyBonusEffects,
       checkTrigger,
-      fieldOptions,
+      fieldOptions: postFieldOptions,
       triggersIgnored,
       playerContextPost,
       enemyContextPost,
@@ -775,7 +851,7 @@ export function computeDuelResolution({
     // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.
     const phaseLogs = null;
 
-    const battleResult = buildDuelBattleResult({
+    const builtResult = buildDuelBattleResult({
       winner,
       pAgent,
       eAgent,
@@ -788,6 +864,10 @@ export function computeDuelResolution({
       eDamage: outcome.eDamage,
       pFocusUsed,
       eFocusUsed,
+      playerFocusInvested: selectedFocus,
+      enemyFocusInvested: enemySelectedFocus,
+      playerTemporaryFocus,
+      enemyTemporaryFocus,
       pArmyBonusActive: pHasBonus,
       eArmyBonusActive: eHasBonus,
       finalPHasBonus,
@@ -827,6 +907,25 @@ export function computeDuelResolution({
       isPlayerFirst,
       events: eventEmitter.events,
     });
+
+    const battleResult = {
+      ...builtResult,
+      fieldDestroyed: conquestOverride.destroyField,
+      skipConquest: conquestOverride.suppressConquest || conquestOverride.destroyField,
+      playerActivationSatisfied: readActivationSatisfied(
+        pAgent,
+        playerContextPost,
+        'player',
+        eminenceBundle?.triggerRules,
+      ),
+      enemyActivationSatisfied: readActivationSatisfied(
+        eAgent,
+        enemyContextPost,
+        'enemy',
+        eminenceBundle?.triggerRules,
+      ),
+      statReductionOccurred: Boolean(state.statReductionOccurred),
+    };
 
     if (battleResult.perfectFocusSide) {
       const perfectSide = battleResult.perfectFocusSide;

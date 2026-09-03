@@ -34,6 +34,9 @@ const ArenaContesaLayoutPage = lazy(() =>
 const EminenceArtLabPage = lazy(() =>
   import('./components/eminenceLab/EminenceArtLabPage').then((m) => ({ default: m.EminenceArtLabPage }))
 );
+const EminenceSystemLabPage = lazy(() =>
+  import('./components/eminenceLab/EminenceSystemLabPage').then((m) => ({ default: m.EminenceSystemLabPage }))
+);
 
 const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
 const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
@@ -110,6 +113,7 @@ function AppContent() {
   const showDialogueLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('dialogue1') === '1';
   const showArenaContesa = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('arenaContesa') === '1';
   const showEminenceArtLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceArtLab') === '1';
+  const showEminenceSystemLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceSystemLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -171,6 +175,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeEminenceSystemLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('eminenceSystemLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -191,6 +201,8 @@ function AppContent() {
         <ArenaContesaLayoutPage onClose={closeArenaContesa} />
       ) : showEminenceArtLab ? (
         <EminenceArtLabPage onClose={closeEminenceArtLab} />
+      ) : showEminenceSystemLab ? (
+        <EminenceSystemLabPage onClose={closeEminenceSystemLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

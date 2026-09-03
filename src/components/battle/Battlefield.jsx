@@ -88,6 +88,22 @@ const generateParticleData = (config) => {
     });
 };
 
+function formatFocusUsedLabel(used, invested, temporary) {
+  const tmp = Math.max(0, Number(temporary) || 0);
+  if (!tmp) return String(used ?? 0);
+  const inv = invested != null ? invested : Math.max(0, (used || 0) - tmp);
+  return `${used} (${inv} investiti + ${tmp} temporanei)`;
+}
+
+function formatFocusInvestedLine(br) {
+  const pTmp = br.playerTemporaryFocus || 0;
+  const eTmp = br.enemyTemporaryFocus || 0;
+  if (!pTmp && !eTmp) {
+    return `FC investiti: IA ${br.enemyFocusUsed} · TU ${br.playerFocusUsed}`;
+  }
+  return `FC: IA ${formatFocusUsedLabel(br.enemyFocusUsed, br.enemyFocusInvested, eTmp)} · TU ${formatFocusUsedLabel(br.playerFocusUsed, br.playerFocusInvested, pTmp)}`;
+}
+
 /**
  * Componente sfondo campo di battaglia
  * Visualizza gradienti, glow e particelle tematiche per il campo attivo
@@ -223,7 +239,8 @@ export const BattlefieldPanel = ({
   isPlayerFirst, 
   isZoomed, 
   selectedAgent, 
-  onConfirm, 
+  onConfirm,
+  confirmDisabled = false,
   awaitingEnemySelection = false,
   /** true = testi "avversario" invece di "IA" (multiplayer online) */
   isOnlinePvP = false,
@@ -296,7 +313,7 @@ export const BattlefieldPanel = ({
         <div className="bg-slate-800/60 rounded p-2">
           <div className="text-red-400/90 font-medium mb-1 text-[10px]">IA</div>
           <div className="text-[10px] space-y-1">
-            <div><span className="text-amber-400">FC:</span> {battleResult.enemyFocusUsed}</div>
+            <div><span className="text-amber-400">FC:</span> {formatFocusUsedLabel(battleResult.enemyFocusUsed, battleResult.enemyFocusInvested, battleResult.enemyTemporaryFocus)}</div>
             {battleResult.enemyPower !== battleResult.enemyAgent.power && (
               <div><span className="text-yellow-400">POT:</span> {battleResult.enemyAgent.power} → {battleResult.enemyPower}</div>
             )}
@@ -321,7 +338,7 @@ export const BattlefieldPanel = ({
         <div className="bg-slate-800/60 rounded p-2">
           <div className="text-green-400/90 font-medium mb-1 text-[10px]">TU</div>
           <div className="text-[10px] space-y-1">
-            <div><span className="text-amber-400">FC:</span> {battleResult.playerFocusUsed}</div>
+            <div><span className="text-amber-400">FC:</span> {formatFocusUsedLabel(battleResult.playerFocusUsed, battleResult.playerFocusInvested, battleResult.playerTemporaryFocus)}</div>
             {battleResult.playerPower !== battleResult.playerAgent.power && (
               <div><span className="text-yellow-400">POT:</span> {battleResult.playerAgent.power} → {battleResult.playerPower}</div>
             )}
@@ -346,7 +363,7 @@ export const BattlefieldPanel = ({
       </div>
       <div className="border-t border-slate-600/40 pt-1.5 mt-1.5">
         <div className="text-slate-500 text-[10px] space-y-1">
-          <div>FC investiti: IA {battleResult.enemyFocusUsed} · TU {battleResult.playerFocusUsed}</div>
+          <div>{formatFocusInvestedLine(battleResult)}</div>
           <div>Danno: {battleResult.damageDealt} PV</div>
         </div>
       </div>
@@ -431,9 +448,11 @@ export const BattlefieldPanel = ({
                   </div>
                 ) : (
                   <button
+                    type="button"
+                    disabled={confirmDisabled}
                     onClick={onConfirm}
                     className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg
-                             border border-white/20 transition-all flex items-center justify-center gap-2"
+                             border border-white/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Icon name="sword" type="cardIcon" size={12} color="#fff" /> Conferma
                   </button>
@@ -504,7 +523,7 @@ export const BattlefieldPanel = ({
                           <div className="text-red-400/90 font-medium mb-1 text-[10px]">IA</div>
                           <div className="text-[10px] space-y-1">
                             <div>
-                              <span className="text-amber-400">FC:</span> {battleResult.enemyFocusUsed}
+                              <span className="text-amber-400">FC:</span> {formatFocusUsedLabel(battleResult.enemyFocusUsed, battleResult.enemyFocusInvested, battleResult.enemyTemporaryFocus)}
                             </div>
                             {/* POT modificato */}
                             {battleResult.enemyPower !== battleResult.enemyAgent.power && (
@@ -545,7 +564,7 @@ export const BattlefieldPanel = ({
                           <div className="text-green-400/90 font-medium mb-1 text-[10px]">TU</div>
                           <div className="text-[10px] space-y-1">
                             <div>
-                              <span className="text-amber-400">FC:</span> {battleResult.playerFocusUsed}
+                              <span className="text-amber-400">FC:</span> {formatFocusUsedLabel(battleResult.playerFocusUsed, battleResult.playerFocusInvested, battleResult.playerTemporaryFocus)}
                             </div>
                             {/* POT modificato */}
                             {battleResult.playerPower !== battleResult.playerAgent.power && (
@@ -586,7 +605,7 @@ export const BattlefieldPanel = ({
                       <div className="border-t border-slate-600/40 pt-1.5 mt-1.5">
                         <div className="text-slate-500 text-[10px] space-y-1">
                           <div>
-                            FC investiti: IA {battleResult.enemyFocusUsed} · TU {battleResult.playerFocusUsed}
+                            {formatFocusInvestedLine(battleResult)}
                           </div>
                           <div>
                             Danno: {battleResult.damageDealt} PV

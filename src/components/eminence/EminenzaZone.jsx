@@ -6,7 +6,9 @@ import {
   selectionParamsReady,
 } from '../../game/eminence/eminenceChoiceView.js';
 import { describeComposedPower, fragmentIdsFromParams } from '../../game/eminence/composeAbilityParams.js';
-import { EMINENCE_ANNOUNCE_HOLD_MS } from '../../game/eminence/eminenceAnnouncements.js';
+import { EMINENCE_ANNOUNCE_HOLD_MS as EMINENCE_ANNOUNCE_HOLD_MS_DEFAULT } from '../../game/eminence/eminenceAnnouncements.js';
+import { EFFECT_TIMINGS } from '../../game/eminence/eminenceConstants.js';
+import { getEminenceAnnounceHoldMs } from '../../utils/eminenceSystemPreference.js';
 import { ARMY_COLORS } from '../../data/armies.js';
 import { ALL_AGENTS } from '../../data/cards.js';
 import { getEminenceArtUrl } from '../../data/eminenceArt.js';
@@ -54,7 +56,14 @@ const PARAM_HINTS = {
   slot: 'Scegli il Campo',
   composeComponent: 'Trigger o effetto?',
   composeOrSecond: 'Scegli un secondo Frammento, oppure Trigger o Effetto',
+  leagueDelta: 'Scegli +1 o −1 Lega',
 };
+
+function agentSideLabel(side) {
+  if (side === 'player' || side === 'local') return 'Tu';
+  if (side === 'enemy' || side === 'opponent') return 'IA';
+  return null;
+}
 
 function paramValueLabel(value, meta = null) {
   if (meta?.label) return meta.label;
@@ -552,7 +561,9 @@ function EminenzaRailItem({
   const per = appearance.per ? appearance.per(index) : {};
   const ink = costInk(shape, armyAccent, gain);
   const csh = costTextShadow(shape, armyAccent, gain);
-  const overlayParams = selected && enumParam && onSelectParam && !expandDown;
+  const isAgentParam = enumParam?.key === 'cardId';
+  const overlayParams = selected && enumParam && onSelectParam && !expandDown && !isAgentParam;
+  const agentPicks = selected && onSelectParam && isAgentParam;
   const dropParams = selected && expandDown && onSelectParam && (enumParam || paramHintRecap);
   const paramGroups = splitParamGroups(enumParam);
 
@@ -581,13 +592,14 @@ function EminenzaRailItem({
         dimmed ? 'em-rail-dim' : '',
         overlayParams ? 'em-rail-params-open' : '',
         dropParams ? 'em-rail-expand-down' : '',
+        agentPicks ? 'em-rail-agent-open' : '',
       ].filter(Boolean).join(' ')}
       style={{
         position: 'relative',
         minHeight: height,
         display: 'flex',
-        alignItems: dropParams ? 'stretch' : 'center',
-        flexDirection: dropParams ? 'column' : 'row',
+        alignItems: dropParams || agentPicks ? 'stretch' : 'center',
+        flexDirection: dropParams || agentPicks ? 'column' : 'row',
         justifyContent: 'flex-end',
         transform: `skewX(${shape['--skew']})`,
         animation: appearance.rail,
@@ -599,7 +611,7 @@ function EminenzaRailItem({
     >
       <div className="em-rail-lozenge" style={{
         position: 'relative',
-        flex: dropParams ? 'none' : 1,
+        flex: dropParams || agentPicks ? 'none' : 1,
         width: '100%',
         minHeight: height,
         display: 'flex',
@@ -802,12 +814,25 @@ function EminenzaRailItem({
           })}
         </div>
       )}
-      {selected && onConfirm && !expandDown && (
+      {selected && onConfirm && !expandDown && !agentPicks && (
         <div className={['em-rail-confirm-hint', paramHintRecap ? 'is-recap' : ''].filter(Boolean).join(' ')}>
           {paramHint}
         </div>
       )}
       </div>
+      {agentPicks && (
+        <RailAgentTokens
+          values={enumParam.values}
+          armyAccent={armyAccent}
+          isParamSelected={isParamSelected}
+          paramMeta={paramMeta}
+          paramKey={enumParam.key}
+          onPick={pickParam}
+          hint={paramHint}
+          hintReady={paramHintRecap}
+          unskew={shape['--unskew']}
+        />
+      )}
       {dropParams && (
         <div
           className="em-rail-drop"
@@ -977,16 +1002,33 @@ function EminenzaRail({
   );
 }
 
-function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false }) {
+const POST_DUEL_ANNOUNCE_TIMINGS = new Set([
+  EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+  EFFECT_TIMINGS.BEFORE_CONQUEST,
+  EFFECT_TIMINGS.POST_BATTLE,
+  EFFECT_TIMINGS.END_ROUND,
+  EFFECT_TIMINGS.END_MATCH,
+]);
+
+function isPostDuelAnnounce(notice) {
+  if (!notice) return false;
+  if (notice.phaseDetail === 'Dopo il Duello') return true;
+  if (notice.timing && POST_DUEL_ANNOUNCE_TIMINGS.has(notice.timing)) return true;
+  return false;
+}
+
+function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoDismiss = true }) {
+  const holdMs = getEminenceAnnounceHoldMs() || EMINENCE_ANNOUNCE_HOLD_MS_DEFAULT;
   useEffect(() => {
-    if (!notice) return undefined;
-    const timer = setTimeout(() => onDismiss?.(notice.id), EMINENCE_ANNOUNCE_HOLD_MS);
+    if (!notice || !autoDismiss) return undefined;
+    const timer = setTimeout(() => onDismiss?.(notice.id), holdMs);
     return () => clearTimeout(timer);
-  }, [notice, onDismiss]);
+  }, [notice, onDismiss, autoDismiss, holdMs]);
 
   if (!notice) return null;
 
   const phaseKey = (notice.phase || 'REVEAL').toLowerCase();
+  const postDuel = isPostDuelAnnounce(notice);
   const ownerLabel = notice.ownerLabel
     || (notice.side === 'player' ? 'La tua Eminenza' : 'Eminenza avversaria');
   const badgeText = notice.badgeText || notice.phaseLabel || 'Avviso';
@@ -1005,12 +1047,20 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false }) {
         held ? 'is-held' : '',
       ].filter(Boolean).join(' ')}
       data-phase={phaseKey}
+      data-post-duel={postDuel ? '1' : undefined}
       data-em-announce={notice.side}
-      onClick={() => onDismiss?.(notice.id)}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onDismiss?.(notice.id);
+      }}
       style={{
         '--em-ann-acc': accent,
         '--em-ann-phase': notice.phaseColor || accent,
-        '--em-ann-hold': `${EMINENCE_ANNOUNCE_HOLD_MS}ms`,
+        '--em-ann-hold': `${holdMs}ms`,
       }}
       aria-label={`${ownerLabel}: ${notice.sourceName || badgeText}. ${notice.name}. ${notice.text}`}
     >
@@ -1034,6 +1084,61 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false }) {
       <span className="em-announce-hint">{hint}</span>
       <span className="em-announce-timer" aria-hidden />
     </button>
+  );
+}
+
+function RailAgentTokens({
+  values,
+  armyAccent,
+  isParamSelected,
+  paramMeta,
+  paramKey,
+  onPick,
+  hint,
+  hintReady,
+  unskew,
+}) {
+  if (!values?.length) return null;
+  return (
+    <div
+      className="em-rail-agent-picks"
+      style={{ '--em-acc': armyAccent, transform: unskew ? `skewX(${unskew})` : undefined, transformOrigin: '50% 0' }}
+    >
+      <div className="em-rail-agent-picks-label">Scegli l'Agente</div>
+      <div className="em-rail-agent-picks-row">
+        {values.map((value) => {
+          const meta = paramMeta?.[paramKey]?.[value] || paramMeta?.[paramKey]?.[String(value)] || null;
+          const card = ALL_AGENTS.find((agent) => agent.id === value);
+          const artUrl = getCardImageUrl(null, value);
+          const name = paramValueLabel(value, meta);
+          const side = agentSideLabel(meta?.side);
+          return (
+            <button
+              key={value}
+              type="button"
+              title={name}
+              className={['em-mark-token', isParamSelected?.(value) ? 'is-on' : ''].filter(Boolean).join(' ')}
+              onClick={(event) => {
+                event.stopPropagation();
+                onPick(value);
+              }}
+            >
+              {side && <span className="em-rail-agent-side">{side}</span>}
+              <span className="em-mark-token-disk">
+                {artUrl ? <img src={artUrl} alt="" /> : null}
+                <span className="em-mark-token-glint" aria-hidden />
+              </span>
+              <span className="em-mark-token-name">{card?.name || name}</span>
+            </button>
+          );
+        })}
+      </div>
+      {hint && (
+        <div className={['em-rail-drop-recap', hintReady ? 'is-ready' : ''].filter(Boolean).join(' ')}>
+          {hint}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1115,6 +1220,7 @@ export function EminenzaZone({
   onMarkFocus,
   stowed = false,
   announceHeld = false,
+  announceAutoDismiss = true,
 }) {
   if (!eminence) return null;
 
@@ -1124,6 +1230,7 @@ export function EminenzaZone({
   const style = APPEARANCES[appearance] || APPEARANCES[DEFAULT_APPEARANCE];
   const accent = accentOverride || ARMY_COLORS[eminence.army]?.accent || '#d5ecf9';
   const isPlayer = side === 'player';
+  const announceOnly = Boolean(announce) && isPostDuelAnnounce(announce);
   const setupPending = Boolean(setup?.pending && isPlayer);
   const locked = !isPlayer
     || (!setupPending && (choiceState === CHOICE_STATES.LOCKED_HIDDEN || choiceState === CHOICE_STATES.REVEALED));
@@ -1163,31 +1270,34 @@ export function EminenzaZone({
           }}
           />
         )}
-        <div className="em-stage">
-          <EminenzaCard
-            eminence={eminence}
-            presence={presence}
-            accent={accent}
-            appearance={style}
-            artX={artX}
-            artY={artY}
-            artZoom={artZoom}
-            artFocusX={artFocusX}
-            artFocusY={artFocusY}
-            life={cardLife}
-            prey={prey}
-            fragments={fragments}
-            focusedMarkId={focusedMarkId}
-            arrivingMarkId={arrivingMarkId}
-            skipEntrance={stowed || Boolean(announce) || prey.length > 0 || fragments.length > 0}
-            onMarkFocus={onMarkFocus}
-          />
+        <div className={`em-stage${announceOnly ? ' em-stage-announce-only' : ''}`}>
+          {!announceOnly && (
+            <EminenzaCard
+              eminence={eminence}
+              presence={presence}
+              accent={accent}
+              appearance={style}
+              artX={artX}
+              artY={artY}
+              artZoom={artZoom}
+              artFocusX={artFocusX}
+              artFocusY={artFocusY}
+              life={cardLife}
+              prey={prey}
+              fragments={fragments}
+              focusedMarkId={focusedMarkId}
+              arrivingMarkId={arrivingMarkId}
+              skipEntrance={stowed || Boolean(announce) || prey.length > 0 || fragments.length > 0}
+              onMarkFocus={onMarkFocus}
+            />
+          )}
           {announce ? (
             <EminenceAnnounceBanner
               key={announce.id}
               notice={announce}
               accent={accent}
               held={announceHeld}
+              autoDismiss={announceAutoDismiss}
               onDismiss={onDismissAnnounce}
             />
           ) : (

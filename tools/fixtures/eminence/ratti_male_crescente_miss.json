@@ -1,0 +1,63 @@
+{
+  "roundNumber": 3,
+  "initiativeSide": "player",
+  "player": {
+    "eminenceId": "ratti_bella_malelabbra",
+    "presence": 1,
+    "abilityId": "ratti_sussurro",
+    "params": null,
+    "agent": {
+      "cardId": 231,
+      "league": 3,
+      "power": 3,
+      "damage": 2,
+      "trigger": "rimonta",
+      "focusInvested": 2,
+      "anchored": false
+    },
+    "remainingHand": [
+      { "id": 400, "league": 1 }
+    ],
+    "fragments": [],
+    "prey": []
+  },
+  "enemy": {
+    "eminenceId": null,
+    "presence": 1,
+    "abilityId": null,
+    "params": null,
+    "agent": {
+      "cardId": 118,
+      "league": 4,
+      "power": 5,
+      "damage": 3,
+      "trigger": "glory",
+      "focusInvested": 2,
+      "anchored": false
+    }
+  },
+  "outcome": {
+    "winner": "player",
+    "powerResolvedBySide": {
+      "player": false,
+      "enemy": false
+    },
+    "activatedTriggerBySide": {
+      "player": null,
+      "enemy": null
+    },
+    "aliasUsedBySide": {
+      "player": false,
+      "enemy": false
+    },
+    "hpDeltas": {
+      "player": 0,
+      "enemy": 0
+    },
+    "statReductionOccurred": false,
+    "finalPowerBySide": null,
+    "finalPowerByCardId": null
+  },
+  "name": "ratti_male_crescente_miss",
+  "branch": "miss"
+}

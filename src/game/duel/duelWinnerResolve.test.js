@@ -42,6 +42,18 @@ test('parità VA e Lega: vince POT più bassa', () => {
   assert.equal(w, 'player');
 });
 
+test('parità VA: un lato armato vince prima dei tie-break di Lega', () => {
+  const w = resolveDuelWinnerByAssault({
+    pAssault: 8,
+    eAssault: 8,
+    pAgent: { league: 3, power: 5 },
+    eAgent: { league: 1, power: 2 },
+    isPlayerFirst: true,
+    vaTieWinnerSide: 'player',
+  });
+  assert.equal(w, 'player');
+});
+
 test('parità VA, Lega e POT: vince chi ha giocato per secondo', () => {
   const log = [];
   assert.equal(

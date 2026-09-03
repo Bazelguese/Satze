@@ -11,7 +11,7 @@ import {
   makePlayerTarget,
   makeSource,
 } from '../duel/battleEventTypes.js';
-import { emitFieldRule, emitResourceChange, emitStatChange } from '../duel/battleEventEmit.js';
+import { emitFieldRule, emitInfo, emitResourceChange, emitStatChange } from '../duel/battleEventEmit.js';
 import { SIDES } from './eminenceConstants.js';
 
 const STAT_LABELS = {
@@ -53,6 +53,10 @@ export function emitFieldVeilEvents(channel, veiledSides, { field, pAgent, eAgen
   }
 }
 
+function grantTemporaryFocusSource(bundle) {
+  return (bundle?.logs || []).find((entry) => entry.primitive === 'GRANT_TEMPORARY_FOCUS')?.source ?? null;
+}
+
 /**
  * Emette gli eventi degli effetti Eminenza che atterrano allo schieramento.
  *
@@ -68,6 +72,7 @@ export function emitEminenceDeployEvents(channel, bundle, {
   pAgent,
   eAgent,
   statDeltas,
+  focusInvestedBySide = null,
 }) {
   if (!bundle || !channel) return;
 
@@ -115,5 +120,28 @@ export function emitEminenceDeployEvents(channel, bundle, {
         after: before + delta,
       });
     }
+  }
+
+  const grantSource = grantTemporaryFocusSource(bundle);
+  for (const side of [SIDES.PLAYER, SIDES.ENEMY]) {
+    const temporary = Math.max(0, bundle.temporaryFocus?.[side] || 0);
+    if (!temporary) continue;
+
+    const agent = agentBySide[side];
+    if (!agent) continue;
+
+    const invested = Math.max(0, focusInvestedBySide?.[side] ?? 0);
+    emitInfo(channel, {
+      phase: BATTLE_PHASES.deploy,
+      revealAt: BATTLE_REVEAL_AT.deploy,
+      infoCode: 'temporaryFocus',
+      source: eminenceSource(side, grantSource),
+      target: makeAgentTarget(side, agent),
+      data: {
+        invested,
+        temporary,
+        effective: invested + temporary,
+      },
+    });
   }
 }

@@ -79,8 +79,9 @@ export function applyDuelPostBattleEffects({
     if (
       !abilityBlocked &&
       agent?.ability &&
-      checkTrigger(agent.ability.trigger, contextPost) &&
-      (agent.ability.trigger === 'lastWish' || agent.ability.trigger === 'conquest')
+      (agent.ability.trigger === 'lastWish' || agent.ability.trigger === 'conquest') &&
+      !(fieldOptions?.conquestDisabled && agent.ability.trigger === 'conquest') &&
+      checkTrigger(agent.ability.trigger, contextPost)
     ) {
       if (sideKey === 'player') pPostAbilityTriggered = true;
       else ePostAbilityTriggered = true;
@@ -104,6 +105,7 @@ export function applyDuelPostBattleEffects({
       !bonusBlocked &&
       side.armyBonus &&
       isPostBattleTrigger(side.armyBonus.trigger) &&
+      !(fieldOptions?.conquestDisabled && side.armyBonus.trigger === 'conquest') &&
       checkTrigger(side.armyBonus.trigger, contextPost)
     ) {
       if (sideKey === 'player') pPostBonusTriggered = true;

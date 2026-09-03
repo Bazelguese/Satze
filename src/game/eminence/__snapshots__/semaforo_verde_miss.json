@@ -1,0 +1,262 @@
+{
+  "ability": {
+    "id": "semaforo_verde",
+    "name": "Verde",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "Imboscata e Turbo sono considerati soddisfatti in questo round. Intervento e Ultima Chance non possono attivarsi."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      0,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "semaforo_verde",
+        "presenceDelta": 1
+      },
+      {
+        "id": "semaforo_giallo",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 0,
+    "presenceAvailable": 0,
+    "presenceDelta": 1,
+    "selected": "semaforo_verde"
+  },
+  "eminence": {
+    "army": "Patto degli Indocili",
+    "id": "patto_grande_semaforo",
+    "name": "Il Grande Semaforo"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:semaforo_verde:GENERAL",
+      "kind": "reveal",
+      "name": "Verde",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "FORCE_TRIGGER",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "FORBID_TRIGGER",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Imboscata e Turbo sono considerati soddisfatti in questo round. Intervento e Ultima Chance non possono attivarsi."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "semaforo_verde_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:semaforo_verde:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:semaforo_verde:GENERAL",
+          "kind": "reveal",
+          "name": "Verde",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "FORCE_TRIGGER",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "FORBID_TRIGGER",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Imboscata e Turbo sono considerati soddisfatti in questo round. Intervento e Ultima Chance non possono attivarsi."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORCE_TRIGGER",
+          "source": "ability",
+          "sourceId": "semaforo_verde",
+          "sourceName": "Verde",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORBID_TRIGGER",
+          "source": "ability",
+          "sourceId": "semaforo_verde",
+          "sourceName": "Verde",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}
