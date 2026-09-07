@@ -14,6 +14,7 @@ import {
   SIDES,
   OPPOSITE_SIDE,
   HP_LOSS_CAUSES,
+  TRIGGER_SCOPES,
 } from './eminenceConstants.js';
 import { createTriggerRules, applyPrimitiveToTriggerRules } from './triggerRulesOverlay.js';
 
@@ -46,6 +47,12 @@ export function createEffectBundle() {
     vaTieWinnerSides: [],
     grantedPowers: {},
     logs: [],
+    poolFocus: { [SIDES.PLAYER]: 0, [SIDES.ENEMY]: 0 },
+    immuneSides: [],
+    toxinRemovals: [],
+    abilityEscalations: [],
+    markGains: [],
+    deals: [],
   };
 }
 
@@ -147,9 +154,15 @@ const handlers = {
 
   [P.LOSE_HP]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      let amount = Math.abs(segment.amount || 0);
+      if (segment.escalationKey) {
+        const uses = Number(ctx.persistent?.abilityEscalation?.[segment.escalationKey] || 0);
+        amount = Math.abs(segment.amountBase ?? segment.amount ?? 0)
+          + uses * Math.abs(segment.amountPerUse ?? 1);
+      }
       bundle.hpDeltas.push({
         side,
-        amount: -Math.abs(segment.amount || 0),
+        amount: -amount,
         cause: segment.cause || HP_LOSS_CAUSES.OTHER,
         source: ctx.source,
       });
@@ -179,9 +192,15 @@ const handlers = {
 
   [P.CHANGE_PRESENCE]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      let delta = segment.delta || 0;
+      if (segment.escalationKey) {
+        const uses = Number(ctx.persistent?.abilityEscalation?.[segment.escalationKey] || 0);
+        delta = (segment.deltaBase ?? segment.delta ?? 0)
+          + uses * (segment.deltaPerUse ?? 1);
+      }
       bundle.presenceChanges.push({
         side,
-        delta: segment.delta || 0,
+        delta,
         // Un guadagno o una perdita da effetto non sono una spesa: non alimentano
         // Manifestazione né Fervore.
         countsAsSpend: false,
@@ -209,6 +228,7 @@ const handlers = {
         suppressed: segment.suppressed ?? bundle.armyBonusState[side]?.suppressed ?? false,
         forcedActive: segment.forcedActive ?? bundle.armyBonusState[side]?.forcedActive ?? false,
         unblockable: segment.unblockable ?? bundle.armyBonusState[side]?.unblockable ?? false,
+        override: segment.override ?? bundle.armyBonusState[side]?.override ?? null,
       };
     }
   },
@@ -253,14 +273,23 @@ const handlers = {
   [P.MARK_CARD]: (bundle, segment, ctx) => {
     const cardIds = resolveMarkCardIds(segment, ctx);
     if (!cardIds.length) return;
-    bundle.marks.push({
+    const markEntry = {
       mark: segment.mark,
       cardIds,
       persistent: Boolean(segment.persistent),
       consume: Boolean(segment.consume),
       side: ctx.ownerSide,
       source: ctx.source,
-    });
+    };
+    bundle.marks.push(markEntry);
+    if (!segment.consume && segment.mark) {
+      bundle.markGains.push({
+        mark: segment.mark,
+        cardIds: [...cardIds],
+        side: ctx.ownerSide,
+        source: ctx.source,
+      });
+    }
   },
 
   [P.REGISTER_END_MATCH_DEBT]: (bundle, segment, ctx) => {
@@ -361,6 +390,122 @@ const handlers = {
       };
     }
   },
+
+  [P.GRANT_IMMUNE]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (!bundle.immuneSides.includes(side)) bundle.immuneSides.push(side);
+    }
+  },
+
+  [P.GRANT_POOL_FOCUS]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.poolFocus[side] += Math.max(0, segment.amount || 0);
+    }
+  },
+
+  [P.REMOVE_TOXIN]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      const removedValue = Number(
+        ctx.params?.removedToxinValue
+        ?? ctx.params?.toxinValueBySide?.[side]
+        ?? segment.removedValue
+        ?? 0,
+      );
+      bundle.toxinRemovals.push({
+        side,
+        removedValue: Math.max(0, removedValue),
+        source: ctx.source,
+      });
+      if (segment.bonusOverrideFactor != null) {
+        const value = Math.max(0, removedValue) * Number(segment.bonusOverrideFactor);
+        bundle.armyBonusState[ctx.ownerSide] = {
+          ...(bundle.armyBonusState[ctx.ownerSide] || {}),
+          override: {
+            effect: segment.bonusOverrideEffect || 'directDamage',
+            value,
+            trigger: null,
+          },
+          forcedActive: true,
+        };
+      }
+    }
+  },
+
+  [P.ESCALATE_ABILITY]: (bundle, segment, ctx) => {
+    const key = segment.escalationKey || ctx.source;
+    if (!key) return;
+    bundle.abilityEscalations.push({
+      side: ctx.ownerSide,
+      key,
+      delta: segment.delta ?? 1,
+      source: ctx.source,
+    });
+  },
+
+  [P.PROPOSE_DEAL]: (bundle, segment, ctx) => {
+    const mode = segment.mode || 'ACCEPT_OR_SELF';
+    const params = ctx.params || {};
+
+    const remapTarget = (target, subjectSide) => {
+      const subjectIsOwner = subjectSide === ctx.ownerSide;
+      if (subjectIsOwner) return target || T.SELF;
+      // Subject is the opponent: SELF/OWN from the deal's POV → OPPONENT/ENEMY from owner POV.
+      if (target === T.SELF || target === T.OWN_AGENT || target == null) {
+        return target === T.OWN_AGENT ? T.ENEMY_AGENT : T.OPPONENT;
+      }
+      if (target === T.OPPONENT || target === T.ENEMY_AGENT) {
+        return target === T.ENEMY_AGENT ? T.OWN_AGENT : T.SELF;
+      }
+      return target;
+    };
+
+    const applyDealEffects = (effects, subjectSide) => {
+      for (const effect of effects || []) {
+        const handler = handlers[effect.primitive];
+        if (!handler) throw new Error(`PROPOSE_DEAL: primitiva sconosciuta ${effect.primitive}`);
+        handler(bundle, {
+          ...effect,
+          target: remapTarget(effect.target, subjectSide),
+        }, ctx);
+      }
+    };
+
+    if (mode === 'CHOOSE_ONE') {
+      const deals = segment.deals || [];
+      let choice = params.dealChoice ?? params.dealId ?? null;
+      if (choice == null) {
+        const opponentPresence = params.opponentPresence
+          ?? Infinity;
+        const legal = deals.filter((deal) => {
+          if (deal.minPresence != null) return opponentPresence >= Math.abs(deal.minPresence);
+          return true;
+        });
+        choice = (legal[0] || deals[0])?.id ?? null;
+      }
+      const selected = deals.find((deal) => deal.id === choice) || deals[0];
+      if (selected) applyDealEffects(selected.effects, OPPOSITE_SIDE[ctx.ownerSide]);
+      bundle.deals.push({
+        mode,
+        choice,
+        ownerSide: ctx.ownerSide,
+        source: ctx.source,
+      });
+      return;
+    }
+
+    const accepted = params.dealAccepted !== false
+      && params.dealResponse !== 'refuse'
+      && params.dealResponse !== false;
+    const subjectSide = accepted ? OPPOSITE_SIDE[ctx.ownerSide] : ctx.ownerSide;
+    applyDealEffects(segment.deal?.effects || segment.effects || [], subjectSide);
+    bundle.deals.push({
+      mode,
+      accepted,
+      subjectSide,
+      ownerSide: ctx.ownerSide,
+      source: ctx.source,
+    });
+  },
 };
 
 /** Primitive che agiscono sull'overlay dei trigger e non sull'accumulatore. */
@@ -373,6 +518,8 @@ const TRIGGER_PRIMITIVES = new Set([
   P.ALIAS_TRIGGER,
   P.SYNC_TRIGGERS_ON_XOR,
   P.SATISFY_TRIGGER_ON_EQUAL_LEAGUE,
+  P.SWAP_POWER_BONUS_TRIGGERS,
+  P.MIRROR_UNSATISFIED_POWER,
 ]);
 
 /**
@@ -396,11 +543,28 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
     const inferredSide = inferTargetSide(params, agentIdBySide);
     if (inferredSide && !params.targetSide) params.targetSide = inferredSide;
 
+    // REPLACE_TRIGGER GLOBAL: entrambi gli Agenti schierati, senza params.cardId.
+    if (
+      segment.primitive === P.REPLACE_TRIGGER
+      && segment.scope === TRIGGER_SCOPES.GLOBAL
+      && !params.cardId
+      && !params.cardIds
+      && !segment.cardIds?.length
+    ) {
+      params.cardIds = [agentIdBySide[SIDES.PLAYER], agentIdBySide[SIDES.ENEMY]].filter((id) => id != null);
+    }
+
+    const ownerPersistent = applyContext.persistentBySide?.[entry.ownerSide]
+      || entry.persistent
+      || null;
+
     const ctx = {
       ownerSide: entry.ownerSide,
       params,
       source: entry.abilityId ?? entry.sourceEminenceId ?? null,
       agentIdBySide,
+      persistent: ownerPersistent,
+      persistentBySide: applyContext.persistentBySide || null,
     };
 
     if (TRIGGER_PRIMITIVES.has(segment.primitive)) {

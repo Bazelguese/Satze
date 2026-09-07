@@ -353,13 +353,13 @@ const semaforoRules = (abilityId, ownerSide = SIDES.PLAYER) => {
   );
 };
 
-test('Semaforo Verde: Imboscata e Turbo soddisfatti, Intervento e Ultima Chance vietati', () => {
+test('Semaforo Verde: nessuna regola depositata, condizioni normali', () => {
   const rules = semaforoRules('semaforo_verde');
 
+  assert.deepEqual(rules.forceSatisfied, []);
+  assert.deepEqual(rules.forceForbidden, []);
   assert.equal(resolve('imboscata', rules).satisfied, true);
-  assert.equal(resolve('turbo', rules).satisfied, true);
-  assert.equal(resolve('intervention', rules).satisfied, false);
-  assert.equal(resolve('ultimaChance', rules).satisfied, false);
+  assert.equal(resolve('turbo', rules).satisfied, false);
 });
 
 test('Semaforo Rosso: il divieto batte anche una condizione naturalmente vera', () => {
@@ -374,13 +374,13 @@ test('Semaforo Rosso: il divieto batte anche una condizione naturalmente vera', 
   assert.equal(resolve('ultimaChance', rules).satisfied, true);
 });
 
-test('Semaforo Giallo: nessuna regola depositata, condizioni normali', () => {
+test('Semaforo Giallo: Imboscata e Turbo soddisfatti', () => {
   const rules = semaforoRules('semaforo_giallo');
 
-  assert.deepEqual(rules.forceSatisfied, []);
-  assert.deepEqual(rules.forceForbidden, []);
   assert.equal(resolve('imboscata', rules).satisfied, true);
-  assert.equal(resolve('turbo', rules).satisfied, false);
+  assert.equal(resolve('turbo', rules).satisfied, true);
+  assert.equal(resolve('intervention', rules).satisfied, false);
+  assert.equal(resolve('ultimaChance', rules).satisfied, false);
 });
 
 test('Semaforo: l\'effetto è simmetrico, colpisce anche l\'avversario', () => {
@@ -390,21 +390,20 @@ test('Semaforo: l\'effetto è simmetrico, colpisce anche l\'avversario', () => {
 });
 
 test('Semaforo contro Semaforo: a colori concorrenti vale FORBID > FORCE', () => {
-  // Punto ancora aperto nella specifica (§11.8): qui si fissa solo la base già decisa.
-  const verde = semaforoRules('semaforo_verde', SIDES.PLAYER);
+  // Giallo forza Imboscata/Turbo, Rosso li vieta: prevale il divieto.
+  const giallo = semaforoRules('semaforo_giallo', SIDES.PLAYER);
   const rules = EMINENCES.patto_grande_semaforo.abilities
     .find((a) => a.id === 'semaforo_rosso')
     .segments.reduce(
       (acc, s) => applyPrimitiveToTriggerRules(acc, s, { ownerSide: SIDES.ENEMY, source: 'semaforo_rosso' }),
-      verde
+      giallo
     );
 
-  // Verde forza Imboscata, Rosso la vieta: prevale il divieto, per entrambi i lati.
   assert.equal(resolve('imboscata', rules, { side: SIDES.PLAYER }).satisfied, false);
   assert.equal(resolve('imboscata', rules, { side: SIDES.ENEMY }).satisfied, false);
   assert.equal(resolve('turbo', rules).satisfied, false);
-  assert.equal(resolve('intervention', rules).satisfied, false);
-  assert.equal(resolve('ultimaChance', rules).satisfied, false);
+  assert.equal(resolve('intervention', rules).satisfied, true);
+  assert.equal(resolve('ultimaChance', rules).satisfied, true);
 });
 
 // ------------------------------------------------------------------

@@ -108,8 +108,9 @@ test('statico: i segmenti vengono armati a ogni inizio round', () => {
   assert.equal(armed[0].ownerSide, SIDES.PLAYER);
   assert.equal(armed[0].timing, EFFECT_TIMINGS.ROUND_START);
 
-  // Il Patto non ha Statico: nessun segmento fantasma.
-  assert.equal(state.enemy.round.pendingEffects.length, 0);
+  // Il Patto ha lo Statico Multa (AFTER_DUEL_OUTCOME), non ROUND_START.
+  assert.equal(state.enemy.round.pendingEffects.length, 1);
+  assert.equal(state.enemy.round.pendingEffects[0].timing, EFFECT_TIMINGS.AFTER_DUEL_OUTCOME);
 });
 
 test('statico: non richiede scelta né gate, quindi matura a round appena aperto', () => {

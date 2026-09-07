@@ -4,10 +4,10 @@
     "name": "Guerra d'Attrito",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+    "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
   },
   "bilance": {
-    "cinematicCues": 3,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       0,
       0
@@ -54,23 +54,6 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
           "recipe": "PRESENCE_PULSE",
           "to": {
             "side": "player",
@@ -85,9 +68,9 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "primitive": "GRANT_POOL_FOCUS",
           "slot": null,
-          "target": "OWN_AGENT"
+          "target": "SELF"
         },
         {
           "primitive": "ADJUST_ABILITY_COST",
@@ -100,7 +83,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 0,
       "side": "player",
-      "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+      "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
     },
     {
       "badgeText": "Risoluzione · Dopo il Duello",
@@ -136,7 +119,7 @@
       "phaseLabel": "Risoluzione",
       "presenceDelta": null,
       "side": "player",
-      "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+      "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
     }
   ],
   "scenario": {
@@ -185,24 +168,6 @@
           },
           "holdAnnounce": false,
           "noticeId": "reveal:player:calibri_guerra_attrito:GENERAL",
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:calibri_guerra_attrito:GENERAL",
           "recipe": "PRESENCE_PULSE",
           "to": {
             "side": "player",
@@ -225,23 +190,6 @@
                 "type": "card"
               },
               "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
-              "to": {
-                "side": "player",
-                "type": "field-agent"
-              },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
-            },
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
               "recipe": "PRESENCE_PULSE",
               "to": {
                 "side": "player",
@@ -256,9 +204,9 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "primitive": "GRANT_POOL_FOCUS",
               "slot": null,
-              "target": "OWN_AGENT"
+              "target": "SELF"
             },
             {
               "primitive": "ADJUST_ABILITY_COST",
@@ -271,7 +219,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 0,
           "side": "player",
-          "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+          "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
         }
       ],
       "presence": {
@@ -349,7 +297,7 @@
           "phaseLabel": "Risoluzione",
           "presenceDelta": null,
           "side": "player",
-          "text": "Ottieni 1 FC. Ogni Duello che vinci aumenta di 1 il costo in Presenza di questa abilità per il resto dello Scontro (0 → 1 → 2 → 3 → 4)."
+          "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
         }
       ],
       "presence": {
@@ -361,7 +309,6 @@
           "condition": {
             "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
             "keys": [
-              "duelWinnerRelative",
               "enemyFinalDamage"
             ],
             "status": "deferred"
@@ -380,11 +327,11 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "primitive": "GRANT_POOL_FOCUS",
           "source": "ability",
           "sourceId": "calibri_guerra_attrito",
           "sourceName": "Guerra d'Attrito",
-          "target": "OWN_AGENT",
+          "target": "SELF",
           "timing": "AFTER_REVEAL"
         },
         {

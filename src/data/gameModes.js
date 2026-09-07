@@ -2,6 +2,46 @@
 // GAME MODES - Definizione delle modalità di gioco
 // ============================================
 
+import { EMINENCE_FORMAT } from '../game/eminence/eminenceConstants.js';
+
+/**
+ * Formati di partita locale (scelta pre-difficoltà).
+ * Combinano modalità Campo + stato del sottosistema Eminenza.
+ */
+export const MATCH_FORMATS = {
+  standard: {
+    id: 'standard',
+    name: 'Standard',
+    description: 'Eminenze e Campi attivi',
+    mode: 'classic',
+    eminenceFormat: EMINENCE_FORMAT.REQUIRED,
+  },
+  noEminence: {
+    id: 'noEminence',
+    name: 'No Eminenza',
+    description: 'Campi attivi, senza Eminenze',
+    mode: 'classic',
+    eminenceFormat: EMINENCE_FORMAT.DISABLED,
+  },
+  bareHands: {
+    id: 'bareHands',
+    name: 'Mani nude',
+    description: 'Niente Eminenze né effetti Campo',
+    mode: 'bareHands',
+    eminenceFormat: EMINENCE_FORMAT.DISABLED,
+  },
+};
+
+export function getMatchFormat(formatId) {
+  return MATCH_FORMATS[formatId] || MATCH_FORMATS.standard;
+}
+
+/** Deriva il formato UI dalla modalità già scelta nel menu (es. Bare Hands). */
+export function matchFormatIdFromMode(modeId) {
+  if (modeId === 'bareHands') return MATCH_FORMATS.bareHands.id;
+  return MATCH_FORMATS.standard.id;
+}
+
 /**
  * Configurazione delle modalità di gioco disponibili
  */

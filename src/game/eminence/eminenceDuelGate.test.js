@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -111,14 +111,14 @@ test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
 
 test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non prima', () => {
   const state = match({ player: 'patto_grande_semaforo' });
-  const chosen = choose(state, SIDES.PLAYER, 'semaforo_verde');
+  const chosen = choose(state, SIDES.PLAYER, 'semaforo_giallo');
 
   const result = prepareEminenceDuel(chosen);
 
-  // Il Semaforo dichiara BEFORE_TRIGGER_CHECK: se la raccolta per checkpoint non
+  // Il Giallo dichiara BEFORE_TRIGGER_CHECK: se la raccolta per checkpoint non
   // funzionasse, l'overlay resterebbe vuoto.
   assert.equal(result.bundle.triggerRules.forceSatisfied.length, 1);
-  assert.equal(result.bundle.triggerRules.forceForbidden.length, 1);
+  assert.equal(result.bundle.triggerRules.forceForbidden.length, 0);
 });
 
 test('preparazione: un gate già superato non si riapre', () => {
@@ -217,8 +217,8 @@ test('reveal: il lato umano non viene riempito in automatico', () => {
   });
   base.player.presence = 4;
   let state = beginEminenceRound(base, { roundNumber: 1 });
-  state = choose(state, SIDES.PLAYER, 'corte_debito_eterno');
-  state = choose(state, SIDES.ENEMY, 'semaforo_giallo');
+  state = choose(state, SIDES.PLAYER, 'corte_brutto_affare');
+  state = choose(state, SIDES.ENEMY, 'semaforo_verde');
 
   const prepared = prepareEminenceDuel(state, {
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
@@ -236,7 +236,7 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
   base.enemy.presence = 4;
   let state = beginEminenceRound(base, { roundNumber: 1 });
   state = choose(state, SIDES.PLAYER, 'semaforo_giallo');
-  state = choose(state, SIDES.ENEMY, 'corte_debito_eterno');
+  state = choose(state, SIDES.ENEMY, 'corte_brutto_affare');
 
   const prepared = prepareEminenceDuel(state, {
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
@@ -245,22 +245,24 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
   assert.equal(prepared.matchState.enemy.selectedParams.cardId, 301);
 });
 
-test('GENERAL già aperto: Accordo e Salasso tengono i FC temporanei nel Duello', () => {
+test('GENERAL già aperto: Accordo e Salasso tengono i delta Affare nel Duello', () => {
   let salasso = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 3 } });
   salasso = choose(salasso, SIDES.PLAYER, 'corte_salasso');
-  salasso = choose(salasso, SIDES.ENEMY, 'semaforo_giallo');
+  salasso = choose(salasso, SIDES.ENEMY, 'semaforo_verde');
   salasso = advanceToNextRevealGate(salasso).matchState;
   salasso = advanceToNextRevealGate(salasso).matchState;
   salasso = advanceToNextRevealGate(salasso).matchState;
   const salassoDuel = prepareEminenceDuel(salasso, {
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
   });
-  assert.equal(salassoDuel.bundle.temporaryFocus[SIDES.PLAYER], 1);
-  assert.equal(salassoDuel.bundle.temporaryFocus[SIDES.ENEMY], 0);
+  assert.ok(salassoDuel.bundle.hpDeltas.some((e) => e.side === SIDES.ENEMY && e.amount === -3));
+  // Verde (+1) + Affare Salasso (+2); la Presenza è già nello stato all'apertura GENERAL.
+  assert.equal(salassoDuel.matchState.enemy.presence, 3);
+  assert.equal(salassoDuel.matchState.player.presence, 2);
 
   let accordo = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
   accordo = choose(accordo, SIDES.PLAYER, 'corte_accordo');
-  accordo = choose(accordo, SIDES.ENEMY, 'semaforo_giallo');
+  accordo = choose(accordo, SIDES.ENEMY, 'semaforo_verde');
   accordo = advanceToNextRevealGate(accordo).matchState;
   accordo = advanceToNextRevealGate(accordo).matchState;
   accordo = advanceToNextRevealGate(accordo).matchState;
@@ -274,7 +276,7 @@ test('GENERAL già aperto: Accordo e Salasso tengono i FC temporanei nel Duello'
 test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', () => {
   let state = match({ player: 'apex_sole_verde', enemy: 'patto_grande_semaforo' });
   state = choose(state, SIDES.PLAYER, 'apex_furia');
-  state = choose(state, SIDES.ENEMY, 'semaforo_giallo');
+  state = choose(state, SIDES.ENEMY, 'semaforo_verde');
   state = advanceToNextRevealGate(state).matchState;
   state = advanceToNextRevealGate(state).matchState;
   state = advanceToNextRevealGate(state).matchState;

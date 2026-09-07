@@ -4,7 +4,7 @@
     "name": "Tacet",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza."
+    "text": "Se uno dei due Agenti non soddisfa il requisito di attivazione del suo trigger Potere, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -78,7 +78,7 @@
       "phaseLabel": "Risoluzione",
       "presenceDelta": 2,
       "side": "player",
-      "text": "Nessun Potere soddisfatto: +2 Presenza."
+      "text": "+2 Presenza."
     }
   ],
   "scenario": {
@@ -198,7 +198,7 @@
           "phaseLabel": "Risoluzione",
           "presenceDelta": 2,
           "side": "player",
-          "text": "Nessun Potere soddisfatto: +2 Presenza."
+          "text": "+2 Presenza."
         }
       ],
       "presence": {
@@ -219,16 +219,15 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "orathai_risonanza",
-          "sourceName": "Consonanza",
+          "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
-            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "detail": "activationUnsatisfiedCount: (assente) → non ancora valutabile",
             "keys": [
-              "ownActivationSatisfied",
-              "enemyActivationSatisfied"
+              "activationUnsatisfiedCount"
             ],
             "status": "deferred"
           },

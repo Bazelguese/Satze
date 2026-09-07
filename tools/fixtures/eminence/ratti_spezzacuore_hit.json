@@ -2,21 +2,22 @@
   "roundNumber": 3,
   "initiativeSide": "player",
   "player": {
-    "eminenceId": "kethran_altare",
-    "presence": 4,
-    "abilityId": "kethran_opera_composita",
-    "params": {
-      "fragmentCardId": 231
-    },
+    "eminenceId": "ratti_bella_malelabbra",
+    "presence": 3,
+    "abilityId": "ratti_spezzacuore",
+    "params": null,
     "agent": {
       "cardId": 231,
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "rimonta",
+      "trigger": "conquest",
       "focusInvested": 2,
       "anchored": false
     },
+    "remainingHand": [
+      { "id": 400, "league": 1 }
+    ],
     "fragments": [],
     "prey": []
   },
@@ -31,18 +32,18 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 3,
+      "focusInvested": 2,
       "anchored": false
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
-      "player": false,
+      "player": true,
       "enemy": false
     },
     "activatedTriggerBySide": {
-      "player": null,
+      "player": "conquest",
       "enemy": null
     },
     "aliasUsedBySide": {
@@ -53,9 +54,10 @@
       "player": 0,
       "enemy": 0
     },
+    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "kethran_opera_composita_miss",
-  "branch": "miss"
+  "name": "ratti_spezzacuore_hit",
+  "branch": "hit"
 }

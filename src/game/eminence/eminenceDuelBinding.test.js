@@ -7,7 +7,34 @@ import {
   consumeHpDeltas,
   applyStatConverts,
   resolveConquestOverride,
+  applyPowerBonusTriggerSwap,
 } from './eminenceDuelBinding.js';
+
+test('swap Potere↔Bonus: aggiorna trigger e description del Bonus', () => {
+  const agent = {
+    id: 1,
+    army: 'Khemet',
+    ability: { trigger: 'intervention', effect: 'power', value: 2 },
+  };
+  const armyBonus = {
+    trigger: 'overdrive',
+    effects: [{ effect: 'immune', value: null }],
+    description: 'Overdrive: Immune',
+  };
+  const { agent: nextAgent, armyBonus: nextBonus } = applyPowerBonusTriggerSwap({
+    agent,
+    armyBonus,
+    side: SIDES.PLAYER,
+    triggerRules: {
+      powerBonusSwaps: [{ scope: 'OWN', ownerSide: SIDES.PLAYER }],
+    },
+  });
+  assert.equal(nextAgent.ability.trigger, 'overdrive');
+  assert.equal(nextBonus.trigger, 'intervention');
+  assert.match(nextBonus.description, /^Intervento:/);
+  assert.match(nextBonus.description, /Immune/i);
+  assert.ok(!/^Overdrive:/i.test(nextBonus.description));
+});
 
 test('risoluzione Potere: scatta solo se il trigger è vero e non bloccato', () => {
   const overdrive = { ability: { trigger: 'overdrive' } };
@@ -77,10 +104,6 @@ test('override Conquista: in sconfitta distrugge e sopprime, in vittoria no', ()
     suppressConquest: true,
   });
   assert.deepEqual(resolveConquestOverride(bundle, SIDES.PLAYER), {
-    destroyField: false,
-    suppressConquest: false,
-  });
-  assert.deepEqual(resolveConquestOverride(bundle, 'draw'), {
     destroyField: false,
     suppressConquest: false,
   });

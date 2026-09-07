@@ -4,7 +4,7 @@
     "name": "Rinuncia al Privilegio",
     "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Il proprio Bonus d'Armata è bloccato per questo Duello."
+    "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -85,7 +85,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 1,
       "side": "player",
-      "text": "Il proprio Bonus d'Armata è bloccato per questo Duello."
+      "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
     },
     {
       "badgeText": "Risoluzione · Dopo il Duello",
@@ -222,7 +222,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 1,
           "side": "player",
-          "text": "Il proprio Bonus d'Armata è bloccato per questo Duello."
+          "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
         }
       ],
       "presence": {

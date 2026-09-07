@@ -4,7 +4,7 @@
     "name": "Frenesia della Fame",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Se una Preda è schierata, in questo Duello il Bonus d'Armata del proprietario è considerato attivo e non può essere bloccato."
+    "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -21,8 +21,8 @@
       2,
       0
     ],
-    "segmentsWithoutCue": 1,
-    "segmentsWithoutNotice": 1
+    "segmentsWithoutCue": 2,
+    "segmentsWithoutNotice": 0
   },
   "choice": {
     "alwaysLegalOption": true,
@@ -79,6 +79,16 @@
       "outcome": null,
       "payoffs": [
         {
+          "primitive": "MARK_CARD",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "UNBLOCKABLE_POWER",
+          "slot": null,
+          "target": null
+        },
+        {
           "primitive": "SET_ARMY_BONUS_STATE",
           "slot": null,
           "target": "SELF"
@@ -89,7 +99,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Se una Preda è schierata, in questo Duello il Bonus d'Armata del proprietario è considerato attivo e non può essere bloccato."
+      "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
     },
     {
       "badgeText": "Mancato · Agenti schierati",
@@ -109,9 +119,9 @@
       "outcome": "miss",
       "payoffs": [
         {
-          "primitive": "SET_ARMY_BONUS_STATE",
+          "primitive": "UNBLOCKABLE_POWER",
           "slot": null,
-          "target": "SELF"
+          "target": null
         }
       ],
       "phase": "MISS",
@@ -219,6 +229,16 @@
           "outcome": null,
           "payoffs": [
             {
+              "primitive": "MARK_CARD",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "UNBLOCKABLE_POWER",
+              "slot": null,
+              "target": null
+            },
+            {
               "primitive": "SET_ARMY_BONUS_STATE",
               "slot": null,
               "target": "SELF"
@@ -229,7 +249,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Se una Preda è schierata, in questo Duello il Bonus d'Armata del proprietario è considerato attivo e non può essere bloccato."
+          "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
         },
         {
           "badgeText": "Mancato · Agenti schierati",
@@ -249,9 +269,9 @@
           "outcome": "miss",
           "payoffs": [
             {
-              "primitive": "SET_ARMY_BONUS_STATE",
+              "primitive": "UNBLOCKABLE_POWER",
               "slot": null,
-              "target": "SELF"
+              "target": null
             }
           ],
           "phase": "MISS",
@@ -292,6 +312,22 @@
         "player": 0
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "deployedMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "SET_ARMY_BONUS_STATE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
         {
           "condition": {
             "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
@@ -336,6 +372,35 @@
           "sourceName": "Istinto Predatorio",
           "target": null,
           "timing": null
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "ability",
+          "sourceId": "mounthborn_frenesia",
+          "sourceName": "Frenesia della Fame",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "deployedMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "UNBLOCKABLE_POWER",
+          "source": "ability",
+          "sourceId": "mounthborn_frenesia",
+          "sourceName": "Frenesia della Fame",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
         },
         {
           "condition": {

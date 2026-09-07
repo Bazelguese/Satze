@@ -1,8 +1,8 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { ARMY_COLORS } from '../../data/armies';
 
 /**
- * SatzeCursor — puntatore custom del gioco (sostituisce la freccia di sistema).
+ * SatzeCursor — puntatore custom (DOM imperativo: nessun re-render per frame).
  *
  *  A riposo   : lama "falce" a due toni, scia legata alla velocità.
  *  Cliccabile : dita escono → al click si chiudono → si riaprono;
@@ -83,6 +83,16 @@ function hitHot(target) {
   return t;
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function setFillStroke(el, fill, stroke = INK, strokeWidth = 0.9) {
+  if (!el) return;
+  el.setAttribute('fill', fill);
+  el.setAttribute('stroke', stroke);
+  el.setAttribute('stroke-width', String(strokeWidth));
+  el.setAttribute('stroke-linejoin', 'miter');
+}
+
 /**
  * Finger mode: hidden → extend → open → close → reopen → (open | retract → hidden)
  */
@@ -98,19 +108,35 @@ export default function SatzeCursor({
   enabled = true,
   dragCard = null,
 }) {
-  const [, tick] = useState(0);
+  const rootRef = useRef(null);
+  const tipRef = useRef(null);
+  const tipInnerRef = useRef(null);
+  const bladeGRef = useRef(null);
+  const restGRef = useRef(null);
+  const gripGRef = useRef(null);
+  const pathPRef = useRef(null);
+  const pathFRef = useRef(null);
+  const gripBodyRef = useRef(null);
+  const gripFaceRef = useRef(null);
+  const fingerRefs = useRef([]);
+  const trailSvgRef = useRef(null);
+  const trailGroupRef = useRef(null);
+  const beamWrapRef = useRef(null);
+  const beamFillRef = useRef(null);
+  const beamCoreRef = useRef(null);
+
   const st = useRef({
     x: -100, y: -100, vel: 0, traccia: [],
     hot: false, giu: false, presa: null, t0: 0,
-    tPresa: 0, lastMove: 0,
+    tPresa: 0, lastMove: 0, lastHitTarget: null,
     finger: { mode: 'hidden', t0: 0, est0: 0 },
   }).current;
-  const raf = useRef(null);
+
+  const propsRef = useRef({ army, inDuel, neutral, size, trail, trailLength, trailDurationMs, fingers, dragCard });
+  propsRef.current = { army, inDuel, neutral, size, trail, trailLength, trailDurationMs, fingers, dragCard };
+
   const loop = useRef(null);
-  const trailLenRef = useRef(trailLength);
-  const trailDurRef = useRef(trailDurationMs);
-  trailLenRef.current = trailLength;
-  trailDurRef.current = trailDurationMs;
+  const kickRef = useRef(() => {});
 
   useLayoutEffect(() => {
     if (!enabled) return undefined;
@@ -128,7 +154,6 @@ export default function SatzeCursor({
 
   useEffect(() => {
     if (!enabled) return undefined;
-    const redraw = () => tick((n) => n + 1);
 
     const fingerBusy = () => {
       const m = st.finger.mode;
@@ -168,19 +193,166 @@ export default function SatzeCursor({
       }
     };
 
-    const ageTrail = (now) => {
-      const dur = trailDurRef.current;
+    const ageTrail = (now, dur) => {
       st.traccia = st.traccia.filter((p) => now - p.t < dur);
       if (now - st.lastMove > 24) st.vel *= 0.88;
+    };
+
+    const paint = (now) => {
+      const p = propsRef.current;
+      const accent = p.inDuel ? (ARMY_COLORS?.[p.army]?.accent || BONE) : p.neutral;
+      const luce = LUM(accent) > 0.82 ? INK : BONE;
+      const presa = !!st.presa || !!p.dragCard;
+      const premuto = st.giu;
+      const fillCorpo = premuto ? luce : accent;
+      const fillFaccia = premuto ? accent : luce;
+      const sizeMul = p.size || 1;
+      const trailDur = p.trailDurationMs;
+
+      if (tipRef.current) {
+        tipRef.current.style.transform = `translate3d(${st.x}px,${st.y}px,0) scale(${sizeMul})`;
+        tipRef.current.style.zIndex = presa ? '4' : '1';
+      }
+      if (tipInnerRef.current) {
+        tipInnerRef.current.style.transform = presa
+          ? 'none'
+          : premuto
+            ? 'translate(1.5px,2px) scale(.96)'
+            : 'none';
+      }
+
+      const trailGroup = trailGroupRef.current;
+      const trailSvg = trailSvgRef.current;
+      if (trailGroup && trailSvg) {
+        while (trailGroup.firstChild) trailGroup.removeChild(trailGroup.firstChild);
+        const showTrail = p.trail && st.traccia.length > 1;
+        trailSvg.style.display = showTrail ? 'block' : 'none';
+        if (showTrail) {
+          const forza = Math.min(1, Math.max(0, st.vel - 1) / 14);
+          const k = K * sizeMul;
+          const bx = SAGOMA.coda[0] * k;
+          const by = SAGOMA.coda[1] * k;
+          const pts = st.traccia;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const age0 = Math.max(0, 1 - (now - pts[i].t) / trailDur);
+            const age1 = Math.max(0, 1 - (now - pts[i + 1].t) / trailDur);
+            const age = (age0 + age1) * 0.5;
+            if (age < 0.02) continue;
+            const t = i / Math.max(1, pts.length - 1);
+            const t2 = (i + 1) / Math.max(1, pts.length - 1);
+            const r = 1 - t;
+            const r2 = 1 - t2;
+            const opac = r * r * 0.8 * Math.max(forza, 0.35 * age) * age;
+            if (opac < 0.015) continue;
+            const poly = document.createElementNS(SVG_NS, 'polygon');
+            poly.setAttribute(
+              'points',
+              [
+                pts[i].x, pts[i].y,
+                pts[i].x + bx * r, pts[i].y + by * r,
+                pts[i + 1].x + bx * r2, pts[i + 1].y + by * r2,
+                pts[i + 1].x, pts[i + 1].y,
+              ].join(' ')
+            );
+            poly.setAttribute('fill', accent);
+            poly.setAttribute('opacity', String(opac));
+            trailGroup.appendChild(poly);
+          }
+        }
+      }
+
+      const beam = beamWrapRef.current;
+      if (beam) {
+        if (presa) {
+          const Tpresa = st.tPresa ? now - st.tPresa : (p.dragCard ? 1e5 : 0);
+          const openEase = EASE(Math.min(1, Tpresa / 280));
+          const W = RAGGIO.ampiezza * sizeMul;
+          const ox = RAGGIO.ox * sizeMul;
+          const oy = RAGGIO.oy * sizeMul;
+          const tx = (p.dragCard?.cx ?? st.x) - st.x;
+          const ty = (p.dragCard?.cy ?? st.y) - st.y;
+          const Lfull = Math.max(10, Math.hypot(tx - ox, ty - oy));
+          const L = Lfull * Math.max(0.08, openEase);
+          const ang = (Math.atan2(ty - oy, tx - ox) * 180) / Math.PI;
+          beam.style.display = 'block';
+          beam.style.transform = `translate3d(${st.x + ox}px,${st.y + oy}px,0) rotate(${ang}deg)`;
+          if (beamFillRef.current) {
+            const fill = beamFillRef.current;
+            fill.style.width = `${L}px`;
+            fill.style.height = `${W}px`;
+            fill.style.top = `${-W / 2}px`;
+            fill.style.background = `linear-gradient(90deg,${accent} 0%,transparent ${RAGGIO.sfumatura}%)`;
+            fill.style.opacity = String(RAGGIO.opacita * openEase);
+          }
+          if (beamCoreRef.current) {
+            beamCoreRef.current.style.width = `${L}px`;
+            beamCoreRef.current.style.background = `linear-gradient(90deg,${accent},transparent)`;
+            beamCoreRef.current.style.opacity = String(0.85 * openEase);
+          }
+        } else {
+          beam.style.display = 'none';
+        }
+      }
+
+      if (restGRef.current) restGRef.current.style.display = presa ? 'none' : 'block';
+      if (gripGRef.current) gripGRef.current.style.display = presa ? 'block' : 'none';
+
+      if (presa) {
+        const Tpresa = st.tPresa ? now - st.tPresa : (p.dragCard ? 1e5 : 0);
+        const ce = EASE(Math.min(1, Tpresa / 280));
+        const P = LAMA_R.perno;
+        const tr = (rot, off) =>
+          `translate(${off[0] * ce} ${off[1] * ce}) rotate(${rot * ce} ${P[0]} ${P[1]})`;
+        if (gripBodyRef.current) {
+          gripBodyRef.current.setAttribute('transform', tr(LAMA_R.rotCorpo, LAMA_R.corpo));
+          const bodyPath = gripBodyRef.current.querySelector('path');
+          setFillStroke(bodyPath, fillCorpo);
+          bodyPath?.setAttribute('fill-rule', 'evenodd');
+        }
+        if (gripFaceRef.current) {
+          gripFaceRef.current.setAttribute('transform', tr(LAMA_R.rotFaccia, LAMA_R.faccia));
+          setFillStroke(gripFaceRef.current.querySelector('path'), fillFaccia);
+        }
+      } else {
+        setFillStroke(pathPRef.current, fillCorpo);
+        setFillStroke(pathFRef.current, fillFaccia);
+        const fMode = st.finger.mode;
+        const fT = now - st.finger.t0;
+        const fEst0 = st.finger.est0 || 0;
+        const showDita = p.fingers && fMode !== 'hidden';
+        for (let i = 0; i < FINGER_N; i++) {
+          const el = fingerRefs.current[i];
+          if (!el) continue;
+          if (!showDita) {
+            el.style.display = 'none';
+            continue;
+          }
+          el.style.display = 'block';
+          let est = 1;
+          let morph = 0;
+          if (fMode === 'extend') {
+            est = Math.max(0.03, fEst0 + (1 - fEst0) * fingerOut(fT, i));
+          } else if (fMode === 'close') {
+            morph = fingerCloseProg(fT, i);
+          } else if (fMode === 'reopen') {
+            morph = 1 - fingerCloseProg(fT, i);
+          } else if (fMode === 'retract') {
+            est = Math.max(0.03, fEst0 * (1 - fingerIn(fT, i)));
+          }
+          el.setAttribute('d', ditoPath(i, morph, est));
+          el.setAttribute('fill', accent);
+        }
+      }
     };
 
     const anima = () => {
       const now = performance.now();
       advanceFingers(now);
-      ageTrail(now);
-      redraw();
+      ageTrail(now, propsRef.current.trailDurationMs);
+      paint(now);
       const vivo =
         st.presa ||
+        !!propsRef.current.dragCard ||
         st.hot ||
         fingerBusy() ||
         st.traccia.length > 0 ||
@@ -192,6 +364,7 @@ export default function SatzeCursor({
       if (loop.current) return;
       loop.current = requestAnimationFrame(anima);
     };
+    kickRef.current = avvia;
 
     const onMove = (e) => {
       const now = performance.now();
@@ -203,18 +376,21 @@ export default function SatzeCursor({
       st.traccia = [
         { x: e.clientX, y: e.clientY, k: (st.traccia[0]?.k || 0) + 1, t: now },
         ...st.traccia,
-      ].slice(0, trailLenRef.current);
+      ].slice(0, propsRef.current.trailLength);
       st.x = e.clientX;
       st.y = e.clientY;
-      const t = hitHot(e.target);
-      if (!!t !== st.hot) {
-        st.hot = !!t;
-        if (t) {
-          if (st.finger.mode === 'hidden' || st.finger.mode === 'retract') startExtend(now);
-        } else if (st.finger.mode === 'open' || st.finger.mode === 'extend') {
-          startRetract(now);
+
+      if (e.target !== st.lastHitTarget) {
+        st.lastHitTarget = e.target;
+        const t = hitHot(e.target);
+        if (!!t !== st.hot) {
+          st.hot = !!t;
+          if (t) {
+            if (st.finger.mode === 'hidden' || st.finger.mode === 'retract') startExtend(now);
+          } else if (st.finger.mode === 'open' || st.finger.mode === 'extend') {
+            startRetract(now);
+          }
         }
-        // close/reopen: non interrompere; a fine reopen → open o retract
       }
       avvia();
     };
@@ -226,6 +402,7 @@ export default function SatzeCursor({
       st.giu = true;
       st.presa = null;
       st.tPresa = 0;
+      st.lastHitTarget = e.target;
       if (d) {
         st.presa = true;
         st.tPresa = now;
@@ -234,7 +411,6 @@ export default function SatzeCursor({
       } else if (hotEl) {
         st.hot = true;
         const m = st.finger.mode;
-        // chiusura → reopen; se le dita non c'erano, partono già in close da aperte
         if (m !== 'close' && m !== 'reopen') {
           st.finger = { mode: 'close', t0: now, est0: 1 };
         }
@@ -250,151 +426,133 @@ export default function SatzeCursor({
       avvia();
     };
 
+    paint(performance.now());
+    if (propsRef.current.dragCard) avvia();
+
     window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('mousedown', onDown, true);
     window.addEventListener('mouseup', onUp, true);
     return () => {
+      kickRef.current = () => {};
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mousedown', onDown, true);
       window.removeEventListener('mouseup', onUp, true);
-      if (raf.current) cancelAnimationFrame(raf.current);
       if (loop.current) cancelAnimationFrame(loop.current);
+      loop.current = null;
     };
   }, [enabled, st]);
 
+  // Riparte il loop quando arriva un drag o cambiano accenti/scala (propsRef già aggiornato)
+  useEffect(() => {
+    if (!enabled) return;
+    st.t0 = performance.now();
+    kickRef.current();
+  }, [enabled, dragCard, army, size, trail, inDuel, neutral, st]);
+
   if (!enabled) return null;
 
-  const accent = inDuel ? (ARMY_COLORS?.[army]?.accent || BONE) : neutral;
-  const luce = LUM(accent) > 0.82 ? INK : BONE;
-  const presa = !!st.presa || !!dragCard;
-  const premuto = st.giu;
-  const corpo = premuto ? { fill: luce } : { fill: accent };
-  const faccia = premuto ? { fill: accent } : { fill: luce };
-  const bordo = { stroke: INK, strokeWidth: 0.9, strokeLinejoin: 'miter' };
-  const now = performance.now();
-  const Tpresa = st.tPresa ? now - st.tPresa : (dragCard ? 1e5 : 0);
-  const strati = [];
-  const trailDur = trailDurationMs;
-  const openEase = EASE(Math.min(1, Tpresa / 280));
-  const fMode = st.finger.mode;
-  const fT = now - st.finger.t0;
-  const fEst0 = st.finger.est0 || 0;
-
-  if (trail && st.traccia.length > 1) {
-    const forza = Math.min(1, Math.max(0, st.vel - 1) / 14);
-    const k = K * size;
-    const bx = SAGOMA.coda[0] * k;
-    const by = SAGOMA.coda[1] * k;
-    const p = st.traccia;
-    const seg = [];
-    for (let i = 0; i < p.length - 1; i++) {
-      const age0 = Math.max(0, 1 - (now - p[i].t) / trailDur);
-      const age1 = Math.max(0, 1 - (now - p[i + 1].t) / trailDur);
-      const age = (age0 + age1) * 0.5;
-      if (age < 0.02) continue;
-      const t = i / Math.max(1, p.length - 1);
-      const t2 = (i + 1) / Math.max(1, p.length - 1);
-      const r = 1 - t;
-      const r2 = 1 - t2;
-      const opac = r * r * 0.8 * Math.max(forza, 0.35 * age) * age;
-      if (opac < 0.015) continue;
-      seg.push(
-        <polygon
-          key={'s' + p[i].k}
-          points={[p[i].x, p[i].y, p[i].x + bx * r, p[i].y + by * r, p[i + 1].x + bx * r2, p[i + 1].y + by * r2, p[i + 1].x, p[i + 1].y].join(' ')}
-          fill={accent}
-          opacity={opac}
-        />
-      );
-    }
-    if (seg.length) {
-      strati.push(
-        <svg key="scia" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', filter: 'blur(1px)' }}>{seg}</svg>
-      );
-    }
-  }
-
-  if (presa) {
-    const W = RAGGIO.ampiezza * size;
-    const ox = RAGGIO.ox * size;
-    const oy = RAGGIO.oy * size;
-    const tx = (dragCard?.cx ?? st.x) - st.x;
-    const ty = (dragCard?.cy ?? st.y) - st.y;
-    const Lfull = Math.max(10, Math.hypot(tx - ox, ty - oy));
-    const L = Lfull * Math.max(0.08, openEase);
-    const ang = (Math.atan2(ty - oy, tx - ox) * 180) / Math.PI;
-    strati.push(
-      <div key={st.tPresa ? `fascio-${st.tPresa}` : 'fascio'} style={{ position: 'absolute', zIndex: 3, left: 0, top: 0, transformOrigin: '0 0', transform: `translate3d(${st.x + ox}px,${st.y + oy}px,0) rotate(${ang}deg)` }}>
-        <div style={{ position: 'absolute', left: 0, top: -W / 2, width: L, height: W, background: `linear-gradient(90deg,${accent} 0%,transparent ${RAGGIO.sfumatura}%)`, clipPath: 'polygon(0 48%,100% 0,100% 100%,0 52%)', opacity: RAGGIO.opacita * openEase, animation: 'satze-cursor-pulsa 1.1s ease-in-out infinite', filter: 'blur(.4px)' }} />
-        <div style={{ position: 'absolute', left: 0, top: -0.5, width: L, height: 1, background: `linear-gradient(90deg,${accent},transparent)`, opacity: 0.85 * openEase }} />
-      </div>
-    );
-  }
-
-  let lama;
-  if (presa) {
-    const ce = openEase;
-    const P = LAMA_R.perno;
-    const tr = (rot, off) => `translate(${off[0] * ce} ${off[1] * ce}) rotate(${rot * ce} ${P[0]} ${P[1]})`;
-    lama = (
-      <g transform={`scale(${K})`}>
-        <g transform={tr(LAMA_R.rotCorpo, LAMA_R.corpo)}>
-          <path d={`${SAGOMA.p} ${SAGOMA.f}`} fillRule="evenodd" {...corpo} {...bordo} />
-        </g>
-        <g transform={tr(LAMA_R.rotFaccia, LAMA_R.faccia)}>
-          <path d={SAGOMA.f} {...faccia} {...bordo} />
-        </g>
-      </g>
-    );
-  } else {
-    const dita = [];
-    const showDita = fingers && fMode !== 'hidden';
-    if (showDita) {
-      for (let i = 0; i < DITA_ESTESA.length; i++) {
-        let est = 1;
-        let morph = 0;
-        if (fMode === 'extend') {
-          est = Math.max(0.03, fEst0 + (1 - fEst0) * fingerOut(fT, i));
-          morph = 0;
-        } else if (fMode === 'open') {
-          est = 1;
-          morph = 0;
-        } else if (fMode === 'close') {
-          est = 1;
-          morph = fingerCloseProg(fT, i);
-        } else if (fMode === 'reopen') {
-          est = 1;
-          morph = 1 - fingerCloseProg(fT, i);
-        } else if (fMode === 'retract') {
-          est = Math.max(0.03, fEst0 * (1 - fingerIn(fT, i)));
-          morph = 0;
-        }
-        dita.push(
-          <path key={'f' + i} d={ditoPath(i, morph, est)} fill={accent} stroke={INK} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" paintOrder="stroke" />
-        );
-      }
-    }
-    lama = (
-      <g transform={`scale(${K})`}>
-        {dita}
-        <path d={SAGOMA.p} {...corpo} {...bordo} />
-        <path d={SAGOMA.f} {...faccia} {...bordo} />
-      </g>
-    );
-  }
-
-  strati.push(
-    <div key="punta" style={{ position: 'absolute', zIndex: presa ? 4 : 1, left: 0, top: 0, transformOrigin: '0 0', transform: `translate3d(${st.x}px,${st.y}px,0) scale(${size})`, filter: 'drop-shadow(2px 3px 0 rgba(0,0,0,.5))' }}>
-      <div style={{ transformOrigin: '0 0', transition: 'transform .1s cubic-bezier(.4,0,.2,1)', transform: presa ? 'none' : premuto ? 'translate(1.5px,2px) scale(.96)' : 'none' }}>
-        <svg width={40 * K} height={48 * K} viewBox="0 0 40 48" style={{ display: 'block', overflow: 'visible' }}>{lama}</svg>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="satze-cursor-root" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2147483000 }}>
+    <div
+      ref={rootRef}
+      className="satze-cursor-root"
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2147483000 }}
+    >
       <style>{'@keyframes satze-cursor-pulsa{0%,100%{opacity:.34}50%{opacity:.58}}'}</style>
-      {strati}
+      <svg
+        ref={trailSvgRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
+          display: 'none',
+          filter: 'blur(1px)',
+        }}
+      >
+        <g ref={trailGroupRef} />
+      </svg>
+      <div
+        ref={beamWrapRef}
+        style={{
+          position: 'absolute',
+          zIndex: 3,
+          left: 0,
+          top: 0,
+          transformOrigin: '0 0',
+          display: 'none',
+        }}
+      >
+        <div
+          ref={beamFillRef}
+          style={{
+            position: 'absolute',
+            left: 0,
+            clipPath: 'polygon(0 48%,100% 0,100% 100%,0 52%)',
+            animation: 'satze-cursor-pulsa 1.1s ease-in-out infinite',
+          }}
+        />
+        <div
+          ref={beamCoreRef}
+          style={{ position: 'absolute', left: 0, top: -0.5, height: 1 }}
+        />
+      </div>
+      <div
+        ref={tipRef}
+        style={{
+          position: 'absolute',
+          zIndex: 1,
+          left: 0,
+          top: 0,
+          transformOrigin: '0 0',
+          transform: 'translate3d(-100px,-100px,0)',
+          filter: 'drop-shadow(2px 3px 0 rgba(0,0,0,.5))',
+        }}
+      >
+        <div
+          ref={tipInnerRef}
+          style={{
+            transformOrigin: '0 0',
+            transition: 'transform .1s cubic-bezier(.4,0,.2,1)',
+          }}
+        >
+          <svg
+            width={40 * K}
+            height={48 * K}
+            viewBox="0 0 40 48"
+            style={{ display: 'block', overflow: 'visible' }}
+          >
+            <g ref={bladeGRef} transform={`scale(${K})`}>
+              <g ref={restGRef}>
+                {DITA_ESTESA.map((_, i) => (
+                  <path
+                    key={`f${i}`}
+                    ref={(el) => { fingerRefs.current[i] = el; }}
+                    d={DITA_ESTESA[i]}
+                    fill={BONE}
+                    stroke={INK}
+                    strokeWidth={1.3}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    paintOrder="stroke"
+                    style={{ display: 'none' }}
+                  />
+                ))}
+                <path ref={pathPRef} d={SAGOMA.p} fill={BONE} stroke={INK} strokeWidth={0.9} strokeLinejoin="miter" />
+                <path ref={pathFRef} d={SAGOMA.f} fill={INK} stroke={INK} strokeWidth={0.9} strokeLinejoin="miter" />
+              </g>
+              <g ref={gripGRef} style={{ display: 'none' }}>
+                <g ref={gripBodyRef}>
+                  <path d={`${SAGOMA.p} ${SAGOMA.f}`} fillRule="evenodd" fill={BONE} stroke={INK} strokeWidth={0.9} strokeLinejoin="miter" />
+                </g>
+                <g ref={gripFaceRef}>
+                  <path d={SAGOMA.f} fill={INK} stroke={INK} strokeWidth={0.9} strokeLinejoin="miter" />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }

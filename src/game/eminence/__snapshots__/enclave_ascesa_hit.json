@@ -4,7 +4,7 @@
     "name": "Ascesa / Declassamento",
     "presenceDelta": -1,
     "revealGate": "PRE_AGENT",
-    "text": "Scegli un proprio Agente non ancora schierato: la sua Lega cambia di +1 o −1 per questo round. Se non lo schieri, la modifica scade a fine round."
+    "text": "Scegli pubblicamente un tuo Agente non schierato e aumenta oppure diminuisci la sua Lega di 1 per questo round."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -85,7 +85,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -1,
       "side": "player",
-      "text": "Scegli un proprio Agente non ancora schierato: la sua Lega cambia di +1 o −1 per questo round. Se non lo schieri, la modifica scade a fine round."
+      "text": "Scegli pubblicamente un tuo Agente non schierato e aumenta oppure diminuisci la sua Lega di 1 per questo round."
     }
   ],
   "scenario": {
@@ -172,7 +172,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -1,
           "side": "player",
-          "text": "Scegli un proprio Agente non ancora schierato: la sua Lega cambia di +1 o −1 per questo round. Se non lo schieri, la modifica scade a fine round."
+          "text": "Scegli pubblicamente un tuo Agente non schierato e aumenta oppure diminuisci la sua Lega di 1 per questo round."
         }
       ],
       "presence": {

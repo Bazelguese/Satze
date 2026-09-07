@@ -1,10 +1,10 @@
 {
   "ability": {
     "id": "khemet_devozione",
-    "name": "Convalida",
-    "presenceDelta": 0,
+    "name": "Devozione al cervello",
+    "presenceDelta": 2,
     "revealGate": "PRE_FIELD",
-    "text": "Se il Potere del proprio Agente si attiva realmente e non viene bloccato, +1 Presenza."
+    "text": "Il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       2,
-      3
+      4
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -29,17 +29,17 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 0
+        "presenceDelta": 2
       },
       {
         "id": "khemet_maledizione_va",
         "presenceDelta": -2
       }
     ],
-    "presenceAfterReveal": 2,
+    "presenceAfterReveal": 4,
     "presenceAfterSelect": 2,
     "presenceAvailable": 2,
-    "presenceDelta": 0,
+    "presenceDelta": 2,
     "selected": "khemet_devozione"
   },
   "eminence": {
@@ -49,7 +49,7 @@
   },
   "notices": [
     {
-      "badgeText": "Risoluzione · Dopo il Duello",
+      "badgeText": "Rivelazione · Prima del Campo",
       "cues": [
         {
           "flight": true,
@@ -57,32 +57,32 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "announce"
           },
           "waitFor": null
         }
       ],
-      "id": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
-      "kind": "effect",
-      "name": "Convalida",
-      "outcome": "hit",
+      "id": "reveal:player:khemet_devozione:PRE_FIELD",
+      "kind": "reveal",
+      "name": "Devozione al cervello",
+      "outcome": null,
       "payoffs": [
         {
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "SWAP_POWER_BONUS_TRIGGERS",
           "slot": null,
-          "target": "SELF"
+          "target": null
         }
       ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Campo",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 2,
       "side": "player",
-      "text": "Il Potere si è attivato: +1 Presenza."
+      "text": "Il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus."
     }
   ],
   "scenario": {
@@ -93,17 +93,70 @@
   },
   "steps": [
     {
-      "badge": "Prima del Campo",
-      "cues": [],
+      "badge": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:khemet_devozione:PRE_FIELD",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": "PRE_FIELD",
       "gateLabel": "Prima del Campo",
       "kind": "gate",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Campo",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:khemet_devozione:PRE_FIELD",
+          "kind": "reveal",
+          "name": "Devozione al cervello",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "SWAP_POWER_BONUS_TRIGGERS",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Campo",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 2,
+          "side": "player",
+          "text": "Il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus."
+        }
+      ],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 4
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -115,9 +168,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 4
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -129,9 +182,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 4
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -142,72 +195,19 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 4
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "cues": [],
       "gate": null,
       "kind": "settle",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Dopo il Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:khemet_devozione:AFTER_DUEL_OUTCOME:hit",
-          "kind": "effect",
-          "name": "Convalida",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "Il Potere si è attivato: +1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 4
       },
       "segments": [
         {
@@ -222,25 +222,22 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "khemet_rito_overdrive",
-          "sourceName": "Risonanza del Nono Sigillo",
+          "sourceName": "Cattura-Energia",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
-            "detail": "ownPowerResolved: true (obs true) → vera",
-            "keys": [
-              "ownPowerResolved"
-            ],
-            "status": "true"
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "SWAP_POWER_BONUS_TRIGGERS",
           "source": "ability",
           "sourceId": "khemet_devozione",
-          "sourceName": "Convalida",
-          "target": "SELF",
-          "timing": "AFTER_DUEL_OUTCOME"
+          "sourceName": "Devozione al cervello",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

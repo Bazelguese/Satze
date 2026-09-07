@@ -92,6 +92,15 @@ export function getCardImageUrl(cardType, agentId = null) {
 
 const preloadedImageUrls = new Set();
 
+/** Segna un URL già in cache (usato dal boot preload). */
+export function markImageUrlPreloaded(url) {
+  if (url) preloadedImageUrls.add(url);
+}
+
+export function isImageUrlPreloaded(url) {
+  return !!url && preloadedImageUrls.has(url);
+}
+
 /** Precarica texture agenti (menu / galleria) senza montare React. */
 export function preloadCardImagesForAgents(agents, resolveSprite) {
   if (!agents?.length || typeof resolveSprite !== 'function') return;

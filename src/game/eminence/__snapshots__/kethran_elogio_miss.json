@@ -1,0 +1,311 @@
+{
+  "ability": {
+    "id": "kethran_elogio",
+    "name": "Elogio al trionfo",
+    "presenceDelta": -1,
+    "revealGate": "GENERAL",
+    "text": "Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      1
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      2
+    ],
+    "segmentsWithoutCue": 2,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "kethran_sacrificio",
+        "presenceDelta": 1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
+      },
+      {
+        "id": "kethran_elogio",
+        "presenceDelta": -1
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -1,
+    "selected": "kethran_elogio"
+  },
+  "eminence": {
+    "army": "Kethran",
+    "id": "kethran_altare",
+    "name": "L'Altare della Ricomposizione"
+  },
+  "notices": [
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "id": "effect:player:kethran_elogio:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Elogio al trionfo",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "MARK_CARD",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": null,
+      "side": "player",
+      "text": "Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro."
+    },
+    {
+      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
+      "kind": "effect",
+      "name": "Ricomposizione",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "kethran_elogio_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [],
+          "id": "effect:player:kethran_elogio:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Elogio al trionfo",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "MARK_CARD",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro."
+        },
+        {
+          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
+          "kind": "effect",
+          "name": "Ricomposizione",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"opponent\" (obs \"self\") → falsa",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "markGained: (assente) → non ancora valutabile",
+            "keys": [
+              "markGained"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "SELF",
+          "timing": "ON_MARK_GAIN"
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"self\" (obs \"self\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "ability",
+          "sourceId": "kethran_elogio",
+          "sourceName": "Elogio al trionfo",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

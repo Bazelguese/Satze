@@ -116,6 +116,7 @@ export function createEminencePersistentState() {
     endMatchDebts: [],
     slotCurses: {},
     abilityPresenceDeltas: {},
+    abilityEscalation: {},
     custom: {},
   };
 }
@@ -157,6 +158,9 @@ export function createEminenceState(eminenceId = null) {
 
     setupCommitted: false,
     setupParams: null,
+
+    // Ultima abilità scelta (persistente fra i round) per forbidConsecutiveAbility.
+    lastSelectedAbilityId: null,
 
     persistent: createEminencePersistentState(),
     round: createEminenceRoundState(),
@@ -203,6 +207,8 @@ export function resetEminenceRoundState(state) {
     selectionSnapshotPresence: 0,
     committedPresenceCost: 0,
     selectionCheckpointPresence: state.presence,
+    // La scelta del round precedente (già pubblica al reveal) vieta la ripetizione consecutiva.
+    lastSelectedAbilityId: state.revealedAbilityId || state.lastSelectedAbilityId || null,
     revealedAbilityId: null,
     revealGateReached: null,
     blockedThisRound: state.blockedNextRound,
@@ -245,6 +251,7 @@ export function selectPublicEminenceState(state) {
     blockedThisRound: state.blockedThisRound,
     hasSealedSelection: Boolean(state.selectedAbilityId) && !state.revealedAbilityId,
     hasSealedSetup: Boolean(state.setupCommitted),
+    lastSelectedAbilityId: state.lastSelectedAbilityId ?? null,
     persistent: selectPublicPersistentState(state.persistent),
     leagueByCardId: { ...(state.round?.temporaryLeagueByCardId || {}) },
   };
@@ -267,6 +274,7 @@ export function selectPublicPersistentState(persistent) {
     endMatchDebts: (persistent.endMatchDebts || []).map((debt) => ({ ...debt })),
     slotCurses: cloneSlotCurses(persistent.slotCurses),
     abilityPresenceDeltas: { ...(persistent.abilityPresenceDeltas || {}) },
+    abilityEscalation: { ...(persistent.abilityEscalation || {}) },
   };
 }
 
@@ -334,22 +342,30 @@ export function resolveAbilityPresenceDelta(ability, persistent = null) {
  * @param {string} eminenceId
  * @param {number} presence
  * @param {object|null} [persistent] stato persistente del lato (costi cresciuti)
+ * @param {object} [options]
+ * @param {string|null} [options.lastSelectedAbilityId]
  * @returns {string[]} id delle abilità legali
  */
-export function getLegalAbilityIds(eminenceId, presence, persistent = null) {
+export function getLegalAbilityIds(eminenceId, presence, persistent = null, options = {}) {
   const eminence = getEminence(eminenceId);
   if (!eminence) return [];
 
+  const forbidConsecutive = Boolean(
+    eminence.forbidConsecutiveAbility ?? eminence.static?.forbidConsecutiveAbility,
+  );
+  const lastId = options.lastSelectedAbilityId ?? null;
+
   return eminence.abilities
     .filter((ability) => {
+      if (forbidConsecutive && lastId && ability.id === lastId) return false;
       const delta = resolveAbilityPresenceDelta(ability, persistent);
       return delta >= 0 || presence >= Math.abs(delta);
     })
     .map((ability) => ability.id);
 }
 
-export function isAbilitySelectable(eminenceId, abilityId, presence, persistent = null) {
-  return getLegalAbilityIds(eminenceId, presence, persistent).includes(abilityId);
+export function isAbilitySelectable(eminenceId, abilityId, presence, persistent = null, options = {}) {
+  return getLegalAbilityIds(eminenceId, presence, persistent, options).includes(abilityId);
 }
 
 /**

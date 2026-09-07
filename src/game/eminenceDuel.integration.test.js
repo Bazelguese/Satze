@@ -70,7 +70,12 @@ const baseInput = {
  * Esegue il round Eminenza fino al Duello e restituisce il bundle dovuto prima
  * del controllo dei trigger.
  */
-function bundleForAbility(abilityId, { presence = null, eminenceId = 'patto_grande_semaforo' } = {}) {
+function bundleForAbility(abilityId, {
+  presence = null,
+  eminenceId = 'patto_grande_semaforo',
+  params = null,
+  agentIdBySide = null,
+} = {}) {
   let matchState = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
     playerEminenceId: eminenceId,
@@ -86,7 +91,7 @@ function bundleForAbility(abilityId, { presence = null, eminenceId = 'patto_gran
 
   matchState = beginEminenceRound(matchState, { roundNumber: 1 });
 
-  const selection = selectEminenceAbility(matchState, SIDES.PLAYER, abilityId);
+  const selection = selectEminenceAbility(matchState, SIDES.PLAYER, abilityId, params || {});
   expect(selection.ok).toBe(true);
 
   const opened = completeGate(selection.matchState, REVEAL_GATES.GENERAL, {
@@ -96,7 +101,13 @@ function bundleForAbility(abilityId, { presence = null, eminenceId = 'patto_gran
     initiativeSide: SIDES.ENEMY,
   });
 
-  return applyEminenceSegments([...opened.resolutionQueue, ...queue]);
+  return applyEminenceSegments([...opened.resolutionQueue, ...queue], null, {
+    agentIdBySide: agentIdBySide || undefined,
+    persistentBySide: {
+      [SIDES.PLAYER]: opened.matchState[SIDES.PLAYER]?.persistent,
+      [SIDES.ENEMY]: opened.matchState[SIDES.ENEMY]?.persistent,
+    },
+  });
 }
 
 describe('Eminenze nel Duello reale', () => {
@@ -107,13 +118,13 @@ describe('Eminenze nel Duello reale', () => {
     expect(battleResult.enemyPower).toBe(6);
   });
 
-  it('Semaforo Verde accende Imboscata su chi non ha l\'iniziativa', () => {
+  it('Semaforo Verde non deposita regole e lascia il Duello naturale', () => {
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       eminenceBundle: bundleForAbility('semaforo_verde'),
     });
 
-    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.playerPower).toBe(4);
     expect(battleResult.enemyPower).toBe(6);
   });
 
@@ -129,13 +140,13 @@ describe('Eminenze nel Duello reale', () => {
     expect(battleResult.enemyPower).toBe(4);
   });
 
-  it('Semaforo Giallo non deposita regole e lascia il Duello identico al naturale', () => {
+  it('Semaforo Giallo accende Imboscata su chi non ha l\'iniziativa', () => {
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       eminenceBundle: bundleForAbility('semaforo_giallo'),
     });
 
-    expect(battleResult.playerPower).toBe(4);
+    expect(battleResult.playerPower).toBe(6);
     expect(battleResult.enemyPower).toBe(6);
   });
 
@@ -211,10 +222,9 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
-    const bundle = bundleForAbility('semaforo_verde');
+    const bundle = bundleForAbility('semaforo_giallo');
     // Regole di ambito globale: devono valere per entrambi i lati, non per il solo autore.
     expect(bundle.triggerRules.forceSatisfied).toHaveLength(1);
-    expect(bundle.triggerRules.forceForbidden).toHaveLength(1);
     expect(bundle.triggerRules.forceSatisfied[0].ownerSide).toBe(SIDES.PLAYER);
   });
 });
@@ -510,39 +520,36 @@ describe('Conversioni e override Conquista nel Duello', () => {
   });
 });
 
-describe('Sincronizzazione trigger XOR nel Duello', () => {
-  it('FORCE_BOTH con XOR accende il Potere spento', () => {
+describe('Orathai nel Duello', () => {
+  it('Contrappunto deposita UNBLOCKABLE proprio e MIRROR sull\'avversario', () => {
     const bundle = bundleForAbility('orathai_contrappunto', {
       eminenceId: 'orathai_primo_canto',
-      presence: 3,
+      presence: 2,
     });
+
+    expect(bundle.triggerRules.unblockable.length).toBeGreaterThan(0);
+    expect(bundle.triggerRules.mirrorUnsatisfied.length).toBeGreaterThan(0);
 
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       eminenceBundle: bundle,
     });
 
-    expect(battleResult.playerPower).toBe(6);
-    expect(battleResult.enemyPower).toBe(6);
-    expect(battleResult.playerActivationSatisfied).toBe(true);
-    expect(battleResult.enemyActivationSatisfied).toBe(true);
+    // Mirror: se il giocatore non soddisfa, anche il nemico non soddisfa → entrambi a POT base.
+    expect(battleResult.playerPower).toBe(4);
+    expect(battleResult.enemyPower).toBe(4);
   });
 
-  it('FORBID_BOTH con XOR spegne il Potere acceso', () => {
+  it('Silenzio sostituisce i trigger Potere con Magnanimo', () => {
+    const agentIdBySide = { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 };
     const bundle = bundleForAbility('orathai_silenzio', {
       eminenceId: 'orathai_primo_canto',
       presence: 3,
+      agentIdBySide,
     });
 
-    const { battleResult } = computeDuelResolution({
-      ...baseInput,
-      eminenceBundle: bundle,
-    });
-
-    expect(battleResult.playerPower).toBe(4);
-    expect(battleResult.enemyPower).toBe(4);
-    expect(battleResult.playerActivationSatisfied).toBe(false);
-    expect(battleResult.enemyActivationSatisfied).toBe(false);
+    expect(bundle.triggerRules.replacementsByCardId[201].trigger).toBe('magnanimous');
+    expect(bundle.triggerRules.replacementsByCardId[301].trigger).toBe('magnanimous');
   });
 });
 
@@ -671,63 +678,54 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
     );
   });
 
-  it('FORCE conquest sul proprio lato accende Conquista anche in sconfitta, senza Ultimo Desiderio', () => {
-    const bundle = bundleForAbility('ratti_conquista_forzata', {
+  it('Spezzacuore rimuove Tossina avversaria e converte il Bonus in danni diretti ×2', () => {
+    const bundle = bundleForAbility('ratti_spezzacuore', {
       eminenceId: 'ratti_bella_malelabbra',
       presence: 3,
+      params: { removedToxinValue: 2 },
     });
-    const loss = {
+    expect(bundle.toxinRemovals?.[0]?.removedValue).toBe(2);
+    expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override).toEqual(
+      expect.objectContaining({ effect: 'directDamage', value: 4 }),
+    );
+
+    const { battleResult } = computeDuelResolution({
       ...baseInput,
-      isPlayerFirst: true,
+      enemyToxin: { value: 2, minHealth: 10 },
       selectedAgent: {
         ...baseInput.selectedAgent,
         army: 'Ratti della Megera',
-        ability: { trigger: 'conquest', effect: 'power', value: 2 },
-      },
-      enemyAgent: {
-        ...baseInput.enemyAgent,
-        ability: { trigger: 'lastWish', effect: 'focusCoin', value: 2 },
+        ability: { trigger: 'conquest', effect: 'power', value: 1 },
       },
       playerArmyBonuses: { 'Ratti della Megera': true },
-    };
-
-    const natural = computeDuelResolution(loss).battleResult;
-    expect(natural.winner).toBe('enemy');
-    expect(natural.playerAbilityTriggered).toBe(false);
-    expect(natural.enemyToxinActivated).toBeNull();
-
-    const { battleResult } = computeDuelResolution({
-      ...loss,
       eminenceBundle: bundle,
     });
-    expect(battleResult.winner).toBe('enemy');
-    expect(battleResult.skipConquest).toBeFalsy();
-    expect(battleResult.playerAbilityTriggered).toBe(true);
-    expect(battleResult.playerPower).toBe(6);
-    expect(battleResult.enemyToxinActivated).toEqual(
-      expect.objectContaining({ value: 1, minHealth: 10 }),
-    );
-    expect(battleResult.enemyAbilityTriggered).toBe(false);
+    expect(battleResult.enemyToxinActivated).toBeNull();
+    expect(battleResult.playerHasBonus).toBe(true);
   });
 
-  it('FORCE conquest non accende Ultimo Desiderio su una vittoria', () => {
-    const bundle = bundleForAbility('ratti_conquista_forzata', {
+  it('Spezzacuore senza Tossina da rimuovere non inventa danni da Bonus', () => {
+    const bundle = bundleForAbility('ratti_spezzacuore', {
       eminenceId: 'ratti_bella_malelabbra',
       presence: 3,
+      params: { removedToxinValue: 0 },
     });
+    expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override?.value ?? 0).toBe(0);
+
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       selectedAgent: {
         ...baseInput.selectedAgent,
-        ability: { trigger: 'lastWish', effect: 'focusCoin', value: 2 },
+        army: 'Ratti della Megera',
+        ability: { trigger: 'glory', effect: 'power', value: 0 },
       },
       enemyAgent: {
         ...baseInput.enemyAgent,
         ability: { trigger: 'glory', effect: 'power', value: 0 },
       },
+      playerArmyBonuses: { 'Ratti della Megera': true },
       eminenceBundle: bundle,
     });
     expect(battleResult.winner).toBe('player');
-    expect(battleResult.playerAbilityTriggered).toBe(false);
   });
 });

@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "ratti_conquista_forzata",
-    "name": "Conquista Forzata",
-    "presenceDelta": -3,
-    "revealGate": "GENERAL",
-    "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+    "id": "corte_debito",
+    "name": "Debito",
+    "presenceDelta": 1,
+    "revealGate": "PRE_AGENT",
+    "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       3,
-      0
+      5
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,32 +28,32 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "ratti_sussurro",
+        "id": "corte_accordo",
         "presenceDelta": 0
       },
       {
-        "id": "ratti_veleno",
+        "id": "corte_salasso",
         "presenceDelta": -2
       },
       {
-        "id": "ratti_conquista_forzata",
-        "presenceDelta": -3
+        "id": "corte_debito",
+        "presenceDelta": 1
       }
     ],
-    "presenceAfterReveal": 0,
+    "presenceAfterReveal": 4,
     "presenceAfterSelect": 3,
     "presenceAvailable": 3,
-    "presenceDelta": -3,
-    "selected": "ratti_conquista_forzata"
+    "presenceDelta": 1,
+    "selected": "corte_debito"
   },
   "eminence": {
-    "army": "Ratti della Megera",
-    "id": "ratti_bella_malelabbra",
-    "name": "Bella dalle Malelabbra, l'Erede della Megera"
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima del Duello",
+      "badgeText": "Rivelazione · Prima dell'Agente",
       "cues": [
         {
           "flight": true,
@@ -73,40 +73,46 @@
           }
         }
       ],
-      "id": "reveal:player:ratti_conquista_forzata:GENERAL",
+      "id": "reveal:player:corte_debito:PRE_AGENT",
       "kind": "reveal",
-      "name": "Conquista Forzata",
+      "name": "Debito",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "REPLACE_TRIGGER",
           "slot": null,
           "target": null
         }
       ],
       "phase": "REVEAL",
-      "phaseDetail": "Prima del Duello",
+      "phaseDetail": "Prima dell'Agente",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -3,
+      "presenceDelta": 1,
       "side": "player",
-      "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+      "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
     },
     {
-      "badgeText": "Mancato · Condizione non soddisfatta",
+      "badgeText": "Risoluzione · Condizione soddisfatta",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
-      "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
       "kind": "effect",
-      "name": "Male Crescente",
-      "outcome": "miss",
+      "name": "Pagare i Debiti",
+      "outcome": "hit",
       "payoffs": [
         {
           "primitive": "CHANGE_PRESENCE",
@@ -114,18 +120,18 @@
           "target": "SELF"
         }
       ],
-      "phase": "MISS",
-      "phaseDetail": "Condizione non soddisfatta",
-      "phaseLabel": "Mancato",
-      "presenceDelta": null,
+      "phase": "RESOLVE",
+      "phaseDetail": "Condizione soddisfatta",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
       "side": "player",
-      "text": "Lega non la più bassa."
+      "text": "+1 Presenza."
     }
   ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
-    "name": "ratti_conquista_forzata_hit",
+    "name": "corte_debito_hit",
     "roundNumber": 3
   },
   "steps": [
@@ -144,21 +150,7 @@
       "timing": null
     },
     {
-      "badge": "Prima dell'Agente",
-      "cues": [],
-      "gate": "PRE_AGENT",
-      "gateLabel": "Prima dell'Agente",
-      "kind": "gate",
-      "notices": [],
-      "presence": {
-        "enemy": 0,
-        "player": 3
-      },
-      "presenceAfterReveal": 3,
-      "timing": null
-    },
-    {
-      "badge": "Rivelazione · Prima del Duello",
+      "badge": "Rivelazione · Prima dell'Agente",
       "cues": [
         {
           "flight": true,
@@ -167,7 +159,7 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:ratti_conquista_forzata:GENERAL",
+          "noticeId": "reveal:player:corte_debito:PRE_AGENT",
           "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
@@ -179,12 +171,12 @@
           }
         }
       ],
-      "gate": "GENERAL",
-      "gateLabel": "Prima del Duello",
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
       "kind": "gate",
       "notices": [
         {
-          "badgeText": "Rivelazione · Prima del Duello",
+          "badgeText": "Rivelazione · Prima dell'Agente",
           "cues": [
             {
               "flight": true,
@@ -204,42 +196,62 @@
               }
             }
           ],
-          "id": "reveal:player:ratti_conquista_forzata:GENERAL",
+          "id": "reveal:player:corte_debito:PRE_AGENT",
           "kind": "reveal",
-          "name": "Conquista Forzata",
+          "name": "Debito",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "FORCE_TRIGGER",
+              "primitive": "REPLACE_TRIGGER",
               "slot": null,
               "target": null
             }
           ],
           "phase": "REVEAL",
-          "phaseDetail": "Prima del Duello",
+          "phaseDetail": "Prima dell'Agente",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -3,
+          "presenceDelta": 1,
           "side": "player",
-          "text": "In questo Duello, Conquista è considerata soddisfatta per il proprio Agente indipendentemente dall'esito."
+          "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 4
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
-      "badge": "Mancato · Condizione non soddisfatta",
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 4
+      },
+      "presenceAfterReveal": 4,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Condizione soddisfatta",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "noticeId": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
+          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
@@ -247,21 +259,27 @@
       "kind": "checkpoint",
       "notices": [
         {
-          "badgeText": "Mancato · Condizione non soddisfatta",
+          "badgeText": "Risoluzione · Condizione soddisfatta",
           "cues": [
             {
-              "flight": false,
-              "from": null,
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
               "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
               "waitFor": null
             }
           ],
-          "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
           "kind": "effect",
-          "name": "Male Crescente",
-          "outcome": "miss",
+          "name": "Pagare i Debiti",
+          "outcome": "hit",
           "payoffs": [
             {
               "primitive": "CHANGE_PRESENCE",
@@ -269,17 +287,17 @@
               "target": "SELF"
             }
           ],
-          "phase": "MISS",
-          "phaseDetail": "Condizione non soddisfatta",
-          "phaseLabel": "Mancato",
-          "presenceDelta": null,
+          "phase": "RESOLVE",
+          "phaseDetail": "Condizione soddisfatta",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
           "side": "player",
-          "text": "Lega non la più bassa."
+          "text": "+1 Presenza."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 5
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -291,24 +309,24 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 5
       },
       "segments": [
         {
           "condition": {
-            "detail": "ownDeployedIsLowestLeague: (assente) → non ancora valutabile",
+            "detail": "hpLossCause: (assente) → non ancora valutabile",
             "keys": [
-              "ownDeployedIsLowestLeague"
+              "hpLossCause"
             ],
             "status": "deferred"
           },
           "expectedNoCue": false,
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
-          "sourceId": "ratti_male_crescente",
-          "sourceName": "Male Crescente",
+          "sourceId": "corte_pagare_debiti",
+          "sourceName": "Pagare i Debiti",
           "target": "SELF",
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "timing": "ON_HP_LOSS"
         },
         {
           "condition": {
@@ -316,12 +334,12 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "REPLACE_TRIGGER",
           "source": "ability",
-          "sourceId": "ratti_conquista_forzata",
-          "sourceName": "Conquista Forzata",
+          "sourceId": "corte_debito",
+          "sourceName": "Debito",
           "target": null,
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

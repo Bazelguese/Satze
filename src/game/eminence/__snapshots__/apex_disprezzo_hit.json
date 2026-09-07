@@ -4,7 +4,7 @@
     "name": "Disprezzo",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+    "text": "Il tuo Agente schierato ignora gli effetti del Campo in questo Duello."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -85,7 +85,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+      "text": "Il tuo Agente schierato ignora gli effetti del Campo in questo Duello."
     }
   ],
   "scenario": {
@@ -186,7 +186,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Il prossimo Agente del proprietario ignora gli effetti del Campo in questo Duello."
+          "text": "Il tuo Agente schierato ignora gli effetti del Campo in questo Duello."
         }
       ],
       "presence": {
@@ -231,7 +231,7 @@
           "primitive": "REPLACE_FIELD",
           "source": "static",
           "sourceId": "ora_verde",
-          "sourceName": "Cataclisma: Ora Verde",
+          "sourceName": "Cataclisma Verde",
           "target": "GLOBAL",
           "timing": "ROUND_START"
         },

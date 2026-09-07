@@ -4,7 +4,7 @@
   "player": {
     "eminenceId": "corte_rossa",
     "presence": 3,
-    "abilityId": "corte_clausola",
+    "abilityId": "corte_debito",
     "params": {
       "cardId": 231
     },
@@ -36,26 +36,26 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_clausola_miss",
-  "branch": "miss"
+  "name": "corte_debito_hit",
+  "branch": "hit"
 }

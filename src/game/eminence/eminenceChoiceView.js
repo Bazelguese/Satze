@@ -223,7 +223,12 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
   const eminence = getEminence(eminenceId);
   if (!eminence) return [];
 
-  const legal = new Set(getLegalAbilityIds(eminenceId, publicSide.selectionCheckpointPresence, publicSide.persistent));
+  const legal = new Set(getLegalAbilityIds(
+    eminenceId,
+    publicSide.selectionCheckpointPresence,
+    publicSide.persistent,
+    { lastSelectedAbilityId: publicSide.lastSelectedAbilityId ?? publicSide.private?.lastSelectedAbilityId },
+  ));
   const completed = gateProgress?.completedGates || [];
 
   return eminence.abilities.map((ability) => {

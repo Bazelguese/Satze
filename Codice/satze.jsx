@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, startTransition } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../src/utils';
@@ -30,7 +30,7 @@ import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.
 import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice } from '../src/game/eminence/eminenceDuelGate.js';
 import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
-import { readHpDelta } from '../src/game/eminence/eminenceDuelBinding.js';
+import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
 import { noticesFromRoundStart, noticesFromSetupPending } from '../src/game/eminence/eminenceAnnouncements.js';
 import {
@@ -122,6 +122,7 @@ import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCaro
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
+import { DuelLoadingOverlay } from '../src/components/DuelLoadingOverlay';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
 import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDeckBuilderWrapper';
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
@@ -251,6 +252,8 @@ export default function SatzeGame() {
     setCampaignDuelMod,
     shuffleDealSetup,
     setShuffleDealSetup,
+    pendingDuelPhase,
+    setPendingDuelPhase,
     playerDeckVisual,
     enemyDeckVisual,
     eminenceMatchState,
@@ -297,8 +300,10 @@ export default function SatzeGame() {
    * mano, dopo la consegna. Sigillarla prima del deal saltava la fase.
    */
   useLayoutEffect(() => {
-    if (gamePhase === 'shuffleDeal') return;
+    if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
     if (animations.showFinalRoundAnimation) return;
+    // Apertura round Eminenza solo a carte già in mano (dopo lo shuffle / deal).
+    if (!playerHand?.length || !enemyHand?.length) return;
     if (!needsEminenceRoundOpen(eminenceMatchState, roundNumber)) return;
 
     openedEminenceGatesRef.current = new Set();
@@ -330,6 +335,8 @@ export default function SatzeGame() {
     roundNumber,
     isPlayerFirst,
     aiDifficulty,
+    playerHand,
+    enemyHand,
     battlefields,
     conqueredFields,
     setEminenceMatchState,
@@ -430,12 +437,17 @@ export default function SatzeGame() {
     waitForNotice: eminenceAnnounceHold && eminenceNotices.some((notice) => notice.kind !== 'setup'),
     resetKey: eminenceMatchState?.roundOpenedAt ?? `off-${roundNumber}`,
   });
+  const handsDealt = Boolean(playerHand?.length && enemyHand?.length);
   const eminenceRoundPending =
     gamePhase !== 'shuffleDeal'
+    && gamePhase !== 'duelLoading'
+    && handsDealt
     && isEminenceSubsystemEnabled(eminenceMatchState)
     && needsEminenceRoundOpen(eminenceMatchState, roundNumber);
   const eminenceSetupPending =
     gamePhase !== 'shuffleDeal'
+    && gamePhase !== 'duelLoading'
+    && handsDealt
     && Boolean(eminenceChoiceView.setupPending);
   const eminenceBlocksMatch = shouldHoldDuelForEminence({
     awaitingChoice: awaitingEminenceChoice,
@@ -653,7 +665,7 @@ export default function SatzeGame() {
   }, [focusedMark]);
 
   useLayoutEffect(() => {
-    if (gamePhase === 'shuffleDeal') return;
+    if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
     if (aiDifficulty === 'multiplayer') return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
     setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', playerUndeployedCardIds));
@@ -666,7 +678,7 @@ export default function SatzeGame() {
   ]);
 
   useLayoutEffect(() => {
-    if (gamePhase === 'shuffleDeal') {
+    if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') {
       setupAnnounceShownRef.current = false;
       playerZoneKeptRef.current = false;
       enemyZoneKeptRef.current = false;
@@ -675,8 +687,13 @@ export default function SatzeGame() {
       openedEminenceGatesRef.current = new Set();
       revealHpCommittedRef.current = { player: 0, enemy: 0 };
       agentsLockedThisRoundRef.current = false;
+      // Evita che un avviso setup (es. La Fame) resti montato su loading/shuffle.
+      setEminenceNotices((prev) => (prev.length ? [] : prev));
       return;
     }
+    // Presentazione inizio Scontro solo dopo che entrambi hanno ricevuto gli Agenti.
+    if (gamePhase !== 'selectField' && gamePhase !== 'selectAgent') return;
+    if (!playerHand?.length || !enemyHand?.length) return;
     if (!eminenceChoiceView.setupPending) return;
     if (setupAnnounceShownRef.current) return;
     const notices = noticesFromSetupPending(eminenceMatchState);
@@ -686,7 +703,13 @@ export default function SatzeGame() {
       if (prev.some((notice) => notice.kind === 'setup')) return prev;
       return [...notices, ...prev];
     });
-  }, [gamePhase, eminenceChoiceView.setupPending, eminenceMatchState]);
+  }, [
+    gamePhase,
+    eminenceChoiceView.setupPending,
+    eminenceMatchState,
+    playerHand,
+    enemyHand,
+  ]);
 
   /** Solo STRUMENTI DEV → DIALOGUE DUELLO: fumetti durante il duello di test. */
   const [devDialogueDuelActive, setDevDialogueDuelActive] = useState(false);
@@ -863,7 +886,7 @@ export default function SatzeGame() {
   }, [eminenceNotices, pendingEminencePhase, setGamePhase]);
 
   useLayoutEffect(() => {
-    if (gamePhase === 'shuffleDeal') return;
+    if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
     if (r5Cinematic) return;
     if (eminenceAnnounceHold) return;
     if (awaitingEminenceChoice) return;
@@ -1628,7 +1651,11 @@ export default function SatzeGame() {
         payload.deckKey,
         payload.mode,
         payload.difficulty,
-        ALL_BATTLEFIELDS
+        ALL_BATTLEFIELDS,
+        payload.enemyArmy ?? null,
+        null,
+        null,
+        payload.startOptions ?? null
       );
       setLaunchVisualPhase('hold');
     }, LAUNCH_TRANSITION.LAUNCH_AT_MS);
@@ -2292,10 +2319,17 @@ export default function SatzeGame() {
   
   // Helper per calcolare se il bonus armata sarà attivo (per preview durante selectAgent)
   const isBonusTriggerSatisfied = useCallback((army, isPlayer, agent = null) => {
-    const bonus = ARMY_BONUSES[army];
+    const side = isPlayer ? 'player' : 'enemy';
+    const sideAgent = agent ?? (isPlayer ? selectedAgent : enemyAgent);
+    const live = resolveLivePowerBonusSwapDisplay({
+      agent: sideAgent || { army },
+      side,
+      matchState: eminenceMatchState,
+      armyBonus: ARMY_BONUSES[army] || null,
+    });
+    const bonus = live.armyBonus || ARMY_BONUSES[army];
     if (!bonus || !bonus.trigger) return true; // Nessun trigger = sempre attivo
 
-    const sideAgent = agent ?? (isPlayer ? selectedAgent : enemyAgent);
     const otherAgent = isPlayer ? enemyAgent : selectedAgent;
     const sideUsed = isPlayer ? playerUsedCards : enemyUsedCards;
     const otherUsed = isPlayer ? enemyUsedCards : playerUsedCards;
@@ -2332,10 +2366,34 @@ export default function SatzeGame() {
     selectedAgent,
     enemyAgent,
     roundNumber,
+    eminenceMatchState,
   ]);
 
+  const playerLiveSwap = useMemo(
+    () => resolveLivePowerBonusSwapDisplay({
+      agent: selectedAgent,
+      side: 'player',
+      matchState: eminenceMatchState,
+      armyBonus: selectedAgent ? ARMY_BONUSES[selectedAgent.army] || null : null,
+    }),
+    [selectedAgent, eminenceMatchState],
+  );
+  const enemyLiveSwap = useMemo(
+    () => resolveLivePowerBonusSwapDisplay({
+      agent: enemyAgent,
+      side: 'enemy',
+      matchState: eminenceMatchState,
+      armyBonus: enemyAgent ? ARMY_BONUSES[enemyAgent.army] || null : null,
+    }),
+    [enemyAgent, eminenceMatchState],
+  );
+  const displaySelectedAgent = playerLiveSwap.agent || selectedAgent;
+  const displayEnemyAgent = enemyLiveSwap.agent || enemyAgent;
+  const playerEffectiveArmyBonus = playerLiveSwap.swapped ? playerLiveSwap.armyBonus : null;
+  const enemyEffectiveArmyBonus = enemyLiveSwap.swapped ? enemyLiveSwap.armyBonus : null;
+
   const playerOverdrivePreview = useMemo(() => {
-    if (gamePhase !== 'selectAgent' || !selectedAgent) return false;
+    if (gamePhase !== 'selectAgent' || !displaySelectedAgent) return false;
     const field = currentFieldIndex != null ? battlefields[currentFieldIndex] : null;
     const fieldModifiers = getFieldModifiers(field);
     const overdriveActive = checkTrigger('overdrive', {
@@ -2344,15 +2402,15 @@ export default function SatzeGame() {
     });
     if (!overdriveActive) return false;
 
-    const abilityHasOverdrive = selectedAgent.ability?.trigger === 'overdrive';
-    const armyBonus = ARMY_BONUSES[selectedAgent.army];
+    const abilityHasOverdrive = displaySelectedAgent.ability?.trigger === 'overdrive';
+    const armyBonus = playerLiveSwap.armyBonus || ARMY_BONUSES[displaySelectedAgent.army];
     const bonusHasOverdrive =
-      Boolean(playerArmyBonuses[selectedAgent.army]) &&
+      Boolean(playerArmyBonuses[displaySelectedAgent.army]) &&
       armyBonus?.trigger === 'overdrive';
     const fieldHasOverdrive = fieldGrantsOverdriveBonus(field);
 
     return abilityHasOverdrive || bonusHasOverdrive || fieldHasOverdrive;
-  }, [gamePhase, selectedAgent, selectedFocus, currentFieldIndex, battlefields, playerArmyBonuses]);
+  }, [gamePhase, displaySelectedAgent, selectedFocus, currentFieldIndex, battlefields, playerArmyBonuses, playerLiveSwap]);
   
   // Auto-scroll del log
   useEffect(() => {
@@ -3949,10 +4007,13 @@ export default function SatzeGame() {
             armyName={selectedArmy}
             deckName={resolveSelectedDeckName()}
             accentColor={colors.accent}
+            initialMode={selectedMode}
+            excludeArmy={isMixedMode ? null : selectedArmy}
             onClose={() => setShowDifficultyPopup(false)}
-            onSelect={(diffId) => {
+            onSelect={(choice) => {
               setShowDifficultyPopup(false);
               clearCardPreview();
+              setSelectedMode(choice.mode);
               const display = buildDeckConfirmDisplay(selectedArmy, selectedDeckKey, colors.accent);
               setLaunchShowText(true);
               setLaunchVisualPhase('animate');
@@ -3960,8 +4021,12 @@ export default function SatzeGame() {
                 sessionId: Date.now(),
                 army: selectedArmy,
                 deckKey: selectedDeckKey,
-                mode: selectedMode,
-                difficulty: diffId,
+                mode: choice.mode,
+                difficulty: choice.difficulty,
+                enemyArmy: choice.enemyArmy ?? null,
+                startOptions: {
+                  eminenceFormat: choice.eminenceFormat,
+                },
                 ...display,
               });
             }}
@@ -4230,7 +4295,8 @@ export default function SatzeGame() {
   if (gamePhase === 'gallery') {
     const galleryTabProps = {
       galleryTab,
-      onGalleryTabChange: (tab) => startTransition(() => setGalleryTab(tab)),
+      // Non startTransition: il montaggio idle della griglia Agenti affamerebbe il tab.
+      onGalleryTabChange: setGalleryTab,
       agentCount: ALL_AGENTS.length,
       fieldCount: ALL_BATTLEFIELDS.length,
       eminenceCount: EMINENCE_IDS.length,
@@ -4259,6 +4325,34 @@ export default function SatzeGame() {
         totalFields={ALL_BATTLEFIELDS.length}
         onBack={() => setGamePhase('menu')}
         {...galleryTabProps}
+      />
+    );
+  }
+
+  // Loading densissimo prima del duello (campi full-res + warm-up animazioni)
+  if (gamePhase === 'duelLoading') {
+    const setup = shuffleDealSetup;
+    const duelPlayerCards = setup?.playerHand?.length ? setup.playerHand : playerHand;
+    const duelEnemyCards = setup?.enemyHand?.length ? setup.enemyHand : enemyHand;
+    const duelPlayerArmy = setup?.playerArmy || selectedArmy || duelPlayerCards?.[0]?.army || null;
+    const duelEnemyArmy = setup?.enemyArmy || duelEnemyCards?.[0]?.army || null;
+    // Non coprire l'ultima animazione di passaggio (iris DeckConfirm → fadeOut/hold)
+    const launchHandoffBusy = Boolean(pendingGameLaunch?.sessionId) || Boolean(launchVisualPhase);
+    return (
+      <DuelLoadingOverlay
+        battlefields={battlefields}
+        playerCards={duelPlayerCards}
+        enemyCards={duelEnemyCards}
+        playerCardBack={setup?.playerCardBack || duelCardBacks?.player || null}
+        enemyCardBack={setup?.enemyCardBack || duelCardBacks?.enemy || null}
+        playerArmy={duelPlayerArmy}
+        enemyArmy={duelEnemyArmy}
+        showChrome={!launchHandoffBusy}
+        onComplete={() => {
+          const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');
+          setPendingDuelPhase(null);
+          setGamePhase(next);
+        }}
       />
     );
   }
@@ -5249,7 +5343,16 @@ export default function SatzeGame() {
                     selectedDeckKey,
                     gameMode || selectedMode || 'classic',
                     aiDifficulty || 'medium',
-                    ALL_BATTLEFIELDS
+                    ALL_BATTLEFIELDS,
+                    enemyHand?.[0]?.army
+                      || enemyUsedCards?.[0]?.army
+                      || shuffleDealSetup?.enemyArmy
+                      || null,
+                    null,
+                    null,
+                    {
+                      eminenceFormat: eminenceMatchState?.format ?? undefined,
+                    }
                   );
                 }
               : undefined
@@ -5346,9 +5449,10 @@ export default function SatzeGame() {
                     <div className="place-flip-face">
                       <GameCard
                         cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                        agent={enemyAgent}
+                        agent={displayEnemyAgent}
                         showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
                         bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                        effectiveArmyBonus={enemyEffectiveArmyBonus}
                         abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
                         onHover={handleEnemyPreviewClick}
                         onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
@@ -5367,9 +5471,10 @@ export default function SatzeGame() {
                 ) : (
                   <GameCard
                     cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                    agent={enemyAgent}
+                    agent={displayEnemyAgent}
                     showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
                     bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                    effectiveArmyBonus={enemyEffectiveArmyBonus}
                     abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
                     onHover={handleEnemyPreviewClick}
                     onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
@@ -5451,9 +5556,10 @@ export default function SatzeGame() {
                     <div className="place-flip-face">
                       <GameCard
                         cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                        agent={selectedAgent}
+                        agent={displaySelectedAgent}
                         showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
                         bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                        effectiveArmyBonus={playerEffectiveArmyBonus}
                         abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                         overdrivePreview={playerOverdrivePreview}
                         onHover={handlePlayerPreviewClick}
@@ -5477,9 +5583,10 @@ export default function SatzeGame() {
                 ) : (
                   <GameCard
                     cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                    agent={selectedAgent}
+                    agent={displaySelectedAgent}
                     showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
                     bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                    effectiveArmyBonus={playerEffectiveArmyBonus}
                     abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
                     overdrivePreview={playerOverdrivePreview}
                     onHover={handlePlayerPreviewClick}

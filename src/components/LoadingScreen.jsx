@@ -11,8 +11,9 @@ import {
   buildSatzeCosmicBackgroundCSS,
 } from '../theme/hudOratorioPalette';
 
-export function LoadingScreen({ progress = 0 }) {
+export function LoadingScreen({ progress = 0, detail = null }) {
   const p = Math.min(100, Math.max(0, progress));
+  const label = p >= 100 ? 'Pronto' : (detail || 'Caricamento risorse');
 
   const loadingStyles = `
   @keyframes loading-dot {
@@ -131,7 +132,7 @@ export function LoadingScreen({ progress = 0 }) {
             textTransform: 'uppercase',
           }}
         >
-          {p >= 100 ? 'Pronto' : 'Caricamento'}
+          {label}
         </div>
 
         <div

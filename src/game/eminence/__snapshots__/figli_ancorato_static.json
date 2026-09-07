@@ -2,9 +2,9 @@
   "ability": {
     "id": "figli_leggerezza",
     "name": "Leggerezza",
-    "presenceDelta": 0,
+    "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Se il proprio Agente non è Ancorato, +1 Presenza."
+    "text": "Se il tuo Agente schierato è Ancorato, il suo trigger è considerato soddisfatto."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       2,
-      3
+      0
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -33,13 +33,13 @@
       },
       {
         "id": "figli_leggerezza",
-        "presenceDelta": 0
+        "presenceDelta": -2
       }
     ],
-    "presenceAfterReveal": 2,
+    "presenceAfterReveal": 0,
     "presenceAfterSelect": 2,
     "presenceAvailable": 2,
-    "presenceDelta": 0,
+    "presenceDelta": -2,
     "selected": "figli_leggerezza"
   },
   "eminence": {
@@ -49,40 +49,34 @@
   },
   "notices": [
     {
-      "badgeText": "Risoluzione · Prima dei trigger",
+      "badgeText": "Mancato · Condizione non soddisfatta",
       "cues": [
         {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
+          "flight": false,
+          "from": null,
           "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
+          "recipe": "MISS_DIM",
+          "to": null,
           "waitFor": null
         }
       ],
-      "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:hit",
+      "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
       "kind": "effect",
       "name": "Leggerezza",
-      "outcome": "hit",
+      "outcome": "miss",
       "payoffs": [
         {
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "FORCE_TRIGGER",
           "slot": null,
-          "target": "SELF"
+          "target": null
         }
       ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Prima dei trigger",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
+      "phase": "MISS",
+      "phaseDetail": "Condizione non soddisfatta",
+      "phaseLabel": "Mancato",
+      "presenceDelta": null,
       "side": "player",
-      "text": "L'Agente non è Ancorato: +1 Presenza."
+      "text": "L'Agente non è Ancorato."
     }
   ],
   "scenario": {
@@ -121,21 +115,15 @@
       "timing": null
     },
     {
-      "badge": "Risoluzione · Prima dei trigger",
+      "badge": "Mancato · Condizione non soddisfatta",
       "cues": [
         {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
+          "flight": false,
+          "from": null,
           "holdAnnounce": false,
-          "noticeId": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
+          "noticeId": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+          "recipe": "MISS_DIM",
+          "to": null,
           "waitFor": null
         }
       ],
@@ -144,47 +132,41 @@
       "kind": "gate",
       "notices": [
         {
-          "badgeText": "Risoluzione · Prima dei trigger",
+          "badgeText": "Mancato · Condizione non soddisfatta",
           "cues": [
             {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
+              "flight": false,
+              "from": null,
               "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
+              "recipe": "MISS_DIM",
+              "to": null,
               "waitFor": null
             }
           ],
-          "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:hit",
+          "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
           "kind": "effect",
           "name": "Leggerezza",
-          "outcome": "hit",
+          "outcome": "miss",
           "payoffs": [
             {
-              "primitive": "CHANGE_PRESENCE",
+              "primitive": "FORCE_TRIGGER",
               "slot": null,
-              "target": "SELF"
+              "target": null
             }
           ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Prima dei trigger",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
+          "phase": "MISS",
+          "phaseDetail": "Condizione non soddisfatta",
+          "phaseLabel": "Mancato",
+          "presenceDelta": null,
           "side": "player",
-          "text": "L'Agente non è Ancorato: +1 Presenza."
+          "text": "L'Agente non è Ancorato."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 0
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -195,7 +177,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 0
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -207,23 +189,39 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 0
       },
       "segments": [
         {
           "condition": {
-            "detail": "ownAnchored: false (obs false) → vera",
+            "detail": "ownAnchored: true (obs false) → falsa",
             "keys": [
               "ownAnchored"
             ],
-            "status": "true"
+            "status": "false"
           },
           "expectedNoCue": false,
           "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "figli_ancorato",
+          "sourceName": "Ancorato",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "ownAnchored: true (obs false) → falsa",
+            "keys": [
+              "ownAnchored"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORCE_TRIGGER",
           "source": "ability",
           "sourceId": "figli_leggerezza",
           "sourceName": "Leggerezza",
-          "target": "SELF",
+          "target": null,
           "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],

@@ -4,7 +4,7 @@
     "name": "Protocollo Terra Bruciata",
     "presenceDelta": -4,
     "revealGate": "GENERAL",
-    "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+    "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -85,7 +85,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -4,
       "side": "player",
-      "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+      "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
     }
   ],
   "scenario": {
@@ -178,7 +178,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -4,
           "side": "player",
-          "text": "Se perdi, dopo il vincitore e prima di Conquista distruggi il Campo: nessuno lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria si risolve normalmente."
+          "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
         }
       ],
       "presence": {
@@ -215,7 +215,6 @@
           "condition": {
             "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
             "keys": [
-              "duelWinnerRelative",
               "enemyFinalDamage"
             ],
             "status": "deferred"

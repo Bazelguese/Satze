@@ -19,6 +19,11 @@ import {
   snapshotHasStatReduction,
   resolveConquestOverride,
   snapshotXorActivation,
+  snapshotMirrorActivation,
+  applyPowerBonusTriggerSwap,
+  readImmuneSides,
+  applyToxinRemovals,
+  readPoolFocus,
   readActivationSatisfied,
 } from './eminence/eminenceDuelBinding.js';
 import { emitEminenceDeployEvents, emitFieldVeilEvents } from './eminence/eminenceBattleEvents.js';
@@ -146,12 +151,12 @@ export function computeDuelResolution({
       undefined,
       eminenceBundle?.leagueByCardId,
     );
-    const pAgent = applyGrantedPower(
+    let pAgent = applyGrantedPower(
       applyLeagueOverlay(pAgentAbility, eminenceBundle, 'player'),
       eminenceBundle,
       'player',
     );
-    const eAgent = applyGrantedPower(
+    let eAgent = applyGrantedPower(
       applyLeagueOverlay(eAgentAbility, eminenceBundle, 'enemy'),
       eminenceBundle,
       'enemy',
@@ -231,10 +236,27 @@ export function computeDuelResolution({
       armyBonus: isSideVeiled(veiledSides, 'enemy') ? eArmyBonusRaw : resolvedBonuses.eArmyBonus,
       sideState: eminenceBundle?.armyBonusState?.enemy,
     });
-    const pHasBonus = pBonusOverlay.hasBonus;
-    const eHasBonus = eBonusOverlay.hasBonus;
-    const pArmyBonus = pBonusOverlay.armyBonus;
-    const eArmyBonus = eBonusOverlay.armyBonus;
+    let pHasBonus = pBonusOverlay.hasBonus;
+    let eHasBonus = eBonusOverlay.hasBonus;
+    let pArmyBonus = pBonusOverlay.armyBonus;
+    let eArmyBonus = eBonusOverlay.armyBonus;
+
+    const pSwap = applyPowerBonusTriggerSwap({
+      agent: pAgent,
+      armyBonus: pArmyBonus,
+      side: 'player',
+      triggerRules: eminenceBundle?.triggerRules,
+    });
+    const eSwap = applyPowerBonusTriggerSwap({
+      agent: eAgent,
+      armyBonus: eArmyBonus,
+      side: 'enemy',
+      triggerRules: eminenceBundle?.triggerRules,
+    });
+    pAgent = pSwap.agent;
+    eAgent = eSwap.agent;
+    pArmyBonus = pSwap.armyBonus;
+    eArmyBonus = eSwap.armyBonus;
 
     const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
 
@@ -251,8 +273,8 @@ export function computeDuelResolution({
       eAssaultMod: deployStats.enemyAssaultMod,
       pHPCurrent: playerHPAtDeploy,
       eHPCurrent: enemyHPAtDeploy,
-      pFCCurrent: playerFocus,
-      eFCCurrent: enemyFocus,
+      pFCCurrent: playerFocus + readPoolFocus(eminenceBundle, 'player'),
+      eFCCurrent: enemyFocus + readPoolFocus(eminenceBundle, 'enemy'),
       pAbilityBlocked: false,
       eAbilityBlocked: false,
       pBonusBlocked: false,
@@ -262,6 +284,9 @@ export function computeDuelResolution({
     };
     duel.pImmune = checkImmunity(pAgent, pHasBonus, pArmyBonus, playerContext);
     duel.eImmune = checkImmunity(eAgent, eHasBonus, eArmyBonus, enemyContext);
+    const immuneSides = readImmuneSides(eminenceBundle);
+    if (immuneSides.includes('player')) duel.pImmune = true;
+    if (immuneSides.includes('enemy')) duel.eImmune = true;
 
     const eventEmitter = createBattleEventEmitter(roundNumber);
     const battleLog = createBattleLogChannel(eventEmitter, { dualStrings: false });
@@ -308,6 +333,13 @@ export function computeDuelResolution({
         enemyContext,
         checkTrigger: baseCheckTrigger,
       });
+      snapshotMirrorActivation(eminenceBundle.triggerRules, {
+        playerAgent: pAgent,
+        enemyAgent: eAgent,
+        playerContext,
+        enemyContext,
+        checkTrigger: baseCheckTrigger,
+      });
     }
     emitFieldVeilEvents(battleLog, veiledSides, { field, pAgent, eAgent });
     const {
@@ -337,11 +369,29 @@ export function computeDuelResolution({
       fieldFlags.fieldStatDeltas ?? createEmptyFieldStatDeltas(),
       slotCurseStatDeltas
     );
-    const toxins = applyToxinApplications(eminenceBundle, {
+    const toxinsApplied = applyToxinApplications(eminenceBundle, {
       playerToxin,
       enemyToxin,
       toxinDisabled: fieldFlags.toxinDisabled === true,
     });
+    const toxins = applyToxinRemovals(eminenceBundle, {
+      playerToxin: toxinsApplied.playerToxin,
+      enemyToxin: toxinsApplied.enemyToxin,
+    });
+    // Se REMOVE_TOXIN non aveva removedValue nei params, completa l'override Spezzacuore
+    // con il valore effettivamente rimosso.
+    if (eminenceBundle?.toxinRemovals?.length) {
+      for (const removal of eminenceBundle.toxinRemovals) {
+        const removed = toxins.removedBySide?.[removal.side] || removal.removedValue || 0;
+        const ownerSide = removal.side === 'player' ? 'enemy' : 'player';
+        const state = eminenceBundle.armyBonusState?.[ownerSide];
+        if (state?.override && state.override.value === 0 && removed > 0) {
+          // factor tipico 2: ricalcola se il valore era 0 perché toxin non era in params
+          const factor = 2;
+          state.override = { ...state.override, value: removed * factor };
+        }
+      }
+    }
     if (eminenceBundle?.toxinApplications?.length && !fieldFlags.toxinDisabled) {
       state.playerToxinActivated = toxins.playerToxin;
       state.enemyToxinActivated = toxins.enemyToxin;
@@ -355,6 +405,10 @@ export function computeDuelResolution({
           `${toxins.playerToxin.source || 'Tossina'}: Tossina ${toxins.playerToxin.value} attiva su TE (min ${toxins.playerToxin.minHealth} PV)`
         );
       }
+    }
+    if (eminenceBundle?.toxinRemovals?.length) {
+      state.playerToxinActivated = toxins.playerToxin;
+      state.enemyToxinActivated = toxins.enemyToxin;
     }
     if (snapshotHasStatReduction(deployStats, duel)) {
       state.statReductionOccurred = true;

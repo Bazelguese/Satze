@@ -2,12 +2,12 @@
   "ability": {
     "id": "figli_risposta",
     "name": "Risposta",
-    "presenceDelta": -4,
+    "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, se il proprio Agente è Ancorato, il suo trigger è considerato soddisfatto."
+    "text": "All'inizio dello Scontro, se il tuo Agente schierato è Ancorato, è anche Immune."
   },
   "bilance": {
-    "cinematicCues": 1,
+    "cinematicCues": 0,
     "fragmentsPlayer": [
       0,
       0
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       4,
-      0
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -33,17 +33,17 @@
       },
       {
         "id": "figli_leggerezza",
-        "presenceDelta": 0
+        "presenceDelta": -2
       },
       {
         "id": "figli_risposta",
-        "presenceDelta": -4
+        "presenceDelta": -3
       }
     ],
-    "presenceAfterReveal": 0,
+    "presenceAfterReveal": 1,
     "presenceAfterSelect": 4,
     "presenceAvailable": 4,
-    "presenceDelta": -4,
+    "presenceDelta": -3,
     "selected": "figli_risposta"
   },
   "eminence": {
@@ -54,34 +54,16 @@
   "notices": [
     {
       "badgeText": "Risoluzione · Prima dei trigger",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
-        }
-      ],
+      "cues": [],
       "id": "effect:player:figli_risposta:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
       "name": "Risposta",
       "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "GRANT_IMMUNE",
           "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         }
       ],
       "phase": "RESOLVE",
@@ -129,60 +111,23 @@
     },
     {
       "badge": "Risoluzione · Prima dei trigger",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:figli_risposta:BEFORE_TRIGGER_CHECK:hit",
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
-        }
-      ],
+      "cues": [],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
       "notices": [
         {
           "badgeText": "Risoluzione · Prima dei trigger",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
-              "to": {
-                "side": "player",
-                "type": "field-agent"
-              },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
-            }
-          ],
+          "cues": [],
           "id": "effect:player:figli_risposta:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
           "name": "Risposta",
           "outcome": "hit",
           "payoffs": [
             {
-              "primitive": "FORCE_TRIGGER",
+              "primitive": "GRANT_IMMUNE",
               "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             }
           ],
           "phase": "RESOLVE",
@@ -195,9 +140,9 @@
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -208,7 +153,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -220,7 +165,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "segments": [
         {
@@ -232,11 +177,27 @@
             "status": "false"
           },
           "expectedNoCue": false,
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "figli_ancorato",
+          "sourceName": "Ancorato",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "ownAnchored: true (obs false) → falsa",
+            "keys": [
+              "ownAnchored"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_IMMUNE",
           "source": "ability",
           "sourceId": "figli_risposta",
           "sourceName": "Risposta",
-          "target": null,
+          "target": "OWN_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],

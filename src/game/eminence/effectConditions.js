@@ -37,6 +37,9 @@ export const CONDITION_KEYS = Object.freeze([
   'ownFocusInvested',
   'ownDeployedIsLowestLeague',
   'statReductionOccurred',
+  'activationUnsatisfiedCount',
+  'totalFocusPlayed',
+  'markGained',
 ]);
 
 /**

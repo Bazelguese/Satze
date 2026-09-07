@@ -4,7 +4,7 @@
     "name": "Deriva",
     "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Il requisito di Ancorato aumenta di 1, per il resto dello Scontro, già da questo round."
+    "text": "Aumenta di 1 il requisito di Ancorato, cumulativamente per il resto dello Scontro, già da questo round."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -30,10 +30,6 @@
       {
         "id": "figli_deriva",
         "presenceDelta": 1
-      },
-      {
-        "id": "figli_leggerezza",
-        "presenceDelta": 0
       }
     ],
     "presenceAfterReveal": 2,
@@ -85,7 +81,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 1,
       "side": "player",
-      "text": "Il requisito di Ancorato aumenta di 1, per il resto dello Scontro, già da questo round."
+      "text": "Aumenta di 1 il requisito di Ancorato, cumulativamente per il resto dello Scontro, già da questo round."
     }
   ],
   "scenario": {
@@ -186,7 +182,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 1,
           "side": "player",
-          "text": "Il requisito di Ancorato aumenta di 1, per il resto dello Scontro, già da questo round."
+          "text": "Aumenta di 1 il requisito di Ancorato, cumulativamente per il resto dello Scontro, già da questo round."
         }
       ],
       "presence": {
@@ -219,6 +215,22 @@
         "player": 2
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "ownAnchored: true (obs false) → falsa",
+            "keys": [
+              "ownAnchored"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "figli_ancorato",
+          "sourceName": "Ancorato",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
         {
           "condition": {
             "detail": null,

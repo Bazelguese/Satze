@@ -2,22 +2,21 @@
   "roundNumber": 3,
   "initiativeSide": "player",
   "player": {
-    "eminenceId": "ratti_bella_malelabbra",
-    "presence": 3,
-    "abilityId": "ratti_conquista_forzata",
-    "params": null,
+    "eminenceId": "corte_rossa",
+    "presence": 4,
+    "abilityId": "corte_brutto_affare",
+    "params": {
+      "cardId": 231
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "conquest",
+      "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
-    "remainingHand": [
-      { "id": 400, "league": 1 }
-    ],
     "fragments": [],
     "prey": []
   },
@@ -32,18 +31,18 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
   "outcome": {
-    "winner": "enemy",
+    "winner": "player",
     "powerResolvedBySide": {
-      "player": true,
+      "player": false,
       "enemy": false
     },
     "activatedTriggerBySide": {
-      "player": "conquest",
+      "player": null,
       "enemy": null
     },
     "aliasUsedBySide": {
@@ -54,10 +53,9 @@
       "player": 0,
       "enemy": 0
     },
-    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "ratti_conquista_forzata_hit",
-  "branch": "hit"
+  "name": "corte_brutto_affare_miss",
+  "branch": "miss"
 }

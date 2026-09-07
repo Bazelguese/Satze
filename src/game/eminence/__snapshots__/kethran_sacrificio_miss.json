@@ -4,22 +4,22 @@
     "name": "Sacrificio",
     "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Se il proprio Agente perde il Duello, +1 Presenza."
+    "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
   },
   "bilance": {
-    "cinematicCues": 0,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 0,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       2,
-      3
+      4
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -34,9 +34,13 @@
       {
         "id": "kethran_innesto",
         "presenceDelta": -2
+      },
+      {
+        "id": "kethran_elogio",
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 3,
+    "presenceAfterReveal": 4,
     "presenceAfterSelect": 2,
     "presenceAvailable": 2,
     "presenceDelta": 1,
@@ -47,7 +51,68 @@
     "id": "kethran_altare",
     "name": "L'Altare della Ricomposizione"
   },
-  "notices": [],
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:kethran_sacrificio:GENERAL",
+      "kind": "reveal",
+      "name": "Sacrificio",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "LOSE_HP",
+          "slot": null,
+          "target": "SELF"
+        },
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        },
+        {
+          "primitive": "ESCALATE_ABILITY",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
+    }
+  ],
   "scenario": {
     "branch": "miss",
     "initiativeSide": "player",
@@ -84,17 +149,109 @@
       "timing": null
     },
     {
-      "badge": "Prima del Duello",
-      "cues": [],
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:kethran_sacrificio:GENERAL",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:kethran_sacrificio:GENERAL",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "player",
+                "type": "hp"
+              },
+              "waitFor": null
+            },
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:kethran_sacrificio:GENERAL",
+          "kind": "reveal",
+          "name": "Sacrificio",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "SELF"
+            },
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            },
+            {
+              "primitive": "ESCALATE_ABILITY",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
+        }
+      ],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 4
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -105,7 +262,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 4
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -117,7 +274,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 4
       },
       "segments": [
         {
@@ -138,11 +295,37 @@
         },
         {
           "condition": {
-            "detail": "duelWinnerRelative: \"opponent\" (obs \"self\") → falsa",
+            "detail": "markGained: (assente) → non ancora valutabile",
             "keys": [
-              "duelWinnerRelative"
+              "markGained"
             ],
-            "status": "false"
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "SELF",
+          "timing": "ON_MARK_GAIN"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "kethran_sacrificio",
+          "sourceName": "Sacrificio",
+          "target": "SELF",
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": false,
           "primitive": "CHANGE_PRESENCE",
@@ -150,7 +333,20 @@
           "sourceId": "kethran_sacrificio",
           "sourceName": "Sacrificio",
           "target": "SELF",
-          "timing": "AFTER_DUEL_OUTCOME"
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "ESCALATE_ABILITY",
+          "source": "ability",
+          "sourceId": "kethran_sacrificio",
+          "sourceName": "Sacrificio",
+          "target": null,
+          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

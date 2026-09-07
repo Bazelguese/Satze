@@ -4,7 +4,7 @@
     "name": "Scommessa",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Il proprietario pronostica segretamente l'esito del Duello. Se il pronostico è corretto, +2 Presenza."
+    "text": "Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 0,

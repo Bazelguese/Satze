@@ -1,0 +1,285 @@
+/* ══════════════════════════════════════════════════════════════════════
+   EM-ANNOUNCE · PELLE "VETRO"  —  drop-in per satze-eminenza.css
+   ----------------------------------------------------------------------
+   Va incluso/incollato DOPO il blocco .em-announce esistente: sovrascrive
+   per posizione, quindi non serve cancellare nulla nel blocco originale.
+   Nessuna classe nuova richiesta sul markup, tranne .is-enemy sul lato
+   nemico (oppure il box vive dentro un .em-zone-enemy).
+
+   Il contenitore che ospita il box DEVE avere una perspective:
+     .em-zone       { perspective:1600px; perspective-origin:72% 58% }  (tuo lato)
+     .em-zone-enemy { perspective:1600px; perspective-origin:28% 38% }  (lato nemico)
+
+   Variabili lette (gia in uso nel componente):
+     --em-ann-phase  colore della fase   --em-ann-acc  accento dell'Eminenza
+     --em-ann-from-x / --em-ann-from-y  offset di partenza (dalla carta)
+
+   Nota clip: backdrop-filter / filter sul ROOT del pannello fanno si che
+   Chromium tratti overflow come hidden e tagli gettone + linguetta.
+   Il vetro sta quindi su ::before (inset:0); il root resta overflow:visible.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Antenati: niente clip sul gettone che sporge (~54px oltre il bordo). */
+.em-layer:has(.em-announce),
+.em-zone:has(.em-announce),
+.em-stage:has(.em-announce){
+  overflow:visible;
+}
+.em-on .em-layer:has(.em-announce){
+  transform-style:preserve-3d;
+}
+
+/* ── STRUTTURA ─────────────────────────────────────────────────────────
+   La prospettiva la porta lo .em-stage (stessi angoli della carta).
+   Qui niente rotateY/X aggiuntivi: altrimenti il tilt si somma o, se lo
+   stage era azzerato, il box restava piatto dal lato player. */
+.em-announce{
+  --em-ann-pad:18px;
+  /* Solo traslazioni d'ingresso/uscita; il 3/4 è sullo stage. */
+  --em-tilt:translateZ(0);
+  --em-ann-glass:
+    linear-gradient(155deg,rgba(200,220,240,.22),rgba(8,12,22,.92) 38%,rgba(3,5,12,.96)),
+    radial-gradient(120% 90% at 6% 0%,color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 34%,transparent),transparent 58%);
+  width:426px;min-height:0;
+  padding:var(--em-ann-pad) 64px calc(var(--em-ann-pad) - 2px) var(--em-ann-pad);
+  display:grid;grid-template-columns:1fr auto;gap:0 14px;align-items:start;
+  grid-template-areas:"eyebrow phase" "source phase" "name cost" "text text" "hint hint";
+  clip-path:none !important;
+  overflow:visible !important;
+  isolation:auto;
+  transform-origin:100% 50%;
+  transform-style:preserve-3d;
+  transform:var(--em-tilt);
+  /* il bordo, per intero, dichiara la fase */
+  border:2px solid var(--em-ann-phase,#d5ecf9);
+  /* NO backdrop-filter/filter sul root: taglierebbero il gettone */
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  background:rgba(6,9,16,.72);
+  box-shadow:
+    38px 46px 60px rgba(0,0,0,.6),
+    0 0 34px color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 30%,transparent);
+  transition:box-shadow .35s ease;
+  animation:emAnnGlassRise .82s cubic-bezier(.16,.86,.22,1) both;
+}
+/* Lastra di vetro: blur solo sulla faccia del pannello, non sul gettone. */
+.em-announce::before{
+  content:'';
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  -webkit-backdrop-filter:blur(14px) saturate(1.5);
+  backdrop-filter:blur(14px) saturate(1.5);
+  background:var(--em-ann-glass);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 40px rgba(255,255,255,.06),
+    inset -14px 0 34px rgba(0,0,0,.34);
+}
+.em-announce-eyebrow,
+.em-announce-source,
+.em-announce-name,
+.em-announce-text,
+.em-announce-hint{position:relative;z-index:2}
+.em-announce:hover{
+  box-shadow:
+    44px 54px 72px rgba(0,0,0,.64),
+    0 0 52px color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 46%,transparent);
+}
+.em-announce:hover::before{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),inset 0 0 54px rgba(255,255,255,.1),
+    inset -14px 0 34px rgba(0,0,0,.3);
+}
+
+/* ── INGRESSO ─────────────────────────────────────────────────────────
+   Niente filter: sul root taglierebbe gettone/linguetta per tutta l'animazione. */
+@keyframes emAnnGlassRise{
+  0%{opacity:.12;transform:var(--em-tilt) translate3d(var(--em-ann-from-x,0px),var(--em-ann-from-y,90px),-460px)}
+  58%{opacity:1;transform:var(--em-tilt) translate3d(0,-12px,54px)}
+  82%{transform:var(--em-tilt) translate3d(0,4px,-8px)}
+  100%{opacity:1;transform:var(--em-tilt) translateZ(0)}
+}
+
+/* ── TIPOGRAFIA ───────────────────────────────────────────────────────── */
+.em-announce-eyebrow{
+  grid-area:eyebrow;margin:0 0 1px;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  font-size:9.5px;font-weight:800;letter-spacing:.2em;color:#a9c2da;
+  text-shadow:0 1px 2px #000;
+}
+/* La fonte è il titolo di riga: è il dato che orienta chi legge. */
+.em-announce-source{
+  grid-area:source;margin:0 0 10px;
+  font-size:15px;letter-spacing:.05em;color:#dceaf7;
+  text-shadow:0 1px 3px #000;
+}
+.em-announce-name{
+  grid-area:name;grid-column:1/-1;margin:0 0 8px;
+  font-size:25px;line-height:1.1;color:#fbfdff;
+  text-shadow:0 1px 3px rgba(0,0,0,.7),0 0 22px color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 40%,transparent);
+}
+.em-announce-text{
+  grid-area:text;margin:0 0 11px;padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.16);
+  font-size:14.5px;font-weight:400;line-height:1.5;color:#e2ebf4;
+  text-wrap:pretty;text-shadow:none;
+}
+.em-announce-hint{grid-area:hint;font-size:9.5px;letter-spacing:.16em;color:#93a9bd}
+
+/* ── LINGUETTA DI FASE ────────────────────────────────────────────────
+   Saldata al bordo superiore: stesso colore, stesso spessore, senza bordo
+   inferiore perché è il bordo del pannello a chiuderla. Sta nel piano del
+   vetro, quindi la prospettiva la prende con sé.
+   grid-area:auto è indispensabile: un figlio absolute di un grid container
+   che conserva la sua area si posiziona rispetto ALL'AREA, non al box. */
+.em-announce-kind{
+  grid-area:auto;
+  position:absolute;top:0;right:24px;z-index:5;
+  transform:translateY(-100%);
+  display:flex;flex-direction:row;align-items:baseline;gap:8px;
+  margin:0;padding:4px 13px 5px;
+  border:2px solid var(--em-ann-phase,#d5ecf9);border-bottom:0;
+  background:var(--em-ann-phase,#d5ecf9);
+  box-shadow:0 -6px 14px color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 26%,transparent);
+  clip-path:polygon(10px 0,100% 0,100% 100%,0 100%);
+  text-align:left;
+}
+.em-announce-kind::before,.em-announce-kind::after{content:none}
+.em-announce-phase-label{font-size:10px;letter-spacing:.16em;color:#08101a;text-shadow:none}
+.em-announce-phase-detail{font-size:9px;letter-spacing:.1em;color:rgba(8,16,26,.68);text-shadow:none}
+
+/* ── GETTONE DEL COSTO ────────────────────────────────────────────────
+   Il costo in Presenza esce dalla griglia: gettone a metà del lato destro,
+   mezzo dentro e mezzo fuori. Il componente passa solo la cifra ("−1").
+   Il ::after "Presenza" del box classico va zittito qui. */
+.em-announce-cost{
+  grid-area:auto;
+  position:absolute;right:0;top:50%;z-index:6;
+  transform:translate(50%,-50%) translateZ(2px);
+  width:92px;height:92px;margin:0;padding:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  font-family:'Cinzel',Georgia,serif;
+  font-size:42px;font-weight:900;letter-spacing:0;line-height:1;text-align:center;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+  color:#080d14;
+  /* gettone pieno e opaco: smalto sul colore di fase, non vetro */
+  background:radial-gradient(circle at 34% 24%,#fff 2%,color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 96%,#fff) 26%,color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 74%,#000) 68%,color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 42%,#000) 100%);
+  text-shadow:0 1px 0 rgba(255,255,255,.4),0 -1px 0 rgba(0,0,0,.35);
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,.6),
+    inset 0 -3px 6px rgba(0,0,0,.45),
+    0 0 0 2px color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 30%,#000),
+    0 0 0 3px color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 88%,#fff),
+    0 16px 30px rgba(0,0,0,.7),
+    0 0 34px color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 46%,transparent);
+}
+.em-announce-cost:empty{display:none}
+.em-announce-cost:not(:empty)::after{content:none}
+/* anello esterno sottile, staccato dal gettone */
+.em-announce-cost::before{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:1px solid color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 30%,transparent);
+}
+/* riflesso che gira sullo smalto: unico effetto continuo del pannello */
+.em-announce-cost::after{
+  content:'';position:absolute;inset:2px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(255,255,255,.55) 24deg,transparent 58deg,transparent 296deg,rgba(255,255,255,.2) 336deg,transparent 360deg);
+  mix-blend-mode:screen;opacity:.6;
+  animation:emAnnCoinGlint 7s linear infinite;
+}
+@keyframes emAnnCoinGlint{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* ── RIFLESSO E ACCESSORI ─────────────────────────────────────────────
+   Con overflow:visible lo sweep resta a inset:0, altrimenti sborda. */
+.em-announce-burst,
+.em-announce-sweep{
+  position:absolute;z-index:1;pointer-events:none;
+}
+.em-announce-sweep{
+  inset:0;
+  background:linear-gradient(104deg,transparent 34%,rgba(255,255,255,.2) 48%,transparent 62%);
+  mix-blend-mode:screen;
+  animation:emAnnGlassSheen 1s .3s ease-out both;
+}
+@keyframes emAnnGlassSheen{0%{opacity:0;transform:translateX(-70%)}40%{opacity:.9}100%{opacity:.34;transform:translateX(0)}}
+.em-announce-burst{
+  left:50%;top:50%;
+  width:88px;height:88px;margin:-44px 0 0 -44px;
+  border-width:1px;border-color:rgba(255,255,255,.7);
+  box-shadow:0 0 26px rgba(255,255,255,.5);
+  animation-duration:.58s;animation-delay:.4s;
+}
+/* Timer: filo sul bordo di fase, non barra spessa a fondo box. */
+.em-announce-timer{
+  left:0;right:0;top:-2px;bottom:auto;height:2px;z-index:3;
+  box-shadow:0 0 8px color-mix(in srgb,var(--em-ann-phase,#d5ecf9) 60%,transparent);
+}
+
+/* ── LATO NEMICO ──────────────────────────────────────────────────────
+   Specchio del player: lo stage porta già rotateY(18deg) rotateX(-6deg). */
+.em-zone-enemy .em-announce,.em-announce.is-enemy{
+  --em-ann-glass:
+    linear-gradient(205deg,rgba(200,220,240,.22),rgba(8,12,22,.92) 38%,rgba(3,5,12,.96)),
+    radial-gradient(120% 90% at 94% 0%,color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 34%,transparent),transparent 58%);
+  transform-origin:0% 50%;
+  padding-right:var(--em-ann-pad);padding-left:64px;
+  background:rgba(6,9,16,.72);
+  box-shadow:
+    -38px 46px 60px rgba(0,0,0,.6),
+    0 0 34px color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 30%,transparent);
+}
+.em-zone-enemy .em-announce::before,.em-announce.is-enemy::before{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 40px rgba(255,255,255,.06),
+    inset 14px 0 34px rgba(0,0,0,.34);
+}
+.em-zone-enemy .em-announce:hover,.em-announce.is-enemy:hover{
+  box-shadow:
+    -44px 54px 72px rgba(0,0,0,.64),
+    0 0 52px color-mix(in srgb,var(--em-ann-acc,#d5ecf9) 46%,transparent);
+}
+.em-zone-enemy .em-announce:hover::before,.em-announce.is-enemy:hover::before{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),inset 0 0 54px rgba(255,255,255,.1),
+    inset 14px 0 34px rgba(0,0,0,.3);
+}
+.em-zone-enemy .em-announce .em-announce-kind,.em-announce.is-enemy .em-announce-kind{
+  right:auto;left:24px;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 100%,0 100%);
+}
+.em-zone-enemy .em-announce .em-announce-cost,.em-announce.is-enemy .em-announce-cost{
+  right:auto;left:0;transform:translate(-50%,-50%) translateZ(2px);
+}
+.em-zone-enemy .em-announce .em-announce-sweep,.em-announce.is-enemy .em-announce-sweep{
+  inset:0;
+  background:linear-gradient(76deg,transparent 38%,rgba(255,255,255,.2) 52%,transparent 66%);
+  animation:emAnnGlassSheenL 1s .3s ease-out both;
+}
+@keyframes emAnnGlassSheenL{0%{opacity:0;transform:translateX(70%)}40%{opacity:.9}100%{opacity:.34;transform:translateX(0)}}
+
+/* ── USCITA ───────────────────────────────────────────────────────────
+   Il componente aggiunge .is-exiting ~460ms prima di smontare il box.
+   Solo opacity/transform: niente filter sul root (stesso motivo del gettone). */
+.em-announce.is-exiting{
+  pointer-events:none;
+  animation:emAnnGlassExit .46s cubic-bezier(.5,0,.75,.15) both;
+}
+@keyframes emAnnGlassExit{
+  0%{opacity:1;transform:var(--em-tilt) translateZ(0)}
+  26%{opacity:1;transform:var(--em-tilt) translateZ(46px)}
+  100%{opacity:0;transform:var(--em-tilt) translate3d(calc(var(--em-ann-from-x,0px) * .34),calc(var(--em-ann-from-y,90px) * .34),-300px)}
+}
+.em-announce.is-exiting .em-announce-sweep{animation:emAnnGlassSheenOut .4s ease-in both}
+@keyframes emAnnGlassSheenOut{0%{opacity:.34}30%{opacity:.85}100%{opacity:0;transform:translateX(-30%) scaleX(.4)}}
+.em-announce.is-exiting .em-announce-timer{animation:none;opacity:0}
+
+/* Specifica più alta di `.em-stage-announce-only .em-announce` in satze-eminenza.css */
+.em-stage-announce-only .em-announce{
+  animation:emAnnGlassRise .82s cubic-bezier(.16,.86,.22,1) both;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .em-announce{animation-duration:.2s}
+  .em-stage-announce-only .em-announce{animation-duration:.2s}
+  .em-announce-cost::after{animation:none}
+  .em-announce.is-exiting{animation-duration:.18s}
+}

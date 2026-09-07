@@ -4,7 +4,7 @@
     "name": "Innesto",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Il proprietario sceglie un Frammento: in questo Duello il Potere del proprio Agente può attivarsi con il trigger proprio o con quello del Frammento."
+    "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -34,6 +34,10 @@
       {
         "id": "kethran_innesto",
         "presenceDelta": -2
+      },
+      {
+        "id": "kethran_elogio",
+        "presenceDelta": -1
       }
     ],
     "presenceAfterReveal": 0,
@@ -90,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Il proprietario sceglie un Frammento: in questo Duello il Potere del proprio Agente può attivarsi con il trigger proprio o con quello del Frammento."
+      "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
     }
   ],
   "scenario": {
@@ -196,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Il proprietario sceglie un Frammento: in questo Duello il Potere del proprio Agente può attivarsi con il trigger proprio o con quello del Frammento."
+          "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
         }
       ],
       "presence": {
@@ -244,6 +248,22 @@
           "sourceName": "Ricomposizione",
           "target": "OWN_AGENT",
           "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "markGained: (assente) → non ancora valutabile",
+            "keys": [
+              "markGained"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "kethran_ricomposizione",
+          "sourceName": "Ricomposizione",
+          "target": "SELF",
+          "timing": "ON_MARK_GAIN"
         },
         {
           "condition": {

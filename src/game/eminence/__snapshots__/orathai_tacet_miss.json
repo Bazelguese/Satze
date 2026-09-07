@@ -4,7 +4,7 @@
     "name": "Tacet",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza."
+    "text": "Se uno dei due Agenti non soddisfa il requisito di attivazione del suo trigger Potere, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       1,
-      1
+      3
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -45,21 +45,27 @@
   },
   "notices": [
     {
-      "badgeText": "Mancato · Dopo il Duello",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
-      "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
+      "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:hit",
       "kind": "effect",
       "name": "Tacet",
-      "outcome": "miss",
+      "outcome": "hit",
       "payoffs": [
         {
           "primitive": "CHANGE_PRESENCE",
@@ -67,12 +73,12 @@
           "target": "SELF"
         }
       ],
-      "phase": "MISS",
+      "phase": "RESOLVE",
       "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Mancato",
-      "presenceDelta": null,
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 2,
       "side": "player",
-      "text": "Almeno un Potere soddisfatto."
+      "text": "+2 Presenza."
     }
   ],
   "scenario": {
@@ -140,12 +146,18 @@
       "badge": "Risoluzione · Dopo il Duello",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "noticeId": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
+          "noticeId": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
@@ -153,21 +165,27 @@
       "kind": "settle",
       "notices": [
         {
-          "badgeText": "Mancato · Dopo il Duello",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
-              "flight": false,
-              "from": null,
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
               "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
               "waitFor": null
             }
           ],
-          "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
+          "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:hit",
           "kind": "effect",
           "name": "Tacet",
-          "outcome": "miss",
+          "outcome": "hit",
           "payoffs": [
             {
               "primitive": "CHANGE_PRESENCE",
@@ -175,17 +193,17 @@
               "target": "SELF"
             }
           ],
-          "phase": "MISS",
+          "phase": "RESOLVE",
           "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Mancato",
-          "presenceDelta": null,
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 2,
           "side": "player",
-          "text": "Almeno un Potere soddisfatto."
+          "text": "+2 Presenza."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
       "segments": [
         {
@@ -201,16 +219,15 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "orathai_risonanza",
-          "sourceName": "Consonanza",
+          "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
-            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "detail": "activationUnsatisfiedCount: (assente) → non ancora valutabile",
             "keys": [
-              "ownActivationSatisfied",
-              "enemyActivationSatisfied"
+              "activationUnsatisfiedCount"
             ],
             "status": "deferred"
           },

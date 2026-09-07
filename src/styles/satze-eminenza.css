@@ -125,13 +125,21 @@
 @keyframes emZoneBreathL{0%,100%{transform:rotateY(18deg) rotateX(-6deg)}50%{transform:rotateY(14deg) rotateX(-4deg) translateY(4px)}}
 .em-zone-player .em-stage{transform-origin:100% 50%;transform:rotateY(-18deg) rotateX(6deg);animation:emZoneBreathR 9s ease-in-out infinite}
 .em-zone-enemy .em-stage{transform-origin:0% 50%;transform:rotateY(18deg) rotateX(-6deg);animation:emZoneBreathL 9s ease-in-out infinite}
+/* Con avviso: niente respiro, ma la posa 3/4 resta — altrimenti l'infobox è piatto
+   e non è più complanare alla carta. */
 .em-zone-player:has(.em-announce) .em-stage,
-.em-zone-enemy:has(.em-announce) .em-stage,
-.em-stage-announce,
-.em-stage-announce-only{
+.em-zone-player .em-stage-announce,
+.em-zone-player .em-stage-announce-only{
   animation:none;
-  transform:none;
-  transform-origin:center center;
+  transform:rotateY(-18deg) rotateX(6deg);
+  transform-origin:100% 50%;
+}
+.em-zone-enemy:has(.em-announce) .em-stage,
+.em-zone-enemy .em-stage-announce,
+.em-zone-enemy .em-stage-announce-only{
+  animation:none;
+  transform:rotateY(18deg) rotateX(-6deg);
+  transform-origin:0% 50%;
 }
 
 /* ── 3. Ingressi (uno per volta sul contenitore .em-stage) ──
@@ -230,12 +238,13 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
    l'Eminenza resta nello stesso angolo del tavolo, 745 + binario 920. */
 .em-zone-player{left:auto;right:255px;top:auto;bottom:32px}
 .em-zone-enemy{left:255px;right:auto;top:32px;bottom:auto}
-/* Fine round (dopo il duello): carte ai bordi laterali; l'infobox sta nel .em-stage e le segue. */
+/* Fine round (dopo il duello): carte ai bordi laterali; l'infobox sta nel .em-stage e le segue.
+   Inset ≥ metà gettone (~54px) altrimenti il cerchio costo finisce fuori dal canvas (overflow hidden). */
 .em-zone-player:has(.em-announce[data-post-duel="1"]){
-  right:12px;
+  right:60px;
 }
 .em-zone-enemy:has(.em-announce[data-post-duel="1"]){
-  left:12px;
+  left:60px;
 }
 .em-stage{display:flex;align-items:center;transform-style:preserve-3d}
 .em-zone-player .em-stage{flex-direction:row-reverse}
@@ -502,13 +511,19 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
   z-index:18;
   transform-style:flat;
 }
+.em-on > .em-layer:has(.em-announce),
+.em-on .em-layer:has(.em-announce){
+  z-index:24;
+  transform-style:preserve-3d;
+}
 .em-layer:has(.em-announce){z-index:24}
 .em-announce{
   --em-ann-from-x:200px;
   --em-ann-from-y:280px;
   --em-ann-phase:var(--em-ann-acc,#d5ecf9);
   position:relative;z-index:22;pointer-events:auto;flex:none;box-sizing:border-box;
-  overflow:hidden;isolation:isolate;
+  /* overflow/isolation lasciati aperti: la pelle Vetro fa sporgere gettone e linguetta */
+  overflow:visible;isolation:auto;
   width:460px;min-height:248px;padding:22px 24px 28px;
   border:2px solid var(--em-ann-acc,#d5ecf9);cursor:pointer;text-align:left;
   background:

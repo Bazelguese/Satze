@@ -4,22 +4,22 @@
     "name": "Accordo Unilaterale",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
+    "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
   },
   "bilance": {
-    "cinematicCues": 4,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 3,
+    "noticesEmitted": 2,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       1,
-      3
+      2
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -30,6 +30,10 @@
       {
         "id": "corte_accordo",
         "presenceDelta": 0
+      },
+      {
+        "id": "corte_debito",
+        "presenceDelta": 1
       }
     ],
     "presenceAfterReveal": 2,
@@ -53,30 +57,13 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "HP_TICK",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
-            "side": "enemy",
-            "type": "hp"
+            "side": "player",
+            "type": "announce"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "enemy",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "enemy",
-            "type": "field-agent"
-          }
         }
       ],
       "id": "reveal:player:corte_accordo:GENERAL",
@@ -85,14 +72,9 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "LOSE_HP",
+          "primitive": "PROPOSE_DEAL",
           "slot": null,
-          "target": "OPPONENT"
-        },
-        {
-          "primitive": "GRANT_TEMPORARY_FOCUS",
-          "slot": null,
-          "target": "ENEMY_AGENT"
+          "target": null
         }
       ],
       "phase": "REVEAL",
@@ -100,43 +82,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 0,
       "side": "player",
-      "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
-    },
-    {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-      "kind": "effect",
-      "name": "Pagare i Debiti",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "+1 Presenza."
+      "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
     },
     {
       "badgeText": "Risoluzione · Condizione soddisfatta",
@@ -219,32 +165,14 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
+          "holdAnnounce": true,
           "noticeId": "reveal:player:corte_accordo:GENERAL",
-          "recipe": "HP_TICK",
+          "recipe": "REVEAL_OPEN",
           "to": {
-            "side": "enemy",
-            "type": "hp"
+            "side": "player",
+            "type": "announce"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:corte_accordo:GENERAL",
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "enemy",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "enemy",
-            "type": "field-agent"
-          }
         },
         {
           "flight": true,
@@ -275,30 +203,13 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "HP_TICK",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
-                "side": "enemy",
-                "type": "hp"
+                "side": "player",
+                "type": "announce"
               },
               "waitFor": null
-            },
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
-              "to": {
-                "side": "enemy",
-                "type": "field-agent"
-              },
-              "waitFor": {
-                "side": "enemy",
-                "type": "field-agent"
-              }
             }
           ],
           "id": "reveal:player:corte_accordo:GENERAL",
@@ -307,14 +218,9 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "LOSE_HP",
+              "primitive": "PROPOSE_DEAL",
               "slot": null,
-              "target": "OPPONENT"
-            },
-            {
-              "primitive": "GRANT_TEMPORARY_FOCUS",
-              "slot": null,
-              "target": "ENEMY_AGENT"
+              "target": null
             }
           ],
           "phase": "REVEAL",
@@ -322,7 +228,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 0,
           "side": "player",
-          "text": "L'avversario perde 2 PV; in questo Duello l'Agente nemico riceve 1 FC temporaneo."
+          "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
         },
         {
           "badgeText": "Risoluzione · Condizione soddisfatta",
@@ -369,67 +275,14 @@
       "timing": null
     },
     {
-      "badge": "Risoluzione · Condizione soddisfatta",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Verifica",
+      "cues": [],
       "gate": null,
       "kind": "checkpoint",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "kind": "effect",
-          "name": "Pagare i Debiti",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "+1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 2
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -441,7 +294,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 2
       },
       "segments": [
         {
@@ -466,24 +319,11 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "LOSE_HP",
+          "primitive": "PROPOSE_DEAL",
           "source": "ability",
           "sourceId": "corte_accordo",
           "sourceName": "Accordo Unilaterale",
-          "target": "OPPONENT",
-          "timing": "AFTER_REVEAL"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "GRANT_TEMPORARY_FOCUS",
-          "source": "ability",
-          "sourceId": "corte_accordo",
-          "sourceName": "Accordo Unilaterale",
-          "target": "ENEMY_AGENT",
+          "target": null,
           "timing": "AFTER_REVEAL"
         }
       ],

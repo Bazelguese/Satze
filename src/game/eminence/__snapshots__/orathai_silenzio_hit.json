@@ -4,7 +4,7 @@
     "name": "Silenzio",
     "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+    "text": "Il trigger Potere di entrambi gli Agenti schierati diventa Magnanimo."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -79,7 +79,7 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "primitive": "REPLACE_TRIGGER",
           "slot": null,
           "target": null
         }
@@ -89,7 +89,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -3,
       "side": "player",
-      "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+      "text": "Il trigger Potere di entrambi gli Agenti schierati diventa Magnanimo."
     }
   ],
   "scenario": {
@@ -180,7 +180,7 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "SYNC_TRIGGERS_ON_XOR",
+              "primitive": "REPLACE_TRIGGER",
               "slot": null,
               "target": null
             }
@@ -190,7 +190,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -3,
           "side": "player",
-          "text": "Se esattamente uno dei due dovrebbe attivare il Potere, nessuno dei due viene considerato soddisfatto."
+          "text": "Il trigger Potere di entrambi gli Agenti schierati diventa Magnanimo."
         }
       ],
       "presence": {
@@ -236,7 +236,7 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "orathai_risonanza",
-          "sourceName": "Consonanza",
+          "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
@@ -246,7 +246,7 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "primitive": "REPLACE_TRIGGER",
           "source": "ability",
           "sourceId": "orathai_silenzio",
           "sourceName": "Silenzio",

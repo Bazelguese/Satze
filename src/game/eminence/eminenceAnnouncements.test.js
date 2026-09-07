@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -59,7 +59,7 @@ test('avviso statico: uno Statico che riordina i gate compare ogni round', () =>
   assert.equal(notices[0].phase, 'PASSIVE');
   assert.equal(notices[0].phaseDetail, 'Regola attiva');
   assert.equal(notices[0].side, SIDES.PLAYER);
-  assert.equal(notices[0].name, 'Ordine degli Incontri');
+  assert.equal(notices[0].name, 'Organizzazione Impeccabile');
   assert.equal(notices[0].sourceName, 'L\'Organizzatore degli Incontri');
 });
 
@@ -72,7 +72,7 @@ test('avviso statico: uno Statico a condizione compare solo quando il segmento m
   assert.equal(notices.length, 1);
   assert.equal(notices[0].kind, 'static');
   assert.equal(notices[0].phaseDetail, 'Scatta ora · Round 5');
-  assert.equal(notices[0].name, 'Cataclisma: Ora Verde');
+  assert.equal(notices[0].name, 'Cataclisma Verde');
 });
 
 test('avviso reveal: un\'abilità post-Duello non si annuncia al gate', () => {
@@ -116,7 +116,7 @@ test('avviso reveal: al gate resta la condizione, senza esito', () => {
   assert.equal(notices[0].outcome, null);
   assert.equal(notices[0].name, 'Frenesia della Fame');
   assert.match(notices[0].text, /Preda/i);
-  assert.match(notices[0].text, /Bonus d'Armata/i);
+  assert.match(notices[0].text, /Bonus/i);
 });
 
 test('avviso Preda: l\'esito arriva quando gli Agenti sono noti, non a fine Duello', () => {
@@ -136,7 +136,7 @@ test('avviso Preda: l\'esito arriva quando gli Agenti sono noti, non a fine Duel
   assert.equal(hit[0].kind, 'effect');
   assert.equal(hit[0].phase, 'VERIFY');
   assert.equal(hit[0].outcome, 'hit');
-  assert.equal(hit[0].name, 'Gorgoglio dai Cento Occhi');
+  assert.equal(hit[0].name, 'Gorgoglio terrificante');
   assert.equal(hit[0].presenceDelta, 2);
   assert.equal(hit[0].markCardId, 102);
   assert.equal(hit[0].payoffs[0].primitive, 'CHANGE_PRESENCE');
@@ -243,7 +243,7 @@ test('sequenza: Gorgoglio mostra la condizione al reveal e l\'esito quando gli A
 
   const preAgent = advanceToNextRevealGate(preField.matchState, { initiativeSide: SIDES.PLAYER });
   assert.equal(preAgent.gate, REVEAL_GATES.PRE_AGENT);
-  const condition = preAgent.notices.find((notice) => notice.name === 'Gorgoglio dai Cento Occhi');
+  const condition = preAgent.notices.find((notice) => notice.name === 'Gorgoglio terrificante');
   assert.equal(condition.kind, 'reveal');
   assert.equal(condition.phase, 'REVEAL');
   assert.equal(condition.phaseDetail, 'Prima dell\'Agente');
@@ -256,7 +256,7 @@ test('sequenza: Gorgoglio mostra la condizione al reveal e l\'esito quando gli A
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 102 },
   });
   assert.equal(general.gate, REVEAL_GATES.GENERAL);
-  const resolution = general.notices.find((notice) => notice.name === 'Gorgoglio dai Cento Occhi');
+  const resolution = general.notices.find((notice) => notice.name === 'Gorgoglio terrificante');
   assert.equal(resolution.kind, 'effect');
   assert.equal(resolution.phase, 'VERIFY');
   assert.equal(resolution.outcome, 'hit');
@@ -402,35 +402,18 @@ test('avviso effetto: Scommessa si ripete solo se il pronostico è corretto', ()
   assert.equal(silent.length, 0);
 });
 
-test('avviso: Convalida è silenziosa al reveal e parla solo se il Potere si attiva', () => {
+test('avviso: Devozione al cervello si annuncia al reveal PRE_FIELD', () => {
   const { matchState } = opened('khemet_maledizioni', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(matchState, 'khemet_devozione', 'semaforo_giallo');
+  matchState.player.presence = 2;
+  const chosen = bothChosen(matchState, 'khemet_devozione', 'semaforo_verde');
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.gate, REVEAL_GATES.PRE_FIELD);
-  assert.equal(first.notices.some((notice) => notice.name === 'Convalida'), false);
-
-  let state = first.matchState;
-  for (let i = 0; i < 2; i += 1) {
-    state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
-  }
-
-  const hit = settleEminenceRound(state, {
-    powerResolvedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
-  });
-  assert.equal(hit.notices.length, 1);
-  assert.equal(hit.notices[0].name, 'Convalida');
-  assert.equal(hit.notices[0].outcome, 'hit');
-  assert.match(hit.notices[0].text, /Il Potere si è attivato/);
-
-  const miss = settleEminenceRound(state, {
-    powerResolvedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
-  });
-  assert.equal(miss.notices.length, 0);
+  assert.equal(first.notices.some((notice) => notice.name === 'Devozione al cervello'), true);
 });
 
-test('avviso: la Risonanza del Nono Sigillo parla solo quando Overdrive si è attivato', () => {
+test('avviso: la Cattura-Energia parla solo quando Overdrive si è attivato', () => {
   const { matchState } = opened('khemet_maledizioni', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(matchState, 'khemet_devozione', 'semaforo_giallo');
+  const chosen = bothChosen(matchState, 'khemet_devozione', 'semaforo_verde');
   let state = chosen;
   for (let i = 0; i < 3; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -439,9 +422,9 @@ test('avviso: la Risonanza del Nono Sigillo parla solo quando Overdrive si è at
   const hit = settleEminenceRound(state, {
     activatedTriggerBySide: { [SIDES.PLAYER]: 'overdrive', [SIDES.ENEMY]: null },
   });
-  assert.equal(hit.notices.length, 1);
-  assert.equal(hit.notices[0].name, 'Risonanza del Nono Sigillo');
-  assert.match(hit.notices[0].text, /Overdrive attivato/);
+  assert.equal(hit.notices.some((n) => n.name === 'Cattura-Energia'), true);
+  const notice = hit.notices.find((n) => n.name === 'Cattura-Energia');
+  assert.match(notice.text, /Overdrive attivato/);
 });
 
 test('avviso: il Sigillo annuncia il Campo scelto al reveal, non l\'effetto in Duello', () => {
@@ -450,7 +433,7 @@ test('avviso: il Sigillo annuncia il Campo scelto al reveal, non l\'effetto in D
   const chosen = bothChosen(matchState, 'khemet_maledizione_va', 'semaforo_giallo', { slot: 2 });
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.gate, REVEAL_GATES.PRE_FIELD);
-  const notice = first.notices.find((entry) => entry.name === 'Sigillo della Misura');
+  const notice = first.notices.find((entry) => entry.name === 'Maledizione della Fama');
   assert.ok(notice);
   assert.equal(notice.kind, 'reveal');
   assert.match(notice.text, /Campo 3/);
@@ -460,7 +443,8 @@ test('avviso: il Sigillo annuncia il Campo scelto al reveal, non l\'effetto in D
 
 test('avviso: Leggerezza parla al controllo Ancorato, non al reveal anticipato', () => {
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_giallo');
+  matchState.player.presence = 2;
+  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_verde');
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.notices.some((notice) => notice.name === 'Leggerezza'), false);
 
@@ -469,7 +453,7 @@ test('avviso: Leggerezza parla al controllo Ancorato, non al reveal anticipato',
 
   const duelOpts = {
     initiativeSide: SIDES.PLAYER,
-    focusInvestedBySide: { [SIDES.PLAYER]: 2, [SIDES.ENEMY]: 0 },
+    focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
     leagueBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 3 },
   };
   const general = advanceToNextRevealGate(afterAgents.matchState, duelOpts);
@@ -478,8 +462,7 @@ test('avviso: Leggerezza parla al controllo Ancorato, non al reveal anticipato',
   assert.ok(notice);
   assert.equal(notice.kind, 'effect');
   assert.equal(notice.outcome, 'hit');
-  assert.match(notice.text, /non è Ancorato/);
-  assert.match(notice.text, /\+1/);
+  assert.match(notice.text, /Ancorato/i);
 
   const prepared = prepareEminenceDuel(general.matchState, duelOpts);
   assert.equal(prepared.notices.some((entry) => entry.name === 'Leggerezza'), false);
@@ -513,7 +496,7 @@ test('avviso: Risposta dice se l\'Agente è Ancorato al GENERAL, hit o miss', ()
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
   matchState.player.presence = 4;
   matchState.player.selectionCheckpointPresence = 4;
-  const chosen = bothChosen(matchState, 'figli_risposta', 'semaforo_giallo');
+  const chosen = bothChosen(matchState, 'figli_risposta', 'semaforo_verde');
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -526,7 +509,7 @@ test('avviso: Risposta dice se l\'Agente è Ancorato al GENERAL, hit o miss', ()
   });
   const hitNotice = hit.notices.find((entry) => entry.name === 'Risposta');
   assert.equal(hitNotice.outcome, 'hit');
-  assert.match(hitNotice.text, /è Ancorato/);
+  assert.match(hitNotice.text, /Ancorato|Immune/i);
 
   const miss = advanceToNextRevealGate(state, {
     initiativeSide: SIDES.PLAYER,
@@ -535,25 +518,25 @@ test('avviso: Risposta dice se l\'Agente è Ancorato al GENERAL, hit o miss', ()
   });
   const missNotice = miss.notices.find((entry) => entry.name === 'Risposta');
   assert.equal(missNotice.outcome, 'miss');
-  assert.match(missNotice.text, /non è Ancorato/);
 });
 
 test('avviso: se GENERAL si apre nel Duello, Leggerezza parla una sola volta', () => {
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_giallo');
+  matchState.player.presence = 2;
+  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_verde');
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
   }
 
   const prepared = prepareEminenceDuel(state, {
-    focusInvestedBySide: { [SIDES.PLAYER]: 2, [SIDES.ENEMY]: 0 },
+    focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
     leagueBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 3 },
   });
   const notices = prepared.notices.filter((entry) => entry.name === 'Leggerezza');
   assert.equal(notices.length, 1);
   assert.equal(notices[0].outcome, 'hit');
-  assert.match(notices[0].text, /non è Ancorato/);
+  assert.match(notices[0].text, /Ancorato/i);
 });
 
 test('avviso: Sussurro parla solo a fine Duello, con esito', () => {

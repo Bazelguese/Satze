@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "corte_clausola",
-    "name": "Clausola Capestro",
-    "presenceDelta": -3,
+    "id": "corte_debito",
+    "name": "Debito",
+    "presenceDelta": 1,
     "revealGate": "PRE_AGENT",
-    "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+    "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       3,
-      1
+      5
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -36,15 +36,15 @@
         "presenceDelta": -2
       },
       {
-        "id": "corte_clausola",
-        "presenceDelta": -3
+        "id": "corte_debito",
+        "presenceDelta": 1
       }
     ],
-    "presenceAfterReveal": 0,
+    "presenceAfterReveal": 4,
     "presenceAfterSelect": 3,
     "presenceAvailable": 3,
-    "presenceDelta": -3,
-    "selected": "corte_clausola"
+    "presenceDelta": 1,
+    "selected": "corte_debito"
   },
   "eminence": {
     "army": "Corte Rossa",
@@ -73,9 +73,9 @@
           }
         }
       ],
-      "id": "reveal:player:corte_clausola:PRE_AGENT",
+      "id": "reveal:player:corte_debito:PRE_AGENT",
       "kind": "reveal",
-      "name": "Clausola Capestro",
+      "name": "Debito",
       "outcome": null,
       "payoffs": [
         {
@@ -87,9 +87,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima dell'Agente",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -3,
+      "presenceDelta": 1,
       "side": "player",
-      "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+      "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
     },
     {
       "badgeText": "Risoluzione · Condizione soddisfatta",
@@ -129,9 +129,9 @@
     }
   ],
   "scenario": {
-    "branch": "hit",
+    "branch": "miss",
     "initiativeSide": "player",
-    "name": "corte_clausola_hit",
+    "name": "corte_debito_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -159,7 +159,7 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:corte_clausola:PRE_AGENT",
+          "noticeId": "reveal:player:corte_debito:PRE_AGENT",
           "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
@@ -196,9 +196,9 @@
               }
             }
           ],
-          "id": "reveal:player:corte_clausola:PRE_AGENT",
+          "id": "reveal:player:corte_debito:PRE_AGENT",
           "kind": "reveal",
-          "name": "Clausola Capestro",
+          "name": "Debito",
           "outcome": null,
           "payoffs": [
             {
@@ -210,16 +210,16 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima dell'Agente",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -3,
+          "presenceDelta": 1,
           "side": "player",
-          "text": "Il proprietario sceglie un Agente non ancora schierato, di entrambi i lati. Per il resto dello Scontro il trigger del suo Potere diventa Debito: quando viene schierato, il giocatore che lo controlla perde 2 PV; poi il Potere si attiva."
+          "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 4
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -231,9 +231,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 4
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 4,
       "timing": null
     },
     {
@@ -297,7 +297,7 @@
       ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 5
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -309,7 +309,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 5
       },
       "segments": [
         {
@@ -336,8 +336,8 @@
           "expectedNoCue": false,
           "primitive": "REPLACE_TRIGGER",
           "source": "ability",
-          "sourceId": "corte_clausola",
-          "sourceName": "Clausola Capestro",
+          "sourceId": "corte_debito",
+          "sourceName": "Debito",
           "target": null,
           "timing": "AFTER_REVEAL"
         }

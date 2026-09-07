@@ -4,7 +4,7 @@
     "name": "Rosso",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+    "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -94,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+      "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
     }
   ],
   "scenario": {
@@ -200,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Intervento e Ultima Chance sono considerati soddisfatti in questo round. Imboscata e Turbo non possono attivarsi."
+          "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
         }
       ],
       "presence": {
@@ -233,6 +233,22 @@
         "player": 0
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "totalFocusPlayed: (assente) → non ancora valutabile",
+            "keys": [
+              "totalFocusPlayed"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "semaforo_multa_caos",
+          "sourceName": "Multa per eccesso di Caos",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
         {
           "condition": {
             "detail": null,

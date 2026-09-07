@@ -4,7 +4,7 @@
     "name": "Furia",
     "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+    "text": "Il tuo Agente schierato ottiene +1 POT. Perdi 2 PV."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -104,7 +104,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 1,
       "side": "player",
-      "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+      "text": "Il tuo Agente schierato ottiene +1 POT. Perdi 2 PV."
     }
   ],
   "scenario": {
@@ -239,7 +239,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 1,
           "side": "player",
-          "text": "Il prossimo Agente del proprietario ottiene +1 POT. Il proprietario perde 2 PV."
+          "text": "Il tuo Agente schierato ottiene +1 POT. Perdi 2 PV."
         }
       ],
       "presence": {
@@ -284,7 +284,7 @@
           "primitive": "REPLACE_FIELD",
           "source": "static",
           "sourceId": "ora_verde",
-          "sourceName": "Cataclisma: Ora Verde",
+          "sourceName": "Cataclisma Verde",
           "target": "GLOBAL",
           "timing": "ROUND_START"
         },

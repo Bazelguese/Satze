@@ -1,10 +1,10 @@
 {
   "ability": {
     "id": "khemet_maledizione_va",
-    "name": "Sigillo della Misura",
+    "name": "Maledizione della Fama",
     "presenceDelta": -2,
     "revealGate": "PRE_FIELD",
-    "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+    "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -29,7 +29,7 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 0
+        "presenceDelta": 2
       },
       {
         "id": "khemet_maledizione_va",
@@ -68,7 +68,7 @@
       ],
       "id": "reveal:player:khemet_maledizione_va:PRE_FIELD",
       "kind": "reveal",
-      "name": "Sigillo della Misura",
+      "name": "Maledizione della Fama",
       "outcome": null,
       "payoffs": [
         {
@@ -82,7 +82,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+      "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
     }
   ],
   "scenario": {
@@ -135,7 +135,7 @@
           ],
           "id": "reveal:player:khemet_maledizione_va:PRE_FIELD",
           "kind": "reveal",
-          "name": "Sigillo della Misura",
+          "name": "Maledizione della Fama",
           "outcome": null,
           "payoffs": [
             {
@@ -149,7 +149,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+          "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
         }
       ],
       "presence": {
@@ -222,7 +222,7 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "khemet_rito_overdrive",
-          "sourceName": "Risonanza del Nono Sigillo",
+          "sourceName": "Cattura-Energia",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
@@ -235,7 +235,7 @@
           "primitive": "APPLY_SLOT_MODIFIER",
           "source": "ability",
           "sourceId": "khemet_maledizione_va",
-          "sourceName": "Sigillo della Misura",
+          "sourceName": "Maledizione della Fama",
           "target": null,
           "timing": "AFTER_REVEAL"
         }

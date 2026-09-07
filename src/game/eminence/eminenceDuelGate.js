@@ -134,6 +134,7 @@ export function autoSelectForcedChoices(matchState) {
       state[side].eminenceId,
       state[side].selectionCheckpointPresence,
       state[side].persistent,
+      { lastSelectedAbilityId: state[side].lastSelectedAbilityId },
     );
     if (legal.length !== 1) continue;
 
@@ -169,6 +170,7 @@ export function autoSelectFirstLegalAbility(matchState, side) {
     matchState[side].eminenceId,
     matchState[side].selectionCheckpointPresence,
     matchState[side].persistent,
+    { lastSelectedAbilityId: matchState[side].lastSelectedAbilityId },
   );
   if (!legal.length) return matchState;
 
@@ -241,22 +243,45 @@ function applyBundleToState(matchState, bundle) {
     state = { ...state, [block.side]: { ...state[block.side], blockedNextRound: true } };
   }
 
-  return persistLeagueByCardId(
-    persistEndMatchDebts(
-      persistAbilityCostChanges(
-        persistTriggerReplacements(
-          applySlotCursesToState(
-            applyAnchoredThresholdToState(applyMarksToState(state, bundle.marks), bundle.anchoredThresholdChanges),
-            bundle.slotModifiers,
+  return persistAbilityEscalation(
+    persistLeagueByCardId(
+      persistEndMatchDebts(
+        persistAbilityCostChanges(
+          persistTriggerReplacements(
+            applySlotCursesToState(
+              applyAnchoredThresholdToState(applyMarksToState(state, bundle.marks), bundle.anchoredThresholdChanges),
+              bundle.slotModifiers,
+            ),
+            bundle.triggerRules?.persistentReplacementsByCardId,
           ),
-          bundle.triggerRules?.persistentReplacementsByCardId,
+          bundle.abilityCostChanges,
         ),
-        bundle.abilityCostChanges,
+        bundle.endMatchDebts,
       ),
-      bundle.endMatchDebts,
+      bundle.leagueChanges,
     ),
-    bundle.leagueChanges,
+    bundle.abilityEscalations,
   );
+}
+
+function persistAbilityEscalation(matchState, escalations) {
+  if (!escalations?.length) return matchState;
+  let state = matchState;
+  for (const entry of escalations) {
+    const side = entry.side;
+    if (!side || !state[side] || !entry.key) continue;
+    const persistent = state[side].persistent || {};
+    const next = { ...(persistent.abilityEscalation || {}) };
+    next[entry.key] = (next[entry.key] || 0) + (entry.delta || 1);
+    state = {
+      ...state,
+      [side]: {
+        ...state[side],
+        persistent: { ...persistent, abilityEscalation: next },
+      },
+    };
+  }
+  return state;
 }
 
 function persistLeagueByCardId(matchState, changes) {
@@ -401,7 +426,9 @@ function applyOnDeployTriggerCosts(bundle, { agentIdBySide } = {}) {
 
 function qualifyingHpLossEvents(hpDeltas) {
   return (hpDeltas || []).filter(
-    (entry) => (entry.amount || 0) < 0 && entry.cause !== HP_LOSS_CAUSES.DUEL_DEFEAT_DAMAGE,
+    (entry) => (entry.amount || 0) < 0
+      && entry.cause !== HP_LOSS_CAUSES.DUEL_DEFEAT_DAMAGE
+      && !entry.suppressHpReaction,
   );
 }
 
@@ -441,11 +468,53 @@ export function notifyHpLossEvents(matchState, hpDeltas, { initiativeSide = SIDE
 
 function applyBundleAndReactions(matchState, bundle, { notices = [], initiativeSide = SIDES.PLAYER } = {}) {
   const persisted = applyBundleToState(matchState, bundle);
-  const reacted = notifyHpLossEvents(persisted, bundle?.hpDeltas, { initiativeSide });
+  const reactedHp = notifyHpLossEvents(persisted, bundle?.hpDeltas, { initiativeSide });
+  const reactedMarks = notifyMarkGainEvents(reactedHp.matchState, bundle?.markGains, { initiativeSide });
   return {
-    matchState: reacted.matchState,
-    notices: [...notices, ...(reacted.notices || [])],
-    reactionBundle: reacted.bundle,
+    matchState: reactedMarks.matchState,
+    notices: [...notices, ...(reactedHp.notices || []), ...(reactedMarks.notices || [])],
+    reactionBundle: reactedMarks.bundle || reactedHp.bundle,
+  };
+}
+
+/**
+ * Reazioni all'ottenimento di marker (es. +1 Presenza quando ottieni un Frammento).
+ */
+export function notifyMarkGainEvents(matchState, markGains, { initiativeSide = SIDES.PLAYER } = {}) {
+  const gains = (markGains || []).filter((entry) => entry?.mark && !entry.consume);
+  if (!gains.length || !isEminenceSubsystemEnabled(matchState)) {
+    return { matchState, bundle: null, queue: [], notices: [] };
+  }
+
+  let state = matchState;
+  const reactionBundle = createEffectBundle();
+  const queue = [];
+  for (const gain of gains) {
+    const collected = collectPendingEffects(state, EFFECT_TIMINGS.ON_MARK_GAIN, {
+      initiativeSide,
+      context: { markGained: gain.mark },
+    });
+    state = collected.matchState;
+    if (!collected.queue.length) continue;
+    // Solo il lato che ha ottenuto il marker reagisce ai propri segmenti ON_MARK_GAIN.
+    const owned = collected.queue.filter((entry) => entry.ownerSide === gain.side);
+    if (!owned.length) continue;
+    queue.push(...owned);
+    applyEminenceSegments(owned, reactionBundle, {
+      persistentBySide: {
+        [SIDES.PLAYER]: state[SIDES.PLAYER]?.persistent,
+        [SIDES.ENEMY]: state[SIDES.ENEMY]?.persistent,
+      },
+    });
+  }
+
+  if (!queue.length) return { matchState: state, bundle: null, queue: [], notices: [] };
+
+  return {
+    matchState: applyBundleToState(state, reactionBundle),
+    bundle: reactionBundle,
+    queue,
+    notices: noticesFromAppliedEffects(state, queue),
   };
 }
 
@@ -614,6 +683,11 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.ARM_VA_TIE_WIN,
   P.APPLY_TOXIN,
   P.GRANT_POWER,
+  P.GRANT_IMMUNE,
+  P.GRANT_POOL_FOCUS,
+  P.REMOVE_TOXIN,
+  P.PROPOSE_DEAL,
+  P.ESCALATE_ABILITY,
 ]);
 
 function replayOpenedGeneralCombat(matchState, agentIdBySide) {
@@ -651,7 +725,10 @@ function mergeDuelReplay(bundle, replay) {
   const target = bundle || createEffectBundle();
   return {
     ...target,
-    hpDeltas: [...(target.hpDeltas || []), ...(replay.hpDeltas || [])],
+    hpDeltas: [
+      ...(target.hpDeltas || []),
+      ...(replay.hpDeltas || []).map((entry) => ({ ...entry, suppressHpReaction: true })),
+    ],
     temporaryFocus: {
       [SIDES.PLAYER]: (target.temporaryFocus?.[SIDES.PLAYER] || 0) + (replay.temporaryFocus?.[SIDES.PLAYER] || 0),
       [SIDES.ENEMY]: (target.temporaryFocus?.[SIDES.ENEMY] || 0) + (replay.temporaryFocus?.[SIDES.ENEMY] || 0),
@@ -669,6 +746,13 @@ function mergeDuelReplay(bundle, replay) {
     vaTieWinnerSides: [...(target.vaTieWinnerSides || []), ...(replay.vaTieWinnerSides || [])],
     toxinApplications: [...(target.toxinApplications || []), ...(replay.toxinApplications || [])],
     grantedPowers: { ...(target.grantedPowers || {}), ...(replay.grantedPowers || {}) },
+    poolFocus: {
+      [SIDES.PLAYER]: (target.poolFocus?.[SIDES.PLAYER] || 0) + (replay.poolFocus?.[SIDES.PLAYER] || 0),
+      [SIDES.ENEMY]: (target.poolFocus?.[SIDES.ENEMY] || 0) + (replay.poolFocus?.[SIDES.ENEMY] || 0),
+    },
+    immuneSides: [...new Set([...(target.immuneSides || []), ...(replay.immuneSides || [])])],
+    toxinRemovals: [...(target.toxinRemovals || []), ...(replay.toxinRemovals || [])],
+    abilityEscalations: [...(target.abilityEscalations || []), ...(replay.abilityEscalations || [])],
   };
 }
 
@@ -730,7 +814,13 @@ export function prepareEminenceDuel(matchState, {
     anchoredBySide,
     deployedIsLowestLeagueBySide: deployedIsLowestLeagueBySide || {},
   });
-  let bundle = applyEminenceSegments([...opened.resolutionQueue, ...collected.queue], null, { agentIdBySide });
+  let bundle = applyEminenceSegments([...opened.resolutionQueue, ...collected.queue], null, {
+    agentIdBySide,
+    persistentBySide: {
+      [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
+      [SIDES.ENEMY]: collected.matchState[SIDES.ENEMY]?.persistent,
+    },
+  });
   if (generalWasAlreadyOpen) {
     bundle = mergeDuelReplay(bundle, replayOpenedGeneralCombat(filled, agentIdBySide));
   }
@@ -830,6 +920,7 @@ export function settleEminenceRound(matchState, {
   finalDamageBySide = null,
   activationSatisfiedBySide = null,
   focusInvestedBySide = null,
+  anchoredBySide = null,
   statReductionOccurred = null,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
@@ -837,6 +928,14 @@ export function settleEminenceRound(matchState, {
   }
 
   const recorded = recordEndMatchDebtAmounts(matchState, { finalPowerByCardId, finalPowerBySide, agentIdBySide });
+  const focusMap = focusInvestedBySide || {};
+  const activationMap = activationSatisfiedBySide || {};
+  const unsatisfiedCount = Object.keys(activationMap).length
+    ? Number(!activationMap[SIDES.PLAYER]) + Number(!activationMap[SIDES.ENEMY])
+    : null;
+  const totalFocus = Object.keys(focusMap).length
+    ? (Number(focusMap[SIDES.PLAYER] || 0) + Number(focusMap[SIDES.ENEMY] || 0))
+    : null;
   const context = {
     ...(winner === undefined ? {} : { winner }),
     agentIdBySide: agentIdBySide || {},
@@ -844,15 +943,22 @@ export function settleEminenceRound(matchState, {
     powerResolvedBySide: powerResolvedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: activatedTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
     finalDamageBySide: finalDamageBySide || {},
-    activationSatisfiedBySide: activationSatisfiedBySide || {},
-    focusInvestedBySide: focusInvestedBySide || {},
+    activationSatisfiedBySide: activationMap,
+    focusInvestedBySide: focusMap,
+    activationUnsatisfiedCount: unsatisfiedCount,
+    totalFocusPlayed: totalFocus,
+    anchoredBySide: anchoredBySide || {},
     statReductionOccurred,
   };
   const collected = collectTimings(recorded, POST_DUEL_TIMINGS, initiativeSide, context);
   const debtQueue = storedDebtsToHpQueue(recorded);
   const queue = [...collected.queue, ...debtQueue];
+  const persistentBySide = {
+    [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
+    [SIDES.ENEMY]: collected.matchState[SIDES.ENEMY]?.persistent,
+  };
   const bundle = queue.length
-    ? applyEminenceSegments(queue, null, { agentIdBySide: context.agentIdBySide })
+    ? applyEminenceSegments(queue, null, { agentIdBySide: context.agentIdBySide, persistentBySide })
     : null;
   const stateAfterDebts = debtQueue.length ? clearEndMatchDebts(collected.matchState) : collected.matchState;
   const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
@@ -888,6 +994,9 @@ function recordEndMatchDebtAmounts(matchState, { finalPowerByCardId, finalPowerB
         if (agentIdBySide[SIDES.ENEMY] === debt.cardId && finalPowerBySide?.[SIDES.ENEMY] != null) {
           amount = finalPowerBySide[SIDES.ENEMY];
         }
+      }
+      if (amount != null && debt.basis === 'HALF_FINAL_POWER_CEIL') {
+        amount = Math.ceil(amount / 2);
       }
       return amount == null ? debt : { ...debt, amount };
     });

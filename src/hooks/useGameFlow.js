@@ -12,7 +12,6 @@ import { calcInitialBonuses, normalizeOnlineMatchPayload, buildShuffleDealSetupF
 import { resolveShuffleKindsForDuel } from '../utils/shuffleStylePreference';
 import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShuffleHands';
 import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
-import { preloadBattlefieldImages } from '../utils/preloadAssets';
 import { createMatchEminenceState, resolveEminenceFormat } from '../game/eminence/eminenceSetup';
 import { EMINENCE_FORMAT } from '../game/eminence/eminenceConstants.js';
 
@@ -60,6 +59,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setBattleEvents,
     setCampaignDuelMod,
     setShuffleDealSetup,
+    setPendingDuelPhase,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
     setEminenceMatchState,
@@ -249,7 +249,6 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       fieldCount: campaignDuelMod?.fields ?? undefined,
     });
     setBattlefields(fields);
-    preloadBattlefieldImages(fields);
     setConqueredFields({});
     
     setPlayerHP(campaignDuelMod?.playerLife ?? 25);
@@ -292,6 +291,14 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setBattleResult(null);
     setSelectedFocus(1);
     
+    const eminenceFormat = startOptions?.eminenceFormat ?? EMINENCE_FORMAT.REQUIRED;
+    const formatLog =
+      mode === 'bareHands'
+        ? `🤜 Formato: Mani nude (senza Eminenze né effetti Campo)`
+        : eminenceFormat === EMINENCE_FORMAT.DISABLED
+          ? `🌑 Formato: No Eminenza (Campi attivi)`
+          : `✨ Formato: Standard (Eminenze e Campi)`;
+
     // Log iniziali (stringhe legacy + eventi strutturati usati dal LogPanel)
     setBattleEvents([]);
     setLogs([
@@ -299,7 +306,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       `🎖️ Tu comandi: ${playerArmy}`,
       `🎖️ IA comanda: ${enemyArmySelected}`,
       `🎯 Difficoltà IA: ${DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES['medium']}`,
-      mode === 'bareHands' ? `🤜 Modalità: Bare Hands (senza effetti campo)` : ``
+      formatLog,
     ].filter(Boolean));
     
     // Determina chi inizia (Lega più bassa della mano)
@@ -327,7 +334,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     
     setLogs(prev => [...prev, `[R1] ${startLog}`]);
     
-    setGamePhase(skipShuffleDeal ? 'selectField' : 'shuffleDeal');
+    setPendingDuelPhase(skipShuffleDeal ? 'selectField' : 'shuffleDeal');
+    setGamePhase('duelLoading');
   }, [
     setGameMode,
     setPlayerHand,
@@ -363,6 +371,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setBattleEvents,
     setCampaignDuelMod,
     setShuffleDealSetup,
+    setPendingDuelPhase,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
     setShowClaimVictoryChoice,
@@ -445,7 +454,6 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       }
 
       setBattlefields(battlefields);
-      preloadBattlefieldImages(battlefields);
       setConqueredFields({});
 
       setPlayerHP(25);
@@ -504,7 +512,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
 
       setOpeningPlayerFirst(isPlayerFirst);
       setIsPlayerFirst(isPlayerFirst);
-      setGamePhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+      setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+      setGamePhase('duelLoading');
     },
     [
       setShowClaimVictoryChoice,
@@ -544,6 +553,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setGamePhase,
       setCampaignDuelMod,
       setShuffleDealSetup,
+      setPendingDuelPhase,
       initEminences,
     ]
   );
@@ -563,6 +573,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShowClaimVictoryChoice(null);
     setCampaignDuelMod(null);
     setShuffleDealSetup(null);
+    setPendingDuelPhase(null);
     setPlayerDeckVisual(null);
     setEnemyDeckVisual(null);
     setEminenceMatchState(null);
@@ -581,6 +592,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setShowClaimVictoryChoice,
     setCampaignDuelMod,
     setShuffleDealSetup,
+    setPendingDuelPhase,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
     setEminenceMatchState,

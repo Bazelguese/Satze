@@ -1017,18 +1017,50 @@ function isPostDuelAnnounce(notice) {
   return false;
 }
 
+const ANNOUNCE_EXIT_MS = 460;
+
 function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoDismiss = true }) {
   const holdMs = getEminenceAnnounceHoldMs() || EMINENCE_ANNOUNCE_HOLD_MS_DEFAULT;
+  const [exiting, setExiting] = useState(false);
+  const exitTimerRef = useRef(null);
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+
+  const beginExit = (noticeId) => {
+    setExiting((already) => {
+      if (already) return already;
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = setTimeout(() => {
+        exitTimerRef.current = null;
+        dismissRef.current?.(noticeId);
+      }, ANNOUNCE_EXIT_MS);
+      return true;
+    });
+  };
+
+  useEffect(() => {
+    setExiting(false);
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+  }, [notice?.id]);
+
   useEffect(() => {
     if (!notice || !autoDismiss) return undefined;
-    const timer = setTimeout(() => onDismiss?.(notice.id), holdMs);
+    const timer = setTimeout(() => beginExit(notice.id), holdMs);
     return () => clearTimeout(timer);
-  }, [notice, onDismiss, autoDismiss, holdMs]);
+  }, [notice?.id, autoDismiss, holdMs]);
+
+  useEffect(() => () => {
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+  }, []);
 
   if (!notice) return null;
 
   const phaseKey = (notice.phase || 'REVEAL').toLowerCase();
   const postDuel = isPostDuelAnnounce(notice);
+  const isEnemy = notice.side === 'enemy';
   const ownerLabel = notice.ownerLabel
     || (notice.side === 'player' ? 'La tua Eminenza' : 'Eminenza avversaria');
   const badgeText = notice.badgeText || notice.phaseLabel || 'Avviso';
@@ -1044,7 +1076,9 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoD
         'em-announce',
         `em-announce-${notice.side}`,
         `em-announce-phase-${phaseKey}`,
+        isEnemy ? 'is-enemy' : '',
         held ? 'is-held' : '',
+        exiting ? 'is-exiting' : '',
       ].filter(Boolean).join(' ')}
       data-phase={phaseKey}
       data-post-duel={postDuel ? '1' : undefined}
@@ -1055,7 +1089,7 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoD
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        onDismiss?.(notice.id);
+        beginExit(notice.id);
       }}
       style={{
         '--em-ann-acc': accent,
@@ -1078,7 +1112,7 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoD
       </span>
       <strong className="em-announce-name">{notice.name}</strong>
       {typeof delta === 'number' && (
-        <span className="em-announce-cost">{formatPresenceDelta(delta)} Presenza</span>
+        <span className="em-announce-cost">{formatPresenceDelta(delta)}</span>
       )}
       <p className="em-announce-text">{notice.text}</p>
       <span className="em-announce-hint">{hint}</span>

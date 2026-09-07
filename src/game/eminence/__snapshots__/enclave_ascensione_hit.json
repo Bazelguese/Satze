@@ -4,7 +4,7 @@
     "name": "Ascensione",
     "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+    "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -94,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -3,
       "side": "player",
-      "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+      "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
     }
   ],
   "scenario": {
@@ -200,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -3,
           "side": "player",
-          "text": "Sfida e Sopraffare del proprio Agente sono soddisfatti anche a Leghe uguali; in caso di parità di VA vince il proprio lato."
+          "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
         }
       ],
       "presence": {

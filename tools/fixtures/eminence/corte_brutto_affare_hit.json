@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 3,
-    "abilityId": "corte_clausola",
+    "presence": 4,
+    "abilityId": "corte_brutto_affare",
     "params": {
       "cardId": 231
     },
@@ -56,6 +56,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_clausola_hit",
+  "name": "corte_brutto_affare_hit",
   "branch": "hit"
 }

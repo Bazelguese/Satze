@@ -1,10 +1,10 @@
 {
   "ability": {
     "id": "apex_cataclisma",
-    "name": "Cataclisma",
+    "name": "Ora Verde",
     "presenceDelta": -4,
     "revealGate": "GENERAL",
-    "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+    "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -75,7 +75,7 @@
       ],
       "id": "reveal:player:apex_cataclisma:GENERAL",
       "kind": "reveal",
-      "name": "Cataclisma",
+      "name": "Ora Verde",
       "outcome": null,
       "payoffs": [
         {
@@ -89,7 +89,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -4,
       "side": "player",
-      "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+      "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
     }
   ],
   "scenario": {
@@ -176,7 +176,7 @@
           ],
           "id": "reveal:player:apex_cataclisma:GENERAL",
           "kind": "reveal",
-          "name": "Cataclisma",
+          "name": "Ora Verde",
           "outcome": null,
           "payoffs": [
             {
@@ -190,7 +190,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -4,
           "side": "player",
-          "text": "Il prossimo Agente del proprietario ottiene Potere: +2 POT, +2 DAN."
+          "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
         }
       ],
       "presence": {
@@ -235,7 +235,7 @@
           "primitive": "REPLACE_FIELD",
           "source": "static",
           "sourceId": "ora_verde",
-          "sourceName": "Cataclisma: Ora Verde",
+          "sourceName": "Cataclisma Verde",
           "target": "GLOBAL",
           "timing": "ROUND_START"
         },
@@ -248,7 +248,7 @@
           "primitive": "GRANT_POWER",
           "source": "ability",
           "sourceId": "apex_cataclisma",
-          "sourceName": "Cataclisma",
+          "sourceName": "Ora Verde",
           "target": "OWN_AGENT",
           "timing": "AFTER_REVEAL"
         }

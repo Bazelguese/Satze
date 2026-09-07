@@ -1,10 +1,10 @@
 {
   "ability": {
     "id": "khemet_maledizione_stat",
-    "name": "Sigillo dell'Imposizione",
+    "name": "Maledizione del Cosmo",
     "presenceDelta": -3,
     "revealGate": "PRE_FIELD",
-    "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA."
+    "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -29,7 +29,7 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 0
+        "presenceDelta": 2
       },
       {
         "id": "khemet_maledizione_va",
@@ -72,7 +72,7 @@
       ],
       "id": "reveal:player:khemet_maledizione_stat:PRE_FIELD",
       "kind": "reveal",
-      "name": "Sigillo dell'Imposizione",
+      "name": "Maledizione del Cosmo",
       "outcome": null,
       "payoffs": [
         {
@@ -86,7 +86,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -3,
       "side": "player",
-      "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
+      "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
     }
   ],
   "scenario": {
@@ -139,7 +139,7 @@
           ],
           "id": "reveal:player:khemet_maledizione_stat:PRE_FIELD",
           "kind": "reveal",
-          "name": "Sigillo dell'Imposizione",
+          "name": "Maledizione del Cosmo",
           "outcome": null,
           "payoffs": [
             {
@@ -153,7 +153,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -3,
           "side": "player",
-          "text": "Il proprietario sceglie uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
+          "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
         }
       ],
       "presence": {
@@ -226,7 +226,7 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "khemet_rito_overdrive",
-          "sourceName": "Risonanza del Nono Sigillo",
+          "sourceName": "Cattura-Energia",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
@@ -239,7 +239,7 @@
           "primitive": "APPLY_SLOT_MODIFIER",
           "source": "ability",
           "sourceId": "khemet_maledizione_stat",
-          "sourceName": "Sigillo dell'Imposizione",
+          "sourceName": "Maledizione del Cosmo",
           "target": null,
           "timing": "AFTER_REVEAL"
         }

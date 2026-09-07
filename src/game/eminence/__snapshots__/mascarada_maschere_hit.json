@@ -4,7 +4,7 @@
     "name": "Maschere Invertite",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista anche come Ultimo Desiderio e viceversa."
+    "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -85,7 +85,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista anche come Ultimo Desiderio e viceversa."
+      "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
     }
   ],
   "scenario": {
@@ -186,7 +186,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista anche come Ultimo Desiderio e viceversa."
+          "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
         }
       ],
       "presence": {

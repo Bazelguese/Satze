@@ -4,22 +4,22 @@
     "name": "Salasso",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
+    "text": "All'avversario vengono proposti due Affari e deve sceglierne uno: «Perdi 3 PV; +2 Presenza.» oppure «Perdi 3 Presenza; Cura 2 PV.» Se uno dei due Affari non può essere accettato, viene scelto automaticamente l'altro."
   },
   "bilance": {
-    "cinematicCues": 4,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 3,
+    "noticesEmitted": 2,
     "presenceEnemy": [
       0,
-      0
+      2
     ],
     "presencePlayer": [
       2,
-      2
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -34,6 +34,10 @@
       {
         "id": "corte_salasso",
         "presenceDelta": -2
+      },
+      {
+        "id": "corte_debito",
+        "presenceDelta": 1
       }
     ],
     "presenceAfterReveal": 1,
@@ -57,30 +61,13 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "HP_TICK",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "hp"
+            "type": "announce"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
         }
       ],
       "id": "reveal:player:corte_salasso:GENERAL",
@@ -89,14 +76,9 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "LOSE_HP",
+          "primitive": "PROPOSE_DEAL",
           "slot": null,
-          "target": "SELF"
-        },
-        {
-          "primitive": "GRANT_TEMPORARY_FOCUS",
-          "slot": null,
-          "target": "OWN_AGENT"
+          "target": null
         }
       ],
       "phase": "REVEAL",
@@ -104,43 +86,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
-    },
-    {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-      "kind": "effect",
-      "name": "Pagare i Debiti",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "+1 Presenza."
+      "text": "All'avversario vengono proposti due Affari e deve sceglierne uno: «Perdi 3 PV; +2 Presenza.» oppure «Perdi 3 Presenza; Cura 2 PV.» Se uno dei due Affari non può essere accettato, viene scelto automaticamente l'altro."
     },
     {
       "badgeText": "Risoluzione · Condizione soddisfatta",
@@ -223,32 +169,14 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
+          "holdAnnounce": true,
           "noticeId": "reveal:player:corte_salasso:GENERAL",
-          "recipe": "HP_TICK",
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "hp"
+            "type": "announce"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:corte_salasso:GENERAL",
-          "recipe": "LINK_AGENT",
-          "to": {
-            "side": "player",
-            "type": "field-agent"
-          },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
         },
         {
           "flight": true,
@@ -279,30 +207,13 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "HP_TICK",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
                 "side": "player",
-                "type": "hp"
+                "type": "announce"
               },
               "waitFor": null
-            },
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
-              "to": {
-                "side": "player",
-                "type": "field-agent"
-              },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
             }
           ],
           "id": "reveal:player:corte_salasso:GENERAL",
@@ -311,14 +222,9 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "LOSE_HP",
+              "primitive": "PROPOSE_DEAL",
               "slot": null,
-              "target": "SELF"
-            },
-            {
-              "primitive": "GRANT_TEMPORARY_FOCUS",
-              "slot": null,
-              "target": "OWN_AGENT"
+              "target": null
             }
           ],
           "phase": "REVEAL",
@@ -326,7 +232,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Il proprietario perde 3 PV; in questo Duello il proprio Agente riceve 1 FC temporaneo."
+          "text": "All'avversario vengono proposti due Affari e deve sceglierne uno: «Perdi 3 PV; +2 Presenza.» oppure «Perdi 3 Presenza; Cura 2 PV.» Se uno dei due Affari non può essere accettato, viene scelto automaticamente l'altro."
         },
         {
           "badgeText": "Risoluzione · Condizione soddisfatta",
@@ -366,74 +272,21 @@
         }
       ],
       "presence": {
-        "enemy": 0,
+        "enemy": 2,
         "player": 1
       },
       "presenceAfterReveal": 1,
       "timing": null
     },
     {
-      "badge": "Risoluzione · Condizione soddisfatta",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Verifica",
+      "cues": [],
       "gate": null,
       "kind": "checkpoint",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "kind": "effect",
-          "name": "Pagare i Debiti",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "+1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
-        "enemy": 0,
-        "player": 2
+        "enemy": 2,
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -444,8 +297,8 @@
       "kind": "settle",
       "notices": [],
       "presence": {
-        "enemy": 0,
-        "player": 2
+        "enemy": 2,
+        "player": 1
       },
       "segments": [
         {
@@ -470,24 +323,11 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "LOSE_HP",
+          "primitive": "PROPOSE_DEAL",
           "source": "ability",
           "sourceId": "corte_salasso",
           "sourceName": "Salasso",
-          "target": "SELF",
-          "timing": "AFTER_REVEAL"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "GRANT_TEMPORARY_FOCUS",
-          "source": "ability",
-          "sourceId": "corte_salasso",
-          "sourceName": "Salasso",
-          "target": "OWN_AGENT",
+          "target": null,
           "timing": "AFTER_REVEAL"
         }
       ],

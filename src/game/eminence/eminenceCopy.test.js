@@ -112,9 +112,11 @@ test('copy: abilità con param slot usano "slot" nel catalogo, non "Scegli un Ca
   }
 });
 
-test('copy: Khemet Convalida distingue attivazione reale del Potere', () => {
+test('copy: Khemet Devozione al cervello inverte i trigger Potere/Bonus', () => {
   const devozione = EMINENCES.khemet_maledizioni.abilities.find((a) => a.id === 'khemet_devozione');
-  assert.match(devozione.text, /si attiva realmente/i);
+  assert.equal(devozione.name, 'Devozione al cervello');
+  assert.match(devozione.text, /inverte il trigger/i);
+  assert.ok(!/si attiva realmente/i.test(devozione.text));
 });
 
 test('copy: pavimenti min usano il registro (min N), non "minimo N PV"', () => {
@@ -128,8 +130,9 @@ test('copy: pavimenti min usano il registro (min N), non "minimo N PV"', () => {
   }
 });
 
-test('copy: Orathai Statico non collide con il nome Risonanza di Khemet', () => {
-  assert.notEqual(EMINENCES.orathai_primo_canto.static.name, 'Risonanza');
+test('copy: Orathai Statico si chiama Risonanza; Khemet Statico Cattura-Energia', () => {
+  assert.equal(EMINENCES.orathai_primo_canto.static.name, 'Risonanza');
+  assert.equal(EMINENCES.khemet_maledizioni.static.name, 'Cattura-Energia');
   assert.notEqual(
     EMINENCES.orathai_primo_canto.static.name,
     EMINENCES.khemet_maledizioni.static.name,

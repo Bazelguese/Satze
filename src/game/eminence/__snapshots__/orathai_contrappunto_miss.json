@@ -4,7 +4,7 @@
     "name": "Contrappunto",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti."
+    "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -79,7 +79,12 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "primitive": "UNBLOCKABLE_POWER",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "MIRROR_UNSATISFIED_POWER",
           "slot": null,
           "target": null
         }
@@ -89,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti."
+      "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
     }
   ],
   "scenario": {
@@ -180,7 +185,12 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "SYNC_TRIGGERS_ON_XOR",
+              "primitive": "UNBLOCKABLE_POWER",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "MIRROR_UNSATISFIED_POWER",
               "slot": null,
               "target": null
             }
@@ -190,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Se esattamente uno dei due dovrebbe attivare il Potere, entrambi vengono considerati soddisfatti."
+          "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
         }
       ],
       "presence": {
@@ -236,7 +246,7 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "orathai_risonanza",
-          "sourceName": "Consonanza",
+          "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
@@ -246,7 +256,20 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "SYNC_TRIGGERS_ON_XOR",
+          "primitive": "UNBLOCKABLE_POWER",
+          "source": "ability",
+          "sourceId": "orathai_contrappunto",
+          "sourceName": "Contrappunto",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "MIRROR_UNSATISFIED_POWER",
           "source": "ability",
           "sourceId": "orathai_contrappunto",
           "sourceName": "Contrappunto",

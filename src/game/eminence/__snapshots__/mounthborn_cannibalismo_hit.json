@@ -4,7 +4,7 @@
     "name": "Cannibalismo",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Se il proprio Agente perde il Duello contro una Preda, il proprietario Cura 3 PV."
+    "text": "Se perdi il Duello contro una Preda, Cura 3 PV."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -196,6 +196,22 @@
         "player": 0
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "deployedMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "SET_ARMY_BONUS_STATE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
         {
           "condition": {
             "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",

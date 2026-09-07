@@ -1,10 +1,17 @@
 /**
- * Precarica le risorse grafiche essenziali del menu all'avvio.
- * Gli sfondi dei campi di battaglia (public/campi_bg/, ~260MB) NON vengono
- * precaricati qui: si caricano on-demand a inizio partita con
- * preloadBattlefieldImages(), che riceve solo i campi estratti.
+ * Precarica le risorse grafiche all'avvio (boot generale).
+ *
+ * Include: sfondi armate, pannelli HUD, logo, arte agenti/tipi, dorsi,
+ * eminenze, miniature campi. Gli sfondi campo a piena risoluzione
+ * (~260MB in public/campi_bg/) restano on-demand a inizio partita.
  */
 import { ARMY_GIFS } from '../data/armies';
+import { AGENT_IMAGE_PATHS, CARD_IMAGE_PATHS, getNascenteStageImageUrl, markImageUrlPreloaded } from '../data/images';
+import { ALL_BATTLEFIELDS } from '../data/battlefields';
+import { EMINENCES } from '../data/eminences';
+import { getEminenceArtUrl, EMINENCE_ART_FALLBACK } from '../data/eminenceArt';
+import { CARD_BACK_IMAGES } from './cardBackPicker';
+import { BRAND_LOGO_SRC } from '../theme/hudOratorioPalette';
 
 function getBaseUrl() {
   return typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL != null
@@ -55,51 +62,115 @@ function preloadImage(url) {
       return;
     }
     const img = new Image();
-    img.onload = () => resolve();
-    img.onerror = () => resolve(); // Non bloccare su errori
+    const done = () => {
+      markImageUrlPreloaded(url);
+      resolve();
+    };
+    img.onload = () => {
+      // decode() forza la decompressione ora, non al primo paint in gioco
+      if (typeof img.decode === 'function') {
+        img.decode().then(done).catch(done);
+      } else {
+        done();
+      }
+    };
+    img.onerror = () => resolve(); // Non bloccare su errori (file mancanti ok)
     img.src = url;
   });
 }
 
 /**
- * Restituisce l'array degli URL essenziali da precaricare all'avvio (solo menu).
+ * Catalogo URL del boot generale (tutto tranne i full-bleed campi).
  */
 export function getAssetUrls() {
   const urls = new Set();
 
-  // Sfondi armate (usati nel menu di selezione armata e nella mano)
   Object.values(ARMY_GIFS).forEach((path) => {
     if (path) urls.add(resolveUrl(path));
   });
 
-  // Sfondi pannelli Log e FC
   urls.add(resolveUrl('/Immagini_bg/CampoLOG_bg.webp'));
   urls.add(resolveUrl('/Immagini_bg/CampoFC_bg.webp'));
+
+  if (BRAND_LOGO_SRC) urls.add(BRAND_LOGO_SRC);
+
+  Object.values(AGENT_IMAGE_PATHS).forEach((path) => {
+    if (path) urls.add(path);
+  });
+  Object.values(CARD_IMAGE_PATHS).forEach((path) => {
+    if (path) urls.add(path);
+  });
+  for (let i = 0; i <= 3; i += 1) {
+    urls.add(getNascenteStageImageUrl(i));
+  }
+
+  CARD_BACK_IMAGES.forEach((path) => {
+    if (path) urls.add(path);
+  });
+
+  urls.add(EMINENCE_ART_FALLBACK);
+  Object.values(EMINENCES).forEach((em) => {
+    const url = getEminenceArtUrl(em);
+    if (url) urls.add(url);
+  });
+
+  // Miniature tabellone: leggere, usate ovunque; full-res solo a inizio partita
+  if (Array.isArray(ALL_BATTLEFIELDS)) {
+    ALL_BATTLEFIELDS.forEach((field) => {
+      const thumb = resolveFieldThumbUrl(field?.bgImage);
+      if (thumb) urls.add(thumb);
+    });
+  }
 
   return [...urls].filter(Boolean);
 }
 
 /**
  * Precarica gli sfondi dei campi passati (tipicamente i campi estratti
- * per la partita corrente). Fire-and-forget: non blocca il flusso di gioco.
+ * per la partita corrente). Opzionale onProgress(loaded, total, percent).
  */
-export async function preloadBattlefieldImages(fields) {
-  if (!Array.isArray(fields)) return;
+export async function preloadBattlefieldImages(fields, onProgress) {
+  if (!Array.isArray(fields)) {
+    onProgress?.(0, 0, 100);
+    return;
+  }
 
-  // Prima le miniature del tabellone: sono ~20 kB l'una e servono subito.
   const thumbs = [...new Set(fields.map((f) => resolveFieldThumbUrl(f?.bgImage)).filter(Boolean))];
-  await Promise.all(thumbs.map(preloadImage));
-
-  // Poi gli sfondi a piena risoluzione, a coppie: caricarli tutti insieme
-  // satura decode e memoria GPU proprio mentre parte la partita.
   const full = [...new Set(fields.map((f) => resolveUrl(f?.bgImage)).filter(Boolean))];
+  const urls = [...thumbs, ...full];
+  const total = urls.length || 1;
+  let loaded = 0;
+  const report = () => {
+    loaded += 1;
+    onProgress?.(loaded, total, Math.round((loaded / total) * 100));
+  };
+
+  // Miniature subito (parallele)
+  await Promise.all(thumbs.map((url) => preloadImage(url).then(report)));
+
+  // Full-res a coppie: evita spike di decode GPU
   for (let i = 0; i < full.length; i += 2) {
-    await Promise.all(full.slice(i, i + 2).map(preloadImage));
+    await Promise.all(full.slice(i, i + 2).map((url) => preloadImage(url).then(report)));
+  }
+
+  onProgress?.(total, total, 100);
+}
+
+async function waitForFonts() {
+  try {
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise((r) => setTimeout(r, 2500)),
+      ]);
+    }
+  } catch {
+    /* ignore */
   }
 }
 
 /**
- * Precarica tutte le risorse e invoca onProgress(loaded, total, percent).
+ * Precarica tutte le risorse del boot e invoca onProgress(loaded, total, percent).
  * Ritorna una Promise che si risolve quando il caricamento è completo.
  */
 export async function preloadAllAssets(onProgress) {
@@ -107,23 +178,25 @@ export async function preloadAllAssets(onProgress) {
   const total = urls.length;
 
   if (total === 0) {
+    await waitForFonts();
     onProgress?.(0, 0, 100);
     return;
   }
 
   let loaded = 0;
   const report = () => {
-    loaded++;
+    loaded += 1;
     const percent = Math.round((loaded / total) * 100);
     onProgress?.(loaded, total, percent);
   };
 
-  // Precarica in batch per non sovraccaricare la rete
-  const BATCH = 8;
+  // Batch ampi ma limitati: più parallelo = boot più corto senza saturare HTTP/2
+  const BATCH = 16;
   for (let i = 0; i < urls.length; i += BATCH) {
     const batch = urls.slice(i, i + BATCH);
     await Promise.all(batch.map((url) => preloadImage(url).then(report)));
   }
 
+  await waitForFonts();
   onProgress?.(loaded, total, 100);
 }

@@ -111,3 +111,18 @@ test('schema: PRIMITIVE_ALLOWED_TARGETS copre tutte le primitive note', () => {
     );
   }
 });
+
+test('schema: abilità ordinate per costo crescente (spesa di Presenza)', () => {
+  for (const id of EMINENCE_IDS) {
+    const abilities = EMINENCES[id].abilities || [];
+    const costs = abilities.map((ability) => Math.max(0, -ability.presenceDelta));
+    for (let i = 1; i < costs.length; i += 1) {
+      assert.ok(
+        costs[i - 1] <= costs[i],
+        `${id}: curva fuori ordine per costo ${JSON.stringify(
+          abilities.map((ability) => ability.presenceDelta),
+        )} — atteso costo non decrescente (0,1,2…)`,
+      );
+    }
+  }
+});

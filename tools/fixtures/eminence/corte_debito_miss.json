@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 4,
-    "abilityId": "corte_debito_eterno",
+    "presence": 3,
+    "abilityId": "corte_debito",
     "params": {
       "cardId": 231
     },
@@ -56,6 +56,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_debito_eterno_miss",
+  "name": "corte_debito_miss",
   "branch": "miss"
 }

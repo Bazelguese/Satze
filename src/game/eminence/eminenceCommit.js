@@ -210,6 +210,7 @@ export async function applyRemoteGateMessage(state, message, { digest = sha256He
       opening.eminenceId,
       remotePublicState.selectionCheckpointPresence,
       remotePublicState.persistent,
+      { lastSelectedAbilityId: remotePublicState.lastSelectedAbilityId },
     );
     if (!legal.includes(opening.abilityId)) return reject('ILLEGAL_AT_SELECTION');
   }

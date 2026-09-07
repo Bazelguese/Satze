@@ -1,10 +1,10 @@
 {
   "ability": {
     "id": "mounthborn_gorgoglio",
-    "name": "Gorgoglio dai Cento Occhi",
+    "name": "Gorgoglio terrificante",
     "presenceDelta": 0,
     "revealGate": "PRE_AGENT",
-    "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+    "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 3,
@@ -64,7 +64,7 @@
       ],
       "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
       "kind": "reveal",
-      "name": "Gorgoglio dai Cento Occhi",
+      "name": "Gorgoglio terrificante",
       "outcome": null,
       "payoffs": [
         {
@@ -83,7 +83,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 0,
       "side": "player",
-      "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+      "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
     },
     {
       "badgeText": "Verifica · Agenti schierati",
@@ -105,7 +105,7 @@
       ],
       "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
-      "name": "Gorgoglio dai Cento Occhi",
+      "name": "Gorgoglio terrificante",
       "outcome": "hit",
       "payoffs": [
         {
@@ -141,7 +141,7 @@
       ],
       "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
-      "name": "Gorgoglio dai Cento Occhi",
+      "name": "Gorgoglio terrificante",
       "outcome": "hit",
       "payoffs": [
         {
@@ -237,7 +237,7 @@
           ],
           "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
           "kind": "reveal",
-          "name": "Gorgoglio dai Cento Occhi",
+          "name": "Gorgoglio terrificante",
           "outcome": null,
           "payoffs": [
             {
@@ -256,7 +256,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 0,
           "side": "player",
-          "text": "Il proprietario sceglie un Agente nemico non schierato: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, +2 Presenza."
+          "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
         },
         {
           "badgeText": "Verifica · Agenti schierati",
@@ -278,7 +278,7 @@
           ],
           "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
-          "name": "Gorgoglio dai Cento Occhi",
+          "name": "Gorgoglio terrificante",
           "outcome": "hit",
           "payoffs": [
             {
@@ -345,7 +345,7 @@
           ],
           "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
-          "name": "Gorgoglio dai Cento Occhi",
+          "name": "Gorgoglio terrificante",
           "outcome": "hit",
           "payoffs": [
             {
@@ -392,6 +392,22 @@
         "player": 3
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "deployedMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "SET_ARMY_BONUS_STATE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
         {
           "condition": {
             "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
@@ -446,7 +462,7 @@
           "primitive": "MARK_CARD",
           "source": "ability",
           "sourceId": "mounthborn_gorgoglio",
-          "sourceName": "Gorgoglio dai Cento Occhi",
+          "sourceName": "Gorgoglio terrificante",
           "target": null,
           "timing": "AFTER_REVEAL"
         },
@@ -462,7 +478,7 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "ability",
           "sourceId": "mounthborn_gorgoglio",
-          "sourceName": "Gorgoglio dai Cento Occhi",
+          "sourceName": "Gorgoglio terrificante",
           "target": "SELF",
           "timing": "BEFORE_TRIGGER_CHECK"
         }

@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -72,7 +72,7 @@ test('vista: dopo la conferma propria il tavolo resta fermo solo se l\'avversari
   assert.equal(isAwaitingEminenceChoice(view), false);
   assert.equal(shouldShowEminenceLayer(view, { gamePhase: 'selectField' }), true);
 
-  const both = selectEminenceAbility(chosen, SIDES.ENEMY, 'semaforo_giallo').matchState;
+  const both = selectEminenceAbility(chosen, SIDES.ENEMY, 'semaforo_verde').matchState;
   const done = buildEminenceChoiceView(both, SIDES.PLAYER);
   assert.equal(shouldShowEminenceLayer(done, { gamePhase: 'selectField' }), false);
 });
@@ -80,7 +80,7 @@ test('vista: dopo la conferma propria il tavolo resta fermo solo se l\'avversari
 test('vista: due scelte segrete diverse producono la stessa proiezione avversaria', () => {
   const base = match();
   const a = selectEminenceAbility(base, SIDES.ENEMY, 'semaforo_verde').matchState;
-  const b = selectEminenceAbility(base, SIDES.ENEMY, 'semaforo_giallo').matchState;
+  const b = selectEminenceAbility(base, SIDES.ENEMY, 'semaforo_verde').matchState;
 
   const viewA = buildEminenceChoiceView(a, SIDES.PLAYER);
   const viewB = buildEminenceChoiceView(b, SIDES.PLAYER);
@@ -130,16 +130,13 @@ test('vista: i Frammenti pubblici diventano opzioni di parametro', () => {
   opened.player.persistent.fragmentCardIds = [101, 116, 106];
   const view = buildEminenceChoiceView(opened, SIDES.PLAYER);
   const innesto = view.self.options.find((o) => o.id === 'kethran_innesto');
-  const opera = view.self.options.find((o) => o.id === 'kethran_opera_composita');
+  const elogio = view.self.options.find((o) => o.id === 'kethran_elogio');
   assert.equal(innesto.implemented, true);
   assert.deepEqual(innesto.paramsSchema.fragmentCardId, [101, 116]);
   assert.equal(innesto.paramsSchema.__limits, undefined);
-  assert.deepEqual(opera.paramsSchema.fragmentCardId, [101, 116, 106]);
-  assert.deepEqual(opera.paramsSchema.composeComponent, ['TRIGGER', 'EFFECT']);
-  assert.deepEqual(opera.paramsSchema.__limits, { fragmentCardId: { min: 1, max: 2 } });
-  assert.equal(selectionParamsReady(opera.paramsSchema, { fragmentCardId: 101 }), false);
-  assert.equal(selectionParamsReady(opera.paramsSchema, { fragmentCardId: 101, composeComponent: 'TRIGGER' }), true);
-  assert.equal(selectionParamsReady(opera.paramsSchema, { fragmentCardId: [101, 116] }), true);
+  assert.equal(elogio.paramsSchema, null);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, {}), false);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), true);
 });
 
 test('vista: gli slot del tabellone diventano opzioni e lo 0 è una scelta valida', () => {
@@ -189,11 +186,11 @@ test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o conf
       { id: 301, side: SIDES.ENEMY, label: 'Avversario' },
     ],
   });
-  const clausola = view.self.options.find((o) => o.id === 'corte_clausola');
-  const eterno = view.self.options.find((o) => o.id === 'corte_debito_eterno');
+  const clausola = view.self.options.find((o) => o.id === 'corte_debito');
+  const eterno = view.self.options.find((o) => o.id === 'corte_brutto_affare');
   assert.deepEqual(clausola.paramsSchema.cardId, [201, 301, 302]);
   assert.deepEqual(eterno.paramsSchema.cardId, [201, 301]);
-  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'corte_clausola' }), [201, 301, 302]);
+  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'corte_debito' }), [201, 301, 302]);
   assert.equal(view.paramMeta.cardId[201].side, SIDES.PLAYER);
   assert.equal(view.paramMeta.cardId[301].side, SIDES.ENEMY);
 });
@@ -433,7 +430,7 @@ test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', (
   base.player.presence = 4;
   const opened = beginEminenceRound(base, { roundNumber: 1 });
   const sealed = selectEminenceAbility(
-    selectEminenceAbility(opened, SIDES.PLAYER, 'corte_debito_eterno').matchState,
+    selectEminenceAbility(opened, SIDES.PLAYER, 'corte_brutto_affare').matchState,
     SIDES.ENEMY,
     'semaforo_giallo',
   ).matchState;

@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "corte_debito_eterno",
-    "name": "Debito Eterno",
+    "id": "corte_brutto_affare",
+    "name": "Brutto Affare",
     "presenceDelta": -4,
     "revealGate": "GENERAL",
-    "text": "Il proprietario sceglie uno dei due Agenti confermati: in questo Duello riceve 2 FC temporanei. Alla Fine Scontro il giocatore che lo controlla perde PV pari alla POT finale registrata."
+    "text": "Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso."
   },
   "bilance": {
     "cinematicCues": 0,
@@ -36,11 +36,11 @@
         "presenceDelta": -2
       },
       {
-        "id": "corte_clausola",
-        "presenceDelta": -3
+        "id": "corte_debito",
+        "presenceDelta": 1
       },
       {
-        "id": "corte_debito_eterno",
+        "id": "corte_brutto_affare",
         "presenceDelta": -4
       }
     ],
@@ -48,7 +48,7 @@
     "presenceAfterSelect": 4,
     "presenceAvailable": 4,
     "presenceDelta": -4,
-    "selected": "corte_debito_eterno"
+    "selected": "corte_brutto_affare"
   },
   "eminence": {
     "army": "Corte Rossa",
@@ -59,7 +59,7 @@
   "scenario": {
     "branch": "miss",
     "initiativeSide": "player",
-    "name": "corte_debito_eterno_miss",
+    "name": "corte_brutto_affare_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -152,8 +152,8 @@
           "expectedNoCue": false,
           "primitive": "GRANT_TEMPORARY_FOCUS",
           "source": "ability",
-          "sourceId": "corte_debito_eterno",
-          "sourceName": "Debito Eterno",
+          "sourceId": "corte_brutto_affare",
+          "sourceName": "Brutto Affare",
           "target": "CHOSEN",
           "timing": "AFTER_REVEAL"
         },
@@ -165,8 +165,8 @@
           "expectedNoCue": false,
           "primitive": "REGISTER_END_MATCH_DEBT",
           "source": "ability",
-          "sourceId": "corte_debito_eterno",
-          "sourceName": "Debito Eterno",
+          "sourceId": "corte_brutto_affare",
+          "sourceName": "Brutto Affare",
           "target": null,
           "timing": "AFTER_REVEAL"
         }

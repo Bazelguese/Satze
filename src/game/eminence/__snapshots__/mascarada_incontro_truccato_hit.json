@@ -4,7 +4,7 @@
     "name": "Incontro Truccato",
     "presenceDelta": -4,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, il trigger del proprio Agente è considerato soddisfatto e il suo Potere non può essere bloccato."
+    "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -94,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -4,
       "side": "player",
-      "text": "In questo Duello, il trigger del proprio Agente è considerato soddisfatto e il suo Potere non può essere bloccato."
+      "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
     }
   ],
   "scenario": {
@@ -200,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -4,
           "side": "player",
-          "text": "In questo Duello, il trigger del proprio Agente è considerato soddisfatto e il suo Potere non può essere bloccato."
+          "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
         }
       ],
       "presence": {

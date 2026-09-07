@@ -4,7 +4,7 @@
     "name": "Tacet",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Se nessuno dei due Agenti soddisfa il requisito di attivazione, +2 Presenza."
+    "text": "Se uno dei due Agenti non soddisfa il requisito di attivazione del suo trigger Potere, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -64,7 +64,7 @@
       ],
       "id": "effect:player:orathai_risonanza:AFTER_DUEL_OUTCOME:hit",
       "kind": "effect",
-      "name": "Consonanza",
+      "name": "Risonanza",
       "outcome": "hit",
       "payoffs": [
         {
@@ -108,7 +108,7 @@
       "phaseLabel": "Mancato",
       "presenceDelta": null,
       "side": "player",
-      "text": "Almeno un Potere soddisfatto."
+      "text": "+2 Presenza."
     }
   ],
   "scenario": {
@@ -223,7 +223,7 @@
           ],
           "id": "effect:player:orathai_risonanza:AFTER_DUEL_OUTCOME:hit",
           "kind": "effect",
-          "name": "Consonanza",
+          "name": "Risonanza",
           "outcome": "hit",
           "payoffs": [
             {
@@ -267,7 +267,7 @@
           "phaseLabel": "Mancato",
           "presenceDelta": null,
           "side": "player",
-          "text": "Almeno un Potere soddisfatto."
+          "text": "+2 Presenza."
         }
       ],
       "presence": {
@@ -288,16 +288,15 @@
           "primitive": "CHANGE_PRESENCE",
           "source": "static",
           "sourceId": "orathai_risonanza",
-          "sourceName": "Consonanza",
+          "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
-            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "detail": "activationUnsatisfiedCount: (assente) → non ancora valutabile",
             "keys": [
-              "ownActivationSatisfied",
-              "enemyActivationSatisfied"
+              "activationUnsatisfiedCount"
             ],
             "status": "deferred"
           },

@@ -31,6 +31,9 @@ export function createTriggerRules() {
     equalLeagueSatisfies: [],
 
     custom: {},
+    powerBonusSwaps: [],
+    mirrorUnsatisfied: [],
+    mirrorSnapshot: null,
   };
 }
 
@@ -46,6 +49,9 @@ function cloneTriggerRules(rules) {
     xorSnapshot: rules.xorSnapshot ? { ...rules.xorSnapshot } : null,
     equalLeagueSatisfies: [...(rules.equalLeagueSatisfies || [])],
     custom: { ...rules.custom },
+    powerBonusSwaps: [...(rules.powerBonusSwaps || [])],
+    mirrorUnsatisfied: [...(rules.mirrorUnsatisfied || [])],
+    mirrorSnapshot: rules.mirrorSnapshot ? { ...rules.mirrorSnapshot } : null,
   };
 }
 
@@ -150,6 +156,14 @@ export function applyPrimitiveToTriggerRules(rules, segment, { ownerSide = SIDES
       next.aliases.push({ ...entry, map });
       break;
     }
+
+    case P.SWAP_POWER_BONUS_TRIGGERS:
+      next.powerBonusSwaps.push(entry);
+      break;
+
+    case P.MIRROR_UNSATISFIED_POWER:
+      next.mirrorUnsatisfied.push(entry);
+      break;
 
     default:
       // Le primitive non attinenti ai trigger non toccano questo overlay.
@@ -293,7 +307,16 @@ export function resolveTriggerState({
     }
   }
 
-  const forbidden = Boolean(forbidEntry) || xorForbidden;
+  let mirrorForbidden = false;
+  for (const mirror of rules.mirrorUnsatisfied || []) {
+    if (mirror.excludeTriggers && mirror.excludeTriggers.includes(effectiveTrigger)) continue;
+    if (side === mirror.ownerSide) continue;
+    if (!scopeMatches(mirror, side)) continue;
+    const ownerNatural = rules.mirrorSnapshot?.[mirror.ownerSide];
+    if (ownerNatural === false) mirrorForbidden = true;
+  }
+
+  const forbidden = Boolean(forbidEntry) || xorForbidden || mirrorForbidden;
   // FORBID prevale su FORCE in conflitto diretto.
   const forced = (Boolean(forceEntry) || xorForced) && !forbidden;
 
@@ -375,6 +398,44 @@ export function snapshotXorActivation(rules, {
   });
 
   rules.xorSnapshot = {
+    [SIDES.PLAYER]: Boolean(player.naturalSatisfied),
+    [SIDES.ENEMY]: Boolean(enemy.naturalSatisfied),
+  };
+  return rules;
+}
+
+/**
+ * Fissa il requisito naturale del proprietario per MIRROR_UNSATISFIED_POWER:
+ * se il proprietario non soddisfa, l'avversario viene forzato a non soddisfare.
+ */
+export function snapshotMirrorActivation(rules, {
+  playerAgent,
+  enemyAgent,
+  playerContext,
+  enemyContext,
+  checkTrigger = defaultCheckTrigger,
+} = {}) {
+  if (!rules?.mirrorUnsatisfied?.length) return rules;
+  if (rules.mirrorSnapshot) return rules;
+
+  const player = resolveActivationRequirement({
+    originalTrigger: playerAgent?.ability?.trigger ?? null,
+    context: playerContext,
+    card: playerAgent,
+    side: SIDES.PLAYER,
+    triggerRules: rules,
+    checkTrigger,
+  });
+  const enemy = resolveActivationRequirement({
+    originalTrigger: enemyAgent?.ability?.trigger ?? null,
+    context: enemyContext,
+    card: enemyAgent,
+    side: SIDES.ENEMY,
+    triggerRules: rules,
+    checkTrigger,
+  });
+
+  rules.mirrorSnapshot = {
     [SIDES.PLAYER]: Boolean(player.naturalSatisfied),
     [SIDES.ENEMY]: Boolean(enemy.naturalSatisfied),
   };

@@ -9,7 +9,45 @@
 
 import { checkTrigger as baseCheckTrigger } from '../triggerLogic.js';
 import { resolveTriggerState, snapshotXorActivation } from './triggerRulesOverlay.js';
-import { SIDES } from './eminenceConstants.js';
+import { SIDES, OPPOSITE_SIDE, EMINENCE_PRIMITIVES as P } from './eminenceConstants.js';
+import { TRIGGER_NAMES } from '../../data/triggers.js';
+import { getEminenceAbility } from '../../data/eminences.js';
+
+function formatBonusEffectEntry(entry) {
+  if (!entry?.effect) return '—';
+  const v = entry.value;
+  const min = (n) => (n != null ? ` (min ${n})` : '');
+  switch (entry.effect) {
+    case 'power': return `+${v} POT`;
+    case 'enemyPower': return `${v} POT nem.${min(entry.minPower)}`;
+    case 'damage': return `+${v} DAN`;
+    case 'enemyDamage': return `${v} DAN nem.${min(entry.minDamage)}`;
+    case 'powerAndDamage': return `+${v} POT, +${v} DAN`;
+    case 'assaultValue': return `+${v} VA`;
+    case 'enemyAssault': return `${v} VA nem.${min(entry.minAssault)}`;
+    case 'focusCoin': return `+${v} FC`;
+    case 'heal': return `Cura ${v}`;
+    case 'directDamage': return `${v} Danni dir.`;
+    case 'immune': return 'Immune';
+    case 'toxin': return `Tossina ${v}${min(entry.minHealth)}`;
+    case 'copyBonus': return 'Copia Bonus nemico';
+    case 'blockAbility': return 'Blocca Potere';
+    case 'blockBonus': return 'Blocca Bonus';
+    default: return '—';
+  }
+}
+
+/** Ricalcola il testo Bonus da trigger + effects (non dalla description statica). */
+export function formatArmyBonusDescription(bonus) {
+  if (!bonus) return '—';
+  const effects = Array.isArray(bonus.effects) && bonus.effects.length
+    ? bonus.effects
+    : (bonus.effect ? [bonus] : []);
+  if (!effects.length) return bonus.description || '—';
+  const body = effects.map(formatBonusEffectEntry).filter((part) => part && part !== '—').join(', ');
+  const trigger = bonus.trigger ? `${TRIGGER_NAMES[bonus.trigger] || bonus.trigger}: ` : '';
+  return `${trigger}${body || '—'}`;
+}
 
 /** Vero se l'overlay contiene almeno una regola capace di cambiare un esito. */
 export function hasActiveTriggerRules(rules) {
@@ -23,6 +61,8 @@ export function hasActiveTriggerRules(rules) {
     || Object.keys(rules.persistentReplacementsByCardId).length > 0
     || (rules.xorSync && rules.xorSync.length > 0)
     || (rules.equalLeagueSatisfies && rules.equalLeagueSatisfies.length > 0)
+    || (rules.powerBonusSwaps && rules.powerBonusSwaps.length > 0)
+    || (rules.mirrorUnsatisfied && rules.mirrorUnsatisfied.length > 0)
   );
 }
 
@@ -233,6 +273,39 @@ export function readActivationSatisfied(agent, context, side, triggerRules) {
 }
 
 export { snapshotXorActivation };
+export { snapshotMirrorActivation } from './triggerRulesOverlay.js';
+
+/** FC reali concessi al pool del controllore (non temporanei sul Duello). */
+export function readPoolFocus(bundle, side) {
+  return Math.max(0, bundle?.poolFocus?.[side] || 0);
+}
+
+/** Lati resi Immune dal bundle Eminenza. */
+export function readImmuneSides(bundle) {
+  return [...(bundle?.immuneSides || [])];
+}
+
+/** Tossine da rimuovere (valore rimosso già noto o da leggere a runtime). */
+export function applyToxinRemovals(bundle, { playerToxin = null, enemyToxin = null } = {}) {
+  if (!bundle?.toxinRemovals?.length) {
+    return { playerToxin, enemyToxin, removedBySide: {} };
+  }
+  let player = playerToxin;
+  let enemy = enemyToxin;
+  const removedBySide = {};
+  for (const removal of bundle.toxinRemovals) {
+    if (removal.side === SIDES.PLAYER) {
+      removedBySide[SIDES.PLAYER] = player?.value || removal.removedValue || 0;
+      player = null;
+    }
+    if (removal.side === SIDES.ENEMY) {
+      removedBySide[SIDES.ENEMY] = enemy?.value || removal.removedValue || 0;
+      enemy = null;
+    }
+  }
+  return { playerToxin: player, enemyToxin: enemy, removedBySide };
+}
+
 export function readHpDelta(bundle, side) {
   return (bundle?.hpDeltas || [])
     .filter((entry) => entry.side === side)
@@ -266,7 +339,7 @@ export function consumeHpDeltas(bundle, bySide = {}) {
   return { ...bundle, hpDeltas };
 }
 
-/** Applica overlay sul Bonus d'Armata: forzato, soppresso, non bloccabile. */
+/** Applica overlay sul Bonus d'Armata: forzato, soppresso, non bloccabile, override effetto. */
 export function applyArmyBonusOverlay({ hasBonus, armyBonus, bonusBlocked = false, sideState = null } = {}) {
   const overlay = sideState || {};
   let nextHas = hasBonus;
@@ -277,8 +350,84 @@ export function applyArmyBonusOverlay({ hasBonus, armyBonus, bonusBlocked = fals
     nextHas = true;
     if (nextBonus) nextBonus = { ...nextBonus, trigger: null };
   }
+  if (overlay.override) {
+    nextHas = true;
+    nextBonus = {
+      ...(nextBonus || {}),
+      trigger: overlay.override.trigger ?? null,
+      effects: overlay.override.effects
+        ? overlay.override.effects.map((entry) => ({ ...entry }))
+        : [{
+          effect: overlay.override.effect || 'directDamage',
+          value: overlay.override.value ?? 0,
+        }],
+    };
+  }
   if (overlay.unblockable) nextBlocked = false;
   return { hasBonus: nextHas, armyBonus: nextBonus, bonusBlocked: nextBlocked };
+}
+
+/**
+ * Scambia trigger Potere ↔ Bonus per i lati indicati dall'overlay.
+ * Ritorna { agent, armyBonus } aggiornati (description Bonus ricalcolata).
+ */
+export function applyPowerBonusTriggerSwap({ agent, armyBonus, side, triggerRules } = {}) {
+  const swaps = triggerRules?.powerBonusSwaps || [];
+  if (!swaps.length || !agent) return { agent, armyBonus };
+  const match = swaps.find((entry) => {
+    if (entry.scope === 'GLOBAL') return true;
+    if (entry.scope === 'OWN') return side === entry.ownerSide;
+    if (entry.scope === 'ENEMY') return side !== entry.ownerSide;
+    return side === entry.ownerSide;
+  });
+  if (!match) return { agent, armyBonus };
+  const powerTrigger = agent.ability?.trigger ?? null;
+  const bonusTrigger = armyBonus?.trigger ?? null;
+  const nextAgent = {
+    ...agent,
+    ability: { ...(agent.ability || {}), trigger: bonusTrigger },
+  };
+  const nextBonus = armyBonus
+    ? (() => {
+      const swapped = { ...armyBonus, trigger: powerTrigger };
+      return { ...swapped, description: formatArmyBonusDescription(swapped) };
+    })()
+    : armyBonus;
+  return { agent: nextAgent, armyBonus: nextBonus };
+}
+
+/** True se l'abilità rivelata del lato deposita SWAP_POWER_BONUS_TRIGGERS. */
+export function sideHasRevealedPowerBonusSwap(matchState, side) {
+  const state = matchState?.[side];
+  if (!state?.eminenceId || !state.revealedAbilityId) return false;
+  const ability = getEminenceAbility(state.eminenceId, state.revealedAbilityId);
+  return (ability?.segments || []).some(
+    (segment) => segment.primitive === P.SWAP_POWER_BONUS_TRIGGERS,
+  );
+}
+
+/**
+ * Vista display Potere/Bonus dopo eventuale Devozione (o analoghe).
+ * Usata dall'UI live prima che il Duello costruisca il bundle completo.
+ * `armyBonus` va passato dal chiamante (es. ARMY_BONUSES[agent.army]).
+ */
+export function resolveLivePowerBonusSwapDisplay({ agent, side, matchState, armyBonus = null } = {}) {
+  if (!agent || !sideHasRevealedPowerBonusSwap(matchState, side)) {
+    return {
+      agent,
+      armyBonus,
+      swapped: false,
+    };
+  }
+  const swapped = applyPowerBonusTriggerSwap({
+    agent,
+    armyBonus,
+    side,
+    triggerRules: {
+      powerBonusSwaps: [{ scope: 'OWN', ownerSide: side }],
+    },
+  });
+  return { ...swapped, swapped: true };
 }
 
 const CONVERT_STAT_KEYS = {

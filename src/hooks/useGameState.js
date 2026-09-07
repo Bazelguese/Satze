@@ -136,6 +136,8 @@ export function useGameState() {
 
   /** Setup animazione mischia & deal (fase shuffleDeal). */
   const [shuffleDealSetup, setShuffleDealSetup] = useState(null);
+  /** Fase duello da aprire dopo `duelLoading` (`shuffleDeal` | `selectField`). */
+  const [pendingDuelPhase, setPendingDuelPhase] = useState(null);
   /** Identità visiva mazzo (accent + armate dal deck da 10) — persiste per tutta la partita. */
   const [playerDeckVisual, setPlayerDeckVisual] = useState(null);
   const [enemyDeckVisual, setEnemyDeckVisual] = useState(null);
@@ -289,6 +291,8 @@ export function useGameState() {
 
     shuffleDealSetup,
     setShuffleDealSetup,
+    pendingDuelPhase,
+    setPendingDuelPhase,
     playerDeckVisual,
     setPlayerDeckVisual,
     enemyDeckVisual,

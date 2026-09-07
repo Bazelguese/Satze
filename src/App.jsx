@@ -1,11 +1,11 @@
 /**
- * Bootstrap dell'app: loading + preload + gioco
- * Mostra una schermata di caricamento invece dello schermo nero
- * e precarica solo gli asset essenziali del menu; gli sfondi campo
- * vengono caricati on-demand a inizio partita (vedi preloadAssets.js).
+ * Bootstrap dell'app: loading denso (asset + chunk + warm-up GPU/animazioni).
+ * Solo gli sfondi campo full-res restano on-demand a inizio partita.
  */
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { LoadingScreen } from './components/LoadingScreen';
+import { FpsCounter } from './components/FpsCounter';
+import { WarmupStage } from './components/WarmupStage';
 import { preloadAllAssets } from './utils/preloadAssets';
 import { GameViewport } from './components/GameViewport';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -15,8 +15,10 @@ import { IS_PUBLIC_PLAYTEST_BUILD } from './config/buildProfile';
 
 const SHOW_CARD_TEST = false; // true per pagina test carte
 
-// Lazy: SatzeGame non viene caricato finché non serve (evita blocco su images.js)
-const SatzeGame = lazy(() => import('../Codice/satze.jsx'));
+/** Avvio immediato del chunk gioco (in parallelo al preload asset). */
+const satzeGameModulePromise = import('../Codice/satze.jsx');
+
+// Lab/tool: lazy on-demand (non nel boot principale)
 const CardTest = lazy(() => import('./components/cards/CardTest').then((m) => ({ default: m.CardTest })));
 const DeckSummaryCropTool = lazy(() => import('./components/deck/DeckSummaryCropTool').then((m) => ({ default: m.DeckSummaryCropTool })));
 const CardPrototypePage = lazy(() => import('./components/cards/CardPrototypePage').then((m) => ({ default: m.CardPrototypePage })));
@@ -38,20 +40,24 @@ const EminenceSystemLabPage = lazy(() =>
   import('./components/eminenceLab/EminenceSystemLabPage').then((m) => ({ default: m.EminenceSystemLabPage }))
 );
 
-const PRELOAD_TIMEOUT_MS = 12000; // Max 12s di preload, poi procedi comunque
-const MIN_LOADING_DISPLAY_MS = 2500; // Schermata di caricamento visibile almeno 2.5s
+/** Boot denso: aspetta fino a 90s prima di procedere comunque sugli asset. */
+const PRELOAD_TIMEOUT_MS = 90000;
+const MIN_LOADING_DISPLAY_MS = 600;
 
 export function App() {
   return (
     <ErrorBoundary>
+      <FpsCounter />
       <AppContent />
     </ErrorBoundary>
   );
 }
 
 function AppContent() {
-  const [isReady, setIsReady] = useState(false);
+  const [bootPhase, setBootPhase] = useState('assets'); // assets | warmup | ready
   const [progress, setProgress] = useState(0);
+  const [detail, setDetail] = useState('Caricamento risorse');
+  const [SatzeGame, setSatzeGame] = useState(null);
 
   useEffect(() => {
     if (!IS_PUBLIC_PLAYTEST_BUILD) return undefined;
@@ -65,7 +71,6 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Rimuovi il loading HTML statico (sostituito da React)
     const el = document.getElementById('loading-initial');
     if (el) el.remove();
 
@@ -73,33 +78,88 @@ function AppContent() {
     const startTime = Date.now();
 
     const run = async () => {
-      try {
-        const preloadPromise = preloadAllAssets((loaded, total, percent) => {
-          if (!cancelled) setProgress(percent);
+      let assetPercent = 0;
+      let gameLoaded = false;
+
+      const reportProgress = () => {
+        if (cancelled) return;
+        // Asset 0–72%, chunk gioco +8% → max 80% prima del warm-up
+        setProgress(Math.min(80, Math.round(assetPercent * 0.72) + (gameLoaded ? 8 : 0)));
+        setDetail(gameLoaded ? 'Caricamento risorse' : 'Caricamento motore e carte');
+      };
+
+      const assetsPromise = preloadAllAssets((_loaded, _total, percent) => {
+        assetPercent = percent;
+        reportProgress();
+      }).catch((err) => {
+        console.warn('Preload asset parziale:', err);
+      });
+
+      const assetsWithTimeout = Promise.race([
+        assetsPromise,
+        new Promise((resolve) => setTimeout(resolve, PRELOAD_TIMEOUT_MS)),
+      ]);
+
+      const gamePromise = satzeGameModulePromise
+        .then((mod) => {
+          gameLoaded = true;
+          reportProgress();
+          return mod.default;
+        })
+        .catch((err) => {
+          console.error('Caricamento SatzeGame fallito:', err);
+          throw err;
         });
-        const timeoutPromise = new Promise((resolve) =>
-          setTimeout(resolve, PRELOAD_TIMEOUT_MS)
-        );
-        await Promise.race([preloadPromise, timeoutPromise]);
+
+      let GameComponent = null;
+      try {
+        const [, gameDefault] = await Promise.all([assetsWithTimeout, gamePromise]);
+        GameComponent = gameDefault;
       } catch (err) {
-        console.warn('Preload parziale:', err);
+        console.error('Impossibile caricare il gioco:', err);
       }
-      if (!cancelled) {
-        setProgress(100);
-        // Attendi che siano passati almeno MIN_LOADING_DISPLAY_MS dall'avvio
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
-        await new Promise((r) => setTimeout(r, remaining + 300));
-        if (!cancelled) setIsReady(true);
-      }
+
+      if (cancelled || !GameComponent) return;
+
+      setSatzeGame(() => GameComponent);
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
+      await new Promise((r) => setTimeout(r, remaining));
+      if (cancelled) return;
+
+      setProgress(82);
+      setDetail('Preparazione animazioni');
+      setBootPhase('warmup');
     };
 
     run();
     return () => { cancelled = true; };
   }, []);
 
-  if (!isReady) {
-    return <LoadingScreen progress={progress} />;
+  const onWarmupProgress = useCallback((p) => {
+    // Warm-up mappa su 82–99
+    setProgress(Math.min(99, 82 + Math.round((Number(p) || 0) * 0.17)));
+    setDetail('Riscaldamento grafica e animazioni');
+  }, []);
+
+  const onWarmupComplete = useCallback(() => {
+    setProgress(100);
+    setDetail('Pronto');
+    // Un frame di “Pronto” poi entra
+    requestAnimationFrame(() => {
+      setTimeout(() => setBootPhase('ready'), 180);
+    });
+  }, []);
+
+  if (bootPhase !== 'ready' || !SatzeGame) {
+    return (
+      <>
+        {bootPhase === 'warmup' ? (
+          <WarmupStage onComplete={onWarmupComplete} onProgress={onWarmupProgress} />
+        ) : null}
+        <LoadingScreen progress={progress} detail={detail} />
+      </>
+    );
   }
 
   const devToolsAllowed = !IS_PUBLIC_PLAYTEST_BUILD;

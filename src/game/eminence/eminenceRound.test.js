@@ -250,15 +250,16 @@ test('reveal: la risoluzione segue l\'iniziativa anche se il pagamento è simult
 
 test('reveal: i segmenti differiti vengono armati, non risolti', () => {
   let matchState = startRound('patto_grande_semaforo', 'apex_sole_verde');
-  matchState = chooseBoth(matchState, 'semaforo_verde', 'apex_furia');
+  matchState = chooseBoth(matchState, 'semaforo_giallo', 'apex_furia');
 
   const { matchState: revealed, resolutionQueue } = completeGeneralGate(matchState, {});
 
-  // Il Semaforo opera a BEFORE_TRIGGER_CHECK: due segmenti in coda, zero immediati.
-  const pending = revealed.player.round.pendingEffects;
-  assert.equal(pending.length, 2);
-  assert.ok(pending.every((entry) => entry.timing === EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK));
-  assert.ok(pending.every((entry) => entry.consumed === false));
+  // Il Giallo opera a BEFORE_TRIGGER_CHECK; lo Statico Multa resta a AFTER_DUEL_OUTCOME.
+  const pendingTriggers = revealed.player.round.pendingEffects.filter(
+    (entry) => entry.timing === EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+  );
+  assert.equal(pendingTriggers.length, 1);
+  assert.ok(pendingTriggers.every((entry) => entry.consumed === false));
   assert.ok(resolutionQueue.every((entry) => entry.ownerSide !== SIDES.PLAYER));
 
   // Apex +1 opera invece subito dopo il reveal.
@@ -268,10 +269,10 @@ test('reveal: i segmenti differiti vengono armati, non risolti', () => {
 
 test('reveal: i segmenti portano l\'id dell\'Eminenza sorgente', () => {
   let matchState = startRoundWithPresence('apex_sole_verde', 'patto_grande_semaforo', { player: 4 });
-  matchState = chooseBoth(matchState, 'apex_cataclisma', 'semaforo_giallo');
+  matchState = chooseBoth(matchState, 'apex_cataclisma', 'semaforo_verde');
 
   const { resolutionQueue } = completeGeneralGate(matchState, {});
-  assert.equal(resolutionQueue.length, 2);
+  assert.equal(resolutionQueue.length, 1);
   assert.ok(resolutionQueue.every((entry) => entry.sourceEminenceId === 'apex_sole_verde'));
 });
 

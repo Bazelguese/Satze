@@ -4,7 +4,7 @@
     "name": "Giallo",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Tutti i trigger seguono le condizioni normali."
+    "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -57,26 +57,35 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": true,
-          "recipe": "REVEAL_OPEN",
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
-            "type": "announce"
+            "type": "field-agent"
           },
-          "waitFor": null
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
         }
       ],
       "id": "reveal:player:semaforo_giallo:GENERAL",
       "kind": "reveal",
       "name": "Giallo",
       "outcome": null,
-      "payoffs": [],
+      "payoffs": [
+        {
+          "primitive": "FORCE_TRIGGER",
+          "slot": null,
+          "target": null
+        }
+      ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
       "presenceDelta": 0,
       "side": "player",
-      "text": "Tutti i trigger seguono le condizioni normali."
+      "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
     }
   ],
   "scenario": {
@@ -123,14 +132,17 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": true,
+          "holdAnnounce": false,
           "noticeId": "reveal:player:semaforo_giallo:GENERAL",
-          "recipe": "REVEAL_OPEN",
+          "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
-            "type": "announce"
+            "type": "field-agent"
           },
-          "waitFor": null
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
         }
       ],
       "gate": "GENERAL",
@@ -146,26 +158,35 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": true,
-              "recipe": "REVEAL_OPEN",
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
               "to": {
                 "side": "player",
-                "type": "announce"
+                "type": "field-agent"
               },
-              "waitFor": null
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
             }
           ],
           "id": "reveal:player:semaforo_giallo:GENERAL",
           "kind": "reveal",
           "name": "Giallo",
           "outcome": null,
-          "payoffs": [],
+          "payoffs": [
+            {
+              "primitive": "FORCE_TRIGGER",
+              "slot": null,
+              "target": null
+            }
+          ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
           "presenceDelta": 0,
           "side": "player",
-          "text": "Tutti i trigger seguono le condizioni normali."
+          "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
         }
       ],
       "presence": {
@@ -197,7 +218,37 @@
         "enemy": 0,
         "player": 0
       },
-      "segments": [],
+      "segments": [
+        {
+          "condition": {
+            "detail": "totalFocusPlayed: (assente) → non ancora valutabile",
+            "keys": [
+              "totalFocusPlayed"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "semaforo_multa_caos",
+          "sourceName": "Multa per eccesso di Caos",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "FORCE_TRIGGER",
+          "source": "ability",
+          "sourceId": "semaforo_giallo",
+          "sourceName": "Giallo",
+          "target": null,
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
       "timing": "AFTER_DUEL_OUTCOME"
     }
   ]

@@ -4,7 +4,7 @@
     "name": "Protocollo di Contenimento",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Dopo i Bonus d'Armata, registra il DAN del tuo Agente come X: il suo DAN diventa 0 e infliggi metà di X in Danni diretti, arrotondata per eccesso. Se vinci il Duello, +2 Presenza."
+    "text": "Dopo la risoluzione dei Bonus, registra il DAN del tuo Agente schierato come X. Il suo DAN diventa 0 in questo Duello e l'avversario subisce Danni diretti pari a X/2, arrotondati per eccesso. Se vinci il Duello, +2 Presenza."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -104,7 +104,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Dopo i Bonus d'Armata, registra il DAN del tuo Agente come X: il suo DAN diventa 0 e infliggi metà di X in Danni diretti, arrotondata per eccesso. Se vinci il Duello, +2 Presenza."
+      "text": "Dopo la risoluzione dei Bonus, registra il DAN del tuo Agente schierato come X. Il suo DAN diventa 0 in questo Duello e l'avversario subisce Danni diretti pari a X/2, arrotondati per eccesso. Se vinci il Duello, +2 Presenza."
     }
   ],
   "scenario": {
@@ -239,7 +239,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Dopo i Bonus d'Armata, registra il DAN del tuo Agente come X: il suo DAN diventa 0 e infliggi metà di X in Danni diretti, arrotondata per eccesso. Se vinci il Duello, +2 Presenza."
+          "text": "Dopo la risoluzione dei Bonus, registra il DAN del tuo Agente schierato come X. Il suo DAN diventa 0 in questo Duello e l'avversario subisce Danni diretti pari a X/2, arrotondati per eccesso. Se vinci il Duello, +2 Presenza."
         }
       ],
       "presence": {
@@ -276,7 +276,6 @@
           "condition": {
             "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
             "keys": [
-              "duelWinnerRelative",
               "enemyFinalDamage"
             ],
             "status": "deferred"
