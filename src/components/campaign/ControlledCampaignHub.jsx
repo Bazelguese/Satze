@@ -1,36 +1,343 @@
-import React,{useState} from 'react';
-import {loadCampaignRun,saveCampaignRun} from '../../campaign/state/persistence.js';
-import {currentAct,currentStage,controlledCampaignReducer,previewControlledReward,findRunMission} from '../../campaign/state/controlledCampaignState.js';
-import {deckTotalLeague,poolCardById} from '../../campaign/state/campaignState.js';
-import {assembleNascenteCard,NASCENTE_ID} from '../../campaign/logic/nascente.js';
-import {campaignEnemyCard} from '../../campaign/logic/campaignDefinition.js';
-import {getEminenceForArmy} from '../../data/eminences.js';
-import {CampaignEventEditor} from './CampaignEventEditor.jsx';
+import React, { useState } from 'react';
+import {
+  loadCampaignRun,
+  saveCampaignRun,
+} from '../../campaign/state/persistence.js';
+import {
+  currentAct,
+  currentStage,
+  controlledCampaignReducer,
+  previewControlledReward,
+  findRunMission,
+} from '../../campaign/state/controlledCampaignState.js';
+import {
+  deckTotalLeague,
+  poolCardById,
+} from '../../campaign/state/campaignState.js';
+import {
+  assembleNascenteCard,
+  NASCENTE_ID,
+} from '../../campaign/logic/nascente.js';
+import { campaignEnemyCard } from '../../campaign/logic/campaignDefinition.js';
+import { getEminenceForArmy } from '../../data/eminences.js';
+import { CampaignEventEditor } from './CampaignEventEditor.jsx';
 import '../../styles/campaign/controlled-campaign.css';
-const KIND={battle:'Battaglia',elite:'Élite',special:'Incontro speciale',boss:'Boss'};
-export function ControlledCampaignHub({campaignSaveSlot=0,onStartMission,onBack}){
- const [run,setRun]=useState(()=>loadCampaignRun(campaignSaveSlot));
- const [selected,setSelected]=useState(null),[tab,setTab]=useState('map'),[editor,setEditor]=useState(false),[error,setError]=useState('');
- const [draftDeck,setDraftDeck]=useState(run?.deck||[]);
- if(editor)return <CampaignEventEditor onBack={()=>setEditor(false)}/>;
- if(!run)return <section className="campaign-control"><p role="alert">Il salvataggio non è leggibile.</p><button onClick={onBack}>Torna al menu</button></section>;
- const act=currentAct(run),stage=currentStage(run),mission=stage.alternatives.find(m=>m.id===selected)||stage.alternatives[0];
- const pending=run.definition.events.find(e=>e.id===run.pendingEvents[0]),nascente=assembleNascenteCard(run.nascente);
- const lookup=id=>id===NASCENTE_ID?nascente:poolCardById(id);
- const dispatch=action=>{try{const next=controlledCampaignReducer(run,action);if(!saveCampaignRun(next,campaignSaveSlot))throw new Error('Impossibile salvare: libera spazio prima di proseguire.');setRun(next);setError('');return next;}catch(e){setError(e.message);return null;}};
- const launch=()=>{const next=dispatch({type:'START_MISSION',nodeId:mission.id});if(next)try{onStartMission({...mission,campaignAttempt:next.activeAttempt},next);}catch(e){dispatch({type:'ABANDON_ATTEMPT'});setError(`Avvio non riuscito: ${e.message}`);}};
- const eminence=getEminenceForArmy(mission.enemy.army);
- return <section className="campaign-control">
-  <header className="cc-header"><div><p className="cc-eyebrow">Il Nascente · Campagna</p><h1>{act.title}</h1><p>Atto {run.actIndex+1} di 3 · Incontro {run.stageIndex+1} di 6 · Lega {deckTotalLeague(run.deck,run.nascente)}/30</p></div><div className="cc-toolbar"><button onClick={()=>setEditor(true)}>Editor eventi</button><button onClick={onBack}>Menu</button></div></header>
-  <nav className="cc-tabs" aria-label="Campagna"><button aria-pressed={tab==='map'} onClick={()=>setTab('map')}>Percorso</button><button aria-pressed={tab==='deck'} onClick={()=>{setDraftDeck(run.deck);setTab('deck');}}>Armata e Nascente</button></nav>
-  {error&&<p className="cc-error" role="alert">{error}</p>}
-  {pending&&<div className="cc-panel cc-story" role="region" aria-label="Evento da risolvere"><p className="cc-eyebrow">Evento · {run.pendingEvents.length} da risolvere</p><h2>{pending.title}</h2><p>{pending.body}</p><div className="cc-choices">{pending.choices.map((c,i)=>{const preview=previewControlledReward(run,c),league=deckTotalLeague(preview.deck,preview.nascente);return <button key={i} onClick={()=>dispatch({type:'APPLY_EVENT_CHOICE',eventId:pending.id,choiceIndex:i})}>{c.label}<small>{c.reward==='card'?`${poolCardById(c.cardId).name} → riserva`:c.reward==='none'?'Nessuna modifica':`Lega armata dopo la scelta: ${league}/30${league>30?' · riorganizza prima del prossimo scontro':''}`}</small></button>;})}</div></div>}
-  {run.outcome&&!pending&&<div className="cc-panel cc-story"><h2>Le campane tacciono</h2><p>Il Nascente ha attraversato i tre atti e superato l’ultima difesa della Concordia.</p><button onClick={onBack}>Torna al menu</button></div>}
-  {run.currentNode&&<div className="cc-panel"><h2>Incontro interrotto</h2><p>{findRunMission(run,run.currentNode)?.title}. La progressione è conservata. Libera il tentativo per ripartire dallo stesso incontro.</p><button onClick={()=>dispatch({type:'ABANDON_ATTEMPT'})}>Riprendi dalla mappa</button></div>}
-  {tab==='map'?<>
-   <div className="cc-acts">{run.definition.acts.map((a,i)=><div className={i===run.actIndex?'active':''} key={a.id}><small>Atto {i+1}{i<run.actIndex?' · completato':''}</small><strong>{a.title}</strong></div>)}</div>
-   <div className="cc-path" aria-label="Percorso dell’atto">{act.stages.map((s,i)=><div className="cc-stage" key={s.id}><p className="cc-eyebrow">Tappa {i+1}{i<run.stageIndex?' · superata':''}</p>{s.alternatives.map(m=>{const won=run.history.some(h=>h.missionId===m.id&&h.result==='player');return <button key={m.id} disabled={i!==run.stageIndex||!!run.outcome} aria-pressed={m.id===mission.id} className={`cc-node cc-${m.kind} ${won?'completed':''}`} onClick={()=>setSelected(m.id)}><small>{won?'Superato':KIND[m.kind]}</small><strong>{m.title}</strong></button>;})}{s.alternatives.length>1&&<small>Una scelta · le vie si ricongiungono</small>}</div>)}</div>
-   {!run.outcome&&<div className="cc-mission-grid"><div className="cc-panel"><p className="cc-eyebrow">{KIND[mission.kind]} · {mission.enemy.army}</p><h2>{mission.title}</h2><p>{mission.briefing}</p><p className="cc-note">Nascente garantito in mano · 5 campi · 25 PV · 18 FC · Eminenza a ogni scontro. PV, FC e Presenza ripartono dai valori iniziali. Una sconfitta o un pareggio consentono di ritentare.</p><button className="cc-primary" disabled={!!pending||!!run.currentNode||deckTotalLeague(run.deck,run.nascente)>30} onClick={launch}>Affronta l’incontro</button><p className="cc-note">{mission.signatureCardId?`Carta firma garantita nella mano nemica: ${campaignEnemyCard(mission.signatureCardId).name}. `:''}Eventi dopo la vittoria: {run.definition.events.filter(e=>e.missionId===mission.id).map(e=>e.title).join(' → ')||'nessuno'}.</p></div><div className="cc-panel"><h2>{eminence?.name}</h2><p>{eminence?.static.text}</p><div className="cc-enemy-cards">{mission.enemy.deck.map(id=>{const c=campaignEnemyCard(id);return <div key={id}><strong>{c.name}</strong><small>L{c.league} · {c.power} POT / {c.damage} DAN</small><span>{c.description}</span></div>;})}</div></div></div>}
-  </>:<div className="cc-panel"><h2>{nascente.name}</h2><p>{nascente.power} POT / {nascente.damage} DAN · L{nascente.league} · {nascente.description}</p><p>Scegli dieci carte, inclusi il Nascente e almeno quattro altri Figli dell’Orizzonte. Le ricompense entrano in riserva.</p><div className="cc-toolbar"><strong>{draftDeck.length}/10 carte · Lega {deckTotalLeague(draftDeck,run.nascente)}/30</strong><button disabled={!!run.currentNode} onClick={()=>dispatch({type:'SET_DECK',deck:draftDeck})}>Salva armata</button></div><div className="cc-roster">{[...run.deck,...run.warehouse].map(id=>{const c=lookup(id);return <label key={id} className={draftDeck.includes(id)?'selected':''}><input type="checkbox" checked={draftDeck.includes(id)} disabled={id===NASCENTE_ID||!!run.currentNode} onChange={e=>setDraftDeck(e.target.checked?[...draftDeck,id]:draftDeck.filter(n=>n!==id))}/><strong>{c.name}</strong><small>L{c.league} · {c.power} POT / {c.damage} DAN</small><span>{c.description}</span></label>;})}</div></div>}
- </section>;
+const KIND = {
+  battle: 'Battaglia',
+  elite: 'Élite',
+  special: 'Incontro speciale',
+  boss: 'Boss',
+};
+export function ControlledCampaignHub({
+  campaignSaveSlot = 0,
+  onStartMission,
+  onBack,
+}) {
+  const [run, setRun] = useState(() => loadCampaignRun(campaignSaveSlot));
+  const [selected, setSelected] = useState(null),
+    [tab, setTab] = useState('map'),
+    [editor, setEditor] = useState(false),
+    [error, setError] = useState('');
+  const [draftDeck, setDraftDeck] = useState(run?.deck || []);
+  if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
+  if (!run)
+    return (
+      <section className="campaign-control">
+        <p role="alert">Il salvataggio non è leggibile.</p>
+        <button onClick={onBack}>Torna al menu</button>
+      </section>
+    );
+  const act = currentAct(run),
+    stage = currentStage(run),
+    mission =
+      stage.alternatives.find((m) => m.id === selected) ||
+      stage.alternatives[0];
+  const pending = run.definition.events.find(
+      (e) => e.id === run.pendingEvents[0],
+    ),
+    nascente = assembleNascenteCard(run.nascente);
+  const lookup = (id) => (id === NASCENTE_ID ? nascente : poolCardById(id));
+  const dispatch = (action) => {
+    try {
+      const next = controlledCampaignReducer(run, action);
+      if (!saveCampaignRun(next, campaignSaveSlot))
+        throw new Error(
+          'Impossibile salvare: libera spazio prima di proseguire.',
+        );
+      setRun(next);
+      setError('');
+      return next;
+    } catch (e) {
+      setError(e.message);
+      return null;
+    }
+  };
+  const launch = () => {
+    const next = dispatch({ type: 'START_MISSION', nodeId: mission.id });
+    if (next)
+      try {
+        onStartMission(
+          { ...mission, campaignAttempt: next.activeAttempt },
+          next,
+        );
+      } catch (e) {
+        dispatch({ type: 'ABANDON_ATTEMPT' });
+        setError(`Avvio non riuscito: ${e.message}`);
+      }
+  };
+  const eminence = getEminenceForArmy(mission.enemy.army);
+  return (
+    <section className="campaign-control">
+      <header className="cc-header">
+        <div>
+          <p className="cc-eyebrow">Il Nascente · Campagna</p>
+          <h1>{act.title}</h1>
+          <p>
+            Atto {run.actIndex + 1} di 3 · Incontro {run.stageIndex + 1} di 6 ·
+            Lega {deckTotalLeague(run.deck, run.nascente)}/30
+          </p>
+        </div>
+        <div className="cc-toolbar">
+          <button onClick={() => setEditor(true)}>Editor eventi</button>
+          <button onClick={onBack}>Menu</button>
+        </div>
+      </header>
+      <nav className="cc-tabs" aria-label="Campagna">
+        <button aria-pressed={tab === 'map'} onClick={() => setTab('map')}>
+          Percorso
+        </button>
+        <button
+          aria-pressed={tab === 'deck'}
+          onClick={() => {
+            setDraftDeck(run.deck);
+            setTab('deck');
+          }}
+        >
+          Armata e Nascente
+        </button>
+      </nav>
+      {error && (
+        <p className="cc-error" role="alert">
+          {error}
+        </p>
+      )}
+      {pending && (
+        <div
+          className="cc-panel cc-story"
+          role="region"
+          aria-label="Evento da risolvere"
+        >
+          <p className="cc-eyebrow">
+            Evento · {run.pendingEvents.length} da risolvere
+          </p>
+          <h2>{pending.title}</h2>
+          <p>{pending.body}</p>
+          <div className="cc-choices">
+            {pending.choices.map((c, i) => {
+              const preview = previewControlledReward(run, c),
+                league = deckTotalLeague(preview.deck, preview.nascente);
+              return (
+                <button
+                  key={i}
+                  onClick={() =>
+                    dispatch({
+                      type: 'APPLY_EVENT_CHOICE',
+                      eventId: pending.id,
+                      choiceIndex: i,
+                    })
+                  }
+                >
+                  {c.label}
+                  <small>
+                    {c.reward === 'card'
+                      ? `${poolCardById(c.cardId).name} → riserva`
+                      : c.reward === 'none'
+                        ? 'Nessuna modifica'
+                        : `Lega armata dopo la scelta: ${league}/30${league > 30 ? ' · riorganizza prima del prossimo scontro' : ''}`}
+                  </small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {run.outcome && !pending && (
+        <div className="cc-panel cc-story">
+          <h2>Le campane tacciono</h2>
+          <p>
+            Il Nascente ha attraversato i tre atti e superato l’ultima difesa
+            della Concordia.
+          </p>
+          <button onClick={onBack}>Torna al menu</button>
+        </div>
+      )}
+      {run.currentNode && (
+        <div className="cc-panel">
+          <h2>Incontro interrotto</h2>
+          <p>
+            {findRunMission(run, run.currentNode)?.title}. La progressione è
+            conservata. Libera il tentativo per ripartire dallo stesso incontro.
+          </p>
+          <button onClick={() => dispatch({ type: 'ABANDON_ATTEMPT' })}>
+            Riprendi dalla mappa
+          </button>
+        </div>
+      )}
+      {tab === 'map' ? (
+        <>
+          <div className="cc-acts">
+            {run.definition.acts.map((a, i) => (
+              <div className={i === run.actIndex ? 'active' : ''} key={a.id}>
+                <small>
+                  Atto {i + 1}
+                  {i < run.actIndex ? ' · completato' : ''}
+                </small>
+                <strong>{a.title}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="cc-path" aria-label="Percorso dell’atto">
+            {act.stages.map((s, i) => (
+              <div className="cc-stage" key={s.id}>
+                <p className="cc-eyebrow">
+                  Tappa {i + 1}
+                  {i < run.stageIndex ? ' · superata' : ''}
+                </p>
+                {s.alternatives.map((m) => {
+                  const won = run.history.some(
+                    (h) => h.missionId === m.id && h.result === 'player',
+                  );
+                  return (
+                    <button
+                      key={m.id}
+                      disabled={i !== run.stageIndex || !!run.outcome}
+                      aria-pressed={m.id === mission.id}
+                      className={`cc-node cc-${m.kind} ${won ? 'completed' : ''}`}
+                      onClick={() => setSelected(m.id)}
+                    >
+                      <small>{won ? 'Superato' : KIND[m.kind]}</small>
+                      <strong>{m.title}</strong>
+                    </button>
+                  );
+                })}
+                {s.alternatives.length > 1 && (
+                  <small>Una scelta · le vie si ricongiungono</small>
+                )}
+              </div>
+            ))}
+          </div>
+          {!run.outcome && (
+            <div className="cc-mission-grid">
+              <div className="cc-panel">
+                <p className="cc-eyebrow">
+                  {KIND[mission.kind]} · {mission.enemy.army}
+                </p>
+                <h2>{mission.title}</h2>
+                <p>{mission.briefing}</p>
+                <p className="cc-note">
+                  Nascente garantito in mano · 5 campi · 25 PV · 18 FC ·
+                  Eminenza a ogni scontro. PV, FC e Presenza ripartono dai
+                  valori iniziali. Una sconfitta o un pareggio consentono di
+                  ritentare.
+                </p>
+                <button
+                  className="cc-primary"
+                  disabled={
+                    !!pending ||
+                    !!run.currentNode ||
+                    deckTotalLeague(run.deck, run.nascente) > 30
+                  }
+                  onClick={launch}
+                >
+                  Affronta l’incontro
+                </button>
+                <p className="cc-note">
+                  {mission.signatureCardId
+                    ? `Carta firma garantita nella mano nemica: ${campaignEnemyCard(mission.signatureCardId).name}. `
+                    : ''}
+                  Eventi dopo la vittoria:{' '}
+                  {run.definition.events
+                    .filter((e) => e.missionId === mission.id)
+                    .map((e) => e.title)
+                    .join(' → ') || 'nessuno'}
+                  .
+                </p>
+              </div>
+              <div className="cc-panel">
+                <h2>{eminence?.name}</h2>
+                <p>{eminence?.static.text}</p>
+                <div className="cc-enemy-cards">
+                  {mission.enemy.deck.map((id) => {
+                    const c = campaignEnemyCard(id);
+                    return (
+                      <div key={id}>
+                        <strong>{c.name}</strong>
+                        <small>
+                          L{c.league} · {c.power} POT / {c.damage} DAN
+                        </small>
+                        <span>{c.description}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="cc-panel">
+          <h2>{nascente.name}</h2>
+          <p>
+            {nascente.power} POT / {nascente.damage} DAN · L{nascente.league} ·{' '}
+            {nascente.description}
+          </p>
+          <p>
+            Scegli dieci carte, inclusi il Nascente e almeno quattro altri Figli
+            dell’Orizzonte. Le ricompense entrano in riserva.
+          </p>
+          <div className="cc-toolbar">
+            <strong>
+              {draftDeck.length}/10 carte · Lega{' '}
+              {deckTotalLeague(draftDeck, run.nascente)}/30
+            </strong>
+            <button
+              disabled={!!run.currentNode}
+              onClick={() => dispatch({ type: 'SET_DECK', deck: draftDeck })}
+            >
+              Salva armata
+            </button>
+          </div>
+          <div className="cc-roster">
+            {[...run.deck, ...run.warehouse].map((id) => {
+              const c = lookup(id);
+              return (
+                <label
+                  key={id}
+                  className={draftDeck.includes(id) ? 'selected' : ''}
+                >
+                  <input
+                    type="checkbox"
+                    checked={draftDeck.includes(id)}
+                    disabled={id === NASCENTE_ID || !!run.currentNode}
+                    onChange={(e) =>
+                      setDraftDeck(
+                        e.target.checked
+                          ? [...draftDeck, id]
+                          : draftDeck.filter((n) => n !== id),
+                      )
+                    }
+                  />
+                  <strong>{c.name}</strong>
+                  <small>
+                    L{c.league} · {c.power} POT / {c.damage} DAN
+                  </small>
+                  <span>{c.description}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
