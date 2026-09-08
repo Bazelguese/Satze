@@ -13,6 +13,7 @@ import { createControlledRun } from '../../campaign/state/controlledCampaignStat
 import { loadCampaignDefinition } from '../../campaign/logic/campaignDefinition.js';
 import { saveCampaignRun } from '../../campaign/state/persistence.js';
 import { CampaignEventEditor } from './CampaignEventEditor.jsx';
+import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
 import { CampaignBackdrop, CampaignSigil, heroArt } from './CampaignScenery.jsx';
 import { playUiClick, playUiConfirm } from '../../audio/gameSounds.js';
 
@@ -42,10 +43,10 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   }, []);
 
   if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
-  if (armySlot != null) return <section className="campaign-scene">
+  if (armySlot != null) return <CampaignScene>
     <CampaignBackdrop/>
     <div className="cs-content">
-      <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
+      <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><CampaignMotionControl/><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
       <div className="cs-origin">
         <div className="cs-origin-portrait"><img src={heroArt({league: 2})} alt="Il Nascente, arciere dell’Orizzonte"/><div>3 POT · 2 DAN · LEGA 2</div></div>
         <div className="cs-origin-copy"><p className="cs-kicker">TRE ATTI · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Oltre il Vallo, le campane della Concordia chiamano i Resistenti. Nove Figli dell’Orizzonte camminano al tuo fianco. La forma che assumerai dipende dalle tue scelte.</p>
@@ -63,7 +64,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
         </div>
       </div>
     </div>
-  </section>;
+  </CampaignScene>;
 
   const fmtTime = (ts) => {
     if (ts == null || !Number.isFinite(ts)) return null;

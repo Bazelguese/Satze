@@ -29,6 +29,48 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+it('Ingresso saltabile: un clic e il timer non avviano due duelli', () => {
+  vi.useFakeTimers();
+  saveCampaignRun(createControlledRun(CONTROLLED_CAMPAIGN), 0);
+  const launch = vi.fn();
+  render(React.createElement(ControlledCampaignHub, { onStartMission: launch, onBack: vi.fn() }));
+  click('Affronta l’incontro');
+  expect(launch).not.toHaveBeenCalled();
+  expect(loadCampaignRun(0).activeAttempt).toBe(1);
+  click('Entra subito');
+  act(() => vi.advanceTimersByTime(1000));
+  expect(launch).toHaveBeenCalledTimes(1);
+});
+
+it('Ingresso automatico recupera un errore di avvio senza lasciare il tentativo bloccato', () => {
+  vi.useFakeTimers();
+  saveCampaignRun(createControlledRun(CONTROLLED_CAMPAIGN), 0);
+  const launch = vi.fn(() => { throw new Error('Duello non disponibile'); });
+  render(React.createElement(ControlledCampaignHub, { onStartMission: launch, onBack: vi.fn() }));
+  click('Affronta l’incontro');
+  act(() => vi.advanceTimersByTime(650));
+  expect(launch).toHaveBeenCalledTimes(1);
+  expect(loadCampaignRun(0).currentNode).toBeNull();
+  expect(host.querySelector('[role=alert]').textContent).toContain('Duello non disponibile');
+  expect(button('Affronta l’incontro').disabled).toBe(false);
+});
+
+it('La preferenza animazioni persiste e il movimento ridotto di sistema prevale', () => {
+  saveCampaignRun(createControlledRun(CONTROLLED_CAMPAIGN), 0);
+  render(React.createElement(ControlledCampaignHub, { onStartMission: vi.fn(), onBack: vi.fn() }));
+  click('Animazioni: sì');
+  expect(localStorage.getItem('satze_campaign_motion_v1')).toBe('off');
+  expect(host.querySelector('.campaign-scene').classList.contains('cs-motion-off')).toBe(true);
+  click('Animazioni: no');
+  render(null);
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  render(React.createElement(ControlledCampaignHub, { onStartMission: vi.fn(), onBack: vi.fn() }));
+  expect(button('Animazioni: no').disabled).toBe(true);
+  expect(host.querySelector('.campaign-scene').classList.contains('cs-motion-off')).toBe(true);
 });
 
 const winStage = run => {
@@ -52,6 +94,7 @@ it('Il bivio sulla mappa seleziona l’armata speciale e tiene bloccati élite e
   expect(special.getAttribute('aria-pressed')).toBe('true');
   expect(host.querySelector('[aria-label="Incontro selezionato"]').textContent).toContain('Corte Rossa');
   click('Affronta l’incontro');
+  click('Entra subito');
   expect(launch.mock.calls[0][0].enemy.army).toBe('Corte Rossa');
 });
 
@@ -82,6 +125,8 @@ it('L’evento illustrato assegna la carta alla riserva e l’armata salva la so
   const reward = [...event.querySelectorAll('button')].find(b => b.textContent.includes('Accogli il Figlio'));
   act(() => reward.click());
   expect(loadCampaignRun(0).warehouse).toContain(113);
+  expect(host.querySelector('[role=dialog]').textContent).toContain('Un nuovo compagno');
+  click('Continua il cammino');
   expect(host.querySelector('[aria-label="Evento da risolvere"]')).toBeNull();
   click('Armata e Nascente');
   const checks = [...host.querySelectorAll('input[type="checkbox"]')];
@@ -157,6 +202,7 @@ it('Menu crea una run; hub lancia il vero useGameFlow con Nascente ed Eminenza',
   render(React.createElement(GameHarness));
   expect(host.textContent).toContain('Oltre il Vallo');
   click('Affronta l’incontro');
+  click('Entra subito');
   expect(host.querySelector('[role=alert]')).toBeNull();
   expect(setters.setGamePhase).toHaveBeenLastCalledWith('duelLoading');
   expect(setters.setPlayerHP).toHaveBeenLastCalledWith(25);

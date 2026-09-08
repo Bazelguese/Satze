@@ -20,9 +20,14 @@ export function CampaignSigil({ kind = 'battle', ...props }) {
 }
 
 export function CampaignBackdrop({ actIndex = 0 }) {
-  return <div className="cs-backdrop" aria-hidden="true">
+  return <div className="cs-backdrop" data-act={actIndex + 1} aria-hidden="true">
     <img key={actIndex} src={actScenery[actIndex]} alt="" />
     <div className="cs-mist"/><div className="cs-grain"/>
+    <div className="cs-embers">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{
+      left: `${(i * 37 + 11) % 100}%`, top: `${(i * 19 + 7) % 100}%`,
+      '--cs-drift': `${(i % 3 - 1) * 35}px`, '--cs-duration': `${8 + i % 7}s`,
+      animationDelay: `${-i * 1.3}s`,
+    }}/>)}</div>
   </div>;
 }
 
@@ -32,6 +37,7 @@ export function CampaignMap({ act, run, selectedId, onSelect }) {
     mission, index, x: positions[index][0], y: branch ? 76 : positions[index][1],
   })));
   const links = points.flatMap(point => points.filter(next => next.index === point.index + 1).map(next => ({ from: point, to: next })));
+  const selected = points.find(point => point.mission.id === selectedId);
   return <div className="cs-map" role="region" aria-label="Percorso dell’atto">
     <span className="cs-map-caption">LE TERRE DELLA CONCORDIA</span>
     <svg className="cs-map-trails" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
@@ -39,13 +45,16 @@ export function CampaignMap({ act, run, selectedId, onSelect }) {
         const traveled = run.history.some(h => h.missionId === from.mission.id && h.result === 'player') &&
           (run.history.some(h => h.missionId === to.mission.id && h.result === 'player') ||
             (to.index === run.stageIndex && !run.outcome));
-        return <path key={`${from.mission.id}-${to.mission.id}`} className={traveled ? 'traveled' : ''}
+        const approaching = to.mission.id === selectedId && to.index === run.stageIndex &&
+          run.history.some(h => h.missionId === from.mission.id && h.result === 'player');
+        return <path key={`${from.mission.id}-${to.mission.id}`} className={`${traveled ? 'traveled' : ''} ${approaching ? 'approaching' : ''}`}
           d={`M${from.x * 10} ${from.y * 6} C${(from.x + 8) * 10} ${from.y * 6},${(to.x - 8) * 10} ${to.y * 6},${to.x * 10} ${to.y * 6}`}/>;
       })}
     </svg>
     {points.map(({ mission, index, x, y }) => {
       const won = run.history.some(h => h.missionId === mission.id && h.result === 'player');
       const available = index === run.stageIndex && !run.outcome;
+      const hasEvent = run.definition.events.some(event => event.missionId === mission.id);
       return <button key={mission.id} style={{ left: `${x}%`, top: `${y}%` }}
         className={`cs-map-node cs-kind-${mission.kind} ${won ? 'is-won' : ''} ${available ? 'is-current' : 'is-locked'}`}
         disabled={!available} aria-pressed={available && selectedId === mission.id}
@@ -54,8 +63,10 @@ export function CampaignMap({ act, run, selectedId, onSelect }) {
         <span className="cs-node-medallion"><CampaignSigil kind={mission.kind}/><span className="cs-node-number">{won ? '✓' : index + 1}</span></span>
         <span className="cs-node-name">{mission.kind === 'special' ? mission.enemy.army : mission.title}</span>
         <small>{won ? 'Superato' : encounterKinds[mission.kind]}</small>
+        {hasEvent && <span className="cs-node-event" aria-label="Evento dopo la vittoria" title="Evento dopo la vittoria">✦</span>}
       </button>;
     })}
+    {selected && !run.outcome && <span className="cs-traveler" aria-hidden="true" style={{ left: `${selected.x}%`, top: `${selected.y}%` }}>✧</span>}
     <div className="cs-map-legend"><span>✦ Il tuo cammino</span><span>Una via al bivio · ricongiungimento prima dell’élite</span></div>
   </div>;
 }
