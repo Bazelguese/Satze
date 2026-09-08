@@ -13,6 +13,8 @@ import { createControlledRun } from '../../campaign/state/controlledCampaignStat
 import { loadCampaignDefinition } from '../../campaign/logic/campaignDefinition.js';
 import { saveCampaignRun } from '../../campaign/state/persistence.js';
 import { CampaignEventEditor } from './CampaignEventEditor.jsx';
+import { CampaignBackdrop, CampaignSigil, heroArt } from './CampaignScenery.jsx';
+import { playUiClick, playUiConfirm } from '../../audio/gameSounds.js';
 
 import '../../styles/campaign/colors_and_type.css';
 import '../../styles/campaign/atto1-components.css';
@@ -40,19 +42,27 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   }, []);
 
   if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
-  if (armySlot != null) return <section className="campaign-control">
-    <p className="cc-eyebrow">Nuova campagna · tre atti</p><h1>Il Nascente</h1>
-    <div className="cc-panel"><h2>Scegli l’Impronta iniziale</h2><p>Il Nascente parte con 3 POT e 2 DAN, accompagnato da nove Figli dell’Orizzonte. La Concordia di Caelion presidia il percorso.</p>
-      <div className="cc-choices">{[['turbo', 'Istinto del primo colpo', 'Turbo: +1 POT'], ['imboscata', 'Arte dell’agguato', 'Imboscata: 1 danno diretto'], ['vendetta', 'Memoria del torto', 'Vendetta: +1 FC']].map(([id, title, text]) => <button key={id} aria-pressed={imprint === id} onClick={() => setImprint(id)}>{title}<small>{text}</small></button>)}</div>
+  if (armySlot != null) return <section className="campaign-scene">
+    <CampaignBackdrop/>
+    <div className="cs-content">
+      <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
+      <div className="cs-origin">
+        <div className="cs-origin-portrait"><img src={heroArt({league: 2})} alt="Il Nascente, arciere dell’Orizzonte"/><div>3 POT · 2 DAN · LEGA 2</div></div>
+        <div className="cs-origin-copy"><p className="cs-kicker">TRE ATTI · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Oltre il Vallo, le campane della Concordia chiamano i Resistenti. Nove Figli dell’Orizzonte camminano al tuo fianco. La forma che assumerai dipende dalle tue scelte.</p>
+          <h2>Scegli l’Impronta iniziale</h2>
+          <div className="cs-imprints">{[['turbo', 'Istinto del primo colpo', 'Turbo: +1 POT', 'battle'], ['imboscata', 'Arte dell’agguato', 'Imboscata: 1 danno diretto', 'special'], ['vendetta', 'Memoria del torto', 'Vendetta: +1 FC', 'elite']].map(([id, title, text, kind]) => <button key={id} aria-pressed={imprint === id} onClick={() => { playUiClick(); setImprint(id); }}><CampaignSigil kind={kind}/><strong>{title}</strong><small>{text}</small></button>)}</div>
+          {error && <p role="alert" className="cs-error">{error}</p>}
+          <button className="cs-primary" onClick={() => {
+            try {
+              const run = createControlledRun(loadCampaignDefinition(), { imprint });
+              if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
+              playUiConfirm();
+              onSlotChosen(armySlot);
+            } catch (e) { setError(e.message); }
+          }}>Inizia il cammino</button><small className="cs-footnote">Il Nascente è sempre nella mano iniziale. Ogni incontro apre un passo del percorso.</small>
+        </div>
+      </div>
     </div>
-    {error && <p role="alert" className="cc-error">{error}</p>}
-    <div className="cc-toolbar"><button onClick={() => {
-      try {
-        const run = createControlledRun(loadCampaignDefinition(), { imprint });
-        if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
-        onSlotChosen(armySlot);
-      } catch (e) { setError(e.message); }
-    }}>Inizia il cammino</button><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></div>
   </section>;
 
   const fmtTime = (ts) => {
