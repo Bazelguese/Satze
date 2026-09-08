@@ -32,12 +32,12 @@
         "presenceDelta": 0
       },
       {
-        "id": "corte_salasso",
-        "presenceDelta": -2
-      },
-      {
         "id": "corte_debito",
         "presenceDelta": 1
+      },
+      {
+        "id": "corte_salasso",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 4,

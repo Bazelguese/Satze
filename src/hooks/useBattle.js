@@ -99,6 +99,20 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
         enemy: (eAgent.league ?? 0) + readCardLeagueDelta(leagueByCardId, eAgent.id),
       },
       deployedIsLowestLeagueBySide,
+      toxinBySide: { player: playerToxin, enemy: enemyToxin },
+      paramContext: {
+        ownUndeployedCardIds: (playerHand || [])
+          .filter((card) => !playerUsedCards.includes(card.id) && card.id !== pAgent.id)
+          .map((card) => card.id),
+        enemyUndeployedCardIds: (enemyHand || [])
+          .filter((card) => !enemyUsedCards.includes(card.id) && card.id !== eAgent.id)
+          .map((card) => card.id),
+        confirmedAgents: [
+          { id: pAgent.id, side: 'player', label: pAgent.name },
+          { id: eAgent.id, side: 'enemy', label: eAgent.name },
+        ],
+        slotCount: battlefields?.length || 5,
+      },
     });
     if (prepared.blocked) {
       console.error('resolveBattle: scelte Eminenza incomplete', prepared.blocked);
@@ -139,7 +153,8 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
       enemyHasEminence: Boolean(prepared.matchState?.enemy?.eminenceId),
     });
 
-    let outcomeNotices = prepared.notices || [];
+    let prepNotices = prepared.notices || [];
+    let outcomeNotices = [];
     let result = battleResult;
     if (eminenceActive) {
       const settled = settleEminenceRound(prepared.matchState, {
@@ -162,7 +177,9 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
         ...powerResolutionFromDuel({ battleResult, playerAgent: pAgent, enemyAgent: eAgent }),
       });
       setEminenceMatchState(settled.matchState);
-      outcomeNotices = [...outcomeNotices, ...(settled.notices || [])];
+      // Solo gli avvisi post-Duello appartengono alla coda di fine risoluzione.
+      // Male Crescente (e simili Pre-Trigger) restano in prepNotices e si mostrano all'avvio.
+      outcomeNotices = settled.notices || [];
       result = {
         ...battleResult,
         finalPlayerHP: Math.max(0, battleResult.finalPlayerHP + readHpDelta(settled.bundle, 'player')),
@@ -179,6 +196,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     setLastWinner(result.winner);
     setBattleResult({
       ...result,
+      eminencePrepNotices: prepNotices,
       eminenceOutcomeNotices: outcomeNotices,
     });
 

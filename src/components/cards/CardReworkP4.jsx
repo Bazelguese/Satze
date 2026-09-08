@@ -14,6 +14,7 @@ import {
   DEFAULT_MIN_CLASS,
   FOOTER_MUTED_MIN_CLASS,
 } from './AbilityFormatted';
+import { formatGrantedAbilityDisplay } from '../../game/cardTextDisplay.js';
 import {
   CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
   CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
@@ -717,6 +718,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   copiedBonus = null,
   copiedAbilityNotTriggered = false,
   copiedBonusNotTriggered = false,
+  /** Potere effettivo dopo sostituzioni campo (Circuito, trigger invertiti, …). */
+  effectiveAbility = null,
   effectiveArmyBonus = null,
   abilityNotTriggered = false,
   bonusNotTriggered = false,
@@ -1090,7 +1093,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
               }}
             >
               <AbilityFormatted
-                ability={copiedAbility || agent.ability}
+                ability={copiedAbility || effectiveAbility || agent.ability}
                 minClassName={
                   abilityCopyText || (!abilityFooterInactive && !abilityBlocked)
                     ? DEFAULT_MIN_CLASS
@@ -1104,6 +1107,11 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
                       : {}
                 }
               />
+              {!copiedAbility && agent.grantedAbility && (() => {
+                const grantedText = formatGrantedAbilityDisplay(agent.grantedAbility);
+                if (!grantedText) return null;
+                return <span className="opacity-90">{` · ${grantedText}`}</span>;
+              })()}
             </span>
           </div>
           {abilityBlocked && (

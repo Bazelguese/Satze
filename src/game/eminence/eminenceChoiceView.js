@@ -11,7 +11,7 @@
 // La scelta propria arriva dal ramo privato che la proiezione riserva al `viewerSide`: chi
 // guarda vede la propria selezione sigillata, non quella dell'altro.
 
-import { SIDES, OPPOSITE_SIDE, REVEAL_GATES, PARAM_SOURCES, CHOICE_PARAMS_TIMING } from './eminenceConstants.js';
+import { SIDES, OPPOSITE_SIDE, REVEAL_GATES, CHOICE_PARAMS_TIMING } from './eminenceConstants.js';
 import { getEminence } from '../../data/eminences.js';
 import { ALL_AGENTS } from '../../data/cards.js';
 import {
@@ -22,6 +22,15 @@ import {
 } from './eminenceState.js';
 import { getSealedAbilityHypotheses, getNextGate, mustChooseThisRound } from './eminenceRound.js';
 import { isEminenceSetupPending, needsEminenceSetup } from './eminenceDuelGate.js';
+import {
+  SCHEMA_LIMITS_KEY,
+  paramLimits,
+  selectionParamsReady,
+  schemaTargetsAvailable,
+  resolveParamsSchema,
+} from './eminenceParamSchema.js';
+
+export { SCHEMA_LIMITS_KEY, paramLimits, selectionParamsReady, schemaTargetsAvailable, resolveParamsSchema };
 
 /**
  * Stati della scelta (§11.2).
@@ -46,6 +55,7 @@ export const CHOICE_STATES = {
 export const OPTION_BLOCKERS = {
   INSUFFICIENT_PRESENCE: 'INSUFFICIENT_PRESENCE',
   GATE_PASSED: 'GATE_PASSED',
+  NO_VALID_TARGETS: 'NO_VALID_TARGETS',
 };
 
 const DISABLED_VIEW = Object.freeze({
@@ -87,56 +97,6 @@ function describeEminence(eminenceId) {
   };
 }
 
-function agentHasTrigger(cardId) {
-  return Boolean(ALL_AGENTS.find((agent) => agent.id === cardId)?.ability?.trigger);
-}
-
-export const SCHEMA_LIMITS_KEY = '__limits';
-
-export function paramLimits(schema, key) {
-  return schema?.[SCHEMA_LIMITS_KEY]?.[key] || { min: 1, max: 1 };
-}
-
-function idsFromParam(value) {
-  if (Array.isArray(value)) return value.filter((id) => id != null);
-  if (value != null) return [value];
-  return [];
-}
-
-/**
- * True quando i params scelti in UI coprono lo schema risolto.
- * `__limits` non è un parametro: `fragmentCardId` può essere scalare o lista;
- * `composeComponent` non serve se sono già stati scelti due Frammenti.
- */
-export function selectionParamsReady(schema, params) {
-  if (!schema) return true;
-  const fragmentIds = idsFromParam(params?.fragmentCardId);
-  return Object.keys(schema).every((key) => {
-    if (key === SCHEMA_LIMITS_KEY) return true;
-    const values = schema[key];
-    if (!Array.isArray(values)) return true;
-    if (values.length === 0) return true;
-    if (key === 'fragmentCardId') {
-      const { min, max } = paramLimits(schema, key);
-      return fragmentIds.length >= min && fragmentIds.length <= max;
-    }
-    if (key === 'composeComponent') {
-      if (fragmentIds.length >= 2) return true;
-      return params?.composeComponent != null;
-    }
-    return params?.[key] != null;
-  });
-}
-
-function resolveSlotIndexes(paramContext) {
-  const slots = paramContext?.slots;
-  if (Array.isArray(slots) && slots.length) {
-    return slots.filter((slot) => !slot.conquered).map((slot) => slot.index);
-  }
-  const count = Math.max(1, paramContext?.slotCount || 5);
-  return Array.from({ length: count }, (_, index) => index);
-}
-
 function agentName(cardId) {
   return ALL_AGENTS.find((agent) => agent.id === cardId)?.name || null;
 }
@@ -175,43 +135,6 @@ function buildSlotParamMeta(paramContext) {
   return Object.keys(meta).length ? meta : null;
 }
 
-function resolveParamsSchema(schema, persistent, paramContext = null) {
-  if (!schema) return null;
-
-  const resolved = {};
-  for (const [key, spec] of Object.entries(schema)) {
-    if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_FRAGMENTS) {
-      const ids = [...(persistent?.fragmentCardIds || [])];
-      resolved[key] = spec.requireTrigger ? ids.filter(agentHasTrigger) : ids;
-      if (spec.min != null || spec.max != null) {
-        resolved[SCHEMA_LIMITS_KEY] = {
-          ...(resolved[SCHEMA_LIMITS_KEY] || {}),
-          [key]: { min: spec.min ?? 1, max: spec.max ?? 1 },
-        };
-      }
-    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.ENEMY_UNDEPLOYED) {
-      const alreadyPrey = new Set(persistent?.preyCardIds || []);
-      resolved[key] = (paramContext?.enemyUndeployedCardIds || []).filter((id) => !alreadyPrey.has(id));
-    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_UNDEPLOYED) {
-      resolved[key] = [...(paramContext?.ownUndeployedCardIds || [])];
-    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.UNDEPLOYED_AGENTS) {
-      const already = new Set(Object.keys(persistent?.debitoByCardId || {}).map(Number));
-      const own = paramContext?.ownUndeployedCardIds || [];
-      const enemy = paramContext?.enemyUndeployedCardIds || [];
-      resolved[key] = [...own, ...enemy].filter((id) => !already.has(id));
-    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.CONFIRMED_AGENTS) {
-      resolved[key] = (paramContext?.confirmedAgents || []).map((entry) => (
-        entry && typeof entry === 'object' ? entry.id : entry
-      )).filter((id) => id != null);
-    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.BATTLEFIELD_SLOTS) {
-      resolved[key] = resolveSlotIndexes(paramContext);
-    } else {
-      resolved[key] = spec;
-    }
-  }
-  return resolved;
-}
-
 /**
  * Opzioni del lato che sta guardando, con legalità già risolta.
  *
@@ -235,10 +158,14 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
     const gatePassed = completed.includes(ability.revealGate);
     const affordable = legal.has(ability.id);
     const presenceDelta = resolveAbilityPresenceDelta(ability, publicSide.persistent);
+    const paramsSchema = resolveParamsSchema(ability.paramsSchema, publicSide.persistent, paramContext);
 
     let blocker = null;
     if (!affordable) blocker = OPTION_BLOCKERS.INSUFFICIENT_PRESENCE;
     else if (gatePassed) blocker = OPTION_BLOCKERS.GATE_PASSED;
+    else if (!schemaTargetsAvailable(paramsSchema, ability.paramsSchema)) {
+      blocker = OPTION_BLOCKERS.NO_VALID_TARGETS;
+    }
 
     return {
       id: ability.id,
@@ -252,7 +179,7 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
       // `[]` è un'abilità implementata che non fa nulla (es. il giallo del Semaforo).
       // `null` è il segnaposto di catalogo per un'attiva ancora senza segmenti.
       implemented: ability.segments != null,
-      paramsSchema: resolveParamsSchema(ability.paramsSchema, publicSide.persistent, paramContext),
+      paramsSchema,
       choiceParamsTiming: ability.choiceParamsTiming,
       selectable: !blocker,
       blocker,

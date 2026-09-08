@@ -32,12 +32,12 @@
         "presenceDelta": 1
       },
       {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
-      },
-      {
         "id": "kethran_elogio",
         "presenceDelta": -1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 4,
@@ -113,7 +113,7 @@
       "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
     },
     {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -142,7 +142,7 @@
         }
       ],
       "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
+      "phaseDetail": "Dopo il Duello",
       "phaseLabel": "Risoluzione",
       "presenceDelta": 1,
       "side": "player",
@@ -325,7 +325,7 @@
       "kind": "settle",
       "notices": [
         {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
               "flight": true,
@@ -354,7 +354,7 @@
             }
           ],
           "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
+          "phaseDetail": "Dopo il Duello",
           "phaseLabel": "Risoluzione",
           "presenceDelta": 1,
           "side": "player",

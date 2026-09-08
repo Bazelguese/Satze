@@ -32,12 +32,12 @@
         "presenceDelta": 1
       },
       {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
-      },
-      {
         "id": "kethran_elogio",
         "presenceDelta": -1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 1,
@@ -74,7 +74,7 @@
       "text": "Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro."
     },
     {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -103,7 +103,7 @@
         }
       ],
       "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
+      "phaseDetail": "Dopo il Duello",
       "phaseLabel": "Risoluzione",
       "presenceDelta": 1,
       "side": "player",
@@ -215,7 +215,7 @@
           "text": "Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro."
         },
         {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
               "flight": true,
@@ -244,7 +244,7 @@
             }
           ],
           "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
+          "phaseDetail": "Dopo il Duello",
           "phaseLabel": "Risoluzione",
           "presenceDelta": 1,
           "side": "player",

@@ -53,6 +53,7 @@ export function createEffectBundle() {
     abilityEscalations: [],
     markGains: [],
     deals: [],
+    pendingDeals: [],
   };
 }
 
@@ -287,13 +288,19 @@ const handlers = {
       source: ctx.source,
     };
     bundle.marks.push(markEntry);
+    // ON_MARK_GAIN solo su id davvero nuovi: un Frammento già presente non ripaga Presenza.
     if (!segment.consume && segment.mark) {
-      bundle.markGains.push({
-        mark: segment.mark,
-        cardIds: [...cardIds],
-        side: ctx.ownerSide,
-        source: ctx.source,
-      });
+      const key = `${segment.mark}CardIds`;
+      const already = new Set(ctx.persistent?.[key] || []);
+      const gainedIds = cardIds.filter((id) => id != null && !already.has(id));
+      if (gainedIds.length) {
+        bundle.markGains.push({
+          mark: segment.mark,
+          cardIds: gainedIds,
+          side: ctx.ownerSide,
+          source: ctx.source,
+        });
+      }
     }
   },
 
@@ -410,19 +417,29 @@ const handlers = {
 
   [P.REMOVE_TOXIN]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      const liveToxin = ctx.toxinBySide?.[side];
+      const liveValue = liveToxin && typeof liveToxin === 'object'
+        ? liveToxin.value
+        : liveToxin;
       const removedValue = Number(
         ctx.params?.removedToxinValue
         ?? ctx.params?.toxinValueBySide?.[side]
+        ?? liveValue
         ?? segment.removedValue
         ?? 0,
       );
+      const factor = segment.bonusOverrideFactor != null
+        ? Number(segment.bonusOverrideFactor)
+        : null;
       bundle.toxinRemovals.push({
         side,
         removedValue: Math.max(0, removedValue),
+        bonusOverrideFactor: factor,
+        bonusOverrideEffect: segment.bonusOverrideEffect || null,
         source: ctx.source,
       });
-      if (segment.bonusOverrideFactor != null) {
-        const value = Math.max(0, removedValue) * Number(segment.bonusOverrideFactor);
+      if (factor != null) {
+        const value = Math.max(0, removedValue) * factor;
         bundle.armyBonusState[ctx.ownerSide] = {
           ...(bundle.armyBonusState[ctx.ownerSide] || {}),
           override: {
@@ -478,14 +495,16 @@ const handlers = {
     if (mode === 'CHOOSE_ONE') {
       const deals = segment.deals || [];
       let choice = params.dealChoice ?? params.dealId ?? null;
-      if (choice == null) {
-        const opponentPresence = params.opponentPresence
-          ?? Infinity;
-        const legal = deals.filter((deal) => {
-          if (deal.minPresence != null) return opponentPresence >= Math.abs(deal.minPresence);
-          return true;
+      const explicitChoice = choice != null;
+      if (!explicitChoice) {
+        bundle.pendingDeals.push({
+          mode,
+          ownerSide: ctx.ownerSide,
+          recipientSide: OPPOSITE_SIDE[ctx.ownerSide],
+          source: ctx.source,
+          deals,
         });
-        choice = (legal[0] || deals[0])?.id ?? null;
+        return;
       }
       const selected = deals.find((deal) => deal.id === choice) || deals[0];
       if (selected) applyDealEffects(selected.effects, OPPOSITE_SIDE[ctx.ownerSide]);
@@ -494,6 +513,20 @@ const handlers = {
         choice,
         ownerSide: ctx.ownerSide,
         source: ctx.source,
+      });
+      return;
+    }
+
+    const hasExplicitResponse = Object.prototype.hasOwnProperty.call(params, 'dealAccepted')
+      || Object.prototype.hasOwnProperty.call(params, 'dealResponse');
+    if (!hasExplicitResponse) {
+      // Niente default silenzioso: l'UI (o l'IA) deve rispondere esplicitamente.
+      bundle.pendingDeals.push({
+        mode: 'ACCEPT_OR_SELF',
+        ownerSide: ctx.ownerSide,
+        recipientSide: OPPOSITE_SIDE[ctx.ownerSide],
+        source: ctx.source,
+        deal: segment.deal || { effects: segment.effects || [] },
       });
       return;
     }
@@ -570,6 +603,7 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
       agentIdBySide,
       persistent: ownerPersistent,
       persistentBySide: applyContext.persistentBySide || null,
+      toxinBySide: applyContext.toxinBySide || null,
     };
 
     if (TRIGGER_PRIMITIVES.has(segment.primitive)) {
@@ -594,6 +628,55 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
   }
 
   return target;
+}
+
+/**
+ * Risolve un Affare lasciato in `pendingDeals` con la risposta esplicita del destinatario.
+ */
+export function applyPendingDealResponse(pendingDeal, response = {}) {
+  if (!pendingDeal) return createEffectBundle();
+  if (pendingDeal.mode === 'CHOOSE_ONE') {
+    const choice = response.dealChoice ?? response.dealId ?? null;
+    if (choice == null) {
+      throw new Error('PROPOSE_DEAL CHOOSE_ONE: dealChoice obbligatorio');
+    }
+    return applyEminenceSegments([{
+      segment: {
+        primitive: P.PROPOSE_DEAL,
+        mode: pendingDeal.mode,
+        deal: pendingDeal.deal,
+        deals: pendingDeal.deals,
+      },
+      ownerSide: pendingDeal.ownerSide,
+      abilityId: pendingDeal.source,
+      params: {
+        dealChoice: choice,
+        opponentPresence: response.opponentPresence,
+      },
+    }]);
+  }
+
+  const hasExplicitResponse = Object.prototype.hasOwnProperty.call(response, 'dealAccepted')
+    || Object.prototype.hasOwnProperty.call(response, 'dealResponse');
+  if (!hasExplicitResponse) {
+    throw new Error('PROPOSE_DEAL: dealAccepted/dealResponse obbligatorio');
+  }
+  return applyEminenceSegments([{
+    segment: {
+      primitive: P.PROPOSE_DEAL,
+      mode: pendingDeal.mode,
+      deal: pendingDeal.deal,
+      deals: pendingDeal.deals,
+    },
+    ownerSide: pendingDeal.ownerSide,
+    abilityId: pendingDeal.source,
+    params: {
+      dealAccepted: response.dealAccepted !== false
+        && response.dealResponse !== 'refuse'
+        && response.dealResponse !== false,
+      dealResponse: response.dealResponse,
+    },
+  }]);
 }
 
 /** Primitive attualmente eseguibili. Utile ai test di copertura del catalogo. */

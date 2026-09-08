@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MENU_ACCENTS, PALETTE } from "../../theme/hudOratorioPalette";
+import { playUiClick } from "../../audio/soundBus";
 
 const MENU_DEFAULT_ACCENT = MENU_ACCENTS.magenta;
 
@@ -11,7 +12,10 @@ export function MenuCard({ children, onClick, accentColor, className = "" }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        playUiClick();
+        onClick?.(e);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={className}
@@ -40,7 +44,10 @@ export function MenuBackButton({ children, onClick }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        playUiClick();
+        onClick?.(e);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

@@ -16,9 +16,47 @@ import { getFocusCoinGlowColor } from '../../utils/focusCoinGlow';
 import { DUEL_ACCENTS, getArmyAccent } from '../../theme/duelAccents.js';
 import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
+import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
+import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
 
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
+}
+
+function fieldAbilityDisplay(battleResult, isPlayer) {
+  const mods = getFieldSetupFlags(battleResult?.field);
+  const ability = isPlayer ? battleResult?.playerAgent?.ability : battleResult?.enemyAgent?.ability;
+  const card = isPlayer ? battleResult?.playerAgent : battleResult?.enemyAgent;
+  const isFirst = isPlayer
+    ? battleResult?.isPlayerFirst !== false
+    : battleResult?.isPlayerFirst === false;
+  return resolveAbilityForDisplay(ability, {
+    fieldMods: mods,
+    isFirst,
+    card,
+    triggerRules: battleResult?.eminenceTriggerRules || null,
+  });
+}
+
+function fieldArmyBonusDisplay(battleResult, isPlayer) {
+  const stored = isPlayer
+    ? battleResult?.playerEffectiveArmyBonus
+    : battleResult?.enemyEffectiveArmyBonus;
+  const playerBonus = ARMY_BONUSES[battleResult?.playerAgent?.army];
+  const enemyBonus = ARMY_BONUSES[battleResult?.enemyAgent?.army];
+  const base = stored || (isPlayer ? playerBonus : enemyBonus);
+  return resolveArmyBonusForDisplay({
+    field: stored ? null : battleResult?.field,
+    fieldMods: getFieldSetupFlags(battleResult?.field),
+    armyBonus: base,
+    hasBonus: isPlayer
+      ? Boolean(battleResult?.playerHasBonus ?? battleResult?.playerArmyBonusActive)
+      : Boolean(battleResult?.enemyHasBonus ?? battleResult?.enemyArmyBonusActive),
+    opponentArmyBonus: isPlayer ? enemyBonus : playerBonus,
+    opponentHasBonus: isPlayer
+      ? Boolean(battleResult?.enemyHasBonus ?? battleResult?.enemyArmyBonusActive)
+      : Boolean(battleResult?.playerHasBonus ?? battleResult?.playerArmyBonusActive),
+  }) || stored || null;
 }
 
 function smoothstep(a, b, x) {
@@ -828,7 +866,8 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
           copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
           copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
-          effectiveArmyBonus={battleResult.playerEffectiveArmyBonus}
+          effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, true)}
+          effectiveAbility={fieldAbilityDisplay(battleResult, true)}
           abilityNotTriggered={display.showPlayerAbilityNotTriggered}
           bonusNotTriggered={display.showPlayerBonusNotTriggered}
           suppressAnimations
@@ -873,7 +912,8 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
           copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
           copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
-          effectiveArmyBonus={battleResult.enemyEffectiveArmyBonus}
+          effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, false)}
+          effectiveAbility={fieldAbilityDisplay(battleResult, false)}
           abilityNotTriggered={display.showEnemyAbilityNotTriggered}
           bonusNotTriggered={display.showEnemyBonusNotTriggered}
           suppressAnimations

@@ -32,12 +32,12 @@
         "presenceDelta": 1
       },
       {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
-      },
-      {
         "id": "kethran_elogio",
         "presenceDelta": -1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 0,
@@ -97,7 +97,7 @@
       "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
     },
     {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -126,7 +126,7 @@
         }
       ],
       "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
+      "phaseDetail": "Dopo il Duello",
       "phaseLabel": "Risoluzione",
       "presenceDelta": 1,
       "side": "player",
@@ -281,7 +281,7 @@
       "kind": "settle",
       "notices": [
         {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
               "flight": true,
@@ -310,7 +310,7 @@
             }
           ],
           "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
+          "phaseDetail": "Dopo il Duello",
           "phaseLabel": "Risoluzione",
           "presenceDelta": 1,
           "side": "player",

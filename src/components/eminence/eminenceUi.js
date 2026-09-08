@@ -8,7 +8,8 @@ export const PRESENCE_COLOR = '#38bdf8';
 export const GAIN_TOP = '#3fb37c';
 export const GAIN_BOT = '#1c6b48';
 export const DEFAULT_SHAPE = 'nastro';
-export const DEFAULT_APPEARANCE = 'mano';
+/** Default di gioco (pacchetto ingressi Eminenza): abilità = affondo. */
+export const DEFAULT_APPEARANCE = 'affondo';
 
 export const GATE_UI = {
   [REVEAL_GATES.PRE_FIELD]: { label: 'pre campo', color: '#c05cf0', dark: '#6b2a94' },
@@ -115,6 +116,7 @@ export function formatCurve(deltas) {
 export function blockerLabel(blocker) {
   if (blocker === OPTION_BLOCKERS.INSUFFICIENT_PRESENCE) return 'Presenza insufficiente';
   if (blocker === OPTION_BLOCKERS.GATE_PASSED) return 'Finestra già chiusa';
+  if (blocker === OPTION_BLOCKERS.NO_VALID_TARGETS) return 'Nessun bersaglio valido';
   return null;
 }
 

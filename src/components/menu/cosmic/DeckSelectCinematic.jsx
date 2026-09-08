@@ -54,6 +54,7 @@ import { GameCard } from '../../cards/GameCard.jsx';
 import { CardShuffleDealStage } from '../../shuffle/CardShuffleDealStage.jsx';
 import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDealLayout.js';
 import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
+import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -397,12 +398,14 @@ export default function DeckSelectCinematic({
     const current = idxRef.current;
     const next = Math.max(0, Math.min(total - 1, current + delta));
     if (next === current) return;
+    playUiClick();
     setIdx(next);
     setPulse((p) => p + 1);
   }, [total]);
 
   const goTo = useCallback((i) => {
     if (phaseRef.current !== 'idle' || i === idxRef.current) return;
+    playUiClick();
     setIdx(i);
     setPulse((p) => p + 1);
   }, []);
@@ -411,6 +414,7 @@ export default function DeckSelectCinematic({
 
   const confirm = useCallback(() => {
     if (phaseRef.current !== 'idle' || !deck) return;
+    playGame(GAME_SOUND.DECK_CONFIRM);
     if (isManager) {
       setPhase('confirming');
       setTimeout(() => { onSelectDeck && onSelectDeck(deck.deckKey); }, 1500);
@@ -501,7 +505,7 @@ export default function DeckSelectCinematic({
             <span className="lbl">+ CREA ESERCITO</span>
           </button>
         )}
-        <button className="dsk-back" onClick={onBack}>
+        <button className="dsk-back" onClick={() => { playUiClick(); onBack?.(); }}>
           <span className="ar">←</span>
           <span className="lbl">{isManager ? 'CHIUDI' : 'INDIETRO'}</span>
         </button>
@@ -549,7 +553,7 @@ export default function DeckSelectCinematic({
 
       {/* Top HUD */}
       <header className="dsk-top">
-        <button className="dsk-back" onClick={onBack}>
+        <button className="dsk-back" onClick={() => { playUiClick(); onBack?.(); }}>
           <span className="ar">←</span><span className="lbl">{backLabel}</span>
         </button>
         <div className="dsk-title-block">

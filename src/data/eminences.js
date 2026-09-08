@@ -848,7 +848,6 @@ export const EMINENCES = {
           cardId: { source: PARAM_SOURCES.CONFIRMED_AGENTS },
         },
         text: 'Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell\'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso.',
-        announceAtReveal: false,
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,

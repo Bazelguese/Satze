@@ -22,6 +22,7 @@ export const HandCard = React.memo(({
   isDragging = false,
   showBonus = false,
   bonusBaseInactive = false,
+  effectiveAbility = null,
   highlighted = false,
   preyArriving = false,
   cardLayout: _legacyCardLayout,
@@ -86,7 +87,12 @@ export const HandCard = React.memo(({
           transform: `translate(-50%, -50%) scale(${HAND_P4_SCALE})`,
         }}
       >
-        <CardReworkP4 agent={agent} showBonus={showBonus} bonusBaseInactive={bonusBaseInactive} />
+        <CardReworkP4
+          agent={agent}
+          showBonus={showBonus}
+          bonusBaseInactive={bonusBaseInactive}
+          effectiveAbility={effectiveAbility}
+        />
       </div>
       {hasOutcome && isWinner && <div className="satze-hand-outcome-diamond pointer-events-none" aria-hidden />}
       {hasOutcome && isLoser && <div className="satze-hand-outcome-dim pointer-events-none" aria-hidden />}

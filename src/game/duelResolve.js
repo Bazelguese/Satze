@@ -386,16 +386,26 @@ export function computeDuelResolution({
       enemyToxin: toxinsApplied.enemyToxin,
     });
     // Se REMOVE_TOXIN non aveva removedValue nei params, completa l'override Spezzacuore
-    // con il valore effettivamente rimosso.
+    // con il valore effettivamente rimosso (factor dallo stamp del segmento).
     if (eminenceBundle?.toxinRemovals?.length) {
       for (const removal of eminenceBundle.toxinRemovals) {
         const removed = toxins.removedBySide?.[removal.side] || removal.removedValue || 0;
         const ownerSide = removal.side === 'player' ? 'enemy' : 'player';
-        const state = eminenceBundle.armyBonusState?.[ownerSide];
-        if (state?.override && state.override.value === 0 && removed > 0) {
-          // factor tipico 2: ricalcola se il valore era 0 perché toxin non era in params
-          const factor = 2;
-          state.override = { ...state.override, value: removed * factor };
+        const bonusState = eminenceBundle.armyBonusState?.[ownerSide];
+        const factor = removal.bonusOverrideFactor != null
+          ? Number(removal.bonusOverrideFactor)
+          : 2;
+        if (bonusState?.override && (bonusState.override.value === 0 || removal.removedValue === 0) && removed > 0) {
+          bonusState.override = { ...bonusState.override, value: removed * factor };
+        }
+        if (removed > 0) {
+          const dmg = removed * factor;
+          const who = removal.side === 'player' ? 'tua' : 'avversaria';
+          battleLog.push(
+            `${removal.source || 'Spezzacuore'}: rimossa Tossina ${removed} (${who}) → Bonus ${dmg} danni diretti`
+          );
+        } else if (removal.source) {
+          battleLog.push(`${removal.source}: nessuna Tossina da rimuovere`);
         }
       }
     }
@@ -971,6 +981,7 @@ export function computeDuelResolution({
 
     const battleResult = {
       ...builtResult,
+      eminenceTriggerRules: eminenceBundle?.triggerRules || null,
       fieldDestroyed: conquestOverride.destroyField,
       skipConquest: conquestOverride.suppressConquest || conquestOverride.destroyField,
       playerActivationSatisfied: readActivationSatisfied(

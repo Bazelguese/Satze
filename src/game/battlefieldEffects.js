@@ -152,3 +152,4 @@ export function applyMinFloorReductionToEffectText(text, minFloorReduction = 0) 
     return `(min ${adjusted})`;
   });
 }
+

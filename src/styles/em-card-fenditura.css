@@ -1,0 +1,95 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — INGRESSO "FENDITURA"
+   Drop-in per src/styles/satze-eminenza.css (§3 Ingressi).
+   ----------------------------------------------------------------------
+   La carta non arriva e non si dissolve: si APRE. Nasce come una
+   fessura di luce verticale al centro dello slot, esce fuori asse
+   (rotateY sbagliata, skew, immagine sdoppiata) e mentre la fenditura
+   si allarga verso i bordi la carta rientra in registro con un solo
+   scatto di sovracorsa. Durata di riferimento .55s: secca.
+
+   MARKUP — su EminenzaZone servono:
+     · la classe `em-in-fenditura` sul contenitore `.em-layer`
+       (NON su .em-zone-*: quella ha già la sua animation shorthand);
+     · dentro `.em-card`, dopo l'<img className="em-art">:
+         <span class="em-app-ghost" style={{'--em-f-art':`url(${art})`}}></span>
+         <span class="em-app-edge l"></span>
+         <span class="em-app-edge r"></span>
+   `--em-f-art` è l'unica cosa che il CSS non può sapere da sé: è la
+   stessa src dell'arte, usata per la copia sfalsata che si spegne.
+
+   RIPRODUZIONE
+       const layer = ref.current;                    // il .em-layer
+       layer.classList.remove('em-in-fenditura', 'em-f-done');
+       void layer.offsetWidth;                       // reflow
+       layer.classList.add('em-in-fenditura');
+       setTimeout(() => layer.classList.add('em-f-done'), DUR * 1.4);
+
+   TARATURA
+       --em-f-dur   durata (default .55s)
+       --em-f-acc   accento identità (default: eredita --em-ac)
+   ═════════════════════════════════════════════════════════════════ */
+
+/* L'ampiezza della fenditura è una custom property registrata: senza
+   registrazione il browser non la interpola e la carta scatterebbe
+   aperta al primo frame. La leggono la clip della carta e i due fili. */
+@property --em-f-w{syntax:'<percentage>';inherits:true;initial-value:0%}
+
+.em-in-fenditura{--em-f-dur:.55s;--em-f-acc:var(--em-ac,#a288fb);animation:emFProg var(--em-f-dur) cubic-bezier(.16,.86,.2,1) both}
+@keyframes emFProg{0%{--em-f-w:1.5%}72%{--em-f-w:104%}100%{--em-f-w:112%}}
+
+/* ── La carta ────────────────────────────────────────────────────────
+   Fuori asse → in registro. L'ultimo keyframe riscrive translateZ(26px)
+   perché nel markup di produzione sta inline e l'animazione lo copre. */
+@keyframes emCardFenditura{
+  0%{opacity:0;transform:translateZ(26px) perspective(900px) rotateY(-19deg) skewY(4deg) scaleX(.86) scaleY(1.07);filter:blur(7px) brightness(2.3) saturate(.5)}
+  12%{opacity:1}
+  56%{transform:translateZ(26px) perspective(900px) rotateY(-6deg) skewY(1.2deg) scaleX(1.03) scaleY(1.01);filter:blur(1.6px) brightness(1.3) saturate(.9)}
+  78%{transform:translateZ(26px) perspective(900px) rotateY(1.6deg) skewY(-.4deg) scaleX(.995) scaleY(1)}
+  100%{opacity:1;transform:translateZ(26px);filter:none}
+}
+.em-in-fenditura .em-card{
+  animation:emCardFenditura var(--em-f-dur) cubic-bezier(.18,.88,.22,1) both;
+  clip-path:inset(0 max(0%,calc(50% - var(--em-f-w) / 2)) 0 max(0%,calc(50% - var(--em-f-w) / 2)));
+}
+/* A gesto finito clip e maschere via: tenerle addosso costa un layer di
+   compositing per tutto il duello su una carta che non cambia più. */
+.em-in-fenditura.em-f-done .em-card{clip-path:none}
+
+/* ── I due fili sul labbro della fenditura ───────────────────────────
+   Stessa variabile della clip: non possono sfasarsi dal taglio. */
+@keyframes emFEdge{0%{opacity:0}8%{opacity:1}74%{opacity:1}100%{opacity:0}}
+.em-app-edge{position:absolute;top:-4%;bottom:-4%;z-index:6;width:3px;opacity:0;pointer-events:none;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--em-f-acc) 92%,#fff) 18%,#fff 50%,color-mix(in srgb,var(--em-f-acc) 92%,#fff) 82%,transparent);box-shadow:0 0 20px color-mix(in srgb,var(--em-f-acc) 85%,transparent),0 0 54px color-mix(in srgb,var(--em-f-acc) 45%,transparent)}
+.em-app-edge.l{left:max(-2px,calc(50% - var(--em-f-w) / 2 - 1.5px))}
+.em-app-edge.r{right:max(-2px,calc(50% - var(--em-f-w) / 2 - 1.5px))}
+.em-in-fenditura .em-app-edge{animation:emFEdge var(--em-f-dur) linear both}
+
+/* ── L'immagine sdoppiata ────────────────────────────────────────────
+   Una copia dell'arte sfalsata in additivo: è la deformazione ottica
+   dello stare fuori asse, e si spegne appena la carta è in registro. */
+@keyframes emFGhost{
+  0%{opacity:.85;transform:translateX(14px) scaleX(1.04)}
+  46%{opacity:.4;transform:translateX(5px) scaleX(1.01)}
+  100%{opacity:0;transform:none}
+}
+.em-app-ghost{position:absolute;inset:0;z-index:2;opacity:0;pointer-events:none;background-image:var(--em-f-art);background-size:cover;background-position:center top;mix-blend-mode:screen;filter:brightness(1.4) saturate(.4)}
+.em-in-fenditura .em-app-ghost{animation:emFGhost calc(var(--em-f-dur) * 1.1) ease-out both}
+.em-in-fenditura.em-f-done .em-app-ghost{display:none}
+
+/* ── Le losanghe ─────────────────────────────────────────────────────
+   Stessa grammatica: si aprono dal loro asse, non volano. Lo
+   sfasamento resta quello inline del markup reale (0.18 + i * 0.09 s). */
+@keyframes emRailFenditura{
+  0%{opacity:0;clip-path:inset(0 50% 0 50%);filter:brightness(2)}
+  16%{opacity:1}
+  100%{opacity:1;clip-path:inset(0 0 0 0);filter:none}
+}
+.em-in-fenditura .em-rail,.em-in-fenditura .em-rail-l{animation:emRailFenditura calc(var(--em-f-dur) * .8) cubic-bezier(.2,.9,.22,1) both}
+
+/* ── Riduzione movimento ────────────────────────────────────────────
+   La carta c'è, intera, subito: sparisce solo l'apertura. */
+@media(prefers-reduced-motion:reduce){
+  .em-in-fenditura,.em-in-fenditura .em-card,.em-in-fenditura .em-rail,.em-in-fenditura .em-rail-l{animation:none!important;opacity:1!important;filter:none!important;clip-path:none!important}
+  .em-in-fenditura .em-card{transform:translateZ(26px)!important}
+  .em-app-edge,.em-app-ghost{animation:none!important;opacity:0!important}
+}

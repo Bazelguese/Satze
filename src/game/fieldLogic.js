@@ -124,3 +124,12 @@ export const selectBattlefields = (
 };
 
 export { getFieldModifiers, fieldGrantsOverdriveBonus } from './battlefieldEffects.js';
+export { getFieldSetupFlags } from './battlefieldEffects.js';
+export {
+  resolveAbilityForDisplay,
+  resolveAbilityForFieldDisplay,
+  resolveArmyBonusForDisplay,
+  formatGrantedAbilityDisplay,
+  buildDisplayTriggerRules,
+  collectPersistentTriggerReplacements,
+} from './cardTextDisplay.js';

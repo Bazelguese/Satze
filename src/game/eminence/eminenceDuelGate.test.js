@@ -7,6 +7,7 @@ import {
   advanceToNextRevealGate,
   prepareEminenceDuel,
   settleEminenceRound,
+  resolvePendingDeal,
 } from './eminenceDuelGate.js';
 import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { createEminenceMatchState } from './eminenceState.js';
@@ -33,8 +34,8 @@ function match({ player = 'apex_sole_verde', enemy = null, presence = {} } = {})
 }
 
 /** Registra una scelta fallendo rumorosamente: una scelta illegale falserebbe il test. */
-function choose(state, side, abilityId) {
-  const attempt = selectEminenceAbility(state, side, abilityId);
+function choose(state, side, abilityId, params = null) {
+  const attempt = selectEminenceAbility(state, side, abilityId, params);
   assert.equal(attempt.reason, null);
   return attempt.matchState;
 }
@@ -247,7 +248,7 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
 
 test('GENERAL già aperto: Accordo e Salasso tengono i delta Affare nel Duello', () => {
   let salasso = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 3 } });
-  salasso = choose(salasso, SIDES.PLAYER, 'corte_salasso');
+  salasso = choose(salasso, SIDES.PLAYER, 'corte_salasso', { dealChoice: 'hp_for_presence' });
   salasso = choose(salasso, SIDES.ENEMY, 'semaforo_verde');
   salasso = advanceToNextRevealGate(salasso).matchState;
   salasso = advanceToNextRevealGate(salasso).matchState;
@@ -261,7 +262,7 @@ test('GENERAL già aperto: Accordo e Salasso tengono i delta Affare nel Duello',
   assert.equal(salassoDuel.matchState.player.presence, 2);
 
   let accordo = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
-  accordo = choose(accordo, SIDES.PLAYER, 'corte_accordo');
+  accordo = choose(accordo, SIDES.PLAYER, 'corte_accordo', { dealAccepted: true });
   accordo = choose(accordo, SIDES.ENEMY, 'semaforo_verde');
   accordo = advanceToNextRevealGate(accordo).matchState;
   accordo = advanceToNextRevealGate(accordo).matchState;
@@ -271,6 +272,25 @@ test('GENERAL già aperto: Accordo e Salasso tengono i delta Affare nel Duello',
   });
   assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.ENEMY], 1);
   assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.PLAYER], 0);
+});
+
+test('Accordo pending: resolvePendingDeal sigilla i params e il Duello applica l\'Affare', () => {
+  let state = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
+  state = choose(state, SIDES.PLAYER, 'corte_accordo');
+  state = choose(state, SIDES.ENEMY, 'semaforo_verde');
+  state = advanceToNextRevealGate(state).matchState;
+  state = advanceToNextRevealGate(state).matchState;
+  const opened = advanceToNextRevealGate(state);
+  assert.equal(opened.bundle.pendingDeals?.length, 1);
+  const pending = opened.bundle.pendingDeals[0];
+  const resolved = resolvePendingDeal(opened.matchState, pending, { dealAccepted: true });
+  assert.equal(resolved.matchState.player.selectedParams.dealAccepted, true);
+  assert.ok(resolved.bundle.hpDeltas.some((e) => e.side === SIDES.ENEMY && e.amount === -2));
+  const duel = prepareEminenceDuel(resolved.matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  });
+  assert.equal(duel.bundle.temporaryFocus[SIDES.ENEMY], 1);
+  assert.equal(duel.bundle.pendingDeals?.length || 0, 0);
 });
 
 test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', () => {

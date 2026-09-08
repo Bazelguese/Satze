@@ -1,0 +1,79 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — INGRESSI ALTERNATIVI DELLA CARTA
+   Drop-in per src/styles/satze-eminenza.css (§3 Ingressi).
+   Tre gesti che rispondono alla stessa richiesta della Fenditura —
+   veloci, leggibili, non generici — con logiche diverse:
+
+     .em-in-tessere      la carta si compone da 48 frammenti che
+                         arrivano da posizioni sparse e si incastrano
+     .em-in-scacchiera   gli stessi 48 frammenti non viaggiano: girano
+                         su sé stessi in tre onde diagonali
+     .em-in-compressa    nessun frammento: la carta esiste già ma
+                         schiacciata a una fessura, e scatta a misura
+
+   MARKUP
+   · classe di stato sul contenitore `.em-layer` (NON su .em-zone-*).
+     .em-in-tessere / .em-in-scacchiera NON duplicano il markup: la carta
+     resta una, e viene divisa in 16 celle (4×4) da sedici layer di
+     maschera — vedi em-card-cells.css. Ogni cella è un pezzo di
+     carta+layout, non un ritaglio della sola arte. Serve solo la classe
+     `em-cells` sulla carta (a riposo è visivamente neutra: le celle
+     coprono tutta la superficie).
+   · `.em-in-compressa` non richiede markup in più.
+
+   TARATURA: `--em-f-dur` (default .55s), `--em-f-acc` (accento).
+   ═════════════════════════════════════════════════════════════════ */
+   · `.em-in-compressa` non richiede markup in più.
+
+   TARATURA: `--em-f-dur` (default .55s), `--em-f-acc` (accento).
+   ═════════════════════════════════════════════════════════════════ */
+
+.em-in-tessere,.em-in-scacchiera,.em-in-compressa{--em-f-dur:.55s;--em-f-acc:var(--em-ac,#a288fb)}
+
+/* ── TESSERE e CENERE ────────────────────────────────────────────
+   Non stanno più qui: le celle e il loro ordine li genera em-cells.js
+   a ogni riproduzione (Tessere sorteggia, Cenere sfrangia un fronte
+   diagonale), e il moto d'insieme sta in em-card-cells.css. Vedi
+   l'intestazione di quei due file.  */
+
+/* ── 3 · COMPRESSA — una fessura che scatta a misura ─────────────────
+   Zero nodi in più: solo la carta. translateZ(26px) va riscritto in
+   ogni keyframe perché nel markup reale sta inline. */
+@keyframes emCardCompressa{
+  0%{opacity:0;transform:translateZ(26px) scaleY(.02) scaleX(1.16);filter:brightness(2.6) saturate(.3)}
+  14%{opacity:1;transform:translateZ(26px) scaleY(.06) scaleX(1.14)}
+  54%{transform:translateZ(26px) scaleY(1.07) scaleX(.97);filter:brightness(1.2) saturate(.9)}
+  74%{transform:translateZ(26px) scaleY(.98) scaleX(1.01)}
+  88%{transform:translateZ(26px) scaleY(1.012) scaleX(.997)}
+  100%{opacity:1;transform:translateZ(26px);filter:none}
+}
+.em-in-compressa .em-card{animation:emCardCompressa var(--em-f-dur) cubic-bezier(.2,.9,.2,1) both}
+/* Il lampo della fessura: sta sul pseudo-elemento, il box-shadow inline
+   della carta non viene toccato. */
+@keyframes emCompressaFlash{0%{opacity:1;transform:scaleY(1)}34%{opacity:.7}100%{opacity:0;transform:scaleY(.2)}}
+.em-in-compressa .em-card::before{content:'';position:absolute;left:-8%;right:-8%;top:50%;height:4px;margin-top:-2px;z-index:8;pointer-events:none;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--em-f-acc) 92%,#fff) 20%,#fff 50%,color-mix(in srgb,var(--em-f-acc) 92%,#fff) 80%,transparent);box-shadow:0 0 26px color-mix(in srgb,var(--em-f-acc) 85%,transparent);animation:emCompressaFlash calc(var(--em-f-dur) * .5) ease-out both}
+
+/* ── Le losanghe ─────────────────────────────────────────────────────
+   Un ingresso per gesto, sullo stesso ritmo; lo sfasamento resta
+   quello inline del markup reale (0.18 + i * 0.09 s). */
+@keyframes emRailSnap{0%{opacity:0;transform:translateX(26px) scaleX(.94);filter:brightness(1.9)}62%{opacity:1}100%{opacity:1;transform:none;filter:none}}
+@keyframes emRailStretch{0%{opacity:0;transform:scaleY(.1);filter:brightness(2)}56%{opacity:1;transform:scaleY(1.06)}100%{opacity:1;transform:none;filter:none}}
+.em-in-tessere .em-rail,.em-in-tessere .em-rail-l,
+.em-in-scacchiera .em-rail,.em-in-scacchiera .em-rail-l{animation:emRailSnap calc(var(--em-f-dur) * .7) cubic-bezier(.2,.9,.22,1) both}
+.em-in-compressa .em-rail,.em-in-compressa .em-rail-l{animation:emRailStretch calc(var(--em-f-dur) * .66) cubic-bezier(.2,.9,.22,1) both}
+
+/* ── Pulizia a gesto finito ─────────────────────────────────────────
+   A gesto finito togli `em-cells` dalla carta: sedici layer di
+   maschera lasciati addosso costano un layer di compositing per tutto
+   il duello, su una carta che non cambia più. */
+.em-f-done .em-card{-webkit-mask-image:none;mask-image:none}
+
+/* ── Riduzione movimento ──────────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .em-in-tessere .em-card,.em-in-scacchiera .em-card,.em-in-compressa .em-card,
+  .em-in-tessere .em-rail,.em-in-tessere .em-rail-l,
+  .em-in-scacchiera .em-rail,.em-in-scacchiera .em-rail-l,
+  .em-in-compressa .em-rail,.em-in-compressa .em-rail-l{animation:none!important;opacity:1!important;filter:none!important}
+  .em-in-tessere .em-card,.em-in-scacchiera .em-card,.em-in-compressa .em-card{transform:translateZ(26px)!important}
+  .em-in-compressa .em-card::before{animation:none!important;opacity:0!important}
+}

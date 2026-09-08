@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { ARMY_COLORS } from '../../data';
 import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 import { computeLegalMaxFocus } from '../../game/legalFocusSpend';
+import { GAME_SOUND, playGame } from '../../audio/gameSounds';
 
 // Fallback per armate con nomi alternativi (es. Nati dalla Bocca -> Mounthborn)
 const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
@@ -15,6 +16,7 @@ const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
 export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = null, accentColor = null }) => {
   const trackRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+  const lastTickRef = useRef(value);
   const effectiveMax = computeLegalMaxFocus(max, reserved);
   const progress =
     effectiveMax <= 0 ? 0 : effectiveMax <= 1 ? 100 : ((value - 1) / (effectiveMax - 1)) * 100;
@@ -25,6 +27,18 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
   const accent = accentColor || colors.accent || '#fbbf24';
   const power = agent?.power ?? 0;
   const baseAssault = power * value; // VA base = POT × FC
+
+  const commitValue = useCallback((newVal) => {
+    if (newVal !== lastTickRef.current) {
+      lastTickRef.current = newVal;
+      playGame(GAME_SOUND.FC_TICK);
+    }
+    onChange(newVal);
+  }, [onChange]);
+
+  useEffect(() => {
+    lastTickRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (effectiveMax < 1) return;
@@ -50,8 +64,8 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
     const rect = trackRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const newVal = positionToValue(x * 100);
-    onChange(newVal);
-  }, [effectiveMax, positionToValue, onChange]);
+    commitValue(newVal);
+  }, [effectiveMax, positionToValue, commitValue]);
 
   const handleThumbMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -65,7 +79,7 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
       const rect = trackRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const newVal = positionToValue(x * 100);
-      onChange(newVal);
+      commitValue(newVal);
     };
     const onUp = () => setIsDragging(false);
     window.addEventListener('mousemove', onMove);
@@ -74,7 +88,7 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [isDragging, positionToValue, onChange]);
+  }, [isDragging, positionToValue, commitValue]);
 
   const textSharp = { textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 0 1px rgba(0,0,0,1)', WebkitFontSmoothing: 'antialiased' };
   return (
@@ -100,8 +114,8 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
           tabIndex={effectiveMax < 1 ? -1 : 0}
           onKeyDown={(e) => {
             if (effectiveMax < 1) return;
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') onChange(Math.max(1, value - 1));
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') onChange(Math.min(effectiveMax, value + 1));
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') commitValue(Math.max(1, value - 1));
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') commitValue(Math.min(effectiveMax, value + 1));
           }}
           onClick={handleTrackClick}
           className={`relative h-6 flex items-center select-none overflow-visible ${effectiveMax < 1 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}

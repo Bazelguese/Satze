@@ -7,12 +7,12 @@
     "text": "Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso."
   },
   "bilance": {
-    "cinematicCues": 0,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 0,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
@@ -32,12 +32,12 @@
         "presenceDelta": 0
       },
       {
-        "id": "corte_salasso",
-        "presenceDelta": -2
-      },
-      {
         "id": "corte_debito",
         "presenceDelta": 1
+      },
+      {
+        "id": "corte_salasso",
+        "presenceDelta": -2
       },
       {
         "id": "corte_brutto_affare",
@@ -55,7 +55,52 @@
     "id": "corte_rossa",
     "name": "Sanguinaccio, il Registro"
   },
-  "notices": [],
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:corte_brutto_affare:GENERAL",
+      "kind": "reveal",
+      "name": "Brutto Affare",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "slot": null,
+          "target": "CHOSEN"
+        },
+        {
+          "primitive": "REGISTER_END_MATCH_DEBT",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -4,
+      "side": "player",
+      "text": "Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso."
+    }
+  ],
   "scenario": {
     "branch": "miss",
     "initiativeSide": "player",
@@ -92,12 +137,76 @@
       "timing": null
     },
     {
-      "badge": "Prima del Duello",
-      "cues": [],
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_brutto_affare:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:corte_brutto_affare:GENERAL",
+          "kind": "reveal",
+          "name": "Brutto Affare",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "slot": null,
+              "target": "CHOSEN"
+            },
+            {
+              "primitive": "REGISTER_END_MATCH_DEBT",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -4,
+          "side": "player",
+          "text": "Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso."
+        }
+      ],
       "presence": {
         "enemy": 0,
         "player": 0

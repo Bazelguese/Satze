@@ -5,6 +5,7 @@
 // Il motore emette notice ed eventi; questo modulo traduce fase + primitive + contesto
 // UI in ricette dati-driven. Nessun ramo per singola Eminenza.
 
+import { playCueWithAudio } from '../../audio/cinematicAudio.js';
 import { ANNOUNCE_PHASES } from './eminenceAnnounceLabels.js';
 import { EMINENCE_PRIMITIVES as P } from './eminenceConstants.js';
 
@@ -183,18 +184,26 @@ export function resolveNoticeCinematics(notice, context = {}) {
 
 function runCue(cue, { playLink, noticeId, setAnnounceHeldId, waitForEntrance }, onDone) {
   const playFlight = () => {
-    if (!cue.flight) {
-      onDone?.();
-      return;
-    }
-    if (cue.holdAnnounce) {
-      playLink(cue.flight, () => {
+    const afterAudio = () => {
+      if (cue.holdAnnounce) {
         setAnnounceHeldId((id) => (id === noticeId ? null : id));
-        onDone?.();
-      });
+      }
+      onDone?.();
+    };
+
+    if (!cue.flight) {
+      playCueWithAudio(cue, (done) => done(), afterAudio);
       return;
     }
-    playLink(cue.flight, onDone);
+
+    playCueWithAudio(
+      cue,
+      (done) => {
+        if (typeof playLink === 'function') playLink(cue.flight, done);
+        else done();
+      },
+      afterAudio,
+    );
   };
 
   const waitSide = cue.waitFor?.side

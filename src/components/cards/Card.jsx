@@ -41,6 +41,7 @@ export const Card = ({
   highlightBonus = false, 
   copiedAbility = null, 
   copiedBonus = null, 
+  effectiveAbility = null,
   effectiveArmyBonus = null,
   abilityNotTriggered = false, 
   bonusNotTriggered = false,
@@ -247,7 +248,7 @@ export const Card = ({
                     : 'text-white'
           }`}>
             <AbilityFormatted
-              ability={copiedAbility || agent.ability}
+              ability={copiedAbility || effectiveAbility || agent.ability}
               options={
                 copiedAbility
                   ? {}

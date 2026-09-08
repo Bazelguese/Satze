@@ -11,6 +11,7 @@ import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from "../../settings/displaySettings";
 import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/vfxQualityProfile";
 import { useUiScale } from "../../hooks/useUiScale";
+import { playUiClick } from "../../audio/soundBus";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -140,6 +141,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
         onMouseLeave={() => setHover(null)}
         disabled={disabled}
         onClick={() => {
+          playUiClick();
           row.onClick?.();
         }}
         style={{
@@ -544,6 +546,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
                     disabled={opt.disabled}
                     onClick={() => {
                       if (opt.disabled) return;
+                      playUiClick();
                       if (opt.choices?.length) {
                         openPicker({
                           accent: choicePicker.accent,
@@ -634,6 +637,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
             <button
               type="button"
               onClick={() => {
+                playUiClick();
                 if (choicePickerStack.length > 1) closeTopPicker();
                 else closeAllPickers();
               }}

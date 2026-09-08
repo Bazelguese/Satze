@@ -1,10 +1,15 @@
 // Galleria Eminenze — griglia consultabile con cornice Arena (EminenceTarotCard).
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ARMY_COLORS } from '../../../data/armies.js';
 import { EMINENCES, EMINENCE_IDS_BY_ARMY_ORDER } from '../../../data/eminences.js';
 import { getEminenceArtUrl } from '../../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../../data/eminenceArtFrames.js';
+import {
+  EMINENZA_DEFAULTS,
+  entryLayerStyle,
+  useEminenzaEntry,
+} from '../../../lib/eminenzaEntry.js';
 import { EminenceTarotCard } from '../../eminenceLab/EminenceTarotCard.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
 import '../../eminenceLab/eminenceArtLab.css';
@@ -197,6 +202,23 @@ function Lightbox({ eminence, onClose }) {
   const artUrl = getEminenceArtUrl(eminence);
   const frame = getEminenceArtFrame(eminence.id);
   const staticText = eminence.static?.text || eminence.static?.name || '';
+  const { cardRef, fxRef, play, cardArmClass, fxArmClass } = useEminenzaEntry({
+    entry: EMINENZA_DEFAULTS.entry,
+    army: eminence.army,
+    accent,
+  });
+  const [entryRevealed, setEntryRevealed] = useState(false);
+
+  useLayoutEffect(() => {
+    setEntryRevealed(false);
+    play();
+  }, [eminence.id, play]);
+
+  useLayoutEffect(() => {
+    if (cardArmClass) setEntryRevealed(true);
+  }, [cardArmClass]);
+
+  const holdHidden = !entryRevealed && !cardArmClass;
 
   return (
     <div className="egl-lb" onClick={onClose}>
@@ -211,6 +233,7 @@ function Lightbox({ eminence, onClose }) {
             style={{ width: LIGHTBOX_CARD_W, height: LIGHTBOX_CARD_H }}
           >
             <div
+              className="egl-lb-card-native"
               style={{
                 width: CARD_NATIVE_W,
                 height: CARD_NATIVE_H,
@@ -218,22 +241,54 @@ function Lightbox({ eminence, onClose }) {
                 transformOrigin: 'top left',
               }}
             >
-              <EminenceTarotCard
-                name={eminence.name}
-                army={eminence.army}
-                staticText={eminence.static?.name || ''}
-                presence={eminence.initialPresence ?? 0}
-                artUrl={artUrl}
-                accent={accent}
-                life="arena"
-                intensity={1.05}
-                tiltEnabled
-                artX={frame.artX}
-                artY={frame.artY}
-                artZoom={frame.zoom}
-                artFocusX={frame.focusX}
-                artFocusY={frame.focusY}
-              />
+              <div
+                className="em-card-shell egl-lb-entry-shell"
+                style={{
+                  position: 'relative',
+                  width: CARD_NATIVE_W,
+                  height: CARD_NATIVE_H,
+                }}
+              >
+                <div
+                  ref={cardRef}
+                  className={['em-card', 'egl-lb-em-card', cardArmClass].filter(Boolean).join(' ')}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    width: CARD_NATIVE_W,
+                    height: CARD_NATIVE_H,
+                    overflow: 'hidden',
+                    borderRadius: '0 0 14px 14px',
+                    '--em-acc': accent,
+                    ...(cardArmClass ? {} : { animation: 'none' }),
+                    ...(holdHidden ? { opacity: 0 } : {}),
+                  }}
+                >
+                  <EminenceTarotCard
+                    className="egl-lb-tarot"
+                    name={eminence.name}
+                    army={eminence.army}
+                    staticText={eminence.static?.name || ''}
+                    presence={eminence.initialPresence ?? 0}
+                    artUrl={artUrl}
+                    accent={accent}
+                    life="arena"
+                    intensity={1.05}
+                    tiltEnabled={!cardArmClass}
+                    artX={frame.artX}
+                    artY={frame.artY}
+                    artZoom={frame.zoom}
+                    artFocusX={frame.focusX}
+                    artFocusY={frame.focusY}
+                  />
+                </div>
+                <span
+                  ref={fxRef}
+                  className={['em-arm-fx', fxArmClass].filter(Boolean).join(' ')}
+                  style={entryLayerStyle(CARD_NATIVE_W, CARD_NATIVE_H)}
+                  aria-hidden
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -433,7 +488,23 @@ function EminenceGalleryStyles() {
         display: flex; justify-content: center;
         padding-top: 12px;
       }
-      .egl-lb-card-scale { position: relative; flex: none; }
+      .egl-lb-card-scale { position: relative; flex: none; overflow: visible; }
+      .egl-lb-card-native { position: relative; overflow: visible; }
+      .egl-lb-entry-shell { overflow: visible; }
+      .egl-lb-em-card {
+        background: transparent;
+        perspective: 900px;
+        transform-style: preserve-3d;
+      }
+      .egl-lb-em-card .eminence-tarot.egl-lb-tarot,
+      .egl-lb-em-card .eminence-tarot {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        --et-w: ${CARD_NATIVE_W}px;
+        --et-h: ${CARD_NATIVE_H}px;
+      }
       .egl-lb-details {
         max-width: 760px; width: 100%; margin: 0 auto;
         padding: 28px 28px 32px;

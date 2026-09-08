@@ -22,6 +22,12 @@ import {
 import { EminenceTarotCard } from '../eminenceLab/EminenceTarotCard.jsx';
 import '../eminenceLab/eminenceArtLab.css';
 import {
+  EMINENCE_CARD_SIZE,
+  EMINENZA_DEFAULTS,
+  entryLayerStyle,
+  useEminenzaEntry,
+} from '../../lib/eminenzaEntry.js';
+import {
   APPEARANCES,
   DEFAULT_APPEARANCE,
   DEFAULT_SHAPE,
@@ -282,6 +288,9 @@ function EminenzaCard({
   focusedMarkId = null,
   arrivingMarkId = null,
   skipEntrance = false,
+  cardRef = null,
+  cardArmClass = '',
+  holdHidden = false,
   onMarkFocus,
 }) {
   const artUrl = getEminenceArtUrl(eminence);
@@ -291,22 +300,28 @@ function EminenzaCard({
   const zoom = artZoom ?? frame.zoom;
   const focusX = artFocusX ?? frame.focusX;
   const focusY = artFocusY ?? frame.focusY;
+  // Con ingresso per armata (cardRef + em-arm-*) niente CSS inline di apparizione carta.
+  const useLegacyCardAnim = !skipEntrance && !cardRef && !cardArmClass && appearance?.card;
+  const cardStyle = {
+    position: 'relative',
+    zIndex: 1,
+    width: EMINENCE_CARD_SIZE.width,
+    height: EMINENCE_CARD_SIZE.height,
+    flex: 'none',
+    overflow: (prey.length || fragments.length) ? 'visible' : 'hidden',
+    background: 'transparent',
+    '--em-acc': accent,
+    transformOrigin: appearance.origin || 'center center',
+  };
+  if (useLegacyCardAnim) cardStyle.animation = appearance.card;
+  else if (!cardArmClass) cardStyle.animation = 'none';
+  if (holdHidden) cardStyle.opacity = 0;
 
   return (
     <div
-      className="em-card"
-      style={{
-        position: 'relative',
-        zIndex: 1,
-        width: 300,
-        height: 525,
-        flex: 'none',
-        overflow: (prey.length || fragments.length) ? 'visible' : 'hidden',
-        background: 'transparent',
-        '--em-acc': accent,
-        animation: skipEntrance ? 'none' : appearance.card,
-        transformOrigin: appearance.origin || 'center center',
-      }}
+      ref={cardRef}
+      className={['em-card', cardArmClass].filter(Boolean).join(' ')}
+      style={cardStyle}
     >
       <EminenceTarotCard
         className="em-card__arena"
@@ -1008,6 +1023,8 @@ const POST_DUEL_ANNOUNCE_TIMINGS = new Set([
   EFFECT_TIMINGS.POST_BATTLE,
   EFFECT_TIMINGS.END_ROUND,
   EFFECT_TIMINGS.END_MATCH,
+  // Reazione a Frammento (Ricomposizione): nasce dal settle post-Duello.
+  EFFECT_TIMINGS.ON_MARK_GAIN,
 ]);
 
 function isPostDuelAnnounce(notice) {
@@ -1227,6 +1244,7 @@ export function EminenzaZone({
   choiceState = CHOICE_STATES.CHOOSING,
   appearance = DEFAULT_APPEARANCE,
   shape = DEFAULT_SHAPE,
+  entry = EMINENZA_DEFAULTS.entry,
   embedded = false,
   artX,
   artY,
@@ -1256,15 +1274,48 @@ export function EminenzaZone({
   announceHeld = false,
   announceAutoDismiss = true,
 }) {
-  if (!eminence) return null;
-
   const displaySettings = useDisplaySettings();
-  const cardLife = resolveEminenceCardLife(side, displaySettings, { opponentFoil });
-
   const style = APPEARANCES[appearance] || APPEARANCES[DEFAULT_APPEARANCE];
-  const accent = accentOverride || ARMY_COLORS[eminence.army]?.accent || '#d5ecf9';
+  const accent = accentOverride
+    || (eminence ? ARMY_COLORS[eminence.army]?.accent : null)
+    || '#d5ecf9';
   const isPlayer = side === 'player';
   const announceOnly = Boolean(announce) && isPostDuelAnnounce(announce);
+  const skipCardEntrance = !eminence
+    || stowed
+    || announceOnly
+    || Boolean(announce)
+    || (prey?.length > 0)
+    || (fragments?.length > 0);
+
+  const { cardRef, fxRef, layerRef, play, cardArmClass, fxArmClass } = useEminenzaEntry({
+    entry,
+    army: eminence?.army,
+    accent,
+  });
+  const [entryRevealed, setEntryRevealed] = useState(Boolean(skipCardEntrance));
+
+  useLayoutEffect(() => {
+    setEntryRevealed(Boolean(skipCardEntrance || announceOnly || !eminence));
+  }, [eminence?.id, skipCardEntrance, announceOnly]);
+
+  useLayoutEffect(() => {
+    if (cardArmClass) setEntryRevealed(true);
+  }, [cardArmClass]);
+
+  // Un gesto per riproduzione. Nemico in ritardo: non due arm-fx pesanti insieme.
+  useLayoutEffect(() => {
+    if (!eminence || skipCardEntrance || announceOnly) return undefined;
+    const delay = side === 'enemy' ? 780 : 0;
+    const t = window.setTimeout(() => {
+      play({ layer: layerRef.current });
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [eminence?.id, side, skipCardEntrance, announceOnly, play, layerRef]);
+
+  if (!eminence) return null;
+
+  const cardLife = resolveEminenceCardLife(side, displaySettings, { opponentFoil });
   const setupPending = Boolean(setup?.pending && isPlayer);
   const locked = !isPlayer
     || (!setupPending && (choiceState === CHOICE_STATES.LOCKED_HIDDEN || choiceState === CHOICE_STATES.REVEALED));
@@ -1283,7 +1334,10 @@ export function EminenzaZone({
     : options;
 
   return (
-    <div className={`em-layer em-layer-${side}${embedded ? ' em-layer-embedded' : ''}${stowed ? ' is-stowed' : ''}`}>
+    <div
+      ref={layerRef}
+      className={`em-layer em-layer-${side}${embedded ? ' em-layer-embedded' : ''}${stowed ? ' is-stowed' : ''}`}
+    >
       <div className={`em-zone em-zone-${side}`} data-side={side} style={{
         transform: (shiftX || shiftY) ? `translate(${shiftX}px, ${shiftY}px)` : undefined,
       }}
@@ -1306,24 +1360,43 @@ export function EminenzaZone({
         )}
         <div className={`em-stage${announceOnly ? ' em-stage-announce-only' : ''}`}>
           {!announceOnly && (
-            <EminenzaCard
-              eminence={eminence}
-              presence={presence}
-              accent={accent}
-              appearance={style}
-              artX={artX}
-              artY={artY}
-              artZoom={artZoom}
-              artFocusX={artFocusX}
-              artFocusY={artFocusY}
-              life={cardLife}
-              prey={prey}
-              fragments={fragments}
-              focusedMarkId={focusedMarkId}
-              arrivingMarkId={arrivingMarkId}
-              skipEntrance={stowed || Boolean(announce) || prey.length > 0 || fragments.length > 0}
-              onMarkFocus={onMarkFocus}
-            />
+            <div
+              className="em-card-shell"
+              style={{
+                position: 'relative',
+                flex: 'none',
+                width: EMINENCE_CARD_SIZE.width,
+                height: EMINENCE_CARD_SIZE.height,
+              }}
+            >
+              <EminenzaCard
+                eminence={eminence}
+                presence={presence}
+                accent={accent}
+                appearance={style}
+                artX={artX}
+                artY={artY}
+                artZoom={artZoom}
+                artFocusX={artFocusX}
+                artFocusY={artFocusY}
+                life={cardLife}
+                prey={prey}
+                fragments={fragments}
+                focusedMarkId={focusedMarkId}
+                arrivingMarkId={arrivingMarkId}
+                skipEntrance={skipCardEntrance}
+                cardRef={cardRef}
+                cardArmClass={cardArmClass}
+                holdHidden={!skipCardEntrance && !entryRevealed && !cardArmClass}
+                onMarkFocus={onMarkFocus}
+              />
+              <span
+                ref={fxRef}
+                className={['em-arm-fx', fxArmClass].filter(Boolean).join(' ')}
+                style={entryLayerStyle(EMINENCE_CARD_SIZE.width, EMINENCE_CARD_SIZE.height)}
+                aria-hidden
+              />
+            </div>
           )}
           {announce ? (
             <EminenceAnnounceBanner

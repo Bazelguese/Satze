@@ -32,12 +32,12 @@
         "presenceDelta": 1
       },
       {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
-      },
-      {
         "id": "kethran_elogio",
         "presenceDelta": -1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 1,
@@ -53,7 +53,7 @@
   },
   "notices": [
     {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -82,7 +82,7 @@
         }
       ],
       "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
+      "phaseDetail": "Dopo il Duello",
       "phaseLabel": "Risoluzione",
       "presenceDelta": 1,
       "side": "player",
@@ -173,7 +173,7 @@
       "kind": "settle",
       "notices": [
         {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
               "flight": true,
@@ -202,7 +202,7 @@
             }
           ],
           "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
+          "phaseDetail": "Dopo il Duello",
           "phaseLabel": "Risoluzione",
           "presenceDelta": 1,
           "side": "player",

@@ -20,12 +20,53 @@ import { DUEL_ACCENTS } from '../../theme/duelAccents.js';
 import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
+import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
+import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
 
 /** Armata con bonus in dati ma regola mazzo non soddisfatta (non trigger, non copia, non blocco). */
 function duelBonusBaseInactive(agent, hasBonus, bonusNotTriggered, bonusBlocked, bonusCopied) {
   if (!agent?.army || !ARMY_BONUSES[agent.army]) return false;
   if (bonusCopied || bonusBlocked) return false;
   return !hasBonus && !bonusNotTriggered;
+}
+
+function fieldAbilityDisplay(battleResult, isPlayer) {
+  const field = battleResult?.field;
+  const mods = getFieldSetupFlags(field);
+  const ability = isPlayer ? battleResult?.playerAgent?.ability : battleResult?.enemyAgent?.ability;
+  const card = isPlayer ? battleResult?.playerAgent : battleResult?.enemyAgent;
+  const isFirst = isPlayer
+    ? battleResult?.isPlayerFirst !== false
+    : battleResult?.isPlayerFirst === false;
+  return resolveAbilityForDisplay(ability, {
+    fieldMods: mods,
+    isFirst,
+    card,
+    triggerRules: battleResult?.eminenceTriggerRules || null,
+  });
+}
+
+function fieldArmyBonusDisplay(battleResult, isPlayer) {
+  const stored = isPlayer
+    ? battleResult?.playerEffectiveArmyBonus
+    : battleResult?.enemyEffectiveArmyBonus;
+  const playerBonus = ARMY_BONUSES[battleResult?.playerAgent?.army];
+  const enemyBonus = ARMY_BONUSES[battleResult?.enemyAgent?.army];
+  const base = stored || (isPlayer ? playerBonus : enemyBonus);
+  // Se il Bonus è già quello risolto dal Duello (70/89/120/Eminenza), non riapplicare lo swap campo:
+  // passa field=null e applica solo scale display (×2, min floor, …).
+  return resolveArmyBonusForDisplay({
+    field: stored ? null : battleResult?.field,
+    fieldMods: getFieldSetupFlags(battleResult?.field),
+    armyBonus: base,
+    hasBonus: isPlayer
+      ? Boolean(battleResult?.playerHasBonus ?? battleResult?.playerArmyBonusActive)
+      : Boolean(battleResult?.enemyHasBonus ?? battleResult?.enemyArmyBonusActive),
+    opponentArmyBonus: isPlayer ? enemyBonus : playerBonus,
+    opponentHasBonus: isPlayer
+      ? Boolean(battleResult?.enemyHasBonus ?? battleResult?.enemyArmyBonusActive)
+      : Boolean(battleResult?.playerHasBonus ?? battleResult?.playerArmyBonusActive),
+  }) || stored || null;
 }
 
 /** Particelle VA: offset fissi da seed per evitare salti a ogni render (es. VFX Lab). */
@@ -464,7 +505,8 @@ export function DuelResultEnemyResultBody({
             copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
             copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
             copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
-            effectiveArmyBonus={battleResult.enemyEffectiveArmyBonus}
+            effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, false)}
+            effectiveAbility={fieldAbilityDisplay(battleResult, false)}
             abilityNotTriggered={display.showEnemyAbilityNotTriggered}
             bonusNotTriggered={display.showEnemyBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
@@ -658,7 +700,8 @@ export function DuelResultPlayerResultBody({
             copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
             copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
             copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
-            effectiveArmyBonus={battleResult.playerEffectiveArmyBonus}
+            effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, true)}
+            effectiveAbility={fieldAbilityDisplay(battleResult, true)}
             abilityNotTriggered={display.showPlayerAbilityNotTriggered}
             bonusNotTriggered={display.showPlayerBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}

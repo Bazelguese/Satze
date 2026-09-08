@@ -1,0 +1,27 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — MOTO D'INSIEME PER I GESTI A CELLE
+   Le celle e il loro ordine li genera em-cells.js a ogni riproduzione
+   (Tessere è casuale per definizione). Qui sta solo il moto della
+   carta nel suo insieme, da comporre con l'animazione delle celle:
+
+     emCellsDrift    Tessere — arriva appena fuori registro e rientra
+     emCellsGather   Cenere — la carta si RICOMPONE: risucchiata da
+                     fuori fuoco verso il proprio posto, come una
+                     disintegrazione riprodotta al contrario
+
+   Uso (em-cells.js restituisce il nome dell'animazione celle):
+     card.style.animation = emCells(card,'cenere') + ' .62s linear both,'
+                          + 'emCellsGather .62s cubic-bezier(.16,.86,.2,1) both';
+
+   SINCRONIA — la fonte è handoff/em-card-ingressi/; le copie nelle
+   cartelle templates/ servono solo alle anteprime, che caricano i file
+   con un path relativo. Foglio e em-cells.js vanno caricati IN
+   ANTICIPO (helmet/head): se arrivano dopo l'avvio dell'animazione, il
+   primo gesto si perde.
+   ═════════════════════════════════════════════════════════════════ */
+@keyframes emCellsDrift{0%{opacity:.001;transform:perspective(900px) rotateY(-11deg) scale(1.04);filter:brightness(1.8) saturate(.6)}22%{opacity:1}68%{transform:perspective(900px) rotateY(-2deg) scale(1.008);filter:brightness(1.14)}100%{opacity:1;transform:none;filter:none}}
+/* Cenere: parte dispersa e fuori fuoco, si raccoglie. Lo scarto di
+   posizione è piccolo — la lettura sta nella grana che si riempie, non
+   in un volo. */
+@keyframes emCellsGather{0%{opacity:.001;transform:translate3d(18px,-14px,0) scale(1.03);filter:blur(5px) brightness(2.2) saturate(.35)}18%{opacity:1}62%{transform:translate3d(4px,-3px,0) scale(1.006);filter:blur(1.2px) brightness(1.22) saturate(.85)}100%{opacity:1;transform:none;filter:none}}
+@media(prefers-reduced-motion:reduce){.em-cells{animation:none!important;-webkit-mask-image:none!important;mask-image:none!important}}

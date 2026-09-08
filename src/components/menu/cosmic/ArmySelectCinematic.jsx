@@ -23,6 +23,7 @@ import {
 } from '../../../data/armies.js';
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
+import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
 // ------------------------------------------------------------
 // Adapter: traduce i dati reali del gioco nel formato usato dal V3
 // ------------------------------------------------------------
@@ -138,6 +139,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const go = useCallback((delta) => {
     const current = idxRef.current;
     const next = (current + delta + total) % total;
+    playUiClick();
     setPrevIdx(current);
     setDirection(delta);
     setIdx(next);
@@ -147,6 +149,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const goTo = useCallback((i) => {
     const current = idxRef.current;
     if (i === current) return;
+    playUiClick();
     setPrevIdx(current);
     setDirection(i > current ? 1 : -1);
     setIdx(i);
@@ -157,6 +160,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
 
   const confirmArmy = useCallback(() => {
     if (phaseRef.current !== 'idle') return;
+    playGame(GAME_SOUND.ARMY_CONFIRM);
     setPhase('confirming');
     setTimeout(() => {
       requestAnimationFrame(() => {
@@ -242,7 +246,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       {/* Top HUD: back + title */}
       <header className="v3c-top v3c-top-clean">
         <div className="v3c-back-slot">
-          <button className="v3c-back" onClick={onBack}>
+          <button className="v3c-back" onClick={() => { playUiClick(); onBack?.(); }}>
             <span className="ar">←</span><span className="lbl">MENU</span>
           </button>
         </div>

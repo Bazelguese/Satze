@@ -7,19 +7,19 @@
     "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
   },
   "bilance": {
-    "cinematicCues": 2,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 2,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       1,
-      2
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -36,7 +36,7 @@
         "presenceDelta": 1
       }
     ],
-    "presenceAfterReveal": 2,
+    "presenceAfterReveal": 1,
     "presenceAfterSelect": 1,
     "presenceAvailable": 1,
     "presenceDelta": 0,
@@ -83,42 +83,6 @@
       "presenceDelta": 0,
       "side": "player",
       "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
-    },
-    {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-      "kind": "effect",
-      "name": "Pagare i Debiti",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "+1 Presenza."
     }
   ],
   "scenario": {
@@ -173,21 +137,6 @@
             "type": "announce"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
         }
       ],
       "gate": "GENERAL",
@@ -229,49 +178,13 @@
           "presenceDelta": 0,
           "side": "player",
           "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
-        },
-        {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "kind": "effect",
-          "name": "Pagare i Debiti",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "+1 Presenza."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -282,7 +195,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -294,7 +207,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
       "segments": [
         {

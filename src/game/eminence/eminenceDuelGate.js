@@ -28,7 +28,7 @@ import {
   selectEminenceAbility,
   setEminenceAbilityParams,
 } from './eminenceRound.js';
-import { applyEminenceSegments, createEffectBundle } from './primitiveHandlers.js';
+import { applyEminenceSegments, applyPendingDealResponse, createEffectBundle } from './primitiveHandlers.js';
 import { resolveTriggerState } from './triggerRulesOverlay.js';
 import { changePresence } from './presence.js';
 import { isEminenceSubsystemEnabled, getLegalAbilityIds } from './eminenceState.js';
@@ -38,6 +38,12 @@ import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployed
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
 import { snapshotAnchoredBySide } from './anchored.js';
 import { collectRoundLeagueByCardId } from './eminenceDuelBinding.js';
+import {
+  resolveParamsSchema,
+  schemaTargetsAvailable,
+  pickDefaultSelectionParams,
+  selectionParamsReady,
+} from './eminenceParamSchema.js';
 
 /** Costo di schieramento legato al trigger effettivo, non a una singola Eminenza. */
 const DEPLOY_TRIGGER_HP_COSTS = {
@@ -157,11 +163,13 @@ export function autoSelectForcedChoices(matchState) {
  * Sigilla una scelta per un lato che non sta decidendo — IA, tutorial, o qualunque
  * chiamante che non espone un punto di scelta.
  *
- * Non è una strategia: prende la prima abilità legale. Serve a non lasciare il round
- * bloccato su `SELECTIONS_INCOMPLETE` quando l'altro lato non ha una UI. La vera IA
- * sostituirà questa funzione senza toccare il resto del flusso.
+ * Non è una strategia: prende la prima abilità legale con bersagli disponibili.
+ * Serve a non lasciare il round bloccato su `SELECTIONS_INCOMPLETE` quando l'altro
+ * lato non ha una UI. La vera IA sostituirà questa funzione senza toccare il resto.
+ *
+ * @param {object} [options.paramContext] contesto per risolvere paramsSchema (prede, slot, …)
  */
-export function autoSelectFirstLegalAbility(matchState, side) {
+export function autoSelectFirstLegalAbility(matchState, side, { paramContext = null } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) return matchState;
   if (!mustChooseThisRound(matchState, side)) return matchState;
   if (matchState[side].selectedAbilityId) return matchState;
@@ -174,6 +182,21 @@ export function autoSelectFirstLegalAbility(matchState, side) {
   );
   if (!legal.length) return matchState;
 
+  for (const abilityId of legal) {
+    const ability = getEminenceAbility(matchState[side].eminenceId, abilityId);
+    const sideContext = paramContextForSide(side, paramContext, null);
+    const resolved = resolveParamsSchema(
+      ability?.paramsSchema,
+      matchState[side].persistent,
+      sideContext,
+    );
+    if (!schemaTargetsAvailable(resolved, ability?.paramsSchema)) continue;
+    const params = pickDefaultSelectionParams(resolved);
+    const attempt = selectEminenceAbility(matchState, side, abilityId, params);
+    if (attempt.ok) return attempt.matchState;
+  }
+
+  // Fallback: prima legale anche senza params (es. solo CONFIRMED_AGENTS differito).
   const attempt = selectEminenceAbility(matchState, side, legal[0]);
   return attempt.ok ? attempt.matchState : matchState;
 }
@@ -613,6 +636,8 @@ export function advanceToNextRevealGate(matchState, {
   announceDeployedMarks = false,
   focusInvestedBySide = null,
   leagueBySide = null,
+  paramContext = null,
+  toxinBySide = null,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: null };
@@ -633,9 +658,21 @@ export function advanceToNextRevealGate(matchState, {
     return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: null };
   }
 
-  const opened = completeGate(matchState, gate, { initiativeSide });
+  const filled = fillMissingAbilityParams(matchState, {
+    agentIdBySide,
+    paramContext,
+    sides: [SIDES.ENEMY],
+  });
+  const opened = completeGate(filled, gate, { initiativeSide });
   const rawBundle = opened.resolutionQueue.length
-    ? applyEminenceSegments(opened.resolutionQueue)
+    ? applyEminenceSegments(opened.resolutionQueue, null, {
+      agentIdBySide,
+      toxinBySide,
+      persistentBySide: {
+        [SIDES.PLAYER]: opened.matchState[SIDES.PLAYER]?.persistent,
+        [SIDES.ENEMY]: opened.matchState[SIDES.ENEMY]?.persistent,
+      },
+    })
     : null;
   const bundle = mergePersistentReplacements(rawBundle, opened.matchState);
   const applied = applyBundleAndReactions(opened.matchState, bundle, { initiativeSide });
@@ -690,7 +727,7 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.ESCALATE_ABILITY,
 ]);
 
-function replayOpenedGeneralCombat(matchState, agentIdBySide) {
+function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null) {
   const queue = [];
   for (const side of BOTH_SIDES) {
     const current = matchState[side];
@@ -708,7 +745,7 @@ function replayOpenedGeneralCombat(matchState, agentIdBySide) {
     }
   }
   if (!queue.length) return null;
-  return applyEminenceSegments(queue, null, { agentIdBySide });
+  return applyEminenceSegments(queue, null, { agentIdBySide, toxinBySide });
 }
 
 function addStatDeltas(left, right) {
@@ -782,6 +819,8 @@ export function prepareEminenceDuel(matchState, {
   focusInvestedBySide = null,
   leagueBySide = null,
   deployedIsLowestLeagueBySide = null,
+  paramContext = null,
+  toxinBySide = null,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, bundle: null, events: [], notices: [], blocked: null };
@@ -792,7 +831,12 @@ export function prepareEminenceDuel(matchState, {
     return { matchState: withChoices, bundle: null, events: [], notices: [], blocked: 'SELECTIONS_INCOMPLETE' };
   }
 
-  const filled = fillMissingConfirmedAgentParams(withChoices, agentIdBySide);
+  const filledAgents = fillMissingConfirmedAgentParams(withChoices, agentIdBySide);
+  const filled = fillMissingAbilityParams(filledAgents, {
+    agentIdBySide,
+    paramContext,
+    sides: [SIDES.ENEMY],
+  });
   if (sideMissingConfirmedAgentParam(filled, SIDES.PLAYER)) {
     return {
       matchState: filled,
@@ -814,15 +858,17 @@ export function prepareEminenceDuel(matchState, {
     anchoredBySide,
     deployedIsLowestLeagueBySide: deployedIsLowestLeagueBySide || {},
   });
-  let bundle = applyEminenceSegments([...opened.resolutionQueue, ...collected.queue], null, {
+  const applyContext = {
     agentIdBySide,
+    toxinBySide,
     persistentBySide: {
       [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
       [SIDES.ENEMY]: collected.matchState[SIDES.ENEMY]?.persistent,
     },
-  });
+  };
+  let bundle = applyEminenceSegments([...opened.resolutionQueue, ...collected.queue], null, applyContext);
   if (generalWasAlreadyOpen) {
-    bundle = mergeDuelReplay(bundle, replayOpenedGeneralCombat(filled, agentIdBySide));
+    bundle = mergeDuelReplay(bundle, replayOpenedGeneralCombat(filled, agentIdBySide, toxinBySide));
   }
   bundle = mergePersistentReplacements(bundle, collected.matchState);
   bundle = mergeRoundLeagues(bundle, collected.matchState);
@@ -882,6 +928,67 @@ function fillMissingConfirmedAgentParams(matchState, agentIdBySide) {
     if (filled.ok) state = filled.matchState;
   }
   return state;
+}
+
+/**
+ * Completa i params mancanti dell'IA (preda, slot, frammento, lega, …) dallo schema risolto.
+ * Non tocca il lato giocatore: quei params restano sulla UI.
+ */
+function fillMissingAbilityParams(matchState, {
+  agentIdBySide = null,
+  paramContext = null,
+  sides = [SIDES.ENEMY],
+} = {}) {
+  let state = matchState;
+  for (const side of sides) {
+    const current = state[side];
+    if (!current?.selectedAbilityId || current.revealedAbilityId) continue;
+    const ability = getEminenceAbility(current.eminenceId, current.selectedAbilityId);
+    if (!ability?.paramsSchema) continue;
+
+    const sideContext = paramContextForSide(side, paramContext, agentIdBySide);
+    const resolved = resolveParamsSchema(ability.paramsSchema, current.persistent, sideContext);
+    if (!schemaTargetsAvailable(resolved, ability.paramsSchema)) continue;
+    if (selectionParamsReady(resolved, current.selectedParams)) continue;
+
+    const defaults = pickDefaultSelectionParams(resolved) || {};
+    if (
+      abilityNeedsConfirmedAgent(ability)
+      && defaults.cardId == null
+      && agentIdBySide?.[side] != null
+    ) {
+      defaults.cardId = agentIdBySide[side];
+      defaults.targetSide = side;
+    }
+    if (!Object.keys(defaults).length) continue;
+    const filled = setEminenceAbilityParams(state, side, defaults);
+    if (filled.ok) state = filled.matchState;
+  }
+  return state;
+}
+
+/** Ruota own/enemy del paramContext quando il lato che sceglie è l'avversario. */
+function paramContextForSide(side, paramContext, agentIdBySide) {
+  if (!paramContext) {
+    if (!agentIdBySide) return null;
+    return {
+      confirmedAgents: [
+        agentIdBySide[SIDES.PLAYER] != null
+          ? { id: agentIdBySide[SIDES.PLAYER], side: SIDES.PLAYER }
+          : null,
+        agentIdBySide[SIDES.ENEMY] != null
+          ? { id: agentIdBySide[SIDES.ENEMY], side: SIDES.ENEMY }
+          : null,
+      ].filter(Boolean),
+    };
+  }
+  if (side === SIDES.PLAYER) return paramContext;
+  return {
+    ...paramContext,
+    ownUndeployedCardIds: paramContext.enemyUndeployedCardIds || [],
+    enemyUndeployedCardIds: paramContext.ownUndeployedCardIds || [],
+    confirmedAgents: paramContext.confirmedAgents || null,
+  };
 }
 
 function attachPersistentSlotCurses(bundle, matchState, slot) {
@@ -1187,4 +1294,67 @@ export function revealEminenceSetupIfReady(matchState) {
     cleared[side] = { ...cleared[side], setupParams: null };
   }
   return cleared;
+}
+
+/**
+ * Sigilla la risposta a un Affare (`pendingDeals`) sui params dell'abilità proprietaria
+ * e applica Presenza / reazioni HP. I delta PV restano sul bundle per l'HUD.
+ */
+export function resolvePendingDeal(matchState, pendingDeal, response = {}, {
+  initiativeSide = SIDES.PLAYER,
+} = {}) {
+  if (!pendingDeal || !isEminenceSubsystemEnabled(matchState)) {
+    return { matchState, bundle: null, notices: [] };
+  }
+
+  const recipientPresence = matchState[pendingDeal.recipientSide]?.presence;
+  let normalized;
+  if (pendingDeal.mode === 'CHOOSE_ONE') {
+    if (response.dealChoice == null && response.dealId == null) {
+      throw new Error('resolvePendingDeal: dealChoice obbligatorio');
+    }
+    normalized = {
+      dealChoice: response.dealChoice ?? response.dealId,
+      opponentPresence: response.opponentPresence ?? recipientPresence,
+    };
+  } else {
+    const hasExplicitResponse = Object.prototype.hasOwnProperty.call(response, 'dealAccepted')
+      || Object.prototype.hasOwnProperty.call(response, 'dealResponse');
+    if (!hasExplicitResponse) {
+      throw new Error('resolvePendingDeal: dealAccepted/dealResponse obbligatorio');
+    }
+    normalized = {
+      dealAccepted: response.dealAccepted !== false
+        && response.dealResponse !== 'refuse'
+        && response.dealResponse !== false,
+      dealResponse: response.dealResponse,
+    };
+  }
+
+  const stamped = setEminenceAbilityParams(matchState, pendingDeal.ownerSide, normalized);
+  const nextState = stamped.ok ? stamped.matchState : matchState;
+  const dealBundle = applyPendingDealResponse(pendingDeal, normalized);
+  const applied = applyBundleAndReactions(nextState, dealBundle, { initiativeSide });
+  return {
+    matchState: applied.matchState,
+    bundle: dealBundle,
+    notices: applied.notices || [],
+  };
+}
+
+/** Risposta automatica dell'IA (o unica scelta legale Salasso). */
+export function autoResponseForPendingDeal(pendingDeal, matchState) {
+  if (!pendingDeal) return {};
+  if (pendingDeal.mode === 'CHOOSE_ONE') {
+    const presence = matchState[pendingDeal.recipientSide]?.presence ?? 0;
+    const deals = pendingDeal.deals || [];
+    const legal = deals.filter((deal) => (
+      deal.minPresence == null || presence >= Math.abs(deal.minPresence)
+    ));
+    return {
+      dealChoice: (legal[0] || deals[0])?.id ?? null,
+      opponentPresence: presence,
+    };
+  }
+  return { dealAccepted: true };
 }

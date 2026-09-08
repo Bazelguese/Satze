@@ -184,14 +184,29 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
 /**
  * Completa o sostituisce i parametri di una scelta già sigillata.
  * Serve ai bersagli fissati al reveal (Agenti confermati) senza riaprire la scelta.
+ * I params Affare (`dealAccepted` / `dealChoice`) possono arrivare dopo il reveal:
+ * l'offerta nasce all'apertura del gate, la risposta del destinatario subito dopo.
  */
+const POST_REVEAL_DEAL_PARAM_KEYS = new Set([
+  'dealAccepted',
+  'dealResponse',
+  'dealChoice',
+  'dealId',
+  'opponentPresence',
+]);
+
 export function setEminenceAbilityParams(matchState, side, params) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, ok: false, reason: 'SUBSYSTEM_DISABLED' };
   }
   const state = matchState[side];
   if (!state?.selectedAbilityId) return { matchState, ok: false, reason: 'NO_SELECTION' };
-  if (state.revealedAbilityId) return { matchState, ok: false, reason: 'ALREADY_REVEALED' };
+  const keys = Object.keys(params || {});
+  const onlyDealResponse = keys.length > 0
+    && keys.every((key) => POST_REVEAL_DEAL_PARAM_KEYS.has(key));
+  if (state.revealedAbilityId && !onlyDealResponse) {
+    return { matchState, ok: false, reason: 'ALREADY_REVEALED' };
+  }
 
   return {
     matchState: {

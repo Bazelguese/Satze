@@ -32,12 +32,12 @@
         "presenceDelta": 1
       },
       {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
-      },
-      {
         "id": "kethran_elogio",
         "presenceDelta": -1
+      },
+      {
+        "id": "kethran_innesto",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 4,

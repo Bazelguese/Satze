@@ -596,6 +596,30 @@ test('Altare statico: ottenere un Frammento (sconfitta) dà +1 Presenza', () => 
   assert.equal(afterLoss.matchState.player.presence, 4);
 });
 
+test('Altare statico: un Frammento già presente non ripaga +1 Presenza', () => {
+  let matchState = createEminenceMatchState({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+  });
+  matchState.player.presence = 3;
+  matchState.player.persistent.fragmentCardIds = [AGENT_A];
+  matchState = beginEminenceRound(matchState, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'kethran_elogio').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  const prepared = prepareEminenceDuel(matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: AGENT_B },
+  });
+  const afterLoss = settleEminenceRound(prepared.matchState, {
+    winner: SIDES.ENEMY,
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: AGENT_B },
+  });
+  assert.deepEqual(afterLoss.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
+  // Elogio −1 al reveal (3→2); la ri-marcatura del Frammento non paga di nuovo.
+  assert.equal(afterLoss.matchState.player.presence, 2);
+});
+
 test('Altare −2: l\'alias usa il trigger del Frammento; il Frammento si consuma solo se l\'alternativa scatta', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: ALTAR,
@@ -997,8 +1021,18 @@ function prepareCorte(playerAbility, {
   return prepareEminenceDuel(sealCorte(playerAbility, { presence, playerParams }), { agentIdBySide });
 }
 
-test('Corte +0: Accordo propone Affare (default accettato) → −2 PV e 1 FC temp all\'avversario', () => {
-  const { matchState, bundle } = prepareCorte('corte_accordo');
+test('Corte +0: Accordo senza risposta resta pending (niente auto-accept)', () => {
+  const { bundle } = prepareCorte('corte_accordo');
+  assert.equal(bundle.pendingDeals?.length, 1);
+  assert.equal(bundle.pendingDeals[0].mode, 'ACCEPT_OR_SELF');
+  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 0);
+  assert.deepEqual(bundle.hpDeltas, []);
+});
+
+test('Corte +0: Accordo accettato esplicitamente → −2 PV e 1 FC temp all\'avversario', () => {
+  const { matchState, bundle } = prepareCorte('corte_accordo', {
+    playerParams: { dealAccepted: true },
+  });
   assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 1);
   assert.deepEqual(bundle.hpDeltas, [
     { side: SIDES.ENEMY, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_accordo' },
@@ -1006,8 +1040,18 @@ test('Corte +0: Accordo propone Affare (default accettato) → −2 PV e 1 FC te
   assert.equal(matchState.player.presence, 2);
 });
 
-test('Corte −2: Salasso propone due Affari; default sceglie il primo (HP→Presenza)', () => {
-  const { matchState, bundle } = prepareCorte('corte_salasso', { presence: 3 });
+test('Corte −2: Salasso senza scelta resta pending', () => {
+  const { bundle } = prepareCorte('corte_salasso', { presence: 3 });
+  assert.equal(bundle.pendingDeals?.length, 1);
+  assert.equal(bundle.pendingDeals[0].mode, 'CHOOSE_ONE');
+  assert.deepEqual(bundle.hpDeltas, []);
+});
+
+test('Corte −2: Salasso con dealChoice hp_for_presence applica l\'Affare', () => {
+  const { matchState, bundle } = prepareCorte('corte_salasso', {
+    presence: 3,
+    playerParams: { dealChoice: 'hp_for_presence' },
+  });
   assert.deepEqual(bundle.hpDeltas, [
     { side: SIDES.ENEMY, amount: -3, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_salasso' },
   ]);
@@ -1073,7 +1117,7 @@ test('Corte −4: Brutto Affare dà 2 FC e riscuote ceil(POT/2) a fine Duello', 
   assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].side, SIDES.ENEMY);
   assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].cardId, CORTE_ENEMY);
 
-  assert.equal(prepared.notices.some((notice) => notice.name === 'Brutto Affare'), false);
+  assert.equal(prepared.notices.some((notice) => notice.name === 'Brutto Affare'), true);
 
   const settled = settleEminenceRound(prepared.matchState, {
     winner: SIDES.PLAYER,
@@ -1085,11 +1129,6 @@ test('Corte −4: Brutto Affare dà 2 FC e riscuote ceil(POT/2) a fine Duello', 
   ]);
   assert.equal(settled.matchState.player.presence, 1);
   assert.deepEqual(settled.matchState.player.persistent.endMatchDebts, []);
-  const debtNotice = settled.notices.find((notice) => notice.name === 'Brutto Affare');
-  assert.equal(debtNotice?.kind, 'effect');
-  assert.equal(debtNotice?.phaseDetail, 'Dopo il Duello');
-  assert.equal(debtNotice?.side, SIDES.PLAYER);
-  assert.equal(debtNotice?.sourceName, 'Sanguinaccio, il Registro');
 
   const closed = settleEminenceMatch(settled.matchState);
   assert.equal(closed.bundle, null);

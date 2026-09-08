@@ -137,6 +137,8 @@ test('vista: i Frammenti pubblici diventano opzioni di parametro', () => {
   assert.equal(elogio.paramsSchema, null);
   assert.equal(selectionParamsReady(innesto.paramsSchema, {}), false);
   assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), true);
+  assert.equal(selectionParamsReady({ fragmentCardId: [] }, {}), false);
+  assert.equal(selectionParamsReady({ preyCardId: [] }, {}), false);
 });
 
 test('vista: gli slot del tabellone diventano opzioni e lo 0 è una scelta valida', () => {

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ARMY_COLORS, ARMY_GIFS } from '../data';
+import { getEminence, getEminenceForArmy } from '../data/eminences.js';
+import { getEminenceArtUrl } from '../data/eminenceArt';
 import { getCardImageUrl } from '../data/images';
 import { getCardSprite } from '../utils/cardUtils';
 import { getBattlefieldAnimationType } from '../data/battlefields';
@@ -9,11 +11,26 @@ import {
   resolvePublicAssetUrl,
   resolveFieldThumbUrl,
 } from '../utils/preloadAssets';
-import { CardReworkP4, CardBack } from './cards';
+import {
+  DROP_PLACE_FX,
+  CLICK_PLACE_FX,
+  PLACE_FX_STYLES,
+  placeFxStyleClass,
+} from '../utils/placeFxPreference';
+import { CardReworkP4, CardBack, GameCard } from './cards';
 import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
+import { EminenzaZone } from './eminence/EminenzaZone';
+import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
+import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
 import './cosmic/cosmic-transitions.css';
+import './eminenceLab/eminenceArtLab.css';
 
-const WARMUP_MS = 2400;
+const WARMUP_MS = 3800;
+
+const PLACE_WARMUP = [
+  ...DROP_PLACE_FX.map((fx) => ({ fx, play: `play-${fx}`, wrap: `fx-${fx}` })),
+  ...CLICK_PLACE_FX.map((fx) => ({ fx, play: `play-${fx}`, wrap: `fx-${fx}` })),
+];
 
 /** Solo nero + barra (niente logo / testo LoadingScreen). */
 function BlackProgressBar({ progress = 0 }) {
@@ -90,13 +107,22 @@ function preloadUrl(url) {
   });
 }
 
+function describeEminence(id) {
+  const em = getEminence(id);
+  if (!em) return null;
+  return {
+    id: em.id,
+    name: em.name,
+    army: em.army,
+    static: em.static,
+    artUrl: getEminenceArtUrl(em),
+    accent: ARMY_COLORS[em.army]?.accent || '#c9e238',
+  };
+}
+
 /**
- * Loading + warm-up dedicati all'ingresso in duello.
- * Precarica campi full-res della partita e riscalda animazioni HTML/CSS del duello
- * (place-fx, reveal, carte mano, pannelli) prima di shuffle/selectField.
- *
- * @param {boolean} [showChrome=true] Se false, nessun UI (warm-up sotto l'iris).
- *   Se true: solo nero + barra (mai la LoadingScreen completa).
+ * Loading + warm-up dedicati all'ingresso in duello:
+ * campi, carte, place-fx agenti, clash, Eminenze (ingresso + announce + mark flight).
  */
 export function DuelLoadingOverlay({
   battlefields = [],
@@ -106,6 +132,7 @@ export function DuelLoadingOverlay({
   enemyCardBack = null,
   playerArmy = null,
   enemyArmy = null,
+  eminenceMatchState = null,
   showChrome = true,
   onComplete,
 }) {
@@ -118,6 +145,9 @@ export function DuelLoadingOverlay({
   const [fieldIdx, setFieldIdx] = useState(0);
   const [slamKey, setSlamKey] = useState(0);
   const [warmupReady, setWarmupReady] = useState(false);
+  const [clashPhase, setClashPhase] = useState(0);
+  const [showAnnounce, setShowAnnounce] = useState(false);
+  const [markFlight, setMarkFlight] = useState(null);
 
   const fields = useMemo(
     () => (Array.isArray(battlefields) ? battlefields.filter(Boolean) : []),
@@ -130,14 +160,72 @@ export function DuelLoadingOverlay({
     return [...p, ...e];
   }, [playerCards, enemyCards]);
 
+  const playerEminence = useMemo(() => {
+    const fromMatch = describeEminence(eminenceMatchState?.player?.eminenceId);
+    if (fromMatch) return fromMatch;
+    const byArmy = getEminenceForArmy(playerArmy);
+    return byArmy ? describeEminence(byArmy.id) : null;
+  }, [eminenceMatchState?.player?.eminenceId, playerArmy]);
+  const enemyEminence = useMemo(() => {
+    const fromMatch = describeEminence(eminenceMatchState?.enemy?.eminenceId);
+    if (fromMatch) return fromMatch;
+    const byArmy = getEminenceForArmy(enemyArmy);
+    return byArmy ? describeEminence(byArmy.id) : null;
+  }, [eminenceMatchState?.enemy?.eminenceId, enemyArmy]);
+
+  const clashResult = useMemo(() => {
+    const playerAgent = playerCards?.[0] || handCards[0];
+    const enemyAgent = enemyCards?.[0] || handCards[1] || handCards[0];
+    if (!playerAgent || !enemyAgent) return null;
+    return {
+      playerAgent,
+      enemyAgent,
+      winner: 'player',
+      playerAssault: 12,
+      enemyAssault: 9,
+      damageDealt: 3,
+      playerFocusUsed: 2,
+      enemyFocusUsed: 1,
+      playerPower: playerAgent.power,
+      enemyPower: enemyAgent.power,
+      playerDamage: playerAgent.damage,
+      enemyDamage: enemyAgent.damage,
+    };
+  }, [playerCards, enemyCards, handCards]);
+
   useEffect(() => {
     if (!warmupReady) return undefined;
     const id = setInterval(() => {
       setFieldIdx((i) => i + 1);
       setSlamKey((k) => k + 1);
-    }, 480);
+    }, 420);
     return () => clearInterval(id);
   }, [warmupReady]);
+
+  useEffect(() => {
+    if (!warmupReady) return undefined;
+    setClashPhase(0);
+    const arm = window.setTimeout(() => setClashPhase(4), 120);
+    const announceOn = window.setTimeout(() => setShowAnnounce(true), 500);
+    const announceOff = window.setTimeout(() => setShowAnnounce(false), 1600);
+    const flightOn = window.setTimeout(() => {
+      setMarkFlight({
+        id: `warmup-flight-${Date.now()}`,
+        kind: 'prey',
+        accent: playerEminence?.accent || '#c9e238',
+        from: { type: 'announce', side: 'player' },
+        to: { type: 'card', side: 'player' },
+      });
+    }, 700);
+    const flightOff = window.setTimeout(() => setMarkFlight(null), 2200);
+    return () => {
+      window.clearTimeout(arm);
+      window.clearTimeout(announceOn);
+      window.clearTimeout(announceOff);
+      window.clearTimeout(flightOn);
+      window.clearTimeout(flightOff);
+    };
+  }, [warmupReady, playerEminence?.accent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,11 +240,11 @@ export function DuelLoadingOverlay({
     };
 
     const run = async () => {
-      setProgress(4);
+      setProgress(3);
 
       await preloadBattlefieldImages(fields, (_l, _t, percent) => {
         if (cancelled) return;
-        setProgress(Math.min(55, Math.round((percent / 100) * 55)));
+        setProgress(Math.min(40, Math.round((percent / 100) * 40)));
       });
       if (cancelled) return;
 
@@ -168,6 +256,8 @@ export function DuelLoadingOverlay({
       }
       if (playerCardBack) extraUrls.add(playerCardBack);
       if (enemyCardBack) extraUrls.add(enemyCardBack);
+      if (playerEminence?.artUrl) extraUrls.add(playerEminence.artUrl);
+      if (enemyEminence?.artUrl) extraUrls.add(enemyEminence.artUrl);
       const armyGifP = playerArmy && ARMY_GIFS[playerArmy];
       const armyGifE = enemyArmy && ARMY_GIFS[enemyArmy];
       if (armyGifP) extraUrls.add(resolvePublicAssetUrl(armyGifP) || armyGifP);
@@ -186,7 +276,7 @@ export function DuelLoadingOverlay({
         const batch = extras.slice(i, i + 8);
         await Promise.all(batch.map((u) => preloadUrl(u)));
         loaded += batch.length;
-        if (!cancelled) setProgress(55 + Math.round((loaded / total) * 20));
+        if (!cancelled) setProgress(40 + Math.round((loaded / total) * 20));
       }
       if (cancelled) return;
 
@@ -195,14 +285,14 @@ export function DuelLoadingOverlay({
       await nextFrame();
       await waitHostImages(rootRef.current);
       if (cancelled) return;
-      setProgress(78);
+      setProgress(68);
 
       const host = rootRef.current;
       const t0 = performance.now();
       while (!cancelled && performance.now() - t0 < WARMUP_MS) {
         await nextFrame();
         if (host) void host.offsetHeight;
-        const p = 78 + Math.min(20, ((performance.now() - t0) / WARMUP_MS) * 20);
+        const p = 68 + Math.min(30, ((performance.now() - t0) / WARMUP_MS) * 30);
         setProgress(Math.round(p));
       }
 
@@ -215,7 +305,16 @@ export function DuelLoadingOverlay({
     return () => {
       cancelled = true;
     };
-  }, [fields, handCards, playerCardBack, enemyCardBack, playerArmy, enemyArmy]);
+  }, [
+    fields,
+    handCards,
+    playerCardBack,
+    enemyCardBack,
+    playerArmy,
+    enemyArmy,
+    playerEminence?.artUrl,
+    enemyEminence?.artUrl,
+  ]);
 
   const activeField = fields[fieldIdx % Math.max(1, fields.length)] || null;
   const revealType = activeField
@@ -224,15 +323,30 @@ export function DuelLoadingOverlay({
   const revealSrc = activeField
     ? resolvePublicAssetUrl(activeField.bgImage) || resolveFieldThumbUrl(activeField.bgImage)
     : null;
-  const placeClass = slamKey % 2 === 0 ? 'play-slam' : 'play-rise';
-  const fxClass = slamKey % 2 === 0 ? 'fx-slam' : 'fx-rise';
-  const playerAccent = ARMY_COLORS[playerArmy]?.accent || '#a78bfa';
+
+  const place = PLACE_WARMUP[slamKey % PLACE_WARMUP.length];
+  const styleKey = PLACE_FX_STYLES[slamKey % PLACE_FX_STYLES.length];
+  const styleClass = placeFxStyleClass(styleKey);
+  const playerAccent = playerEminence?.accent || ARMY_COLORS[playerArmy]?.accent || '#a78bfa';
+
+  const warmupAnnounce = showAnnounce && playerEminence
+    ? {
+        id: 'duel-warmup-announce',
+        kind: 'setup',
+        side: 'player',
+        name: playerEminence.static?.name || playerEminence.name,
+        sourceName: playerEminence.name,
+        text: playerEminence.static?.text || 'Preparazione Scontro',
+        phaseLabel: 'Preparazione',
+        phaseDetail: null,
+      }
+    : null;
 
   const stage = warmupReady ? (
     <div
       ref={rootRef}
       aria-hidden
-      className="satze-duel-warmup-stage"
+      className="satze-duel-warmup-stage satze-scene dep-2 mov-1 sty-a"
       style={{
         position: 'fixed',
         inset: 0,
@@ -246,7 +360,7 @@ export function DuelLoadingOverlay({
         ['--acc']: playerAccent,
       }}
     >
-      {/* Sfondi full-res dei campi della partita */}
+      {/* Sfondi full-res */}
       <div style={{ position: 'absolute', inset: 0 }}>
         {fields.map((field, i) => {
           const src = resolvePublicAssetUrl(field?.bgImage);
@@ -270,54 +384,55 @@ export function DuelLoadingOverlay({
         })}
       </div>
 
-      {/* Reveal animato sul campo attivo */}
       {revealSrc ? (
         <div
           key={`duel-reveal-${fieldIdx}-${revealType}`}
-          style={{ position: 'absolute', right: 40, top: 40, width: 560, height: 300, overflow: 'hidden' }}
+          style={{ position: 'absolute', right: 24, top: 24, width: 520, height: 280, overflow: 'hidden' }}
         >
           <BattlefieldReveal imageSrc={revealSrc} animationType={revealType} />
         </div>
       ) : null}
 
-      {/* Carte mano partita */}
+      {/* Carte mano */}
       <div
         style={{
           position: 'absolute',
-          left: 32,
-          top: 32,
+          left: 24,
+          top: 24,
           display: 'flex',
-          gap: 10,
-          transform: 'scale(0.42)',
+          gap: 8,
+          transform: 'scale(0.38)',
           transformOrigin: 'top left',
         }}
       >
         {handCards.slice(0, 6).map((agent) => (
           <CardReworkP4 key={`duel-card-${agent.id}`} agent={agent} showBonus suppressAnimations />
         ))}
-        {(playerCardBack || enemyCardBack) && (
-          <>
-            {playerCardBack ? (
-              <div style={{ width: 230, height: 330 }}>
-                <CardBack armies={[playerArmy].filter(Boolean)} backImage={playerCardBack} />
-              </div>
-            ) : null}
-            {enemyCardBack ? (
-              <div style={{ width: 230, height: 330 }}>
-                <CardBack armies={[enemyArmy].filter(Boolean)} backImage={enemyCardBack} />
-              </div>
-            ) : null}
-          </>
-        )}
+        {playerCardBack ? (
+          <div style={{ width: 230, height: 330 }}>
+            <CardBack armies={[playerArmy].filter(Boolean)} backImage={playerCardBack} />
+          </div>
+        ) : null}
+        {enemyCardBack ? (
+          <div style={{ width: 230, height: 330 }}>
+            <CardBack armies={[enemyArmy].filter(Boolean)} backImage={enemyCardBack} />
+          </div>
+        ) : null}
       </div>
 
-      {/* Place-fx ingresso carta */}
+      {/* Tutti i place-fx agenti + stili */}
       <div
         key={`duel-place-${slamKey}`}
-        className={fxClass}
-        style={{ position: 'absolute', left: '42%', bottom: 48, width: 220, height: 300 }}
+        className={`place-fx ${place.wrap}${styleClass}`}
+        data-field-agent="player"
+        style={{ position: 'absolute', left: '38%', bottom: 40, width: 200, height: 280 }}
       >
-        <div className={`place-card ${placeClass}`} style={{ width: '100%', height: '100%', background: '#1a1028' }}>
+        <div className={`place-card ${place.play}`} style={{ width: '100%', height: '100%' }}>
+          {handCards[0] ? (
+            <GameCard agent={handCards[0]} showBonus />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: '#1a1028' }} />
+          )}
           <div className="place-shadow" />
           <div className="place-ring" />
           <div className="place-ring b" />
@@ -327,12 +442,75 @@ export function DuelLoadingOverlay({
           <div className="place-echo e3" />
           <div className="place-edge" />
         </div>
-        <div className="imp-row-reveal" style={{ marginTop: 10, height: 36, background: '#2a1840' }} />
-        <div className="imp-victory imp-victory-reveal" style={{ marginTop: 8, height: 28, background: '#3a2050' }} />
+        <div className="imp-row-reveal" style={{ marginTop: 8, height: 32, background: '#2a1840' }} />
+        <div className="imp-victory imp-victory-reveal" style={{ marginTop: 6, height: 24, background: '#3a2050' }} />
       </div>
 
-      {/* Round 5 / filter blur keyframes */}
-      <div className="ov on r5" style={{ position: 'absolute', inset: '18% 28%', display: 'block' }}>
+      <div
+        data-field-agent="enemy"
+        style={{ position: 'absolute', right: '12%', top: 120, width: 160, height: 220, opacity: 0.5 }}
+      >
+        <div className="place-card" style={{ width: '100%', height: '100%', background: '#1a1028' }} />
+      </div>
+
+      {/* Clash Aurora */}
+      {clashResult && clashPhase >= 4 ? (
+        <div style={{ position: 'absolute', inset: 0, transform: 'scale(0.55)', transformOrigin: 'center center' }}>
+          <DuelClashAuroraSequence
+            key={`clash-${warmupReady}-${clashPhase}`}
+            battleResult={clashResult}
+            duelPhase={clashPhase}
+            duelEffectStep={1}
+            variant="v1"
+            isZoomed
+          />
+        </div>
+      ) : null}
+
+      {/* Zone Eminenza (ingresso carta + announce) */}
+      {playerEminence ? (
+        <div
+          data-side="player"
+          style={{ position: 'absolute', left: 40, bottom: 40, width: 280, height: 420, transform: 'scale(0.72)', transformOrigin: 'bottom left' }}
+        >
+          <EminenzaZone
+            side="player"
+            eminence={playerEminence}
+            presence={eminenceMatchState?.player?.presence ?? 3}
+            accent={playerEminence.accent}
+            announce={warmupAnnounce}
+            hideRail
+            announceAutoDismiss={false}
+          />
+        </div>
+      ) : null}
+      {enemyEminence ? (
+        <div
+          data-side="enemy"
+          style={{ position: 'absolute', right: 40, bottom: 40, width: 280, height: 420, transform: 'scale(0.72)', transformOrigin: 'bottom right' }}
+        >
+          <EminenzaZone
+            side="enemy"
+            eminence={enemyEminence}
+            presence={eminenceMatchState?.enemy?.presence ?? 3}
+            accent={enemyEminence.accent}
+            hideRail
+            announceAutoDismiss={false}
+          />
+        </div>
+      ) : null}
+
+      {/* Ancore mark-flight */}
+      <div data-em-hp="player" style={{ position: 'absolute', left: 200, top: 80, width: 24, height: 24 }} />
+      <div data-em-hp="enemy" style={{ position: 'absolute', right: 200, top: 80, width: 24, height: 24 }} />
+      <div data-field-slot="0" style={{ position: 'absolute', left: '50%', top: '45%', width: 40, height: 40 }} />
+
+      {markFlight ? (
+        <EminenceMarkFlight flight={markFlight} onComplete={() => setMarkFlight(null)} />
+      ) : null}
+
+      {/* Round 5 / filter blur */}
+      <div className="ov on r5" style={{ position: 'absolute', inset: '22% 30%', display: 'block' }}>
         <div className="r5-ink">
           <div className="slab" />
           <div className="five">5</div>
@@ -341,7 +519,7 @@ export function DuelLoadingOverlay({
         </div>
       </div>
 
-      {/* Sweep cosmico ingresso */}
+      {/* Sweep cosmico */}
       <div className="cosmic-stage" style={{ position: 'absolute', inset: 0 }}>
         <div className="sweep-panel sweep-panel--a" />
         <div className="sweep-panel sweep-panel--b" />

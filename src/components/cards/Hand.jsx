@@ -48,6 +48,8 @@ export const Hand = React.memo(({
   /** Porta le carte sopra il velo Eminenza, così restano cliccabili (anteprima Preda). */
   elevateCards = false,
   arrivingPreyId = null,
+  /** (ability, isPlayer, card?) => ability effettiva per display campo/Eminenza. */
+  resolveEffectiveAbility = null,
 }) => {
   const [gifError, setGifError] = useState(false);
   const army = hand?.[0]?.army ?? zoneArmy;
@@ -251,6 +253,11 @@ export const Hand = React.memo(({
                   : false}
                 bonusBaseInactive={
                   Boolean(ARMY_BONUSES[agent?.army]) && !armyBonuses?.[agent?.army]
+                }
+                effectiveAbility={
+                  resolveEffectiveAbility
+                    ? resolveEffectiveAbility(agent?.ability, position === 'bottom-right', agent)
+                    : null
                 }
                 battleOutcome={outcome}
                 onDragStart={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled && onDragStart

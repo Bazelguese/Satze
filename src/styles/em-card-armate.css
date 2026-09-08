@@ -1,0 +1,264 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — APPARIZIONE PER ARMATA (v2)
+   Drop-in per src/styles/satze-eminenza.css (§3 Ingressi).
+   ----------------------------------------------------------------------
+   Dodici ingressi della carta, uno per armata, che riprendono la
+   grammatica con cui si rivela il CAMPO di quella stessa armata
+   (BattlefieldRevealAnimations.jsx): l'Eminenza entra come entra la
+   sua terra.
+
+   Rispetto alla v1 ogni gesto ha TRE cose invece di una:
+     · una rivelazione in più fasi (non un solo clip che si apre);
+     · un moto della carta che finisce nella posa di riposo, così il
+       respiro dell'HUD lo raccoglie senza stacco;
+     · da uno a tre strati di effetto — luce, grana, schegge — che
+       vivono su pseudo-elementi e non toccano mai i figli della carta.
+
+   MARKUP — lo strato d'effetto è FRATELLO della carta, non figlio: la
+   maschera o il clip che rivela la carta ritaglierebbe anche lui. Ha
+   però il proprio overflow:hidden, così l'effetto resta dentro il
+   riquadro della carta come nei reveal dei campi.
+     <div class="em-card em-arm em-arm-<slug>">…invariato…</div>
+     <span class="em-arm-fx em-fx-<slug>"></span>
+   Va sovrapposto alla carta (stessa posizione e misura, z-index sopra).
+   Senza di lui i gesti funzionano comunque, con due strati invece di
+   quattro.
+   A fine gesto togli `em-arm` e `em-arm-<slug>`: maschere e blend
+   lasciati addosso costano layer di compositing per tutta la partita.
+
+   TARATURA
+     --em-a-dur   durata (default .72s)
+     --em-a-acc   accento dell'armata (default: eredita --em-ac)
+   ═════════════════════════════════════════════════════════════════ */
+
+.em-arm{--em-a-dur:.72s;--em-a-acc:var(--em-ac,#d5ecf9)}
+.em-arm::before,.em-arm::after,.em-arm-fx::before,.em-arm-fx::after{content:'';position:absolute;pointer-events:none;opacity:0}
+.em-arm-fx{--em-a-dur:.72s;--em-a-acc:var(--em-ac,#d5ecf9)}
+.em-arm::before,.em-arm::after{inset:0;z-index:9}
+/* Ritaglia al riquadro della carta, esattamente come i reveal dei campi
+   ritagliano al riquadro del campo: anelli e creste si vedono per intero
+   dentro la carta e non sbordano sul resto del banco. È fratello della
+   carta solo perché il clip-path della carta, se fosse figlio, lo
+   cancellerebbe insieme a lei. */
+.em-arm-fx{position:absolute;z-index:10;pointer-events:none;overflow:hidden;border-radius:inherit}
+.em-arm-fx::before,.em-arm-fx::after{inset:0}
+
+/* Chiusura comune: l'ultimo quinto di ogni gesto è un assestamento
+   piccolissimo che arriva alla posa di riposo con velocità non nulla —
+   è quello che evita lo stacco con l'idle. */
+@keyframes emArmSettle{0%{transform:translateY(-2.5px) scale(1.004)}100%{transform:none}}
+
+/* ── Orizzonte · Swirl ─────────────────────────────────────────────────
+   Il campo si apre a cerchio ruotando. Qui la rotazione è sulla carta,
+   il cerchio è la maschera, e l'anello scappa fuori quadro. */
+@keyframes emArmSwirl{
+  0%{opacity:0;clip-path:circle(0% at 50% 50%);transform:scale(1.42) rotate(-24deg)}
+  12%{opacity:1}
+  46%{clip-path:circle(46% at 50% 50%);transform:scale(1.12) rotate(-7deg)}
+  76%{clip-path:circle(96% at 50% 50%);transform:scale(1.006) rotate(.8deg)}
+  100%{opacity:1;clip-path:circle(150% at 50% 50%);transform:none}
+}
+.em-arm-orizzonte{animation:emArmSwirl var(--em-a-dur) cubic-bezier(.16,.86,.22,1) both}
+@keyframes emArmSwirlRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.04)}14%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}}
+.em-fx-orizzonte::before{left:50%;top:50%;right:auto;bottom:auto;width:130%;height:130%;border-radius:50%;border:2px solid var(--em-a-acc);box-shadow:0 0 26px var(--em-a-acc),inset 0 0 26px var(--em-a-acc);mix-blend-mode:screen;animation:emArmSwirlRing var(--em-a-dur) cubic-bezier(.16,.86,.22,1) both}
+/* Un secondo anello più lento dà profondità al vortice invece di un cerchio solo. */
+.em-fx-orizzonte::after{left:50%;top:50%;right:auto;bottom:auto;width:130%;height:130%;border-radius:50%;border:1px solid var(--em-a-acc);opacity:0;mix-blend-mode:screen;animation:emArmSwirlRing calc(var(--em-a-dur) * 1.3) cubic-bezier(.2,.8,.3,1) calc(var(--em-a-dur) * .12) both}
+@keyframes emArmSwirlWash{0%{opacity:0}22%{opacity:.3}100%{opacity:0}}
+.em-arm-orizzonte::before{background:conic-gradient(from 0deg,transparent,var(--em-a-acc),transparent 55%);mix-blend-mode:screen;animation:emArmSwirlWash var(--em-a-dur) ease-out both}
+
+/* ── Kethran · Frammenti ──────────────────────────────────────────────
+   Nel campo sono 20 ritagli che arrivano da posizioni casuali, ruotati, e
+   convergono. Qui i 20 pezzi sono COPIE della carta ritagliate alla
+   propria cella: arte e layout viaggiano insieme, non l'arte da sola.
+
+   MARKUP (nello strato .em-arm-fx, 20 volte; la copia la fa cloneNode):
+     <span class="em-frag" style="--cx:0..4;--cy:0..3;--fx:..;--fy:..;--fr:..;--fd:..">
+       <span class="em-frag-in"><!-- clone di .em-card --></span>
+     </span>                                                              */
+.em-frag{position:absolute;overflow:hidden;width:20%;height:25%;left:calc(var(--cx) * 20%);top:calc(var(--cy) * 25%);opacity:0;will-change:transform,opacity;backface-visibility:hidden}
+.em-frag-in{position:absolute;width:500%;height:400%;left:calc(var(--cx) * -100%);top:calc(var(--cy) * -100%)}
+.em-frag-in>*{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important;-webkit-mask-image:none!important;mask-image:none!important;box-shadow:none!important}
+@keyframes emFragFly{
+  0%{opacity:0;transform:translate(var(--fx,120px),var(--fy,-90px)) rotate(var(--fr,14deg)) scale(1.16)}
+  20%{opacity:1}
+  76%{opacity:1;transform:none}
+  100%{opacity:0;transform:none}
+}
+.em-fx-kethran .em-frag{animation:emFragFly var(--em-a-dur) cubic-bezier(.16,.88,.2,1) var(--fd,0s) both}
+/* La carta vera prende il posto delle copie appena sono a registro. */
+@keyframes emArmConverge{0%,66%{opacity:0}100%{opacity:1}}
+.em-arm-kethran{animation:emArmConverge var(--em-a-dur) linear both}
+@keyframes emArmFragFlash{0%,66%{opacity:0}78%{opacity:.2}100%{opacity:0}}
+.em-arm-kethran::before{background:var(--em-a-acc);mix-blend-mode:screen;animation:emArmFragFlash var(--em-a-dur) ease-out both}
+
+/* ── Corte Rossa · Sipario ─────────────────────────────────────────────
+   Le due metà si aprono; la cucitura di luce resta un istante di più e
+   il velo scorre via ai lati. */
+@keyframes emArmSipario{
+  0%{opacity:0;clip-path:inset(0 50% 0 50%);transform:scale(1.1)}
+  8%{opacity:1}
+  58%{clip-path:inset(0 8% 0 8%);transform:scale(1.02)}
+  100%{opacity:1;clip-path:inset(0 0 0 0);transform:none}
+}
+.em-arm-corte{animation:emArmSipario var(--em-a-dur) cubic-bezier(.38,0,.18,1) both}
+@keyframes emArmSeam{0%{opacity:0;transform:scaleY(.2)}12%{opacity:1;transform:scaleY(1)}62%{opacity:.6}100%{opacity:0}}
+.em-fx-corte::before{left:50%;top:-6%;bottom:-6%;right:auto;width:3px;margin-left:-1.5px;background:linear-gradient(180deg,transparent,#fff,var(--em-a-acc),transparent);box-shadow:0 0 14px var(--em-a-acc),0 0 40px var(--em-a-acc);mix-blend-mode:screen;animation:emArmSeam var(--em-a-dur) ease-out both}
+@keyframes emArmVelvet{0%{opacity:.9;clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 50% 0 50%)}}
+.em-arm-corte::before{background:linear-gradient(90deg,#0a0508 0 46%,transparent 46% 54%,#0a0508 54%);mix-blend-mode:normal;animation:emArmVelvet calc(var(--em-a-dur) * .8) cubic-bezier(.38,0,.18,1) both}
+
+/* ── Calibri Pesanti · HUD ─────────────────────────────────────────────
+   La riga scende e dietro di lei arriva il colore: sopra la riga la
+   carta è ancora un negativo monocromo. Griglia che si spegne. */
+@keyframes emArmHudInk{
+  0%{opacity:0;filter:brightness(.3) saturate(0) contrast(1.2)}
+  8%{opacity:1}
+  70%{filter:brightness(1.12) saturate(.72)}
+  100%{opacity:1;filter:none}
+}
+@keyframes emArmHudWipe{0%{-webkit-mask-size:100% 0%;mask-size:100% 0%}72%,100%{-webkit-mask-size:100% 100%;mask-size:100% 100%}}
+.em-arm-calibri{-webkit-mask-image:linear-gradient(#000,#000);mask-image:linear-gradient(#000,#000);-webkit-mask-position:0 0;mask-position:0 0;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:emArmHudInk var(--em-a-dur) linear both,emArmHudWipe var(--em-a-dur) linear both}
+@keyframes emArmScan{0%{opacity:0;top:0}6%{opacity:.95}70%{opacity:.95;top:100%}100%{opacity:0;top:100%}}
+.em-fx-calibri::before{left:-4%;right:-4%;top:0;bottom:auto;height:2px;background:#fff;box-shadow:0 0 10px var(--em-a-acc),0 0 30px var(--em-a-acc);animation:emArmScan var(--em-a-dur) linear both}
+@keyframes emArmGrid{0%{opacity:.16}64%{opacity:.16}100%{opacity:0}}
+.em-fx-calibri::after{background:repeating-linear-gradient(90deg,var(--em-a-acc) 0 1px,transparent 1px 20%),repeating-linear-gradient(180deg,var(--em-a-acc) 0 1px,transparent 1px 25%);animation:emArmGrid var(--em-a-dur) linear both}
+
+/* ── Orathai · Onda ────────────────────────────────────────────────────
+   Il cerchio sale dal basso con un rimbalzo, e due creste lo seguono. */
+@keyframes emArmOnda{
+  0%{opacity:0;clip-path:circle(0% at 50% 86%);transform:translateY(10px) scale(1.05)}
+  10%{opacity:1}
+  52%{clip-path:circle(58% at 50% 86%);transform:translateY(-3px) scale(1.004)}
+  78%{clip-path:circle(104% at 50% 86%);transform:translateY(1px)}
+  100%{opacity:1;clip-path:circle(150% at 50% 86%);transform:none}
+}
+.em-arm-orathai{animation:emArmOnda var(--em-a-dur) cubic-bezier(.3,1.22,.6,1) both}
+@keyframes emArmCrest{0%{opacity:0;transform:translate(-50%,-50%) scale(.05)}16%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(2.5)}}
+.em-fx-orathai::before{left:50%;top:86%;right:auto;bottom:auto;width:140%;height:140%;border-radius:50%;border:2px solid var(--em-a-acc);box-shadow:0 0 30px var(--em-a-acc);mix-blend-mode:screen;animation:emArmCrest var(--em-a-dur) cubic-bezier(.3,1.22,.6,1) both}
+.em-fx-orathai::after{left:50%;top:86%;right:auto;bottom:auto;width:140%;height:140%;border-radius:50%;border:1px solid var(--em-a-acc);mix-blend-mode:screen;animation:emArmCrest calc(var(--em-a-dur) * 1.25) cubic-bezier(.3,1.1,.6,1) calc(var(--em-a-dur) * .16) both}
+
+/* ── Mounthborn · Morsi ────────────────────────────────────────────────
+   Sette morsi che si richiudono sulla carta, sfalsati in tre tempi. */
+@keyframes emArmMorsi{
+  0%{opacity:0;-webkit-mask-size:0% 0%,0% 0%,0% 0%,0% 0%,0% 0%,0% 0%,0% 0%;mask-size:0% 0%,0% 0%,0% 0%,0% 0%,0% 0%,0% 0%,0% 0%}
+  14%{opacity:1;-webkit-mask-size:78% 78%,0% 0%,66% 66%,0% 0%,0% 0%,0% 0%,0% 0%;mask-size:78% 78%,0% 0%,66% 66%,0% 0%,0% 0%,0% 0%,0% 0%}
+  44%{-webkit-mask-size:130% 130%,96% 96%,120% 120%,88% 88%,0% 0%,80% 80%,0% 0%;mask-size:130% 130%,96% 96%,120% 120%,88% 88%,0% 0%,80% 80%,0% 0%}
+  74%{-webkit-mask-size:180% 180%,150% 150%,170% 170%,146% 146%,120% 120%,140% 140%,110% 110%;mask-size:180% 180%,150% 150%,170% 170%,146% 146%,120% 120%,140% 140%,110% 110%}
+  100%{opacity:1;-webkit-mask-size:230% 230%,230% 230%,230% 230%,230% 230%,230% 230%,230% 230%,230% 230%;mask-size:230% 230%,230% 230%,230% 230%,230% 230%,230% 230%,230% 230%,230% 230%}
+}
+.em-arm-mounthborn{-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%);mask-image:radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%),radial-gradient(circle,#000 58%,transparent 64%);-webkit-mask-position:20% 14%,80% 24%,48% 50%,16% 74%,84% 88%,62% 8%,34% 94%;mask-position:20% 14%,80% 24%,48% 50%,16% 74%,84% 88%,62% 8%,34% 94%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:emArmMorsi var(--em-a-dur) cubic-bezier(.2,.9,.24,1) both}
+@keyframes emArmMorsiRim{0%{opacity:0}24%{opacity:.55}100%{opacity:0}}
+.em-fx-mounthborn::before{background:radial-gradient(circle at 20% 14%,var(--em-a-acc),transparent 26%),radial-gradient(circle at 80% 24%,var(--em-a-acc),transparent 24%),radial-gradient(circle at 48% 50%,var(--em-a-acc),transparent 30%);mix-blend-mode:screen;animation:emArmMorsiRim var(--em-a-dur) ease-out both}
+
+/* ── Enclave · Occhio ──────────────────────────────────────────────────
+   Prima la fessura verticale, poi la pupilla si allarga: due tempi
+   distinti, come nel campo. */
+@keyframes emArmOcchio{
+  0%{opacity:0;clip-path:ellipse(1.5% 0% at 50% 50%)}
+  8%{opacity:1;clip-path:ellipse(2.5% 26% at 50% 50%)}
+  30%{clip-path:ellipse(4% 68% at 50% 50%)}
+  40%{clip-path:ellipse(5% 72% at 50% 50%)}
+  72%{clip-path:ellipse(34% 74% at 50% 50%)}
+  100%{opacity:1;clip-path:ellipse(78% 78% at 50% 50%)}
+}
+.em-arm-enclave{animation:emArmOcchio var(--em-a-dur) cubic-bezier(.22,.86,.2,1) both}
+@keyframes emArmSlit{0%{opacity:0;transform:scaleY(.06)}14%{opacity:1;transform:scaleY(1)}52%{opacity:.7}100%{opacity:0}}
+.em-fx-enclave::before{left:50%;top:0;bottom:0;right:auto;width:3px;margin-left:-1.5px;background:linear-gradient(180deg,transparent,#fff,var(--em-a-acc),transparent);box-shadow:0 0 20px var(--em-a-acc);mix-blend-mode:screen;animation:emArmSlit calc(var(--em-a-dur) * .66) ease-out both}
+@keyframes emArmLid{0%{opacity:.9}100%{opacity:0}}
+.em-arm-enclave::before{background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,#05070a 78%);mix-blend-mode:normal;animation:emArmLid var(--em-a-dur) ease-out both}
+
+/* ── Apex · Balzo ──────────────────────────────────────────────────────
+   Piomba addosso, frena, e il bordo si accende un istante. */
+@keyframes emArmBalzo{
+  0%{opacity:0;transform:scale(1.4) translateY(-8px);filter:brightness(2.2) saturate(.45) blur(3px)}
+  14%{opacity:1}
+  58%{transform:scale(1.02) translateY(2px);filter:brightness(1.2) saturate(.9) blur(0)}
+  78%{transform:scale(.992) translateY(-2px)}
+  90%{transform:scale(1.004)}
+  100%{opacity:1;transform:none;filter:none}
+}
+.em-arm-apex{animation:emArmBalzo var(--em-a-dur) cubic-bezier(.14,.9,.18,1) both}
+@keyframes emArmRim{0%{opacity:0}16%{opacity:.9}54%{opacity:.4}100%{opacity:0}}
+.em-fx-apex::before{box-shadow:inset 0 0 0 2px #fff,inset 0 0 44px var(--em-a-acc);animation:emArmRim var(--em-a-dur) ease-out both}
+@keyframes emArmVeil{0%{opacity:.85}70%{opacity:.2}100%{opacity:0}}
+.em-arm-apex::before{background:linear-gradient(180deg,var(--em-a-acc),transparent 44%);mix-blend-mode:screen;animation:emArmVeil var(--em-a-dur) ease-out both}
+
+/* ── Mascarada · Ring ─────────────────────────────────────────────────
+   Lucha: i riflettori spazzano il telone, poi alla campana il telone
+   viene strappato via a bande orizzontali in direzioni alterne, mentre
+   l'immagine chiude un balzo lento. Le bande sono due strati (pari e
+   dispari) perché devono andare da parti opposte. */
+@keyframes emArmPounce{0%{opacity:0;transform:scale(1.2)}10%{opacity:1}100%{opacity:1;transform:none}}
+.em-arm-mascarada{animation:emArmPounce var(--em-a-dur) cubic-bezier(.16,.86,.22,1) both}
+@keyframes emArmTeloneL{0%,44%{opacity:1;transform:none}100%{opacity:1;transform:translateX(-128%) skewX(7deg)}}
+@keyframes emArmTeloneR{0%,52%{opacity:1;transform:none}100%{opacity:1;transform:translateX(128%) skewX(-7deg)}}
+/* Bande 1 e 3 (0-26%, 50-74%) vanno a sinistra; 2 e 4 a destra. */
+.em-fx-mascarada::before,.em-fx-mascarada::after{left:-6%;right:-6%;top:0;bottom:0;background:linear-gradient(180deg,#07080c,#020306);box-shadow:inset 0 0 60px var(--em-a-acc)}
+.em-fx-mascarada::before{-webkit-mask-image:linear-gradient(180deg,#000 0 26%,transparent 26% 50%,#000 50% 74%,transparent 74%);mask-image:linear-gradient(180deg,#000 0 26%,transparent 26% 50%,#000 50% 74%,transparent 74%);animation:emArmTeloneL var(--em-a-dur) cubic-bezier(.5,0,.2,1) both}
+.em-fx-mascarada::after{-webkit-mask-image:linear-gradient(180deg,transparent 0 26%,#000 26% 50%,transparent 50% 74%,#000 74%);mask-image:linear-gradient(180deg,transparent 0 26%,#000 26% 50%,transparent 50% 74%,#000 74%);animation:emArmTeloneR var(--em-a-dur) cubic-bezier(.5,0,.2,1) both}
+/* I due riflettori che spazzano prima della campana. */
+@keyframes emArmSpotL{0%{opacity:0;transform:translate(-50%,0) rotate(26deg)}22%{opacity:.9}100%{opacity:0;transform:translate(-50%,0) rotate(-10deg)}}
+@keyframes emArmSpotR{0%{opacity:0;transform:translate(-50%,0) rotate(-26deg)}30%{opacity:.75}100%{opacity:0;transform:translate(-50%,0) rotate(10deg)}}
+.em-arm-mascarada::before,.em-arm-mascarada::after{inset:auto;left:50%;top:-40%;width:78%;height:150%;transform-origin:50% 0%;background:radial-gradient(ellipse 50% 40% at 50% 78%,#bcd8ff88,var(--em-a-acc) 45%,transparent 72%);filter:blur(7px);mix-blend-mode:screen}
+.em-arm-mascarada::before{margin-left:-58%;animation:emArmSpotL var(--em-a-dur) cubic-bezier(.16,.86,.22,1) both}
+.em-arm-mascarada::after{margin-left:-20%;animation:emArmSpotR calc(var(--em-a-dur) * 1.1) cubic-bezier(.16,.86,.22,1) calc(var(--em-a-dur) * .08) both}
+
+/* ── Indocili · Rivolta ────────────────────────────────────────────────
+   Schegge che calano di traverso, poi la vampata che si spegne. */
+@keyframes emArmRivolta{
+  0%{opacity:0;-webkit-mask-size:0% 100%;mask-size:0% 100%;transform:translateY(-14px) skewY(2.2deg);filter:brightness(2)}
+  14%{opacity:1}
+  60%{-webkit-mask-size:16% 100%;mask-size:16% 100%;transform:translateY(3px) skewY(-.5deg);filter:brightness(1.2)}
+  100%{opacity:1;-webkit-mask-size:22% 100%;mask-size:22% 100%;transform:none;filter:none}
+}
+.em-arm-indocili{-webkit-mask-image:linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000);mask-image:linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000),linear-gradient(#000,#000);-webkit-mask-position:0% 0,20% 0,40% 0,60% 0,80% 0,100% 0;mask-position:0% 0,20% 0,40% 0,60% 0,80% 0,100% 0;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:emArmRivolta var(--em-a-dur) cubic-bezier(.24,.92,.2,1) both}
+@keyframes emArmBurst{0%{opacity:0;transform:scale(.35)}20%{opacity:.55}100%{opacity:0;transform:scale(1.6)}}
+.em-fx-indocili::before{background:radial-gradient(circle at 50% 46%,#fff,var(--em-a-acc) 30%,transparent 64%);mix-blend-mode:screen;animation:emArmBurst var(--em-a-dur) ease-out both}
+
+/* ── Ratti · Sciame ────────────────────────────────────────────────────
+   Strisce sottili che arrivano a raffica, a scatti, non in dissolvenza. */
+@keyframes emArmSciame{
+  0%{opacity:0;-webkit-mask-image:repeating-linear-gradient(180deg,#000 0 1px,transparent 1px 2px);mask-image:repeating-linear-gradient(180deg,#000 0 1px,transparent 1px 2px);-webkit-mask-size:100% 0%;mask-size:100% 0%}
+  16%{opacity:1}
+  82%{-webkit-mask-image:repeating-linear-gradient(180deg,#000 0 1.7px,transparent 1.7px 2px);mask-image:repeating-linear-gradient(180deg,#000 0 1.7px,transparent 1.7px 2px);-webkit-mask-size:100% 8.4%;mask-size:100% 8.4%}
+  100%{opacity:1;-webkit-mask-image:linear-gradient(#000,#000);mask-image:linear-gradient(#000,#000);-webkit-mask-size:100% 100%;mask-size:100% 100%}
+}
+@keyframes emArmSciameShift{0%{transform:translateX(14px) scale(1.03);filter:brightness(1.7)}100%{transform:none;filter:none}}
+.em-arm-ratti{-webkit-mask-image:repeating-linear-gradient(180deg,#000 0 1px,transparent 1px 2px);mask-image:repeating-linear-gradient(180deg,#000 0 1px,transparent 1px 2px);-webkit-mask-repeat:repeat;mask-repeat:repeat;animation:emArmSciame var(--em-a-dur) steps(12,end) both,emArmSciameShift var(--em-a-dur) cubic-bezier(.2,.9,.22,1) both}
+@keyframes emArmSciameDust{0%{opacity:0;transform:translateX(30px)}34%{opacity:.42}100%{opacity:0;transform:translateX(-18px)}}
+.em-fx-ratti::before{background:repeating-linear-gradient(180deg,var(--em-a-acc) 0 1px,transparent 1px 7px);mix-blend-mode:screen;animation:emArmSciameDust var(--em-a-dur) linear both}
+
+/* ── Khemet · Cerchi ──────────────────────────────────────────────────
+   Il campo si ricompone per anelli concentrici che ruotano sul posto. La
+   carta NON si muove: sta ferma sotto, e a ruotare sono le sette corone
+   sovrapposte — ognuna una copia della carta ritagliata ad anello, che
+   gira e si allinea. L'ultimo anello che si ferma consegna alla carta.
+
+   MARKUP (nello strato .em-arm-fx, 7 volte; copia via cloneNode):
+     <span class="em-ring" style="--r:0..6"><!-- clone di .em-card --></span>
+   Il ritaglio a corona lo fa il CSS con --r; il passo dei raggi si ricava
+   da --cw/--ch (misure della carta) perché il settimo anello debba
+   coprire anche gli angoli, non solo il cerchio inscritto.             */
+.em-ring{position:absolute;inset:0;opacity:0;will-change:rotate,opacity;transform-origin:50% 50%;
+  --em-ring-step:calc((var(--cw,300px) + var(--ch,525px)) / 14);
+  --r0:calc(var(--r) * var(--em-ring-step));--r1:calc((var(--r) + 1) * var(--em-ring-step));
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent var(--r0),#000 calc(var(--r0) + 1px),#000 var(--r1),transparent calc(var(--r1) + 1px));
+  mask-image:radial-gradient(circle at 50% 50%,transparent var(--r0),#000 calc(var(--r0) + 1px),#000 var(--r1),transparent calc(var(--r1) + 1px));
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-position:50% 50%;mask-position:50% 50%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.em-ring>*{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important;box-shadow:none!important}
+/* Anelli pari e dispari girano in verso opposto, come nel campo. */
+@keyframes emRingSpinA{0%{opacity:0;rotate:-118deg}14%{opacity:1}84%{opacity:1;rotate:0deg}100%{opacity:0;rotate:0deg}}
+@keyframes emRingSpinB{0%{opacity:0;rotate:118deg}14%{opacity:1}84%{opacity:1;rotate:0deg}100%{opacity:0;rotate:0deg}}
+.em-fx-khemet .em-ring{animation:emRingSpinA var(--em-a-dur) cubic-bezier(.2,.86,.24,1) calc((6 - var(--r)) * .05s) both}
+.em-fx-khemet .em-ring:nth-child(even){animation-name:emRingSpinB}
+/* La carta è ferma: appare e basta, nessuna trasformazione. */
+@keyframes emArmCerchi{0%,76%{opacity:0}100%{opacity:1}}
+.em-arm-khemet{animation:emArmCerchi var(--em-a-dur) linear both}
+@keyframes emArmCerchiWash{0%{opacity:.4}100%{opacity:0}}
+.em-arm-khemet::before{background:radial-gradient(circle at 50% 50%,var(--em-a-acc),transparent 62%);mix-blend-mode:screen;animation:emArmCerchiWash var(--em-a-dur) linear both}
+
+/* ── Riduzione movimento ────────────────────────────────────────────
+   La carta c'è, intera, subito: sparisce solo l'ingresso. */
+@media(prefers-reduced-motion:reduce){
+  [class*="em-arm-"],[class*="em-fx-"]{animation:none!important;opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important;-webkit-mask-image:none!important;mask-image:none!important}
+  .em-arm::before,.em-arm::after,.em-arm-fx::before,.em-arm-fx::after,[class*="em-fx-"]::before,[class*="em-fx-"]::after{animation:none!important;opacity:0!important}
+}

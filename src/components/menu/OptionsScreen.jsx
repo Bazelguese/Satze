@@ -17,6 +17,13 @@ import {
   resetDisplaySettings,
   setDisplaySettings,
 } from '../../settings/displaySettings';
+import {
+  AUDIO_SETTINGS_CHANGED_EVENT,
+  getAudioSettings,
+  resetAudioSettings,
+  setAudioSettings,
+} from '../../audio/audioPreferences';
+import { playCinematic, playUiClick, unlockAudio } from '../../audio/soundBus';
 
 const MODE_LABELS = {
   windowed: 'Finestra',
@@ -121,11 +128,18 @@ function Row({ label, hint, children }) {
 
 export function OptionsScreen({ onClose }) {
   const [settings, setSettings] = useState(() => getDisplaySettings());
+  const [audio, setAudio] = useState(() => getAudioSettings());
   const [status, setStatus] = useState(/** @type {null | { tone: 'ok'|'warn'|'err', text: string }} */ (null));
   const [applying, setApplying] = useState(false);
   const electronReady = hasElectronDisplayApi();
 
   const resolutionLocked = settings.displayMode !== 'windowed';
+
+  useEffect(() => {
+    const onAudio = () => setAudio(getAudioSettings());
+    window.addEventListener(AUDIO_SETTINGS_CHANGED_EVENT, onAudio);
+    return () => window.removeEventListener(AUDIO_SETTINGS_CHANGED_EVENT, onAudio);
+  }, []);
 
   const dirtyDisplay = useMemo(() => {
     const saved = getDisplaySettings();
@@ -139,6 +153,13 @@ export function OptionsScreen({ onClose }) {
     const next = setDisplaySettings(partial);
     setSettings(next);
     setStatus({ tone: 'ok', text: 'Impostazioni presentazione aggiornate.' });
+  }, []);
+
+  const persistAudio = useCallback((partial) => {
+    unlockAudio();
+    const next = setAudioSettings(partial);
+    setAudio(next);
+    setStatus({ tone: 'ok', text: 'Impostazioni audio aggiornate.' });
   }, []);
 
   const handleMode = (displayMode) => {
@@ -187,6 +208,12 @@ export function OptionsScreen({ onClose }) {
     setStatus({ tone: 'ok', text: 'Impostazioni ripristinate.' });
   };
 
+  const handleResetAudio = () => {
+    const next = resetAudioSettings();
+    setAudio(next);
+    setStatus({ tone: 'ok', text: 'Audio ripristinato.' });
+  };
+
   useEffect(() => {
     // Sync eventuali valori display salvati dal main process (solo Electron)
     let cancelled = false;
@@ -213,7 +240,7 @@ export function OptionsScreen({ onClose }) {
     status?.tone === 'err' ? '#fb7185' : status?.tone === 'warn' ? '#fbbf24' : MENU_ACCENTS.pink;
 
   return (
-    <MenuScreenLayout centered={false} title="Opzioni" subtitle="Video · Display Electron">
+    <MenuScreenLayout centered={false} title="Opzioni" subtitle="Video · Audio · Display Electron">
       <div
         style={{
           width: '100%',
@@ -515,6 +542,101 @@ export function OptionsScreen({ onClose }) {
               {status.text}
             </p>
           )}
+        </div>
+
+        <div
+          style={{
+            marginTop: '1.25rem',
+            background: `${MENU_ACCENTS.panel}ee`,
+            border: `1.5px solid ${PALETTE.slate}`,
+            boxShadow: '0 8px 32px #000a',
+            padding: '0.5rem 1.25rem 1.25rem',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: '0.7rem',
+              letterSpacing: '0.18em',
+              color: MENU_ACCENTS.pink,
+              marginBottom: '0.25rem',
+              paddingTop: '0.5rem',
+            }}
+          >
+            AUDIO
+          </div>
+
+          <Row label="Mute SFX" hint="Silenzia effetti (non la musica, quando arriverà)">
+            <button
+              type="button"
+              onClick={() => {
+                playUiClick();
+                persistAudio({ muted: !audio.muted });
+              }}
+              style={{
+                ...segmentBtnStyle(audio.muted, '#38bdf8'),
+                flex: '0 0 auto',
+                minWidth: 120,
+                paddingLeft: '1.25rem',
+                paddingRight: '1.25rem',
+              }}
+            >
+              {audio.muted ? 'Muto' : 'Attivo'}
+            </button>
+          </Row>
+
+          <Row label="Volume SFX" hint={`${Math.round(audio.sfxVolume * 100)}%`}>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(audio.sfxVolume * 100)}
+              disabled={audio.muted}
+              onChange={(e) => persistAudio({ sfxVolume: Number(e.target.value) / 100 })}
+              style={{ width: '100%', accentColor: MENU_ACCENTS.magenta, opacity: audio.muted ? 0.5 : 1 }}
+            />
+          </Row>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                unlockAudio();
+                playUiClick({ force: true });
+                window.setTimeout(() => playCinematic('LINK_AGENT', 'launch', { force: true }), 80);
+                window.setTimeout(() => playCinematic('LINK_AGENT', 'impact', { force: true }), 220);
+              }}
+              style={{
+                padding: '0.75rem 1.25rem',
+                background: `${MENU_ACCENTS.pink}28`,
+                border: `1.5px solid ${MENU_ACCENTS.pink}`,
+                color: '#fdf4ff',
+                cursor: 'pointer',
+                fontFamily: HUD_ORATORIO_FONT_DISPLAY,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                fontSize: '0.78rem',
+              }}
+            >
+              PROVA SFX
+            </button>
+            <button
+              type="button"
+              onClick={handleResetAudio}
+              style={{
+                padding: '0.75rem 1.1rem',
+                background: 'transparent',
+                border: `1.5px solid ${PALETTE.slate}`,
+                color: PALETTE.textSecondary,
+                cursor: 'pointer',
+                fontFamily: HUD_ORATORIO_FONT_UI,
+                letterSpacing: '0.1em',
+                fontSize: '0.75rem',
+              }}
+            >
+              DEFAULT AUDIO
+            </button>
+          </div>
         </div>
 
         <MenuBackButton onClick={onClose}>Menu principale</MenuBackButton>
