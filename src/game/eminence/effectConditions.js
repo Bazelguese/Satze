@@ -19,6 +19,7 @@
  */
 export const CONDITION_KEYS = Object.freeze([
   'roundNumber',
+  'ownSelectedSecond',
   'duelWinnerRelative',
   'aliasUsed',
   'enemyAgentTrigger',

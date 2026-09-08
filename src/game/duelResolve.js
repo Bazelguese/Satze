@@ -171,6 +171,13 @@ export function computeDuelResolution({
     // trigger e Campo devono già vederle.
     const pEminenceStats = readStatDeltas(eminenceBundle, 'player');
     const eEminenceStats = readStatDeltas(eminenceBundle, 'enemy');
+    // Explicit Eminence floors are applied at deployment, before triggers and field effects.
+    for (const [side, agent, deltas] of [['player', pAgent, pEminenceStats], ['enemy', eAgent, eEminenceStats]]) {
+      for (const stat of ['power', 'damage']) {
+        const floor = eminenceBundle?.statMinimums?.[side]?.[stat];
+        if (Number.isFinite(floor)) deltas[stat] = Math.max(floor, agent[stat] + deltas[stat]) - agent[stat];
+      }
+    }
     const deployStats = {
       playerPower: pAgent.power + pEminenceStats.power,
       enemyPower: eAgent.power + eEminenceStats.power,

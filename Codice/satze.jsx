@@ -1,3 +1,4 @@
+import { selectConcordiaAbility } from '../src/campaign/logic/concordiaAI.js';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -101,6 +102,8 @@ import {
 import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
 import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
+import { ControlledCampaignHub } from '../src/components/campaign/ControlledCampaignHub';
+import { getCampaignRunSummary } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
@@ -317,6 +320,7 @@ export default function SatzeGame() {
     // Vs IA la scelta avversaria è simultanea e segreta: la sigilliamo qui, senza UI.
     // Il giocatore sceglie dalla rail, anche se resta una sola abilità legale.
     if (aiDifficulty !== 'multiplayer') {
+      next = selectConcordiaAbility(next, { hand: enemyHand, usedCards: enemyUsedCards, choosesSecond: isPlayerFirst, roundNumber });
       next = autoSelectFirstLegalAbility(next, 'enemy');
     }
     setEminenceMatchState(next);
@@ -337,6 +341,7 @@ export default function SatzeGame() {
     aiDifficulty,
     playerHand,
     enemyHand,
+    enemyUsedCards,
     battlefields,
     conqueredFields,
     setEminenceMatchState,
@@ -1587,7 +1592,8 @@ export default function SatzeGame() {
       ALL_BATTLEFIELDS,
       cfg.enemyArmy,
       cfg.enemyDeckIds,
-      cfg.campaignDuelMod
+      cfg.campaignDuelMod,
+      cfg.startOptions
     );
   }, [startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
 
@@ -3607,9 +3613,10 @@ export default function SatzeGame() {
 
   // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
   if (gamePhase === 'campaignHub') {
+    const CampaignHub = getCampaignRunSummary(campaignSaveSlot).controlled ? ControlledCampaignHub : CampaignAtto1Hub;
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
-        <CampaignAtto1Hub
+        <CampaignHub
           campaignSaveSlot={campaignSaveSlot}
           onStartMission={startCampaignMission}
           onBack={() => setGamePhase('menu')}

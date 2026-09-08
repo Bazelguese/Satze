@@ -1,3 +1,4 @@
+import { CONCORDIA_EMINENCE } from '../campaign/data/concordiaEminence.js';
 // ============================================
 // EMINENZE — Catalogo dati (rework 2026-09-06)
 // Fonte normativa: Documentazione/SATZE_EMINENZE_REWORK_TESTI_CORRETTI_2026-09-06.md
@@ -1255,15 +1256,15 @@ export const EMINENCE_IDS_BY_ARMY_ORDER = EMINENCE_ARMY_ORDER.map(
 );
 
 export function getEminence(eminenceId) {
-  return EMINENCES[eminenceId] || null;
+  return EMINENCES[eminenceId] || (eminenceId === CONCORDIA_EMINENCE.id ? CONCORDIA_EMINENCE : null);
 }
 
 export function getEminenceForArmy(army) {
-  return EMINENCE_BY_ARMY[army] || null;
+  return EMINENCE_BY_ARMY[army] || (army === CONCORDIA_EMINENCE.army ? CONCORDIA_EMINENCE : null);
 }
 
 export function getEminenceAbility(eminenceId, abilityId) {
-  const eminence = EMINENCES[eminenceId];
+  const eminence = getEminence(eminenceId);
   if (!eminence) return null;
   return eminence.abilities.find((ability) => ability.id === abilityId) || null;
 }

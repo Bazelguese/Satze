@@ -1,3 +1,8 @@
+import { isControlledRun, controlledCampaignReducer } from '../state/controlledCampaignState.js';
+import { campaignEnemyCard } from './campaignDefinition.js';
+import { campaignFixedHands } from './campaignEncounterSetup.js';
+import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
+import { getEminenceForArmy } from '../../data/eminences.js';
 // ============================================
 // ADATTATORE MISSIONE → DUELLO → CAMPAGNA
 // SPEC_PROTOTIPO_CAMPAGNA_CURSOR §6
@@ -80,11 +85,21 @@ export function resolveRunDeckCards(run) {
  * }}
  */
 export function buildDuelConfig(mission, run, act) {
+  const controlled = isControlledRun(run);
+  const playerArmy = controlled ? run.definition.playerArmy : act.playerArmy;
+  const playerDeckCards = resolveRunDeckCards(run);
+  const enemyDeck = controlled ? mission.enemy.deck.map(campaignEnemyCard) : [...(mission.enemy.deck || [])];
   return {
-    playerArmy: act.playerArmy,
-    playerDeckCards: resolveRunDeckCards(run),
+    playerArmy,
+    playerDeckCards,
     enemyArmy: mission.enemy.army,
-    enemyDeckIds: [...(mission.enemy.deck || [])],
+    enemyDeckIds: enemyDeck,
+    startOptions: controlled ? {
+      eminenceFormat: EMINENCE_FORMAT.REQUIRED,
+      fixedHands: campaignFixedHands(mission, run, playerDeckCards, enemyDeck),
+      playerEminenceId: getEminenceForArmy(playerArmy)?.id,
+      enemyEminenceId: getEminenceForArmy(mission.enemy.army)?.id,
+    } : null,
     difficulty: mission.difficulty ?? (mission.boss ? 'hard' : 'medium'),
     campaignDuelMod: {
       initiativeProfile: INITIATIVE_BY_OBJECTIVE[mission.objective] ?? null,
@@ -105,6 +120,7 @@ export function buildDuelConfig(mission, run, act) {
  */
 export function applyDuelResult(run, act, mission, gameResult) {
   const winner = gameResult?.winner === 'player' ? 'player' : gameResult?.winner === 'draw' ? 'draw' : 'enemy';
+  if (isControlledRun(run)) return controlledCampaignReducer(run, { type: 'APPLY_DUEL_RESULT', nodeId: mission.node, winner, attempt: mission.campaignAttempt });
   return campaignReducer(
     run,
     { type: 'APPLY_DUEL_RESULT', missionId: mission.id, nodeId: mission.node, winner },

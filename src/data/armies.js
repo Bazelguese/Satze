@@ -30,6 +30,7 @@ export { ARMY_ICONS };
   // Accenti su asse oklch controllato — L 0.61–0.87, tinte a ≥24° di distanza.
   // `deep` (facoltativo): tinta di fondo/gradiente, non usata come accento UI.
   export const ARMY_COLORS = {
+    "Concordia di Caelion": { bg: "from-stone-900 to-amber-900", accent: "#c7ad71", text: "text-amber-200" },
     "Figli dell'Orizzonte":    { bg: "from-purple-900 to-indigo-800", accent: "#a288fb", text: "text-purple-200" },
     "Kethran":                 { bg: "from-amber-900 to-yellow-800",  accent: "#eebf3c", text: "text-amber-200" },
     "Corte Rossa":             { bg: "from-red-900 to-rose-800",      accent: "#f8504f", text: "text-red-200" },
@@ -63,6 +64,7 @@ export { ARMY_ICONS };
 
   // BONUS ARMATE (unico per ogni armata)
   export const ARMY_BONUSES = {
+    "Concordia di Caelion": { trigger: "intervention", effects: [{ effect: "power", value: 1 }], description: "Disciplina del Vallo — Intervento: +1 POT" },
     "Figli dell'Orizzonte": {
       trigger: null,
       effects: [{ effect: "enemyAssault", value: -5, minAssault: 6 }],

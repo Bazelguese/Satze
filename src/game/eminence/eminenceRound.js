@@ -413,6 +413,7 @@ export function collectPendingEffects(
     if (!state?.round?.pendingEffects.length) continue;
 
     const sideExtra = { ...extra };
+    sideExtra.ownSelectedSecond = extra.selectedSecondBySide?.[side] ?? false;
     if (knownWinner) sideExtra.duelWinnerRelative = relativeDuelOutcome(extra.winner, side);
     sideExtra.aliasUsed = Boolean(extra.aliasUsedBySide?.[side]);
     sideExtra.ownPowerResolved = Boolean(extra.powerResolvedBySide?.[side]);

@@ -127,6 +127,11 @@ const handlers = {
         throw new Error(`Statistica non gestita da MODIFY_STAT: ${stat}`);
       }
       bundle.statDeltas[side][stat] += segment.delta || 0;
+      if (Number.isFinite(segment.minimum)) {
+        bundle.statMinimums ||= {};
+        bundle.statMinimums[side] ||= {};
+        bundle.statMinimums[side][stat] = Math.max(bundle.statMinimums[side][stat] ?? -Infinity, segment.minimum);
+      }
     }
   },
 

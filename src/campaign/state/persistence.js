@@ -1,3 +1,4 @@
+import { isControlledRun, assertControlledRun } from './controlledCampaignState.js';
 // ============================================
 // PERSISTENZA RUN CAMPAGNA — slot condivisi (3)
 // Riusa l'infrastruttura slot di src/data/campaignSaves.js.
@@ -27,7 +28,8 @@ export function loadCampaignRun(slotIndex, act) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || !parsed.actId) return null; // legacy o corrotto
-    assertRunInvariants(parsed, act);
+    if (isControlledRun(parsed)) assertControlledRun(parsed);
+    else assertRunInvariants(parsed, act);
     return parsed;
   } catch (e) {
     console.error('Errore caricamento run campagna:', e);
@@ -78,6 +80,9 @@ export function getCampaignRunSummary(slotIndex) {
     return {
       empty: false,
       slotIndex: slot,
+      controlled: isControlledRun(p),
+      actNumber: (p.actIndex ?? 0) + 1,
+      stageNumber: (p.stageIndex ?? 0) + 1,
       day: p.day ?? 1,
       daysLimit: p.daysLimit ?? 14,
       outcome: p.outcome ?? null,

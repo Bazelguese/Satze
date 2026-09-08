@@ -937,6 +937,7 @@ export function settleEminenceRound(matchState, {
     ? (Number(focusMap[SIDES.PLAYER] || 0) + Number(focusMap[SIDES.ENEMY] || 0))
     : null;
   const context = {
+    selectedSecondBySide: { player: initiativeSide === SIDES.ENEMY, enemy: initiativeSide === SIDES.PLAYER },
     ...(winner === undefined ? {} : { winner }),
     agentIdBySide: agentIdBySide || {},
     aliasUsedBySide: aliasUsedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },

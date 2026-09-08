@@ -2,18 +2,17 @@
 
 import React, { useCallback, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
-import { ACT } from '../../campaign/data/atto1.js';
 import {
   CAMPAIGN_SLOT_COUNT,
   getCampaignRunSummary,
-  initializeCampaignRun,
   clearCampaignRun,
 } from '../../campaign/state/persistence.js';
-import { NASCENTE_ID, poolCardById } from '../../campaign/state/campaignState.js';
 import { CAMPAIGN_UI, CAMPAIGN_FONTS } from '../../campaign/campaignTheme.js';
 import { MenuScreenLayout, MenuBackButton } from '../menu';
-import StartingArmySelection from './atto1/StartingArmySelection.jsx';
-import { getNascenteStageImageUrl } from '../../data/images.js';
+import { createControlledRun } from '../../campaign/state/controlledCampaignState.js';
+import { loadCampaignDefinition } from '../../campaign/logic/campaignDefinition.js';
+import { saveCampaignRun } from '../../campaign/state/persistence.js';
+import { CampaignEventEditor } from './CampaignEventEditor.jsx';
 
 import '../../styles/campaign/colors_and_type.css';
 import '../../styles/campaign/atto1-components.css';
@@ -32,68 +31,29 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   // Slot su cui è aperta la scelta dell'esercito iniziale (nuova campagna)
   const [armySlot, setArmySlot] = useState(null);
 
-  // Pool compagni L2 dai dati dell'Atto (schierabili: 2 su 6)
-  const companionPool = (ACT.companions || [])
-    .map((id) => {
-      const c = poolCardById(id);
-      return c && {
-        id,
-        name: c.name,
-        role: 'Agente',
-        rarity: 'comune',
-        army: 'orizzonte',
-        level: c.league,
-        pot: c.power,
-        dan: c.damage,
-        power: c.description || 'Nessun potere.',
-      };
-    })
-    .filter(Boolean);
+  const [editor, setEditor] = useState(false);
+  const [imprint, setImprint] = useState('turbo');
+  const [error, setError] = useState('');
 
   const refresh = useCallback(() => {
     setSummaries(Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignRunSummary(i)));
   }, []);
 
-  if (armySlot != null) {
-    return (
-      <div className="w-full h-full min-h-full overflow-hidden" style={{ position: 'relative', minHeight: '100%' }}>
-        <StartingArmySelection
-          pool={companionPool}
-          nascente={{
-            name: 'Nascente',
-            role: 'Protagonista',
-            level: ACT.nascente?.startLeague ?? 2,
-            pot: ACT.nascente?.startStats?.power ?? 2,
-            dan: ACT.nascente?.startStats?.damage ?? 2,
-            imageSrc: getNascenteStageImageUrl(0),
-          }}
-          companionSlots={2}
-          pv={25}
-          fc={10}
-          synergiesFor={() => []}
-          onConfirm={(picked) => {
-            const slot = armySlot;
-            initializeCampaignRun(ACT, slot, { deck: [NASCENTE_ID, ...picked.map((c) => c.id)] });
-            setArmySlot(null);
-            refresh();
-            onSlotChosen(slot);
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => setArmySlot(null)}
-          style={{
-            position: 'absolute', top: 18, right: 24, zIndex: 10,
-            fontFamily: CAMPAIGN_FONTS.ui, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-            padding: '8px 14px', cursor: 'pointer',
-            border: `1px solid ${CAMPAIGN_UI.border}`, background: 'rgba(7,7,7,.6)', color: CAMPAIGN_UI.textSec,
-          }}
-        >
-          ← Torna agli slot
-        </button>
-      </div>
-    );
-  }
+  if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
+  if (armySlot != null) return <section className="campaign-control">
+    <p className="cc-eyebrow">Nuova campagna · tre atti</p><h1>Il Nascente</h1>
+    <div className="cc-panel"><h2>Scegli l’Impronta iniziale</h2><p>Il Nascente parte con 3 POT e 2 DAN, accompagnato da nove Figli dell’Orizzonte. La Concordia di Caelion presidia il percorso.</p>
+      <div className="cc-choices">{[['turbo', 'Istinto del primo colpo', 'Turbo: +1 POT'], ['imboscata', 'Arte dell’agguato', 'Imboscata: 1 danno diretto'], ['vendetta', 'Memoria del torto', 'Vendetta: +1 FC']].map(([id, title, text]) => <button key={id} aria-pressed={imprint === id} onClick={() => setImprint(id)}>{title}<small>{text}</small></button>)}</div>
+    </div>
+    {error && <p role="alert" className="cc-error">{error}</p>}
+    <div className="cc-toolbar"><button onClick={() => {
+      try {
+        const run = createControlledRun(loadCampaignDefinition(), { imprint });
+        if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
+        onSlotChosen(armySlot);
+      } catch (e) { setError(e.message); }
+    }}>Inizia il cammino</button><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></div>
+  </section>;
 
   const fmtTime = (ts) => {
     if (ts == null || !Number.isFinite(ts)) return null;
@@ -142,14 +102,14 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
               {!empty && !sum.corrupt && (
                 <div style={{ fontSize: 13, color: CAMPAIGN_UI.textSec, lineHeight: 1.6, marginBottom: 12 }}>
                   <div>
-                    Giorno <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.day}</strong>
-                    {' '}di <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.daysLimit}</strong>
+                    {sum.controlled ? <>Atto {sum.actNumber} di 3 · Incontro {sum.stageNumber} di 6</> : <>Giorno <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.day}</strong>
+                    {' '}di <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.daysLimit}</strong></>}
                     {' '}· Missioni superate: <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.missionsCompleted}</strong>
                   </div>
                   {sum.outcome != null && (
                     <div style={{ fontSize: 12, marginTop: 4 }}>
                       Esito: <span style={{ color: sum.outcome === 'won' ? CAMPAIGN_UI.greenLit : CAMPAIGN_UI.redLit }}>
-                        {sum.outcome === 'won' ? 'Atto I completato' : 'Tempo scaduto'}
+                        {sum.outcome === 'won' ? (sum.controlled ? 'Campagna completata' : 'Atto I completato') : 'Tempo scaduto'}
                       </span>
                     </div>
                   )}
@@ -231,6 +191,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
         })}
       </div>
 
+      <button type="button" onClick={() => setEditor(true)} style={{ color: "#d5b87a", padding: 12 }}>Editor distribuzione eventi</button>
       <MenuBackButton onClick={onBack}>Menu principale</MenuBackButton>
 
       {pendingDelete != null && (
