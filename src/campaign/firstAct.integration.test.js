@@ -62,12 +62,14 @@ describe('Atto I 0.25',()=>{
    expect(r.active).toBeNull();expect(Boolean(r.pendingReward)).toBe(winner==='player');
   }
  });
- it.each(POWER_PACKAGES.map(p=>[p.id]))('acquires and evolves %s with explicit league and preserves independent stats on change',(id)=>{
+ it.each(POWER_PACKAGES.map(p=>[p.id]))('keeps %s at L3 with a chosen final stat and preserves independent stats on change',(id)=>{
   let r=until('E01');r=reduce(r,{type:'ENTER_EVENT'});r=reduce(r,{type:'CHOICE',choice:id});expect(runCard(r,NASCENTE).league).toBe(2);
   while(!availableFirstActNodes(r).some(n=>n.id==='E03')){
    const n=availableFirstActNodes(r)[0];if(n.kind==='event'){r=reduce(r,{type:'ENTER_EVENT'});r=reduce(r,{type:'CHOICE',choice:n.id==='E02'?'damage':'liberi'});}else r=win(r);
   }
-  r=reduce(r,{type:'ENTER_EVENT'});const p=previewFirstActChoice(r,id==='A2'?'evolveDamage':'evolve');expect(runCard(p,NASCENTE).league).toBe(4);expect(legalArmy(p)).not.toBeNull();
+  r=reduce(r,{type:'ENTER_EVENT'});const before=runCard(r,NASCENTE);
+  for(const choice of ['finalPower','finalDamage']){const p=previewFirstActChoice(r,choice),card=runCard(p,NASCENTE);expect(card.league).toBe(3);expect(card.ability).toEqual(before.ability);expect(card.power).toBe(before.power+Number(choice==='finalPower'));expect(card.damage).toBe(before.damage+Number(choice==='finalDamage'));expect(legalArmy(p)).not.toBeNull();}
+  expect(()=>previewFirstActChoice(r,'evolve')).toThrow();
   const changed=previewFirstActChoice(r,'C1');expect(runCard(changed,NASCENTE)).toMatchObject({power:2,damage:3,league:3});
  });
  it('matures only after a subsequent completed stage and transforms uniformly within league',()=>{
@@ -159,4 +161,16 @@ it('preserves phase-specific fields and PV across the boss squad transition',()=
  expect(r.active.fieldSquads).toEqual(fields);
  expect(firstActDuelConfig(r).campaignDuelMod.fixedFields.map(f=>f.id)).toEqual(fields[1]);
  expect(r.active.pv).toEqual({player:15,enemy:12});
+});
+
+it('reads old E03 upgrades as a single stat without reaching L4',()=>{
+ for(const evolution of ['power','damage']){const r=createFirstActRun();r.nascente={...r.nascente,packageId:'C1',statTaken:true,damage:1,evolution};
+ expect(runCard(r,NASCENTE)).toMatchObject({league:3,power:evolution==='power'?3:2,damage:evolution==='damage'?4:3,ability:{effect:'power',value:2}});
+ }
+});
+it('offers the final stat choice even with no power and consumes the event once',()=>{
+ let r=until('E03');r=reduce(r,{type:'ENTER_EVENT'});
+ const before=runCard(r,NASCENTE);r=reduce(r,{type:'CHOICE',choice:'finalDamage'});
+ expect(runCard(r,NASCENTE)).toMatchObject({league:before.league,power:before.power,damage:before.damage+1,ability:null});
+ expect(()=>reduce(r,{type:'CHOICE',choice:'finalPower'})).toThrow();
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getNascenteStageImageUrl, nascenteStageFromLeague } from '../../data/images.js';
 import '../../styles/campaign/campaign-scene.css';
 import { campaignMapLayout } from './campaignMapLayout.js';
@@ -8,6 +8,12 @@ export const campaignArt = `${BASE}campaign/concordia-vallo.webp`;
 export const actScenery = [54, 51, 53].map(id => `${BASE}campi_bg/campo-${id}.webp`);
 export const heroArt = card => getNascenteStageImageUrl(nascenteStageFromLeague(card.league));
 export const encounterKinds = { battle: 'Battaglia', elite: 'Élite', special: 'Incontro speciale', boss: 'Boss', event: 'Domanda', faglia: 'Faglia' };
+
+export function CampaignArt({ src, onLoad, ...props }) {
+  const image=useRef(null), [ready,setReady]=useState(null);
+  useEffect(()=>{if(image.current?.complete && image.current.naturalWidth) setReady(src);},[src]);
+  return <img {...props} ref={image} src={src} data-art-ready={ready===src} onLoad={e=>{setReady(src);onLoad?.(e);}}/>;
+}
 
 /** Small UI heraldry, deliberately separate from card artwork. */
 export function CampaignSigil({ kind = 'battle', ...props }) {
@@ -22,7 +28,7 @@ export function CampaignSigil({ kind = 'battle', ...props }) {
 
 export function CampaignBackdrop({ actIndex = 0 }) {
   return <div className="cs-backdrop" data-act={actIndex + 1} aria-hidden="true">
-    <img key={actIndex} src={actScenery[actIndex]} alt="" />
+    <CampaignArt key={actIndex} src={actScenery[actIndex]} alt="" />
     <div className="cs-mist"/><div className="cs-grain"/>
     <div className="cs-embers">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{
       left: `${(i * 37 + 11) % 100}%`, top: `${(i * 19 + 7) % 100}%`,

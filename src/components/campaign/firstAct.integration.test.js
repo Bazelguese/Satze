@@ -133,6 +133,8 @@ it('previews the consumed copy and confirms exactly one random transformation',(
  const after=loadCampaignRun(0);
  expect(after.copies).toHaveLength(before.copies.length);
  expect(after.copies.filter((c,i)=>c.cardId!==before.copies[i].cardId)).toHaveLength(1);
+ expect(host.querySelector('.cs-transformation.is-changing')).toBeTruthy();
+ click('Salta animazione');expect(host.querySelector('.cs-transformation.is-revealed')).toBeTruthy();click('Continua');
  expect(host.querySelector('.cs-transform-result').textContent).toContain('TRASFORMAZIONE COMPLETATA');
  expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Conferma trasformazione casuale')).toBe(false);
 });
@@ -164,4 +166,42 @@ it.each([[1920,1080],[1280,720],[2560,1080]])('fits the campaign in the real due
   expect(getComputedStyle(medallion).height).toBe('76px');
   expect(getComputedStyle(point).transform).toBe('translate(-50%,-38px)');
  } finally {style.remove();vi.unstubAllGlobals();}
+});
+
+it('reveals a saved transformation after its sequence and never awards it twice',()=>{
+ vi.useFakeTimers();
+ try {
+  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
+  render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+  const b=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));act(()=>b.click());click('Conferma trasformazione casuale');
+  const saved=loadCampaignRun(0);expect(host.querySelector('.cs-transformation.is-changing')).toBeTruthy();
+  act(()=>vi.advanceTimersByTime(2399));expect(host.querySelector('.cs-transformation.is-changing')).toBeTruthy();
+  act(()=>vi.advanceTimersByTime(1));expect(host.querySelector('.cs-transformation.is-revealed')).toBeTruthy();
+  expect(loadCampaignRun(0)).toEqual(saved);click('Chiudi');expect(loadCampaignRun(0)).toEqual(saved);
+ } finally {vi.useRealTimers();}
+});
+it('motion-off transformation reveals immediately and still saves its single result',()=>{
+ localStorage.setItem('satze_campaign_motion_v1','off');let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ const b=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));act(()=>b.click());click('Conferma trasformazione casuale');
+ expect(host.querySelector('.cs-transformation.is-revealed')).toBeTruthy();expect(host.textContent).not.toContain('Salta animazione');
+});
+it('uses a view transition for campaign progression when supported, respecting motion preference',()=>{
+ const transition=vi.fn(callback=>{callback();return {ready:Promise.resolve()};});
+ Object.defineProperty(document,'startViewTransition',{value:transition,configurable:true});
+ try {
+  saveCampaignRun(createFirstActRun({seed:2}),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Test: vinci incontro');expect(transition).toHaveBeenCalledOnce();
+  click('Animazioni: sì');click('Accogli');expect(transition).toHaveBeenCalledOnce();expect(loadCampaignRun(0).stage).toBe(1);
+ } finally {delete document.startViewTransition;}
+});
+it('migrates old L4 cards in saved hands and checkpoints without replaying past results',()=>{
+ let r=reduce(createFirstActRun({seed:2}),{type:'START',nodeId:'I1'});
+ r.nascente={...r.nascente,statTaken:true,power:1,packageId:'C1',evolution:'power'};
+ r.active.snapshot={playerHand:[{id:9001,league:4,power:3,damage:2}],selectedAgent:{id:9001,league:4},playerHP:7,roundNumber:2,battleResult:{winner:'player'}};
+ r.checkpoints=[{completed:0,state:{...r,active:null,checkpoints:[]}}];saveCampaignRun(r,0);
+ const loaded=loadCampaignRun(0);expect(loaded.nascente).toMatchObject({evolution:null,finalStat:'power'});
+ expect(loaded.active.snapshot.playerHand[0]).toMatchObject({league:3,power:4,damage:2,ability:{value:2}});
+ expect(loaded.active.snapshot.selectedAgent.league).toBe(3);expect(loaded.active.snapshot.playerHP).toBe(7);expect(loaded.active.snapshot.battleResult).toEqual({winner:'player'});
+ expect(loaded.checkpoints[0].state.nascente.finalStat).toBe('power');
+ saveCampaignRun(loaded,0);expect(loadCampaignRun(0).nascente).toEqual(loaded.nascente);
 });

@@ -3,6 +3,11 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 const Motion = createContext(null);
 const PREFERENCE = 'satze_campaign_motion_v1';
 const query = () => window.matchMedia?.('(prefers-reduced-motion: reduce)');
+export const useCampaignMotion = () => useContext(Motion) || { enabled:false, reduced:true };
+export function campaignMotionAllowed() {
+  try { return localStorage.getItem(PREFERENCE) !== 'off' && !query()?.matches; }
+  catch { return !query()?.matches; }
+}
 
 /** Presentation preferences never enter the run or its random seed. */
 export function CampaignScene({ children, className = '' }) {
