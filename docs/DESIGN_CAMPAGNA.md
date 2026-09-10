@@ -868,7 +868,7 @@ Crescita garantita: solo dopo I.1–I.4, I.6 e I.8–I.11, se il premio lascia m
 
 Contabilità: percorso obbligatorio, 13 premi principali; percorso con F2, 14. Con il Nascente iniziale sono 14 o 15 copie complessive, più gli eventuali rinforzi di crescita. Una trasformazione sostituisce una copia e non aumenta il totale. Il numero di identità distinte e la Lega disponibile si controllano separatamente. E01, E02, E06 ed E03 non aggiungono agenti.
 
-Prima della conferma finale si mostrano carta ottenuta, eventuale doppione, rinforzo e nuovi posti. Non sono assegnati livelli, valuta di crescita o trasformazioni gratuite aggiuntivi. Offerta e risultato restano salvati: riaprire, perdere un retry o ricaricare non rigenera il premio.
+Prima della conferma finale si mostrano carta ottenuta, eventuale doppione, rinforzo e nuovi posti. Il pannello mostra ogni agente con la sua carta e il suo nome, distingue «Agente ottenuto» e «Rinforzo aggiuntivo» e indica il conteggio delle copie prima e dopo. L’anteprima usa la stessa transazione della conferma, così il rinforzo mostrato coincide con quello salvato. Non sono assegnati livelli, valuta di crescita o trasformazioni gratuite aggiuntivi. Offerta e risultato restano salvati: riaprire, perdere un retry o ricaricare non rigenera il premio.
 
 ## 11  Trasformazione casuale di pari Lega
 

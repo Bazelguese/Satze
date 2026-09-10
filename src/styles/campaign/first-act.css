@@ -97,8 +97,8 @@
 .cs-motion-on.cs-first-act .cs-question-families button { animation:cs-chrome-arrive .35s ease-out both; }
 .cs-motion-on.cs-first-act .cs-question-answers { animation:cs-stage-arrive .35s ease-out both; }
 .cs-motion-on.cs-first-act .cs-choice-card { animation:cs-choice-reveal .5s ease-out both; }
-.cs-motion-on.cs-first-act .cs-first-rewards > button { animation:cs-choice-reveal .7s .12s ease-out both; }
-.cs-motion-on.cs-first-act .cs-first-rewards > button:nth-child(2) { animation-delay:.26s; }
+.cs-motion-on.cs-first-act .cs-first-rewards > .cs-reward-option { animation:cs-choice-reveal .7s .12s ease-out both; }
+.cs-motion-on.cs-first-act .cs-first-rewards > .cs-reward-option:nth-child(2) { animation-delay:.26s; }
 .cs-motion-on.cs-first-act .cs-reserve-list > button { animation:cs-chrome-arrive .35s ease-out both; }
 .cs-motion-on.cs-first-act .cs-map-node.is-current .cs-node-medallion { animation:cs-node-breathe 3.2s ease-in-out infinite; }
 .cs-motion-on.cs-first-act .cs-kind-faglia .cs-node-medallion svg { animation:cs-rift-turn 14s linear infinite; }
@@ -144,3 +144,13 @@
 @media (prefers-reduced-motion:reduce) { ::view-transition-old(campaign-stage),::view-transition-new(campaign-stage) { animation:none; } }
 .cs-first-act img[data-art-ready] { transition:opacity .6s ease-out; }
 .cs-first-act img[data-art-ready=false] { opacity:0 !important; }
+
+/* Reward cards mirror the complete saved transaction, including growth reinforcements. */
+.cs-first-act .cs-first-reward-panel { height:100%; min-height:0; overflow-y:auto; }
+.cs-first-act .cs-first-rewards { align-items:stretch; }
+.cs-first-act .cs-reward-option { flex:0 1 auto; max-width:540px; padding:18px; border:1px solid #bda36d70; background:#152124; display:flex; flex-direction:column; gap:12px; }
+.cs-first-act .cs-reward-cards { display:flex; justify-content:center; gap:24px; }
+.cs-first-act .cs-reward-agent { width:210px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+.cs-first-act .cs-reward-agent p { font-size:14px; line-height:1.5; margin:0; }
+.cs-first-act .cs-reward-reason { padding:12px; border-left:2px solid #d5b87a; background:#d5b87a10; }
+.cs-first-act .cs-reward-option > button { margin-top:auto; align-items:center; }

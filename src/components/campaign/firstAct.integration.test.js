@@ -205,3 +205,41 @@ it('migrates old L4 cards in saved hands and checkpoints without replaying past 
  expect(loaded.checkpoints[0].state.nascente.finalStat).toBe('power');
  saveCampaignRun(loaded,0);expect(loadCampaignRun(0).nascente).toEqual(loaded.nascente);
 });
+
+function pendingAt(nodeId) {
+ let r=createFirstActRun({seed:1});
+ while(availableFirstActNodes(r)[0].id!==nodeId) {
+  const node=availableFirstActNodes(r)[0];
+  if(node.kind==='event') {r=reduce(r,{type:'ENTER_EVENT'});r=reduce(r,{type:'CHOICE',choice:node.id==='E06'?'liberi':'conserva'});}
+  else {r=reduce(r,{type:'TEST_WIN',nodeId:node.id});r=reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});}
+ }
+ return reduce(r,{type:'TEST_WIN',nodeId});
+}
+it('shows the duplicate and the exact extra reinforcement before saving either copy',()=>{
+ const before=pendingAt('I9A');saveCampaignRun(before,0);
+ const saved=loadCampaignRun(0), expected=reduce(before,{type:'REWARD',cardId:before.pendingReward.offer[0]});
+ const added=expected.copies.slice(before.copies.length);expect(added).toHaveLength(2);
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));
+ const panel=host.querySelector('.cs-first-reward-panel');
+ expect([...panel.querySelectorAll('[data-card-id]')].map(el=>Number(el.dataset.cardId))).toEqual(added.map(c=>c.cardId));
+ expect(panel.textContent).toContain('Scudiero del Vallo');expect(panel.textContent).toContain('Duellante del Sole Pallido');
+ expect(panel.textContent).toContain('Doppione · 2 → 3 copie');expect(panel.textContent).toContain('RINFORZO AGGIUNTIVO');
+ expect(panel.textContent).toContain('Posti nell’armata: 7 → 8');expect(loadCampaignRun(0)).toEqual(saved);
+ const shown=panel.textContent;render(null);render(React.createElement(FirstActHub,{onBack:()=>{}}));
+ expect(host.querySelector('.cs-first-reward-panel').textContent).toBe(shown);
+ click('Accogli');expect(loadCampaignRun(0).copies).toEqual(expected.copies);expect(loadCampaignRun(0).deck).toEqual(expected.deck);
+ expect(host.querySelector('.cs-first-reward-panel')).toBeNull();
+});
+it('shows only the ordinary agent when no growth reinforcement is needed',()=>{
+ const r=pendingAt('I1');saveCampaignRun(r,0);render(React.createElement(FirstActHub,{onBack:()=>{}}));
+ const panel=host.querySelector('.cs-first-reward-panel');expect(panel.querySelectorAll('[data-card-id]')).toHaveLength(1);
+ expect(panel.textContent).not.toContain('RINFORZO AGGIUNTIVO');expect(panel.textContent).not.toContain('Doppione');
+ click('Accogli');expect(loadCampaignRun(0).copies.map(c=>c.cardId)).toEqual(r.pendingReward.offer);
+});
+it('keeps the two boss reward previews separate and awards only the clicked offer',()=>{
+ const r=pendingAt('I12');saveCampaignRun(r,0);render(React.createElement(FirstActHub,{onBack:()=>{}}));
+ const options=[...host.querySelectorAll('.cs-reward-option')];expect(options).toHaveLength(2);
+ options.forEach((option,i)=>expect(Number(option.querySelector('[data-card-id]').dataset.cardId)).toBe(r.pendingReward.offer[i]));
+ act(()=>options[1].querySelector('button').click());
+ expect(loadCampaignRun(0).copies.slice(r.copies.length).map(c=>c.cardId)).toEqual([r.pendingReward.offer[1]]);
+});

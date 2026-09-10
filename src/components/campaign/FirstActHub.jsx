@@ -6,7 +6,7 @@ import { CampaignBackdrop, CampaignArt, CampaignSigil, CampaignMap, campaignArt,
 import { CampaignDeparture } from './CampaignDeparture.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { loadCampaignRun, saveCampaignRun } from '../../campaign/state/persistence.js';
-import { availableFirstActNodes, firstActReducer, runCard, runLeague } from '../../campaign/state/firstActState.js';
+import { availableFirstActNodes, firstActReducer, previewFirstActReward, runCard, runLeague } from '../../campaign/state/firstActState.js';
 import { FIRST_ACT_STAGES, firstActNode, firstActCard, NASCENTE, TOWER_ID, campaignField } from '../../campaign/data/firstAct.js';
 import { firstActDuelConfig } from '../../campaign/logic/firstActBattle.js';
 import { FirstActArmyDialog } from './FirstActArmyDialog.jsx';
@@ -70,7 +70,24 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
     <div className="cs-act-heading"><div><p className="cs-kicker">IL CAMMINO DEL NASCENTE</p><h1>Oltre il Vallo</h1></div><p>{run.completed} tappe completate · {run.slots} posti · Lega {runLeague(run)}/30</p></div>
     {error&&<p className="cs-error" role="alert">{error}</p>}
     <div className="cs-stage-content" key={`${run.stage}:${run.pendingReward?'reward':run.pendingEvent?'event':run.outcome?'ending':'map'}`}>
-    {run.outcome ? <section className="cs-ending"><CampaignArt src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body"><h2>Gli agenti dello sconfitto</h2><p>{run.pendingReward.offer.length===1?'Hai ottenuto questo agente.':'Scegli un agente fra i due prigionieri.'} Un’identità già posseduta resta in riserva come copia separata.</p><div className="cs-first-rewards">{run.pendingReward.offer.map(id=><button key={id} onClick={()=>commit({type:'REWARD',cardId:id})}><CardReworkP4Scaled agent={firstActCard(id)} width={180}/><span>Accogli {firstActCard(id).name}</span></button>)}</div></div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">
+    {run.outcome ? <section className="cs-ending"><CampaignArt src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body">
+      <h2>Gli agenti dello sconfitto</h2>
+      <p>{run.pendingReward.offer.length===1?'Accogli l’agente ottenuto.':'Scegli un agente fra i due prigionieri.'} Qui sono mostrati tutti gli agenti che riceverai.</p>
+      <div className="cs-first-rewards">{run.pendingReward.offer.map(id=>{
+        const reward=previewFirstActReward(run,id);
+        return <article className="cs-reward-option" key={id} aria-label={`Premio: ${firstActCard(id).name}`}>
+          <div className="cs-reward-cards">{reward.copies.map(copy=><div className="cs-reward-agent" key={copy.uid} data-card-id={copy.cardId}>
+            <span className="cs-kicker">{copy.reinforcement?'RINFORZO AGGIUNTIVO':'AGENTE OTTENUTO'}</span>
+            <CardReworkP4Scaled agent={firstActCard(copy.cardId)} width={180}/>
+            <strong>{firstActCard(copy.cardId).name}</strong>
+            <p>{copy.ownedBefore ? `Doppione · ${copy.ownedBefore} → ${copy.totalCopies} copie. La copia aggiuntiva resta in riserva.` : 'Nuova identità nella tua collezione.'}</p>
+          </div>)}</div>
+          {reward.copies.some(c=>c.reinforcement)&&<p className="cs-reward-reason">La tua armata cresce a {reward.slots} posti: ricevi anche questo rinforzo per poterli riempire. Il premio originale viene conservato.</p>}
+          {reward.slots>run.slots&&<p>Posti nell’armata: {run.slots} → {reward.slots}</p>}
+          <button className="cs-primary" onClick={()=>commit({type:'REWARD',cardId:id})}>Accogli {firstActCard(id).name}{reward.copies.length>1?' e il rinforzo':''}</button>
+        </article>;
+      })}</div>
+    </div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">
       <div className="cs-map-scroll" ref={mapViewport} tabIndex={0} role="region" aria-label="Mappa scorrevole della campagna">
         <CampaignMap act={mapAct} run={mapRun} continuous availableIds={available.map(n=>n.id)} interactionLocked={!!run.active} selectedId={battleNode?.id} onSelect={setSelected} legend="Scorri per esplorare il cammino"/>
       </div>

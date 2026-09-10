@@ -113,6 +113,19 @@ function advance(r, nodeId) {
 function addCopy(r, cardId) {
   return { ...r, nextCopy: r.nextCopy + 1, copies: [...r.copies, { uid: `c${r.nextCopy}`, cardId, acquiredAt: r.completed + 1 }] };
 }
+// Preview the very same transaction that Accogli commits, without saving or mutating the run.
+export function previewFirstActReward(r, cardId) {
+  const next = firstActReducer(r, { type: 'REWARD', cardId });
+  return {
+    slots: next.slots,
+    copies: next.copies.slice(r.copies.length).map((copy, index) => ({
+      ...copy,
+      reinforcement: index > 0,
+      ownedBefore: r.copies.filter(c => c.cardId === copy.cardId).length,
+      totalCopies: next.copies.filter(c => c.cardId === copy.cardId).length,
+    })),
+  };
+}
 export function transformationPool(r, uid) {
   const copy = r.copies.find(c => c.uid === uid);
   if (!copy || !mature(r, copy) || firstActCard(copy.cardId).army === FIGLI) return [];
