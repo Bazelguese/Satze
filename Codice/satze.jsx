@@ -1,4 +1,5 @@
 import { useFirstActPersistence, restoreFirstActSnapshot } from '../src/hooks/useFirstActPersistence.js';
+import { CampaignDuelPreload } from '../src/components/campaign/CampaignDuelPreload.jsx';
 import { FirstActHub } from '../src/components/campaign/FirstActHub.jsx';
 import { firstActMatchOutcome, revealedAt } from '../src/campaign/logic/firstActBattle.js';
 import { selectConcordiaAbility } from '../src/campaign/logic/concordiaAI.js';
@@ -25,7 +26,7 @@ import {
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, ARMY_ICONS } from '../src/data';
 import { ACT as CAMPAIGN_ACT } from '../src/campaign/data/atto1.js';
-import { buildDuelConfig as buildCampaignDuelConfig } from '../src/campaign/logic/missionAdapter.js';
+import { buildDuelConfig as buildCampaignDuelConfig, restartCampaignEncounter } from '../src/campaign/logic/missionAdapter.js';
 import { applyToxin } from '../src/game/toxinLogic';
 import { checkTrigger } from '../src/game/triggerLogic';
 import {
@@ -120,7 +121,7 @@ import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
 import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
 import { ControlledCampaignHub } from '../src/components/campaign/ControlledCampaignHub';
-import { getCampaignRunSummary, abandonFirstActAttempt } from '../src/campaign/state/persistence';
+import { getCampaignRunSummary, abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
@@ -306,6 +307,9 @@ export default function SatzeGame() {
   const [eminenceNotices, setEminenceNotices] = useState([]);
   const [pendingEminencePhase, setPendingEminencePhase] = useState(null);
   const [pendingEminenceDeals, setPendingEminenceDeals] = useState([]);
+  const campaignAssetsSlotRef = useRef(null);
+  const [campaignEntryRun,setCampaignEntryRun] = useState(null);
+  const [campaignActionError,setCampaignActionError] = useState('');
   const setupAnnounceShownRef = useRef(false);
   const eminenceSetupSceneRef = useRef(null);
   const playerZoneKeptRef = useRef(false);
@@ -1112,6 +1116,7 @@ export default function SatzeGame() {
     if (
       gamePhase === 'playtestHistory' ||
       gamePhase === 'campaignSlots' ||
+      gamePhase === 'campaignLoading' ||
       gamePhase === 'campaignHub'
     ) {
       setGamePhaseRaw('menu');
@@ -1766,10 +1771,42 @@ export default function SatzeGame() {
       cfg.enemyArmy,
       cfg.enemyDeckIds,
       cfg.campaignDuelMod,
-      cfg.startOptions
+      {...cfg.startOptions, campaignAssetsReady: campaignAssetsSlotRef.current === campaignSaveSlot}
     );
-    if (run.model === 'first-act') restoreFirstActSnapshot(gameState, run.active?.snapshot);
-  }, [gameState, startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
+    if (run.model === 'first-act') restoreFirstActSnapshot(gameState, run.active?.snapshot, {campaignAssetsReady:campaignAssetsSlotRef.current === campaignSaveSlot});
+  }, [gameState, campaignSaveSlot, startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
+
+  const retryCampaignMission = () => {
+    try {
+      const next = restartCampaignEncounter(loadCampaignRun(campaignSaveSlot, CAMPAIGN_ACT), CAMPAIGN_ACT, campaignLevel);
+      if (!saveCampaignRun(next,campaignSaveSlot)) throw new Error('Salvataggio non riuscito: impossibile ritentare.');
+      aiThinkGenerationRef.current += 1;
+      if (aiAgentThinkTimerRef.current) clearTimeout(aiAgentThinkTimerRef.current);
+      aiAgentThinkTimerRef.current = null;
+      aiHasSelectedAgent.current = false;
+      setPlayerConfirmedAwaitingAI(false);
+      ai.resetAiSession();
+      setVictoryCondFx(null);
+      setShowFinalRoundAnimation(false);
+      setCampaignActionError('');
+      const mission = next.model === 'first-act'
+        ? {...campaignLevel,campaignAttempt:next.active.id,campaignPhase:0}
+        : {...campaignLevel,campaignAttempt:next.activeAttempt};
+      startCampaignMission(mission,next);
+    } catch (e) { setCampaignActionError(e.message); }
+  };
+
+  const winCampaignTest = () => {
+    aiThinkGenerationRef.current += 1;
+    if (aiAgentThinkTimerRef.current) clearTimeout(aiAgentThinkTimerRef.current);
+    aiAgentThinkTimerRef.current = null;
+    aiHasSelectedAgent.current = false;
+    setPlayerConfirmedAwaitingAI(false);
+    setPlayerHP(Math.max(1,playerHP));
+    setEnemyHP(0);
+    setGameResult({winner:'player',reason:'hp',test:true});
+    setGamePhase('gameOver');
+  };
 
   const goAfterDeckSelection = useCallback((deckKeyOverride) => {
     const deckKey = deckKeyOverride ?? selectedDeckKey;
@@ -3893,11 +3930,20 @@ export default function SatzeGame() {
       <CampaignSaveSlots
         onBack={() => setGamePhase('menu')}
         onSlotChosen={(slotIndex) => {
+          campaignAssetsSlotRef.current = null;
+          setCampaignEntryRun(loadCampaignRun(slotIndex, CAMPAIGN_ACT));
           setCampaignSaveSlot(slotIndex);
-          setGamePhase('campaignHub');
+          setGamePhase('campaignLoading');
         }}
       />
     );
+  }
+
+  if (gamePhase === 'campaignLoading') {
+    return <CampaignDuelPreload run={campaignEntryRun} onComplete={()=>{
+      campaignAssetsSlotRef.current = campaignSaveSlot;
+      setGamePhase('campaignHub');
+    }}/>;
   }
 
   // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
@@ -5697,6 +5743,10 @@ export default function SatzeGame() {
         </div>
       )}
 
+      {campaignActionError && selectedMode === 'campaign' && <div role="alert" className="cs-error" style={{position:'absolute',top:100,left:'35%',zIndex:100}}>{campaignActionError}</div>}
+      {campaignDuelMod?.firstAct && ['selectField','selectAgent','selectFocus'].includes(gamePhase) && (
+        <button type="button" className="cs-test-win satze-hud-panel pointer-events-auto" style={{position:'absolute',top:105,left:'50%',transform:'translateX(-50%)',zIndex:100,padding:'8px 14px'}} onClick={winCampaignTest}>Test: vinci incontro</button>
+      )}
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
         field={battlefields[currentFieldIndex]}
@@ -5758,6 +5808,8 @@ export default function SatzeGame() {
             resetToMenu();
           }
         }}
+        isCampaign={selectedMode === 'campaign'}
+        onCampaignRetry={retryCampaignMission}
         onRematch={
           isOnlinePvP && multiplayerSession && !onlineOpponentLeft
             ? () => requestOnlineRematch('same')

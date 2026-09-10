@@ -24,11 +24,12 @@ export function useFirstActPersistence(state) {
   });
   return error;
 }
-export function restoreFirstActSnapshot(gameState, snapshot) {
+export function restoreFirstActSnapshot(gameState, snapshot, { campaignAssetsReady = false } = {}) {
   if (!snapshot) return;
   for (const key of CAMPAIGN_SNAPSHOT_KEYS) {
     const setter=gameState[`set${key[0].toUpperCase()}${key.slice(1)}`];
     if (typeof setter==='function' && Object.hasOwn(snapshot,key)) setter(snapshot[key]);
   }
-  gameState.setPendingDuelPhase(snapshot.gamePhase);
+  gameState.setPendingDuelPhase(campaignAssetsReady ? null : snapshot.gamePhase);
+  if (campaignAssetsReady) gameState.setGamePhase(snapshot.gamePhase);
 }

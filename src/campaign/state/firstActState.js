@@ -136,6 +136,13 @@ export function firstActReducer(r, action) {
       next = { ...base, branch: node.id, active, attempt: active.id, lastResult: null };
       break;
     }
+    case 'TEST_WIN': {
+      // Explicit test control: use the real outcome/reward path, including node completion.
+      if (r.pendingReward || r.pendingEvent || r.outcome) throw new Error('Nessun incontro da risolvere.');
+      const started = r.active ? r : firstActReducer(r,{type:'START',nodeId:action.nodeId});
+      return firstActReducer(started,{type:'RESULT',attempt:started.active.id,phase:started.active.phase,
+        winner:'player',playerHP:Math.max(1,started.active.pv?.player ?? 10),enemyHP:0});
+    }
     case 'SNAPSHOT':
       if (!r.active || r.active.id !== action.attempt || r.active.phase !== action.phase) return r;
       next = { ...r, active: { ...r.active, snapshot: clone(action.snapshot) } }; break;

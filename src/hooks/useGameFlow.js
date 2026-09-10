@@ -335,8 +335,10 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     
     setLogs(prev => [...prev, `[R1] ${startLog}`]);
     
-    setPendingDuelPhase(skipShuffleDeal ? 'selectField' : 'shuffleDeal');
-    setGamePhase('duelLoading');
+    const entryPhase = skipShuffleDeal ? 'selectField' : 'shuffleDeal';
+    const campaignReady = mode === 'campaign' && startOptions?.campaignAssetsReady === true;
+    setPendingDuelPhase(campaignReady ? null : entryPhase);
+    setGamePhase(campaignReady ? entryPhase : 'duelLoading');
   }, [
     setGameMode,
     setPlayerHand,

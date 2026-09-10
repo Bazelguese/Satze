@@ -249,6 +249,8 @@ export const BattlefieldPanel = ({
   onContinue,
   gameResult,
   onMenu,
+  isCampaign = false,
+  onCampaignRetry,
   onRematch,
   /** Rematch online: cambia esercito/mazzo restando in stanza */
   onRematchChangeDeck,
@@ -647,6 +649,10 @@ export const BattlefieldPanel = ({
             {gameResult?.winner === 'draw' && 'Pareggio'}
           </div>
           <div className="flex flex-col gap-2 w-full">
+            {isCampaign ? <button type="button" onClick={gameResult?.winner === 'player' ? onMenu : onCampaignRetry}
+              className="w-full py-2 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-medium rounded-lg border border-amber-400/40 transition-all">
+              {gameResult?.winner === 'player' ? 'Prosegui' : 'Ritenta'}
+            </button> : <>
             {onRematch && (
               <button
                 type="button"
@@ -718,8 +724,9 @@ export const BattlefieldPanel = ({
             >
               Menù
             </button>
+            </>}
           </div>
-          {onOpenPlaytest && (
+          {!isCampaign && onOpenPlaytest && (
             <button
               type="button"
               onClick={onOpenPlaytest}

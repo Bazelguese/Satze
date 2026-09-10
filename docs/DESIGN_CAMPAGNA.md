@@ -19,7 +19,13 @@ I nuovi slot avviano il primo atto 0.25. I salvataggi dei due modelli precedenti
 
 I1 è un tutorial con apertura nemica fissa (`openingPlayerFirst: false`): Nascente e Picca restano 2 POT, 2 DAN, Lega 2 e hanno 10 FC. Impegnando tutti i 10 FC il giocatore può conquistare il Varco contro ogni puntata legale nemica; a pari VA, Lega e POT vale il normale spareggio a favore del secondo. L’iniziativa degli altri incontri resta invariata. Un tentativo precedente già iniziato conserva il proprio stato: abbandonandolo e ritentando si applica l’apertura corretta.
 
-L’hub riutilizza la mappa scenica esistente, i sentieri, i medaglioni, il ritratto dell’incontro, le carte dell’armata e la transizione di ingresso. Le diciotto tappe sono mostrate in tre sezioni di sei tappe navigabili; la progressione porta automaticamente alla sezione corrente. Consultare sezioni future non sblocca i nodi.
+L’hub riutilizza la mappa scenica esistente, i sentieri, i medaglioni, il ritratto dell’incontro, le carte dell’armata e la transizione di ingresso. Le diciotto tappe sono disposte su un unico percorso illustrato a scorrimento orizzontale, senza pulsanti di pagina. Rotella, trackpad e scorrimento touch permettono di esplorarlo; all’ingresso e dopo una tappa la vista si posiziona sul nodo corrente. Consultare tappe future non le sblocca.
+
+### Flusso campagna e controlli di prova
+
+- Alla fine dell’incontro il pannello centrale mostra soltanto **Prosegui** in caso di vittoria e **Ritenta** in caso di sconfitta o pareggio. Prosegui torna alla campagna, mantenendo premi o fase successiva pendenti; Ritenta salva un nuovo tentativo e riavvia subito l’intero incontro, dalla prima squadra e con risorse iniziali. Il pannello campagna non espone Menù, ragionamenti IA, rematch o storico playtest.
+- Quando si entra in uno slot vengono precaricati campi, carte e risorse delle tappe future e preparate le animazioni del duello. All’interno della stessa sessione di campagna gli incontri successivi, i retry e le fasi successive riutilizzano questa preparazione, senza ripetere la schermata di caricamento. Una ripresa dello scontro ripristina direttamente la fase salvata. Gli altri formati conservano il proprio caricamento.
+- Per le prove del primo atto, **Test: vinci incontro** è disponibile nella scheda dell’incontro e nel duello durante la selezione. Completa l’intero incontro, comprese eventuali squadre successive, tramite il normale percorso di esito e ricompensa; la scelta del premio resta da confermare. Non salta le Domande e non duplica ricompense già pendenti. Il comando è esplicito e temporaneo, da rimuovere terminata la fase di test.
 
 ### Avvio e configurazione
 

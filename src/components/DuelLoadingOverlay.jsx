@@ -26,6 +26,7 @@ import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
 
 const WARMUP_MS = 3800;
+const EMPTY_ASSETS = Object.freeze([]);
 
 const PLACE_WARMUP = [
   ...DROP_PLACE_FX.map((fx) => ({ fx, play: `play-${fx}`, wrap: `fx-${fx}` })),
@@ -134,6 +135,8 @@ export function DuelLoadingOverlay({
   enemyArmy = null,
   eminenceMatchState = null,
   showChrome = true,
+  preloadCards = EMPTY_ASSETS,
+  preloadUrls = EMPTY_ASSETS,
   onComplete,
 }) {
   const rootRef = useRef(null);
@@ -248,8 +251,8 @@ export function DuelLoadingOverlay({
       });
       if (cancelled) return;
 
-      const extraUrls = new Set();
-      for (const card of handCards) {
+      const extraUrls = new Set(preloadUrls);
+      for (const card of [...handCards, ...preloadCards]) {
         const sprite = getCardSprite(card);
         const url = getCardImageUrl(sprite?.type, sprite?.agentId);
         if (url) extraUrls.add(url);
@@ -308,6 +311,8 @@ export function DuelLoadingOverlay({
   }, [
     fields,
     handCards,
+    preloadCards,
+    preloadUrls,
     playerCardBack,
     enemyCardBack,
     playerArmy,

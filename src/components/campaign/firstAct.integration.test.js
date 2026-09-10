@@ -12,6 +12,9 @@ import {useGameFlow} from '../../hooks/useGameFlow.js';
 import {useBattle} from '../../hooks/useBattle.js';
 import {useFirstActPersistence,restoreFirstActSnapshot} from '../../hooks/useFirstActPersistence.js';
 import {useCampaignGameOutcome} from '../../hooks/useCampaignGameOutcome.js';
+import {BattlefieldPanel} from '../battle/Battlefield.jsx';
+import {campaignDuelAssets} from './CampaignDuelPreload.jsx';
+import {FIRST_ACT_NODES,TOWER_ID} from '../../campaign/data/firstAct.js';
 import {ALL_BATTLEFIELDS} from '../../data/battlefields.js';
 let root,host;
 beforeEach(()=>{globalThis.IS_REACT_ACT_ENVIRONMENT=true;localStorage.clear();vi.spyOn(HTMLMediaElement.prototype,'play').mockResolvedValue();vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});host=document.createElement('div');document.body.append(host);root=createRoot(host);});
@@ -53,23 +56,61 @@ it('restores a committed terminal phase with its result rather than applying aft
  expect(state.setPendingDuelPhase).toHaveBeenCalledWith('gameOver');expect(state.setGameResult).toHaveBeenCalledWith({winner:'enemy'});expect(state.setPlayerHP).toHaveBeenCalledWith(0);
 });
 
-it('keeps the illustrated route, future sections and card portraits in the new act',()=>{
+it('keeps every stage on one scrollable illustrated route',()=>{
  saveCampaignRun(createFirstActRun({seed:2}),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));
  expect(host.querySelector('.cs-map-trails path')).toBeTruthy();
- expect(host.querySelectorAll('.cs-node-medallion')).toHaveLength(7);
+ expect(host.querySelectorAll('.cs-node-medallion')).toHaveLength(20);
  expect(host.querySelector('.cs-encounter-art img')).toBeTruthy();
  expect(host.querySelector('.cs-hero-summary img')).toBeTruthy();
  expect(host.querySelector('.cs-first-map')).toBeNull();
  const current=host.querySelector('.cs-map-node.is-current');expect(current.disabled).toBe(false);expect(current.textContent).toContain('Primo contatto');
- click('Tappe 13');const branches=[...host.querySelectorAll('.cs-map-node')].slice(0,2);expect(branches[0].style.top).not.toBe(branches[1].style.top);expect(host.querySelectorAll('.cs-node-medallion')).toHaveLength(7);expect([...host.querySelectorAll('.cs-map-node')].every(b=>b.disabled)).toBe(true);
- click('Tappe 1–6');expect(host.querySelector('.cs-map-node.is-current').textContent).toContain('Primo contatto');
+ expect(host.querySelector('.cs-map-pages')).toBeNull();
+ const viewport=host.querySelector('.cs-map-scroll');expect(viewport.tabIndex).toBe(0);
+ Object.defineProperty(viewport,'clientWidth',{value:600});Object.defineProperty(viewport,'scrollWidth',{value:2880});viewport.scrollLeft=0;
+ act(()=>viewport.dispatchEvent(new WheelEvent('wheel',{deltaY:200,bubbles:true,cancelable:true})));expect(viewport.scrollLeft).toBe(200);
+ const branches=[...host.querySelectorAll('.cs-map-node')].filter(b=>b.textContent.includes('Arena del Sole')||b.textContent.includes('Custodia del Vallo'));
+ expect(branches[0].style.top).not.toBe(branches[1].style.top);
+ expect([...host.querySelectorAll('.cs-map-node')].filter(b=>!b.disabled)).toHaveLength(1);
  click('Armata e riserva');expect(host.querySelector('.cs-card-roster .cs-roster-card')).toBeTruthy();
 });
-it('opens the current map section after progression and locks the other branch during a saved attempt',()=>{
+it('scrolls to the current stage after progression and locks the other branch during a saved attempt',()=>{
  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});r=reduce(r,{type:'START',nodeId:'I5A'});saveCampaignRun(r,0);
  render(React.createElement(FirstActHub,{onBack:()=>{}}));
  expect(host.querySelectorAll('.cs-map-node.is-current')).toHaveLength(1);expect(host.querySelector('.cs-map-node.is-current').disabled).toBe(true);
  expect(host.querySelector('.cs-map-node.is-current').textContent).toContain('6');
  r=reduce(r,{type:'RESULT',attempt:r.active.id,phase:0,winner:'player',playerHP:10,enemyHP:8});r=reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});saveCampaignRun(r,0);
- render(React.createElement(FirstActHub,{key:'next-stage',onBack:()=>{}}));expect(host.querySelector('.cs-map-pages [aria-pressed=true]').textContent).toContain('Tappe 7–12');expect(host.querySelector('.cs-map-node.is-current .cs-node-number').textContent).toBe('7');
+ render(React.createElement(FirstActHub,{key:'next-stage',onBack:()=>{}}));expect(host.querySelector('.cs-map-scroll').scrollLeft).toBeGreaterThan(900);expect(host.querySelector('.cs-map-node.is-current .cs-node-number').textContent).toBe('7');
+});
+
+it.each(['player','enemy','draw'])('campaign terminal panel has only its dedicated action: %s',winner=>{
+ const next=vi.fn(),retry=vi.fn();render(React.createElement(BattlefieldPanel,{gamePhase:'gameOver',gameResult:{winner},isCampaign:true,onMenu:next,onCampaignRetry:retry,onRematch:vi.fn(),onOpenPlaytest:vi.fn(),aiDecisionLog:[{id:1,headline:'IA'}]}));
+ const buttons=[...host.querySelectorAll('button')];expect(buttons).toHaveLength(1);expect(buttons[0].textContent.trim()).toBe(winner==='player'?'Prosegui':'Ritenta');
+ act(()=>buttons[0].click());expect(winner==='player'?next:retry).toHaveBeenCalledOnce();expect(host.textContent).not.toContain('Ragionamenti');expect(host.textContent).not.toContain('Menù');
+});
+it('preserves ordinary end-of-match options outside campaign',()=>{
+ render(React.createElement(BattlefieldPanel,{gamePhase:'gameOver',gameResult:{winner:'player'},onMenu:()=>{},onRematch:()=>{},aiDecisionLog:[{id:1,headline:'IA'}]}));
+ expect(host.textContent).toContain('Menù');expect(host.textContent).toContain('Rematch');expect(host.textContent).toContain('Ragionamenti IA');
+});
+it('test victory reaches the normal reward and subsequent stage exactly once',()=>{
+ saveCampaignRun(createFirstActRun({seed:2}),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Test: vinci incontro');
+ expect(loadCampaignRun(0).pendingReward.nodeId).toBe('I1');expect(loadCampaignRun(0).active).toBeNull();
+ expect([...host.querySelectorAll('button')].some(b=>b.textContent.includes('Test:'))).toBe(false);
+ click('Accogli');expect(loadCampaignRun(0).stage).toBe(1);expect(loadCampaignRun(0).copies).toHaveLength(1);expect(host.querySelector('.cs-map-node.is-current').textContent).toContain('Pattuglia');
+});
+it('prepares future fields, opponents and transformation cards at campaign entry',()=>{
+ const r=createFirstActRun(),assets=campaignDuelAssets(r);
+ expect(assets.battlefields.some(f=>f.id===TOWER_ID)).toBe(true);
+ for(const n of FIRST_ACT_NODES)for(const id of n.roster||[])expect(assets.preloadCards.some(c=>c.id===id)).toBe(true);
+ expect(assets.preloadUrls.filter(u=>u.includes('nascente/'))).toHaveLength(4);
+});
+it('loaded campaign launches and retries without loading, ordinary duels still load',()=>{
+ const setters={},state=new Proxy({},{get:(_,k)=>setters[k]||=vi.fn()});let flow;
+ function Harness(){flow=useGameFlow(state);return null;}render(React.createElement(Harness));
+ const run=reduce(createFirstActRun(),{type:'START',nodeId:'I1'}),c=firstActDuelConfig(run);
+ const launch=(mode,ready)=>act(()=>flow.startGame(c.playerArmy,c.playerDeckCards,mode,c.difficulty,ALL_BATTLEFIELDS,c.enemyArmy,c.enemyDeckIds,c.campaignDuelMod,{...c.startOptions,campaignAssetsReady:ready}));
+ launch('campaign',false);expect(setters.setGamePhase).toHaveBeenLastCalledWith('duelLoading');
+ launch('campaign',true);expect(setters.setGamePhase).toHaveBeenLastCalledWith('selectField');expect(setters.setPendingDuelPhase).toHaveBeenLastCalledWith(null);
+ launch('campaign',true);expect(setters.setGamePhase).toHaveBeenLastCalledWith('selectField');
+ launch('classic',true);expect(setters.setGamePhase).toHaveBeenLastCalledWith('duelLoading');
+ restoreFirstActSnapshot(state,{gamePhase:'result',playerFocus:0},{campaignAssetsReady:true});expect(setters.setGamePhase).toHaveBeenLastCalledWith('result');expect(setters.setPendingDuelPhase).toHaveBeenLastCalledWith(null);expect(setters.setPlayerFocus).toHaveBeenLastCalledWith(0);
 });
