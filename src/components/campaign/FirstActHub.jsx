@@ -5,11 +5,14 @@ import { CampaignBackdrop, CampaignSigil, CampaignMap, campaignArt, heroArt, enc
 import { CampaignDeparture } from './CampaignDeparture.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { loadCampaignRun, saveCampaignRun } from '../../campaign/state/persistence.js';
-import { availableFirstActNodes, firstActReducer, eventChoices, previewFirstActChoice, runCard, runLeague, mature, transformationPool } from '../../campaign/state/firstActState.js';
-import { FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, NASCENTE, campaignField } from '../../campaign/data/firstAct.js';
+import { availableFirstActNodes, firstActReducer, runCard, runLeague } from '../../campaign/state/firstActState.js';
+import { FIRST_ACT_STAGES, firstActNode, firstActCard, NASCENTE, TOWER_ID, campaignField } from '../../campaign/data/firstAct.js';
 import { firstActDuelConfig } from '../../campaign/logic/firstActBattle.js';
+import { FirstActArmyDialog } from './FirstActArmyDialog.jsx';
+import { FirstActEvent } from './FirstActEvent.jsx';
+import { stageX } from './campaignMapLayout.js';
 import '../../styles/campaign/controlled-campaign.css';
-const labels = { conserva:'Per ora, ciò che sono basta.', power:'La forza per contendere il terreno. (+1 POT)', damage:'Rendere decisiva una vittoria. (+1 DAN)', evolve:'Rafforza il Potere attuale.', evolvePower:'Rimonta: +2 POT, +1 DAN', evolveDamage:'Rimonta: +1 POT, +2 DAN', liberi:'Liberali. (+3 PV alla prossima battaglia)', trattenuti:'Trattienili. (+2 FC alla prossima battaglia)', comunione:'Lascia parlare i Concordia conservati. (+2 FC e Comunione)' };
+import '../../styles/campaign/first-act.css';
 export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const [run,setRun] = useState(()=>loadCampaignRun(campaignSaveSlot));
   const [error,setError] = useState(''), [army,setArmy]=useState(false), [selected,setSelected]=useState(null), [choice,setChoice]=useState(null), [family,setFamily]=useState(null), [inspect,setInspect]=useState(false);
@@ -18,7 +21,7 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   useEffect(()=>{
     const viewport=mapViewport.current;
     if (!viewport) return;
-    const left=Math.max(0,80+(run?.stage || 0)*160-viewport.clientWidth/2);
+    const left=Math.max(0,stageX(run?.stage || 0)-viewport.clientWidth/2);
     viewport.scrollLeft=left;
   },[run?.stage,run?.pendingReward,run?.pendingEvent]);
   useEffect(()=>{
@@ -43,25 +46,17 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const start = () => { const next=run.active ? run : commit({type:'START',nodeId:node.id});if(!next)return; const n=firstActNode(next.active.nodeId);setDeparture({mission:{...n,enemy:{army:n.army,deck:n.roster},campaignAttempt:next.active.id,campaignPhase:next.active.phase},run:next}); };
   const enterDuel=()=>{try{onStartMission(departure.mission,departure.run);}catch(e){setError(e.message);}finally{setDeparture(null);}};
   const openArmy=()=>{setDraft(run.deck);setArmy(true);};
-  const options=eventChoices(run);
-  let preview=null,previewError='';
-  if(choice)try{preview=previewFirstActChoice(run,choice);}catch(e){previewError=e.message;}
-  const nextCard=preview ? runCard(preview,NASCENTE) : null;
   const battleNode=run.active ? firstActNode(run.active.nodeId) : node;
   const enemy=battleNode?.roster || [];
   const nascente=runCard(run,NASCENTE);
   const mapRun={stageIndex:run.stage,outcome:run.outcome,definition:{events:[]},history:run.history.map(h=>({...h,missionId:h.nodeId}))};
   const mapAct={stages:FIRST_ACT_STAGES.map(ids=>({alternatives:ids.map(firstActNode)}))};
   const resources=battleNode?.kind!=='event' && battleNode ? firstActDuelConfig({...run,active:run.active || {nodeId:battleNode.id,phase:0,playerSquads:[run.deck.slice(0,5)],enemySquads:[battleNode.roster.slice(0,5)],opening:[true]}}).campaignDuelMod : null;
-  return <CampaignScene><CampaignBackdrop/><div className="cs-content">
+  return <CampaignScene className="cs-first-act"><CampaignBackdrop/><div className="cs-content">
     <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · ATTO I</span><strong>Oltre il Vallo</strong></div></div><nav className="cs-actions"><button onClick={openArmy}>Armata e riserva</button><CampaignMotionControl/><button onClick={onBack}>Menu</button></nav></header>
     <div className="cs-act-heading"><div><p className="cs-kicker">IL CAMMINO DEL NASCENTE</p><h1>Oltre il Vallo</h1></div><p>{run.completed} tappe completate · {run.slots} posti · Lega {runLeague(run)}/30</p></div>
     {error&&<p className="cs-error" role="alert">{error}</p>}
-    {run.outcome ? <section className="cs-ending"><img src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body"><h2>Gli agenti dello sconfitto</h2><p>{run.pendingReward.offer.length===1?'Hai ottenuto questo agente.':'Scegli un agente fra i due prigionieri.'} Un’identità già posseduta resta in riserva come copia separata.</p><div className="cs-first-rewards">{run.pendingReward.offer.map(id=><button key={id} onClick={()=>commit({type:'REWARD',cardId:id})}><CardReworkP4Scaled agent={firstActCard(id)} width={180}/><span>Accogli {firstActCard(id).name}</span></button>)}</div></div></section> : run.pendingEvent ? <section className="cs-event"><div className="cs-event-portrait"><img src={heroArt(nascente)} alt="Il Nascente"/><CampaignSigil kind="special"/></div><div className="cs-event-body"><p className="cs-kicker">EVENTO</p><h2>{firstActNode(run.pendingEvent.id).title}</h2><p>{run.pendingEvent.id==='E06'?'Hanno deposto le armi. Le campane continuano a suonare.':'Su cosa vuoi fondare la forza che porterai oltre il Vallo?'}</p>
-      <div className="cs-first-options">{options.filter(id=>labels[id]).map(id=><button key={id} aria-pressed={choice===id} onClick={()=>{setChoice(id);setFamily(null);}}>{labels[id]}</button>)}</div>
-      {options.some(id=>POWER_PACKAGES.some(p=>p.id===id))&&<><h3>{run.nascente.packageId?'Dai una nuova forma al tuo Potere':'Cerca la tua risposta'}</h3><div className="cs-first-options">{[...new Set(POWER_PACKAGES.map(p=>p.family))].map(f=><button key={f} aria-pressed={family===f} onClick={()=>{setFamily(f);setChoice(null);}}>{f}</button>)}</div>{family&&<div className="cs-first-options"><h4>Come traduci questa convinzione in battaglia?</h4>{POWER_PACKAGES.filter(p=>p.family===family).map(p=><button key={p.id} aria-pressed={choice===p.id} onClick={()=>setChoice(p.id)}>{p.answer}</button>)}</div>}</>}
-      {previewError&&<p role="alert">{previewError}</p>}{preview&&<div className="cs-first-preview"><CardReworkP4Scaled agent={nextCard} width={180}/><div><p>{nextCard.description}</p><p>Lega esercito dopo la scelta: {runLeague(preview)}/30</p><button className="cs-primary" onClick={()=>{if(commit({type:'CHOICE',choice})){setChoice(null);setFamily(null);}}}>Conferma risposta</button></div></div>}
-    </div></section> : <div className="cs-world-layout"><div className="cs-first-cartography">
+    {run.outcome ? <section className="cs-ending"><img src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body"><h2>Gli agenti dello sconfitto</h2><p>{run.pendingReward.offer.length===1?'Hai ottenuto questo agente.':'Scegli un agente fra i due prigionieri.'} Un’identità già posseduta resta in riserva come copia separata.</p><div className="cs-first-rewards">{run.pendingReward.offer.map(id=><button key={id} onClick={()=>commit({type:'REWARD',cardId:id})}><CardReworkP4Scaled agent={firstActCard(id)} width={180}/><span>Accogli {firstActCard(id).name}</span></button>)}</div></div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">
       <div className="cs-map-scroll" ref={mapViewport} tabIndex={0} role="region" aria-label="Mappa scorrevole della campagna">
         <CampaignMap act={mapAct} run={mapRun} continuous availableIds={available.map(n=>n.id)} interactionLocked={!!run.active} selectedId={battleNode?.id} onSelect={setSelected} legend="Scorri per esplorare il cammino"/>
       </div>
@@ -82,7 +77,7 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
     </footer>
   </div>
   {departure&&<CampaignDeparture mission={departure.mission} onReady={enterDuel}/>}
-  {inspect&&<CampaignDialog title="Ricognizione" onClose={()=>setInspect(false)}><div className="cs-first-options">{node.fieldIds.map((id,i)=><p key={i}>{campaignField(id).name} · round {node.revealRounds[i]}<br/>{campaignField(id).description||campaignField(id).effect}</p>)}</div>{node.required?.length>0&&<p>Agenti garantiti nella mano nemica: {node.required.map(id=>firstActCard(id).name).join(', ')}.</p>}{node.squads&&node.squads.map((s,i)=><p key={i}>Squadra {i+1}: {s.map(id=>firstActCard(id).name).join(', ')}.</p>)}<div className="cs-enemy-roster">{enemy.map(id=><CardReworkP4Scaled key={id} agent={firstActCard(id)} width={176}/>)}</div></CampaignDialog>}
-  {army&&<CampaignDialog title="Armata e riserva" onClose={()=>setArmy(false)}><p>{draft.length}/{run.slots} agenti · Lega {runLeague(run,draft)}/30. Una sola copia per identità nell’esercito.</p><div className="cs-card-roster">{[NASCENTE,...new Set(run.copies.map(c=>c.cardId))].map(id=><label key={id} className={draft.includes(id)?'selected':''}><input type="checkbox" checked={draft.includes(id)} disabled={id===NASCENTE||!!run.active||!!run.pendingReward} onChange={e=>setDraft(e.target.checked?[...draft,id]:draft.filter(x=>x!==id))}/><div className="cs-roster-card"><CardReworkP4Scaled agent={runCard(run,id)} width={176}/></div><span>{draft.includes(id)?'Schierato nell’armata':'In riserva'}</span></label>)}</div><button className="cs-primary" disabled={!!run.active||!!run.pendingReward} onClick={()=>{if(commit({type:'SET_DECK',deck:draft}))setArmy(false);}}>Salva armata</button><h3>Copie conservate</h3>{run.copies.map(c=><div className="cs-first-copy" key={c.uid}><span>{firstActCard(c.cardId).name} · {mature(run,c)?'Matura':'Completa una tappa successiva'}</span><button disabled={!!run.active||!!run.pendingEvent||!!run.pendingReward||!transformationPool(run,c.uid).length} onClick={()=>commit({type:'TRANSFORM',uid:c.uid})}>Trasforma in un Figlio casuale di pari Lega</button></div>)}</CampaignDialog>}
+  {inspect&&<CampaignDialog title="Ricognizione" onClose={()=>setInspect(false)}><div className="cs-first-options">{node.winRule==='varco' ? <p>{campaignField(node.fieldIds[0]).name} · Conquista: Vinci la partita.</p> : <p>I Campi vengono estratti a ogni nuovo tentativo. {node.fieldIds.includes(TOWER_ID)&&`${campaignField(TOWER_ID).name} compare in quarta o quinta posizione.`}<br/>Rivelazione dei Campi: {node.revealRounds.map((round,i)=>`${i+1}° al round ${round}`).join(' · ')}.</p>}</div>{node.required?.length>0&&<p>Agenti garantiti nella mano nemica: {node.required.map(id=>firstActCard(id).name).join(', ')}.</p>}{node.squads&&node.squads.map((s,i)=><p key={i}>Squadra {i+1}: {s.map(id=>firstActCard(id).name).join(', ')}.</p>)}<div className="cs-enemy-roster">{enemy.map(id=><CardReworkP4Scaled key={id} agent={firstActCard(id)} width={176}/>)}</div></CampaignDialog>}
+  {army&&<FirstActArmyDialog {...{run,draft,setDraft,commit,error}} onClose={()=>setArmy(false)}/>}
   </CampaignScene>;
 }

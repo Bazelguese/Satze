@@ -1,6 +1,7 @@
 import React from 'react';
 import { getNascenteStageImageUrl, nascenteStageFromLeague } from '../../data/images.js';
 import '../../styles/campaign/campaign-scene.css';
+import { campaignMapLayout } from './campaignMapLayout.js';
 
 const BASE = import.meta.env.BASE_URL;
 export const campaignArt = `${BASE}campaign/concordia-vallo.webp`;
@@ -33,6 +34,7 @@ export function CampaignBackdrop({ actIndex = 0 }) {
 
 const positions = [[12, 76], [29, 55], [45, 38], [62, 55], [76, 35], [87, 15]];
 export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, availableIds, interactionLocked = false, continuous = false, legend = "Una via al bivio · ricongiungimento prima dell’élite" }) {
+  if (continuous) return <ContinuousCampaignMap {...{act,run,selectedId,onSelect,availableIds,interactionLocked,legend}}/>;
   const points = act.stages.flatMap((stage, index) => stage.alternatives.map((mission, branch) => ({
     mission, index: index + stageOffset, x: continuous ? (80 + index * 160) / Math.max(960, act.stages.length * 160) * 100 : positions[index][0], y: stage.alternatives.length > 1 ? (branch ? 76 : continuous ? 35 : Math.min(45, positions[index % 6][1])) : positions[index % 6][1],
   })));
@@ -68,5 +70,39 @@ export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, a
     })}
     {selected && !run.outcome && <span className="cs-traveler" aria-hidden="true" style={{ left: `${selected.x}%`, top: `${selected.y}%` }}>✧</span>}
     <div className="cs-map-legend"><span>✦ Il tuo cammino</span><span>{legend}</span></div>
+  </div>;
+}
+
+function ContinuousCampaignMap({ act, run, selectedId, onSelect, availableIds, interactionLocked, legend }) {
+  const { points, links, width, height } = campaignMapLayout(act.stages);
+  const won = id => run.history.some(h => h.missionId === id && h.result === 'player');
+  const selected = points.find(p => p.id === selectedId);
+  return <div className="cs-map cs-map-continuous" style={{width,height}} role="region" aria-label="Percorso dell’atto">
+    <span className="cs-map-caption">LE TERRE DELLA CONCORDIA</span>
+    <svg className="cs-map-trails" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      {links.map(({from,to,routeId,optional,d}) => {
+        const index = from.index;
+        const skipped = routeId?.startsWith('skip-') && run.stageIndex > index && !won(routeId.slice(5));
+        const traveled = routeId ? won(routeId) || skipped : run.stageIndex > index || !!run.outcome;
+        const approaching = routeId === selectedId && index === run.stageIndex;
+        return <path key={`${from.id}-${to.id}`} data-from={from.id} data-to={to.id} data-route={routeId}
+          className={`${traveled ? 'traveled' : ''} ${approaching ? 'approaching' : ''} ${optional ? 'optional' : ''}`} d={d}/>;
+      })}
+    </svg>
+    {points.map(({mission,index,x,y}) => {
+      const available = index === run.stageIndex && !run.outcome && (!availableIds || availableIds.includes(mission.id));
+      const completed = won(mission.id), passed = index < run.stageIndex && !completed;
+      return <button key={mission.id} style={{left:x,top:y}} data-node-id={mission.id}
+        className={`cs-map-node cs-kind-${mission.kind} ${completed ? 'is-won' : ''} ${passed ? 'is-bypassed' : ''} ${available ? 'is-current' : 'is-locked'}`}
+        disabled={!available || interactionLocked} aria-pressed={available && selectedId === mission.id}
+        aria-label={`${mission.title} · ${encounterKinds[mission.kind]} · ${completed ? 'superato' : available ? 'disponibile' : 'non disponibile'}`}
+        onClick={()=>onSelect(mission.id)}>
+        <span className="cs-node-medallion"><CampaignSigil kind={mission.kind}/><span className="cs-node-number">{completed ? '✓' : index+1}</span></span>
+        <span className="cs-node-name">{mission.title}</span>
+        <small>{completed ? 'Superato' : passed ? 'Non percorso' : mission.optional ? 'Faglia opzionale' : encounterKinds[mission.kind]}</small>
+      </button>;
+    })}
+    {selected && !run.outcome && <span className="cs-traveler" aria-hidden="true" style={{left:selected.x,top:selected.y}}>✧</span>}
+    <div className="cs-map-legend"><span>✦ Il tuo cammino</span><span>{legend} · Le deviazioni si ricongiungono alla via principale</span></div>
   </div>;
 }

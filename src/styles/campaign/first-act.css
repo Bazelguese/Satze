@@ -1,0 +1,89 @@
+/* Same logical canvas as Codice/satze.jsx; GameViewport performs the only scaling. */
+.campaign-scene.cs-first-act { overflow:hidden; }
+.cs-first-act .cs-content { width:100%; height:100%; padding:24px 48px; display:grid; grid-template-rows:64px 94px minmax(0,1fr) 120px; gap:18px; }
+.cs-first-act .cs-hud { flex-direction:row; align-items:center; padding:0 0 16px; }
+.cs-first-act .cs-actions { gap:8px; }
+.cs-first-act .cs-actions button { font-size:14px; padding:10px 16px; }
+.cs-first-act .cs-kicker { font-size:12px; }
+.cs-first-act h1 { font-size:44px; }
+.cs-first-act h2 { font-size:30px; }
+.cs-first-act .cs-act-heading { margin:0; gap:24px; flex-wrap:nowrap; }
+.cs-first-act .cs-act-heading > p { font-size:16px; }
+.cs-first-act .cs-world-layout { display:grid; height:100%; min-height:0; grid-template-columns:minmax(0,1fr) 410px; gap:32px; align-items:stretch; }
+.cs-first-act .cs-first-cartography { display:grid; align-items:center; min-height:0; border-block:1px solid #d5b77b22; }
+.cs-first-act .cs-map-scroll { width:100%; max-height:100%; overscroll-behavior:contain; }
+.cs-first-act .cs-map-continuous .cs-map-node { width:170px; transform:translate(-50%,-38px); }
+.cs-first-act .cs-map-continuous .cs-node-medallion { width:76px; height:76px; margin:0 auto 16px; }
+.cs-first-act .cs-map-continuous .cs-node-medallion svg { width:38px; height:38px; }
+.cs-first-act .cs-map-continuous .cs-kind-boss { transform:translate(-50%,-44px); }
+.cs-first-act .cs-map-continuous .cs-kind-boss .cs-node-medallion { width:88px; height:88px; }
+.cs-first-act .cs-map-continuous .cs-node-name { font-size:14px; line-height:1.4; }
+.cs-first-act .cs-map-continuous .cs-map-node > small { font-size:11px; }
+.cs-first-act .cs-map-continuous .cs-map-node.is-bypassed { opacity:.38; }
+.cs-first-act .cs-map-continuous .cs-map-node:hover .cs-node-medallion { transform:none; }
+.cs-first-act .cs-map-continuous .cs-map-caption { top:28px; left:40px; }
+.cs-first-act .cs-map-continuous .cs-map-legend { display:flex; bottom:18px; left:40px; font-size:12px; }
+.cs-first-act .cs-map-trails path.optional:not(.traveled) { stroke-dasharray:2 9; }
+.cs-first-act .cs-encounter { display:flex; flex-direction:column; align-self:stretch; margin:0; min-height:0; overflow:hidden; }
+.cs-first-act .cs-encounter-art { flex:0 0 178px; height:178px; min-height:0; }
+.cs-first-act .cs-encounter-body { padding:16px 24px 24px; min-height:0; overflow-y:auto; }
+.cs-first-act .cs-encounter-body > p:not(.cs-kicker) { font-size:14px; margin:10px 0; }
+.cs-first-act .cs-encounter-body > button:not(.cs-primary) { font-size:13px; }
+.cs-first-act .cs-primary { font-size:14px; }
+.cs-first-act .cs-party { margin:0; padding:16px 0 0; display:grid; grid-template-columns:1fr 1fr; gap:36px; min-height:0; }
+.cs-first-act .cs-hero-summary { min-width:0; }
+.cs-first-act .cs-hero-summary img { height:94px; }
+.cs-first-act .cs-hero-summary small { font-size:13px; }
+.cs-first-act .cs-party-deck { gap:24px; }
+.cs-first-act .cs-deck-fan { display:block; }
+.cs-first-act .cs-error { position:absolute; z-index:240; top:90px; left:50%; transform:translateX(-50%); width:max-content; max-width:1000px; padding:12px 24px; background:#421c1d; border:1px solid #d58b77; }
+.cs-first-act .cs-first-rewards { justify-content:center; }
+.cs-first-act .cs-ending { margin:auto; }
+/* A deliberate master/detail choice: convictions, answers, then the actual card. */
+.cs-question { display:grid; grid-template-rows:auto minmax(0,1fr); min-height:0; border:1px solid #bda36d50; background:#0b161eee; }
+.cs-question > header { padding:22px 30px 16px; border-bottom:1px solid #d5b77b30; }
+.cs-question > header p:last-child { margin:8px 0 0; color:#c1cfc5; font-size:16px; }
+.cs-question-body { min-height:0; display:grid; grid-template-columns:290px minmax(0,1fr) 320px; }
+.cs-question-families,.cs-question-answers,.cs-question-preview { min-height:0; overflow-y:auto; padding:22px; }
+.cs-question-families { border-right:1px solid #d5b77b25; }
+.cs-question-families button { display:block; width:100%; text-align:left; border:1px solid transparent; background:transparent; padding:10px 12px; margin-bottom:4px; font-size:14px; color:#bccbc3; }
+.cs-question-families button[aria-pressed=true] { color:#f9dfab; border-color:#d5b77b66; background:#d5b77b15; }
+.cs-question-answers h3 { font-size:25px; margin:6px 0 26px; }
+.cs-question-answers > button { display:block; width:100%; padding:22px; margin-bottom:16px; border:1px solid #d5b77b45; background:linear-gradient(130deg,#23343a,#111d24); text-align:left; }
+.cs-question-answers > button:hover,.cs-question-answers > button[aria-pressed=true] { border-color:#e8cc8f; background:#34413a; }
+.cs-question-answers strong { display:block; font:19px/1.45 Cinzel,Georgia,serif; }
+.cs-question-answers button span { display:block; margin-top:14px; padding-top:12px; border-top:1px solid #d5b77b30; font-size:15px; color:#ead6ac; }
+.cs-question-note { color:#a7bab3; font-size:14px; }
+.cs-question-preview { display:flex; flex-direction:column; align-items:center; background:#071217b0; border-left:1px solid #d5b77b25; text-align:center; }
+.cs-question-preview > .cs-roster-card { flex-shrink:0; }
+.cs-question-preview > p:not(.cs-kicker) { font-size:15px; }
+.cs-question-preview > .cs-primary { margin-top:auto; flex-shrink:0; }
+/* Reserve: individual copies on the left; cost and random result on the right. */
+.cs-first-act .cs-dialog-shade { padding:40px; }
+.cs-first-act .cs-dialog { width:1420px; max-height:960px; padding:30px; }
+.cs-first-act .cs-dialog > header { margin-bottom:20px; }
+.cs-army-tabs { display:flex; gap:24px; border-bottom:1px solid #d5b77b40; margin-bottom:22px; }
+.cs-army-tabs button { padding:14px 6px; border:0; border-bottom:2px solid transparent; color:#b4c4be; background:transparent; font-size:17px; }
+.cs-army-tabs button[aria-pressed=true] { border-bottom-color:#e2c78f; color:#ffe7b9; }
+.cs-army-roster-scroll { max-height:580px; overflow-y:auto; padding:8px; }
+.cs-first-act .cs-card-roster { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:18px; }
+.cs-transform-layout { display:grid; grid-template-columns:370px minmax(0,1fr); height:660px; gap:28px; }
+.cs-reserve-list { overflow-y:auto; padding:4px 14px 12px 0; }
+.cs-reserve-list > button { display:flex; align-items:center; width:100%; gap:14px; padding:12px; margin-bottom:10px; text-align:left; border:1px solid #77908440; background:#102027; }
+.cs-reserve-list > button[aria-pressed=true] { border-color:#e0c28a; background:#30413e; }
+.cs-reserve-list img { width:62px; height:80px; object-fit:cover; border-radius:4px; }
+.cs-reserve-list strong { display:block; font-size:16px; }
+.cs-reserve-list small { display:block; margin-top:6px; color:#bbc9be; font-size:12px; }
+.cs-transform-detail { min-height:0; overflow-y:auto; padding:20px 30px; border:1px solid #d5b77b35; background:radial-gradient(ellipse at 50% 25%,#33444380,#0b151ce0 70%); }
+.cs-transform-detail h3 { font-size:24px; }
+.cs-transform-detail p { font-size:15px; margin:12px 0; }
+.cs-transform-cards { display:flex; justify-content:center; align-items:center; gap:30px; margin:16px 0 22px; }
+.cs-transform-cards > span { color:#d5b77b; font-size:30px; }
+.cs-transform-mystery { width:200px; height:280px; border:1px solid #d5b77b80; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:20px; text-align:center; background:repeating-linear-gradient(135deg,#d5b77b05 0 2px,transparent 2px 12px); }
+.cs-transform-mystery svg { width:68px; height:68px; color:#e4c993; }
+.cs-transform-mystery strong { font:19px Cinzel,Georgia,serif; }
+.cs-transform-pool { color:#b7c8be; }
+.cs-transform-empty,.cs-transform-result { display:flex; height:100%; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.cs-transform-empty > svg { width:90px; height:90px; color:#ddc28a; margin-bottom:24px; }
+.cs-transform-result h3 { margin-top:24px; }
+.cs-transform-result > div { flex-shrink:0; }

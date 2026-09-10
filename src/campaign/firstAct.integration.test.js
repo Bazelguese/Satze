@@ -134,3 +134,29 @@ it('test victory completes even a multi-phase encounter, but cannot duplicate re
  expect(()=>reduce(r,{type:'TEST_WIN',nodeId:'I12'})).toThrow();
  expect(()=>reduce(until('E01'),{type:'TEST_WIN',nodeId:'E01'})).toThrow();
 });
+
+it('draws fresh fields on retry while keeping saved attempts stable and special timing intact',()=>{
+ for (const nodeId of ['I2','I3','I4','I7','F1','I12']) {
+  let r=until(nodeId);r=reduce(r,{type:'START',nodeId});
+  const first=structuredClone(r.active.fieldSquads);
+  expect(firstActDuelConfig(JSON.parse(JSON.stringify(r))).campaignDuelMod.fixedFields.map(f=>f.id)).toEqual(first[0]);
+  expect(assertFirstActRun(r)).toBe(r);
+  for(const ids of first){
+   expect(new Set(ids).size).toBe(firstActNode(nodeId).fieldIds.length);
+   if(firstActNode(nodeId).fieldIds.includes(TOWER_ID))expect([3,4]).toContain(ids.indexOf(TOWER_ID));
+  }
+  const legacy=structuredClone(r);delete legacy.active.fieldSquads;
+  expect(firstActDuelConfig(legacy).campaignDuelMod.fixedFields.map(f=>f.id)).toEqual(firstActNode(nodeId).fieldIds);
+  r=result(r,'draw');r=reduce(r,{type:'START',nodeId});
+  expect(r.active.fieldSquads[0]).not.toEqual(first[0]);
+  expect(r.active.snapshot).toBeNull();
+  expect(firstActDuelConfig(r).campaignDuelMod.fixedFields.map(f=>f.id)).toEqual(r.active.fieldSquads[0]);
+ }
+});
+it('preserves phase-specific fields and PV across the boss squad transition',()=>{
+ let r=until('I12');r=reduce(r,{type:'START',nodeId:'I12'});const fields=structuredClone(r.active.fieldSquads);
+ expect(fields[0]).not.toEqual(fields[1]);r=result(r,'player',15,12);
+ expect(r.active.fieldSquads).toEqual(fields);
+ expect(firstActDuelConfig(r).campaignDuelMod.fixedFields.map(f=>f.id)).toEqual(fields[1]);
+ expect(r.active.pv).toEqual({player:15,enemy:12});
+});

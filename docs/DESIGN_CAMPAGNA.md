@@ -1642,7 +1642,15 @@ Gli stati seguenti descrivono un contratto da implementare. Non attestano che il
 
 Dalla mappa si ispeziona senza impegnarsi. Affronta valida l’esercito e salva nodo, ramo, configurazione nemica e casualità del tentativo prima di mostrare la mano. Il seme delle mani è separato da quelli dei premi e delle trasformazioni: cambiare composizione non cambia il nemico o il premio. Stessa versione, nodo, seme e insieme ordinato di identità producono la stessa mano. L’iniziativa standard iniziale viene salvata, senza rilanci alla riapertura.
 
-Una vittoria di fase con un’altra squadra prevista conduce al ricambio, applicato una sola volta. Una vittoria del nodo conduce al premio pendente; sconfitta e pareggio conducono ai rispettivi esiti, senza avanzamento. Il retry ritorna all’apertura dello stesso nodo, ripristinando la configurazione del tentativo; consente riorganizzazione ma non assegnazione manuale delle mani. Uscire dall’app sospende. Il riavvolgimento usa gli snapshot di tre tappe completate precedenti come al capitolo 22.
+Una vittoria di fase con un’altra squadra prevista conduce al ricambio, applicato una sola volta. Una vittoria del nodo conduce al premio pendente; sconfitta e pareggio conducono ai rispettivi esiti, senza avanzamento. Il retry ritorna all’apertura dello stesso nodo con un nuovo tentativo: azzera lo stato del duello ed estrae nuovi Campi, mantenendo i vincoli dell’incontro. Consente riorganizzazione ma non assegnazione manuale delle mani. Uscire dall’app sospende. Il riavvolgimento usa gli snapshot di tre tappe completate precedenti come al capitolo 22.
+
+#### Campi, mappa e trasformazioni — correzioni funzionali
+
+I Campi ordinari sono estratti con il motore di rarità del duello, con un seme separato per nodo, tentativo e fase. Gli identificativi delle estrazioni di tutte le squadre vengono salvati all’avvio: riprendere un tentativo non li cambia; ritentare ne genera di nuovi. Il Varco introduttivo resta fisso. Negli incontri che prevedono la Torre del Richiamo, essa occupa il quarto o il quinto posto e il relativo posto speciale. Restano le rivelazioni concordate: quarto Campo al round 3, quinto al round 4. I tentativi già salvati con il formato precedente conservano i propri Campi fino al successivo avvio. Sfondi della pool casuale, carte e trasformazioni vengono precaricati all’ingresso in campagna.
+
+La campagna usa lo stesso canvas logico 1920×1080 e lo stesso adattamento alla finestra del duello. La mappa scorre all’interno della scena; intestazione, riepilogo dell’armata e dettaglio dell’incontro mantengono il proprio posto. Tappe e tracciati condividono le coordinate: i bivi si separano e si ricongiungono, F2 dispone di una deviazione facoltativa e di un collegamento che la evita. Il percorso effettivamente compiuto è evidenziato; le alternative lasciate indietro sono attenuate.
+
+Armata e riserva hanno viste distinte. Per trasformare si seleziona una copia, se ne leggono maturità, costo ed esiti possibili e si conferma il consumo. Il Figlio di pari Lega rimane casuale: gli esiti elencati non sono selezionabili. Dopo il salvataggio si mostra la carta ottenuta. Gli eventi del Nascente separano temi filosofici, risposte e anteprima della carta; nessuna selezione è applicata prima della conferma.
 
 #### Premio e gestione
 

@@ -17,6 +17,8 @@ export function campaignDuelAssets(run) {
     : Object.values(ARMY_SETS).flat();
   const armies = [...new Set(cards.map(c=>c.army))];
   const urls = [0,1,2,3].map(getNascenteStageImageUrl);
+  // Warm the full random pool in bounded loading batches, without mounting 100+ GPU surfaces.
+  urls.push(...ALL_BATTLEFIELDS.map(f=>resolvePublicAssetUrl(f.bgImage)).filter(Boolean));
   urls.push(...armies.map(a=>resolvePublicAssetUrl(ARMY_GIFS[a])).filter(Boolean));
   const playerCards = firstAct ? run.deck.map(id=>runCard(run,id)) : cards.slice(0,5);
   const enemyCards = firstAct ? FIRST_ACT_NODES[0].roster.map(firstActCard) : cards.slice(5,10);
