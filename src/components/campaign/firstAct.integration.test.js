@@ -76,7 +76,7 @@ it('keeps every stage on one scrollable illustrated route',()=>{
  const branches=[...host.querySelectorAll('.cs-map-node')].filter(b=>b.textContent.includes('Arena del Sole')||b.textContent.includes('Custodia del Vallo'));
  expect(branches[0].style.top).not.toBe(branches[1].style.top);
  expect([...host.querySelectorAll('.cs-map-node')].filter(b=>!b.disabled)).toHaveLength(1);
- click('Armata e riserva');expect(host.querySelector('.cs-card-roster .cs-roster-card')).toBeTruthy();
+ click('Esercito e riserva');expect(host.querySelector('.cs-card-roster .cs-roster-card')).toBeTruthy();
 });
 it('scrolls to the current stage after progression and locks the other branch during a saved attempt',()=>{
  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});r=reduce(r,{type:'START',nodeId:'I5A'});saveCampaignRun(r,0);
@@ -122,7 +122,7 @@ it('loaded campaign launches and retries without loading, ordinary duels still l
 
 it('previews the consumed copy and confirms exactly one random transformation',()=>{
  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
- render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Esercito e riserva');click('Riserva e trasformazione');
  const before=JSON.parse(JSON.stringify(loadCampaignRun(0)));
  const available=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));
  expect(available).toBeTruthy();act(()=>available.click());
@@ -140,7 +140,7 @@ it('previews the consumed copy and confirms exactly one random transformation',(
 });
 it('does not lose the selected-copy focus on dialog rerenders',()=>{
  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
- render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Esercito e riserva');click('Riserva e trasformazione');
  const button=host.querySelector('.cs-reserve-list button');button.focus();act(()=>button.click());
  expect(document.activeElement).toBe(button);
  act(()=>button.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
@@ -172,7 +172,7 @@ it('reveals a saved transformation after its sequence and never awards it twice'
  vi.useFakeTimers();
  try {
   let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
-  render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+  render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Esercito e riserva');click('Riserva e trasformazione');
   const b=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));act(()=>b.click());click('Conferma trasformazione casuale');
   const saved=loadCampaignRun(0);expect(host.querySelector('.cs-transformation.is-changing')).toBeTruthy();
   act(()=>vi.advanceTimersByTime(2399));expect(host.querySelector('.cs-transformation.is-changing')).toBeTruthy();
@@ -182,7 +182,7 @@ it('reveals a saved transformation after its sequence and never awards it twice'
 });
 it('motion-off transformation reveals immediately and still saves its single result',()=>{
  localStorage.setItem('satze_campaign_motion_v1','off');let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
- render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Esercito e riserva');click('Riserva e trasformazione');
  const b=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));act(()=>b.click());click('Conferma trasformazione casuale');
  expect(host.querySelector('.cs-transformation.is-revealed')).toBeTruthy();expect(host.textContent).not.toContain('Salta animazione');
 });
@@ -224,7 +224,7 @@ it('shows the duplicate and the exact extra reinforcement before saving either c
  expect([...panel.querySelectorAll('[data-card-id]')].map(el=>Number(el.dataset.cardId))).toEqual(added.map(c=>c.cardId));
  expect(panel.textContent).toContain('Scudiero del Vallo');expect(panel.textContent).toContain('Duellante del Sole Pallido');
  expect(panel.textContent).toContain('Doppione · 2 → 3 copie');expect(panel.textContent).toContain('RINFORZO AGGIUNTIVO');
- expect(panel.textContent).toContain('Posti nell’armata: 7 → 8');expect(loadCampaignRun(0)).toEqual(saved);
+ expect(panel.textContent).toContain('Posti nell’esercito: 7 → 8');expect(loadCampaignRun(0)).toEqual(saved);
  const shown=panel.textContent;render(null);render(React.createElement(FirstActHub,{onBack:()=>{}}));
  expect(host.querySelector('.cs-first-reward-panel').textContent).toBe(shown);
  click('Accogli');expect(loadCampaignRun(0).copies).toEqual(expected.copies);expect(loadCampaignRun(0).deck).toEqual(expected.deck);
@@ -242,4 +242,33 @@ it('keeps the two boss reward previews separate and awards only the clicked offe
  options.forEach((option,i)=>expect(Number(option.querySelector('[data-card-id]').dataset.cardId)).toBe(r.pendingReward.offer[i]));
  act(()=>options[1].querySelector('button').click());
  expect(loadCampaignRun(0).copies.slice(r.copies.length).map(c=>c.cardId)).toEqual([r.pendingReward.offer[1]]);
+});
+
+it('opens the protagonist summary separately from the renamed army management',()=>{
+ let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'O1'});r.stats={wins:4,losses:2,draws:1,transformed:3,partial:false};saveCampaignRun(r,0);
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));
+ expect(host.textContent).toContain('Esercito del Nascente');expect(host.textContent).not.toContain('Armata dell’Orizzonte');
+ act(()=>host.querySelector('.cs-hero-summary').click());
+ const dialog=host.querySelector('[role="dialog"]');expect(dialog.textContent).toContain('Il cammino del Nascente');
+ expect([...dialog.querySelectorAll('dt')].map(e=>e.textContent)).toEqual(['Vittorie','Sconfitte','Pareggi','Agenti trasformati']);
+ expect([...dialog.querySelectorAll('dd')].map(e=>e.textContent)).toEqual(['4','2','1','3']);
+ expect(dialog.textContent).toContain('Colosso');expect(dialog.textContent).toContain('−3 PV a te');expect(dialog.querySelector('.cs-army-tabs')).toBeNull();
+ click('Chiudi');act(()=>host.querySelector('.cs-party-deck').click());expect(host.querySelector('.cs-army-tabs').textContent).toContain('Esercito');
+ expect(loadCampaignRun(0).stats).toEqual(r.stats);
+});
+it('shows a clear empty power and archetype on a new run',()=>{
+ saveCampaignRun(createFirstActRun(),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));act(()=>host.querySelector('.cs-hero-summary').click());
+ const dialog=host.querySelector('[role="dialog"]');expect(dialog.textContent).toContain('Nessun potere acquisito.');expect(dialog.textContent).toContain('Non ancora definito');
+ expect([...dialog.querySelectorAll('dd')].map(e=>e.textContent)).toEqual(['0','0','0','0']);expect(dialog.textContent).not.toContain('Statistiche parziali');
+});
+it('recovers available legacy stats without counting questions as wins and restores classic field timing',()=>{
+ let r=pendingAt('I9A');delete r.stats;saveCampaignRun(r,0);
+ const loaded=loadCampaignRun(0);expect(loaded.stats.partial).toBe(true);
+ expect(loaded.stats.wins).toBe(r.history.filter(h=>FIRST_ACT_NODES.find(n=>n.id===h.nodeId)?.roster).length+1);
+ saveCampaignRun(loaded,0);expect(loadCampaignRun(0).stats).toEqual(loaded.stats);
+ r=reduce(loaded,{type:'REWARD',cardId:loaded.pendingReward.offer[0]});r=reduce(r,{type:'START',nodeId:'F2'});
+ r.active.snapshot={roundNumber:2,playerHP:17,conqueredFields:{0:{winner:'player'}},revealedFields:3,campaignDuelMod:{firstAct:true,revealRounds:[1,1,1,3,4]}};
+ saveCampaignRun(r,0);const snapshot=loadCampaignRun(0).active.snapshot;
+ expect(snapshot.campaignDuelMod.revealRounds).toEqual([1,1,1,2,3]);expect(snapshot.revealedFields).toBe(4);
+ expect(snapshot.playerHP).toBe(17);expect(snapshot.conqueredFields).toEqual(r.active.snapshot.conqueredFields);
 });

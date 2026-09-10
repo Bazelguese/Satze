@@ -154,3 +154,18 @@
 .cs-first-act .cs-reward-agent p { font-size:14px; line-height:1.5; margin:0; }
 .cs-first-act .cs-reward-reason { padding:12px; border-left:2px solid #d5b87a; background:#d5b87a10; }
 .cs-first-act .cs-reward-option > button { margin-top:auto; align-items:center; }
+
+/* Separate footer entry points: deck left, protagonist right. */
+.cs-first-act .cs-party-deck { grid-column:1; grid-row:1; }
+.cs-first-act .cs-hero-summary { grid-column:2; grid-row:1; justify-self:end; }
+.cs-nascente-summary { display:grid; grid-template-columns:300px minmax(0,1fr); gap:48px; padding:24px; }
+.cs-summary-card { display:flex; flex-direction:column; align-items:center; gap:18px; }
+.cs-summary-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:0 0 20px; }
+.cs-summary-stats > div { padding:20px 14px; border:1px solid #bda36d60; background:#152124; text-align:center; }
+.cs-summary-stats dt { color:#c7d2c8; font-size:15px; }
+.cs-summary-stats dd { margin:12px 0 0; font:32px Cinzel,Georgia,serif; color:#f4d99e; }
+.cs-summary-details section { margin-top:28px; padding-top:20px; border-top:1px solid #bda36d40; }
+.cs-summary-details h3 { font-size:22px; color:#f4d99e; }
+.cs-summary-details p { line-height:1.6; }
+.cs-summary-details blockquote { margin:12px 0; color:#c7d2c8; font-style:italic; }
+.cs-summary-legacy { color:#dec18b; }

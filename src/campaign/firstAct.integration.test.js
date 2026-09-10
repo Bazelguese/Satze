@@ -37,7 +37,11 @@ describe('Atto I 0.25',()=>{
   expect(cfg.campaignDuelMod).toMatchObject({playerLife:10,enemyLife:10,playerFocus:10,enemyFocus:10,winRule:'varco'});
   expect(cfg.startOptions.fixedHands.playerHand).toHaveLength(1);
  });
- it('opens the fourth field at round 3, fifth at round 4',()=>expect([1,2,3,4,5].map(n=>revealedAt([1,1,1,3,4],n))).toEqual([3,3,4,5,5]));
+ it('uses classic field timing: fourth at round 2, fifth at round 3',()=>{
+  for(const node of FIRST_ACT_NODES.filter(n=>n.roster)){
+   expect([1,2,3,4,5].map(round=>revealedAt(node.revealRounds,round))).toEqual([1,2,3,4,5].map(round=>Math.min(node.fieldIds.length,round+2)));
+  }
+ });
  it('keeps the branch after defeat and excludes stale results',()=>{
   let r=until('I5A');r=reduce(r,{type:'START',nodeId:'I5B'});const attempt=r.active.id;r=result(r,'enemy');
   expect(availableFirstActNodes(r).map(n=>n.id)).toEqual(['I5B']);
@@ -173,4 +177,25 @@ it('offers the final stat choice even with no power and consumes the event once'
  const before=runCard(r,NASCENTE);r=reduce(r,{type:'CHOICE',choice:'finalDamage'});
  expect(runCard(r,NASCENTE)).toMatchObject({league:before.league,power:before.power,damage:before.damage+1,ability:null});
  expect(()=>reduce(r,{type:'CHOICE',choice:'finalPower'})).toThrow();
+});
+
+
+it('counts terminal encounters once, including retries and abandonments, but not events or intermediate phases',()=>{
+ let r=createFirstActRun({seed:1});
+ for(const winner of ['enemy','draw','player']) {
+  r=reduce(r,{type:'START',nodeId:'I1'});const action={type:'RESULT',attempt:r.active.id,phase:0,winner,playerHP:10,enemyHP:9};
+  r=reduce(r,action);expect(reduce(r,action)).toBe(r);
+ }
+ expect(r.stats).toEqual({wins:1,losses:1,draws:1,transformed:0,partial:false});
+ r=reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});expect(r.stats.wins).toBe(1);
+ r=reduce(r,{type:'START',nodeId:'I2'});r=reduce(r,{type:'ABANDON'});expect(r.stats.losses).toBe(2);expect(reduce(r,{type:'ABANDON'})).toBe(r);
+ let boss=until('I12');const before={...boss.stats};boss=reduce(boss,{type:'START',nodeId:'I12'});boss=result(boss);expect(boss.stats).toEqual(before);
+ boss=result(boss);expect(boss.stats.wins).toBe(before.wins+1);
+ let event=until('E01');const stats={...event.stats};event=reduce(event,{type:'ENTER_EVENT'});event=reduce(event,{type:'CHOICE',choice:'C1'});expect(event.stats).toEqual(stats);
+});
+it('records transformations and retains lifetime counters across rewind',()=>{
+ let r=until('I6');const copy=r.copies.find(c=>transformationPool(r,c.uid).length);
+ r=reduce(r,{type:'TRANSFORM',uid:copy.uid});expect(r.stats.transformed).toBe(1);
+ r=reduce(r,{type:'START',nodeId:'I6'});r=result(r,'enemy');const stats={...r.stats};
+ r=reduce(r,{type:'REWIND'});expect(r.stats).toEqual(stats);
 });

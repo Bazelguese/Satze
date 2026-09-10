@@ -27,9 +27,9 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
   if (sequence) return <CampaignDialog title="Il passaggio" kicker="TRASFORMAZIONE" onClose={onClose}>
     <CampaignTransformation {...sequence} onComplete={()=>{setSequence(null);transforming.current=false;}}/>
   </CampaignDialog>;
-  return <CampaignDialog title="Armata e riserva" kicker="IL TUO SEGUITO" onClose={onClose}>
-    <nav className="cs-army-tabs" aria-label="Gestione armata">
-      <button aria-pressed={tab==='army'} onClick={()=>setTab('army')}>Armata · {draft.length}/{run.slots}</button>
+  return <CampaignDialog title="Esercito e riserva" kicker="IL TUO SEGUITO" onClose={onClose}>
+    <nav className="cs-army-tabs" aria-label="Gestione esercito">
+      <button aria-pressed={tab==='army'} onClick={()=>setTab('army')}>Esercito · {draft.length}/{run.slots}</button>
       <button aria-pressed={tab==='reserve'} onClick={()=>setTab('reserve')}>Riserva e trasformazione · {run.copies.length}</button>
     </nav>
     {error && <p className="cs-error" role="alert">{error}</p>}
@@ -40,10 +40,10 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
           <input type="checkbox" aria-label={runCard(run,id).name} checked={draft.includes(id)} disabled={id===NASCENTE||!!run.active||!!run.pendingReward}
             onChange={e=>setDraft(e.target.checked?[...draft,id]:draft.filter(x=>x!==id))}/>
           <div className="cs-roster-card"><CardReworkP4Scaled agent={runCard(run,id)} width={176}/></div>
-          <span>{draft.includes(id)?'Schierato nell’armata':'In riserva'}</span>
+          <span>{draft.includes(id)?'Schierato nell’esercito':'In riserva'}</span>
         </label>)}
       </div></div>
-      <button className="cs-primary" disabled={!!run.active||!!run.pendingReward} onClick={()=>{if(commit({type:'SET_DECK',deck:draft}))onClose();}}>Salva armata</button>
+      <button className="cs-primary" disabled={!!run.active||!!run.pendingReward} onClick={()=>{if(commit({type:'SET_DECK',deck:draft}))onClose();}}>Salva esercito</button>
     </> : <div className="cs-transform-layout">
       <div className="cs-reserve-list" role="group" aria-label="Copie da trasformare">
         <p className="cs-kicker">SCEGLI LA COPIA DA CONSUMARE</p>
@@ -59,7 +59,7 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
       </div>
       <section className="cs-transform-detail" aria-label="Anteprima trasformazione" aria-live="polite">
         {received ? <div className="cs-transform-result"><p className="cs-kicker">TRASFORMAZIONE COMPLETATA</p>
-          <CardReworkP4Scaled agent={firstActCard(received)} width={220}/><h3>{firstActCard(received).name}</h3><p>Il nuovo Figlio è ora nella tua armata o in riserva, al posto della copia consumata.</p>
+          <CardReworkP4Scaled agent={firstActCard(received)} width={220}/><h3>{firstActCard(received).name}</h3><p>Il nuovo Figlio è ora nel tuo esercito o in riserva, al posto della copia consumata.</p>
           <button className="cs-primary" onClick={()=>setReceived(null)}>Continua</button>
         </div> : source ? <>
           <p className="cs-kicker">UNA COPIA · UNA NUOVA IDENTITÀ</p>
@@ -67,7 +67,7 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
             <div className="cs-transform-mystery"><CampaignSigil kind="sun"/><strong>Figlio dell’Orizzonte</strong><span>Lega {source.league}</span><small>Identità casuale</small></div>
           </div>
           <h3>{source.name}</h3><p>Consumi questa copia e ottieni un Figlio casuale della stessa Lega, fra quelli che non possiedi.</p>
-          {run.deck.includes(source.id)&&<p>{count(source.id)>1?'Un’altra copia conserverà il suo posto nell’armata.':'Il nuovo Figlio prenderà il suo posto nell’armata.'}</p>}
+          {run.deck.includes(source.id)&&<p>{count(source.id)>1?'Un’altra copia conserverà il suo posto nell’esercito.':'Il nuovo Figlio prenderà il suo posto nell’esercito.'}</p>}
           <p className="cs-transform-pool">{pool.length ? `${pool.length} esiti possibili: ${pool.map(id=>firstActCard(id).name).join(', ')}.` : !mature(run,copy)?'Completa una tappa successiva all’acquisizione per far maturare la copia.':'Non ci sono Figli disponibili di pari Lega per questa copia.'}</p>
           {locked && <p>La trasformazione sarà disponibile dopo aver concluso l’incontro o l’evento.</p>}
           <button className="cs-primary" disabled={locked||!pool.length} onClick={transform}>Conferma trasformazione casuale</button>
