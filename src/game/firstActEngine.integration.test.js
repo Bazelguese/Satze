@@ -1,7 +1,8 @@
 import {describe,it,expect} from 'vitest';
 import {computeDuelResolution} from './duelResolve.js';
 import {firstActCard,campaignField,codes,TOWER_ID,POWER_PACKAGES,NASCENTE} from '../campaign/data/firstAct.js';
-import {createFirstActRun,nascenteCard} from '../campaign/state/firstActState.js';
+import {createFirstActRun,nascenteCard,firstActReducer} from '../campaign/state/firstActState.js';
+import {firstActDuelConfig,firstActMatchOutcome} from '../campaign/logic/firstActBattle.js';
 import {calcInitialBonuses} from '../utils/onlineMatch.js';
 const card=code=>firstActCard(codes(code)[0]);
 const plain={id:99999,name:'Avversario',army:'test',league:2,power:3,damage:2,ability:null};
@@ -63,5 +64,21 @@ describe('first act engine integration',()=>{
   const p={...plain,power:10,damage:3};const base={selectedAgent:p,enemyArmyBonuses:{}};
   expect(duel({...base,campaign:{firstAct:true,plan:'tenuta'}}).damageDealt).toBe(2);
   expect(duel({...base,campaign:{firstAct:true,plan:'tenuta',planUsed:true}}).damageDealt).toBe(3);
+ });
+});
+
+describe('first encounter is winnable independently of the campaign seed',()=>{
+ it.each([1,2,3,4,6,31,999])('conquers the varco against every legal enemy commitment, seed %s',seed=>{
+  const run=firstActReducer(createFirstActRun({seed}),{type:'START',nodeId:'I1'}),config=firstActDuelConfig(run),hands=config.startOptions.fixedHands;
+  expect(run.active.opening[0]).toBe(false);
+  for(let focus=0;focus<=10;focus++){
+   const result=duel({field:config.campaignDuelMod.fixedFields[0],campaign:config.campaignDuelMod,selectedAgent:hands.playerHand[0],enemyAgent:hands.enemyHand[0],...hands,selectedFocus:10,enemySelectedFocus:focus,playerHP:10,enemyHP:10,playerFocus:10,enemyFocus:10,isPlayerFirst:run.active.opening[0],enemyArmyBonuses:{}});
+   expect(result.winner).toBe('player');expect(result.skipConquest).toBeFalsy();
+   expect(firstActMatchOutcome({playerHP:result.finalPlayerHP,enemyHP:result.finalEnemyHP,playerFields:1,enemyFields:0,exhausted:true,round:1,rule:'varco'}).winner).toBe('player');
+  }
+ });
+ it('still permits defeat when the player commits too few FC',()=>{
+  const r=firstActReducer(createFirstActRun({seed:2}),{type:'START',nodeId:'I1'}),c=firstActDuelConfig(r),h=c.startOptions.fixedHands;
+  expect(duel({field:c.campaignDuelMod.fixedFields[0],campaign:c.campaignDuelMod,selectedAgent:h.playerHand[0],enemyAgent:h.enemyHand[0],...h,selectedFocus:1,enemySelectedFocus:10,isPlayerFirst:false,enemyArmyBonuses:{}}).winner).toBe('enemy');
  });
 });

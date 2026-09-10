@@ -325,4 +325,17 @@
   }
 }
 
-.cs-first-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,1fr);gap:24px;align-items:start}.cs-first-map{display:grid;gap:8px;max-height:65vh;overflow:auto;padding:12px;background:#101a16cc}.cs-first-map>div{display:flex;gap:8px}.cs-first-map button{flex:1;text-align:left;padding:12px;border:1px solid #516052;border-radius:5px}.cs-first-map .current{outline:2px solid #d5b87a;border-radius:5px}.cs-first-map button:disabled{opacity:.48}.cs-first-options{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.cs-first-options button,.cs-first-options label{padding:12px;border:1px solid #77745b;border-radius:5px;background:#18241e;color:#eee5cf}.cs-first-options [aria-pressed=true]{outline:2px solid #d5b87a;background:#3a4935}.cs-first-rewards,.cs-first-preview{display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin:20px 0}.cs-first-rewards button{display:flex;flex-direction:column;gap:12px}.cs-first-copy{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #555}.cs-first-copy button:disabled{opacity:.4}.cs-encounter>button{display:block;margin:12px 0}.cs-first-options input{margin-right:8px}@media(max-width:760px){.cs-first-layout{grid-template-columns:1fr}.cs-first-map{max-height:35vh}.cs-first-copy{flex-direction:column}}
+.cs-first-options{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.cs-first-options button,.cs-first-options label{padding:12px;border:1px solid #77745b;border-radius:5px;background:#18241e;color:#eee5cf}.cs-first-options [aria-pressed=true]{outline:2px solid #d5b87a;background:#3a4935}.cs-first-rewards,.cs-first-preview{display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin:20px 0}.cs-first-rewards button{display:flex;flex-direction:column;gap:12px}.cs-first-copy{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #555}.cs-first-copy button:disabled{opacity:.4}.cs-first-options input{margin-right:8px}@media(max-width:760px){.cs-first-copy{flex-direction:column}}
+
+/* Extend the scenic campaign presentation to the eighteen-stage first act. */
+.cs-first-cartography { min-width: 0; }
+.cs-map-pages { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+.cs-map-pages button { border: 1px solid #d5b77b40; background: #0c1a21c9; padding: 9px 12px; color: #bac6bf; font-size: 11px; }
+.cs-map-pages button[aria-pressed=true] { color: #f2dbab; border-color: #d5b77b; background: #58492970; }
+.cs-kind-event .cs-node-medallion { color: #e8d5a0; border-color: #baa66d; }
+.cs-kind-faglia .cs-node-medallion { color: #d1b6ef; border-color: #aa81cc; background: radial-gradient(circle, #463556, #101824); }
+.cs-encounter-body > button:not(.cs-primary) { display: block; width: 100%; margin-top: 12px; padding: 9px; border: 1px solid #d5b77b40; background: transparent; font-size: 11px; }
+.cs-encounter-body .cs-tutorial-note { color: #ead6a6 !important; border-left: 2px solid #d5b77b; padding-left: 10px; }
+.cs-first-reward-panel { padding: 24px; }
+.cs-first-rewards button { padding: 14px; border: 1px solid #bda36d70; background: #152124; color: #ead6a6; }
+@media(max-width:760px) { .cs-act-heading { flex-wrap: wrap; } .cs-act-heading > p { margin: 0; font-size: 12px; } .cs-first-reward-panel { display: block; } }

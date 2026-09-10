@@ -15,6 +15,12 @@ I nuovi slot avviano il primo atto 0.25. I salvataggi dei due modelli precedenti
 - Salvataggio di tentativo, mani, stato logico del duello, esito, premio ed evento pendente; retry, riavvolgimento e controlli contro applicazioni duplicate.
 - Piani P1/P2, Preparazione E06, flag di Comunione e chiusura dell’atto. Le Faglie sono incontri contro IA nell’ambientazione delle incursioni.
 
+### Correzioni del primo incontro e della mappa
+
+I1 è un tutorial con apertura nemica fissa (`openingPlayerFirst: false`): Nascente e Picca restano 2 POT, 2 DAN, Lega 2 e hanno 10 FC. Impegnando tutti i 10 FC il giocatore può conquistare il Varco contro ogni puntata legale nemica; a pari VA, Lega e POT vale il normale spareggio a favore del secondo. L’iniziativa degli altri incontri resta invariata. Un tentativo precedente già iniziato conserva il proprio stato: abbandonandolo e ritentando si applica l’apertura corretta.
+
+L’hub riutilizza la mappa scenica esistente, i sentieri, i medaglioni, il ritratto dell’incontro, le carte dell’armata e la transizione di ingresso. Le diciotto tappe sono mostrate in tre sezioni di sei tappe navigabili; la progressione porta automaticamente alla sezione corrente. Consultare sezioni future non sblocca i nodi.
+
 ### Avvio e configurazione
 
 Eseguire `npm install` e `npm run dev:vite`. Nel menu Campagna scegliere uno slot vuoto, Nuova campagna e Inizia il cammino. Il Nascente parte 2 POT / 2 DAN senza Potere.

@@ -27,7 +27,7 @@ export function firstActCard(id) {
 }
 const battle = (id, title, roster, size, opts = {}) => ({ id, node: id, title, kind: 'battle', army: CONCORDIA_ARMY, roster: codes(roster), size, required: [], fieldIds: [8, 12, 2, TOWER_ID, 4], revealRounds: [1, 1, 1, 3, 4], life: 25, focus: 18, difficulty: 'medium', winRule: 'classic', ...opts });
 export const FIRST_ACT_NODES = [
-  battle('I1', 'Primo contatto', 'V02', 1, { growth: 2, life: 10, focus: 10, fieldIds: [VARCO_ID], revealRounds: [1], winRule: 'varco', difficulty: 'easy' }),
+  battle('I1', 'Primo contatto', 'V02', 1, { growth: 2, life: 10, focus: 10, fieldIds: [VARCO_ID], revealRounds: [1], winRule: 'varco', difficulty: 'easy', openingPlayerFirst: false }),
   battle('I2', 'Pattuglia', 'V01 V04', 2, { growth: 3, life: 10, focus: 10, fieldIds: [8, 12], revealRounds: [1, 1], winRule: 'territory', difficulty: 'easy' }),
   battle('I3', 'Presidio', 'V02 V03 V06', 3, { growth: 4, life: 10, focus: 10, fieldIds: [8, 12, 2], revealRounds: [1, 1, 1], winRule: 'territory' }),
   battle('I4', 'Posto di blocco', 'V01 V03 V04 V05', 4, { growth: 5, life: 10, focus: 10, fieldIds: [8, 12, 2, 4], revealRounds: [1, 1, 1, 3], winRule: 'territory' }),
