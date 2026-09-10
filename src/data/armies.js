@@ -59,7 +59,8 @@ export { ARMY_ICONS };
     "Patto degli Indocili": './Immagini_bg/indocili-bg1.webp',
     "Khemet": './Immagini_bg/Khemet_bg1.webp',
     "Apex": './Immagini_bg/Apex_bg1.webp',
-    "Mascarada": './Immagini_bg/Mascarada_bg1.webp'
+    "Mascarada": './Immagini_bg/Mascarada_bg1.webp',
+    "Concordia di Caelion": './Immagini_bg/Concordia_bg1.webp',
   };
 
   // BONUS ARMATE (unico per ogni armata)

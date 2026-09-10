@@ -8,8 +8,8 @@ export const FIGLI = "Figli dell'Orizzonte";
 export const TOWER_ID = 9201;
 export const VARCO_ID = 9200;
 export const SPECIAL_FIELDS = [
-  { id: VARCO_ID, name: 'Il primo varco', description: 'Conquista: Vinci la partita.', effect: 'Conquista: Vinci la partita.', category: 'neutral', campaignOnly: true },
-  { id: TOWER_ID, name: 'Torre del Richiamo', description: 'Staffetta è soddisfatto. Disponibilità e blocchi restano validi.', effect: 'Staffetta è soddisfatto.', category: 'special', campaignOnly: true, forceStaffetta: true },
+  { id: VARCO_ID, name: 'Il primo varco', description: 'Conquista: Vinci la partita.', effect: 'Conquista: Vinci la partita.', category: 'neutral', campaignOnly: true, bgImage: './campi_bg/campo-9200.webp' },
+  { id: TOWER_ID, name: 'Torre del Richiamo', description: 'Staffetta è soddisfatto. Disponibilità e blocchi restano validi.', effect: 'Staffetta è soddisfatto.', category: 'special', campaignOnly: true, forceStaffetta: true, bgImage: './campi_bg/campo-9201.webp' },
 ];
 export const campaignField = id => [...SPECIAL_FIELDS, ...ALL_BATTLEFIELDS].find(f => f.id === id);
 export const codes = text => text.split(' ').map(code => {

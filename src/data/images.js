@@ -56,6 +56,8 @@ const AGENT_ID_RANGES = [
   [1001, 1030],
   [1101, 1130],
   [1201, 1230],
+  // Concordia di Caelion (catalogo campagna esclusivo)
+  [9101, 9115],
 ];
 
 function buildCardImagePaths() {
