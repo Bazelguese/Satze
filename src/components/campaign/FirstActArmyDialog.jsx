@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { CampaignTransformation } from './CampaignTransformation.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { CampaignSigil } from './CampaignScenery.jsx';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
@@ -9,15 +10,23 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
   const [tab,setTab] = useState('army');
   const [selected,setSelected] = useState(null);
   const [received,setReceived] = useState(null);
+  const [sequence,setSequence] = useState(null);
+  const transforming = useRef(false);
   const copy = run.copies.find(c=>c.uid === selected);
   const source = copy && firstActCard(copy.cardId);
   const pool = copy ? transformationPool(run,copy.uid) : [];
   const locked = !!(run.active || run.pendingReward || run.pendingEvent || run.outcome);
   const count = id => run.copies.filter(c=>c.cardId === id).length;
   const transform = () => {
+    if (transforming.current) return;
+    transforming.current = true;
     const next = commit({type:'TRANSFORM',uid:copy.uid});
-    if (next) { setReceived(next.copies.find(c=>c.uid===copy.uid).cardId); setSelected(null); }
+    if (next) { const id=next.copies.find(c=>c.uid===copy.uid).cardId; setSequence({source,result:firstActCard(id)});setReceived(id);setSelected(null); }
+    else transforming.current = false;
   };
+  if (sequence) return <CampaignDialog title="Il passaggio" kicker="TRASFORMAZIONE" onClose={onClose}>
+    <CampaignTransformation {...sequence} onComplete={()=>{setSequence(null);transforming.current=false;}}/>
+  </CampaignDialog>;
   return <CampaignDialog title="Armata e riserva" kicker="IL TUO SEGUITO" onClose={onClose}>
     <nav className="cs-army-tabs" aria-label="Gestione armata">
       <button aria-pressed={tab==='army'} onClick={()=>setTab('army')}>Armata · {draft.length}/{run.slots}</button>

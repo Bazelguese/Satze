@@ -1,4 +1,4 @@
-import { isFirstActRun, assertFirstActRun, firstActReducer } from './firstActState.js';
+import { isFirstActRun, assertFirstActRun, firstActReducer, migrateFirstActGrowth } from './firstActState.js';
 import { isControlledRun, assertControlledRun } from './controlledCampaignState.js';
 // ============================================
 // PERSISTENZA RUN CAMPAGNA — slot condivisi (3)
@@ -27,9 +27,9 @@ export function loadCampaignRun(slotIndex, act) {
   try {
     const raw = localStorage.getItem(campaignSlotStorageKey(slotIndex));
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    let parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || !parsed.actId) return null; // legacy o corrotto
-    if (isFirstActRun(parsed)) assertFirstActRun(parsed);
+    if (isFirstActRun(parsed)) { parsed=migrateFirstActGrowth(parsed);assertFirstActRun(parsed); }
     else if (isControlledRun(parsed)) assertControlledRun(parsed);
     else assertRunInvariants(parsed, act);
     return parsed;

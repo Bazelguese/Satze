@@ -21,16 +21,13 @@ export function shuffled(values, seed, salt) {
 export function nascenteCard(run) {
   const n = run.nascente, pkg = POWER_PACKAGES.find(p => p.id === n.packageId);
   let ability = pkg ? { ...pkg.ability } : null;
-  let power = 2 + n.power, damage = 2 + n.damage;
-  if (n.packageId === 'O1') power += n.evolution ? 3 : 2;
-  if (n.evolution && ability) {
-    const values = { C1: 3, C2: 8, A1: 3, S1: -3, S2: -8, G1: 3, G2: -3, K1: 3, F1: 2 };
-    if (values[n.packageId] != null) ability.value = values[n.packageId];
-    if (n.packageId === 'A2') ability = { trigger: 'rimonta', effect: 'campaignStats', value: n.evolution === 'damage' ? { power: 1, damage: 2 } : { power: 2, damage: 1 } };
-    if (['K2', 'F2', 'B1', 'B2'].includes(n.packageId)) power++;
-  }
+  // Old E03 evolutions are read as one independent stat, including saved runs/checkpoints.
+  const finalStat = n.finalStat || (n.evolution ? (n.evolution === 'damage' ? 'damage' : 'power') : null);
+  let power = 2 + n.power + Number(finalStat === 'power');
+  const damage = 2 + n.damage + Number(finalStat === 'damage');
+  if (n.packageId === 'O1') power += 2;
   const label = ability ? `${TRIGGER_NAMES[ability.trigger] || ability.trigger}: ${effectLabel(ability)}` : 'Nessun Potere';
-  return { id: NASCENTE, name: 'Il Nascente', army: FIGLI, power, damage, league: 2 + Number(n.statTaken) + Number(Boolean(n.evolution)), ability, description: label, icon: 'sun', campaignOnly: true };
+  return { id: NASCENTE, name: 'Il Nascente', army: FIGLI, power, damage, league: 2 + Number(n.statTaken), ability, description: label, icon: 'sun', campaignOnly: true };
 }
 function effectLabel(a) {
   const labels = { power: 'POT', damage: 'DAN', assaultValue: 'VA', focusCoin: 'FC', enemyPower: 'POT nemica', enemyDamage: 'DAN nemici', enemyAssault: 'VA nemico' };
@@ -38,12 +35,28 @@ function effectLabel(a) {
   return ({ blockBonus: 'Blocca Bonus', directDamage: `${a.value} danni diretti`, heal: `Cura ${a.value}`, selfDamage: `−${a.value} PV a te`, powerAndDamage: '+1 POT, +1 DAN', campaignStats: `+${a.value?.power} POT, +${a.value?.damage} DAN` })[a.effect] || a.effect;
 }
 export const runCard = (r, id) => id === NASCENTE ? nascenteCard(r) : firstActCard(id);
+export function migrateFirstActGrowth(r) {
+  if (!isFirstActRun(r)) return r;
+  let next=r;
+  if (r.nascente?.evolution) {
+    next={...r,nascente:{...r.nascente,finalStat:r.nascente.finalStat || (r.nascente.evolution==='damage'?'damage':'power'),evolution:null}};
+    if (r.active?.snapshot) {
+      const card=nascenteCard(next), refresh=c=>c?.id===NASCENTE?{...c,...card}:c;
+      const snapshot={...r.active.snapshot};
+      for(const key of ['playerHand','playerUsedCards']) if(Array.isArray(snapshot[key])) snapshot[key]=snapshot[key].map(refresh);
+      if(snapshot.selectedAgent) snapshot.selectedAgent=refresh(snapshot.selectedAgent);
+      next.active={...r.active,snapshot};
+    }
+  }
+  if(r.checkpoints?.length) next={...next,checkpoints:r.checkpoints.map(c=>({...c,state:migrateFirstActGrowth(c.state)}))};
+  return next;
+}
 export const runLeague = (r, ids = r.deck) => ids.reduce((s, id) => s + (runCard(r, id)?.league ?? Infinity), 0);
 export const availableFirstActNodes = r => (r.outcome ? [] : FIRST_ACT_STAGES[r.stage] || []).filter(id => !r.branch || id === r.branch).map(firstActNode);
 export const mature = (r, c) => r.completed >= c.acquiredAt + 1;
 export function createFirstActRun({ seed = Math.floor(Math.random() * 2 ** 31) } = {}) {
   validateFirstActData();
-  return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
+  return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, finalStat: null, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
 }
 export function validateFirstActDeck(r, deck = r.deck) {
   return Array.isArray(deck) && deck.length === r.slots && new Set(deck).size === deck.length && deck.includes(NASCENTE) && deck.every(id => id === NASCENTE || r.copies.some(c => c.cardId === id)) && runLeague(r, deck) <= 30;
@@ -113,7 +126,7 @@ export function eventChoices(r) {
   const choices = ['conserva'];
   if (ev.id === 'E02') choices.push('power', 'damage');
   if (!r.nascente.packageId || ev.id === 'E03') choices.push(...POWER_PACKAGES.map(p => p.id));
-  if (ev.id === 'E03' && r.nascente.packageId) choices.push(...(r.nascente.packageId === 'A2' ? ['evolvePower', 'evolveDamage'] : ['evolve']));
+  if (ev.id === 'E03') choices.push('finalPower', 'finalDamage');
   return choices;
 }
 export function previewFirstActChoice(r, choice) {
@@ -123,7 +136,7 @@ export function previewFirstActChoice(r, choice) {
     next.preparation = choice === 'liberi' ? { life: 3, focus: 0 } : { life: 0, focus: 2 };
     next.flags = { ...r.flags, [choice === 'liberi' ? 'LIBERI' : choice === 'trattenuti' ? 'TRATTENUTI' : 'COMUNIONE_VALLO']: true, ...(choice === 'comunione' ? { COMUNIONE_VALLO: true } : {}) };
   } else if (choice === 'power' || choice === 'damage') { n[choice]++; n.statTaken = true; }
-  else if (choice.startsWith('evolve')) n.evolution = choice === 'evolveDamage' ? 'damage' : 'power';
+  else if (choice === 'finalPower' || choice === 'finalDamage') { n.finalStat = choice === 'finalDamage' ? 'damage' : 'power'; n.evolution = null; }
   else if (choice !== 'conserva') { n.packageId = choice; n.evolution = null; }
   next.nascente = n;
   if (!legalArmy(next)) throw new Error('Questa crescita non consente un esercito entro Lega 30.');

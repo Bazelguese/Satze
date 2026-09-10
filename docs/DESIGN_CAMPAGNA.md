@@ -479,7 +479,7 @@ Controllo combinatorio: i roster I.7–I.12, contando i due rami I.9, rispettano
 
 Il boss proposto concentra 15 Lega nella prima squadra e 18 nella seconda; la carta N01 di Lega 5 compare in entrambe. Il roster resta a 30 Lega, mentre le dieci presenze totalizzano 33. Questo vantaggio del ritorno va provato con i PV conservati e il +4 PV iniziale già proposto, senza aumenti gratuiti di POT o DAN. Il resto della progressione alterna picchi élite e incontri ordinari.
 
-Disponibilità con il profilo provvisorio: entro I.4 si conservano cinque identità L2 incluso il Nascente. I.6 e I.8 aggiungono al massimo L3; I.9–I.11 al massimo L4. Il nucleo di dieci costa al massimo 28 con Nascente L2, oppure 30 con Nascente L4. Trasformazioni di pari Lega mantengono questo limite. È una formazione conservativa possibile, non la legalità di ogni selezione.
+Disponibilità con il profilo provvisorio: entro I.4 si conservano cinque identità L2 incluso il Nascente. I.6 e I.8 aggiungono al massimo L3; I.9–I.11 al massimo L4. Il nucleo di dieci costa al massimo 28 con Nascente L2, oppure 29 con Nascente L3. Trasformazioni di pari Lega mantengono questo limite. È una formazione conservativa possibile, non la legalità di ogni selezione.
 
 La 0.25 fissa Leghe di prova esplicite per Nascente e G03 al capitolo 26. Prima di confermare una modifica si verifica l’esistenza di una formazione legale; se occorre si riorganizza. Nessuna trasformazione è obbligata. Una futura revisione delle Leghe richiederà di ricontrollare il limite: non modifica retroattivamente la versione di una campagna avviata.
 
@@ -989,7 +989,7 @@ Ogni opportunità concede una modifica. I gradini seguenti sono alternative cand
 | B1/B2 | Blocca Bonus invariato, +1 POT indipendente | Nessun artificiale «Blocca Bonus +1». Un cambio a Blocca Potere è un altro pacchetto, da prezzare |
 | O1 | +2 POT di forma → +3 POT di forma, costo −3 PV invariato | Diventa 5/2; l'intero aumento della forma si perde se la si abbandona |
 
-Proposta 0.22 per l’Atto I: E02 concede una modifica statistica indipendente; E03 concede una sola evoluzione dalla tabella oppure un cambio di pacchetto iniziale. Questo limite conta le scelte, non certifica pari valore. Il pricing resta da validare sul corpo e sul Potere completi; nessun coefficiente assente vale zero. Per A2 la nuova proposta aumenta una sola componente, POT oppure DAN.
+La precedente proposta 0.22 di evoluzioni E03 è rinviata agli atti successivi. Nel primo atto E02 concede una modifica statistica indipendente; E03 concede +1 POT oppure +1 DAN senza aumento di Lega, oppure un cambio di pacchetto iniziale. Questo limite conta le scelte, non certifica pari valore. Il pricing resta da validare sul corpo e sul Potere completi; nessun coefficiente assente vale zero. Per A2 la nuova proposta aumenta una sola componente, POT oppure DAN.
 
 ### Provenienza delle modifiche
 
@@ -997,7 +997,7 @@ La scheda deve distinguere: statistiche originali, modificatori della forma, mod
 
 Esempio con la proposta attuale: 2 POT originali +2 Colosso +1 modifica indipendente = 5 POT. Uscendo da Colosso resta 3 POT. Se il potenziamento acquistato è invece una crescita della forma da +2 a +3, all'uscita si rimuovono tutti e tre i punti della forma. L'evento deve dichiarare quale componente modifica.
 
-Proposta generale per cambi successivi: trasferire gli investimenti della forma soltanto mediante esiti espliciti già valutati. Nel primo atto E03 offre una scelta fra evolvere e cambiare: il cambio usa un pacchetto iniziale del capitolo 12, conserva E02 indipendente e non concede anche l’evoluzione. Non serve quindi inventare un cambio numerico automatico fra effetti diversi. E04 degli atti successivi resta da valutare separatamente.
+Proposta generale per cambi successivi: trasferire gli investimenti della forma soltanto mediante esiti espliciti già valutati. Nel primo atto E03 offre una scelta fra aumentare una statistica e cambiare: il cambio usa un pacchetto iniziale del capitolo 12, conserva E02 indipendente e non concede anche l’evoluzione. Non serve quindi inventare un cambio numerico automatico fra effetti diversi. E04 degli atti successivi resta da valutare separatamente.
 
 Le modifiche indipendenti restano registrate anche quando un cap impedisce di applicarle integralmente. Il valore effettivo rispetta i limiti; cambiare forma non cancella un investimento né permette di duplicarlo. I cap storici del Nascente sono POT 7 e DAN 6; applicarli dopo la composizione non basta a certificare la Lega.
 
@@ -1262,7 +1262,7 @@ Gli eventi pongono domande filosofiche e militari. Le risposte indirizzano verso
 | --- | --- | --- | --- |
 | E01 Prima Domanda | Dopo I.4 | Primo Potere del Nascente, accesso agli otto archetipi. | Confermato; testi e pacchetti candidati. |
 | E02 Modifica statistica | Dopo I.6, prima di F1; poi II.4 e III.2 proposti. | Una modifica indipendente: +1 POT oppure +1 DAN. | Collocazioni e budget proposti. |
-| E03 Risonanza | Dopo I.11, II.2, III.4 | Atto I: evoluzione del Potere o cambio a un pacchetto iniziale. Una sola scelta; dettagli 0.22. | Collocazioni e incrementi proposti. |
+| E03 Risonanza | Dopo I.11, II.2, III.4 | Atto I: +1 POT oppure +1 DAN senza aumento di Lega, oppure cambio a un pacchetto iniziale. Una sola scelta. | Collocazioni e incrementi proposti. |
 | E04 Rifrazione | Dopo II.8, III.8 | Cambio di direzione con confronto completo fra vecchio e nuovo Potere. | Collocazioni e costo proposti. |
 
 Le Domande usano esclusivamente i Poteri candidati dei capitoli 12–13. Per i blocchi non numerici E03 offre una modifica statistica dichiarata; non esiste Blocca Bonus +1. Un evento concede una sola scelta: potenziare, cambiare o conservare sono alternative. I quindici Poteri iniziali restano accessibili senza vincoli morali o di armata.
@@ -1330,23 +1330,9 @@ L’anteprima confronta corpo attuale e risultante, Potere, modifiche indipenden
 
 Dopo I.11, prima del boss. Testo proposto: «L’ultima difesa ha ceduto, ma la porta resta davanti a voi. Hai visto ciò che la tua risposta può ottenere e ciò che lascia scoperto. Vuoi renderla più incisiva, oppure rispondere diversamente?»
 
-Tre vie: «Approfondire la mia risposta» apre una sola evoluzione della tabella; «Cambiare ciò su cui faccio affidamento» riapre tutti i quindici pacchetti iniziali E01; «Conservare la mia risposta» completa la tappa senza modifica. Se sei ancora senza Potere, acquisirne uno tramite E01 sostituisce l’evoluzione.
+Tre vie: scegliere +1 POT oppure +1 DAN indipendente, cambiare il Potere scegliendo uno dei quindici pacchetti iniziali E01, oppure conservare la risposta attuale. Una sola scelta per evento. La crescita statistica è disponibile anche senza Potere e non aumenta la Lega: nel primo atto il Nascente non raggiunge L4. Il trigger e l’effetto del Potere restano invariati quando si sceglie una statistica.
 
-| Pacchetto | Evoluzione candidata | Vincolo |
-| --- | --- | --- |
-| C1 / C2 | +2 POT → +3 POT / +6 VA → +8 VA | Trigger invariato. |
-| A1 | +2 DAN → +3 DAN | Richiede ancora di vincere per infliggere DAN. |
-| A2 | +2 POT, +1 DAN oppure +1 POT, +2 DAN | Scegli una sola componente; sostituisce il vecchio +2/+2. |
-| S1 / S2 | −2 POT → −3 POT / −6 VA → −8 VA | Minimi invariati: rispettivamente 2 e 5. |
-| G1 / G2 | Cura 2 → 3 / −2 DAN → −3 DAN | Tetto della cura ordinario; minimo DAN 1. |
-| K1 | 2 danni diretti → 3 | Imboscata invariata. |
-| F1 | +1 FC → +2 FC | Turbo invariato; non aumenta la puntata corrente. |
-| K2 / F2 / B1 / B2 | Potere invariato; +1 POT indipendente | Si conserva cambiando forma. Per K2 può ridurre la frequenza della sconfitta richiesta. |
-| O1 | +2 POT di forma → +3 POT di forma | Costo −3 PV e DAN di forma 2 invariati; si rimuove tutta la POT di forma quando la abbandoni. |
-
-Cambiare sceglie un pacchetto iniziale completo, conservando le statistiche indipendenti di E02. Si rimuovono il vecchio Potere e i modificatori della sua forma; non si ottiene anche l’evoluzione di questa tabella. Tornare sullo stesso pacchetto non accumula statistiche. Esempio: Colosso 5/2, di cui +1 POT indipendente, diventa C1 3/2 con Imboscata: +2 POT.
-
-Se l’evoluzione statistica indipendente supera un cap, può essere proposta +1 DAN indipendente al suo posto, se valida, con anteprima esplicita. Per ogni altro esito non valido restano Cambio o Conserva; nessun premio sostitutivo automatico. Le singole evoluzioni sono candidate da prezzare, non incrementi già dichiarati equivalenti.
+Cambiare pacchetto conserva le statistiche indipendenti di E02, rimuove i modificatori della vecchia forma e applica quelli della nuova. Non concede anche il +1 statistico E03. L’anteprima mostra POT, DAN e Lega prima della conferma. I precedenti salvataggi con evoluzione E03 sono interpretati come +1 alla statistica corrispondente (POT per la precedente evoluzione generica), senza il gradino di Lega aggiuntivo; lo stesso vale per i checkpoint.
 
 La conferma salva pacchetto e provenienza delle modifiche una sola volta. Ricaricare riprende la scelta o l’esito salvato; retry del boss non riapre E03. Il riavvolgimento precedente all’evento ripristina corpo e Potere precedenti. Nessun evento modifica le mani casuali, l’identità dei prigionieri o il Bonus Armata del Nascente.
 
@@ -1630,7 +1616,7 @@ I.1–I.4: 10 PV e 10 FC; da I.5: 25 PV e 18 FC, con modificatori dichiarati. Il
 
 #### Leghe di prova senza valutazione automatica
 
-Scelta tecnica provvisoria 0.25: Nascente L2 iniziale e con qualsiasi pacchetto acquisito. Una modifica statistica E02 vale un gradino aggiuntivo; evolvere in E03 vale un altro gradino. Quindi Lega di prova = 2 + modifica E02 presente + evoluzione E03 presente, massimo L4. Conserva non aggiunge gradini. Acquisire un Potere tardivamente non aggiunge il gradino dell’evento cui si rinuncia; cambiare pacchetto in E03 mantiene E02 e non aggiunge evoluzione. Nessuna di queste cifre misura il valore reale del Potere.
+Correzione dopo playtest: Nascente L2 iniziale e con qualsiasi pacchetto acquisito. La modifica statistica E02 porta a L3. E03 offre +1 POT oppure +1 DAN senza variazione di Lega, in alternativa a Cambio o Conserva. La Lega di prova è quindi 2 + modifica E02 presente, massimo L3 nel primo atto. Acquisire un Potere non aumenta la Lega. Nessuna di queste cifre misura il valore reale del Potere.
 
 G03 usa L3; gli altri agenti mantengono la Lega del catalogo. I cap del corpo del Nascente restano POT 7 e DAN 6. Questi dati servono a budget, anteprime, spareggi e trasformazioni: non si esegue il vecchio valutatore per sovrascriverli. Il modello numerico del capitolo 13 resta materiale per il bilanciamento futuro. Configurazioni prive di una Lega esplicita sono errori di dati, non carte a costo zero.
 
@@ -1689,3 +1675,10 @@ PROPOSTA_MODELLO_v3.md è citato dai documenti recuperati, ma il file completo n
 Per Terraformare sono stati esaminati src/data/battlefieldsData.js, src/game/battlefieldEffects.js, src/game/duelResolve.js e le fasi duelFieldSetup, duelMainAbilities, duelArmyBonusPhases, duelBlockPrescan, duelPostBattle, duelResolutionFinish e duelFieldStatTracking. Il catalogo dei Campi è generato e deve essere aggiornato dalla sua fonte. Nel blocco I.5–I.6 sono stati inoltre confrontati src/data/gameModes.js, src/hooks/useGameFlow.js, src/game/ai/projectPostDuelState.js e Codice/satze.jsx per risorse, iniziativa, rivelazioni e conclusione della battaglia.
 
 I due approfondimenti precedenti su pacchetti del Nascente e Terraformare sono integrati rispettivamente nei capitoli 12–13 e 14. Le regole superate su impronte, conversioni fisse e matrice 4×4 restano sostituite. Il precedente divieto generale di pesca viene precisato dalla versione 0.16: il ricambio fra squadre è ammesso, la pesca libera durante i duelli non è introdotta.
+
+
+### Presentazione della campagna — correzioni dopo playtest
+
+Mappa, premi, domande e conclusione entrano gradualmente, con una transizione fra le viste quando il browser la supporta. Il cambio dell’incontro, delle risposte e dell’anteprima del Nascente ha una propria animazione. Lo scenario si muove lentamente, la tappa corrente pulsa e le faglie ruotano; le immagini diventano visibili dopo il caricamento. I controlli Animazioni e movimento ridotto del sistema restano rispettati.
+
+La trasformazione salva prima un unico esito casuale, poi mostra dissoluzione della copia, convergenza luminosa e rivelazione del Figlio. La sequenza è saltabile e con movimento ridotto mostra direttamente il risultato. Chiudere la finestra durante l’animazione non annulla né ripete la trasformazione.

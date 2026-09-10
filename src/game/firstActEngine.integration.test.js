@@ -44,9 +44,9 @@ describe('first act engine integration',()=>{
   const arena=duel({selectedAgent:transform(3),enemyAgent:{...plain,power:2,ability:{trigger:null,effect:'power',value:5}}});expect(arena.enemyPower).toBe(2);
   const mine=duel({selectedAgent:{...transform(4),power:10},playerHP:10});expect(mine.finalPlayerHP).toBe(12);
  });
- it.each(POWER_PACKAGES.map(p=>[p.id]))('resolves initial and evolved package %s',(id)=>{
-  for(const evolution of [null,'power']){
-   const r=createFirstActRun();r.nascente={...r.nascente,packageId:id,evolution};
+ it.each(POWER_PACKAGES.map(p=>[p.id]))('resolves initial and stat-enhanced package %s',(id)=>{
+  for(const finalStat of [null,'power','damage']){
+   const r=createFirstActRun();r.nascente={...r.nascente,packageId:id,finalStat};
    const result=duel({selectedAgent:nascenteCard(r),conqueredFields:{1:{winner:'enemy'}},playerHP:10,isPlayerFirst:id==='G2'||id==='B1'?false:true});
    expect(Number.isFinite(result.finalPlayerHP)).toBe(true);expect(Number.isFinite(result.playerPower)).toBe(true);
   }

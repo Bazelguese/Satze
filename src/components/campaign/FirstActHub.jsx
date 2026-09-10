@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
-import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
-import { CampaignBackdrop, CampaignSigil, CampaignMap, campaignArt, heroArt, encounterKinds } from './CampaignScenery.jsx';
+import { CampaignScene, CampaignMotionControl, campaignMotionAllowed } from './CampaignScene.jsx';
+import { CampaignBackdrop, CampaignArt, CampaignSigil, CampaignMap, campaignArt, heroArt, encounterKinds } from './CampaignScenery.jsx';
 import { CampaignDeparture } from './CampaignDeparture.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { loadCampaignRun, saveCampaignRun } from '../../campaign/state/persistence.js';
@@ -18,6 +19,7 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const [error,setError] = useState(''), [army,setArmy]=useState(false), [selected,setSelected]=useState(null), [choice,setChoice]=useState(null), [family,setFamily]=useState(null), [inspect,setInspect]=useState(false);
   const [departure,setDeparture]=useState(null);
   const mapViewport=useRef(null);
+  const currentRun=useRef(run);
   useEffect(()=>{
     const viewport=mapViewport.current;
     if (!viewport) return;
@@ -39,7 +41,18 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const [draft,setDraft]=useState(run?.deck || []);
   if (!run) return <section className="campaign-control"><p>Salvataggio non leggibile.</p><button onClick={onBack}>Menu</button></section>;
   const commit = action => {
-    try { const next=firstActReducer(run,action); if(!saveCampaignRun(next,campaignSaveSlot)) throw new Error('Salvataggio non riuscito: nessuna azione confermata.'); setRun(next);setDraft(next.deck);setError('');return next; }
+    try {
+      const previous=currentRun.current, next=firstActReducer(previous,action);
+      if(!saveCampaignRun(next,campaignSaveSlot)) throw new Error('Salvataggio non riuscito: nessuna azione confermata.');
+      currentRun.current=next;
+      const update=()=>{setRun(currentRun.current);setDraft(currentRun.current.deck);setError('');};
+      const changed=previous.stage!==next.stage || previous.pendingReward!==next.pendingReward || previous.pendingEvent!==next.pendingEvent;
+      if(changed && campaignMotionAllowed() && document.startViewTransition) {
+        try { const transition=document.startViewTransition(()=>flushSync(update));transition.ready?.catch(()=>{}); }
+        catch { update(); }
+      } else update();
+      return next;
+    }
     catch(e){setError(e.message);return null;}
   };
   const available=availableFirstActNodes(run), node=available.find(n=>n.id===selected)||available[0];
@@ -56,12 +69,13 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
     <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · ATTO I</span><strong>Oltre il Vallo</strong></div></div><nav className="cs-actions"><button onClick={openArmy}>Armata e riserva</button><CampaignMotionControl/><button onClick={onBack}>Menu</button></nav></header>
     <div className="cs-act-heading"><div><p className="cs-kicker">IL CAMMINO DEL NASCENTE</p><h1>Oltre il Vallo</h1></div><p>{run.completed} tappe completate · {run.slots} posti · Lega {runLeague(run)}/30</p></div>
     {error&&<p className="cs-error" role="alert">{error}</p>}
-    {run.outcome ? <section className="cs-ending"><img src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body"><h2>Gli agenti dello sconfitto</h2><p>{run.pendingReward.offer.length===1?'Hai ottenuto questo agente.':'Scegli un agente fra i due prigionieri.'} Un’identità già posseduta resta in riserva come copia separata.</p><div className="cs-first-rewards">{run.pendingReward.offer.map(id=><button key={id} onClick={()=>commit({type:'REWARD',cardId:id})}><CardReworkP4Scaled agent={firstActCard(id)} width={180}/><span>Accogli {firstActCard(id).name}</span></button>)}</div></div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">
+    <div className="cs-stage-content" key={`${run.stage}:${run.pendingReward?'reward':run.pendingEvent?'event':run.outcome?'ending':'map'}`}>
+    {run.outcome ? <section className="cs-ending"><CampaignArt src={heroArt(nascente)} alt="Il Nascente"/><div><h2>Il Vallo è alle tue spalle</h2><p>Hai completato il primo atto. Il Nascente e la tua riserva conservano il cammino compiuto.</p><button className="cs-primary" onClick={onBack}>Torna al menu</button></div></section> : run.pendingReward ? <section className="cs-encounter cs-first-reward-panel"><div className="cs-encounter-body"><h2>Gli agenti dello sconfitto</h2><p>{run.pendingReward.offer.length===1?'Hai ottenuto questo agente.':'Scegli un agente fra i due prigionieri.'} Un’identità già posseduta resta in riserva come copia separata.</p><div className="cs-first-rewards">{run.pendingReward.offer.map(id=><button key={id} onClick={()=>commit({type:'REWARD',cardId:id})}><CardReworkP4Scaled agent={firstActCard(id)} width={180}/><span>Accogli {firstActCard(id).name}</span></button>)}</div></div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">
       <div className="cs-map-scroll" ref={mapViewport} tabIndex={0} role="region" aria-label="Mappa scorrevole della campagna">
         <CampaignMap act={mapAct} run={mapRun} continuous availableIds={available.map(n=>n.id)} interactionLocked={!!run.active} selectedId={battleNode?.id} onSelect={setSelected} legend="Scorri per esplorare il cammino"/>
       </div>
-    </div><aside className={`cs-encounter cs-kind-${battleNode?.kind}`} aria-label="Incontro selezionato">
-      <div className="cs-encounter-art"><img src={battleNode?.kind==='event'?heroArt(nascente):battleNode?.kind==='faglia'?`${import.meta.env.BASE_URL}card-images/agents/${enemy[0]}.webp`:campaignArt} alt={battleNode?.army || 'Il Nascente'}/><span className="cs-encounter-type"><CampaignSigil kind={battleNode?.kind}/>{encounterKinds[battleNode?.kind]}</span></div><div className="cs-encounter-body">
+    </div><aside key={battleNode?.id} className={`cs-encounter cs-kind-${battleNode?.kind}`} aria-label="Incontro selezionato">
+      <div className="cs-encounter-art"><CampaignArt src={battleNode?.kind==='event'?heroArt(nascente):battleNode?.kind==='faglia'?`${import.meta.env.BASE_URL}card-images/agents/${enemy[0]}.webp`:campaignArt} alt={battleNode?.army || 'Il Nascente'}/><span className="cs-encounter-type"><CampaignSigil kind={battleNode?.kind}/>{encounterKinds[battleNode?.kind]}</span></div><div className="cs-encounter-body">
       <p className="cs-kicker">{battleNode?.kind==='faglia'?'FAGLIA · INCURSIONE':battleNode?.kind==='event'?'DOMANDA':battleNode?.kind==='boss'?'BOSS · DUE SQUADRE':battleNode?.kind==='elite'?'ÉLITE':'SCONTRO'}</p><h2>{battleNode?.title}</h2>
       {run.active ? <><p>Fase {run.active.phase+1} di {run.active.enemySquads.length}. Il tentativo è conservato.</p><button className="cs-primary" onClick={start}>{run.active.snapshot?'Riprendi lo scontro':run.active.phase?'Affronta la seconda squadra':'Entra nello scontro'}</button><button onClick={()=>commit({type:'ABANDON'})}>Abbandona il tentativo</button></> : node?.kind==='event' ? <button className="cs-primary" onClick={()=>commit({type:'ENTER_EVENT'})}>Ascolta la domanda</button> : <>
       <p>{node?.kind==='faglia'?'Una deformazione dello spazio apre il passaggio a un’armata guidata da un altro Giocatore. Affronti la sua incursione.':node?.army}</p><p>{node?.size} agenti per esercito · {Math.min(5,node?.size)} in mano</p><p>Tu: {resources?.playerLife} PV / {resources?.playerFocus} FC<br/>Nemico: {resources?.enemyLife} PV / {resources?.enemyFocus} FC</p>{resources?.plan&&<p>{resources.plan==='assalto'?'Assalto: primo DAN nemico +1.':'Tenuta: primo DAN subito dal nemico −1 (min 0).'}</p>}
@@ -71,9 +85,10 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
       <button className="cs-primary" onClick={start}>Affronta l’incontro</button>{node?.optional&&<button onClick={()=>{commit({type:'SKIP'});setSelected(null);}}>Prosegui verso la breccia</button>}{run.lastResult==='enemy'&&<button onClick={()=>{if(commit({type:'REWIND'}))setSelected(null);}}>Riavvolgi tre tappe</button>}</>}
       {battleNode?.kind!=='event'&&<button className="cs-test-win" disabled={!!departure} onClick={()=>commit({type:'TEST_WIN',nodeId:battleNode.id})}>Test: vinci incontro</button>}
     </div></aside></div>}
+    </div>
     <footer className="cs-party">
-      <button className="cs-hero-summary" onClick={openArmy}><img src={heroArt(nascente)} alt=""/><div><span className="cs-kicker">IL TUO NASCENTE</span><strong>{nascente.power} POT <i> / </i>{nascente.damage} DAN <i> · </i> L{nascente.league}</strong><small>{nascente.description}</small></div></button>
-      <button className="cs-party-deck" onClick={openArmy} aria-label="Gestisci le carte dell’armata"><span className="cs-deck-fan" aria-hidden="true">{run.deck.filter(id=>id!==NASCENTE).slice(0,5).map((id,i)=><img key={id} src={`${import.meta.env.BASE_URL}card-images/agents/${id}.webp`} alt="" style={{'--fan-index':i}}/>)}</span><span><strong>Armata dell’Orizzonte</strong><small>{run.deck.length} carte · Lega {runLeague(run)}/30 · {run.copies.length} copie conservate</small></span><b>→</b></button>
+      <button className="cs-hero-summary" onClick={openArmy}><CampaignArt src={heroArt(nascente)} alt=""/><div><span className="cs-kicker">IL TUO NASCENTE</span><strong>{nascente.power} POT <i> / </i>{nascente.damage} DAN <i> · </i> L{nascente.league}</strong><small>{nascente.description}</small></div></button>
+      <button className="cs-party-deck" onClick={openArmy} aria-label="Gestisci le carte dell’armata"><span className="cs-deck-fan" aria-hidden="true">{run.deck.filter(id=>id!==NASCENTE).slice(0,5).map((id,i)=><CampaignArt key={id} src={`${import.meta.env.BASE_URL}card-images/agents/${id}.webp`} alt="" style={{'--fan-index':i}}/>)}</span><span><strong>Armata dell’Orizzonte</strong><small>{run.deck.length} carte · Lega {runLeague(run)}/30 · {run.copies.length} copie conservate</small></span><b>→</b></button>
     </footer>
   </div>
   {departure&&<CampaignDeparture mission={departure.mission} onReady={enterDuel}/>}
