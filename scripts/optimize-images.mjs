@@ -1,6 +1,6 @@
 /**
- * Converte le immagini pesanti di public/ in WebP ridimensionato:
- *  - public/card-images/agents/*.png  -> .webp (max 512px lato lungo, q80)
+ * Converte le immagini pesanti di public/ in WebP:
+ *  - public/card-images/agents/*.png  -> .webp (risoluzione nativa, q90)
  *  - public/campi_bg/*.png            -> .webp (dimensione originale, q75)
  *
  * I PNG originali vengono spostati in originals_png/ (fuori da public/,
@@ -21,9 +21,9 @@ const TARGETS = [
   {
     dir: path.join(rootDir, 'public', 'card-images', 'agents'),
     backup: path.join(backupRoot, 'card-images', 'agents'),
-    // Le carte sono renderizzate a ~230x330: 512px basta anche per zoom/retina
-    resize: { width: 512, height: 512, fit: 'inside', withoutEnlargement: true },
-    quality: 80,
+    // Allineato a update-card-images.js: nativo + q90
+    resize: null,
+    quality: 90,
   },
   {
     dir: path.join(rootDir, 'public', 'campi_bg'),

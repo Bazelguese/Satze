@@ -123,7 +123,6 @@ function CardTagsToggle({ card }) {
 }
 
 const CARD_P4_W = 230;
-const CARD_P4_H = 330;
 
 function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
   const accent = accentForArmy(card.army);
@@ -132,7 +131,7 @@ function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
 
   useEffect(() => {
     const node = shellRef.current;
-    if (!node) return;
+    if (!node) return undefined;
 
     const updateScale = () => {
       const width = node.offsetWidth;
@@ -274,7 +273,29 @@ function DeckRow({
   );
 }
 
-export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
+const CATALOG_BATCH = 14;
+
+function scheduleIdleWork(fn) {
+  if (typeof requestIdleCallback === 'function') {
+    return requestIdleCallback(fn, { timeout: 120 });
+  }
+  return requestAnimationFrame(() => setTimeout(fn, 0));
+}
+
+function cancelIdleWork(id) {
+  if (typeof cancelIdleCallback === 'function') {
+    cancelIdleCallback(id);
+  } else {
+    cancelAnimationFrame(id);
+  }
+}
+
+export function DeckBuilderLabPage({
+  existingDeckId = null,
+  onClose,
+  onBootProgress = null,
+  onBootReady = null,
+}) {
   useEffect(() => {
     injectSatzeUiFonts();
   }, []);
@@ -283,6 +304,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   const [deckIds, setDeckIds] = useState([]);
   const [deckName, setDeckName] = useState('');
   const [isDeckLoading, setIsDeckLoading] = useState(Boolean(existingDeckId));
+  const [catalogVisible, setCatalogVisible] = useState(CATALOG_BATCH);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('lega');
   const [legaFilter, setLegaFilter] = useState(null);
@@ -298,6 +320,11 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
   const dragIndexRef = useRef(null);
+  const bootReadySentRef = useRef(false);
+  const onBootProgressRef = useRef(onBootProgress);
+  const onBootReadyRef = useRef(onBootReady);
+  onBootProgressRef.current = onBootProgress;
+  onBootReadyRef.current = onBootReady;
 
   const primaryFac = FACTIONS.find((f) => f.key === selectedArmyKeys[0]) || FACTIONS[0];
   const accent = primaryFac.accent;
@@ -527,6 +554,69 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
 
     return groups;
   }, [shown, sort]);
+
+  // Montaggio progressivo della griglia: evita lo spike FPS al primo ingresso.
+  useEffect(() => {
+    setCatalogVisible(CATALOG_BATCH);
+  }, [selectedArmyKeys, filterState, sort]);
+
+  useEffect(() => {
+    if (isDeckLoading) return undefined;
+    const total = shown.length;
+    if (total <= 0) {
+      onBootProgressRef.current?.(1);
+      return undefined;
+    }
+
+    if (catalogVisible >= total) {
+      onBootProgressRef.current?.(1);
+      return undefined;
+    }
+
+    onBootProgressRef.current?.(catalogVisible / total);
+    const idleId = scheduleIdleWork(() => {
+      setCatalogVisible((prev) => Math.min(total, prev + CATALOG_BATCH));
+    });
+    return () => cancelIdleWork(idleId);
+  }, [catalogVisible, shown.length, isDeckLoading]);
+
+  useEffect(() => {
+    if (isDeckLoading || bootReadySentRef.current) return undefined;
+    // Prima batch montata + 2 frame di layout: sblocca il loading esterno.
+    if (catalogVisible < Math.min(CATALOG_BATCH, Math.max(1, shown.length)) && shown.length > 0) {
+      return undefined;
+    }
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled || bootReadySentRef.current) return;
+        bootReadySentRef.current = true;
+        onBootReadyRef.current?.();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [isDeckLoading, catalogVisible, shown.length]);
+
+  const visibleShown = useMemo(
+    () => shown.slice(0, catalogVisible),
+    [shown, catalogVisible]
+  );
+
+  const visibleShownByArmy = useMemo(() => {
+    if (!shownByArmy) return null;
+    let remaining = catalogVisible;
+    const groups = [];
+    for (const group of shownByArmy) {
+      if (remaining <= 0) break;
+      const cards = group.cards.slice(0, remaining);
+      remaining -= cards.length;
+      if (cards.length) groups.push({ ...group, cards });
+    }
+    return groups;
+  }, [shownByArmy, catalogVisible]);
 
   const legaFilterBase = useMemo(
     () => applyCatalogFilters(pool, filterState, 'lega'),
@@ -842,8 +932,8 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
               <div className="dbl-empty">
                 Seleziona almeno un&apos;armata dal pannello a sinistra
               </div>
-            ) : shownByArmy ? (
-              shownByArmy.map(({ army, faction, cards }) => (
+            ) : visibleShownByArmy ? (
+              visibleShownByArmy.map(({ army, faction, cards }) => (
                 <section key={army} className="dbl-grid-group" style={{ '--c': faction?.accent || accent }}>
                   <div className="dbl-grid-group-h">
                     {faction?.icon ? (
@@ -868,7 +958,7 @@ export function DeckBuilderLabPage({ existingDeckId = null, onClose }) {
                 </section>
               ))
             ) : (
-              shown.map((c) => (
+              visibleShown.map((c) => (
                 <CatalogCard
                   key={c.id}
                   card={c}

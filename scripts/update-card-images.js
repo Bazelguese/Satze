@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Converte le immagini delle carte da carte/Immagini/ in WebP ottimizzato
- * (max 512px, q80) in public/card-images/agents/.
+ * Converte le immagini delle carte da carte/Immagini/ in WebP ad alta qualità
+ * in public/card-images/agents/.
+ *
+ * Qualità massima percepibile a peso contenuto:
+ *  - risoluzione nativa (no downscale)
+ *  - WebP q90 (q95→q90 è in pratica indistinguibile su questa arte, ~25–35% più leggero)
+ *
  * Il file src/data/images.js usa solo i path: non viene più modificato.
  *
  * Uso: node scripts/update-card-images.js
@@ -19,13 +24,16 @@ const rootDir = path.resolve(__dirname, '..');
 const IMAGES_DIR = path.join(rootDir, 'carte', 'Immagini');
 const AGENTS_DIR = path.join(rootDir, 'public', 'card-images', 'agents');
 
+/** q90 ≈ stesso look di q95 su ritratti AI; q95 gonfiava solo i byte. */
+const WEBP_QUALITY = 90;
+
 function extractCardId(filename) {
   const match = filename.match(/^(\d+)\.(png|jpg|jpeg|webp)$/i);
   return match ? match[1] : null;
 }
 
 async function main() {
-  console.log('🖼️  Aggiornamento immagini carte (WebP in public/card-images/agents/)\n');
+  console.log('🖼️  Aggiornamento immagini carte (WebP nativo q90 in public/card-images/agents/)\n');
 
   if (!fs.existsSync(IMAGES_DIR)) {
     console.error(`❌ La cartella ${IMAGES_DIR} non esiste!`);
@@ -59,8 +67,7 @@ async function main() {
 
     try {
       await sharp(srcPath)
-        .resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
+        .webp({ quality: WEBP_QUALITY, effort: 6 })
         .toFile(destPath);
       copied++;
       if (copied <= 5) console.log(`  ${file} → agents/${id}.webp`);

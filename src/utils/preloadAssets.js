@@ -1,12 +1,14 @@
 /**
  * Precarica le risorse grafiche all'avvio (boot generale).
  *
- * Include: sfondi armate, pannelli HUD, logo, arte agenti/tipi, dorsi,
- * eminenze, miniature campi. Gli sfondi campo a piena risoluzione
- * (~260MB in public/campi_bg/) restano on-demand a inizio partita.
+ * Include: sfondi armate, pannelli HUD, logo, tipi carta, dorsi,
+ * eminenze, miniature campi, Nascente. Le texture agenti full-res
+ * (~centinaia di MB) NON sono nel boot: lazy in CardImage + idle in
+ * menu (satze.jsx) + warmup a inizio duello. Gli sfondi campo a piena
+ * risoluzione restano on-demand a inizio partita.
  */
 import { ARMY_GIFS } from '../data/armies';
-import { AGENT_IMAGE_PATHS, CARD_IMAGE_PATHS, getNascenteStageImageUrl, markImageUrlPreloaded } from '../data/images';
+import { CARD_IMAGE_PATHS, getNascenteStageImageUrl, markImageUrlPreloaded } from '../data/images';
 import { ALL_BATTLEFIELDS } from '../data/battlefields';
 import { EMINENCES } from '../data/eminences';
 import { getEminenceArtUrl, EMINENCE_ART_FALLBACK } from '../data/eminenceArt';
@@ -94,9 +96,7 @@ export function getAssetUrls() {
 
   if (BRAND_LOGO_SRC) urls.add(BRAND_LOGO_SRC);
 
-  Object.values(AGENT_IMAGE_PATHS).forEach((path) => {
-    if (path) urls.add(path);
-  });
+  // Tipi generici leggeri; agenti full-res → on-demand (vedi commento file)
   Object.values(CARD_IMAGE_PATHS).forEach((path) => {
     if (path) urls.add(path);
   });

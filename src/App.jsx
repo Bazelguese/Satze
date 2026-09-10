@@ -151,6 +151,15 @@ function AppContent() {
     });
   }, []);
 
+  // Failsafe: se il warm-up non completa, entra comunque nel gioco.
+  useEffect(() => {
+    if (bootPhase !== 'warmup') return undefined;
+    const t = window.setTimeout(() => {
+      onWarmupComplete();
+    }, 7000);
+    return () => window.clearTimeout(t);
+  }, [bootPhase, onWarmupComplete]);
+
   if (bootPhase !== 'ready' || !SatzeGame) {
     return (
       <>
