@@ -6,13 +6,13 @@ const BASE = import.meta.env.BASE_URL;
 export const campaignArt = `${BASE}campaign/concordia-vallo.webp`;
 export const actScenery = [54, 51, 53].map(id => `${BASE}campi_bg/campo-${id}.webp`);
 export const heroArt = card => getNascenteStageImageUrl(nascenteStageFromLeague(card.league));
-export const encounterKinds = { battle: 'Battaglia', elite: 'Élite', special: 'Incontro speciale', boss: 'Boss' };
+export const encounterKinds = { battle: 'Battaglia', elite: 'Élite', special: 'Incontro speciale', boss: 'Boss', event: 'Domanda', faglia: 'Faglia' };
 
 /** Small UI heraldry, deliberately separate from card artwork. */
 export function CampaignSigil({ kind = 'battle', ...props }) {
   return <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true" {...props}>
     {kind === 'boss' ? <><path d="M9 15l7 7 8-13 8 13 7-7-4 22H13Z"/><path d="M14 31h20M24 18v10"/><circle cx="24" cy="39" r="2"/></>
-      : kind === 'special' ? <><path d="M24 5l5 14 14 5-14 5-5 14-5-14-14-5 14-5Z"/><circle cx="24" cy="24" r="5"/></>
+      : ['special', 'event', 'faglia'].includes(kind) ? <><path d="M24 5l5 14 14 5-14 5-5 14-5-14-14-5 14-5Z"/><circle cx="24" cy="24" r="5"/></>
       : kind === 'elite' ? <><path d="M24 5L9 12v14c0 8 15 17 15 17s15-9 15-17V12Z"/><path d="M17 16l14 17M31 16L17 33M14 30l6 6m8 0 6-6"/></>
       : kind === 'sun' ? <><circle cx="24" cy="24" r="10"/><path d="M24 2v8m0 28v8M2 24h8m28 0h8M8 8l6 6m20 20 6 6M8 40l6-6m20-20 6-6"/></>
       : <><path d="M10 7l5 2 23 28-3 3L10 12ZM38 7l-5 2L10 37l3 3 25-28Z"/><path d="M7 29l12 12m22-12L29 41"/></>}
@@ -32,9 +32,9 @@ export function CampaignBackdrop({ actIndex = 0 }) {
 }
 
 const positions = [[12, 76], [29, 55], [45, 38], [62, 55], [76, 35], [87, 15]];
-export function CampaignMap({ act, run, selectedId, onSelect }) {
+export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, availableIds, interactionLocked = false, legend = "Una via al bivio · ricongiungimento prima dell’élite" }) {
   const points = act.stages.flatMap((stage, index) => stage.alternatives.map((mission, branch) => ({
-    mission, index, x: positions[index][0], y: branch ? 76 : positions[index][1],
+    mission, index: index + stageOffset, x: positions[index][0], y: stage.alternatives.length > 1 ? (branch ? 76 : Math.min(45, positions[index][1])) : positions[index][1],
   })));
   const links = points.flatMap(point => points.filter(next => next.index === point.index + 1).map(next => ({ from: point, to: next })));
   const selected = points.find(point => point.mission.id === selectedId);
@@ -53,11 +53,11 @@ export function CampaignMap({ act, run, selectedId, onSelect }) {
     </svg>
     {points.map(({ mission, index, x, y }) => {
       const won = run.history.some(h => h.missionId === mission.id && h.result === 'player');
-      const available = index === run.stageIndex && !run.outcome;
+      const available = index === run.stageIndex && !run.outcome && (!availableIds || availableIds.includes(mission.id));
       const hasEvent = run.definition.events.some(event => event.missionId === mission.id);
       return <button key={mission.id} style={{ left: `${x}%`, top: `${y}%` }}
         className={`cs-map-node cs-kind-${mission.kind} ${won ? 'is-won' : ''} ${available ? 'is-current' : 'is-locked'}`}
-        disabled={!available} aria-pressed={available && selectedId === mission.id}
+        disabled={!available || interactionLocked} aria-pressed={available && selectedId === mission.id}
         aria-label={`${mission.title} · ${encounterKinds[mission.kind]} · ${won ? 'superato' : available ? 'disponibile' : 'non disponibile'}`}
         onClick={() => onSelect(mission.id)}>
         <span className="cs-node-medallion"><CampaignSigil kind={mission.kind}/><span className="cs-node-number">{won ? '✓' : index + 1}</span></span>
@@ -67,6 +67,6 @@ export function CampaignMap({ act, run, selectedId, onSelect }) {
       </button>;
     })}
     {selected && !run.outcome && <span className="cs-traveler" aria-hidden="true" style={{ left: `${selected.x}%`, top: `${selected.y}%` }}>✧</span>}
-    <div className="cs-map-legend"><span>✦ Il tuo cammino</span><span>Una via al bivio · ricongiungimento prima dell’élite</span></div>
+    <div className="cs-map-legend"><span>✦ Il tuo cammino</span><span>{legend}</span></div>
   </div>;
 }

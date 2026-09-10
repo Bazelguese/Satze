@@ -80,7 +80,8 @@ export function createAttempt(r, node) {
   if (multi) pSquads.push(r.deck.filter(id => !player.includes(id)).sort((a,b) => a-b));
   const sum = ids => ids.reduce((s,id) => s + runCard(r,id).league, 0);
   const eSquads = multi || [enemy];
-  const opening = pSquads.map((p,i) => sum(p) === sum(eSquads[i]) ? shuffled([true,false],r.seed,`${node.id}:initiative:${i}`)[0] : sum(p) < sum(eSquads[i]));
+  // The opening tutorial must be winnable with equal cards and a full FC commitment.
+  const opening = pSquads.map((p,i) => node.openingPlayerFirst ?? (sum(p) === sum(eSquads[i]) ? shuffled([true,false],r.seed,`${node.id}:initiative:${i}`)[0] : sum(p) < sum(eSquads[i])));
   return { id: r.attempt + 1, nodeId: node.id, phase: 0, playerSquads: pSquads, enemySquads: eSquads, opening, pv: null, snapshot: null };
 }
 function checkpoint(r) {
