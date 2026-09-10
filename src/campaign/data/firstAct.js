@@ -25,12 +25,12 @@ export function firstActCard(id) {
   if (c.code === 'G03') return { ...c, league: 3, ability: { trigger: 'resistenza', effect: 'terraform', value: TOWER_ID }, description: 'Resistenza: Terraformare Torre del Richiamo' };
   return c;
 }
-const battle = (id, title, roster, size, opts = {}) => ({ id, node: id, title, kind: 'battle', army: CONCORDIA_ARMY, roster: codes(roster), size, required: [], fieldIds: [8, 12, 2, TOWER_ID, 4], revealRounds: [1, 1, 1, 3, 4], life: 25, focus: 18, difficulty: 'medium', winRule: 'classic', ...opts });
+const battle = (id, title, roster, size, opts = {}) => ({ id, node: id, title, kind: 'battle', army: CONCORDIA_ARMY, roster: codes(roster), size, required: [], fieldIds: [8, 12, 2, TOWER_ID, 4], revealRounds: [1, 1, 1, 2, 3], life: 25, focus: 18, difficulty: 'medium', winRule: 'classic', ...opts });
 export const FIRST_ACT_NODES = [
   battle('I1', 'Primo contatto', 'V02', 1, { growth: 2, life: 10, focus: 10, fieldIds: [VARCO_ID], revealRounds: [1], winRule: 'varco', difficulty: 'easy', openingPlayerFirst: false }),
   battle('I2', 'Pattuglia', 'V01 V04', 2, { growth: 3, life: 10, focus: 10, fieldIds: [8, 12], revealRounds: [1, 1], winRule: 'territory', difficulty: 'easy' }),
   battle('I3', 'Presidio', 'V02 V03 V06', 3, { growth: 4, life: 10, focus: 10, fieldIds: [8, 12, 2], revealRounds: [1, 1, 1], winRule: 'territory' }),
-  battle('I4', 'Posto di blocco', 'V01 V03 V04 V05', 4, { growth: 5, life: 10, focus: 10, fieldIds: [8, 12, 2, 4], revealRounds: [1, 1, 1, 3], winRule: 'territory' }),
+  battle('I4', 'Posto di blocco', 'V01 V03 V04 V05', 4, { growth: 5, life: 10, focus: 10, fieldIds: [8, 12, 2, 4], revealRounds: [1, 1, 1, 2], winRule: 'territory' }),
   { id: 'E01', title: 'La prima Domanda', kind: 'event' },
   battle('I5A', 'Il deposito delle corazze', 'V01 V02 V03 V04 V05', 5, { plan: 'riserve' }),
   battle('I5B', 'La colonna dei rifornimenti', 'V01 V02 V03 V04 V05', 5, { plan: 'corazze' }),
@@ -50,6 +50,7 @@ export const FIRST_ACT_NODES = [
 ];
 export const FIRST_ACT_STAGES = [['I1'], ['I2'], ['I3'], ['I4'], ['E01'], ['I5A', 'I5B'], ['I6'], ['E02'], ['F1'], ['I7'], ['I8'], ['E06'], ['I9A', 'I9B'], ['F2'], ['I10'], ['I11'], ['E03'], ['I12']];
 export const firstActNode = id => FIRST_ACT_NODES.find(n => n.id === id);
+export const NASCENTE_ARCHETYPES = { C:'Campione', A:'Assaltatore', S:'Soffocatore', G:'Guardiano', K:'Carnefice', F:'Catalizzatore', B:'Sabotatore', O:'Colosso' };
 const power = (id, family, answer, trigger, effect, value, extra = {}) => ({ id, family, answer, ability: { trigger, effect, value, ...extra } });
 export const POWER_PACKAGES = [
   power('C1', 'Sulla forza con cui mi impongo.', 'Prendendo l’iniziativa.', 'imboscata', 'power', 2),

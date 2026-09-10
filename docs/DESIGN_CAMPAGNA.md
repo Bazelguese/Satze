@@ -868,7 +868,7 @@ Crescita garantita: solo dopo I.1–I.4, I.6 e I.8–I.11, se il premio lascia m
 
 Contabilità: percorso obbligatorio, 13 premi principali; percorso con F2, 14. Con il Nascente iniziale sono 14 o 15 copie complessive, più gli eventuali rinforzi di crescita. Una trasformazione sostituisce una copia e non aumenta il totale. Il numero di identità distinte e la Lega disponibile si controllano separatamente. E01, E02, E06 ed E03 non aggiungono agenti.
 
-Prima della conferma finale si mostrano carta ottenuta, eventuale doppione, rinforzo e nuovi posti. Non sono assegnati livelli, valuta di crescita o trasformazioni gratuite aggiuntivi. Offerta e risultato restano salvati: riaprire, perdere un retry o ricaricare non rigenera il premio.
+Prima della conferma finale si mostrano carta ottenuta, eventuale doppione, rinforzo e nuovi posti. Il pannello mostra ogni agente con la sua carta e il suo nome, distingue «Agente ottenuto» e «Rinforzo aggiuntivo» e indica il conteggio delle copie prima e dopo. L’anteprima usa la stessa transazione della conferma, così il rinforzo mostrato coincide con quello salvato. Non sono assegnati livelli, valuta di crescita o trasformazioni gratuite aggiuntivi. Offerta e risultato restano salvati: riaprire, perdere un retry o ricaricare non rigenera il premio.
 
 ## 11  Trasformazione casuale di pari Lega
 
@@ -1682,3 +1682,12 @@ I due approfondimenti precedenti su pacchetti del Nascente e Terraformare sono i
 Mappa, premi, domande e conclusione entrano gradualmente, con una transizione fra le viste quando il browser la supporta. Il cambio dell’incontro, delle risposte e dell’anteprima del Nascente ha una propria animazione. Lo scenario si muove lentamente, la tappa corrente pulsa e le faglie ruotano; le immagini diventano visibili dopo il caricamento. I controlli Animazioni e movimento ridotto del sistema restano rispettati.
 
 La trasformazione salva prima un unico esito casuale, poi mostra dissoluzione della copia, convergenza luminosa e rivelazione del Figlio. La sequenza è saltabile e con movimento ridotto mostra direttamente il risultato. Chiudere la finestra durante l’animazione non annulla né ripete la trasformazione.
+
+
+### Riepilogo del Nascente e tempi dei Campi — aggiornamento corrente
+
+Il comando del Nascente in basso a destra apre il riepilogo personale: vittorie, sconfitte, pareggi, numero di agenti trasformati, Potere acquisito con trigger ed effetto e archetipo attuale. L’archetipo segue il pacchetto attivo, senza bloccare scelte future. Il comando in basso a sinistra apre invece «Esercito del Nascente», con la gestione dell’esercito e della riserva. Il deck del giocatore è denominato esercito; armata resta il termine per le fazioni.
+
+Le statistiche contano gli incontri conclusi nell’intera run, includendo i tentativi falliti, quelli riavvolti e le vittorie di test. Le fasi intermedie, gli eventi e la conferma dei premi non aggiungono vittorie. L’abbandono conta come sconfitta. Ogni trasformazione confermata incrementa il contatore una volta; il riavvolgimento non cancella le statistiche cumulative. Il salvataggio conserva i contatori; per quelli precedenti vengono recuperati solo i dati disponibili, con indicazione «Statistiche parziali».
+
+Rivelazione dei Campi ripristinata al duello classico: fino a tre Campi iniziali, quarto al round 2 e quinto al round 3. Nei formati ridotti si applica la stessa sequenza limitata ai Campi presenti. Questa disposizione sostituisce i precedenti tempi round 3/4 descritti nei capitoli degli incontri. Si applica anche ai duelli salvati, conservando identità dei Campi, conquiste e risorse. Ogni nuova fase ricomincia al round 1 con i primi tre Campi visibili.

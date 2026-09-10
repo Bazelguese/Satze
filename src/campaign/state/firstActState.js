@@ -35,6 +35,20 @@ function effectLabel(a) {
   return ({ blockBonus: 'Blocca Bonus', directDamage: `${a.value} danni diretti`, heal: `Cura ${a.value}`, selfDamage: `−${a.value} PV a te`, powerAndDamage: '+1 POT, +1 DAN', campaignStats: `+${a.value?.power} POT, +${a.value?.damage} DAN` })[a.effect] || a.effect;
 }
 export const runCard = (r, id) => id === NASCENTE ? nascenteCard(r) : firstActCard(id);
+export function firstActStats(r) {
+  if (r.stats) return r.stats;
+  // Legacy history stores completed events as victories too: count combat nodes only.
+  return {
+    wins: r.history.filter(h => firstActNode(h.nodeId)?.roster && h.result === 'player').length + Number(!!r.pendingReward),
+    losses: Number(r.lastResult === 'enemy'), draws: Number(r.lastResult === 'draw'),
+    transformed: r.copies.filter(c => firstActCard(c.cardId)?.army === FIGLI).length,
+    partial: true,
+  };
+}
+function recordFirstActResult(r, winner) {
+  const stats = firstActStats(r), key = { player: 'wins', enemy: 'losses', draw: 'draws' }[winner];
+  return { ...stats, [key]: stats[key] + 1 };
+}
 export function migrateFirstActGrowth(r) {
   if (!isFirstActRun(r)) return r;
   let next=r;
@@ -49,14 +63,22 @@ export function migrateFirstActGrowth(r) {
     }
   }
   if(r.checkpoints?.length) next={...next,checkpoints:r.checkpoints.map(c=>({...c,state:migrateFirstActGrowth(c.state)}))};
-  return next;
+  if (next.active?.snapshot?.campaignDuelMod?.firstAct) {
+    const snapshot=next.active.snapshot, node=firstActNode(next.active.nodeId);
+    const revealRounds=node.revealRounds;
+    next={...next,active:{...next.active,snapshot:{...snapshot,
+      campaignDuelMod:{...snapshot.campaignDuelMod,revealRounds:[...revealRounds]},
+      revealedFields:revealRounds.filter(round=>round<=(snapshot.roundNumber || 1)).length,
+    }}};
+  }
+  return { ...next, stats:firstActStats(next) };
 }
 export const runLeague = (r, ids = r.deck) => ids.reduce((s, id) => s + (runCard(r, id)?.league ?? Infinity), 0);
 export const availableFirstActNodes = r => (r.outcome ? [] : FIRST_ACT_STAGES[r.stage] || []).filter(id => !r.branch || id === r.branch).map(firstActNode);
 export const mature = (r, c) => r.completed >= c.acquiredAt + 1;
 export function createFirstActRun({ seed = Math.floor(Math.random() * 2 ** 31) } = {}) {
   validateFirstActData();
-  return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, finalStat: null, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
+  return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, stats: { wins:0, losses:0, draws:0, transformed:0, partial:false }, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, finalStat: null, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
 }
 export function validateFirstActDeck(r, deck = r.deck) {
   return Array.isArray(deck) && deck.length === r.slots && new Set(deck).size === deck.length && deck.includes(NASCENTE) && deck.every(id => id === NASCENTE || r.copies.some(c => c.cardId === id)) && runLeague(r, deck) <= 30;
@@ -71,6 +93,7 @@ export function assertFirstActRun(r) {
   if (!Number.isInteger(r.stage) || r.stage < 0 || r.stage > FIRST_ACT_STAGES.length || !Number.isInteger(r.slots) || r.slots < 1 || r.slots > 10) throw new Error('Progressione non valida.');
   if (!Array.isArray(r.copies) || new Set(r.copies.map(c => c.uid)).size !== r.copies.length || r.copies.some(c => !firstActCard(c.cardId) || !Number.isInteger(c.acquiredAt))) throw new Error('Riserva non valida.');
   if (!validateFirstActDeck(r)) throw new Error('Esercito non valido: identità distinte, Nascente e Lega entro 30.');
+  if (r.stats && (['wins','losses','draws','transformed'].some(k=>!Number.isInteger(r.stats[k]) || r.stats[k]<0) || typeof r.stats.partial!=='boolean')) throw new Error('Statistiche della campagna non valide.');
   const n = nascenteCard(r);
   if (n.power > 7 || n.damage > 6 || (r.nascente.packageId && !POWER_PACKAGES.some(p => p.id === r.nascente.packageId))) throw new Error('Nascente non valido.');
   if (!Number.isInteger(r.completed) || r.completed<0 || !Number.isInteger(r.seed)) throw new Error('Stato casualità o tappe non valido.');
@@ -113,6 +136,19 @@ function advance(r, nodeId) {
 function addCopy(r, cardId) {
   return { ...r, nextCopy: r.nextCopy + 1, copies: [...r.copies, { uid: `c${r.nextCopy}`, cardId, acquiredAt: r.completed + 1 }] };
 }
+// Preview the very same transaction that Accogli commits, without saving or mutating the run.
+export function previewFirstActReward(r, cardId) {
+  const next = firstActReducer(r, { type: 'REWARD', cardId });
+  return {
+    slots: next.slots,
+    copies: next.copies.slice(r.copies.length).map((copy, index) => ({
+      ...copy,
+      reinforcement: index > 0,
+      ownedBefore: r.copies.filter(c => c.cardId === copy.cardId).length,
+      totalCopies: next.copies.filter(c => c.cardId === copy.cardId).length,
+    })),
+  };
+}
 export function transformationPool(r, uid) {
   const copy = r.copies.find(c => c.uid === uid);
   if (!copy || !mature(r, copy) || firstActCard(copy.cardId).army === FIGLI) return [];
@@ -148,7 +184,8 @@ export function firstActReducer(r, action) {
     case 'START': {
       const node = availableFirstActNodes(r).find(n => n.id === action.nodeId);
       if (!node || r.active || r.pendingReward || r.pendingEvent || node.kind === 'event' || !validateFirstActDeck(r)) throw new Error('Incontro non disponibile.');
-      const base = r.lastResult ? r : checkpoint(r);
+      const tracked = { ...r, stats:firstActStats(r) };
+      const base = r.lastResult ? tracked : checkpoint(tracked);
       const active = createAttempt(base,node);
       next = { ...base, branch: node.id, active, attempt: active.id, lastResult: null };
       break;
@@ -171,10 +208,10 @@ export function firstActReducer(r, action) {
       if (winner === 'player' && playerHP > 0 && enemyHP > 0 && r.active.phase + 1 < r.active.enemySquads.length) {
         next = { ...r, active: { ...r.active, phase: r.active.phase+1, pv: { player: playerHP, enemy: enemyHP }, snapshot: null } }; break;
       }
-      if (winner !== 'player') { next = { ...r, active: null, lastResult: winner }; break; }
+      if (winner !== 'player') { next = { ...r, stats:recordFirstActResult(r,winner), active: null, lastResult: winner }; break; }
       const pool = node.roster.filter(id => id !== node.signature);
       const offer = shuffled(pool,r.seed,`${node.id}:reward`).slice(0,['elite','boss'].includes(node.kind) ? 2 : 1);
-      next = { ...r, active: null, pendingReward: { nodeId: node.id, offer } }; break;
+      next = { ...r, stats:recordFirstActResult(r,winner), active: null, pendingReward: { nodeId: node.id, offer } }; break;
     }
     case 'REWARD': {
       const pending = r.pendingReward;
@@ -216,19 +253,19 @@ export function firstActReducer(r, action) {
       const copy = r.copies.find(c=>c.uid===action.uid);
       const cardId = shuffled(pool,r.seed,`transform:${copy.uid}`)[0];
       const copies = r.copies.map(c => c.uid===copy.uid ? { ...c, cardId } : c);
-      next = { ...r, copies, deck: r.deck.map(id => id===copy.cardId && !copies.some(c=>c.cardId===id) ? cardId : id) }; break;
+      next = { ...r, stats:{...firstActStats(r),transformed:firstActStats(r).transformed+1}, copies, deck: r.deck.map(id => id===copy.cardId && !copies.some(c=>c.cardId===id) ? cardId : id) }; break;
     }
     case 'SKIP':
       if (FIRST_ACT_STAGES[r.stage]?.[0] !== 'F2' || r.active || r.pendingReward) throw new Error('Faglia non saltabile.');
       next = { ...r, stage: r.stage+1, branch:null,lastResult:null }; break;
     case 'ABANDON':
       if (!r.active) return r;
-      next = { ...r, active:null,lastResult:'enemy' }; break;
+      next = { ...r, stats:recordFirstActResult(r,'enemy'), active:null,lastResult:'enemy' }; break;
     case 'REWIND': {
       if (r.lastResult !== 'enemy') throw new Error('Riavvolgimento disponibile dopo una sconfitta.');
       const target = r.checkpoints.find(c => c.completed===Math.max(0,r.completed-3));
       if (!target) throw new Error('Checkpoint non disponibile.');
-      next = { ...clone(target.state), checkpoints:r.checkpoints.filter(c=>c.completed<target.completed), attempt:r.attempt, lastResult:null }; break;
+      next = { ...clone(target.state), stats:firstActStats(r), checkpoints:r.checkpoints.filter(c=>c.completed<target.completed), attempt:r.attempt, lastResult:null }; break;
     }
     default: throw new Error('Azione primo atto non riconosciuta.');
   }
