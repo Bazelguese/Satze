@@ -23,7 +23,14 @@ function buildFinalOrderFromHand(deckSize, handDeckIndices) {
  */
 export function computeShuffleDealFromSets(playerSet, enemySet, playerArmy, enemyArmy, fixedHands = null) {
   const useFixed =
-    fixedHands?.playerHand?.length === 5 && fixedHands?.enemyHand?.length === 5;
+    fixedHands?.playerHand?.length > 0 && fixedHands?.playerHand?.length <= 5 &&
+    fixedHands?.enemyHand?.length === fixedHands?.playerHand?.length;
+  if (fixedHands && !useFixed) throw new Error('Mani fisse non valide.');
+  if (useFixed) {
+    for (const [hand, deck] of [[fixedHands.playerHand, playerSet], [fixedHands.enemyHand, enemySet]]) {
+      if (new Set(hand.map(c=>c.id)).size !== hand.length || hand.some(c=>!deck.some(d=>d.id===c.id))) throw new Error('Mano fissa estranea al mazzo.');
+    }
+  }
 
   let playerFinalOrder;
   let enemyFinalOrder;

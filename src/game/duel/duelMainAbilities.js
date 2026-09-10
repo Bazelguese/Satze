@@ -35,15 +35,7 @@ export function applyDuelMainAbilities({
     minAssault: a.minAssault,
     minHealth: a.minHealth,
     stat: a.stat,
-    copyDisabled,
-    modifiersDisabled,
-    positivePowerModifiersDisabled,
-    positiveDamageModifiersDisabled,
-    toxinDisabled,
-    swapCopyImponi,
-    directDamageDisabled,
-    directDamageBonus,
-    minFloorReduction,
+    ...fieldOptions,
   });
 
   const canTriggerPreBattleAbility = (agent, context) =>

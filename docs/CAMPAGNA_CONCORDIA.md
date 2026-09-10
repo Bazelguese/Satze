@@ -1,4 +1,9 @@
-# Campagna del Nascente e regia degli eventi
+# Campagna del Nascente — modello precedente
+
+Questo documento conserva le istruzioni del modello precedente a tre atti. I nuovi slot aprono il primo atto 0.25, i cui flussi e stato di implementazione sono nel documento principale. L’editor qui descritto modifica soltanto il modello precedente.
+
+Per il riferimento corrente: [Design base della campagna](DESIGN_CAMPAGNA.md).
+
 
 ## Avvio
 
@@ -69,3 +74,9 @@ File consumato dal gioco: `public/campaign/concordia-vallo.webp` (1536×1024, We
 Prompt finale:
 
 > Use case: stylized-concept. Asset type: illustrated encounter background for original dark fantasy card game Satze. A solemn human military order, the Concordia di Caelion: foreground a fully armoured knight in dark worn steel, green cloth tabard, weathered gold sun insignia, closed visor, tall kite shield and upright spear; behind him a disciplined line of soldiers and hanging green and yellow banners below an enormous gothic bell tower and stone battlements. They resist a cosmic threat. Hand-crafted detailed pixel art, visible crisp square pixel clusters, rich dark teal shadows and muted antique gold highlights, subdued violet storm sky, cinematic dramatic lighting. Landscape composition 3:2 with the foreground knight at right-centre, atmospheric gate and troops visible at left, head and shield within central safe zone so the image can also be cropped to a portrait encounter panel. A serious, mysterious collectible-card-game atmosphere, no cartoon outlines, no UI, no text, no letters, no watermark. Original scene, no recognizable characters from another game.
+
+## Movimento e conferme visive
+
+La scena ora include parallasse leggera con mouse, particelle, indicatore della destinazione e sentiero animato. L’ingresso nell’incontro dura 650 ms ed è saltabile con «Entra subito»; timer e clic condividono una protezione contro il doppio avvio. Le ricompense salvate vengono presentate in una finestra con la carta ottenuta. Il comando Animazioni conserva la preferenza; movimento ridotto e pagina nascosta sono rispettati.
+
+Verifica dell’aggiornamento: build riuscita e 13 test mirati superati, inclusi salto della transizione, recupero dopo errore di avvio e preferenze di movimento. La prova visiva resta da eseguire nel gioco.

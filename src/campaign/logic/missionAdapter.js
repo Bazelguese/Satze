@@ -1,3 +1,5 @@
+import { isFirstActRun } from '../state/firstActState.js';
+import { firstActDuelConfig } from './firstActBattle.js';
 import { isControlledRun, controlledCampaignReducer } from '../state/controlledCampaignState.js';
 import { campaignEnemyCard } from './campaignDefinition.js';
 import { campaignFixedHands } from './campaignEncounterSetup.js';
@@ -85,6 +87,7 @@ export function resolveRunDeckCards(run) {
  * }}
  */
 export function buildDuelConfig(mission, run, act) {
+  if (isFirstActRun(run)) return firstActDuelConfig(run);
   const controlled = isControlledRun(run);
   const playerArmy = controlled ? run.definition.playerArmy : act.playerArmy;
   const playerDeckCards = resolveRunDeckCards(run);

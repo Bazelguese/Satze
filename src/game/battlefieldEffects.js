@@ -5,6 +5,7 @@ export function buildFieldModifiers(field) {
   if (!field?.id) return {};
   const id = field.id;
   const m = {};
+  if (field.forceStaffetta) m.staffettaAlwaysActive = true;
 
   if (id === 22) {
     m.gloriaAlwaysActive = true;

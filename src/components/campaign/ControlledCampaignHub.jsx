@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { CampaignBackdrop, CampaignMap, CampaignSigil, campaignArt, heroArt, encounterKinds as KIND } from './CampaignScenery.jsx';
+import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
+import { CampaignDeparture } from './CampaignDeparture.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { playUiClick, playUiConfirm } from '../../audio/gameSounds.js';
 import {
@@ -37,6 +39,8 @@ export function ControlledCampaignHub({
     [editor, setEditor] = useState(false),
     [error, setError] = useState('');
   const [inspectEnemy, setInspectEnemy] = useState(false);
+  const [departure, setDeparture] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   const [draftDeck, setDraftDeck] = useState(run?.deck || []);
   if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
   if (!run)
@@ -72,24 +76,42 @@ export function ControlledCampaignHub({
     }
   };
   const launch = () => {
+    if (departure || receipt) return;
     const next = dispatch({ type: 'START_MISSION', nodeId: mission.id });
-    if (next)
-      try {
-        onStartMission(
-          { ...mission, campaignAttempt: next.activeAttempt },
-          next,
-        );
-      } catch (e) {
-        dispatch({ type: 'ABANDON_ATTEMPT' });
-        setError(`Avvio non riuscito: ${e.message}`);
-      }
+    if (next) {
+      playUiConfirm();
+      setDeparture({ mission, run: next });
+    }
+  };
+  const enterDuel = () => {
+    if (!departure) return;
+    try {
+      onStartMission({ ...departure.mission, campaignAttempt: departure.run.activeAttempt }, departure.run);
+      setDeparture(null);
+    } catch (e) {
+      dispatch({ type: 'ABANDON_ATTEMPT' });
+      setDeparture(null);
+      setError(`Avvio non riuscito: ${e.message}`);
+    }
+  };
+  const claimReward = (choice, index) => {
+    if (receipt) return;
+    const next = dispatch({ type: 'APPLY_EVENT_CHOICE', eventId: pending.id, choiceIndex: index });
+    if (!next) return;
+    playUiConfirm();
+    if (choice.reward !== 'none') setReceipt({
+      title: choice.reward === 'card' ? 'Un nuovo compagno' : 'Il Nascente prende forma',
+      label: choice.label,
+      card: choice.reward === 'card' ? poolCardById(choice.cardId) : assembleNascenteCard(next.nascente),
+      detail: choice.reward === 'card' ? 'La carta ti attende in riserva. Puoi inserirla nell’armata.' : 'La nuova forma è stata salvata. Il cammino continua.',
+    });
   };
   const eminence = getEminenceForArmy(mission.enemy.army);
   const league = deckTotalLeague(run.deck, run.nascente);
   const openDeck = () => { playUiClick(); setDraftDeck(run.deck); setTab('deck'); };
   const rewards = run.definition.events.filter(e => e.missionId === mission.id);
   return (
-    <section className="campaign-scene">
+    <CampaignScene>
       <CampaignBackdrop actIndex={run.actIndex}/>
       <div className="cs-content">
         <header className="cs-hud">
@@ -98,7 +120,7 @@ export function ControlledCampaignHub({
             <button aria-pressed={tab === 'map'} onClick={() => { playUiClick(); setTab('map'); }}>Percorso</button>
             <button aria-pressed={tab === 'deck'} onClick={openDeck}>Armata e Nascente</button>
             <button onClick={() => setEditor(true)}>Editor eventi</button>
-            <button onClick={onBack}>Menu</button>
+            <CampaignMotionControl/><button onClick={onBack}>Menu</button>
           </nav>
         </header>
         <div className="cs-act-heading">
@@ -106,14 +128,14 @@ export function ControlledCampaignHub({
           <ol className="cs-act-seals" aria-label="I tre atti">{run.definition.acts.map((a, i) => <li key={a.id} className={i === run.actIndex ? 'active' : ''} aria-current={i === run.actIndex ? 'step' : undefined}><span>{i < run.actIndex ? '✓' : ['I', 'II', 'III'][i]}</span><div><small>Atto {i + 1}</small><strong>{a.title}</strong></div></li>)}</ol>
         </div>
         {error && <p className="cs-error" role="alert">{error}</p>}
-        {run.currentNode && <div className="cs-notice"><div><strong>Incontro interrotto · {findRunMission(run, run.currentNode)?.title}</strong><p>Il cammino è conservato. Puoi ripartire da questo incontro.</p></div><button onClick={() => dispatch({type: 'ABANDON_ATTEMPT'})}>Riprendi dalla mappa</button></div>}
-        {pending ? <div className="cs-event" role="region" aria-label="Evento da risolvere">
+        {run.currentNode && !departure && <div className="cs-notice"><div><strong>Incontro interrotto · {findRunMission(run, run.currentNode)?.title}</strong><p>Il cammino è conservato. Puoi ripartire da questo incontro.</p></div><button onClick={() => dispatch({type: 'ABANDON_ATTEMPT'})}>Riprendi dalla mappa</button></div>}
+        {pending ? <div key={pending.id} className="cs-event" role="region" aria-label="Evento da risolvere">
           <div className="cs-event-portrait"><img src={heroArt(nascente)} alt="Il Nascente"/><CampaignSigil kind="special"/></div>
           <div className="cs-event-body"><p className="cs-kicker">LUNGO IL CAMMINO · {run.pendingEvents.length} EVENTI DA RISOLVERE</p><h2>{pending.title}</h2><p className="cs-story-copy">{pending.body}</p>
             <div className="cs-reward-choices">{pending.choices.map((c, i) => {
               const preview = previewControlledReward(run, c), afterLeague = deckTotalLeague(preview.deck, preview.nascente);
               const card = c.reward === 'card' ? poolCardById(c.cardId) : c.reward === 'none' ? null : assembleNascenteCard(preview.nascente);
-              return <button className="cs-reward" key={i} onClick={() => { if (dispatch({type: 'APPLY_EVENT_CHOICE', eventId: pending.id, choiceIndex: i})) playUiConfirm(); }}>
+              return <button className="cs-reward" key={i} style={{'--cs-order': i}} onClick={() => claimReward(c, i)}>
                 {card ? <div className="cs-reward-card"><CardReworkP4Scaled key={`${pending.id}-${i}`} agent={card} width={126}/></div> : <CampaignSigil kind="special"/>}
                 <strong>{c.label}</strong><small>{c.reward === 'card' ? `${card.name} → riserva` : c.reward === 'none' ? 'Prosegui senza modifiche' : `Lega armata: ${afterLeague}/30${afterLeague > 30 ? ' · riorganizza prima del duello' : ''}`}</small>
               </button>;
@@ -128,14 +150,14 @@ export function ControlledCampaignHub({
               <div className="cs-duel-stats"><span><b>25</b> PV</span><span><b>18</b> FC</span><span><b>5</b> Campi</span></div>
               <button className="cs-inspect" onClick={() => { playUiClick(); setInspectEnemy(true); }}><CampaignSigil kind="sun"/><span><small>EMINENZA AVVERSARIA</small><strong>{eminence?.name}</strong><small>Esamina l’armata →</small></span></button>
               {rewards.length > 0 && <p className="cs-reward-note">✦ Dopo la vittoria: {rewards.map(e => e.title).join(' · ')}</p>}
-              <button className="cs-primary" disabled={!!run.currentNode || league > 30} onClick={launch}>Affronta l’incontro</button>
+              <button className="cs-primary" disabled={!!run.currentNode || !!receipt || league > 30} onClick={launch}>Affronta l’incontro</button>
               <small className="cs-footnote">{league > 30 ? 'Lega oltre 30: riorganizza l’armata prima dello scontro.' : 'Il Nascente sarà nella tua mano. Puoi ritentare in caso di sconfitta.'}</small>
             </div>
           </aside>
         </div>}
         {tab === 'deck' && <div className="cs-army">
           <div className="cs-army-heading"><div><p className="cs-kicker">FIGLI DELL’ORIZZONTE</p><h2>La tua armata</h2><p>Scegli dieci carte: il Nascente e almeno quattro altri Figli dell’Orizzonte. Le ricompense ti attendono in riserva.</p></div><div><strong>{draftDeck.length}/10 carte · Lega {deckTotalLeague(draftDeck, run.nascente)}/30</strong><button className="cs-primary" disabled={!!run.currentNode} onClick={() => { if (dispatch({type: 'SET_DECK', deck: draftDeck})) {playUiConfirm(); setTab('map');} }}>Salva armata</button></div></div>
-          <div className="cs-card-roster">{[...new Set([...run.deck, ...run.warehouse])].map(id => <label key={id} className={draftDeck.includes(id) ? 'selected' : ''}>
+          <div className="cs-card-roster">{[...new Set([...run.deck, ...run.warehouse])].map((id, i) => <label key={id} style={{'--cs-order': i}} className={draftDeck.includes(id) ? 'selected' : ''}>
             <input aria-label={lookup(id).name} type="checkbox" checked={draftDeck.includes(id)} disabled={id === NASCENTE_ID || !!run.currentNode} onChange={e => { playUiClick(); setDraftDeck(e.target.checked ? [...draftDeck, id] : draftDeck.filter(n => n !== id)); }}/>
             <div className="cs-roster-card"><CardReworkP4Scaled agent={lookup(id)} width={176}/></div><span>{id === NASCENTE_ID ? 'Il tuo Nascente' : draftDeck.includes(id) ? 'Schierato nell’armata' : 'In riserva'}</span>
           </label>)}</div>
@@ -145,10 +167,14 @@ export function ControlledCampaignHub({
           <button className="cs-party-deck" onClick={openDeck} aria-label="Gestisci le carte dell’armata"><span className="cs-deck-fan" aria-hidden="true">{run.deck.filter(id => id !== NASCENTE_ID).slice(0, 5).map((id, i) => <img key={id} src={`${import.meta.env.BASE_URL}card-images/agents/${id}.webp`} alt="" style={{'--fan-index': i}}/>)}</span><span><strong>Armata dell’Orizzonte</strong><small>{run.deck.length} carte · Lega {league}/30 · {run.warehouse.length} in riserva</small></span><b>→</b></button>
         </footer>}
       </div>
+      {receipt && <CampaignDialog title={receipt.title} onClose={() => setReceipt(null)}>
+        <div className="cs-acquired"><div className="cs-acquired-card"><CardReworkP4Scaled agent={receipt.card} width={230}/></div><div><p className="cs-kicker">SCELTA CONFERMATA</p><h3>{receipt.label}</h3><p>{receipt.detail}</p><button className="cs-primary" onClick={() => setReceipt(null)}>Continua il cammino</button></div></div>
+      </CampaignDialog>}
+      {departure && <CampaignDeparture mission={departure.mission} onReady={enterDuel}/>}
       {inspectEnemy && <CampaignDialog title={mission.enemy.army} onClose={() => setInspectEnemy(false)}>
         <div className="cs-enemy-brief"><div><p className="cs-kicker">EMINENZA</p><h3>{eminence?.name}</h3><p>{eminence?.static.text}</p></div><p>{mission.signatureCardId ? `Carta firma garantita in mano: ${campaignEnemyCard(mission.signatureCardId).name}.` : 'La mano nemica contiene cinque carte di questa armata.'} PV, FC e Presenza ripartono dai valori iniziali a ogni incontro.</p></div>
         <div className="cs-enemy-roster">{mission.enemy.deck.map(id => <div key={id}><CardReworkP4Scaled agent={campaignEnemyCard(id)} width={176}/></div>)}</div>
       </CampaignDialog>}
-    </section>
+    </CampaignScene>
   );
 }

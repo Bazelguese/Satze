@@ -2,6 +2,7 @@
 // Proiezione stato strategico post-duello
 // ============================================
 
+import { revealedAt, firstActMatchOutcome } from '../../campaign/logic/firstActBattle.js';
 import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
 
 function usedList(ids) {
@@ -14,6 +15,11 @@ function resolveTerminalFromProjected(state) {
   if (state.playerHP <= 0 && state.aiHP <= 0) return 'draw_hp';
 
   const round = state.roundNumber || 1;
+  if (state._refs?.campaignDuelMod?.firstAct) {
+    const r=firstActMatchOutcome({playerHP:state.playerHP,enemyHP:state.aiHP,playerFields:state.playerFieldsConquered,enemyFields:state.enemyFieldsConquered,exhausted:state.aiRemainingCardIds.length===0||state.playerRemainingCardIds.length===0,round:Math.max(1,round-1),rule:state._refs.campaignDuelMod.winRule});
+    if (r?.claim) return 'player_threat_fields';
+    return r ? (r.winner==='player'?'ai_loss_cards':r.winner==='enemy'?'ai_win_cards':'draw_cards') : null;
+  }
   const mode = state.mode || 'classic';
   // Il duello appena risolto era al round precedente; i Campi contano subito.
   const duelRound = Math.max(1, round - 1);
@@ -119,7 +125,8 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
       ? battlefields.length
       : Number(strategicState.revealedFields);
   const maxReveal = Math.max(battlefields.length, prevRevealed);
-  const revealedFields = Math.min(maxReveal, prevRevealed + 1);
+  const campaign=strategicState._refs?.campaignDuelMod;
+  const revealedFields = campaign?.firstAct ? revealedAt(campaign.revealRounds,nextRound) : Math.min(maxReveal, prevRevealed + 1);
 
   const availableFieldIndexes = [];
   for (let i = 0; i < battlefields.length; i += 1) {
@@ -162,7 +169,10 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
         ? simulation.aiToxinAfter
         : (simulation?.battleResult?.enemyToxinActivated ?? strategicState.aiToxin),
 
-    _refs: strategicState._refs,
+    _refs: campaign?.firstAct ? {...strategicState._refs,
+      campaignDuelMod:{...campaign,previousBonus:simulation?.battleResult?.previousBonus || campaign.previousBonus,planUsed:campaign.planUsed || simulation?.battleResult?.campaignPlanUsed},
+      battlefields:battlefields.map((f,i)=>i===fieldIndex && simulation?.battleResult?.resolvedField ? simulation.battleResult.resolvedField : f),
+    } : strategicState._refs,
     terminalStatus: simulation?.terminalStatus || null,
   };
 

@@ -126,6 +126,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
 
     const { battleResult } = computeDuelResolution({
       field,
+      campaign: gameState.campaignDuelMod,
       selectedAgent: pAgent,
       enemyAgent: eAgent,
       selectedFocus,
@@ -187,6 +188,10 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
       };
     }
 
+    if (gameState.campaignDuelMod?.firstAct) {
+      gameState.setCampaignDuelMod(prev => ({ ...prev, previousBonus: result.previousBonus, planUsed: result.campaignPlanUsed }));
+      if (result.resolvedField) gameState.setBattlefields(prev => prev.map((f,i)=>i===currentFieldIndex ? result.resolvedField : f));
+    }
     setPlayerHP(result.finalPlayerHP);
     setEnemyHP(result.finalEnemyHP);
     setPlayerFocus(result.finalPlayerFC);
@@ -210,6 +215,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     setIsZoomed(true);
     setGamePhase('result');
   }, [
+    gameState.campaignDuelMod,
     battlefields,
     currentFieldIndex,
     selectedAgent,

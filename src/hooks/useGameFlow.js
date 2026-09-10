@@ -245,7 +245,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     }
     
     // Estensioni campagna: numero Campi e PV per missione (default 5 / 25)
-    const fields = selectBattlefields(mode, allBattlefields, {
+    const fields = campaignDuelMod?.fixedFields ?? selectBattlefields(mode, allBattlefields, {
       fieldCount: campaignDuelMod?.fields ?? undefined,
     });
     setBattlefields(fields);
@@ -253,8 +253,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     
     setPlayerHP(campaignDuelMod?.playerLife ?? 25);
     setEnemyHP(campaignDuelMod?.enemyLife ?? 25);
-    setPlayerFocus(18);
-    setEnemyFocus(18);
+    setPlayerFocus(campaignDuelMod?.playerFocus ?? 18);
+    setEnemyFocus(campaignDuelMod?.enemyFocus ?? 18);
     
     setPlayerUsedCards([]);
     setEnemyUsedCards([]);
@@ -324,6 +324,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     } else if (campaignDuelMod?.initiativeProfile === 'defense') {
       playerFirst = false;
     }
+    if (typeof campaignDuelMod?.openingPlayerFirst === 'boolean') playerFirst = campaignDuelMod.openingPlayerFirst;
     setOpeningPlayerFirst(playerFirst);
     setIsPlayerFirst(playerFirst);
     

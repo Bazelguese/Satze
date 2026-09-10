@@ -1,3 +1,6 @@
+import { useFirstActPersistence, restoreFirstActSnapshot } from '../src/hooks/useFirstActPersistence.js';
+import { FirstActHub } from '../src/components/campaign/FirstActHub.jsx';
+import { firstActMatchOutcome, revealedAt } from '../src/campaign/logic/firstActBattle.js';
 import { selectConcordiaAbility } from '../src/campaign/logic/concordiaAI.js';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -117,7 +120,7 @@ import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
 import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
 import { ControlledCampaignHub } from '../src/components/campaign/ControlledCampaignHub';
-import { getCampaignRunSummary } from '../src/campaign/state/persistence';
+import { getCampaignRunSummary, abandonFirstActAttempt } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
@@ -798,7 +801,9 @@ export default function SatzeGame() {
     return armies.map((army) => ARMY_ICONS[army]).filter(Boolean);
   }, [playerDeckVisual?.armies, playerHand]);
 
-  useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot });
+  const matchArmyBonuses = campaignDuelMod?.firstAct ? {...ARMY_BONUSES, 'Concordia di Caelion':{trigger:'staffetta',effects:[{effect:'power',value:1}],description:'Staffetta: +1 POT'}} : ARMY_BONUSES;
+  const campaignPersistenceError = useFirstActPersistence(gameState);
+  const campaignOutcomeError = useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP });
 
   const setGamePhaseAnimated = useTransitionedSetGamePhase(setGamePhaseRaw, gamePhase);
   const setGamePhaseFromMainMenu = useCallback((nextPhase) => {
@@ -1763,7 +1768,8 @@ export default function SatzeGame() {
       cfg.campaignDuelMod,
       cfg.startOptions
     );
-  }, [startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
+    if (run.model === 'first-act') restoreFirstActSnapshot(gameState, run.active?.snapshot);
+  }, [gameState, startStandardGame, setCampaignLevel, setSelectedMode, setIsMultiplayer, setSelectedArmy, setSelectedDeckKey]);
 
   const goAfterDeckSelection = useCallback((deckKeyOverride) => {
     const deckKey = deckKeyOverride ?? selectedDeckKey;
@@ -2520,9 +2526,9 @@ export default function SatzeGame() {
       agent: sideAgent || { army },
       side,
       matchState: eminenceMatchState,
-      armyBonus: ARMY_BONUSES[army] || null,
+      armyBonus: matchArmyBonuses[army] || null,
     });
-    const bonus = live.armyBonus || ARMY_BONUSES[army];
+    const bonus = live.armyBonus || matchArmyBonuses[army];
     if (!bonus || !bonus.trigger) return true; // Nessun trigger = sempre attivo
 
     const otherAgent = isPlayer ? enemyAgent : selectedAgent;
@@ -2538,6 +2544,8 @@ export default function SatzeGame() {
       enemyFocusCoins: isPlayer ? (enemySelectedFocus || 0) : (selectedFocus || 0),
       playerHP: isPlayer ? playerHP : enemyHP,
       enemyHP: isPlayer ? enemyHP : playerHP,
+      previousBonusActivated: campaignDuelMod?.previousBonus?.[side] === true,
+      fieldModifiers: getFieldModifiers(battlefields[currentFieldIndex]),
       cardsPlayed: sideUsed.length + (sideAgent ? 1 : 0),
       enemyCardsPlayed: otherUsed.length + (otherAgent ? 1 : 0),
       roundNumber: roundNumber || 1,
@@ -2561,7 +2569,7 @@ export default function SatzeGame() {
     selectedAgent,
     enemyAgent,
     roundNumber,
-    eminenceMatchState,
+    eminenceMatchState, campaignDuelMod, battlefields, currentFieldIndex,
   ]);
 
   const playerLiveSwap = useMemo(
@@ -2569,7 +2577,7 @@ export default function SatzeGame() {
       agent: selectedAgent,
       side: 'player',
       matchState: eminenceMatchState,
-      armyBonus: selectedAgent ? ARMY_BONUSES[selectedAgent.army] || null : null,
+      armyBonus: selectedAgent ? matchArmyBonuses[selectedAgent.army] || null : null,
     }),
     [selectedAgent, eminenceMatchState],
   );
@@ -2578,7 +2586,7 @@ export default function SatzeGame() {
       agent: enemyAgent,
       side: 'enemy',
       matchState: eminenceMatchState,
-      armyBonus: enemyAgent ? ARMY_BONUSES[enemyAgent.army] || null : null,
+      armyBonus: enemyAgent ? matchArmyBonuses[enemyAgent.army] || null : null,
     }),
     [enemyAgent, eminenceMatchState],
   );
@@ -2615,13 +2623,13 @@ export default function SatzeGame() {
   const playerEffectiveArmyBonus = useMemo(() => {
     const base = playerLiveSwap.swapped
       ? playerLiveSwap.armyBonus
-      : (displaySelectedAgent ? ARMY_BONUSES[displaySelectedAgent.army] : null);
+      : (displaySelectedAgent ? matchArmyBonuses[displaySelectedAgent.army] : null);
     const fieldBonus = resolveArmyBonusForDisplay({
       field: activeFieldForAbilityDisplay,
       fieldMods: activeFieldAbilityMods,
-      armyBonus: base || ARMY_BONUSES[displaySelectedAgent?.army] || null,
+      armyBonus: base || matchArmyBonuses[displaySelectedAgent?.army] || null,
       hasBonus: Boolean(displaySelectedAgent && playerArmyBonuses[displaySelectedAgent.army]),
-      opponentArmyBonus: displayEnemyAgent ? ARMY_BONUSES[displayEnemyAgent.army] : null,
+      opponentArmyBonus: displayEnemyAgent ? matchArmyBonuses[displayEnemyAgent.army] : null,
       opponentHasBonus: Boolean(displayEnemyAgent && enemyArmyBonuses[displayEnemyAgent.army]),
     });
     return fieldBonus || (playerLiveSwap.swapped ? playerLiveSwap.armyBonus : null);
@@ -2638,13 +2646,13 @@ export default function SatzeGame() {
   const enemyEffectiveArmyBonus = useMemo(() => {
     const base = enemyLiveSwap.swapped
       ? enemyLiveSwap.armyBonus
-      : (displayEnemyAgent ? ARMY_BONUSES[displayEnemyAgent.army] : null);
+      : (displayEnemyAgent ? matchArmyBonuses[displayEnemyAgent.army] : null);
     const fieldBonus = resolveArmyBonusForDisplay({
       field: activeFieldForAbilityDisplay,
       fieldMods: activeFieldAbilityMods,
-      armyBonus: base || ARMY_BONUSES[displayEnemyAgent?.army] || null,
+      armyBonus: base || matchArmyBonuses[displayEnemyAgent?.army] || null,
       hasBonus: Boolean(displayEnemyAgent && enemyArmyBonuses[displayEnemyAgent.army]),
-      opponentArmyBonus: displaySelectedAgent ? ARMY_BONUSES[displaySelectedAgent.army] : null,
+      opponentArmyBonus: displaySelectedAgent ? matchArmyBonuses[displaySelectedAgent.army] : null,
       opponentHasBonus: Boolean(displaySelectedAgent && playerArmyBonuses[displaySelectedAgent.army]),
     });
     return fieldBonus || (enemyLiveSwap.swapped ? enemyLiveSwap.armyBonus : null);
@@ -2669,7 +2677,7 @@ export default function SatzeGame() {
     if (!overdriveActive) return false;
 
     const abilityHasOverdrive = displaySelectedAgent.ability?.trigger === 'overdrive';
-    const armyBonus = playerLiveSwap.armyBonus || ARMY_BONUSES[displaySelectedAgent.army];
+    const armyBonus = playerLiveSwap.armyBonus || matchArmyBonuses[displaySelectedAgent.army];
     const bonusHasOverdrive =
       Boolean(playerArmyBonuses[displaySelectedAgent.army]) &&
       armyBonus?.trigger === 'overdrive';
@@ -3530,7 +3538,7 @@ export default function SatzeGame() {
     
     // Rivela campo nascosto se ce ne sono (il totale può essere <5 in campagna: fields per missione)
     if (revealedFields < battlefields.length) {
-      setRevealedFields(prev => prev + 1);
+      setRevealedFields(prev => campaignDuelMod?.firstAct ? revealedAt(campaignDuelMod.revealRounds, roundNumber + 1) : prev + 1);
     }
     
     // Conta campi conquistati per giocatore (usa il vincitore effettivo, non l'armata)
@@ -3581,6 +3589,19 @@ export default function SatzeGame() {
     }
     const newPlayerHP = currentPlayerHP;
     const newEnemyHP = currentEnemyHP;
+    if (campaignDuelMod?.firstAct) {
+      const outcome = firstActMatchOutcome({ playerHP:newPlayerHP,enemyHP:newEnemyHP,playerFields,enemyFields,
+        exhausted:playerAvailable.length===0||enemyAvailable.length===0,round:roundNumber,rule:campaignDuelMod.winRule });
+      if (outcome && !(outcome.claim && skipTerritorialWin)) {
+        if (outcome.claim) setShowClaimVictoryChoice({winner:'player',playerFields,enemyFields});
+        else { setGameResult({...outcome,playerFields,enemyFields}); setGamePhase('gameOver'); }
+        return;
+      }
+      forceContinueAfterClaimRef.current = false;
+      handedOffToAdvance = true;
+      doResetAndNextRound(playerFields,enemyFields);
+      return;
+    }
     const blockTerritorialPlayerWin = annihilationOnly && newEnemyHP > 0;
     if (skipTerritorialWin) {
       forceContinueAfterClaimRef.current = false;
@@ -3863,6 +3884,10 @@ export default function SatzeGame() {
   // ============================================
 
   // Scelta slot salvataggio campagna
+  if ((campaignPersistenceError || campaignOutcomeError) && campaignDuelMod?.firstAct && gamePhase !== 'campaignHub' && gamePhase !== 'menu') {
+    return <div role="alert" style={{padding:32,color:'white',background:'#211',minHeight:'100vh'}}><p>{campaignPersistenceError || campaignOutcomeError}</p><button onClick={()=>setGamePhaseRaw('campaignHub')}>Torna alla campagna salvata</button></div>;
+  }
+
   if (gamePhase === 'campaignSlots') {
     return (
       <CampaignSaveSlots
@@ -3877,7 +3902,8 @@ export default function SatzeGame() {
 
   // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
   if (gamePhase === 'campaignHub') {
-    const CampaignHub = getCampaignRunSummary(campaignSaveSlot).controlled ? ControlledCampaignHub : CampaignAtto1Hub;
+    const summary = getCampaignRunSummary(campaignSaveSlot);
+    const CampaignHub = summary.firstAct ? FirstActHub : summary.controlled ? ControlledCampaignHub : CampaignAtto1Hub;
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         <CampaignHub
@@ -6127,6 +6153,7 @@ export default function SatzeGame() {
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
           onClick={() => {
             if (window.confirm('Vuoi davvero abbandonare la partita?')) {
+              if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
               setCampaignLevel(null);
               setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
             }
@@ -6135,6 +6162,7 @@ export default function SatzeGame() {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               if (window.confirm('Vuoi davvero abbandonare la partita?')) {
+              if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
                 setCampaignLevel(null);
                 setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
               }

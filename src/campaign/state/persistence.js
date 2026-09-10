@@ -1,3 +1,4 @@
+import { isFirstActRun, assertFirstActRun, firstActReducer } from './firstActState.js';
 import { isControlledRun, assertControlledRun } from './controlledCampaignState.js';
 // ============================================
 // PERSISTENZA RUN CAMPAGNA — slot condivisi (3)
@@ -28,7 +29,8 @@ export function loadCampaignRun(slotIndex, act) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || !parsed.actId) return null; // legacy o corrotto
-    if (isControlledRun(parsed)) assertControlledRun(parsed);
+    if (isFirstActRun(parsed)) assertFirstActRun(parsed);
+    else if (isControlledRun(parsed)) assertControlledRun(parsed);
     else assertRunInvariants(parsed, act);
     return parsed;
   } catch (e) {
@@ -80,6 +82,8 @@ export function getCampaignRunSummary(slotIndex) {
     return {
       empty: false,
       slotIndex: slot,
+      firstAct: isFirstActRun(p),
+      completed: p.completed,
       controlled: isControlledRun(p),
       actNumber: (p.actIndex ?? 0) + 1,
       stageNumber: (p.stageIndex ?? 0) + 1,
@@ -92,4 +96,9 @@ export function getCampaignRunSummary(slotIndex) {
   } catch {
     return { empty: true, slotIndex: slot, corrupt: true };
   }
+}
+
+export function abandonFirstActAttempt(slotIndex) {
+  const run = loadCampaignRun(slotIndex);
+  if (isFirstActRun(run) && run.active && !saveCampaignRun(firstActReducer(run,{type:'ABANDON'}),slotIndex)) throw new Error('Salvataggio non riuscito.');
 }

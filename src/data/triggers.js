@@ -9,6 +9,7 @@
 // - turbo      = round 1 o 2 (ex chiave `turboRound`; etichetta regola "Turbo")
 
 export const TRIGGER_NAMES = {
+    staffetta: 'Staffetta',
   imboscata: 'Imboscata',
   intervention: 'Intervento',
   glory: 'Gloria',

@@ -5,6 +5,7 @@
 import { computeDuelResolution } from '../duelResolve.js';
 import { countConqueredFields } from '../duel/duelHelpers.js';
 import { applyToxin } from '../toxinLogic.js';
+import { firstActMatchOutcome } from '../../campaign/logic/firstActBattle.js';
 import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
 
 /**
@@ -48,6 +49,12 @@ export function resolveTerminalStatus(context, {
   if (playerHpAfter <= 0 && aiHpAfter <= 0) return 'draw_hp';
 
   const round = context.roundNumber || 1;
+  if (context.campaignDuelMod?.firstAct) {
+    const result=firstActMatchOutcome({playerHP:playerHpAfter,enemyHP:aiHpAfter,playerFields:playerFieldsAfter,enemyFields:aiFieldsAfter,exhausted:aiCardsRemaining<=0||playerCardsRemaining<=0,round,rule:context.campaignDuelMod.winRule});
+    if (result?.claim) return 'player_threat_fields';
+    if (result?.winner) return result.winner==='player'?'ai_loss_cards':result.winner==='enemy'?'ai_win_cards':'draw_cards';
+    return null;
+  }
   const mode = context.mode || 'classic';
   const territorialAllowed =
     (mode === 'bareHands' || mode === 'classic') && round < AI_SUPREMACY_ROUND;
@@ -132,6 +139,7 @@ export function buildSimulateAIDuelCacheKey(context, aiAction, playerAction) {
     context.enemyFieldsConquered ?? 0,
     toxinCacheKey(context.player?.toxin),
     toxinCacheKey(context.ai?.toxin),
+    stableObjectKey(context.campaignDuelMod || {}),
     stableObjectKey(context.player?.armyBonuses || {}),
     stableObjectKey(context.ai?.armyBonuses || {}),
   ].join('|');
@@ -171,6 +179,7 @@ export function simulateAIDuel(context, aiAction, playerAction, options = {}) {
 
   const { battleResult } = computeDuelResolution({
     field,
+    campaign: context.campaignDuelMod,
     selectedAgent: playerAction.card,
     enemyAgent: aiAction.card,
     selectedFocus: playerAction.focus,
