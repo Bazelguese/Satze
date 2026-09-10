@@ -1,4 +1,9 @@
-# Campagna del Nascente e regia degli eventi
+# Campagna del Nascente — modello precedente
+
+Questo documento conserva le istruzioni del modello precedente a tre atti. I nuovi slot aprono il primo atto 0.25, i cui flussi e stato di implementazione sono nel documento principale. L’editor qui descritto modifica soltanto il modello precedente.
+
+Per il riferimento corrente: [Design base della campagna](DESIGN_CAMPAGNA.md).
+
 
 ## Avvio
 
@@ -44,3 +49,34 @@ La distribuzione è salvata nello stesso ambiente locale dei salvataggi del gioc
 - I sei nuovi test unit coprono tutti gli otto percorsi per ciascuna delle tre Impronte, i 18 incontri, garanzie delle mani, eventi, callback duplicati, import non validi e compatibilità dei salvataggi.
 - La prova grafica con Chromium non è stata completata: il processo è bloccato dall’ambiente di esecuzione. I test dell’interfaccia usano il DOM con React.
 - Testi dei tre atti e bilanciamento sono una prima versione giocabile. Per le carte senza illustrazioni dedicate si usano i fallback già disponibili. Artefatti e magie restano fuori da questa versione.
+
+## Aggiornamento grafico della campagna
+
+La presentazione della campagna controllata ora usa una scena a tutto schermo:
+
+- Fondali esistenti `campo-54`, `campo-51`, `campo-53` per i tre atti, con velatura atmosferica e luce sui nodi disponibili.
+- Percorso spaziale con sentieri, bivio, sigilli di battaglia/élite/speciale/boss e stato ricavato dal salvataggio. I collegamenti completati seguono il ramo effettivamente percorso.
+- Illustrazione originale della Concordia nel pannello degli incontri. Gli incontri speciali mostrano un agente dell’armata corrispondente.
+- Nuova apertura con il Nascente illustrato e tre Impronte selezionabili; il ritratto del Nascente in campagna segue la Lega raggiunta.
+- Ricompense e armata mostrano il componente reale `CardReworkP4Scaled`, con anteprima del Nascente dopo la scelta e delle carte che entrano in riserva.
+- Ricognizione dell’avversario in una finestra dedicata: mazzo, Eminenza e garanzia della carta firma. Chiusura con Escape e gestione del focus.
+- Suoni di selezione/conferma tramite il bus audio del gioco, nel rispetto delle opzioni esistenti. Animazioni disattivate con `prefers-reduced-motion`.
+- Layout adattato anche alle finestre più strette. L’editor eventi conserva la propria interfaccia di lavoro.
+
+Queste modifiche valgono anche per le campagne controllate già salvate. Per vedere la nuova apertura iniziare una campagna in uno slot vuoto. Il modello legacy conserva la sua schermata.
+
+Verifica di questo aggiornamento: build Vite e sei test UI della campagna superati, inclusi selezione del ramo speciale, avvio reale tramite `useGameFlow`, gestione del focus, ricompensa in riserva e sostituzione nel mazzo. La prova visiva nel browser resta da eseguire sul gioco: l’anteprima locale è bloccata da `ERR_BLOCKED_BY_CLIENT` nell’ambiente di lavoro. Il nuovo asset illustra la fazione; le quindici carte Concordia richiedono ancora illustrazioni individuali e mantengono i fallback esistenti.
+
+### Asset Concordia
+
+File consumato dal gioco: `public/campaign/concordia-vallo.webp` (1536×1024, WebP). Generato con lo strumento integrato Imagegen; conversione WebP con Sharp, qualità 88. Nessun caricamento remoto necessario durante il gioco.
+
+Prompt finale:
+
+> Use case: stylized-concept. Asset type: illustrated encounter background for original dark fantasy card game Satze. A solemn human military order, the Concordia di Caelion: foreground a fully armoured knight in dark worn steel, green cloth tabard, weathered gold sun insignia, closed visor, tall kite shield and upright spear; behind him a disciplined line of soldiers and hanging green and yellow banners below an enormous gothic bell tower and stone battlements. They resist a cosmic threat. Hand-crafted detailed pixel art, visible crisp square pixel clusters, rich dark teal shadows and muted antique gold highlights, subdued violet storm sky, cinematic dramatic lighting. Landscape composition 3:2 with the foreground knight at right-centre, atmospheric gate and troops visible at left, head and shield within central safe zone so the image can also be cropped to a portrait encounter panel. A serious, mysterious collectible-card-game atmosphere, no cartoon outlines, no UI, no text, no letters, no watermark. Original scene, no recognizable characters from another game.
+
+## Movimento e conferme visive
+
+La scena ora include parallasse leggera con mouse, particelle, indicatore della destinazione e sentiero animato. L’ingresso nell’incontro dura 650 ms ed è saltabile con «Entra subito»; timer e clic condividono una protezione contro il doppio avvio. Le ricompense salvate vengono presentate in una finestra con la carta ottenuta. Il comando Animazioni conserva la preferenza; movimento ridotto e pagina nascosta sono rispettati.
+
+Verifica dell’aggiornamento: build riuscita e 13 test mirati superati, inclusi salto della transizione, recupero dopo errore di avvio e preferenze di movimento. La prova visiva resta da eseguire nel gioco.

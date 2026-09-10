@@ -195,6 +195,13 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
   }
 
   switch (effect) {
+    case 'terraform':
+      ctx.terraform?.(value, target, log);
+      break;
+    case 'campaignStats':
+      applyDuelPowerEffect('power', value.power, target, source, log, options, state, ctx);
+      applyDuelPowerEffect('damage', value.damage, target, source, log, options, state, ctx);
+      break;
     case 'power': {
       if (target === 'player') {
         const before = state.pPower;

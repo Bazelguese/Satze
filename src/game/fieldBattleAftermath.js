@@ -29,6 +29,7 @@ export function applyBattlefieldRoundAftermath({
   battleLog,
   pFocusUsed = 0,
   eFocusUsed = 0,
+  preventRevival = false,
 }) {
   let pHP = pHPCurrent;
   let eHP = eHPCurrent;
@@ -40,6 +41,7 @@ export function applyBattlefieldRoundAftermath({
     eHP = Math.max(0, eHP - damageDealt);
     battleLog.push(`💥 L'IA perde ${damageDealt} PV (${before} → ${eHP})`);
 
+    if (preventRevival && (pHP <= 0 || eHP <= 0)) return {pHPCurrent:pHP,eHPCurrent:eHP,pFCCurrent:pFC,eFCCurrent:eFC};
     if (field.name === 'Nido di Spine') {
       const pBefore = pHP;
       pHP = Math.max(0, pHP - 5);
@@ -65,6 +67,7 @@ export function applyBattlefieldRoundAftermath({
     pHP = Math.max(0, pHP - damageDealt);
     battleLog.push(`💔 Perdi ${damageDealt} PV (${before} → ${pHP})`);
 
+    if (preventRevival && (pHP <= 0 || eHP <= 0)) return {pHPCurrent:pHP,eHPCurrent:eHP,pFCCurrent:pFC,eFCCurrent:eFC};
     if (field.name === 'Nido di Spine') {
       const eBefore = eHP;
       eHP = Math.max(0, eHP - 5);

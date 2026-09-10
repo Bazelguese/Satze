@@ -735,7 +735,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
-  const armyBonus = ARMY_BONUSES[agent.army];
+  const armyBonus = agent.armyBonusOverride || ARMY_BONUSES[agent.army];
   const displayArmyBonus = copiedBonus || effectiveArmyBonus || armyBonus;
   const spriteInfo = getCardSprite(agent);
   const basePositioning = getImagePositioning(agent.id, agent.army);

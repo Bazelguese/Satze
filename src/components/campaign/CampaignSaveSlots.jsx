@@ -1,3 +1,4 @@
+import { createFirstActRun } from '../../campaign/state/firstActState.js';
 // Scelta slot salvataggio campagna (3 slot indipendenti).
 
 import React, { useCallback, useState } from 'react';
@@ -9,10 +10,11 @@ import {
 } from '../../campaign/state/persistence.js';
 import { CAMPAIGN_UI, CAMPAIGN_FONTS } from '../../campaign/campaignTheme.js';
 import { MenuScreenLayout, MenuBackButton } from '../menu';
-import { createControlledRun } from '../../campaign/state/controlledCampaignState.js';
-import { loadCampaignDefinition } from '../../campaign/logic/campaignDefinition.js';
 import { saveCampaignRun } from '../../campaign/state/persistence.js';
 import { CampaignEventEditor } from './CampaignEventEditor.jsx';
+import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
+import { CampaignBackdrop, CampaignSigil, heroArt } from './CampaignScenery.jsx';
+import { playUiClick, playUiConfirm } from '../../audio/gameSounds.js';
 
 import '../../styles/campaign/colors_and_type.css';
 import '../../styles/campaign/atto1-components.css';
@@ -32,7 +34,6 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   const [armySlot, setArmySlot] = useState(null);
 
   const [editor, setEditor] = useState(false);
-  const [imprint, setImprint] = useState('turbo');
   const [error, setError] = useState('');
 
   const refresh = useCallback(() => {
@@ -40,20 +41,27 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   }, []);
 
   if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
-  if (armySlot != null) return <section className="campaign-control">
-    <p className="cc-eyebrow">Nuova campagna · tre atti</p><h1>Il Nascente</h1>
-    <div className="cc-panel"><h2>Scegli l’Impronta iniziale</h2><p>Il Nascente parte con 3 POT e 2 DAN, accompagnato da nove Figli dell’Orizzonte. La Concordia di Caelion presidia il percorso.</p>
-      <div className="cc-choices">{[['turbo', 'Istinto del primo colpo', 'Turbo: +1 POT'], ['imboscata', 'Arte dell’agguato', 'Imboscata: 1 danno diretto'], ['vendetta', 'Memoria del torto', 'Vendetta: +1 FC']].map(([id, title, text]) => <button key={id} aria-pressed={imprint === id} onClick={() => setImprint(id)}>{title}<small>{text}</small></button>)}</div>
+  if (armySlot != null) return <CampaignScene>
+    <CampaignBackdrop/>
+    <div className="cs-content">
+      <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><CampaignMotionControl/><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
+      <div className="cs-origin">
+        <div className="cs-origin-portrait"><img src={heroArt({league: 2})} alt="Il Nascente, arciere dell’Orizzonte"/><div>2 POT · 2 DAN · LEGA 2</div></div>
+        <div className="cs-origin-copy"><p className="cs-kicker">ATTO I · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Oltre il Vallo, le campane della Concordia chiamano i Resistenti. Il Nascente affronta il primo varco da solo. Gli agenti ottenuti dagli avversari formeranno il tuo esercito. La forma che assumerai dipende dalle tue scelte.</p>
+          <p>Il primo Potere prenderà forma attraverso le Domande lungo il cammino.</p>
+          {error && <p role="alert" className="cs-error">{error}</p>}
+          <button className="cs-primary" onClick={() => {
+            try {
+              const run = createFirstActRun();
+              if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
+              playUiConfirm();
+              onSlotChosen(armySlot);
+            } catch (e) { setError(e.message); }
+          }}>Inizia il cammino</button><small className="cs-footnote">Il Nascente è sempre nella mano iniziale. Ogni incontro apre un passo del percorso.</small>
+        </div>
+      </div>
     </div>
-    {error && <p role="alert" className="cc-error">{error}</p>}
-    <div className="cc-toolbar"><button onClick={() => {
-      try {
-        const run = createControlledRun(loadCampaignDefinition(), { imprint });
-        if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
-        onSlotChosen(armySlot);
-      } catch (e) { setError(e.message); }
-    }}>Inizia il cammino</button><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></div>
-  </section>;
+  </CampaignScene>;
 
   const fmtTime = (ts) => {
     if (ts == null || !Number.isFinite(ts)) return null;
@@ -102,7 +110,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
               {!empty && !sum.corrupt && (
                 <div style={{ fontSize: 13, color: CAMPAIGN_UI.textSec, lineHeight: 1.6, marginBottom: 12 }}>
                   <div>
-                    {sum.controlled ? <>Atto {sum.actNumber} di 3 · Incontro {sum.stageNumber} di 6</> : <>Giorno <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.day}</strong>
+                    {sum.firstAct ? <>Atto I · {sum.completed} tappe completate</> : sum.controlled ? <>Atto {sum.actNumber} di 3 · Incontro {sum.stageNumber} di 6</> : <>Giorno <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.day}</strong>
                     {' '}di <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.daysLimit}</strong></>}
                     {' '}· Missioni superate: <strong style={{ color: CAMPAIGN_UI.textPri }}>{sum.missionsCompleted}</strong>
                   </div>

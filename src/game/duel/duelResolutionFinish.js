@@ -30,6 +30,8 @@ export function runDuelDamageAftermathAndFcAdjust({
   // Lati che non subiscono la parte per-Agente del Campo. L'aftermath di round resta fuori:
   // agisce sul giocatore dopo il Duello, non sull'Agente durante il Duello.
   fieldVeiledSides = [],
+  terminal = null,
+  preventRevival = false,
 }) {
   if (battleLog && typeof battleLog.setContext === 'function') {
     battleLog.setContext(BATTLE_PHASES.post, BATTLE_REVEAL_AT.postFx);
@@ -60,9 +62,10 @@ export function runDuelDamageAftermathAndFcAdjust({
     eFC: eFCCurrent,
   };
 
-  const aftermath = applyBattlefieldRoundAftermath({
+  const aftermath = terminal ? { pHPCurrent: terminal.playerHP, eHPCurrent: terminal.enemyHP, pFCCurrent, eFCCurrent } : applyBattlefieldRoundAftermath({
     field,
     winner,
+    preventRevival,
     damageDealt,
     pHPCurrent,
     eHPCurrent,

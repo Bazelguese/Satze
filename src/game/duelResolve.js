@@ -1,3 +1,5 @@
+import { terraformDestination, replaceContinuousFieldStats } from './duel/terraform.js';
+import { getFieldSetupFlags } from './battlefieldEffects.js';
 // ============================================
 // Risoluzione duello (logica pura, nessun React)
 // Fonte di verità per VA, poteri, bonus e esito scontro (locale e UI).
@@ -95,6 +97,7 @@ function combatStartDiffersFromDeploy(deployStats, state) {
  */
 export function computeDuelResolution({
   field,
+  campaign = null,
   selectedAgent: pAgentInput,
   enemyAgent: eAgentInput,
   selectedFocus,
@@ -222,8 +225,11 @@ export function computeDuelResolution({
 
     const pHasBonusRaw = playerArmyBonuses[pAgent.army] || false;
     const eHasBonusRaw = enemyArmyBonuses[eAgent.army] || false;
-    const pArmyBonusRaw = ARMY_BONUSES[pAgent.army];
-    const eArmyBonusRaw = ARMY_BONUSES[eAgent.army];
+    playerContext.previousBonusActivated = campaign?.previousBonus?.player === true;
+    enemyContext.previousBonusActivated = campaign?.previousBonus?.enemy === true;
+    const concordiaBonus = { trigger: 'staffetta', effects: [{effect:'power',value:1}], description:'Staffetta: +1 POT' };
+    const pArmyBonusRaw = campaign?.firstAct && pAgent.army === 'Concordia di Caelion' ? concordiaBonus : ARMY_BONUSES[pAgent.army];
+    const eArmyBonusRaw = campaign?.firstAct && eAgent.army === 'Concordia di Caelion' ? concordiaBonus : ARMY_BONUSES[eAgent.army];
     const resolvedBonuses = resolveFieldArmyBonuses(
       field,
       pHasBonusRaw,
@@ -265,7 +271,7 @@ export function computeDuelResolution({
     pArmyBonus = pSwap.armyBonus;
     eArmyBonus = eSwap.armyBonus;
 
-    const duelCanTriggerAbility = createDuelCanTriggerAbility(checkTrigger, field);
+    const duelCanTriggerAbility = (...args) => createDuelCanTriggerAbility(checkTrigger, field)(...args);
 
     const duel = {
       pPower: deployStats.playerPower,
@@ -349,7 +355,7 @@ export function computeDuelResolution({
       });
     }
     emitFieldVeilEvents(battleLog, veiledSides, { field, pAgent, eAgent });
-    const {
+    let {
       blockDisabled,
       copyDisabled,
       directDamageDisabled,
@@ -454,8 +460,14 @@ export function computeDuelResolution({
       enemyFieldsConquered,
     });
 
-    const applyEffect = (effect, value, target, source, log, options = {}) =>
+    let campaignTerminal = null;
+    const applyEffect = (effect, value, target, source, log, options = {}) => {
+      if (campaignTerminal) return;
       applyDuelPowerEffect(effect, value, target, source, log, options, state, ctx);
+      if (campaign?.firstAct && (state.pHPCurrent <= 0 || state.eHPCurrent <= 0)) {
+        campaignTerminal = { playerHP: state.pHPCurrent, enemyHP: state.eHPCurrent };
+      }
+    };
 
     const fieldOptions = {
       copyDisabled,
@@ -486,6 +498,8 @@ export function computeDuelResolution({
       visualRecorder,
     });
 
+    // Separate agent blocks from the outgoing Temple's continuous prohibition.
+    if (field.id === 6) { state.pBonusBlocked = false; state.eBonusBlocked = false; }
     applyDuelBlockPrescan({
       blockDisabled,
       fieldName: field.name,
@@ -500,6 +514,25 @@ export function computeDuelResolution({
       isPlayerFirst,
       visualRecorder,
     });
+    const agentBonusBlocks = { player: state.pBonusBlocked, enemy: state.eBonusBlocked };
+    if (field.id === 6) { state.pBonusBlocked = true; state.eBonusBlocked = true; }
+    ctx.terraform = (id, target, log) => {
+      const next = terraformDestination(id);
+      if (next.id === field.id) return;
+      const old = field;
+      replaceContinuousFieldStats(state, old, next);
+      field = { ...next };
+      Object.assign(fieldFlags, getFieldSetupFlags(field));
+      ({ blockDisabled, copyDisabled, directDamageDisabled, modifiersDisabled, maxDamage,
+         maxFC, directDamageBonus, overdriveThreshold, triggersIgnored, minFloorReduction } = fieldFlags);
+      Object.assign(fieldOptions, fieldFlags);
+      attachFieldModifiersToContexts(field, playerContext, enemyContext);
+      // Prescan already ran: never replay or remove an Agent's resolved block.
+      if (old.id === 6) { state.pBonusBlocked = agentBonusBlocks.player; state.eBonusBlocked = agentBonusBlocks.enemy; }
+      if (field.id === 6) { state.pBonusBlocked = true; state.eBonusBlocked = true; }
+      if (field.id === 3) { state.pAbilityBlocked = true; state.eAbilityBlocked = true; }
+      log.push(`Terraformare: ${old.name} → ${field.name}`);
+    };
     if (eminenceBundle?.armyBonusState?.player?.unblockable) state.pBonusBlocked = false;
     if (eminenceBundle?.armyBonusState?.enemy?.unblockable) state.eBonusBlocked = false;
 
@@ -890,6 +923,12 @@ export function computeDuelResolution({
     const finalPHasBonus = pBonusTriggerSatisfied || pPostBonusTriggered;
     const finalEHasBonus = eBonusTriggerSatisfied || ePostBonusTriggered;
 
+    const planApplies = campaign?.firstAct && !campaign.planUsed && ((campaign.plan === 'tenuta' && winner === 'player') || (campaign.plan === 'assalto' && winner === 'enemy'));
+    if (planApplies) {
+      if (winner === 'player') pDamage = Math.max(0, pDamage - 1);
+      else eDamage += 1;
+      battleLog.push(`Piano ${campaign.plan}: DAN modificato di ${winner === 'player' ? '−1' : '+1'}`);
+    }
     const outcome = runDuelDamageAftermathAndFcAdjust({
       battleLog,
       field,
@@ -917,6 +956,8 @@ export function computeDuelResolution({
         eAgent?.id
       ),
       fieldVeiledSides: veiledSides,
+      terminal: campaignTerminal,
+      preventRevival: campaign?.firstAct === true,
     });
 
     // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.
@@ -981,6 +1022,10 @@ export function computeDuelResolution({
 
     const battleResult = {
       ...builtResult,
+      ...(campaign?.firstAct ? {resolvedField: field,
+      campaignPlanUsed: Boolean(campaign?.planUsed || planApplies),
+      campaignTerminal,
+      previousBonus: { player: Boolean(finalPHasBonus && pHasBonus && !pBonusBlocked), enemy: Boolean(finalEHasBonus && eHasBonus && !eBonusBlocked) }} : {}),
       eminenceTriggerRules: eminenceBundle?.triggerRules || null,
       fieldDestroyed: conquestOverride.destroyField,
       skipConquest: conquestOverride.suppressConquest || conquestOverride.destroyField,

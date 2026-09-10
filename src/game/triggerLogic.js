@@ -57,6 +57,9 @@ export const checkTrigger = (trigger, context) => {
     const fieldMods = context.fieldModifiers || {};
     
     switch (trigger) {
+      case 'staffetta':
+        return fieldMods.staffettaAlwaysActive === true || context.cardsPlayed === 1 || context.previousBonusActivated === true;
+
       case 'imboscata':
         if (fieldMods.imboscataAlwaysActive) return true;
         if (fieldMods.swapImboscataIntervento) return !context.isFirst;
