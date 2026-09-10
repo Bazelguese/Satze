@@ -80,8 +80,9 @@ export function createFirstActRun({ seed = Math.floor(Math.random() * 2 ** 31) }
   validateFirstActData();
   return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, stats: { wins:0, losses:0, draws:0, transformed:0, partial:false }, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, finalStat: null, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
 }
+export const firstActDeckSize = r => Math.min(r.slots, new Set([NASCENTE,...r.copies.map(c=>c.cardId)]).size);
 export function validateFirstActDeck(r, deck = r.deck) {
-  return Array.isArray(deck) && deck.length === r.slots && new Set(deck).size === deck.length && deck.includes(NASCENTE) && deck.every(id => id === NASCENTE || r.copies.some(c => c.cardId === id)) && runLeague(r, deck) <= 30;
+  return Array.isArray(deck) && deck.length === firstActDeckSize(r) && new Set(deck).size === deck.length && deck.includes(NASCENTE) && deck.every(id => id === NASCENTE || r.copies.some(c => c.cardId === id)) && runLeague(r, deck) <= 30;
 }
 export function legalArmy(r) {
   const ids = [...new Set(r.copies.map(c => c.cardId))].sort((a, b) => runCard(r, a).league - runCard(r, b).league || a - b);
@@ -112,9 +113,10 @@ function hand(ids, required, r, salt) {
   return [...required, ...shuffled([...ids].sort((a,b) => a-b).filter(id => !required.includes(id)), r.seed, salt)].slice(0, Math.min(5, ids.length));
 }
 export function createAttempt(r, node) {
-  const player = hand(r.deck, [NASCENTE], r, `${node.id}:hands:player`);
   const enemy = node.squads?.[0] || hand(node.roster, node.required, r, `${node.id}:hands:enemy`);
   const multi = node.squads || (node.kind === 'elite' && node.roster.length === 10 ? [enemy, node.roster.filter(id => !enemy.includes(id))] : null);
+  // Keep a real agent for the second squad even when duplicate rewards leave vacant slots.
+  const player = hand(r.deck, [NASCENTE], r, `${node.id}:hands:player`).slice(0, multi ? Math.min(5,r.deck.length-1) : 5);
   const pSquads = [player];
   if (multi) pSquads.push(r.deck.filter(id => !player.includes(id)).sort((a,b) => a-b));
   const sum = ids => ids.reduce((s,id) => s + runCard(r,id).league, 0);
@@ -141,9 +143,8 @@ export function previewFirstActReward(r, cardId) {
   const next = firstActReducer(r, { type: 'REWARD', cardId });
   return {
     slots: next.slots,
-    copies: next.copies.slice(r.copies.length).map((copy, index) => ({
+    copies: next.copies.slice(r.copies.length).map(copy => ({
       ...copy,
-      reinforcement: index > 0,
       ownedBefore: r.copies.filter(c => c.cardId === copy.cardId).length,
       totalCopies: next.copies.filter(c => c.cardId === copy.cardId).length,
     })),
@@ -219,13 +220,6 @@ export function firstActReducer(r, action) {
       const node = firstActNode(pending.nodeId);
       next = addCopy(r,action.cardId);
       next.slots = node.growth || r.slots;
-      const owned = () => new Set([NASCENTE,...next.copies.map(c => c.cardId)]);
-      if (owned().size < next.slots) {
-        const candidates = shuffled(node.roster.filter(id => !owned().has(id)),r.seed,`${node.id}:reinforcement`);
-        const id = candidates.find(id => legalArmy(addCopy(next,id)));
-        if (id == null) throw new Error('Roster privo di un rinforzo legale.');
-        next = addCopy(next,id);
-      }
       if (!validateFirstActDeck(next)) next.deck = legalArmy(next);
       if (!next.deck) throw new Error('Nessun esercito legale dopo il premio.');
       if (node.plan) next.plans = { ...next.plans, [node.id.startsWith('I5') ? 'P1' : 'P2']: node.plan };
@@ -253,7 +247,9 @@ export function firstActReducer(r, action) {
       const copy = r.copies.find(c=>c.uid===action.uid);
       const cardId = shuffled(pool,r.seed,`transform:${copy.uid}`)[0];
       const copies = r.copies.map(c => c.uid===copy.uid ? { ...c, cardId } : c);
-      next = { ...r, stats:{...firstActStats(r),transformed:firstActStats(r).transformed+1}, copies, deck: r.deck.map(id => id===copy.cardId && !copies.some(c=>c.cardId===id) ? cardId : id) }; break;
+      next = { ...r, stats:{...firstActStats(r),transformed:firstActStats(r).transformed+1}, copies, deck: r.deck.map(id => id===copy.cardId && !copies.some(c=>c.cardId===id) ? cardId : id) };
+      if (!validateFirstActDeck(next)) next.deck = legalArmy(next);
+      break;
     }
     case 'SKIP':
       if (FIRST_ACT_STAGES[r.stage]?.[0] !== 'F2' || r.active || r.pendingReward) throw new Error('Faglia non saltabile.');

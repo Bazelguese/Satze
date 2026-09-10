@@ -78,14 +78,13 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
         const reward=previewFirstActReward(run,id);
         return <article className="cs-reward-option" key={id} aria-label={`Premio: ${firstActCard(id).name}`}>
           <div className="cs-reward-cards">{reward.copies.map(copy=><div className="cs-reward-agent" key={copy.uid} data-card-id={copy.cardId}>
-            <span className="cs-kicker">{copy.reinforcement?'RINFORZO AGGIUNTIVO':'AGENTE OTTENUTO'}</span>
+            <span className="cs-kicker">AGENTE OTTENUTO</span>
             <CardReworkP4Scaled agent={firstActCard(copy.cardId)} width={180}/>
             <strong>{firstActCard(copy.cardId).name}</strong>
             <p>{copy.ownedBefore ? `Doppione · ${copy.ownedBefore} → ${copy.totalCopies} copie. La copia aggiuntiva resta in riserva.` : 'Nuova identità nella tua collezione.'}</p>
           </div>)}</div>
-          {reward.copies.some(c=>c.reinforcement)&&<p className="cs-reward-reason">Il tuo esercito cresce a {reward.slots} posti: ricevi anche questo rinforzo per poterli riempire. Il premio originale viene conservato.</p>}
           {reward.slots>run.slots&&<p>Posti nell’esercito: {run.slots} → {reward.slots}</p>}
-          <button className="cs-primary" onClick={()=>commit({type:'REWARD',cardId:id})}>Accogli {firstActCard(id).name}{reward.copies.length>1?' e il rinforzo':''}</button>
+          <button className="cs-primary" onClick={()=>commit({type:'REWARD',cardId:id})}>Accogli {firstActCard(id).name}</button>
         </article>;
       })}</div>
     </div></section> : run.pendingEvent ? <FirstActEvent {...{run,choice,setChoice,family,setFamily,commit}}/> : <div className="cs-world-layout"><div className="cs-first-cartography">

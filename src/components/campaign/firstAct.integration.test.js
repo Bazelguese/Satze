@@ -215,15 +215,16 @@ function pendingAt(nodeId) {
  }
  return reduce(r,{type:'TEST_WIN',nodeId});
 }
-it('shows the duplicate and the exact extra reinforcement before saving either copy',()=>{
+it('shows and saves only the duplicate, without any reinforcement',()=>{
  const before=pendingAt('I9A');saveCampaignRun(before,0);
  const saved=loadCampaignRun(0), expected=reduce(before,{type:'REWARD',cardId:before.pendingReward.offer[0]});
- const added=expected.copies.slice(before.copies.length);expect(added).toHaveLength(2);
+ const added=expected.copies.slice(before.copies.length);expect(added).toHaveLength(1);
  render(React.createElement(FirstActHub,{onBack:()=>{}}));
  const panel=host.querySelector('.cs-first-reward-panel');
  expect([...panel.querySelectorAll('[data-card-id]')].map(el=>Number(el.dataset.cardId))).toEqual(added.map(c=>c.cardId));
- expect(panel.textContent).toContain('Scudiero del Vallo');expect(panel.textContent).toContain('Duellante del Sole Pallido');
- expect(panel.textContent).toContain('Doppione · 2 → 3 copie');expect(panel.textContent).toContain('RINFORZO AGGIUNTIVO');
+ expect(panel.textContent).toContain('Scudiero del Vallo');expect(panel.textContent).not.toContain('Duellante del Sole Pallido');
+ const count=before.copies.filter(c=>c.cardId===before.pendingReward.offer[0]).length;
+ expect(count).toBeGreaterThan(0);expect(panel.textContent).toContain(`Doppione · ${count} → ${count+1} copie`);expect(panel.textContent).not.toContain('RINFORZO AGGIUNTIVO');
  expect(panel.textContent).toContain('Posti nell’esercito: 7 → 8');expect(loadCampaignRun(0)).toEqual(saved);
  const shown=panel.textContent;render(null);render(React.createElement(FirstActHub,{onBack:()=>{}}));
  expect(host.querySelector('.cs-first-reward-panel').textContent).toBe(shown);
@@ -271,4 +272,14 @@ it('recovers available legacy stats without counting questions as wins and resto
  saveCampaignRun(r,0);const snapshot=loadCampaignRun(0).active.snapshot;
  expect(snapshot.campaignDuelMod.revealRounds).toEqual([1,1,1,2,3]);expect(snapshot.revealedFields).toBe(4);
  expect(snapshot.playerHP).toBe(17);expect(snapshot.conqueredFields).toEqual(r.active.snapshot.conqueredFields);
+});
+
+it('places the Nascente summary on the left and the army on the right',()=>{
+ const style=document.createElement('style');style.textContent=firstActCss;document.head.append(style);
+ try {
+  saveCampaignRun(createFirstActRun(),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));
+  expect(getComputedStyle(host.querySelector('.cs-hero-summary')).gridColumn).toBe('1');
+  expect(getComputedStyle(host.querySelector('.cs-party-deck')).gridColumn).toBe('2');
+  act(()=>host.querySelector('.cs-hero-summary').click());expect(host.querySelector('[role="dialog"]').textContent).toContain('Il cammino del Nascente');
+ }finally{style.remove();}
 });

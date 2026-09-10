@@ -145,19 +145,18 @@
 .cs-first-act img[data-art-ready] { transition:opacity .6s ease-out; }
 .cs-first-act img[data-art-ready=false] { opacity:0 !important; }
 
-/* Reward cards mirror the complete saved transaction, including growth reinforcements. */
+/* Reward cards mirror the complete saved transaction, including duplicate copies. */
 .cs-first-act .cs-first-reward-panel { height:100%; min-height:0; overflow-y:auto; }
 .cs-first-act .cs-first-rewards { align-items:stretch; }
 .cs-first-act .cs-reward-option { flex:0 1 auto; max-width:540px; padding:18px; border:1px solid #bda36d70; background:#152124; display:flex; flex-direction:column; gap:12px; }
 .cs-first-act .cs-reward-cards { display:flex; justify-content:center; gap:24px; }
 .cs-first-act .cs-reward-agent { width:210px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
 .cs-first-act .cs-reward-agent p { font-size:14px; line-height:1.5; margin:0; }
-.cs-first-act .cs-reward-reason { padding:12px; border-left:2px solid #d5b87a; background:#d5b87a10; }
 .cs-first-act .cs-reward-option > button { margin-top:auto; align-items:center; }
 
-/* Separate footer entry points: deck left, protagonist right. */
-.cs-first-act .cs-party-deck { grid-column:1; grid-row:1; }
-.cs-first-act .cs-hero-summary { grid-column:2; grid-row:1; justify-self:end; }
+/* Separate footer entry points: protagonist left, deck right. */
+.cs-first-act .cs-party-deck { grid-column:2; grid-row:1; }
+.cs-first-act .cs-hero-summary { grid-column:1; grid-row:1; justify-self:start; }
 .cs-nascente-summary { display:grid; grid-template-columns:300px minmax(0,1fr); gap:48px; padding:24px; }
 .cs-summary-card { display:flex; flex-direction:column; align-items:center; gap:18px; }
 .cs-summary-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:0 0 20px; }

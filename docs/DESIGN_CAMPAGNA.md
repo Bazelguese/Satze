@@ -1691,3 +1691,12 @@ Il comando del Nascente in basso a destra apre il riepilogo personale: vittorie,
 Le statistiche contano gli incontri conclusi nell’intera run, includendo i tentativi falliti, quelli riavvolti e le vittorie di test. Le fasi intermedie, gli eventi e la conferma dei premi non aggiungono vittorie. L’abbandono conta come sconfitta. Ogni trasformazione confermata incrementa il contatore una volta; il riavvolgimento non cancella le statistiche cumulative. Il salvataggio conserva i contatori; per quelli precedenti vengono recuperati solo i dati disponibili, con indicazione «Statistiche parziali».
 
 Rivelazione dei Campi ripristinata al duello classico: fino a tre Campi iniziali, quarto al round 2 e quinto al round 3. Nei formati ridotti si applica la stessa sequenza limitata ai Campi presenti. Questa disposizione sostituisce i precedenti tempi round 3/4 descritti nei capitoli degli incontri. Si applica anche ai duelli salvati, conservando identità dei Campi, conquiste e risorse. Ogni nuova fase ricomincia al round 1 con i primi tre Campi visibili.
+
+
+### Premio singolo e posizione del Nascente — regola corrente
+
+Il Nascente torna in basso a sinistra e apre il riepilogo personale; l’Esercito del Nascente occupa il lato destro e apre esercito e riserva.
+
+Ogni premio confermato assegna esattamente una copia dell’agente offerto. Un doppione resta in riserva: non viene sostituito e non concede rinforzi, altre carte o compensazioni. La Crescita garantita descritta nei capitoli precedenti è abolita. Le élite e il boss mantengono due candidati, con una sola copia assegnata dopo la scelta.
+
+I posti sbloccati restano disponibili anche quando mancano identità diverse. Si schierano tutte le identità disponibili fino alla capienza, con il Nascente, una sola copia per identità e Lega entro 30. I posti vuoti non impediscono di ritirare il premio o iniziare l’incontro. Nuove acquisizioni o trasformazioni di doppioni possono riempirli. In un incontro a due squadre si conserva almeno un agente per la seconda fase se l’esercito conta cinque o meno identità; nessuna carta viene duplicata o generata per completare la mano. Le copie già assegnate nei salvataggi precedenti vengono conservate.

@@ -54,7 +54,7 @@ describe('Atto I 0.25',()=>{
  });
  it('boss preserves PV, replaces all hands, resets FC and returns only N01',()=>{
   let r=until('I12');r=reduce(r,{type:'START',nodeId:'I12'});const a=r.active;
-  expect(a.playerSquads[0]).toContain(NASCENTE);expect(new Set(a.playerSquads.flat()).size).toBe(10);
+  expect(a.playerSquads[0]).toContain(NASCENTE);expect(new Set(a.playerSquads.flat()).size).toBe(r.deck.length);
   r=result(r,'player',17,9);expect(r.active.phase).toBe(1);expect(r.pendingReward).toBeNull();
   const cfg=firstActDuelConfig(r);expect(cfg.campaignDuelMod).toMatchObject({playerLife:17,enemyLife:9,playerFocus:18,enemyFocus:20});
   expect(a.enemySquads[0].filter(id=>a.enemySquads[1].includes(id))).toEqual(codes('N01'));
@@ -198,4 +198,42 @@ it('records transformations and retains lifetime counters across rewind',()=>{
  r=reduce(r,{type:'TRANSFORM',uid:copy.uid});expect(r.stats.transformed).toBe(1);
  r=reduce(r,{type:'START',nodeId:'I6'});r=result(r,'enemy');const stats={...r.stats};
  r=reduce(r,{type:'REWIND'});expect(r.stats).toEqual(stats);
+});
+
+it('awards exactly one copy across runs, allowing vacant slots without replacing duplicates',()=>{
+ let duplicates=0;
+ for(let seed=1;seed<=12;seed++) {
+  let r=createFirstActRun({seed});
+  while(!r.outcome) {
+   const nodes=availableFirstActNodes(r),node=nodes[seed%nodes.length];
+   if(node.optional&&seed%2){r=reduce(r,{type:'SKIP'});continue;}
+   if(node.kind==='event'){r=reduce(r,{type:'ENTER_EVENT'});r=reduce(r,{type:'CHOICE',choice:node.id==='E06'?'liberi':'conserva'});continue;}
+   const before=r.copies;
+   r=reduce(r,{type:'START',nodeId:node.id});
+   expect(r.active.playerSquads.flat().every(id=>r.deck.includes(id))).toBe(true);
+   while(r.active) r=result(r);
+   const reward=r.pendingReward.offer[0],wasDuplicate=before.some(c=>c.cardId===reward);
+   r=reduce(r,{type:'REWARD',cardId:reward});
+   expect(r.copies.slice(0,before.length)).toEqual(before);expect(r.copies).toHaveLength(before.length+1);
+   expect(r.copies.at(-1).cardId).toBe(reward);expect(r.nextCopy).toBe(r.copies.length+1);
+   expect(r.deck.length).toBe(Math.min(r.slots,new Set([NASCENTE,...r.copies.map(c=>c.cardId)]).size));
+   if(wasDuplicate)duplicates++;
+  }
+ }
+ expect(duplicates).toBeGreaterThan(0);
+});
+it('uses only owned agents in both boss phases when most army slots are vacant',()=>{
+ let r=until('I12');const ids=codes('V01 V02');
+ r={...r,copies:r.copies.filter(c=>ids.includes(c.cardId)),deck:[NASCENTE,...ids]};assertFirstActRun(r);
+ r=reduce(r,{type:'START',nodeId:'I12'});
+ expect(r.active.playerSquads.map(s=>s.length)).toEqual([2,1]);
+ expect(new Set(r.active.playerSquads.flat()).size).toBe(3);
+ r=result(r);expect(r.active.phase).toBe(1);expect(firstActDuelConfig(r).startOptions.fixedHands.playerHand).toHaveLength(1);
+ r=result(r);r=reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});expect(r.outcome).toBe('won');
+});
+it('fills a vacant slot when transforming a reserve duplicate into a new identity',()=>{
+ let r=until('I5A');const id=codes('V02')[0];
+ r={...r,copies:[{uid:'x',cardId:id,acquiredAt:0},{uid:'y',cardId:id,acquiredAt:0}],deck:[NASCENTE,id]};
+ const next=reduce(r,{type:'TRANSFORM',uid:'y'});
+ expect(next.copies).toHaveLength(2);expect(next.deck).toHaveLength(3);expect(next.deck).toContain(id);assertFirstActRun(next);
 });

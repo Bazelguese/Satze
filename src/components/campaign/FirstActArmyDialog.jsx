@@ -35,6 +35,7 @@ export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClos
     {error && <p className="cs-error" role="alert">{error}</p>}
     {tab === 'army' ? <>
       <p>Lega {runLeague(run,draft)}/30 · Una sola copia per identità nell’esercito.</p>
+      {run.deck.length<run.slots&&<p>{run.slots-run.deck.length} posti vuoti: serviranno nuove identità per riempirli. I doppioni restano in riserva.</p>}
       <div className="cs-army-roster-scroll"><div className="cs-card-roster">
         {[NASCENTE,...new Set(run.copies.map(c=>c.cardId))].map(id=><label key={id} className={draft.includes(id)?'selected':''}>
           <input type="checkbox" aria-label={runCard(run,id).name} checked={draft.includes(id)} disabled={id===NASCENTE||!!run.active||!!run.pendingReward}
