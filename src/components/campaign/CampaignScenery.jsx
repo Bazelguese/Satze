@@ -32,15 +32,15 @@ export function CampaignBackdrop({ actIndex = 0 }) {
 }
 
 const positions = [[12, 76], [29, 55], [45, 38], [62, 55], [76, 35], [87, 15]];
-export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, availableIds, interactionLocked = false, legend = "Una via al bivio · ricongiungimento prima dell’élite" }) {
+export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, availableIds, interactionLocked = false, continuous = false, legend = "Una via al bivio · ricongiungimento prima dell’élite" }) {
   const points = act.stages.flatMap((stage, index) => stage.alternatives.map((mission, branch) => ({
-    mission, index: index + stageOffset, x: positions[index][0], y: stage.alternatives.length > 1 ? (branch ? 76 : Math.min(45, positions[index][1])) : positions[index][1],
+    mission, index: index + stageOffset, x: continuous ? (80 + index * 160) / Math.max(960, act.stages.length * 160) * 100 : positions[index][0], y: stage.alternatives.length > 1 ? (branch ? 76 : continuous ? 35 : Math.min(45, positions[index % 6][1])) : positions[index % 6][1],
   })));
   const links = points.flatMap(point => points.filter(next => next.index === point.index + 1).map(next => ({ from: point, to: next })));
   const selected = points.find(point => point.mission.id === selectedId);
-  return <div className="cs-map" role="region" aria-label="Percorso dell’atto">
+  return <div className={`cs-map${continuous ? ' cs-map-continuous' : ''}`} style={continuous ? {width:Math.max(960, act.stages.length * 160)} : undefined} role="region" aria-label="Percorso dell’atto">
     <span className="cs-map-caption">LE TERRE DELLA CONCORDIA</span>
-    <svg className="cs-map-trails" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+    <svg className="cs-map-trails" viewBox={`0 0 ${continuous ? Math.max(960, act.stages.length * 160) : 1000} 600`} preserveAspectRatio="none" aria-hidden="true">
       {links.map(({from, to}) => {
         const traveled = run.history.some(h => h.missionId === from.mission.id && h.result === 'player') &&
           (run.history.some(h => h.missionId === to.mission.id && h.result === 'player') ||
@@ -48,7 +48,7 @@ export function CampaignMap({ act, run, selectedId, onSelect, stageOffset = 0, a
         const approaching = to.mission.id === selectedId && to.index === run.stageIndex &&
           run.history.some(h => h.missionId === from.mission.id && h.result === 'player');
         return <path key={`${from.mission.id}-${to.mission.id}`} className={`${traveled ? 'traveled' : ''} ${approaching ? 'approaching' : ''}`}
-          d={`M${from.x * 10} ${from.y * 6} C${(from.x + 8) * 10} ${from.y * 6},${(to.x - 8) * 10} ${to.y * 6},${to.x * 10} ${to.y * 6}`}/>;
+          d={(() => { const scale = continuous ? Math.max(960, act.stages.length * 160)/100 : 10; const bend = continuous ? 60 : 80; return `M${from.x * scale} ${from.y * 6} C${from.x * scale + bend} ${from.y * 6},${to.x * scale - bend} ${to.y * 6},${to.x * scale} ${to.y * 6}`; })()}/>;
       })}
     </svg>
     {points.map(({ mission, index, x, y }) => {

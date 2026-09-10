@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
 import { CampaignBackdrop, CampaignSigil, CampaignMap, campaignArt, heroArt, encounterKinds } from './CampaignScenery.jsx';
@@ -13,8 +13,26 @@ const labels = { conserva:'Per ora, ciò che sono basta.', power:'La forza per c
 export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const [run,setRun] = useState(()=>loadCampaignRun(campaignSaveSlot));
   const [error,setError] = useState(''), [army,setArmy]=useState(false), [selected,setSelected]=useState(null), [choice,setChoice]=useState(null), [family,setFamily]=useState(null), [inspect,setInspect]=useState(false);
-  const [mapPage,setMapPage] = useState(()=>Math.floor((run?.stage || 0)/6)), [departure,setDeparture]=useState(null);
-  useEffect(()=>setMapPage(Math.min(2,Math.floor((run?.stage || 0)/6))),[run?.stage]);
+  const [departure,setDeparture]=useState(null);
+  const mapViewport=useRef(null);
+  useEffect(()=>{
+    const viewport=mapViewport.current;
+    if (!viewport) return;
+    const left=Math.max(0,80+(run?.stage || 0)*160-viewport.clientWidth/2);
+    viewport.scrollLeft=left;
+  },[run?.stage,run?.pendingReward,run?.pendingEvent]);
+  useEffect(()=>{
+    const viewport=mapViewport.current;
+    if (!viewport) return;
+    const wheel=e=>{
+      if(e.ctrlKey || Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+      const delta=e.deltaY*(e.deltaMode===1?24:e.deltaMode===2?viewport.clientWidth:1);
+      const next=Math.max(0,Math.min(viewport.scrollWidth-viewport.clientWidth,viewport.scrollLeft+delta));
+      if(next!==viewport.scrollLeft){e.preventDefault();viewport.scrollLeft=next;}
+    };
+    viewport.addEventListener('wheel',wheel,{passive:false});
+    return ()=>viewport.removeEventListener('wheel',wheel);
+  },[run?.pendingReward,run?.pendingEvent,run?.outcome]);
   const [draft,setDraft]=useState(run?.deck || []);
   if (!run) return <section className="campaign-control"><p>Salvataggio non leggibile.</p><button onClick={onBack}>Menu</button></section>;
   const commit = action => {
@@ -33,7 +51,7 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   const enemy=battleNode?.roster || [];
   const nascente=runCard(run,NASCENTE);
   const mapRun={stageIndex:run.stage,outcome:run.outcome,definition:{events:[]},history:run.history.map(h=>({...h,missionId:h.nodeId}))};
-  const mapAct={stages:FIRST_ACT_STAGES.slice(mapPage*6,mapPage*6+6).map(ids=>({alternatives:ids.map(firstActNode)}))};
+  const mapAct={stages:FIRST_ACT_STAGES.map(ids=>({alternatives:ids.map(firstActNode)}))};
   const resources=battleNode?.kind!=='event' && battleNode ? firstActDuelConfig({...run,active:run.active || {nodeId:battleNode.id,phase:0,playerSquads:[run.deck.slice(0,5)],enemySquads:[battleNode.roster.slice(0,5)],opening:[true]}}).campaignDuelMod : null;
   return <CampaignScene><CampaignBackdrop/><div className="cs-content">
     <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · ATTO I</span><strong>Oltre il Vallo</strong></div></div><nav className="cs-actions"><button onClick={openArmy}>Armata e riserva</button><CampaignMotionControl/><button onClick={onBack}>Menu</button></nav></header>
@@ -44,8 +62,9 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
       {options.some(id=>POWER_PACKAGES.some(p=>p.id===id))&&<><h3>{run.nascente.packageId?'Dai una nuova forma al tuo Potere':'Cerca la tua risposta'}</h3><div className="cs-first-options">{[...new Set(POWER_PACKAGES.map(p=>p.family))].map(f=><button key={f} aria-pressed={family===f} onClick={()=>{setFamily(f);setChoice(null);}}>{f}</button>)}</div>{family&&<div className="cs-first-options"><h4>Come traduci questa convinzione in battaglia?</h4>{POWER_PACKAGES.filter(p=>p.family===family).map(p=><button key={p.id} aria-pressed={choice===p.id} onClick={()=>setChoice(p.id)}>{p.answer}</button>)}</div>}</>}
       {previewError&&<p role="alert">{previewError}</p>}{preview&&<div className="cs-first-preview"><CardReworkP4Scaled agent={nextCard} width={180}/><div><p>{nextCard.description}</p><p>Lega esercito dopo la scelta: {runLeague(preview)}/30</p><button className="cs-primary" onClick={()=>{if(commit({type:'CHOICE',choice})){setChoice(null);setFamily(null);}}}>Conferma risposta</button></div></div>}
     </div></section> : <div className="cs-world-layout"><div className="cs-first-cartography">
-      <nav className="cs-map-pages" aria-label="Sezioni del percorso">{[0,1,2].map(page=><button key={page} aria-pressed={mapPage===page} onClick={()=>setMapPage(page)}>Tappe {page*6+1}–{Math.min((page+1)*6,FIRST_ACT_STAGES.length)}{Math.floor(run.stage/6)===page?' · Sei qui':''}</button>)}</nav>
-      <CampaignMap act={mapAct} run={mapRun} stageOffset={mapPage*6} availableIds={available.map(n=>n.id)} interactionLocked={!!run.active} selectedId={battleNode?.id} onSelect={setSelected} legend="Bivi, Domande e Faglie lungo il cammino"/>
+      <div className="cs-map-scroll" ref={mapViewport} tabIndex={0} role="region" aria-label="Mappa scorrevole della campagna">
+        <CampaignMap act={mapAct} run={mapRun} continuous availableIds={available.map(n=>n.id)} interactionLocked={!!run.active} selectedId={battleNode?.id} onSelect={setSelected} legend="Scorri per esplorare il cammino"/>
+      </div>
     </div><aside className={`cs-encounter cs-kind-${battleNode?.kind}`} aria-label="Incontro selezionato">
       <div className="cs-encounter-art"><img src={battleNode?.kind==='event'?heroArt(nascente):battleNode?.kind==='faglia'?`${import.meta.env.BASE_URL}card-images/agents/${enemy[0]}.webp`:campaignArt} alt={battleNode?.army || 'Il Nascente'}/><span className="cs-encounter-type"><CampaignSigil kind={battleNode?.kind}/>{encounterKinds[battleNode?.kind]}</span></div><div className="cs-encounter-body">
       <p className="cs-kicker">{battleNode?.kind==='faglia'?'FAGLIA · INCURSIONE':battleNode?.kind==='event'?'DOMANDA':battleNode?.kind==='boss'?'BOSS · DUE SQUADRE':battleNode?.kind==='elite'?'ÉLITE':'SCONTRO'}</p><h2>{battleNode?.title}</h2>
@@ -55,6 +74,7 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
       {node?.plan&&<p>Vincendo interrompi il piano {({riserve:'Corazze',corazze:'Riserve',tenuta:'Assalto',assalto:'Tenuta'})[node.plan]}. Nei successivi scontri Concordia resterà {({riserve:'Riserve: +2 FC nemici',corazze:'Corazze: +2 PV nemici',tenuta:'Tenuta: primo DAN nemico subito −1',assalto:'Assalto: primo DAN nemico inflitto +1'})[node.plan]}.</p>}<p>{node?.winRule==='varco'?'Conquista Il primo varco per vincere.':node?.winRule==='territory'?'A mano esaurita: più Campi, poi più PV.':'Duello Classico: conquista i Campi o annienta il nemico.'}</p><button onClick={()=>setInspect(true)}>Esamina armata e Campi</button>
       {run.lastResult&&<p>{run.lastResult==='draw'?'Pareggio.':'Sconfitta.'} Puoi riorganizzare l’esercito e ritentare.</p>}
       <button className="cs-primary" onClick={start}>Affronta l’incontro</button>{node?.optional&&<button onClick={()=>{commit({type:'SKIP'});setSelected(null);}}>Prosegui verso la breccia</button>}{run.lastResult==='enemy'&&<button onClick={()=>{if(commit({type:'REWIND'}))setSelected(null);}}>Riavvolgi tre tappe</button>}</>}
+      {battleNode?.kind!=='event'&&<button className="cs-test-win" disabled={!!departure} onClick={()=>commit({type:'TEST_WIN',nodeId:battleNode.id})}>Test: vinci incontro</button>}
     </div></aside></div>}
     <footer className="cs-party">
       <button className="cs-hero-summary" onClick={openArmy}><img src={heroArt(nascente)} alt=""/><div><span className="cs-kicker">IL TUO NASCENTE</span><strong>{nascente.power} POT <i> / </i>{nascente.damage} DAN <i> · </i> L{nascente.league}</strong><small>{nascente.description}</small></div></button>

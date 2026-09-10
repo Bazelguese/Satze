@@ -329,9 +329,11 @@
 
 /* Extend the scenic campaign presentation to the eighteen-stage first act. */
 .cs-first-cartography { min-width: 0; }
-.cs-map-pages { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
-.cs-map-pages button { border: 1px solid #d5b77b40; background: #0c1a21c9; padding: 9px 12px; color: #bac6bf; font-size: 11px; }
-.cs-map-pages button[aria-pressed=true] { color: #f2dbab; border-color: #d5b77b; background: #58492970; }
+.cs-map-scroll { max-width:100%; overflow-x:auto; overflow-y:hidden; scrollbar-color:#d5b77b #0c1a21; scrollbar-width:auto; overscroll-behavior-x:contain; }
+.cs-map-scroll:focus-visible { outline:2px solid #d5b77b; outline-offset:4px; }
+.cs-map-continuous { height:530px; }
+.cs-map-continuous .cs-map-caption, .cs-map-continuous .cs-map-legend { left:30px; }
+.cs-test-win { border:1px dashed #d5b77b99 !important; color:#e7c991 !important; }
 .cs-kind-event .cs-node-medallion { color: #e8d5a0; border-color: #baa66d; }
 .cs-kind-faglia .cs-node-medallion { color: #d1b6ef; border-color: #aa81cc; background: radial-gradient(circle, #463556, #101824); }
 .cs-encounter-body > button:not(.cs-primary) { display: block; width: 100%; margin-top: 12px; padding: 9px; border: 1px solid #d5b77b40; background: transparent; font-size: 11px; }

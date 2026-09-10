@@ -2,6 +2,7 @@ import { describe,it,expect } from 'vitest';
 import { createFirstActRun,firstActReducer as reduce,availableFirstActNodes,runCard,runLeague,legalArmy,transformationPool,previewFirstActChoice,assertFirstActRun } from './state/firstActState.js';
 import { FIRST_ACT_STAGES,firstActNode,NASCENTE,codes,POWER_PACKAGES,TOWER_ID,FIRST_ACT_NODES,validateFirstActData } from './data/firstAct.js';
 import { firstActDuelConfig,firstActMatchOutcome,revealedAt } from './logic/firstActBattle.js';
+import { restartCampaignEncounter } from './logic/missionAdapter.js';
 import { computeDuelResolution } from '../game/duelResolve.js';
 import { calcInitialBonuses } from '../utils/onlineMatch.js';
 function result(r,winner='player',playerHP=22,enemyHP=20){return reduce(r,{type:'RESULT',attempt:r.active.id,phase:r.active.phase,winner,playerHP,enemyHP});}
@@ -119,4 +120,17 @@ it('empty transformation pools preserve the original copy and pending rewards su
 it('rejects incomplete encounter data before starting a run',()=>{
  const data=JSON.parse(JSON.stringify(FIRST_ACT_NODES));data[0].roster=[-1];expect(()=>validateFirstActData(data)).toThrow(/Lega/);
  const calendar=JSON.parse(JSON.stringify(FIRST_ACT_NODES));calendar.find(n=>n.id==='I4').revealRounds=[1,1,1,5];expect(()=>validateFirstActData(calendar)).toThrow(/round 4/);
+});
+
+it('retry after losing boss phase two restarts phase one with full resources and fresh attempt',()=>{
+ let r=until('I12');r=reduce(r,{type:'START',nodeId:'I12'});const original=r.active;
+ r=result(r,'player',7,4);r=result(r,'enemy',0,3);
+ r=restartCampaignEncounter(r,null,firstActNode('I12'));
+ expect(r.active.phase).toBe(0);expect(r.active.pv).toBeNull();expect(r.active.snapshot).toBeNull();expect(r.active.id).toBeGreaterThan(original.id);expect(r.active.playerSquads).toEqual(original.playerSquads);
+ expect(firstActDuelConfig(r).campaignDuelMod.playerLife).toBe(25);expect(r.pendingReward).toBeNull();
+});
+it('test victory completes even a multi-phase encounter, but cannot duplicate rewards or skip a question',()=>{
+ let r=until('I12');r=reduce(r,{type:'TEST_WIN',nodeId:'I12'});expect(r.active).toBeNull();expect(r.pendingReward.nodeId).toBe('I12');
+ expect(()=>reduce(r,{type:'TEST_WIN',nodeId:'I12'})).toThrow();
+ expect(()=>reduce(until('E01'),{type:'TEST_WIN',nodeId:'E01'})).toThrow();
 });

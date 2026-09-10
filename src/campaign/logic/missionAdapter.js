@@ -1,4 +1,4 @@
-import { isFirstActRun } from '../state/firstActState.js';
+import { isFirstActRun, firstActReducer } from '../state/firstActState.js';
 import { firstActDuelConfig } from './firstActBattle.js';
 import { isControlledRun, controlledCampaignReducer } from '../state/controlledCampaignState.js';
 import { campaignEnemyCard } from './campaignDefinition.js';
@@ -132,3 +132,11 @@ export function applyDuelResult(run, act, mission, gameResult) {
 }
 
 export { nodeById };
+
+/** Restart the whole encounter, never just the failed second squad. */
+export function restartCampaignEncounter(run, act, mission) {
+  if (!run || !mission) throw new Error('Incontro da ritentare non disponibile.');
+  if (isFirstActRun(run)) return firstActReducer(run, {type:'START',nodeId:mission.node});
+  if (isControlledRun(run)) return controlledCampaignReducer(run, {type:'START_MISSION',nodeId:mission.node});
+  return campaignReducer(run, {type:'START_MISSION',nodeId:mission.node}, act);
+}
