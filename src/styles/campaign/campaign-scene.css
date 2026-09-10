@@ -1,7 +1,7 @@
 /* Campaign world. Scoped independently of the event authoring tool. */
 .campaign-scene {
   --cs-gold: #d5b77b; --cs-ink: #0b1417; --cs-text: #f0e8d6; --cs-muted: #b5bbb5;
-  position: relative; isolation: isolate; height: 100%; min-height: 100%; overflow: auto;
+  position: relative; isolation: isolate; width:1920px; height:1080px; min-width:1920px; max-width:1920px; min-height:1080px; max-height:1080px; overflow:auto;
   color: var(--cs-text); background: var(--cs-ink); font-family: 'Chakra Petch', system-ui, sans-serif;
 }
 .campaign-scene *, .campaign-scene *::before, .campaign-scene *::after { box-sizing: border-box; }

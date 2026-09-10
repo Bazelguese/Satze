@@ -6,10 +6,12 @@ export function firstActDuelConfig(run) {
   const a = run.active;
   if (!a) throw new Error('Nessun tentativo attivo.');
   const node = firstActNode(a.nodeId), phase = a.phase;
+  // Legacy attempts retain their original fields until the next START.
+  const fieldIds = a.fieldSquads?.[phase] || node.fieldIds;
   const concordia = node.army === CONCORDIA_ARMY;
   const mod = {
     firstAct: true, nodeId: node.id, phase, winRule: node.winRule,
-    fields: node.fieldIds.length, fixedFields: node.fieldIds.map(id=>({ ...campaignField(id) })), revealRounds: node.revealRounds,
+    fields: fieldIds.length, fixedFields: fieldIds.map(id=>({ ...campaignField(id) })), revealRounds: node.revealRounds,
     playerLife: a.pv?.player ?? (node.winRule === 'classic' ? 25 : 10) + (run.preparation?.life || 0),
     enemyLife: a.pv?.enemy ?? node.life + (concordia && run.plans.P1 === 'corazze' ? 2 : 0),
     playerFocus: node.focus + (phase === 0 ? run.preparation?.focus || 0 : 0),

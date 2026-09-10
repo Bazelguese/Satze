@@ -2,6 +2,11 @@
 import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {beforeEach,afterEach,it,expect,vi} from 'vitest';
+import {GameViewport} from '../GameViewport.jsx';
+import {readFileSync} from 'node:fs';
+import {URL as NodeURL} from 'node:url';
+const sceneCss=readFileSync(new NodeURL('../../styles/campaign/campaign-scene.css',import.meta.url),'utf8');
+const firstActCss=readFileSync(new NodeURL('../../styles/campaign/first-act.css',import.meta.url),'utf8');
 import {FirstActHub} from './FirstActHub.jsx';
 import {CampaignSaveSlots} from './CampaignSaveSlots.jsx';
 import {createFirstActRun,firstActReducer as reduce,availableFirstActNodes} from '../../campaign/state/firstActState.js';
@@ -113,4 +118,50 @@ it('loaded campaign launches and retries without loading, ordinary duels still l
  launch('campaign',true);expect(setters.setGamePhase).toHaveBeenLastCalledWith('selectField');
  launch('classic',true);expect(setters.setGamePhase).toHaveBeenLastCalledWith('duelLoading');
  restoreFirstActSnapshot(state,{gamePhase:'result',playerFocus:0},{campaignAssetsReady:true});expect(setters.setGamePhase).toHaveBeenLastCalledWith('result');expect(setters.setPendingDuelPhase).toHaveBeenLastCalledWith(null);expect(setters.setPlayerFocus).toHaveBeenLastCalledWith(0);
+});
+
+it('previews the consumed copy and confirms exactly one random transformation',()=>{
+ let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ const before=JSON.parse(JSON.stringify(loadCampaignRun(0)));
+ const available=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));
+ expect(available).toBeTruthy();act(()=>available.click());
+ expect(loadCampaignRun(0)).toEqual(before);
+ expect(host.querySelector('.cs-transform-mystery').textContent).toContain('Identità casuale');
+ expect(host.querySelector('.cs-transform-pool').querySelector('button')).toBeNull();
+ click('Conferma trasformazione casuale');
+ const after=loadCampaignRun(0);
+ expect(after.copies).toHaveLength(before.copies.length);
+ expect(after.copies.filter((c,i)=>c.cardId!==before.copies[i].cardId)).toHaveLength(1);
+ expect(host.querySelector('.cs-transform-result').textContent).toContain('TRASFORMAZIONE COMPLETATA');
+ expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Conferma trasformazione casuale')).toBe(false);
+});
+it('does not lose the selected-copy focus on dialog rerenders',()=>{
+ let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
+ render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Armata e riserva');click('Riserva e trasformazione');
+ const button=host.querySelector('.cs-reserve-list button');button.focus();act(()=>button.click());
+ expect(document.activeElement).toBe(button);
+ act(()=>button.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
+ expect(host.querySelector('[role="dialog"]')).toBeNull();
+});
+it('preloads every random battlefield background before the first duel',()=>{
+ const assets=campaignDuelAssets(createFirstActRun({seed:2}));
+ for (const field of ALL_BATTLEFIELDS) if(field.bgImage) expect(assets.preloadUrls.some(url=>url.endsWith(field.bgImage.split('/').at(-1)))).toBe(true);
+});
+
+it.each([[1920,1080],[1280,720],[2560,1080]])('fits the campaign in the real duel viewport at %s × %s', (width,height)=>{
+ vi.stubGlobal('innerWidth',width);vi.stubGlobal('innerHeight',height);
+ const style=document.createElement('style');style.textContent=sceneCss+'\n'+firstActCss;document.head.append(style);
+ try {
+  saveCampaignRun(createFirstActRun({seed:2}),0);
+  render(React.createElement(GameViewport,null,React.createElement(FirstActHub,{onBack:()=>{}})));
+  const scene=host.querySelector('.campaign-scene'),canvas=scene.parentElement;
+  const computed=getComputedStyle(scene);
+  expect(computed.width).toBe(canvas.style.width);expect(computed.height).toBe(canvas.style.height);
+  expect(computed.overflow).toBe('hidden');
+  expect(canvas.style.transform).toBe(`scale(${Math.min(width/1920,height/1080)})`);
+  const point=host.querySelector('[data-node-id="I1"]'),medallion=point.querySelector('.cs-node-medallion');
+  expect(getComputedStyle(medallion).height).toBe('76px');
+  expect(getComputedStyle(point).transform).toBe('translate(-50%,-38px)');
+ } finally {style.remove();vi.unstubAllGlobals();}
 });

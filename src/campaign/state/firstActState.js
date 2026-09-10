@@ -2,6 +2,8 @@ import { FIRST_ACT_VERSION, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_
 import { ARMY_SETS } from '../../data/cards.js';
 import { CONCORDIA_ARMY } from '../data/concordia.js';
 import { TRIGGER_NAMES } from '../../data/triggers.js';
+import { drawFirstActFields } from '../logic/firstActFields.js';
+import { campaignField } from '../data/firstAct.js';
 const clone = x => JSON.parse(JSON.stringify(x));
 export const isFirstActRun = r => r?.model === 'first-act';
 export function shuffled(values, seed, salt) {
@@ -63,6 +65,7 @@ export function assertFirstActRun(r) {
     const a=r.active;
     if (!firstActNode(a.nodeId) || !Number.isInteger(a.phase) || a.phase<0 || !a.playerSquads?.[a.phase] || !a.enemySquads?.[a.phase]) throw new Error('Tentativo non valido.');
     for (const squads of [a.playerSquads,a.enemySquads]) if (squads.some(s => s.length<1 || s.length>5 || new Set(s).size!==s.length || s.some(id=>!runCard(r,id)))) throw new Error('Mani salvate non valide.');
+    if (a.fieldSquads && (a.fieldSquads.length !== a.enemySquads.length || a.fieldSquads.some(ids => ids.length !== firstActNode(a.nodeId).fieldIds.length || new Set(ids).size !== ids.length || ids.some(id => !campaignField(id))))) throw new Error('Campi salvati non validi.');
   }
   if (r.pendingReward && (!firstActNode(r.pendingReward.nodeId)?.roster || !r.pendingReward.offer?.length || r.pendingReward.offer.some(id=>!firstActNode(r.pendingReward.nodeId).roster.includes(id)))) throw new Error('Premio salvato non valido.');
   if (r.pendingEvent && firstActNode(r.pendingEvent.id)?.kind!=='event') throw new Error('Evento salvato non valido.');
@@ -82,7 +85,8 @@ export function createAttempt(r, node) {
   const eSquads = multi || [enemy];
   // The opening tutorial must be winnable with equal cards and a full FC commitment.
   const opening = pSquads.map((p,i) => node.openingPlayerFirst ?? (sum(p) === sum(eSquads[i]) ? shuffled([true,false],r.seed,`${node.id}:initiative:${i}`)[0] : sum(p) < sum(eSquads[i])));
-  return { id: r.attempt + 1, nodeId: node.id, phase: 0, playerSquads: pSquads, enemySquads: eSquads, opening, pv: null, snapshot: null };
+  const fieldSquads = eSquads.map((_, phase) => drawFirstActFields(r, node, phase));
+  return { id: r.attempt + 1, nodeId: node.id, phase: 0, playerSquads: pSquads, enemySquads: eSquads, fieldSquads, opening, pv: null, snapshot: null };
 }
 function checkpoint(r) {
   const { checkpoints, ...state } = clone(r);

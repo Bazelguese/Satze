@@ -5,7 +5,7 @@ const PREFERENCE = 'satze_campaign_motion_v1';
 const query = () => window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
 /** Presentation preferences never enter the run or its random seed. */
-export function CampaignScene({ children }) {
+export function CampaignScene({ children, className = '' }) {
   const root = useRef(null);
   const [allowed, setAllowed] = useState(() => {
     try { return localStorage.getItem(PREFERENCE) !== 'off'; } catch { return true; }
@@ -61,7 +61,7 @@ export function CampaignScene({ children }) {
     return !previous;
   });
   return <Motion.Provider value={{ enabled, reduced, toggle }}>
-    <section ref={root} className={`campaign-scene ${enabled ? 'cs-motion-on' : 'cs-motion-off'}`}>{children}</section>
+    <section ref={root} className={`campaign-scene ${className} ${enabled ? 'cs-motion-on' : 'cs-motion-off'}`}>{children}</section>
   </Motion.Provider>;
 }
 
