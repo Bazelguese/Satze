@@ -8,7 +8,7 @@
 
 | # | Nome | L | POT | DAN | Potere | Stato |
 |---|------|---|-----|-----|--------|-------|
-| 101 | Sorethal, il Primo Ancorante | 5 | 6 | 4 | -8 VA nem. (min 6) (sempre) | FIX |
+| 101 | Sorethai, il Primo Ancorante | 5 | 6 | 4 | -8 VA nem. (min 6) (sempre) | FIX |
 | 111 | L'Eco del Primo Sole | 5 | 5 | 6 | Turbo: +8 VA | REWORK |
 | 102 | Tessitrice della Trama | 4 | 5 | 3 | Sopraffare: +2 FC | REWORK |
 | 103 | Portatore della Domanda | 4 | 4 | 4 | Resa dei conti: -4 VA nem. (min 4) | FIX |
@@ -30,7 +30,7 @@
 
 ### FIX (solo aggiunta minimo)
 
-**101 — Sorethal:** -8 VA nem. → -8 VA nem. **(min 6)**
+**101 — Sorethai:** -8 VA nem. → -8 VA nem. **(min 6)**
 **103 — Portatore della Domanda:** -4 VA nem. → -4 VA nem. **(min 4)**
 
 ### REWORK

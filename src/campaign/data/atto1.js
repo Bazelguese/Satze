@@ -61,7 +61,7 @@ export const ACT = {
   missions: [
     { id: 'A1-00', node: 'n_prologo', objective: 'dominazione', fields: 3,
       title: 'Il Richiamo',
-      briefing: "Echi dei Figli, richiamati dalla Nebula, sbarrano la strada. Non sono nemici: sono ciò che resta di chi non ha retto la Fusione. Attraversali, e ricorda i loro volti.",
+      briefing: "Echi dei Figli, richiamati dalla Nebula, sbarrano la strada. Non sono nemici: sono ciò che resta di chi non ha retto la Domanda. Attraversali, e ricorda i loro volti.",
       enemy: { army: "Figli dell'Orizzonte", deck: [107, 110, 108], life: 25 },
       playerDeckSize: 3 },
 

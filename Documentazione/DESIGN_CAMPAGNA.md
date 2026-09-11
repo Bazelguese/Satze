@@ -24,9 +24,9 @@ Principi:
 
 | Atto | Titolo | Funzione nel percorso | Fondale attuale | Boss |
 |---|---|---|---|---|
-| I | Oltre il Vallo | Presentare la resistenza della Concordia e il primo sviluppo dell’armata | `campo-54.webp` | La Corona Vuota |
+| I | Oltre il Vallo | Presentare la resistenza della Concordia e il primo sviluppo dell’armata | `campo-54.webp` | Demise, Flagello di Cael |
 | II | Le Livree del Vespro | Combinare minacce più forti e continuare la crescita del Nascente | `campo-51.webp` | L’Ultima Sortita |
-| III | Il Primo Sole | Portare il mazzo costruito alla difesa finale | `campo-53.webp` | Il Custode del Primo Sole |
+| III | Il Primo Sole | Portare il mazzo costruito alla difesa finale | `campo-53.webp` | Pekronis, Capo dei Leoni di Cael |
 
 Ogni atto contiene **sei incontri da vincere lungo il percorso scelto**. La terza tappa presenta due alternative: si gioca solo quella selezionata. Sulla mappa sono quindi visibili sette nodi, ma la progressione dell’atto conta sei tappe. In totale servono diciotto vittorie, esclusi i tentativi falliti.
 

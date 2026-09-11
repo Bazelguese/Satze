@@ -11,7 +11,7 @@
 Questi quattro punti condizionano tutto il flusso: se non si sistemano, i nuovi stage insegnano cose che il gioco poi smentisce.
 
 ### P1 — Mani guidate implicite (slice per id)
-`startGuidedMatch` fa `sort by id → slice(0,5)/(5,10)`. Le mani dipendono da quali carte hanno gli id più bassi nel pool: oggi il giocatore riceve Sorethal (POT 6, **-8 VA nem.**), Tessitrice (Sopraffare +2 FC), Portatore della Domanda (Resa dei conti -6 VA nem.), ecc. Ogni aggiunta di carte può cambiare silenziosamente le mani e ribaltare gli esiti scriptati.
+`startGuidedMatch` fa `sort by id → slice(0,5)/(5,10)`. Le mani dipendono da quali carte hanno gli id più bassi nel pool: oggi il giocatore riceve Sorethai (POT 6, **-8 VA nem.**), Tessitrice (Sopraffare +2 FC), Portatore della Domanda (Resa dei conti -6 VA nem.), ecc. Ogni aggiunta di carte può cambiare silenziosamente le mani e ribaltare gli esiti scriptati.
 
 **Soluzione:** costanti esplicite in `tutorialGuidedContent.js`:
 ```js
