@@ -1,6 +1,6 @@
 # Revisione nomi e lore — Concordia e Figli dell’Orizzonte
 
-Checkpoint implementato: 31 carte, 15 Concordia e 16 Figli. Nomi e testi mantengono le formulazioni dell’autore, con le correzioni meccaniche del riepilogo approvato. Statistiche, abilità, ID, immagini e composizione degli eserciti sono invariati.
+Checkpoint implementato: 45 carte, 15 Concordia e 30 Figli. Nomi e testi mantengono le formulazioni dell’autore, con le correzioni meccaniche del riepilogo approvato. Statistiche, abilità, ID, immagini e composizione degli eserciti sono invariati.
 
 [Canone e continuità](LORE_FIGLI_DELL_ORIZZONTE.md)
 
@@ -37,6 +37,21 @@ Checkpoint implementato: 31 carte, 15 Concordia e 16 Figli. Nomi e testi manteng
 | 121 | Fine del Pensiero | Fine del Pensiero |
 | 126 | Collezionista di Spade | Collezionista di Spade |
 | 127 | Arsenale Vivente | Arsenale Vivente |
+
+| 103 | Portatore della Domanda | Portatore della Domanda |
+| 105 | Richiamante dell'Ordine | Richiamante dell’Ancora |
+| 106 | Condensato per la Guerra | Condensato per la guerra |
+| 111 | L'Eco del Primo Sole | Ion, eco del Primo Sole |
+| 114 | Il Portatore della Campana | Portatore della Campana |
+| 115 | Vethan, Guerriero per un Giorno | Vethan, Guerriero per un giorno |
+| 117 | Prete dell'Ancora | Prete dell’Ancora |
+| 122 | Nidhogg | Rancore Caeliano |
+| 123 | Pesante Centenario | Pesante Centenario |
+| 124 | Timoniere del Vuoto | Timoniere del Vuoto |
+| 125 | Satellite della Nebula | Satellite della Nebula |
+| 128 | Divoramenti | Divoramenti |
+| 129 | O-Etemorp | Izmahel, figlio del Primo Sole |
+| 130 | Astronave da Guerra della Nebula | Astronave da guerra |
 
 ## 9101 — Scudiero di Concordia
 
@@ -86,13 +101,15 @@ Checkpoint implementato: 31 carte, 15 Concordia e 16 Figli. Nomi e testi manteng
 
 — August, Ciambellano di Cael
 
+**Continuità:** Il Prete dell’Ancora (117) è la versione del Portastendardo di Concordia nei Figli dell’Orizzonte.
+
 ## 9108 — Leone di Cael
 
 «Il divino Cael bagnò la testa dei suoi più fidati soldati col sangue del Primo Sole. Quando la luce colpisce i loro capelli è possibile venir accecati da visioni di morte.»
 
 — Vethan, Vescovo della guerra
 
-**Continuità:** Vethan è lo stesso individuo della carta 115, Vethan, Guerriero per un Giorno; la lore di quella carta non è ancora stata riscritta.
+**Continuità:** Vethan è lo stesso individuo della carta 115, Vethan, Guerriero per un giorno.
 
 ## 9109 — Impetuosi dell'ordine della Campana
 
@@ -234,19 +251,70 @@ L’orrore cosmico nel suo eterno passaggio incontrò un pianeta tanto bello qua
 
 **Continuità:** È il pianeta deforme, a forma di balena con grande occhio laterale e ventre illuminato. Ospita la maggior parte dei Richiamati; una quota consistente resta dispersa nella Nebula. Non stabilito che tutti siano nati nel ventre o che Dubbi e Richiamati siano sinonimi.
 
-## Carte dei Figli ancora da riscrivere
+## 103 — Portatore della Domanda
 
-- 103 — Portatore della Domanda
-- 105 — Richiamante dell'Ordine
-- 106 — Condensato per la Guerra
-- 111 — L'Eco del Primo Sole
-- 114 — Il Portatore della Campana
-- 115 — Vethan, Guerriero per un Giorno
-- 117 — Prete dell'Ancora
-- 122 — Nidhogg
-- 123 — Pesante Centenario
-- 124 — Timoniere del Vuoto
-- 125 — Satellite della Nebula
-- 128 — Divoramenti
-- 129 — O-Etemorp
-- 130 — Astronave da Guerra della Nebula
+Il Folle Quesito ne muove il corpo mentre la mente cerca di sfuggirgli. La Domanda lo circonda, non lo abbandona. Non ha intaccato lui, ma ciò che può percepire: un dubbio che nasce da fuori e piega ciò che la Domanda non può raggiungere.
+
+## 105 — Richiamante dell’Ancora
+
+Attraversa la Nebula tessendo fili verso ogni Leggero e Pesante che incontra. Li lascia liberi finché non è la Nebula stessa a esigere altrimenti. Con la flessione di una falange può far comparire decine di Richiamati.
+
+## 106 — Condensato per la guerra
+
+Non è un Pesante, ma nemmeno un Leggero: è un agglomerato di questi ultimi. Uniti da un sentimento comune, nonostante il Folle Quesito, riprendono forma per ottemperare a un dovere antecedente alla loro nuova esistenza. Un dovere che dona loro una forma comune in grado di combattere.
+
+**Continuità:** È un agglomerato di Leggeri uniti da un dovere antecedente alla trasformazione.
+
+## 111 — Ion, eco del Primo Sole
+
+Quando la Domanda fuse i corpi celesti alla Nebula, qualcosa di antico, ma comunque più giovane, si svegliò. Come un cadavere che riprende a muoversi: una veglia disturbata che porta con sé il dilemma di una stella.
+
+**Continuità:** Il riferimento del confronto «più giovane» resta implicito.
+
+## 114 — Portatore della Campana
+
+Tanti simboli vorticano attorno all’Ancora e vengono tutti assimilati, prima o poi. Questo Leggero, però, porta con estrema gelosia la Campana con sé. Ogni suo rintocco attira Richiamati, ogni rintocco condivide il sollievo dalla Domanda, per poi infierire con un consapevole silenzio.
+
+## 115 — Vethan, Guerriero per un giorno
+
+Un Leggero che prende forma lì dove la Domanda viene rifiutata. Un essere armato di falce che elimina ogni remora e indecisione da chiunque condivida il suo sguardo perso nella Follia.
+
+**Continuità:** Vethan è lo stesso individuo che firma la testimonianza del Leone di Cael (9108) come Vescovo della guerra.
+
+## 117 — Prete dell’Ancora
+
+Brandisce una bandiera tessuta direttamente dalla Nebula. Sventola il simbolo dell’Ordine, richiamando al dovere ogni essere tormentato dalla Domanda.
+
+**Continuità:** Versione del Portastendardo di Concordia (9107) nei Figli dell’Orizzonte.
+
+## 122 — Rancore Caeliano
+
+Lo spirito indomito di certi uomini venne piegato dalla Domanda quando questa aveva ormai inquinato il colore della terra stessa. Quando il Sole li abbandonò, non rimasero che le stelle. Insegue la Nebula senza mai raggiungerla, fermandosi davanti ai suoi avanzi. Divora ciò che rimane per continuare la sua astiosa missione.
+
+## 123 — Pesante Centenario
+
+Uscito dal ventre dell’Arsenale, non è mai più tornato. Non si è nemmeno mai disciolto. La sua esistenza stessa sembra convivere con la Domanda, ma a ogni sistema inglobato dalla Nebula, a ogni nuovo Richiamato, il Folle Quesito aumenta il suo peso su di lui.
+
+## 124 — Timoniere del Vuoto
+
+Un Pesante in grado di navigare lungo i percorsi folli della Nebula. La Domanda gli permette di non perdersi tra gli infiniti Dubbi tessuti nello spazio. La sua barca è ciò che rimane di quello che era prima; la sua professione, l’unica cosa che è stata in grado di sopravvivere al Folle Quesito.
+
+## 125 — Satellite della Nebula
+
+La Domanda attecchisce anche sul metallo. L’orrore cosmico, nel suo infinito viaggio, ha trovato ogni tipo di artefatto segnato dalla presenza di vita. E quella vita, ogni volta, è stata sottoposta al Folle Quesito.
+
+## 128 — Divoramenti
+
+Obbligati a rispondere alla Domanda, trovano sollievo nel fornire risposte da fuori. Ormai logorati e privi di pensieri propri, non rimane loro che far propri quelli degli altri, prima di svanire.
+
+## 129 — Izmahel, figlio del Primo Sole
+
+«Cael non abbandonò mai i suoi figli. Quando ascese per illuminare tutta Concordia, lasciò loro il dovere di proteggerlo durante la Veglia Notturna. Izmahel, però, abbandonò la Campana in favore del Sole, condannandosi a bruciare per sempre.»
+
+— August, Ciambellano di Cael
+
+**Continuità:** Il titolo non stabilisce da solo una genealogia letterale.
+
+## 130 — Astronave da guerra
+
+Desideravano vedere il loro pianeta dall’alto, desideravano scoprire cosa si trovasse oltre il cielo, desideravano vedere di più. La Nebula non rispose per generosità, ma per caso.

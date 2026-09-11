@@ -8,7 +8,7 @@ export const DECK_LORE = {
       code: "O·I", name: "Il Sole Prima della Fine", archetype: "CONQUISTA · AGGRESSIVA",
       flavor: "Sotto i colori della Nebula, anche la luce del Sole diventa un ricordo.",
       keywords: ["Conquista","Tempo","Tech"],
-      leader: { name: "L'Eco del Primo Sole", title: "L'Eco del Primo Sole", img: null, league: 5, power: 5, damage: 5, ability: "Turbo: +8 VA" },
+      leader: { name: "Ion, eco del Primo Sole", title: "eco del Primo Sole", img: null, league: 5, power: 5, damage: 5, ability: "Turbo: +8 VA" },
     },
     B: {
       code: "O·II", name: "La Domanda Senza Fine", archetype: "SUPREMAZIA · CONTROLLO",
@@ -20,7 +20,7 @@ export const DECK_LORE = {
       code: "O·III", name: "Liturgia dell'Ancora", archetype: "CONQUISTA · ADATTIVA",
       flavor: "La mano decide la liturgia: i Leggeri aprono, i Pesanti chiudono.",
       keywords: ["Conquista","Adattivo","Tech"],
-      leader: { name: "Richiamante dell'Ordine", title: "Richiamante dell'Ordine", img: null, league: 4, power: 5, damage: 3, ability: "Turbo: 2 Danni dir." },
+      leader: { name: "Richiamante dell’Ancora", title: "Richiamante dell’Ancora", img: null, league: 4, power: 5, damage: 3, ability: "Turbo: 2 Danni dir." },
     },
   },
   "Kethran": {
