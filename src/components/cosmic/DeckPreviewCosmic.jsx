@@ -570,8 +570,8 @@ function DeckPreviewCosmic({
                   )}
                 </div>
                 {selectedCard.flavor ? (
-                  <div style={{ marginTop: 12, fontFamily: 'Cinzel, serif', fontStyle: 'italic', fontSize: 13, color: '#cbd5e1' }}>
-                    “{selectedCard.flavor}”
+                  <div style={{ marginTop: 12, fontFamily: 'Cinzel, serif', fontStyle: 'italic', fontSize: 13, color: '#cbd5e1', whiteSpace: 'pre-line' }}>
+                    {selectedCard.flavor.startsWith('«') ? selectedCard.flavor : <>“{selectedCard.flavor}”</>}
                   </div>
                 ) : null}
                 {deckHighlights ? (

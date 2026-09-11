@@ -46,7 +46,7 @@ export const FIRST_ACT_NODES = [
   battle('I10', 'La breccia', 'V01 V02 V04 V05 G01 G02 G03 R01', 8, { required: codes('R01 G03'), growth: 9 }),
   battle('I11', 'La guardia della corona', 'V01 V02 V04 V05 G01 G02 G03 R01 R02', 9, { kind: 'elite', required: codes('R02 G03'), life: 27, growth: 10, difficulty: 'hard' }),
   { id: 'E03', title: 'Risonanza', kind: 'event' },
-  battle('I12', 'La Corona Vuota', 'V01 V02 V04 V05 G01 G02 G03 R01 R02 N01', 10, { kind: 'boss', life: 29, difficulty: 'hard', signature: codes('N01')[0], squads: [codes('N01 G03 G01 V01 V05'), codes('N01 G02 R01 R02 V04')] }),
+  battle('I12', 'Demise, Flagello di Cael', 'V01 V02 V04 V05 G01 G02 G03 R01 R02 N01', 10, { kind: 'boss', life: 29, difficulty: 'hard', signature: codes('N01')[0], squads: [codes('N01 G03 G01 V01 V05'), codes('N01 G02 R01 R02 V04')] }),
 ];
 export const FIRST_ACT_STAGES = [['I1'], ['I2'], ['I3'], ['I4'], ['E01'], ['I5A', 'I5B'], ['I6'], ['E02'], ['F1'], ['I7'], ['I8'], ['E06'], ['I9A', 'I9B'], ['F2'], ['I10'], ['I11'], ['E03'], ['I12']];
 export const firstActNode = id => FIRST_ACT_NODES.find(n => n.id === id);

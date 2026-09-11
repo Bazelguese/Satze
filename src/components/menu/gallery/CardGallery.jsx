@@ -213,7 +213,7 @@ function Lightbox({ agent, onClose }) {
           )}
 
           {agent.flavour && (
-            <p className="cgl-lb-flavour">&ldquo;{agent.flavour}&rdquo;</p>
+            <p className="cgl-lb-flavour">{agent.flavour.startsWith('«') ? agent.flavour : <>&ldquo;{agent.flavour}&rdquo;</>}</p>
           )}
         </div>
 
@@ -397,7 +397,7 @@ function CardGalleryStyles() {
         margin: 0; padding-top: 28px;
         border-top: 1px solid rgba(255,255,255,0.12);
         color: rgba(203,213,225,0.92); font-size: 14px; line-height: 1.65;
-        font-style: italic; text-align: left;
+        font-style: italic; text-align: left; white-space: pre-line;
       }
       .cgl-lb-hint {
         margin: 0; text-align: center;

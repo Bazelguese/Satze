@@ -4969,9 +4969,9 @@ export default function SatzeGame() {
                       >
                         <p 
                           className="text-sm italic leading-[1.75]" 
-                          style={{ color: PALETTE.textPrimary, opacity: 0.92 }}
+                          style={{ color: PALETTE.textPrimary, opacity: 0.92, whiteSpace: 'pre-line' }}
                         >
-                          "{displayPreviewCard.agent.flavour}"
+                          {displayPreviewCard.agent.flavour.startsWith('«') ? displayPreviewCard.agent.flavour : <>"{displayPreviewCard.agent.flavour}"</>}
                         </p>
                       </div>
                     )}

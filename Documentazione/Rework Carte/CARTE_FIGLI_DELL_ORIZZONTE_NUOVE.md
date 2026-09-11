@@ -1,5 +1,7 @@
 # FIGLI DELL'ORIZZONTE — NUOVE CARTE (116–120)
 
+> Bozza storica. Per nomi, lore e continuità delle carte già revisionate prevalgono [la revisione corrente](../REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md) e [il canone](../LORE_FIGLI_DELL_ORIZZONTE.md). Le descrizioni visive sottostanti non sono state rielaborate in questo passaggio.
+
 *Cinque nuove carte che portano il pool da 15 a 20. Include anche l'aggiornamento alla carta 103.*
 
 ---
@@ -59,7 +61,7 @@
 
 **Flavour:** "L'Ordine dell'Ancora non ha templi — ha pratiche. Lui insegna la prima: vincere è l'unica preghiera che la Nebula ascolta. Ogni vittoria deposita qualcosa di solido dove la Domanda aveva rosicchiato. Non è fede. È sopravvivenza con un nome più dignitoso."
 
-**Descrizione visiva:** Figura d'ombra imponente con armatura cerimoniale dell'Ordine dell'Ancora — più completa e definita di quella di Sorethal, con il simbolo di un'ancora stilizzata inciso sul petto che emette luce ciano. Tiene con entrambe le mani uno stendardo di vuoto su cui galleggiano simboli dell'Ordine. Postura eretta, autorevole. Cuore stellare luminoso e stabile, il più stabile del pool dei Figli — quasi sereno.
+**Descrizione visiva:** Figura d'ombra imponente con armatura cerimoniale dell'Ordine dell'Ancora — più completa e definita di quella di Sorethai, con il simbolo di un'ancora stilizzata inciso sul petto che emette luce ciano. Tiene con entrambe le mani uno stendardo di vuoto su cui galleggiano simboli dell'Ordine. Postura eretta, autorevole. Cuore stellare luminoso e stabile, il più stabile del pool dei Figli — quasi sereno.
 
 **Prompt:** `32-bit pixel art, cyan and deep purple palette with golden stellar accents, imposing shadow humanoid in ceremonial dark armor with glowing anchor symbol on chest, holding void banner with floating cosmic glyphs, stable bright stellar heart, authoritative upright pose, dark fantasy, cinematic composition, black background, --ar 2:3 --s 250 --c 15`
 

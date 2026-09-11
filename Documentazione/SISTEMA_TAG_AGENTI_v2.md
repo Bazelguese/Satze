@@ -291,7 +291,7 @@ Legenda colonne: **C** = Corpo, **E** = Equilibrio, **P** = POT, **D** = DAN, **
 
 | # | Nome | L | POT/DAN | C | E | P | D | Post. | Funz. | Ruolo |
 |---|------|---|---------|---|---|---|---|-------|-------|-------|
-| 101 | Sorethal, il Primo Ancorante | 5 | 6/4 | Solido | Equilibrato | Alta | Alto | Steady | Debuffer | Boss, Anchor |
+| 101 | Sorethai, il Primo Ancorante | 5 | 6/4 | Solido | Equilibrato | Alta | Alto | Steady | Debuffer | Boss, Anchor |
 | 111 | L'Eco del Primo Sole | 5 | 5/6 | Imponente | Equilibrato | Alta | Letale | Early Rush | Buffer | Boss, Bomb |
 | 102 | Tessitrice della Trama | 4 | 5/3 | Solido | Equilibrato | Alta | Medio | Momentum | Engine | Pillar |
 | 103 | Portatore della Domanda | 4 | 4/4 | Solido | Equilibrato | Media | Alto | Late Game | Debuffer | Pillar |

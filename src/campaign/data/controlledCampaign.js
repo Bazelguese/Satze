@@ -29,9 +29,9 @@ const acts = ['Oltre il Vallo', 'Le Livree del Vespro', 'Il Primo Sole'].map(
         title:
           step === 5
             ? [
-                'La Corona Vuota',
+                'Demise, Flagello di Cael',
                 'L’Ultima Sortita',
-                'Il Custode del Primo Sole',
+                'Pekronis, Capo dei Leoni di Cael',
               ][index]
             : [
                 'Le Vedette',
@@ -54,7 +54,7 @@ const acts = ['Oltre il Vallo', 'Le Livree del Vespro', 'Il Primo Sole'].map(
         briefing:
           kind === 'boss'
             ? 'Le campane chiamano l’ultima difesa. Il Nascente affronta il comando della Concordia.'
-            : 'I Resistenti presidiano il passaggio. Il loro Intervento premia chi risponde per secondo: conquista i campi e apri la strada.',
+            : 'I soldati di Concordia presidiano il passaggio. Il loro Intervento premia chi risponde per secondo: conquista i campi e apri la strada.',
         enemy: {
           army: CONCORDIA_ARMY,
           deck: [...CONCORDIA_DECKS[decks[index][step]]],

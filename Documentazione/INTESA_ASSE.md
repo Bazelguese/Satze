@@ -287,7 +287,7 @@ doppia dipendenza dalla mano (Intesa + Rinforzi, §4), Rinforzi ~88% con 3 altri
   description: "Potere: Resa dei conti: -4 VA nem. (min 4) — Intesa (Orathai)" }
 ```
 
-**Lore.** Soggetto = l'ancoraggio, il gesto fondativo dei Figli (Sorethal): la materia
+**Lore.** Soggetto = l'ancoraggio, il gesto fondativo dei Figli (Sorethai): la materia
 attutisce la Domanda. La sua àncora è un legno del bosco che canta — e il canto la
 attutisce meglio di qualsiasi reliquia muta. L'Intesa dà il contesto: torna nel bosco
 perché l'àncora, lontana dalle radici, lentamente tace.

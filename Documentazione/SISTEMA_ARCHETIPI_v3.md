@@ -73,7 +73,7 @@ Riduce la capacità numerica dell'avversario di vincere lo scontro.
 
 **Effetti:** -POT nem. · -VA nem. · -POT e DAN nem. · Imponi POT
 
-*Esempi:* Sorethal, il Primo Ancorante (L5 6/4, Overdrive: -8 VA nem. (min 6)) · Portatore della Domanda (L4 4/4, Resa dei conti: -8 VA nem. (min 8)) · Vittima della Domanda (L3 3/3, Resa dei conti: -6 VA nem. (min 6))
+*Esempi:* Sorethai, il Primo Ancorante (L5 6/4, Overdrive: -8 VA nem. (min 6)) · Portatore della Domanda (L4 4/4, Resa dei conti: -8 VA nem. (min 8)) · Vittima della Domanda (L3 3/3, Resa dei conti: -6 VA nem. (min 6))
 
 ### Sabotatore — 40 carte
 
@@ -414,7 +414,7 @@ La distribuzione degli archetipi per Armata è un'impronta identitaria e un test
 
 | # | Nome | L | POT/DAN | Potere | Archetipo | Focus | Scal. |
 |---:|---|:-:|:-:|---|---|---|:-:|
-| 101 | Sorethal, il Primo Ancorante | 5 | 6/4 | Overdrive: -8 VA nem. (min 6) | **Soffocatore** | Indifferente |  |
+| 101 | Sorethai, il Primo Ancorante | 5 | 6/4 | Overdrive: -8 VA nem. (min 6) | **Soffocatore** | Indifferente |  |
 | 111 | L'Eco del Primo Sole | 5 | 5/5 | Turbo: +8 VA | **Campione** | Indifferente |  |
 | 116 | Vega, il Sofferente | 5 | 4/5 | Ultima Chance: +4 POT | **Campione** | Vorace |  |
 | 130 | Astronave da Guerra della Nebula | 5 | 6/3 | Imboscata: Blocca Bonus | **Sabotatore** | Indifferente |  |

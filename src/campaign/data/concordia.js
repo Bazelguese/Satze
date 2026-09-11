@@ -4,7 +4,7 @@ export const CONCORDIA_EMINENCE_ID = 'concordia_campane_vallo';
 const rows = [
   [
     'V01',
-    'Scudiero del Vallo',
+    "Scudiero di Concordia",
     2,
     3,
     1,
@@ -15,7 +15,7 @@ const rows = [
   ],
   [
     'V02',
-    'Picca delle Porte',
+    "Picchiere di città",
     2,
     2,
     2,
@@ -26,7 +26,7 @@ const rows = [
   ],
   [
     'V03',
-    'Balestriere delle Mura',
+    "Balestriere d'élite Caeliona",
     2,
     3,
     1,
@@ -37,7 +37,7 @@ const rows = [
   ],
   [
     'V04',
-    'Guardia del Fossato',
+    "Custodi del sonno dei Giusti",
     2,
     3,
     1,
@@ -49,7 +49,7 @@ const rows = [
   ],
   [
     'V05',
-    'Cavaliere della Campana',
+    "Cavaliere dell'ordine della Campana",
     2,
     3,
     2,
@@ -60,7 +60,7 @@ const rows = [
   ],
   [
     'V06',
-    'Portascudo di Caelion',
+    "Portascudo dei Cavalieri",
     2,
     2,
     2,
@@ -72,7 +72,7 @@ const rows = [
   ],
   [
     'G01',
-    'Portastendardo dell’Aurora',
+    "Portastendardo di Concordia",
     3,
     4,
     2,
@@ -83,7 +83,7 @@ const rows = [
   ],
   [
     'G02',
-    'Duellante del Sole Pallido',
+    "Leone di Cael",
     3,
     4,
     2,
@@ -94,7 +94,7 @@ const rows = [
   ],
   [
     'G03',
-    'Cavaliere della Seconda Campana',
+    "Impetuosi dell'ordine della Campana",
     3,
     3,
     3,
@@ -105,7 +105,7 @@ const rows = [
   ],
   [
     'G04',
-    'Reliquiario Errante',
+    "Squadra di raccoglimento reliquie Oris",
     3,
     3,
     2,
@@ -116,7 +116,7 @@ const rows = [
   ],
   [
     'R01',
-    'Cavaliere della Breccia',
+    "Sfondamura di Cael",
     4,
     5,
     3,
@@ -127,7 +127,7 @@ const rows = [
   ],
   [
     'R02',
-    'Giustiziere del Vespro',
+    "Zoul, Cacciatore di tenebre",
     4,
     4,
     4,
@@ -139,7 +139,7 @@ const rows = [
   ],
   [
     'R03',
-    'Maresciallo della Livrea Rossa',
+    "Sorethai, Mastino di Concordia",
     4,
     5,
     2,
@@ -150,7 +150,7 @@ const rows = [
   ],
   [
     'N01',
-    'Cavaliere Nero della Corona Vuota',
+    "Demise, Flagello di Cael",
     5,
     5,
     4,
@@ -161,7 +161,7 @@ const rows = [
   ],
   [
     'N02',
-    'Custode del Primo Sole',
+    "Pekronis, Capo dei Leoni di Cael",
     5,
     5,
     4,
@@ -171,6 +171,25 @@ const rows = [
     'Resistenza: +2 POT, +2 DAN',
   ],
 ];
+// Testi narrativi individuali consolidati dalla revisione dell’autore.
+const CONCORDIA_FLAVOURS = {
+  "V01": "«Lucidano le armature dei nostri cavalieri finché possono specchiarvisi e immaginare di indossarle. È un’ambizione che incoraggiamo: molti uomini hanno trovato il coraggio di morire pur di essere ricordati con un titolo diverso da quello con cui erano nati.»\n\n— August, Ciambellano di Cael",
+  "V02": "«Uomini infimi senza possibilità di redenzione oramai viziati da anni di violenza, risentimento e finzione serpeggiano tra le nostre nobili fila, per fortuna la maggior parte di loro sono solo bruti inetti senza gloria in cerca di sangue e timore, a Concordia c'è impiego anche per loro.»\n\n— August, Ciambellano di Cael",
+  "V03": "«Le loro mante verdi inducono spesso a sottovalutarli, nonostante il loro rango sono abili assassini e ottimi soldati. Spesso tra i rintocchi felici delle campane di Caelion si nasconde un loro dardo.»\n\n— August, Ciambellano di Cael",
+  "V04": "«Investiti dal dovere di proteggere il sonno di Cael, coraggiosi uomini decisero di intraprendere il percorso della Veglia Notturna, si negarono dell'abbraccio del Padre per garantirne la sicurezza, un sacrificio degno di un soldato che più della sua mediocre abilità non poteva dare.»\n\n— Estratto da «Ordini e Disordini Cavallereschi»",
+  "V05": "«Il giovane suona le campane del padre mentre questo sorge, lo fa ad ogni ora finché l'anziano non cerca il meritato riposo. I rintocchi ricordano a tutta Concordia dell'impegno del Figlio, il sole del giudizio del Padre, un cavaliere si arma di entrambe dal momento in cui apre gli occhi[...]»\n\n— Estratto da «Ordini e Disordini Cavallereschi»",
+  "V06": "«Affidiamo i nostri eroi ai nostri uomini comuni. Che l'umiltà del loro volto ed il giudizio del nostro Sole possano guidare la vostra spada con giudizio.»\n\n— Cael, Erede del sole",
+  "G01": "«Quando gli stendardi di Concordia vengono alzati ogni cielo si apre di fronte alla volontà di Cael che illumina la sua effige donando ai suoi preziosi cavalieri il tepore dell'anziano Padre e la forza del giovane Figlio.»\n\n— August, Ciambellano di Cael",
+  "G02": "«Il divino Cael bagnò la testa dei suoi più fidati soldati col sangue del Primo Sole. Quando la luce colpisce i loro capelli è possibile venir accecati da visioni di morte.»\n\n— Vethan, Vescovo della guerra",
+  "G03": "«Ognuno di noi ha una propensione naturale per il Padre o per il Figlio, coloro che guidano e coloro che aprono la via, gli Impetuosi sono uomini pervasi dal fervore del Figlio, diligenti guerrieri che portano i sacri rintocchi con loro in battaglia.»\n\n— Estratto da «Ordini e Disordini Cavallereschi»",
+  "G04": "«Un'antica civiltà si disse aver vissuto qui prima che Cael stesso esistesse, si dice anche che alcuni uomini di questa civiltà camminino ancora tra di noi. Prima di Cael non esisteva la luce però, quindi abbiamo delle ombre tra noi.»\n\n— Zoul, Cacciatore di tenebre",
+  "R01": "«Nessuno ha mai negato il cielo a Cael e per chi nella storia ci ha mai provato ha conosciuto la forza di questi cavalieri, ne abbattevano le porte portando sul petto l'effige del Padre, il sole. Le loro armature erano adornate anche con l'impegno del Figlio, la campana, così che ogni colpo portasse dietro con sé la volontà del divino.»\n\n— Estratto da «Ordini e Disordini Cavallereschi»",
+  "R02": "«Cael scacciò il buio con il solo sguardo ma questo non bastò per eliminarlo completamente da Concordia. Uomini coraggiosi, cavalieri fedeli, si diedero come missione di portare lo sguardo di Cael su ogni anfratto di Concordia. Immolati per una causa eterna, come il Figlio per il Padre.»\n\n— Estratto da «Ordini e Disordini Cavallereschi»",
+  "R03": "«Molti uomini sbagliano, pochi lo ammettono e Sorethai è colui che porta tutti gli uomini ad ammettere i loro errori e a pagarli. La sua ferrea volontà gli ha permesso di ripulire Concordia e la sua famiglia dalla corruzione. La sua manta rossa fu tinta col sangue dei legami recisi e mai più pulita.»\n\n— August, Ciambellano di Cael",
+  "N01": "Il divino Cael stesso gli concedette l'onore di vestire i colori del massimo grado militare, gli donò il suo simbolo e gli ordinò di unire i giusti sotto un unico rintocco, sotto un unico cielo.",
+  "N02": "«Uno degli uomini più fedeli di Cael, assieme a Demise vestì i colori militari e l’effige divina. Giudice e boia degli ordini cavallereschi si occupa di portare il giudizio del Padre sulle armature dei meno timorati, lui porta la terrificante consapevolezza del Sole sopra chi ha scordato cosa voler dire poter brandire una spada.»\n\n— August, Ciambellano di Cael"
+};
+
 export const CONCORDIA_CARDS = rows.map(
   (
     [
@@ -199,8 +218,7 @@ export const CONCORDIA_CARDS = rows.map(
     livrea: { 2: 'verde', 3: 'gialla', 4: 'rossa', 5: 'nera' }[league],
     ability: { trigger, effect, value, ...limits },
     description: `Potere: ${description}`,
-    flavour:
-      'La Concordia ha rifiutato la Fusione. Al suono delle campane, i Resistenti serrano le file.',
+    flavour: CONCORDIA_FLAVOURS[code],
   }),
 );
 const codes = Object.fromEntries(CONCORDIA_CARDS.map((c) => [c.code, c.id]));
