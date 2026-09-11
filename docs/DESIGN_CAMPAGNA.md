@@ -1759,3 +1759,36 @@ P2 e il tratto finale potranno ricevere lo stesso trattamento dopo aver definito
 Misurare la base senza nuovi piani, poi ciascun piano isolato e infine le combinazioni effettivamente raggiungibili nei percorsi alternativi. Ripetere i confronti a parità di seed, Campi e politica dell’IA, su più eserciti del Nascente: completi, con doppioni e posti vuoti, con trasformazioni e con Poteri diversi. I posti vuoti sono una condizione reale dopo l’abolizione del rinforzo automatico, non vanno riempiti di nascosto nei test.
 
 Registrare vittorie, sconfitte, pareggi, PV residui, FC spesi, numero di retry e motivo dell’esito; separare conquista e annientamento. Valutare il costo cumulativo degli status permanenti fino al boss e la loro successiva applicabilità, non una finestra temporanea. Confrontare anche ricompense e requisiti raggiungibili nei diversi rami per individuare scelte sempre preferibili. Verificare esclusione dei percorsi, conteggio degli incontri, mantenimento degli sblocchi e applicazione unica degli status dopo retry o ricaricamento. Finché mancano questi confronti, gli incrementi proposti non sono dichiarati bilanciati e non sostituiscono i valori di produzione.
+
+
+### Playtest del primo atto — folle L1 e boss L4
+
+Il giocatore segnala una difficoltà eccessiva del boss, soprattutto con eserciti dei Figli dell’Orizzonte a basso DAN. Direzione corrente: il boss finale dell’Atto I diventa di Lega 4; introdurre unità L1 che rappresentano gruppi di persone comuni, senza identità eroiche individuali. Questa sezione aggiorna il design; il catalogo e i valori del motore non sono ancora modificati. I valori candidati sotto richiedono playtest.
+
+#### Riscontro sul codice disponibile
+
+N01 è attualmente L5, POT 5 / DAN 4, Intervento: Blocca Potere e compare in entrambe le squadre. I12 parte da 29 PV contro i 25 base del giocatore; Corazze aggiunge altri 2 PV al nemico. Le squadre concentrano rispettivamente 15 e 18 Lega; il giocatore divide casualmente le proprie carte senza riutilizzare il Nascente nella seconda fase.
+
+Nel catalogo dei Figli, sei dei sette L2 hanno DAN base 1–2; nei L3 sono tre su dieci. Il problema non va quindi esteso indistintamente a tutta l’armata: occorre verificare quali agenti il giocatore riesce effettivamente a ottenere e trasformare prima del boss. Poteri, Bonus, riduzioni e danni diretti modificano il DAN effettivo. Non è stata eseguita una simulazione che dimostri l’impossibilità assoluta di vincere.
+
+Il formato classico implementato confronta prima i PV e poi i Campi a esaurimento mano, oltre alle condizioni anticipate di conquista e annientamento. Partire con 4–6 PV di svantaggio pesa quindi anche senza dover azzerare la vita avversaria. Con danni effettivi di 1–2, recuperare sei PV richiede indicativamente tre–sei conquiste senza subire danni, cure o altre variazioni: è un esempio del divario, non un risultato simulato.
+
+#### Boss di fine Atto I
+
+Lega 4 è il nuovo riferimento per la firma del primo atto. Non basta cambiare il numero di Lega lasciando invariata la carta. Primo profilo da provare: POT 4 / DAN 3, conservando Intervento: Blocca Potere e il ritorno nella seconda squadra. La presenza di due fasi è già parte della difficoltà. La variante del primo atto va isolata da eventuali versioni L5 usate altrove, mantenendo stabili identità, riferimenti e salvataggi.
+
+Proposta collegata: 25 PV base per entrambi nello scontro finale. Il +4 PV automatico del boss viene rimosso nella futura implementazione; eventuali vantaggi ulteriori derivano dagli status permanenti acquisiti nel percorso e sono visibili prima dello scontro. I PV continuano a conservarsi fra le fasi. Nessuna compensazione automatica legata alla composizione del giocatore.
+
+Rivedere anche la seconda squadra: N01 insieme a R01 e R02 concentra tre L4 pur dopo la riduzione della firma. Provare prima il nuovo profilo e la parità di PV, poi valutare una scorta prevalentemente L2–L3 con la firma L4 come picco. Non dichiarare risolto il bilanciamento dalla sola riduzione di Lega e non alzare indiscriminatamente il DAN di tutti i Figli.
+
+#### Folle di Lega 1
+
+Una carta rappresenta un gruppo: per esempio Folla delle Porte, Lavoratori del Vallo o Pellegrini della Campana. Nomi e profili sono candidati. Il gruppo occupa un normale posto nell’esercito e segue le normali regole delle carte; non introduce pedine, azioni multiple o moltiplicatori per il numero di persone raffigurate.
+
+Primi profili da confrontare: POT 2 / DAN 1 oppure POT 1 / DAN 2, inizialmente senza Potere individuale. L’appartenenza all’armata e l’eventuale Bonus restano espliciti e vanno inclusi nella valutazione. Le L1 rappresentano una base più debole delle truppe regolari L2, non una nuova famiglia di carte con effetti complessi a basso costo.
+
+Collocarle soprattutto nell’apertura e nei presidi di contorno, sostituendo carte negli incontri già previsti senza aggiungere combattimenti. Prima di cambiare I1 verificare tutte le condizioni iniziali del tutorial e la disponibilità del premio. Non riempire la progressione avanzata di L1: poiché si ottengono gli agenti dei nemici reali, abbassare troppo i roster abbasserebbe anche la crescita dell’esercito del giocatore e potrebbe peggiorare il problema del boss.
+
+La trasformazione attuale richiede un Figlio di pari Lega non posseduto; il catalogo dei Figli contiene zero L1. Prima di rendere ottenibili le nuove folle serve quindi una pool L1 dei Figli, anch’essa rappresentata da collettività, oppure una revisione esplicita della regola. Direzione proposta: aggiungere la pool L1 conservando la parità di Lega, senza promozioni gratuite a L2, conversioni fisse o bonus per i doppioni. Quando la pool non offre più identità valide la trasformazione rimane indisponibile, come per le altre Leghe.
+
+Verifica minima del blocco: apertura vincibile, reclutamento e trasformazione L1 completi, boss L4 senza bonus automatico di PV e prove con eserciti realmente raggiungibili (anche DAN basso e posti vuoti), nelle due fasi e con le combinazioni permanenti nemiche consentite dai percorsi.
