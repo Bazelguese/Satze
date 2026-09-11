@@ -1700,3 +1700,39 @@ Il Nascente torna in basso a sinistra e apre il riepilogo personale; l’Esercit
 Ogni premio confermato assegna esattamente una copia dell’agente offerto. Un doppione resta in riserva: non viene sostituito e non concede rinforzi, altre carte o compensazioni. La Crescita garantita descritta nei capitoli precedenti è abolita. Le élite e il boss mantengono due candidati, con una sola copia assegnata dopo la scelta.
 
 I posti sbloccati restano disponibili anche quando mancano identità diverse. Si schierano tutte le identità disponibili fino alla capienza, con il Nascente, una sola copia per identità e Lega entro 30. I posti vuoti non impediscono di ritirare il premio o iniziare l’incontro. Nuove acquisizioni o trasformazioni di doppioni possono riempirli. In un incontro a due squadre si conserva almeno un agente per la seconda fase se l’esercito conta cinque o meno identità; nessuna carta viene duplicata o generata per completare la mano. Le copie già assegnate nei salvataggi precedenti vengono conservate.
+
+
+### Bilanciamento tramite eventi e decisioni del giocatore — proposta di lavoro
+
+Direzione richiesta: aumentare gli eventi che possono potenziare il nemico e affidare al giocatore una parte della gestione della sua progressione. Il bilanciamento del primo atto entra ora nel lavoro corrente. Le regole e i valori sotto sono proposte da confrontare nel prototipo, non modifiche già applicate al motore.
+
+#### Base degli incontri
+
+Conservare la progressione introduttiva 1v1–5v5 e l’identità degli incontri tramite composizioni, Poteri, Campi e squadre del boss. Per confrontare la nuova progressione, partire da una base comune di risorse negli incontri completi: 25 PV e 18 FC, trasferendo ai piani generati dagli eventi gli aumenti automatici attuali di PV delle élite e del boss. La difficoltà dell’IA resta dichiarata e stabile durante l’incontro; non viene modificata segretamente per compensare l’esercito del giocatore.
+
+I piani già implementati P1 e P2 sono il punto di partenza. Attualmente P1 lascia alla Concordia Riserve (+2 FC) oppure Corazze (+2 PV); P2 lascia Assalto (primo DAN inflitto +1) oppure Tenuta (primo DAN subito ridotto). Prima di confrontare numericamente P2 va allineato il minimo di Tenuta: il design riporta minimo 0 ma il codice lo applica alla quantità di DAN prima del normale risolutore del danno. La verifica deve riguardare l’esito effettivo e le altre riduzioni, senza assumere equivalenze fra POT, DAN, PV e FC.
+
+#### Quattro occasioni di gestione nel primo atto
+
+Proposta di distribuzione: mantenere le due scelte P1/P2 e aggiungere due nodi evento fra gli incontri completi. Le nuove posizioni vanno scelte insieme alla revisione della mappa; non aggiungere potenziamenti nei primi scontri introduttivi. Le Domande del Nascente mantengono la loro funzione e non impongono automaticamente un costo nemico a ogni risposta.
+
+| Occasione | Scelta proposta | Durata e scopo |
+| --- | --- | --- |
+| Preparativi della Concordia, P1 | Interrompere le corazze oppure i rifornimenti; l’altro piano si realizza. | Persistente sui successivi Concordia fino al termine dell’atto. Il giocatore sceglie la natura della pressione. |
+| Vantaggio conteso, nuovo evento | Ottenere una crescita statistica del Nascente accettando rinforzi logistici nemici, oppure rinunciare a entrambi. | Prototipo: +1 POT oppure +1 DAN rispettando i cap, contro +2 FC iniziali ai prossimi due incontri Concordia. Valori provvisori, da testare sul percorso. |
+| Dottrina militare, P2 | Contrastare Assalto oppure Tenuta; resta l’altra dottrina. | Persistente sui successivi Concordia. Si presenta prima l’effetto preciso sulla battaglia. |
+| Interferenza, nuovo evento prima del boss | Ridurre o sostituire un piano attivo rinunciando al potenziamento personale offerto da questo evento; in alternativa conservare il piano e ottenere quel potenziamento. | Rende rivedibile una decisione precedente. Statistica e intensità da definire; niente restituzione retroattiva dei premi. |
+
+Non tutti gli eventi devono offrire una scelta fra due penalità. Le operazioni parallele fanno scegliere quale minaccia resta; gli scambi volontari fanno scegliere anche quanta difficoltà aggiungere. Ogni alternativa deve avere un motivo concreto per essere scelta. Una ricompensa personale in questi eventi è un esito esplicito della decisione, separato dal premio degli incontri; non ripristina compensazioni o carte aggiuntive per i doppioni.
+
+#### Durata, provenienza e chiarezza
+
+Prima della conferma mostrare il beneficio personale, la modifica nemica, i destinatari, l’inizio e la durata. I modificatori Concordia non si applicano alle armate delle Faglie. Un effetto valido per due incontri resta identico in tutti i retry dello stesso incontro e consuma una carica soltanto al suo completamento; le fasi di un boss non consumano cariche separate. I PV conservati fra le fasi non vengono incrementati nuovamente, mentre un modificatore agli FC iniziali va dichiarato per ogni fase cui si applica.
+
+Le scelte possono rendere il boss il risultato del percorso, ma i modificatori non devono trasformarsi in un accumulo automatico a ogni tappa. Distinguere un miglioramento personale permanente da uno svantaggio nemico temporaneo: dopo la scadenza rimane il beneficio, quindi il valore dello scambio dipende anche dalla sua collocazione. Non dare immunità universali o contromisure automatiche all’archetipo scelto dal giocatore. L’esercito nemico e i modificatori restano consultabili prima dello scontro.
+
+#### Primo blocco di verifica del bilanciamento
+
+Misurare la base senza nuovi piani, poi ciascun piano isolato e infine le combinazioni raggiungibili mediante gli eventi. Ripetere i confronti a parità di seed, Campi e politica dell’IA, su più eserciti del Nascente: completi, con doppioni e posti vuoti, con trasformazioni, e con Poteri diversi. I posti vuoti sono una condizione reale dopo l’abolizione del rinforzo automatico, non vanno riempiti di nascosto nei test.
+
+Registrare vittorie, sconfitte, pareggi, PV residui, FC spesi, numero di retry e motivo dell’esito; separare conquista e annientamento. Per gli scambi valutare anche i successivi incontri dopo la scadenza del costo nemico. Confrontare le alternative entro lo stesso evento per individuare scelte sempre preferibili. Finché mancano questi confronti, gli incrementi proposti non sono dichiarati bilanciati e non sostituiscono i valori di produzione.
