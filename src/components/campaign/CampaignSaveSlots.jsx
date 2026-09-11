@@ -47,7 +47,7 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
       <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><CampaignMotionControl/><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
       <div className="cs-origin">
         <div className="cs-origin-portrait"><img src={heroArt({league: 2})} alt="Il Nascente, arciere dell’Orizzonte"/><div>2 POT · 2 DAN · LEGA 2</div></div>
-        <div className="cs-origin-copy"><p className="cs-kicker">ATTO I · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Oltre il Vallo, le campane della Concordia chiamano i Resistenti. Il Nascente affronta il primo varco da solo. Gli agenti ottenuti dagli avversari formeranno il tuo esercito. La forma che assumerai dipende dalle tue scelte.</p>
+        <div className="cs-origin-copy"><p className="cs-kicker">ATTO I · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Un tempo Concordia governava tutto il mondo. Poi i colori della Nebula illuminarono una parte del cielo notturno: chi ne fu colpito ricevette la Domanda. Ora i Figli cercano una risposta negli altri, mentre le campane di Concordia chiamano i suoi soldati alla difesa. Il Nascente affronta il primo varco da solo. Gli agenti ottenuti dagli avversari formeranno il tuo esercito. La forma che assumerai dipende dalle tue scelte.</p>
           <p>Il primo Potere prenderà forma attraverso le Domande lungo il cammino.</p>
           {error && <p role="alert" className="cs-error">{error}</p>}
           <button className="cs-primary" onClick={() => {

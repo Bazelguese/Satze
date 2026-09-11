@@ -15,9 +15,9 @@ export const ARMY_LORE = {
   "Figli dell'Orizzonte": {
     glyph: '☄',
     bonusLabel: 'PASSIVO',
-    motto: 'Ancorati al cielo. Disarma prima di colpire.',
+    motto: 'La Domanda cerca ancora una risposta.',
     synopsis:
-      "Vegliano sui confini del cielo, ancorati alla Domanda che li tiene interi. Non cercano la gloria del colpo decisivo: la loro presenza basta a dissuadere l'attacco, a comprimere lo spazio in cui il nemico può muoversi.\n\nOgni Figlio è un filo teso tra la Nebula e il campo. Quando quel filo si tende, l'aggressione avversaria si spegne prima ancora di nascere. Combattono con dubbio, ritmo e Focus — non con la furia frontale.\n\nSceglili se vuoi dettare il tempo della partita: rallentare l'assalto nemico, accumulare risorse e chiudere quando il campo è già piegato a tuo favore.",
+      "Un tempo il loro mondo era interamente sotto Concordia. Quando i colori della Nebula ne illuminarono una parte del cielo notturno, chi ne fu colpito ricevette la Domanda: un orrore mistico capace di spezzare la ragione e trasformare l’esistenza.\n\nI Figli cercarono la risposta prima in sé stessi, poi negli altri. Per questo tentarono di trasformare il resto del mondo. Pochi possiedono tale capacità; molti uccidono senza neppure volerlo. La campagna racconta questa guerra. Nel presente Concordia è caduta e non esiste più.\n\nLa ricerca continua tra le forme disperse nella Nebula e quelle raccolte nel ventre luminoso dell’Arsenale Vivente. Alcuni riescono a dare una direzione alla Domanda attraverso la volontà. Altri perdono corpo, memoria e identità, senza riuscire a smettere di cercare.",
     bonusWhen: 'Sempre attivo — nessun trigger richiesto.',
     bonusExplain:
       'Il Valore Assalto del nemico scende di 5 su ogni duello, senza mai scendere sotto 6. È un freno permanente sulla pressione offensiva avversaria.',

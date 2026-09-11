@@ -79,7 +79,7 @@ const PLAYER_HAND = [
     used: false,
   },
   {
-    id: 'p2', name: 'Sorethal, il Primo Ancorante', army: ARMIES.orizzonte,
+    id: 'p2', name: 'Sorethai, il Primo Ancorante', army: ARMIES.orizzonte,
     league: 5, pot: 6, dan: 4, va: 12,
     portrait: 'assets/cards/101.png',
     abilityTitle: 'Potere', abilityKind: '',

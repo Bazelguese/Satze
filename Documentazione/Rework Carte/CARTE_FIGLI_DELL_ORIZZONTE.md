@@ -1,5 +1,7 @@
 # FIGLI DELL'ORIZZONTE — CARTE RIDISEGNATE
 
+> Bozza storica. Per nomi, lore e continuità delle carte già revisionate prevalgono [la revisione corrente](../REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md) e [il canone](../LORE_FIGLI_DELL_ORIZZONTE.md). Le descrizioni visive sottostanti non sono state rielaborate in questo passaggio.
+
 *Sagome d'ombra con cuori di stella. Divisi tra Pesanti (ancorati alla materia) e Leggeri (dispersi nella Nebula). Tormentati dalla Domanda Senza Fine: "Cosa sono adesso?"*
 
 ---
@@ -7,9 +9,9 @@
 ## CARTA 101 | Lega 5
 **POT 6 | DAN 4 | Potere:** -8 VA nem. (sempre)
 
-**Nome:** Sorethal, il Primo Ancorante
+**Nome:** Sorethai, il Primo Ancorante
 
-**Flavour:** "La Fusione dissolse i corpi, ma Sorethal rifiutò di svanire. Si vestì di reliquie del vecchio mondo — armature vuote, armi dimenticate — e scoprì che la materia attutiva la Domanda. Fu il primo ad ancorarsi. Fu il primo a restare intero."
+**Flavour:** "La Fusione dissolse i corpi, ma Sorethai rifiutò di svanire. Si vestì di reliquie del vecchio mondo — armature vuote, armi dimenticate — e scoprì che la materia attutiva la Domanda. Fu il primo ad ancorarsi. Fu il primo a restare intero."
 
 **Descrizione visiva:** Figura umanoide di oscurità assoluta. Armatura dorata antica, incompleta e stratificata. Cuore di stella viola incandescente visibile nel petto. Elmo da generale con visiera vuota, due punti di luce ciano come occhi. Una mano guantata protesa in avanti come a tirare qualcosa verso di sé, l'altra fatta di plasma stellare che si dissolve in scia. Mantello di polvere cosmica che fluttua. In movimento, avanza emergendo dalla nebbia.
 

@@ -27,7 +27,7 @@
 
 | # | Nome | Corpo | Equil. | POT | DAN | Postura | Funzione | Ruolo |
 |---|------|-------|--------|-----|-----|---------|----------|-------|
-| 101 | Sorethal, il Primo Ancorante | Imponente | Equilibrato | POT Alta | DAN Alto | Steady | Debuffer | Boss, Pillar |
+| 101 | Sorethai, il Primo Ancorante | Imponente | Equilibrato | POT Alta | DAN Alto | Steady | Debuffer | Boss, Pillar |
 | 102 | Tessitrice della Trama | Solido | Equilibrato | POT Alta | DAN Medio | Momentum | Engine | Pillar |
 | 103 | Portatore della Domanda | Solido | Equilibrato | POT Media | DAN Alto | Late Game | Debuffer | Pillar |
 | 104 | Cartografo del Vuoto | Solido | Equilibrato | POT Media | DAN Medio | Punisher | Engine | Pillar |

@@ -32,7 +32,7 @@ function DeckBuilderCosmic() {
     { id: 'nimrod',     name: 'Nimrod, il Primo Re',         lega: 5, pot: 7, dan: 3, fac: 'KETHRAN',    img: '/assets/cards/101.png', trig: 'RESA DEI CONTI', eff: '+2 DAN', selected: true },
     { id: 'vaelith',    name: 'Vaelith Sorn, il Primo',      lega: 5, pot: 7, dan: 3, fac: 'CORTE',      img: '/assets/cards/201.png', trig: 'CONQUISTA',     eff: '3 DAN dir.' },
     { id: 'patriarca',  name: "Patriarca dell'Enclave",      lega: 5, pot: 7, dan: 7, fac: 'ENCLAVE',    img: '/assets/cards/411.png', trig: 'SEMPRE',         eff: '-7 VA nem. (min 14)' },
-    { id: 'sorethal',   name: 'Sorethal, il Primo Ancorante',lega: 5, pot: 6, dan: 4, fac: 'ORATHAI',    img: '/assets/cards/301.png', trig: 'SEMPRE',         eff: '-8 VA nem.' },
+    { id: 'sorethal',   name: 'Sorethai, il Primo Ancorante',lega: 5, pot: 6, dan: 4, fac: 'ORATHAI',    img: '/assets/cards/301.png', trig: 'SEMPRE',         eff: '-8 VA nem.' },
     { id: 'urnammu',    name: 'Ur-Nammu il Conquistatore',   lega: 5, pot: 6, dan: 5, fac: 'MOUNTHBORN', img: '/assets/cards/501.png', trig: 'MAGNANIMO',     eff: '+2 POT' },
     { id: 'titano',     name: 'Titano Corazzato MK-IV',      lega: 5, pot: 6, dan: 6, fac: 'CALIBRI',    img: '/assets/cards/601.png', trig: 'SEMPRE',         eff: 'Immune' },
     { id: 'evoluzione', name: "L'Evoluzione Finale",         lega: 5, pot: 6, dan: 3, fac: 'KETHRAN',    img: '/assets/cards/102.png', trig: 'RESA DEI CONTI',eff: 'Immune' },

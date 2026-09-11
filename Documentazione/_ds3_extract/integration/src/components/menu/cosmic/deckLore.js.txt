@@ -30,10 +30,10 @@ export const DECK_LORE = {
     },
     "figli-dellorizzonte-controllo": {
       code: 'O·II', name: 'Ancora del Primo', archetype: 'CONTROLLO · RITMO',
-      flavor: 'Sorethal rifiutò di svanire. Tu rifiuti di affrettare.',
+      flavor: 'Sorethai rifiutò di svanire. Tu rifiuti di affrettare.',
       keywords: ['Controllo', 'VA−', 'Tempo'],
       stats: { pot: 35, dan: 25, vaImpact: 14, fc: 7 },
-      leader: { name: 'Sorethal, il Primo Ancorante', title: 'Il Primo Ancorante', img: null, league: 5, power: 6, damage: 4, ability: '−8 VA nem. (min 6)' },
+      leader: { name: 'Sorethai, il Primo Ancorante', title: 'Il Primo Ancorante', img: null, league: 5, power: 6, damage: 4, ability: '−8 VA nem. (min 6)' },
     },
   },
   "Kethran": {
