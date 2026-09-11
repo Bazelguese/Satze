@@ -1,6 +1,6 @@
 # Figli dell’Orizzonte e Concordia — canone narrativo
 
-Revisione dell’autore, settembre 2026. Nomi e lore delle 31 carte consolidate sono in [REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md](REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md). I valori di gioco restano nei cataloghi del codice.
+Revisione dell’autore, settembre 2026. Nomi e lore delle 45 carte consolidate sono in [REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md](REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md). I valori di gioco restano nei cataloghi del codice.
 
 ## Origine comune e campagna
 
@@ -35,13 +35,14 @@ I Richiamati possono abbandonare l’Arsenale o trovarsi dispersi nella Nebula. 
 ## Identità e continuità
 
 - Sorethai, Mastino di Concordia (9113), e Sorethai, il Primo Ancorante (101), sono lo stesso individuo. Il nome Sorethai sostituisce definitivamente la vecchia grafia.
-- Vethan, Vescovo della guerra, è lo stesso individuo della carta Vethan, Guerriero per un Giorno (115). Il testo di quella carta resta da riscrivere.
+- Vethan, Vescovo della guerra, è lo stesso individuo della carta Vethan, Guerriero per un giorno (115).
+- Il Prete dell’Ancora (117) è la versione del Portastendardo di Concordia (9107) nei Figli dell’Orizzonte.
 - Oris indica un’antica civiltà vissuta prima di Cael nelle testimonianze di Zoul. Restano da definire ulteriori dettagli geografici; non si assume che sia il nome del pianeta.
 - Sotto i colori della Nebula possono animarsi anche cose prima prive di vita, come descritto dal Superstite Oris.
 - I legami familiari non esplicitati, il marito di Naela e la sequenza dettagliata del passaggio di Sorethai attraverso l’Arsenale restano da sviluppare.
 
 ## Stato della revisione
 
-Sono consolidate 15 carte di Concordia e 16 dei Figli. Le altre 14 carte dei Figli conservano temporaneamente i testi precedenti e richiedono una revisione dedicata. Le vecchie bozze di carte e le descrizioni visive in `Rework Carte` sono materiale storico: per nomi, testi e continuità delle carte consolidate prevalgono il catalogo corrente e il documento collegato sopra.
+Sono consolidate tutte le 45 carte della revisione: 15 di Concordia e 30 dei Figli. Le vecchie bozze di carte e le descrizioni visive in `Rework Carte` sono materiale storico: per nomi, testi e continuità delle carte consolidate prevalgono il catalogo corrente e il documento collegato sopra.
 
 La precedente storia della Fusione collettiva, di Vaela e del sistema di sette pianeti non costituisce la base di questa revisione. Le specifiche non riconfermate restano nella cronologia Git, senza essere introdotte nuovamente nei testi correnti.
