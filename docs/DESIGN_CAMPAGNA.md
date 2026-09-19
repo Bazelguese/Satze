@@ -1792,3 +1792,27 @@ Collocarle soprattutto nell’apertura e nei presidi di contorno, sostituendo ca
 La trasformazione attuale richiede un Figlio di pari Lega non posseduto; il catalogo dei Figli contiene zero L1. Prima di rendere ottenibili le nuove folle serve quindi una pool L1 dei Figli, anch’essa rappresentata da collettività, oppure una revisione esplicita della regola. Direzione proposta: aggiungere la pool L1 conservando la parità di Lega, senza promozioni gratuite a L2, conversioni fisse o bonus per i doppioni. Quando la pool non offre più identità valide la trasformazione rimane indisponibile, come per le altre Leghe.
 
 Verifica minima del blocco: apertura vincibile, reclutamento e trasformazione L1 completi, boss L4 senza bonus automatico di PV e prove con eserciti realmente raggiungibili (anche DAN basso e posti vuoti), nelle due fasi e con le combinazioni permanenti nemiche consentite dai percorsi.
+
+
+### Blocco implementato — collettività L1 e boss L4 (19 settembre 2026)
+
+Prima versione giocabile del blocco descritto sopra. Le carte sono definite nel catalogo del primo atto e non vengono aggiunte ai cataloghi del duello libero. Tutte le collettività sono L1, senza Potere individuale; mantengono l’appartenenza all’armata e le normali condizioni di disponibilità e attivazione del suo Bonus.
+
+| Identità | Armata | POT | DAN |
+| --- | --- | --- | --- |
+| L01 — Folla delle Porte (9301) | Concordia | 2 | 1 |
+| L02 — Lavoratori del Vallo (9302) | Concordia | 1 | 2 |
+| L03 — Pellegrini della Campana (9303) | Concordia | 2 | 1 |
+| Coro dei Dispersi (9401) | Figli dell’Orizzonte | 2 | 1 |
+| Moltitudine Incompiuta (9402) | Figli dell’Orizzonte | 1 | 2 |
+| Viandanti della Nebula (9403) | Figli dell’Orizzonte | 2 | 1 |
+
+I1 conserva V02 e il campo del Varco. I2 schiera L01 e V01; I3 schiera L02, L03 e V03. Gli altri roster conservano la composizione precedente; il numero degli incontri, gli sblocchi e le dimensioni delle mani restano quelli esistenti. I premi provengono dal roster realmente affrontato, inclusi i doppioni senza compensazioni. Le L1 reclutate maturano dopo una tappa successiva e si trasformano casualmente in un Figlio L1 non posseduto tra i tre sopra; non ci sono corrispondenze fisse o aumenti gratuiti di Lega. Pool esaurita: si conserva la copia originale.
+
+N01 nel primo atto è ora L4, POT 4 / DAN 3, Intervento: Blocca Potere. La versione del catalogo Concordia condiviso resta L5 e gli ID esistenti non cambiano. I12 parte da 25 PV base contro 25, oppure 27 nemici con Corazze. La prima squadra vale ora 14 Lega e la seconda 17: il boss ritorna e mantiene entrambe le scorte precedenti per il prossimo confronto. I PV residui si conservano fra le fasi e Corazze non viene aggiunto una seconda volta. Non si considera concluso il bilanciamento della seconda squadra.
+
+Compatibilità: ogni nuovo tentativo conserva il roster completo come fonte della ricompensa. I vecchi tentativi I2/I3 e le offerte già salvate mantengono le identità della versione precedente. Le copie già possedute non vengono convertite o rimosse. I tentativi ripresi da uno snapshot conservano lo stato del duello già salvato; per provare il nuovo boss dall’inizio occorre avviare o ritentare l’incontro. Non si azzerano i PV di una fase già in corso.
+
+Verifiche automatiche: 111 test mirati superati tra stato della campagna, risoluzione del duello e componenti, compresi reclutamento e trasformazione L1, pool esaurita, visualizzazione del premio corretto, pre-caricamento, compatibilità dei vecchi premi, boss L4 e conservazione PV. Il primo duello è verificato su più seed e contro ogni puntata nemica legale con impegno pieno del giocatore. Build completata con avvisi preesistenti su asset, CSS, chiave di stile duplicata e dimensione dei bundle. Questi controlli verificano il funzionamento; non dimostrano il bilanciamento dell’intera run e non sostituiscono il playtest.
+
+Restano proposte di design i nuovi percorsi articolati e la nuova sezione Status Esercito con l’estensione degli status permanenti; non vengono dichiarati implementati da questo blocco. Le collettività non hanno ancora illustrazioni dedicate.

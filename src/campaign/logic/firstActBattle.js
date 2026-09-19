@@ -1,6 +1,6 @@
 import { firstActNode, firstActCard, campaignField } from '../data/firstAct.js';
 import { CONCORDIA_ARMY } from '../data/concordia.js';
-import { runCard } from '../state/firstActState.js';
+import { runCard, firstActEncounterRoster } from '../state/firstActState.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 export function firstActDuelConfig(run) {
   const a = run.active;
@@ -22,7 +22,7 @@ export function firstActDuelConfig(run) {
   };
   return {
     playerArmy: "Figli dell'Orizzonte", playerDeckCards: run.deck.map(id=>runCard(run,id)),
-    enemyArmy: node.army, enemyDeckIds: node.roster.map(firstActCard), difficulty: node.difficulty,
+    enemyArmy: node.army, enemyDeckIds: firstActEncounterRoster(run).map(firstActCard), difficulty: node.difficulty,
     campaignDuelMod: mod,
     startOptions: { eminenceFormat: EMINENCE_FORMAT.DISABLED, skipShuffleDeal: true, fixedHands: { playerHand: a.playerSquads[phase].map(id=>runCard(run,id)), enemyHand: a.enemySquads[phase].map(firstActCard) } },
   };

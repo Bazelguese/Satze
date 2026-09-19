@@ -82,3 +82,16 @@ describe('first encounter is winnable independently of the campaign seed',()=>{
   expect(duel({field:c.campaignDuelMod.fixedFields[0],campaign:c.campaignDuelMod,selectedAgent:h.playerHand[0],enemyAgent:h.enemyHand[0],...h,selectedFocus:1,enemySelectedFocus:10,isPlayerFirst:false,enemyArmyBonuses:{}}).winner).toBe('enemy');
  });
 });
+
+
+it('resolves unpowered L1 collectives with their ordinary army bonus eligibility',()=>{
+ for(const id of [9301,9302,9303,9401,9402,9403]){
+  const c=firstActCard(id);
+  const r=duel({selectedAgent:c,playerHand:[c],playerArmyBonuses:{},enemyArmyBonuses:{}});
+  expect(Number.isFinite(r.finalPlayerHP)).toBe(true);
+  expect(Number.isFinite(r.finalEnemyHP)).toBe(true);
+  expect(r.playerPower).toBe(c.power);
+ }
+ const enemy=firstActCard(9301);
+ expect(duel({enemyAgent:enemy,enemyArmyBonuses:{[enemy.army]:true}}).enemyPower).toBe(enemy.power+1);
+});

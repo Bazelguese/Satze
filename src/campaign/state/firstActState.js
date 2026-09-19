@@ -1,4 +1,4 @@
-import { FIRST_ACT_VERSION, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, FIGLI, NASCENTE, validateFirstActData } from '../data/firstAct.js';
+import { FIRST_ACT_VERSION, FIRST_ACT_COLLECTIVES, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, FIGLI, NASCENTE, validateFirstActData } from '../data/firstAct.js';
 import { ARMY_SETS } from '../../data/cards.js';
 import { CONCORDIA_ARMY } from '../data/concordia.js';
 import { TRIGGER_NAMES } from '../../data/triggers.js';
@@ -89,6 +89,9 @@ export function legalArmy(r) {
   const result = [NASCENTE, ...ids.slice(0, r.slots - 1)];
   return validateFirstActDeck(r, result) ? result : null;
 }
+function validEncounterRoster(node, roster) {
+  return Array.isArray(roster) && [node?.roster, node?.legacyRoster].some(expected => expected && expected.length === roster.length && new Set(roster).size === roster.length && roster.every(id => expected.includes(id)));
+}
 export function assertFirstActRun(r) {
   if (!isFirstActRun(r) || r.version !== 3 || r.designVersion !== FIRST_ACT_VERSION) throw new Error('Versione del primo atto non riconosciuta.');
   if (!Number.isInteger(r.stage) || r.stage < 0 || r.stage > FIRST_ACT_STAGES.length || !Number.isInteger(r.slots) || r.slots < 1 || r.slots > 10) throw new Error('Progressione non valida.');
@@ -101,16 +104,26 @@ export function assertFirstActRun(r) {
   if (r.active) {
     const a=r.active;
     if (!firstActNode(a.nodeId) || !Number.isInteger(a.phase) || a.phase<0 || !a.playerSquads?.[a.phase] || !a.enemySquads?.[a.phase]) throw new Error('Tentativo non valido.');
+    if (a.rewardRoster && !validEncounterRoster(firstActNode(a.nodeId), a.rewardRoster)) throw new Error('Roster salvato non valido.');
     for (const squads of [a.playerSquads,a.enemySquads]) if (squads.some(s => s.length<1 || s.length>5 || new Set(s).size!==s.length || s.some(id=>!runCard(r,id)))) throw new Error('Mani salvate non valide.');
     if (a.fieldSquads && (a.fieldSquads.length !== a.enemySquads.length || a.fieldSquads.some(ids => ids.length !== firstActNode(a.nodeId).fieldIds.length || new Set(ids).size !== ids.length || ids.some(id => !campaignField(id))))) throw new Error('Campi salvati non validi.');
   }
-  if (r.pendingReward && (!firstActNode(r.pendingReward.nodeId)?.roster || !r.pendingReward.offer?.length || r.pendingReward.offer.some(id=>!firstActNode(r.pendingReward.nodeId).roster.includes(id)))) throw new Error('Premio salvato non valido.');
+  if (r.pendingReward) {
+    const pending = r.pendingReward, node = firstActNode(pending.nodeId);
+    const roster = pending.roster || node?.legacyRoster || node?.roster;
+    if (!node?.roster || !validEncounterRoster(node, roster) || !pending.offer?.length || pending.offer.some(id=>!roster.includes(id) || id===node.signature)) throw new Error('Premio salvato non valido.');
+  }
   if (r.pendingEvent && firstActNode(r.pendingEvent.id)?.kind!=='event') throw new Error('Evento salvato non valido.');
   return r;
 }
 function hand(ids, required, r, salt) {
   if (required.some(id => !ids.includes(id))) throw new Error('Carta garantita assente.');
   return [...required, ...shuffled([...ids].sort((a,b) => a-b).filter(id => !required.includes(id)), r.seed, salt)].slice(0, Math.min(5, ids.length));
+}
+// Keep rewards tied to the roster encountered, including attempts saved before a rebalance.
+export function firstActEncounterRoster(r) {
+  const node = firstActNode(r.active.nodeId);
+  return r.active.rewardRoster || node.legacyRoster || node.roster;
 }
 export function createAttempt(r, node) {
   const enemy = node.squads?.[0] || hand(node.roster, node.required, r, `${node.id}:hands:enemy`);
@@ -124,7 +137,7 @@ export function createAttempt(r, node) {
   // The opening tutorial must be winnable with equal cards and a full FC commitment.
   const opening = pSquads.map((p,i) => node.openingPlayerFirst ?? (sum(p) === sum(eSquads[i]) ? shuffled([true,false],r.seed,`${node.id}:initiative:${i}`)[0] : sum(p) < sum(eSquads[i])));
   const fieldSquads = eSquads.map((_, phase) => drawFirstActFields(r, node, phase));
-  return { id: r.attempt + 1, nodeId: node.id, phase: 0, playerSquads: pSquads, enemySquads: eSquads, fieldSquads, opening, pv: null, snapshot: null };
+  return { id: r.attempt + 1, nodeId: node.id, phase: 0, playerSquads: pSquads, enemySquads: eSquads, rewardRoster: [...node.roster], fieldSquads, opening, pv: null, snapshot: null };
 }
 function checkpoint(r) {
   const { checkpoints, ...state } = clone(r);
@@ -154,7 +167,7 @@ export function transformationPool(r, uid) {
   const copy = r.copies.find(c => c.uid === uid);
   if (!copy || !mature(r, copy) || firstActCard(copy.cardId).army === FIGLI) return [];
   const owned = new Set([NASCENTE, ...r.copies.map(c => c.cardId)]);
-  return (ARMY_SETS[FIGLI] || []).filter(c => c.league === firstActCard(copy.cardId).league && !owned.has(c.id)).map(c => c.id).sort((a,b)=>a-b);
+  return [...(ARMY_SETS[FIGLI] || []), ...FIRST_ACT_COLLECTIVES.filter(c => c.army === FIGLI)].filter(c => c.league === firstActCard(copy.cardId).league && !owned.has(c.id)).map(c => c.id).sort((a,b)=>a-b);
 }
 export function eventChoices(r) {
   const ev = r.pendingEvent;
@@ -210,9 +223,10 @@ export function firstActReducer(r, action) {
         next = { ...r, active: { ...r.active, phase: r.active.phase+1, pv: { player: playerHP, enemy: enemyHP }, snapshot: null } }; break;
       }
       if (winner !== 'player') { next = { ...r, stats:recordFirstActResult(r,winner), active: null, lastResult: winner }; break; }
-      const pool = node.roster.filter(id => id !== node.signature);
+      const roster = firstActEncounterRoster(r);
+      const pool = roster.filter(id => id !== node.signature);
       const offer = shuffled(pool,r.seed,`${node.id}:reward`).slice(0,['elite','boss'].includes(node.kind) ? 2 : 1);
-      next = { ...r, stats:recordFirstActResult(r,winner), active: null, pendingReward: { nodeId: node.id, offer } }; break;
+      next = { ...r, stats:recordFirstActResult(r,winner), active: null, pendingReward: { nodeId: node.id, offer, roster: [...roster] } }; break;
     }
     case 'REWARD': {
       const pending = r.pendingReward;
