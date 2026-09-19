@@ -1,8 +1,6 @@
-import { CONCORDIA_CARDS } from './data/concordia.js';
-import { ARMY_SETS } from '../data/cards.js';
 import { describe,it,expect } from 'vitest';
 import { createFirstActRun,firstActReducer as reduce,availableFirstActNodes,runCard,runLeague,legalArmy,transformationPool,previewFirstActChoice,assertFirstActRun } from './state/firstActState.js';
-import { FIRST_ACT_COLLECTIVES,firstActCard,FIRST_ACT_STAGES,firstActNode,NASCENTE,codes,POWER_PACKAGES,TOWER_ID,FIRST_ACT_NODES,validateFirstActData } from './data/firstAct.js';
+import { FIRST_ACT_STAGES,firstActNode,NASCENTE,codes,POWER_PACKAGES,TOWER_ID,FIRST_ACT_NODES,validateFirstActData } from './data/firstAct.js';
 import { firstActDuelConfig,firstActMatchOutcome,revealedAt } from './logic/firstActBattle.js';
 import { restartCampaignEncounter } from './logic/missionAdapter.js';
 import { computeDuelResolution } from '../game/duelResolve.js';
@@ -238,72 +236,4 @@ it('fills a vacant slot when transforming a reserve duplicate into a new identit
  r={...r,copies:[{uid:'x',cardId:id,acquiredAt:0},{uid:'y',cardId:id,acquiredAt:0}],deck:[NASCENTE,id]};
  const next=reduce(r,{type:'TRANSFORM',uid:'y'});
  expect(next.copies).toHaveLength(2);expect(next.deck).toHaveLength(3);expect(next.deck).toContain(id);assertFirstActRun(next);
-});
-
-
-describe('L1 collectives and the L4 act one boss',()=>{
- it('keeps campaign identities unique and leaves shared catalogs unchanged',()=>{
-  const shared=[...Object.values(ARMY_SETS).flat(),...CONCORDIA_CARDS];
-  expect(new Set([...shared,...FIRST_ACT_COLLECTIVES].map(c=>c.id)).size).toBe(shared.length+FIRST_ACT_COLLECTIVES.length);
-  expect(FIRST_ACT_COLLECTIVES).toHaveLength(6);
-  for(const c of FIRST_ACT_COLLECTIVES) expect(firstActCard(c.id)).toMatchObject({league:1,ability:null});
-  const signature=codes('N01')[0];
-  expect(CONCORDIA_CARDS.find(c=>c.id===signature)).toMatchObject({league:5,power:5,damage:4});
-  expect(firstActCard(signature)).toMatchObject({league:4,power:4,damage:3,ability:{effect:'blockAbility'}});
- });
- it('recruits L1 from actual early encounters and transforms after maturity at the same league',()=>{
-  let recruits=0;
-  for(let seed=1;seed<=20;seed++){
-   let r=win(win(createFirstActRun({seed})));
-   const c=r.copies.find(c=>firstActCard(c.cardId).league===1);
-   if(!c)continue;
-   recruits++;
-   expect(transformationPool(r,c.uid)).toEqual([]);
-   r=win(r);const pool=transformationPool(r,c.uid);
-   expect(pool).toEqual([9401,9402,9403]);
-   const next=reduce(r,{type:'TRANSFORM',uid:c.uid});
-   const transformed=next.copies.find(x=>x.uid===c.uid);
-   expect(pool).toContain(transformed.cardId);
-   expect(runCard(next,transformed.cardId)).toMatchObject({league:1,army:"Figli dell'Orizzonte",ability:null});
-   expect(next.copies).toHaveLength(r.copies.length);
-   expect(assertFirstActRun(JSON.parse(JSON.stringify(next)))).toEqual(next);
-  }
-  expect(recruits).toBeGreaterThan(0);
- });
- it('does not replace a duplicate or promote an L1 when all transformations are owned',()=>{
-  const r=until('I5A');
-  r.copies=[...r.copies,{uid:'crowdA',cardId:9301,acquiredAt:0},{uid:'crowdB',cardId:9301,acquiredAt:0},...[9401,9402,9403].map(cardId=>({uid:`owned${cardId}`,cardId,acquiredAt:0}))];
-  r.deck=legalArmy(r);
-  const before=structuredClone(r.copies);
-  expect(transformationPool(r,'crowdB')).toEqual([]);
-  expect(()=>reduce(r,{type:'TRANSFORM',uid:'crowdB'})).toThrow('Nessuna trasformazione disponibile');
-  expect(r.copies).toEqual(before);
- });
- it('starts the boss at equal base PV, applies Corazze once, and returns the L4 signature',()=>{
-  for(const P1 of [undefined,'corazze','riserve']){
-   let r=until('I12');r.plans={P1};r=reduce(r,{type:'START',nodeId:'I12'});
-   let cfg=firstActDuelConfig(r);
-   expect(cfg.campaignDuelMod).toMatchObject({playerLife:25,enemyLife:P1==='corazze'?27:25});
-   expect(cfg.startOptions.fixedHands.enemyHand.find(c=>c.code==='N01')).toMatchObject({league:4,power:4,damage:3});
-   r=result(r,'player',17,9);cfg=firstActDuelConfig(r);
-   expect(cfg.campaignDuelMod).toMatchObject({playerLife:17,enemyLife:9});
-   expect(cfg.startOptions.fixedHands.enemyHand.find(c=>c.code==='N01')).toMatchObject({league:4,power:4,damage:3});
-  }
- });
- it('retains the encountered roster and pending reward in pre-L1 saves, then uses the new roster on retry',()=>{
-  for(const nodeId of ['I2','I3']){
-   let r=until(nodeId);r=reduce(r,{type:'START',nodeId});
-   const oldRoster=firstActNode(nodeId).legacyRoster;
-   delete r.active.rewardRoster;r.active.enemySquads=[oldRoster];
-   const legacy=JSON.parse(JSON.stringify(r));assertFirstActRun(legacy);
-   expect(firstActDuelConfig(legacy).enemyDeckIds.map(c=>c.id)).toEqual(oldRoster);
-   const rewarded=result(legacy);expect(oldRoster).toContain(rewarded.pendingReward.offer[0]);
-   const pending={...rewarded,pendingReward:{nodeId,offer:[oldRoster.at(-1)]}};
-   assertFirstActRun(pending);
-   expect(reduce(pending,{type:'REWARD',cardId:oldRoster.at(-1)}).copies.at(-1).cardId).toBe(oldRoster.at(-1));
-   const retry=reduce(result(legacy,'draw'),{type:'START',nodeId});
-   expect(firstActDuelConfig(retry).enemyDeckIds.map(c=>c.id)).toEqual(firstActNode(nodeId).roster);
-   expect(result(retry).pendingReward.roster).toEqual(firstActNode(nodeId).roster);
-  }
- });
 });

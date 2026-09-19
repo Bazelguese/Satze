@@ -5,15 +5,6 @@ import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
 export const FIRST_ACT_VERSION = '0.25';
 export const NASCENTE = 9001;
 export const FIGLI = "Figli dell'Orizzonte";
-// Explicit campaign-only IDs: preserve the shared catalogs and existing saved identities.
-export const FIRST_ACT_COLLECTIVES = [
-  { id: 9301, code: 'L01', name: 'Folla delle Porte', army: CONCORDIA_ARMY, power: 2, damage: 1, flavour: 'Si stringono davanti alle porte, con utensili e scudi di fortuna. Nessuno vuole essere il primo a cedere.' },
-  { id: 9302, code: 'L02', name: 'Lavoratori del Vallo', army: CONCORDIA_ARMY, power: 1, damage: 2, flavour: 'Le mani che hanno alzato il Vallo portano ancora martelli e picconi. Ora li rivolgono contro chi si avvicina.' },
-  { id: 9303, code: 'L03', name: 'Pellegrini della Campana', army: CONCORDIA_ARMY, power: 2, damage: 1, flavour: 'Hanno seguito il suono fino alle mura. Aspettano insieme che qualcuno dica loro dove andare.' },
-  { id: 9401, name: 'Coro dei Dispersi', army: FIGLI, power: 2, damage: 1, flavour: 'Le voci hanno perso i nomi. Quando rispondono alla Domanda, lo fanno tutte insieme.' },
-  { id: 9402, name: 'Moltitudine Incompiuta', army: FIGLI, power: 1, damage: 2, flavour: 'Dalla Nebula emergono mani, passi e volti incompleti. Avanzano sostenendosi l’un l’altro.' },
-  { id: 9403, name: 'Viandanti della Nebula', army: FIGLI, power: 2, damage: 1, flavour: 'Continuano a camminare. Nessuno ricorda chi guidasse il gruppo prima che il sentiero scomparisse.' },
-].map(c => ({ ...c, league: 1, ability: null, description: 'Nessun Potere', campaignOnly: true, icon: c.army === FIGLI ? 'galaxy' : 'shield' }));
 export const TOWER_ID = 9201;
 export const VARCO_ID = 9200;
 export const SPECIAL_FIELDS = [
@@ -22,15 +13,14 @@ export const SPECIAL_FIELDS = [
 ];
 export const campaignField = id => [...SPECIAL_FIELDS, ...ALL_BATTLEFIELDS].find(f => f.id === id);
 export const codes = text => text.split(' ').map(code => {
-  const c = [...CONCORDIA_CARDS, ...FIRST_ACT_COLLECTIVES].find(c => c.code === code);
+  const c = CONCORDIA_CARDS.find(c => c.code === code);
   if (!c) throw new Error(`Codice Concordia sconosciuto: ${code}`);
   return c.id;
 });
 export function firstActCard(id) {
-  let c = FIRST_ACT_COLLECTIVES.find(c => c.id === id) || concordiaCardById(id) || Object.entries(ARMY_SETS).flatMap(([army, cards]) => cards.map(c => ({ ...c, army: c.army || army }))).find(c => c.id === id);
+  let c = concordiaCardById(id) || Object.entries(ARMY_SETS).flatMap(([army, cards]) => cards.map(c => ({ ...c, army: c.army || army }))).find(c => c.id === id);
   if (!c) return null;
   if (c.army === CONCORDIA_ARMY) c = {...c, armyBonusOverride: {trigger:'staffetta',effects:[{effect:'power',value:1}],description:'Staffetta: +1 POT'}};
-  if (c.code === 'N01') return { ...c, league: 4, power: 4, damage: 3 };
   if (c.code === 'V01' || c.code === 'V05') return { ...c, ability: { ...c.ability, trigger: 'staffetta' }, description: c.code === 'V01' ? 'Staffetta: +3 VA' : 'Staffetta: +1 DAN' };
   if (c.code === 'G03') return { ...c, league: 3, ability: { trigger: 'resistenza', effect: 'terraform', value: TOWER_ID }, description: 'Resistenza: Terraformare Torre del Richiamo' };
   return c;
@@ -38,8 +28,8 @@ export function firstActCard(id) {
 const battle = (id, title, roster, size, opts = {}) => ({ id, node: id, title, kind: 'battle', army: CONCORDIA_ARMY, roster: codes(roster), size, required: [], fieldIds: [8, 12, 2, TOWER_ID, 4], revealRounds: [1, 1, 1, 2, 3], life: 25, focus: 18, difficulty: 'medium', winRule: 'classic', ...opts });
 export const FIRST_ACT_NODES = [
   battle('I1', 'Primo contatto', 'V02', 1, { growth: 2, life: 10, focus: 10, fieldIds: [VARCO_ID], revealRounds: [1], winRule: 'varco', difficulty: 'easy', openingPlayerFirst: false }),
-  battle('I2', 'Pattuglia', 'L01 V01', 2, { legacyRoster: codes('V01 V04'), growth: 3, life: 10, focus: 10, fieldIds: [8, 12], revealRounds: [1, 1], winRule: 'territory', difficulty: 'easy' }),
-  battle('I3', 'Presidio', 'L02 L03 V03', 3, { legacyRoster: codes('V02 V03 V06'), growth: 4, life: 10, focus: 10, fieldIds: [8, 12, 2], revealRounds: [1, 1, 1], winRule: 'territory' }),
+  battle('I2', 'Pattuglia', 'V01 V04', 2, { growth: 3, life: 10, focus: 10, fieldIds: [8, 12], revealRounds: [1, 1], winRule: 'territory', difficulty: 'easy' }),
+  battle('I3', 'Presidio', 'V02 V03 V06', 3, { growth: 4, life: 10, focus: 10, fieldIds: [8, 12, 2], revealRounds: [1, 1, 1], winRule: 'territory' }),
   battle('I4', 'Posto di blocco', 'V01 V03 V04 V05', 4, { growth: 5, life: 10, focus: 10, fieldIds: [8, 12, 2, 4], revealRounds: [1, 1, 1, 2], winRule: 'territory' }),
   { id: 'E01', title: 'La prima Domanda', kind: 'event' },
   battle('I5A', 'Il deposito delle corazze', 'V01 V02 V03 V04 V05', 5, { plan: 'riserve' }),
@@ -56,7 +46,7 @@ export const FIRST_ACT_NODES = [
   battle('I10', 'La breccia', 'V01 V02 V04 V05 G01 G02 G03 R01', 8, { required: codes('R01 G03'), growth: 9 }),
   battle('I11', 'La guardia della corona', 'V01 V02 V04 V05 G01 G02 G03 R01 R02', 9, { kind: 'elite', required: codes('R02 G03'), life: 27, growth: 10, difficulty: 'hard' }),
   { id: 'E03', title: 'Risonanza', kind: 'event' },
-  battle('I12', 'La Corona Vuota', 'V01 V02 V04 V05 G01 G02 G03 R01 R02 N01', 10, { kind: 'boss', life: 25, difficulty: 'hard', signature: codes('N01')[0], squads: [codes('N01 G03 G01 V01 V05'), codes('N01 G02 R01 R02 V04')] }),
+  battle('I12', 'La Corona Vuota', 'V01 V02 V04 V05 G01 G02 G03 R01 R02 N01', 10, { kind: 'boss', life: 29, difficulty: 'hard', signature: codes('N01')[0], squads: [codes('N01 G03 G01 V01 V05'), codes('N01 G02 R01 R02 V04')] }),
 ];
 export const FIRST_ACT_STAGES = [['I1'], ['I2'], ['I3'], ['I4'], ['E01'], ['I5A', 'I5B'], ['I6'], ['E02'], ['F1'], ['I7'], ['I8'], ['E06'], ['I9A', 'I9B'], ['F2'], ['I10'], ['I11'], ['E03'], ['I12']];
 export const firstActNode = id => FIRST_ACT_NODES.find(n => n.id === id);

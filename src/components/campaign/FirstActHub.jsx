@@ -6,7 +6,7 @@ import { CampaignBackdrop, CampaignArt, CampaignSigil, CampaignMap, campaignArt,
 import { CampaignDeparture } from './CampaignDeparture.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
 import { loadCampaignRun, saveCampaignRun } from '../../campaign/state/persistence.js';
-import { availableFirstActNodes, firstActEncounterRoster, firstActReducer, previewFirstActReward, firstActStats, runCard, runLeague } from '../../campaign/state/firstActState.js';
+import { availableFirstActNodes, firstActReducer, previewFirstActReward, firstActStats, runCard, runLeague } from '../../campaign/state/firstActState.js';
 import { FIRST_ACT_STAGES, NASCENTE_ARCHETYPES, POWER_PACKAGES, firstActNode, firstActCard, NASCENTE, TOWER_ID, campaignField } from '../../campaign/data/firstAct.js';
 import { firstActDuelConfig } from '../../campaign/logic/firstActBattle.js';
 import { FirstActArmyDialog } from './FirstActArmyDialog.jsx';
@@ -57,15 +57,15 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
     catch(e){setError(e.message);return null;}
   };
   const available=availableFirstActNodes(run), node=available.find(n=>n.id===selected)||available[0];
-  const start = () => { const next=run.active ? run : commit({type:'START',nodeId:node.id});if(!next)return; const n=firstActNode(next.active.nodeId);setDeparture({mission:{...n,enemy:{army:n.army,deck:firstActEncounterRoster(next)},campaignAttempt:next.active.id,campaignPhase:next.active.phase},run:next}); };
+  const start = () => { const next=run.active ? run : commit({type:'START',nodeId:node.id});if(!next)return; const n=firstActNode(next.active.nodeId);setDeparture({mission:{...n,enemy:{army:n.army,deck:n.roster},campaignAttempt:next.active.id,campaignPhase:next.active.phase},run:next}); };
   const enterDuel=()=>{try{onStartMission(departure.mission,departure.run);}catch(e){setError(e.message);}finally{setDeparture(null);}};
   const openArmy=()=>{setDraft(run.deck);setArmy(true);};
   const battleNode=run.active ? firstActNode(run.active.nodeId) : node;
-  const enemy=run.active ? firstActEncounterRoster(run) : battleNode?.roster || [];
+  const enemy=battleNode?.roster || [];
   const nascente=runCard(run,NASCENTE);
   const mapRun={stageIndex:run.stage,outcome:run.outcome,definition:{events:[]},history:run.history.map(h=>({...h,missionId:h.nodeId}))};
   const mapAct={stages:FIRST_ACT_STAGES.map(ids=>({alternatives:ids.map(firstActNode)}))};
-  const resources=battleNode?.kind!=='event' && battleNode ? firstActDuelConfig({...run,active:run.active || {nodeId:battleNode.id,phase:0,rewardRoster:battleNode.roster,playerSquads:[run.deck.slice(0,5)],enemySquads:[battleNode.roster.slice(0,5)],opening:[true]}}).campaignDuelMod : null;
+  const resources=battleNode?.kind!=='event' && battleNode ? firstActDuelConfig({...run,active:run.active || {nodeId:battleNode.id,phase:0,playerSquads:[run.deck.slice(0,5)],enemySquads:[battleNode.roster.slice(0,5)],opening:[true]}}).campaignDuelMod : null;
   return <CampaignScene className="cs-first-act"><CampaignBackdrop/><div className="cs-content">
     <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · ATTO I</span><strong>Oltre il Vallo</strong></div></div><nav className="cs-actions"><button onClick={openArmy}>Esercito e riserva</button><CampaignMotionControl/><button onClick={onBack}>Menu</button></nav></header>
     <div className="cs-act-heading"><div><p className="cs-kicker">IL CAMMINO DEL NASCENTE</p><h1>Oltre il Vallo</h1></div><p>{run.completed} tappe completate · {run.slots} posti · Lega {runLeague(run)}/30</p></div>

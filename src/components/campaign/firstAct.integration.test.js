@@ -283,19 +283,3 @@ it('places the Nascente summary on the left and the army on the right',()=>{
   act(()=>host.querySelector('.cs-hero-summary').click());expect(host.querySelector('[role="dialog"]').textContent).toContain('Il cammino del Nascente');
  }finally{style.remove();}
 });
-
-
-it('preloads L1 transformations and displays the actual collective reward and reserve card',()=>{
- let r=createFirstActRun({seed:31});
- expect(campaignDuelAssets(r).preloadCards.filter(c=>[9401,9402,9403].includes(c.id))).toHaveLength(3);
- r=reduce(r,{type:'TEST_WIN',nodeId:'I1'});r=reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});
- r=reduce(r,{type:'TEST_WIN',nodeId:'I2'});
- expect(r.pendingReward.offer).toContain(9301);
- saveCampaignRun(r,0);render(React.createElement(FirstActHub,{onBack:()=>{}}));
- expect(host.querySelector('[data-card-id="9301"]')).toBeTruthy();
- expect(host.textContent).toContain('Folla delle Porte');
- click('Accogli Folla delle Porte');
- const saved=loadCampaignRun(0);expect(saved.copies.at(-1).cardId).toBe(9301);
- expect(saved.copies).toHaveLength(2);
- click('Esercito e riserva');expect(host.textContent).toContain('Folla delle Porte');
-});

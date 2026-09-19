@@ -1763,7 +1763,7 @@ Registrare vittorie, sconfitte, pareggi, PV residui, FC spesi, numero di retry e
 
 ### Playtest del primo atto — folle L1 e boss L4
 
-Il giocatore segnala una difficoltà eccessiva del boss, soprattutto con eserciti dei Figli dell’Orizzonte a basso DAN. Direzione corrente: il boss finale dell’Atto I diventa di Lega 4; introdurre unità L1 che rappresentano gruppi di persone comuni, senza identità eroiche individuali. Questa sezione aggiorna il design; il catalogo e i valori del motore non sono ancora modificati. I valori candidati sotto richiedono playtest.
+Il giocatore segnala una difficoltà eccessiva del boss, soprattutto con eserciti dei Figli dell’Orizzonte a basso DAN. Direzione proposta dal giocatore, da sviluppare prima di implementare: portare il boss finale dell’Atto I a Lega 4 e introdurre unità L1 che rappresentano gruppi di persone comuni, senza identità eroiche individuali. Questa sezione aggiorna il design; il catalogo e i valori del motore non sono ancora modificati. I valori candidati sotto richiedono playtest.
 
 #### Riscontro sul codice disponibile
 
@@ -1775,9 +1775,9 @@ Il formato classico implementato confronta prima i PV e poi i Campi a esauriment
 
 #### Boss di fine Atto I
 
-Lega 4 è il nuovo riferimento per la firma del primo atto. Non basta cambiare il numero di Lega lasciando invariata la carta. Primo profilo da provare: POT 4 / DAN 3, conservando Intervento: Blocca Potere e il ritorno nella seconda squadra. La presenza di due fasi è già parte della difficoltà. La variante del primo atto va isolata da eventuali versioni L5 usate altrove, mantenendo stabili identità, riferimenti e salvataggi.
+Lega 4 è il riferimento proposto dal giocatore per la firma del primo atto; il profilo completo resta da scegliere. Non basta cambiare il numero di Lega lasciando invariata la carta. Ipotesi dell’assistente non approvata: POT 4 / DAN 3, conservando Intervento: Blocca Potere e il ritorno nella seconda squadra. La presenza di due fasi è già parte della difficoltà. La variante del primo atto va isolata da eventuali versioni L5 usate altrove, mantenendo stabili identità, riferimenti e salvataggi.
 
-Proposta collegata: 25 PV base per entrambi nello scontro finale. Il +4 PV automatico del boss viene rimosso nella futura implementazione; eventuali vantaggi ulteriori derivano dagli status permanenti acquisiti nel percorso e sono visibili prima dello scontro. I PV continuano a conservarsi fra le fasi. Nessuna compensazione automatica legata alla composizione del giocatore.
+Proposta collegata: 25 PV base per entrambi nello scontro finale. Si propone di rimuovere il +4 PV automatico del boss, previa scelta del giocatore; eventuali vantaggi ulteriori derivano dagli status permanenti acquisiti nel percorso e sono visibili prima dello scontro. I PV continuano a conservarsi fra le fasi. Nessuna compensazione automatica legata alla composizione del giocatore.
 
 Rivedere anche la seconda squadra: N01 insieme a R01 e R02 concentra tre L4 pur dopo la riduzione della firma. Provare prima il nuovo profilo e la parità di PV, poi valutare una scorta prevalentemente L2–L3 con la firma L4 come picco. Non dichiarare risolto il bilanciamento dalla sola riduzione di Lega e non alzare indiscriminatamente il DAN di tutti i Figli.
 
@@ -1794,25 +1794,30 @@ La trasformazione attuale richiede un Figlio di pari Lega non posseduto; il cata
 Verifica minima del blocco: apertura vincibile, reclutamento e trasformazione L1 completi, boss L4 senza bonus automatico di PV e prove con eserciti realmente raggiungibili (anche DAN basso e posti vuoti), nelle due fasi e con le combinazioni permanenti nemiche consentite dai percorsi.
 
 
-### Blocco implementato — collettività L1 e boss L4 (19 settembre 2026)
+### Annullamento del prototipo e ripresa della valutazione (19 settembre 2026)
 
-Prima versione giocabile del blocco descritto sopra. Le carte sono definite nel catalogo del primo atto e non vengono aggiunte ai cataloghi del duello libero. Tutte le collettività sono L1, senza Potere individuale; mantengono l’appartenenza all’armata e le normali condizioni di disponibilità e attivazione del suo Bonus.
+Su richiesta del giocatore viene annullato integralmente il blocco di codice «collettività L1 e boss L4», pubblicato prima che fossero scelti e approvati i dettagli. Il gameplay torna alla versione precedente: nessuna nuova L1, roster I2/I3 precedenti, boss N01 L5 e 29 PV base. Le altre modifiche precedenti restano valide. I valori 4 POT / 3 DAN e 25 PV, le sei identità inventate, i profili L1 senza Potere e la loro collocazione erano ipotesi dell’assistente, non decisioni approvate.
 
-| Identità | Armata | POT | DAN |
-| --- | --- | --- | --- |
-| L01 — Folla delle Porte (9301) | Concordia | 2 | 1 |
-| L02 — Lavoratori del Vallo (9302) | Concordia | 1 | 2 |
-| L03 — Pellegrini della Campana (9303) | Concordia | 2 | 1 |
-| Coro dei Dispersi (9401) | Figli dell’Orizzonte | 2 | 1 |
-| Moltitudine Incompiuta (9402) | Figli dell’Orizzonte | 1 | 2 |
-| Viandanti della Nebula (9403) | Figli dell’Orizzonte | 2 | 1 |
+Metodo concordato: prima elaborare e confrontare le opzioni; registrare nel documento le decisioni esplicite; implementare soltanto su richiesta esplicita. «Continuiamo» indica continuare la valutazione e non autorizza a modificare o pubblicare il codice.
 
-I1 conserva V02 e il campo del Varco. I2 schiera L01 e V01; I3 schiera L02, L03 e V03. Gli altri roster conservano la composizione precedente; il numero degli incontri, gli sblocchi e le dimensioni delle mani restano quelli esistenti. I premi provengono dal roster realmente affrontato, inclusi i doppioni senza compensazioni. Le L1 reclutate maturano dopo una tappa successiva e si trasformano casualmente in un Figlio L1 non posseduto tra i tre sopra; non ci sono corrispondenze fisse o aumenti gratuiti di Lega. Pool esaurita: si conserva la copia originale.
+#### Blocco aperto A — ruolo delle collettività L1
 
-N01 nel primo atto è ora L4, POT 4 / DAN 3, Intervento: Blocca Potere. La versione del catalogo Concordia condiviso resta L5 e gli ID esistenti non cambiano. I12 parte da 25 PV base contro 25, oppure 27 nemici con Corazze. La prima squadra vale ora 14 Lega e la seconda 17: il boss ritorna e mantiene entrambe le scorte precedenti per il prossimo confronto. I PV residui si conservano fra le fasi e Corazze non viene aggiunto una seconda volta. Non si considera concluso il bilanciamento della seconda squadra.
+Il punto di partenza del giocatore è rappresentare folle di persone comuni attraverso carte di Lega 1. Restano da scegliere numero di carte, nomi, POT/DAN, presenza di Poteri e ruolo nella progressione. La carta può rappresentare una folla senza introdurre azioni o pedine aggiuntive; anche questa impostazione va presentata come proposta.
 
-Compatibilità: ogni nuovo tentativo conserva il roster completo come fonte della ricompensa. I vecchi tentativi I2/I3 e le offerte già salvate mantengono le identità della versione precedente. Le copie già possedute non vengono convertite o rimosse. I tentativi ripresi da uno snapshot conservano lo stato del duello già salvato; per provare il nuovo boss dall’inizio occorre avviare o ritentare l’incontro. Non si azzerano i PV di una fase già in corso.
+| Opzione da confrontare | Utilità | Compromesso |
+| --- | --- | --- |
+| L1 semplici, senza Potere individuale | Apertura leggibile e distinzione netta dalle truppe regolari. | Rischiano di diventare premi poco utili e di occupare posti senza contribuire abbastanza. |
+| L1 specializzate, con un piccolo Potere condizionale | Possono mantenere un impiego preciso anche quando arrivano agenti più forti. | Un buon effetto con costo di Lega basso può renderle troppo convenienti; serve valutare anche il Bonus d’armata. |
+| Piccolo insieme misto | Una carta semplice introduce la Lega; altre rappresentano usi differenti delle folle. | Occorre una ragione concreta per ogni carta, evitando varianti equivalenti aggiunte soltanto per aumentare la pool. |
 
-Verifiche automatiche: 111 test mirati superati tra stato della campagna, risoluzione del duello e componenti, compresi reclutamento e trasformazione L1, pool esaurita, visualizzazione del premio corretto, pre-caricamento, compatibilità dei vecchi premi, boss L4 e conservazione PV. Il primo duello è verificato su più seed e contro ogni puntata nemica legale con impegno pieno del giocatore. Build completata con avvisi preesistenti su asset, CSS, chiave di stile duplicata e dimensione dei bundle. Questi controlli verificano il funzionamento; non dimostrano il bilanciamento dell’intera run e non sostituiscono il playtest.
+Proposta da discutere: distinguere le folle per ciò che fanno (tenere una posizione, reagire con violenza, sostenere altri), prima di assegnare statistiche o nomi. Il supporto non implica necessariamente un nuovo effetto: si possono valutare quelli già esistenti. Nessun profilo è scelto qui.
 
-Restano proposte di design i nuovi percorsi articolati e la nuova sezione Status Esercito con l’estensione degli status permanenti; non vengono dichiarati implementati da questo blocco. Le collettività non hanno ancora illustrazioni dedicate.
+Reclutamento e trasformazione restano parte della valutazione: i nemici L1 realmente affrontati possono diventare premi e quindi incidono sulla forza dell’esercito al boss. La regola attuale di trasformazione a pari Lega richiederebbe esiti Figli L1. Definirli insieme agli originali, senza presumere promozioni automatiche o compensazioni per doppioni.
+
+#### Blocco aperto B — dove concentrare la difficoltà del boss
+
+Il giocatore propone L4 e segnala lo svantaggio di PV e DAN. Valutare separatamente forza della firma, composizione delle due squadre, risorse iniziali e piani nemici. Il ritorno della firma è già un vantaggio, perché il Nascente non torna automaticamente nella seconda squadra. Cambiare soltanto l’etichetta della Lega non riduce la difficoltà del duello.
+
+Prima proposta da discutere: firma L4 sostenuta prevalentemente da L2–L3, PV base uguali, e vantaggi ulteriori derivanti dai piani permanenti lasciati crescere dal giocatore. Alternativa: mantenere una scorta più forte ma ridurre maggiormente la pressione della firma. La scelta determina se il boss si presenta soprattutto come individuo dominante oppure come comandante di una squadra. Nessuna composizione o statistica viene approvata automaticamente da questa analisi.
+
+Ordine di lavoro proposto: scegliere il ruolo delle L1 e quello del boss; poi confrontare poche schede complete con POT, DAN, Potere e Bonus effettivo; infine scegliere roster e ricompense verificando un esercito realisticamente ottenibile. Mantenere invariato il numero degli incontri obbligatori.
