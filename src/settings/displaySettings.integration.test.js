@@ -49,6 +49,7 @@ describe('displaySettings', () => {
       cursorSize: 125,
       cursorTrailLength: 16,
       cursorTrailDuration: 700,
+      fpsCap: 60,
     });
     const s = getDisplaySettings();
     expect(s.vfxQuality).toBe('low');
@@ -58,6 +59,12 @@ describe('displaySettings', () => {
     expect(s.cursorSize).toBe(125);
     expect(s.cursorTrailLength).toBe(16);
     expect(s.cursorTrailDuration).toBe(700);
+    expect(s.fpsCap).toBe(60);
+  });
+
+  it('falls back fps cap to default when invalid', () => {
+    const n = normalizeDisplaySettings({ fpsCap: 144 });
+    expect(n.fpsCap).toBe(DEFAULT_DISPLAY_SETTINGS.fpsCap);
   });
 
   it('falls back cursor presets to defaults when invalid', () => {

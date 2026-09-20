@@ -1,0 +1,97 @@
+{
+  "id": 611,
+  "name": "L'Evoluzione Finale",
+  "league": 5,
+  "power": 6,
+  "damage": 3,
+  "icon": "dino",
+  "ability": {
+    "title": "Turbo",
+    "text": "+1 POT, +1 DAN"
+  },
+  "description": "Potere: Turbo: +1 POT, +1 DAN",
+  "flavour": "Non è nato così. È diventato così — boccone dopo boccone, vittima dopo vittima. Tutto ciò che ha mangiato vive in lui. Tutto ciò che ha mangiato lo protegge.",
+  "style": "Eldritch",
+  "faction": "Mounthborn",
+  "accent": "#c9e238",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Imboscata",
+    "text": "+1 POT, +1 DAN"
+  },
+  "layout": {
+    "name": {
+      "x": 228,
+      "y": 85,
+      "w": 560,
+      "h": 205,
+      "fontSize": 110,
+      "scaleX": 0.94
+    },
+    "faction": {
+      "x": 650,
+      "y": 292,
+      "w": 280,
+      "h": 58,
+      "fontSize": 40
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 611
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Evoluzione-Finale-Soggetto.png",
+    "background": "Evoluzione-Finale-Sfondo.png",
+    "frame": "Evoluzione-Finale-Cornice.png",
+    "overlay": "Evoluzione-Finale-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 0,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "nome",
+      "nome esercito",
+      "cornice sinistra",
+      "cornice destra",
+      "numero Potenza"
+    ],
+    "foregroundParts": [
+      "corna",
+      "mano destra nella composizione",
+      "artiglio sinistro nella composizione"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

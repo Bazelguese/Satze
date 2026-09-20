@@ -330,7 +330,7 @@ export function ArenaContesaDuelStage({
         <div
           key={fieldBgImage}
           className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 0, isolation: 'isolate', contain: 'paint' }}
+          style={{ zIndex: 0 }}
         >
           <BattlefieldReveal imageSrc={fieldBgImage} animationType={entranceAnimationType} />
         </div>

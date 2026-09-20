@@ -248,7 +248,11 @@ const SciameReveal = ({ imageSrc, accent, f }) => {
 
 /* 9. RIVOLTA — Patto degli Indocili (il velo si frantuma in schegge Voronoi irregolari che si disperdono: "mai uniti") */
 const RivoltaReveal = ({ imageSrc, accent, f }) => {
-  const on = usePhases([30]) >= 1;
+  // phase 1 = shatter; phase 2 = rimuovi i pezzi opachi (se restano in DOM col velo nero
+  // lo sfondo del campo sparisce per tutta la durata del duello — bug Posto di Blocco).
+  const phase = usePhases([30, Math.round(30 + 1400 * f)]);
+  const on = phase >= 1;
+  const shatterDone = phase >= 2;
   const cells = useMemo(() => {
     const N = 28;
     const sites = Array.from({ length: N }).map(() => [Math.random() * 100, Math.random() * 100]);
@@ -263,7 +267,10 @@ const RivoltaReveal = ({ imageSrc, accent, f }) => {
         const fa = fval(a), fb = fval(b);
         if (fa <= 0) out.push(a);
         if ((fa <= 0) !== (fb <= 0)) {
-          const t = fa / (fa - fb);
+          const denom = fa - fb;
+          if (Math.abs(denom) < 1e-9) continue;
+          const t = fa / denom;
+          if (!Number.isFinite(t)) continue;
           out.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]);
         }
       }
@@ -274,6 +281,7 @@ const RivoltaReveal = ({ imageSrc, accent, f }) => {
       let poly = [[0, 0], [100, 0], [100, 100], [0, 100]];
       for (let j = 0; j < N && poly.length; j++) { if (j !== i) poly = clipHalf(poly, sites[i], sites[j]); }
       if (poly.length < 3) continue;
+      if (poly.some((p) => !Number.isFinite(p[0]) || !Number.isFinite(p[1]))) continue;
       let cx = 0, cy = 0;
       poly.forEach((p) => { cx += p[0]; cy += p[1]; });
       cx /= poly.length; cy /= poly.length;
@@ -294,7 +302,7 @@ const RivoltaReveal = ({ imageSrc, accent, f }) => {
   return (
     <div style={{ ...fill, overflow: 'hidden' }}>
       <div style={fill}><Img src={imageSrc} style={{ transform: on ? 'scale(1)' : 'scale(1.05)', transition: `transform ${Math.round(1500 * f)}ms ${EASE_OUT}` }} /></div>
-      {cells.map((c, i) => (
+      {!shatterDone && cells.map((c, i) => (
         <div key={i} style={{
           ...fill,
           background: 'linear-gradient(135deg, #181818, #050505)',
@@ -303,10 +311,13 @@ const RivoltaReveal = ({ imageSrc, accent, f }) => {
           filter: `drop-shadow(0 0 2px ${accent}40)`,
           transform: on ? `translate(${c.tx}px, ${c.ty}px) rotate(${c.rot}deg)` : 'none',
           opacity: on ? 0 : 1,
+          pointerEvents: 'none',
           transition: `transform ${D}ms ${EASE_STD} ${c.delay}s, opacity ${Math.round(D * 0.7)}ms ${EASE_STD} ${(c.delay + 0.05).toFixed(2)}s`,
         }} />
       ))}
-      <div style={{ ...fill, background: `radial-gradient(circle at 50% 50%, ${accent}, transparent 62%)`, mixBlendMode: 'screen', opacity: 0, animation: `bf-revolt ${Math.round(560 * f)}ms ease-out forwards`, pointerEvents: 'none' }} />
+      {!shatterDone && (
+        <div style={{ ...fill, background: `radial-gradient(circle at 50% 50%, ${accent}, transparent 62%)`, mixBlendMode: 'screen', opacity: 0, animation: `bf-revolt ${Math.round(560 * f)}ms ease-out forwards`, pointerEvents: 'none' }} />
+      )}
       <style>{`@keyframes bf-revolt{0%{opacity:0}22%{opacity:.32}100%{opacity:0}}`}</style>
     </div>
   );
@@ -721,8 +732,17 @@ export function BattlefieldReveal({ imageSrc, animationType }) {
     [imageSrc]
   );
   const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const Comp = (!reduce && REVEAL_MAP[animationType]) || DefaultReveal;
+  const Anim = !reduce && REVEAL_MAP[animationType] ? REVEAL_MAP[animationType] : null;
   const accent = getAccent(ANIM_TO_THEME[animationType]);
   const f = reduce ? 0.5 : 1;
-  return <Comp imageSrc={resolvedSrc} accent={accent} f={f} />;
+  // Foto del campo sempre sotto: le animazioni sono FX. Se un reveal lascia un velo
+  // opaco (es. schegge Rivolta), il duello non deve restare senza sfondo.
+  return (
+    <div style={{ ...fill, overflow: 'hidden', background: '#050508' }}>
+      <Img src={resolvedSrc} />
+      {Anim ? <Anim imageSrc={resolvedSrc} accent={accent} f={f} /> : (
+        <DefaultReveal imageSrc={resolvedSrc} />
+      )}
+    </div>
+  );
 }

@@ -1,0 +1,109 @@
+{
+  "id": 830,
+  "name": "Il Quarto Marito",
+  "league": 5,
+  "power": 6,
+  "damage": 3,
+  "icon": "skull",
+  "ability": {
+    "title": "Magnanimo",
+    "text": "Attrizione 1 DAN"
+  },
+  "description": "Potere: Magnanimo: Attrizione 1 DAN",
+  "flavour": "Tre matrimoni, tre funerali, una sola moglie che non perdonò mai. Quando vince contro chi è più debole, ogni carta già giocata diventa un colpo in più — lento, cumulativo, inevitabile.",
+  "style": "Eldritch",
+  "faction": "Ratti della Megera",
+  "accent": "#40ad60",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Conquista",
+    "text": "Tossina 1\n(min 10)"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 90,
+      "w": 715,
+      "h": 205,
+      "fontSize": 116,
+      "scaleX": 0.9
+    },
+    "faction": {
+      "x": 620,
+      "y": 285,
+      "w": 310,
+      "h": 60,
+      "fontSize": 40
+    },
+    "abilityTitle": {
+      "x": 400,
+      "y": 1000,
+      "w": 400,
+      "h": 110,
+      "fontSize": 100
+    },
+    "abilityText": {
+      "x": 400,
+      "y": 1095,
+      "w": 390,
+      "h": 110,
+      "fontSize": 50
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 830
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Quarto-Marito-Soggetto.png",
+    "background": "Quarto-Marito-Sfondo.png",
+    "frame": "Quarto-Marito-Cornice.png",
+    "overlay": "Quarto-Marito-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 0,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice superiore",
+      "cornice sinistra",
+      "cornice inferiore"
+    ],
+    "wingBelowName": true,
+    "foregroundParts": [
+      "osso dell’ala",
+      "schizzi di acido"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

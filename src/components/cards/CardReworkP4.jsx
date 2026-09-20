@@ -282,7 +282,40 @@ function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25, fastNam
     }
     el.style.fontSize = `${best}px`;
     applyTracking(best);
-  }, [name, box.w, box.h, maxFontPx, minFontPx]);
+  }, [name, box.w, box.h, maxFontPx, minFontPx, fastNameFit]);
+
+  // Anteprima compatta: clamp CSS a larghezza reale (niente box 80px congelato).
+  if (fastNameFit) {
+    return (
+      <div className="flex h-full min-h-0 w-full min-w-0 items-center justify-center">
+        <div
+          className="text-center font-extrabold uppercase"
+          style={{
+            width: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            boxSizing: 'border-box',
+            color: '#f8fafc',
+            fontFamily: GAME_CARD_UI_FONT,
+            fontWeight: 800,
+            fontSize: maxFontPx,
+            letterSpacing: '0.08em',
+            lineHeight: 1.12,
+            textShadow: `${P4_SASH_NAME_OUTLINE}, 0 0 10px ${accent}77`,
+            textAlign: 'center',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {name}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapRef} className="flex h-full min-h-0 w-full min-w-0 items-center justify-center">
@@ -732,6 +765,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   copyBonusAnim = false,
   /** Griglia galleria / catalogo: stesso layout P4, senza footer abilità e senza fit testo costoso. */
   catalogPreview = false,
+  /** Arte thumb leggera (cascata menu). */
+  preferThumb = false,
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
@@ -861,6 +896,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
           scale={imageScalePercent}
           containerLeft={containerLeft}
           containerTop={containerTop}
+          preferThumb={preferThumb}
         />
       </div>
 
@@ -1290,13 +1326,31 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
 });
 
 /** CardReworkP4 ridimensionata (rapporto 230×330). Utile per liste e anteprime compatte. */
-export function CardReworkP4Scaled({ agent, width = 176, catalogPreview = false, ...p4rest }) {
+export function CardReworkP4Scaled({ agent, width = 176, catalogPreview = false, preferThumb = false, ...p4rest }) {
   const scale = width / 230;
   const height = Math.round(330 * scale);
+  // Scala 1:1 → niente transform (evita soft-resample di testo e arte).
+  if (Math.abs(scale - 1) < 0.001) {
+    return (
+      <CardReworkP4
+        agent={agent}
+        catalogPreview={catalogPreview}
+        preferThumb={preferThumb}
+        suppressAnimations
+        {...p4rest}
+      />
+    );
+  }
   return (
     <div className="overflow-hidden" style={{ width, height }}>
       <div style={{ width: 230, height: 330, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-        <CardReworkP4 agent={agent} catalogPreview={catalogPreview} suppressAnimations {...p4rest} />
+        <CardReworkP4
+          agent={agent}
+          catalogPreview={catalogPreview}
+          preferThumb={preferThumb}
+          suppressAnimations
+          {...p4rest}
+        />
       </div>
     </div>
   );

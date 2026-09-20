@@ -29,7 +29,7 @@ import { ARMY_LORE } from '../cosmic/armyLore.js';
 import { BattlefieldReveal } from '../../gallery/BattlefieldRevealAnimations.jsx';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
 import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
-import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
+import { resolvePublicAssetUrl, resolveFieldThumbUrl } from '../../../utils/preloadAssets.js';
 
 const CATEGORY_LABEL = {
   values: 'VALORI',
@@ -50,10 +50,12 @@ const CATEGORY_DESC = {
 };
 
 function resolveFieldImage(bgImage, fieldId) {
+  // Griglia/viewer galleria: thumb (leggere). Full-res resta per il duello.
   if (bgImage) {
-    return resolvePublicAssetUrl(bgImage) || bgImage;
+    return resolveFieldThumbUrl(bgImage) || resolvePublicAssetUrl(bgImage) || bgImage;
   }
-  return resolvePublicAssetUrl(`/campi_bg/campo-${fieldId}.webp`);
+  return resolveFieldThumbUrl(`/campi_bg/campo-${fieldId}.webp`)
+    || resolvePublicAssetUrl(`/campi_bg/campo-${fieldId}.webp`);
 }
 
 function buildFields() {

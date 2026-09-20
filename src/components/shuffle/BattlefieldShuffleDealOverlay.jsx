@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CardShuffleDealStage } from './CardShuffleDealStage';
-import { createBattlefieldShuffleDealLayout } from './cardShuffleDealLayout';
+import { createBattlefieldShuffleDealLayout, SHUFFLE_DEAL_HAND_SIZE } from './cardShuffleDealLayout';
 import {
   DUEL_DECK_INTRO_BEAT_MS,
   DUEL_DECK_INTRO_FADE_MS,
@@ -20,6 +20,7 @@ export function BattlefieldShuffleDealOverlay({
   shuffleKind,
   launchRevealHoldMs = 0,
   onRevealPhaseChange,
+  onDealProgress,
 }) {
   const playerKind = setup?.playerShuffleKind ?? shuffleKind ?? getShuffleStyle();
   const enemyKind = setup?.enemyShuffleKind ?? pickRandomEnemyShuffleKind(playerKind);
@@ -30,6 +31,17 @@ export function BattlefieldShuffleDealOverlay({
   const onRevealPhaseChangeRef = useRef(onRevealPhaseChange);
   onCompleteRef.current = onComplete;
   onRevealPhaseChangeRef.current = onRevealPhaseChange;
+  const onDealProgressRef = useRef(onDealProgress);
+  onDealProgressRef.current = onDealProgress;
+  // carte consegnate in mano per lato → progresso 0..1 di tutta la smazzata
+  const dealtRef = useRef({ player: 0, enemy: 0 });
+  const reportDealt = useCallback((side, n) => {
+    dealtRef.current = { ...dealtRef.current, [side]: n };
+    const total = SHUFFLE_DEAL_HAND_SIZE * 2;
+    onDealProgressRef.current?.(Math.min(1, (dealtRef.current.player + dealtRef.current.enemy) / total));
+  }, []);
+  const handlePlayerDealt = useCallback((n) => reportDealt('player', n), [reportDealt]);
+  const handleEnemyDealt = useCallback((n) => reportDealt('enemy', n), [reportDealt]);
 
   const enemyLayout = useMemo(() => createBattlefieldShuffleDealLayout('enemy'), []);
   const playerLayout = useMemo(() => createBattlefieldShuffleDealLayout('player'), []);
@@ -50,6 +62,8 @@ export function BattlefieldShuffleDealOverlay({
     setEntrancePhase('hold');
     setPlayerDone(false);
     setEnemyDone(false);
+    dealtRef.current = { player: 0, enemy: 0 };
+    onDealProgressRef.current?.(0);
 
     const revealTimer = setTimeout(() => setEntrancePhase('reveal'), holdMs);
     const fallbackTimer = setTimeout(handleRevealComplete, holdMs + DUEL_REVEAL_MS + 80);
@@ -96,6 +110,7 @@ export function BattlefieldShuffleDealOverlay({
             fixedFinalOrder={setup.enemyFinalOrder}
             cardBackSrc={setup.enemyCardBack}
             onComplete={handleEnemyComplete}
+            onDealProgress={handleEnemyDealt}
             battlefield
             autoPlay
             deckIntroFadeMs={DUEL_DECK_INTRO_FADE_MS}
@@ -109,6 +124,7 @@ export function BattlefieldShuffleDealOverlay({
             fixedFinalOrder={setup.playerFinalOrder}
             cardBackSrc={setup.playerCardBack}
             onComplete={handlePlayerComplete}
+            onDealProgress={handlePlayerDealt}
             battlefield
             autoPlay
             deckIntroFadeMs={DUEL_DECK_INTRO_FADE_MS}

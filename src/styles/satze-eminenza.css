@@ -708,7 +708,8 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
 
 /* ── 7. Scambio vista Campo / Eminenza ── */
 .em-table-toggle{
-  position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:18;
+  /* sopra il badge "Tocca a te", che sta sul bordo alto del pannello campo */
+  position:absolute;left:50%;top:calc(50% - 193px);transform:translateX(-50%);z-index:18;
   pointer-events:auto;padding:8px 18px;
   border:1px solid var(--em-toggle-acc,#d5ecf9);
   background:rgba(8,10,16,.82);

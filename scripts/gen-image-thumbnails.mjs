@@ -22,6 +22,8 @@ const ORIGINALS = join(ROOT, 'originals_png');
 
 /** Chip del tabellone: ~300×40 CSS px sul canvas 1920, 480 copre anche il DPR alto. */
 const FIELD_THUMB_WIDTH = 480;
+/** Cascata menu: carte a 120–280 CSS px, spesso blur; 360 basta anche a DPR 2 sul piano near. */
+const AGENT_RAIN_THUMB_WIDTH = 360;
 /** Dorsi carta: mostrati a ~230×330 CSS px, 660 copre zoom e animazioni shuffle. */
 const CARD_BACK_WIDTH = 660;
 /** Sfondi armata: allineati alle altre armate già in webp. */
@@ -49,6 +51,27 @@ async function collectFieldThumbs() {
       out: join(outDir, entry.name),
       width: FIELD_THUMB_WIDTH,
       quality: 72,
+    });
+  }
+}
+
+/** Varianti leggere arte agenti per MenuAgentRain (e simili anteprime piccole). */
+async function collectAgentRainThumbs() {
+  const srcDir = join(PUBLIC, 'card-images', 'agents');
+  if (!existsSync(srcDir)) return;
+  const outDir = join(srcDir, 'thumbs');
+  await mkdir(outDir, { recursive: true });
+
+  const entries = await readdir(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (extname(entry.name).toLowerCase() !== '.webp') continue;
+    addJob({
+      label: `card-images/agents/thumbs/${entry.name}`,
+      src: join(srcDir, entry.name),
+      out: join(outDir, entry.name),
+      width: AGENT_RAIN_THUMB_WIDTH,
+      quality: 58,
     });
   }
 }
@@ -95,6 +118,7 @@ async function collectArmyBackgrounds() {
 
 async function run() {
   await collectFieldThumbs();
+  await collectAgentRainThumbs();
   await collectCardBacks();
   await collectArmyBackgrounds();
 

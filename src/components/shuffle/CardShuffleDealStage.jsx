@@ -1,10 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { getDeckArmies } from '../../utils/deckManager';
 import { CLASSIC_SHUFFLE_KIND } from '../../utils/shuffleStylePreference';
 import { ShuffleDealAnimatedCard } from './ShuffleDealAnimatedCard';
 import { useCardShuffleDealAnimation } from './useCardShuffleDealAnimation';
 import { useShuffleKitAnimation } from './useShuffleKitAnimation';
 import { CARD_TRANSITION } from './BattlefieldShuffleKitController';
+
+/** Riporta quante carte sono già state consegnate in mano (campo `dealt`). */
+function useDealProgress(cards, onDealProgress) {
+  const cbRef = useRef(onDealProgress);
+  cbRef.current = onDealProgress;
+  const dealt = cards.reduce((n, c) => n + (c.dealt ? 1 : 0), 0);
+  useEffect(() => { cbRef.current?.(dealt); }, [dealt]);
+}
 
 function ClassicShuffleStage({
   deck,
@@ -13,6 +21,7 @@ function ClassicShuffleStage({
   cardBackSrc,
   autoPlay,
   onComplete,
+  onDealProgress,
   showReplayButton,
   deckIntroFadeMs,
   deckIntroBeatMs,
@@ -24,6 +33,7 @@ function ClassicShuffleStage({
     deckIntroFadeMs,
     deckIntroBeatMs,
   });
+  useDealProgress(cards, onDealProgress);
   const deckArmies = useMemo(
     () => getDeckArmies(deck, { fallbackArmy: deck?.[0]?.army }),
     [deck]
@@ -57,6 +67,7 @@ function KitShuffleStage({
   cardBackSrc,
   autoPlay,
   onComplete,
+  onDealProgress,
   showReplayButton,
   loop,
   timeScale,
@@ -73,6 +84,7 @@ function KitShuffleStage({
     deckIntroFadeMs,
     deckIntroBeatMs,
   });
+  useDealProgress(cards, onDealProgress);
   const deckArmies = useMemo(
     () => getDeckArmies(deck, { fallbackArmy: deck?.[0]?.army }),
     [deck]
@@ -130,6 +142,7 @@ export function CardShuffleDealStage({
   cardBackSrc = null,
   autoPlay = true,
   onComplete,
+  onDealProgress,
   showReplayButton = false,
   battlefield = false,
   loop = false,
@@ -145,6 +158,7 @@ export function CardShuffleDealStage({
     cardBackSrc,
     autoPlay,
     onComplete,
+    onDealProgress,
     showReplayButton,
     deckIntroFadeMs,
     deckIntroBeatMs,

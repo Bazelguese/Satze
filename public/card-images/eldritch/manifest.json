@@ -1,0 +1,158 @@
+[
+  {
+    "army": "Concordia di Caelion",
+    "color": "#c7ad71",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Concordia-di-Caelion.png"
+  },
+  {
+    "army": "Concordia di Caelion",
+    "color": "#c7ad71",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Concordia-di-Caelion.png"
+  },
+  {
+    "army": "Figli dell'Orizzonte",
+    "color": "#a288fb",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Figli-dell-Orizzonte.png"
+  },
+  {
+    "army": "Figli dell'Orizzonte",
+    "color": "#a288fb",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Figli-dell-Orizzonte.png"
+  },
+  {
+    "army": "Kethran",
+    "color": "#eebf3c",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Kethran.png"
+  },
+  {
+    "army": "Kethran",
+    "color": "#eebf3c",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Kethran.png"
+  },
+  {
+    "army": "Corte Rossa",
+    "color": "#f8504f",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Corte-Rossa.png"
+  },
+  {
+    "army": "Corte Rossa",
+    "color": "#f8504f",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Corte-Rossa.png"
+  },
+  {
+    "army": "Calibri Pesanti",
+    "color": "#a9a294",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Calibri-Pesanti.png"
+  },
+  {
+    "army": "Calibri Pesanti",
+    "color": "#a9a294",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Calibri-Pesanti.png"
+  },
+  {
+    "army": "Orathai",
+    "color": "#5ad4bc",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Orathai.png"
+  },
+  {
+    "army": "Orathai",
+    "color": "#5ad4bc",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Orathai.png"
+  },
+  {
+    "army": "Mounthborn",
+    "color": "#c9e238",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Mounthborn.png"
+  },
+  {
+    "army": "Mounthborn",
+    "color": "#c9e238",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Mounthborn.png"
+  },
+  {
+    "army": "L'Enclave delle Scaglie",
+    "color": "#fb912d",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-L-Enclave-delle-Scaglie.png"
+  },
+  {
+    "army": "L'Enclave delle Scaglie",
+    "color": "#fb912d",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-L-Enclave-delle-Scaglie.png"
+  },
+  {
+    "army": "Ratti della Megera",
+    "color": "#40ad60",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Ratti-della-Megera.png"
+  },
+  {
+    "army": "Ratti della Megera",
+    "color": "#40ad60",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Ratti-della-Megera.png"
+  },
+  {
+    "army": "Patto degli Indocili",
+    "color": "#e867c3",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Patto-degli-Indocili.png"
+  },
+  {
+    "army": "Patto degli Indocili",
+    "color": "#e867c3",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Patto-degli-Indocili.png"
+  },
+  {
+    "army": "Khemet",
+    "color": "#26c4e8",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Khemet.png"
+  },
+  {
+    "army": "Khemet",
+    "color": "#26c4e8",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Khemet.png"
+  },
+  {
+    "army": "Apex",
+    "color": "#d5ecf9",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Apex.png"
+  },
+  {
+    "army": "Apex",
+    "color": "#d5ecf9",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Apex.png"
+  },
+  {
+    "army": "Mascarada",
+    "color": "#437ef2",
+    "type": "frame",
+    "file": "assets/cornici-eserciti/Cornice-Mascarada.png"
+  },
+  {
+    "army": "Mascarada",
+    "color": "#437ef2",
+    "type": "ring",
+    "file": "assets/anelli-eserciti/Anello-Mascarada.png"
+  }
+]

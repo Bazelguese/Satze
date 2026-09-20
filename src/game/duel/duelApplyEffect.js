@@ -856,6 +856,8 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
           applyDuelPowerEffect('powerAndDamage', attritionBonus, target, source, log, options, state, ctx);
         } else if (attritionStat === 'directDamage') {
           applyDuelPowerEffect('directDamage', attritionBonus, target, source, log, options, state, ctx);
+        } else if (attritionStat === 'assaultValue') {
+          applyDuelPowerEffect('assaultValue', attritionBonus, target, source, log, options, state, ctx);
         } else {
           applyDuelPowerEffect('damage', attritionBonus, target, source, log, options, state, ctx);
         }

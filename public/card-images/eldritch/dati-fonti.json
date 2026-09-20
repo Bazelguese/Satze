@@ -1,0 +1,138 @@
+{
+  "style": "Eldritch",
+  "colors": {
+    "Concordia di Caelion": "#c7ad71",
+    "Figli dell'Orizzonte": "#a288fb",
+    "Kethran": "#eebf3c",
+    "Corte Rossa": "#f8504f",
+    "Calibri Pesanti": "#a9a294",
+    "Orathai": "#5ad4bc",
+    "Mounthborn": "#c9e238",
+    "L'Enclave delle Scaglie": "#fb912d",
+    "Ratti della Megera": "#40ad60",
+    "Patto degli Indocili": "#e867c3",
+    "Khemet": "#26c4e8",
+    "Apex": "#d5ecf9",
+    "Mascarada": "#437ef2"
+  },
+  "cards": [
+    {
+      "id": 101,
+      "name": "Sorethai, il Primo Ancorante",
+      "league": 5,
+      "power": 6,
+      "damage": 4,
+      "icon": "galaxy",
+      "ability": {
+        "title": "Overdrive",
+        "text": "-8 VA nem.\n(min 6)"
+      },
+      "description": "Potere: Overdrive: -8 VA nem. (min 6)",
+      "flavour": "Abbandonato il ventre dell’Arsenale, Sorethai fu il primo a rendersi conto di cosa poteva fare la volontà contro la Domanda, poteva dargli una forma, una direzione e così fece prima con la sua mente e poi con il suo corpo. Insegnò in fretta ad altri lo stesso processo, assimilando senza alcuna remora chiunque fallisse.",
+      "style": "Eldritch",
+      "faction": "Figli dell'Orizzonte",
+      "bonus": {
+        "title": "Bonus",
+        "text": "-5 VA nem. (min 6)"
+      },
+      "accent": "#a288fb",
+      "artY": 0,
+      "artScale": 1,
+      "autoFaction": true,
+      "layout": {
+        "damageLabel": {
+          "x": 794,
+          "y": 1354
+        },
+        "powerLabel": {
+          "x": 72,
+          "y": 1176
+        },
+        "league": {
+          "x": 836,
+          "y": 93
+        },
+        "name": {
+          "x": 84,
+          "y": 104
+        },
+        "damage": {
+          "x": 803,
+          "y": 1120
+        }
+      },
+      "source": {
+        "repository": "Bazelguese/Satze",
+        "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+        "cardFile": "src/data/cards.js",
+        "armyFile": "src/data/armies.js",
+        "cardId": 101
+      }
+    },
+    {
+      "id": 201,
+      "name": "Ur-Nammu il Conquistatore",
+      "league": 5,
+      "power": 6,
+      "damage": 5,
+      "icon": "crown",
+      "ability": {
+        "title": "Magnanimo",
+        "text": "+2 POT"
+      },
+      "description": "Potere: Magnanimo: +2 POT",
+      "flavour": "Era re prima della caduta. Nel buio, rifiutò di morire — prese i pezzi migliori dei suoi sudditi caduti, uno per uno. 'Un re porta il suo popolo' disse. Ora li porta letteralmente. E loro combattono ancora per lui.",
+      "style": "Eldritch",
+      "faction": "Kethran",
+      "bonus": {
+        "title": "Rimonta",
+        "text": "+2 POT"
+      },
+      "accent": "#eebf3c",
+      "artY": 0,
+      "artScale": 1,
+      "autoFaction": true,
+      "layout": {
+        "damageLabel": {
+          "x": 794,
+          "y": 1354
+        },
+        "powerLabel": {
+          "x": 72,
+          "y": 1176
+        },
+        "league": {
+          "x": 836,
+          "y": 93
+        },
+        "name": {
+          "x": 84,
+          "y": 104
+        },
+        "damage": {
+          "x": 803,
+          "y": 1120
+        }
+      },
+      "source": {
+        "repository": "Bazelguese/Satze",
+        "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+        "cardFile": "src/data/cards.js",
+        "armyFile": "src/data/armies.js",
+        "cardId": 201
+      }
+    }
+  ],
+  "art": {
+    "sorethai": "Immagine invariata estratta dal prototipo Satze-Alfa-Editor.html",
+    "urNammu": "Illustrazione Eldritch generata da imagegen a partire dall’immagine originale di Ur-Nammu fornita dall’utente, con Sorethai come riferimento stilistico. Conservati corona, scettro a sinistra, scudo rotondo a destra, armatura di teschi e aureola solare."
+  },
+  "layoutVersion": "2.0",
+  "layoutAssets": {
+    "frame": "assets/Eldritch-Cornice.png",
+    "ring": "assets/Eldritch-Anello-Lega.png",
+    "wideInk": "assets/Eldritch-Macchia-Larga.png",
+    "compactInk": "assets/Eldritch-Macchia-Compatta.png",
+    "paletteManifest": "assets/manifest.json"
+  }
+}

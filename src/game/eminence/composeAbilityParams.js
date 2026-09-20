@@ -42,11 +42,11 @@ function formatEffect(ability) {
     case 'attrition':
       return ability.stat === 'powerAndDamage'
         ? `Attrizione ${v} POT, ${v} DAN`
-        : `Attrizione ${v} ${ability.stat === 'power' ? 'POT' : ability.stat === 'damage' ? 'DAN' : 'STAT'}`;
+        : `Attrizione ${v} ${ability.stat === 'power' ? 'POT' : ability.stat === 'damage' ? 'DAN' : ability.stat === 'assaultValue' ? 'VA' : 'STAT'}`;
     case 'escalation':
       return ability.stat === 'powerAndDamage'
         ? `Escalation ${v} POT, ${v} DAN`
-        : `Escalation ${v} ${ability.stat === 'power' ? 'POT' : ability.stat === 'damage' ? 'DAN' : 'STAT'}`;
+        : `Escalation ${v} ${ability.stat === 'power' ? 'POT' : ability.stat === 'damage' ? 'DAN' : ability.stat === 'assaultValue' ? 'VA' : 'STAT'}`;
     default: return '—';
   }
 }

@@ -218,6 +218,7 @@ export function useCardShuffleDealAnimation(deck, layout, options = {}) {
           y: slot.y,
           rot: slot.rot,
           z: 50 + k,
+          dealt: true, // consegnata in mano (progresso della smazzata)
           flipped: layout.flipOnDeal,
           scale: layout.dealScale,
           opacity: 1,

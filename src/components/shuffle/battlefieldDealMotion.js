@@ -106,6 +106,7 @@ export function scheduleBattlefieldDeal({
         y: slot.y,
         rot: slot.rot,
         z: 50 + k,
+        dealt: true, // consegnata in mano (progresso della smazzata)
         flipped: layout.flipOnDeal !== false,
         scale: dealScale,
         opacity: 1,

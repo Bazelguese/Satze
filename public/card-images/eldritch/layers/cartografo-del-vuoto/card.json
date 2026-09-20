@@ -1,0 +1,75 @@
+{
+  "id": 104,
+  "name": "Cartografo del Vuoto",
+  "league": 3,
+  "power": 3,
+  "damage": 3,
+  "style": "Eldritch",
+  "faction": "Figli dell'Orizzonte",
+  "accent": "#a288fb",
+  "autoFaction": false,
+  "ability": {
+    "title": "Opportunista",
+    "text": "+3 FC"
+  },
+  "bonus": {
+    "title": "Sempre",
+    "text": "−5 VA nem.\n(min 6)"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 65,
+      "w": 725,
+      "h": 155,
+      "fontSize": 100
+    },
+    "faction": {
+      "x": 653,
+      "y": 370,
+      "w": 280,
+      "h": 65,
+      "fontSize": 38
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1.04,
+    "subjectYPercent": 14,
+    "foregroundParts": [
+      "mano protesa oltre la cornice sinistra"
+    ],
+    "anatomy": "Tre braccia: due sul lato destro dell’immagine afferrano lo stesso bastone a diverse altezze."
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

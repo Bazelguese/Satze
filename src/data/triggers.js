@@ -154,7 +154,9 @@ export const getAbilityExplanation = (ability) => {
             ? 'POT'
             : ability.stat === 'damage'
               ? 'DAN'
-              : ability.stat;
+              : ability.stat === 'assaultValue'
+                ? 'VA'
+                : ability.stat;
       effectText = `aumenta la tua ${attritionStat} di ${ability.value} per ogni carta che hai già giocato in questa partita. Diventa più forte man mano che la partita procede.`;
       break;
     }

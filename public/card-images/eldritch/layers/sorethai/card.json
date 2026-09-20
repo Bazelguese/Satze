@@ -1,0 +1,86 @@
+{
+  "id": 101,
+  "name": "Sorethai, il Primo Ancorante",
+  "league": 5,
+  "power": 6,
+  "damage": 4,
+  "icon": "galaxy",
+  "ability": {
+    "title": "Overdrive",
+    "text": "-8 VA nem.\n(min 6)"
+  },
+  "description": "Potere: Overdrive: -8 VA nem. (min 6)",
+  "flavour": "Abbandonato il ventre dell’Arsenale, Sorethai fu il primo a rendersi conto di cosa poteva fare la volontà contro la Domanda, poteva dargli una forma, una direzione e così fece prima con la sua mente e poi con il suo corpo. Insegnò in fretta ad altri lo stesso processo, assimilando senza alcuna remora chiunque fallisse.",
+  "style": "Eldritch",
+  "faction": "Figli dell'Orizzonte",
+  "bonus": {
+    "title": "Bonus",
+    "text": "-5 VA nem. (min 6)"
+  },
+  "accent": "#a288fb",
+  "artY": 0,
+  "artScale": 1,
+  "autoFaction": true,
+  "layout": {
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "name": {
+      "x": 84,
+      "y": 104
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 101
+  },
+  "layers": {
+    "subject": "Sorethai-Soggetto.png",
+    "background": "Sorethai-Sfondo.png",
+    "composition": {
+      "canvas": [
+        1024,
+        1536
+      ],
+      "subjectScale": 1.045,
+      "subjectYPercent": 16,
+      "backgroundScale": 1.07,
+      "backgroundYPercent": 12,
+      "order": [
+        "background",
+        "subject",
+        "frame",
+        "subject-overlap",
+        "ink-and-text"
+      ]
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

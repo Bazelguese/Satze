@@ -1,0 +1,84 @@
+{
+  "id": 407,
+  "name": "Drone Cacciatore X-9",
+  "league": 2,
+  "power": 3,
+  "damage": 1,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Riferimento approvato Filomena: contorni irregolari a inchiostro nero, pennellate ruvide e spezzate che seguono i volumi, ombre compatte e dettaglio selettivo. Evitare sia superfici lisce o faccettate sia microdettaglio uniforme, puntinatura eccessiva e intrico meccanico",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Calibri Pesanti",
+  "accent": "#a9a294",
+  "autoFaction": false,
+  "ability": {
+    "title": "Imboscata",
+    "text": "2 Danni dir."
+  },
+  "bonus": {
+    "title": "Sempre",
+    "text": "−2 DAN nem. (min 2)"
+  },
+  "layout": {
+    "abilityText": {
+      "fontSize": 46,
+      "w": 440
+    },
+    "name": {
+      "x": 82,
+      "y": 77,
+      "w": 720,
+      "h": 145,
+      "fontSize": 76
+    },
+    "faction": {
+      "x": 622,
+      "y": 840,
+      "w": 330,
+      "h": 65,
+      "fontSize": 36
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "foregroundParts": [
+      "canna del fucile oltre la cornice sinistra"
+    ],
+    "anatomy": "Robot umanoide in ginocchio, due braccia e due gambe. Fucile imbracciato, mira appena a sinistra del giocatore, testa bianca segmentata, occhi ciano e cappa marrone."
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

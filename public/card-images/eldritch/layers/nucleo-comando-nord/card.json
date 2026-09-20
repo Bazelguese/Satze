@@ -1,0 +1,93 @@
+{
+  "id": 402,
+  "name": "Nucleo di Comando Nord",
+  "league": 4,
+  "power": 5,
+  "damage": 3,
+  "icon": "brain",
+  "ability": {
+    "title": "Overdrive",
+    "text": "+2 POT"
+  },
+  "description": "Potere: Overdrive: +2 POT",
+  "flavour": "Il fronte nord non è mai caduto. Lui è il motivo. Coordina, calcola, comanda — e quando serve, scende in campo. Il nemico non sa cosa sia peggio.",
+  "style": "Eldritch",
+  "faction": "Calibri Pesanti",
+  "accent": "#a9a294",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Bonus",
+    "text": "−2 DAN nem.\n(min 2)"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 90,
+      "w": 715,
+      "h": 205,
+      "fontSize": 116,
+      "scaleX": 0.9
+    },
+    "faction": {
+      "x": 620,
+      "y": 285,
+      "w": 310,
+      "h": 60,
+      "fontSize": 40
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 402
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Nucleo-Comando-Nord-Soggetto.png",
+    "background": "Nucleo-Comando-Nord-Sfondo.png",
+    "frame": "Nucleo-Comando-Nord-Cornice.png",
+    "overlay": "Nucleo-Comando-Nord-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 5,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "cornice destra"
+    ],
+    "foregroundParts": [
+      "spalla sinistra",
+      "spalla destra"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

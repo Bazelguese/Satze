@@ -113,6 +113,7 @@ export const ARMY_ICONS = {
   'Khemet': iconPublic('Khetan-nobg.webp'),
   'Apex': iconPublic('Apex-nobg.png'),
   'Mascarada': `${iconPublic('Mascarada-nobg.png')}?v=2`,
+  'Concordia di Caelion': iconPublic('concordia-nobg.webp'),
 };
 
 // ============================================

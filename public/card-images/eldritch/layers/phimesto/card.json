@@ -1,0 +1,94 @@
+{
+  "id": 323,
+  "name": "Phimesto",
+  "league": 3,
+  "power": 4,
+  "damage": 2,
+  "icon": "devil",
+  "ability": {
+    "title": "Alleato",
+    "text": "Blocca Bonus"
+  },
+  "description": "Potere: Alleato: Blocca Bonus",
+  "flavour": "Sorride mentre controlla la mano iniziale. Se c'è un vantaggio nascosto, lo trova — e lo cancella prima che possa servire.",
+  "style": "Eldritch",
+  "faction": "Corte Rossa",
+  "accent": "#f8504f",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Bonus",
+    "text": "Copia Bonus nemico"
+  },
+  "layout": {
+    "name": {
+      "x": 270,
+      "y": 100,
+      "w": 515,
+      "h": 125,
+      "fontSize": 122,
+      "scaleX": 0.9
+    },
+    "faction": {
+      "x": 640,
+      "y": 248,
+      "w": 310,
+      "h": 60,
+      "fontSize": 42
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 323
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Phimesto-Soggetto.png",
+    "background": "Phimesto-Sfondo.png",
+    "frame": "Phimesto-Cornice.png",
+    "overlay": "Phimesto-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 4,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "macchia del titolo"
+    ],
+    "foregroundParts": [
+      "carte infuocate",
+      "mano",
+      "corno destro"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

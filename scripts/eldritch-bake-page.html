@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Eldritch composita bake</title>
+  <style>
+    html, body {
+      margin: 0;
+      background: transparent !important;
+    }
+    #card {
+      position: relative;
+      width: 1104px;
+      height: 1584px;
+      isolation: isolate;
+      overflow: hidden;
+      background: transparent;
+      --eld-cornice-clip: inset(3.3% 4.5% 3.5% 4.5% round 4.8%);
+    }
+    #card img, #card .layout {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      user-select: none;
+    }
+    #card .bg,
+    #card .subject,
+    #card .frame,
+    #card .break {
+      object-fit: fill;
+    }
+    #card .layout {
+      object-fit: fill;
+    }
+    #card .window {
+      position: absolute;
+      inset: 0;
+      clip-path: var(--eld-cornice-clip);
+      overflow: hidden;
+      background: #07070c;
+    }
+    #card .bg { z-index: 0; }
+    #card .subject { z-index: 1; }
+    #card .frame { z-index: 3; }
+    #card .break { z-index: 4; }
+    /* Macchie sopra break/soggetto, clipate in cornice (bordo libero per overflow). */
+    #card .layout-ink { z-index: 5; clip-path: var(--eld-cornice-clip); }
+    #card .layout-type { z-index: 6; }
+    #card .break.above { z-index: 7; }
+    #card .layout-ink [data-layer="type"],
+    #card .layout-ink [data-layer="league-ring"],
+    #card .layout-ink [data-layer="frame"] { display: none !important; }
+    #card .layout-type [data-layer="ink"] { display: none !important; }
+    #card .layout svg { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="card"></div>
+  <script type="module">
+    import {
+      ALL_FACE_CARDS,
+      CARD_FACE_FONT_ASSETS,
+      LAYERED_CARD_KITS,
+      agentToFaceData,
+      buildAssets,
+      getArmyChromeUrls,
+    } from '/src/components/cardFaceLab/cardFaceLabData.js';
+    import { loadCardFaceFonts, renderCardFace } from '/src/components/cardFaceLab/alfaCardRenderer.js';
+    import { normalizeEldritchSvgTo2333 } from '/src/components/cardFaceLab/eldritchFormat2333.js';
+
+    const DEFAULT_COMPOSITION = {
+      subjectScale: 1.025,
+      subjectXPercent: 0,
+      subjectYPercent: 0,
+      backgroundScale: 1.07,
+      backgroundYPercent: 0,
+      breakHeadClip: 'polygon(16% 0, 82% 0, 82% 31%, 16% 31%)',
+      breakHeadMask: undefined,
+      breakShoulderClip: 'polygon(0 31%, 31% 31%, 31% 71%, 0 71%)',
+      breakShoulderMask:
+        'linear-gradient(to bottom, transparent 31%, #000 40%, #000 59%, transparent 71%)',
+      breakRightClip: undefined,
+      breakRightMask: undefined,
+      breakExtraClip: undefined,
+      breakExtraMask: undefined,
+      breaksAboveLayout: false,
+    };
+
+    function mergeComposition(kitComp) {
+      const c = { ...DEFAULT_COMPOSITION, ...(kitComp || {}) };
+      // null/false nel kit = disattiva il default (non ripristinare il polygon base)
+      for (const key of [
+        'breakHeadClip',
+        'breakHeadMask',
+        'breakShoulderClip',
+        'breakShoulderMask',
+        'breakRightClip',
+        'breakRightMask',
+        'breakExtraClip',
+        'breakExtraMask',
+      ]) {
+        if (kitComp && Object.prototype.hasOwnProperty.call(kitComp, key) && !kitComp[key]) {
+          c[key] = null;
+        }
+      }
+      return c;
+    }
+
+    /** Con Vite, BASE è / — lascia i path; con ./ mappa a root public. */
+    function pub(url) {
+      if (!url) return '';
+      const u = String(url);
+      if (u.startsWith('http') || u.startsWith('data:')) return u;
+      if (u.startsWith('/')) return u;
+      if (u.startsWith('./')) return '/' + u.slice(2);
+      return '/' + u.replace(/^\//, '');
+    }
+
+    function maskStyle(clip, mask) {
+      const s = { clipPath: clip };
+      if (mask) {
+        s.webkitMaskImage = mask;
+        s.maskImage = mask;
+      }
+      return s;
+    }
+
+    function applyStyle(el, style) {
+      Object.assign(el.style, style);
+    }
+
+    window.__ELD_BAKE__ = async function bake(id) {
+      const kit = LAYERED_CARD_KITS[id];
+      if (!kit) throw new Error('kit missing ' + id);
+      const agent = ALL_FACE_CARDS.find((c) => c.id === id);
+      if (!agent) throw new Error('agent missing ' + id);
+
+      const fonts = {
+        displayFont: pub(CARD_FACE_FONT_ASSETS.displayFont),
+        bodyFont: pub(CARD_FACE_FONT_ASSETS.bodyFont),
+      };
+      await loadCardFaceFonts(fonts);
+
+      const face = agentToFaceData(agent, 'eldritch');
+      const assets = {
+        ...buildAssets(undefined, {
+          styleMode: 'eldritch',
+          faction: face.faction,
+          useArmyChrome: true,
+        }),
+        layoutOnly: true,
+      };
+      // Fix asset URLs for static server
+      for (const key of Object.keys(assets)) {
+        if (typeof assets[key] === 'string' && assets[key].includes('/')) {
+          assets[key] = pub(assets[key]);
+        }
+      }
+
+      const { svg: rawSvg } = renderCardFace(
+        { ...face, layoutOnly: true, illustration: undefined },
+        assets
+      );
+      const svg = normalizeEldritchSvgTo2333(rawSvg, { stretch: true });
+
+      const c = mergeComposition(kit.composition);
+      const subjectUrl = pub(kit.subject);
+      const backgroundUrl = pub(kit.background);
+      const frameUrl =
+        pub(kit.frame) ||
+        pub(getArmyChromeUrls(kit.faction || face.faction)?.frame) ||
+        '';
+
+      const root = document.getElementById('card');
+      root.innerHTML = '';
+
+      const windowEl = document.createElement('div');
+      windowEl.className = 'window';
+
+      const bg = document.createElement('img');
+      bg.className = 'bg';
+      bg.src = backgroundUrl;
+      applyStyle(bg, {
+        transform: `translate(0%, ${c.backgroundYPercent}%) scale(${c.backgroundScale})`,
+      });
+
+      const subject = document.createElement('img');
+      subject.className = 'subject';
+      subject.src = subjectUrl;
+      applyStyle(subject, {
+        transform: `translate(${c.subjectXPercent || 0}%, ${c.subjectYPercent}%) scale(${c.subjectScale})`,
+      });
+
+      windowEl.append(bg, subject);
+      root.append(windowEl);
+
+      const breakAboveClass = (flag) =>
+        (flag != null ? flag : c.breaksAboveLayout) ? ' above' : '';
+
+      const mkBreak = (clip, mask, aboveFlag) => {
+        if (!clip) return null;
+        const img = document.createElement('img');
+        img.className = `break${breakAboveClass(aboveFlag)}`;
+        img.src = subjectUrl;
+        applyStyle(img, {
+          ...maskStyle(clip, mask),
+          transform: `translate(${c.subjectXPercent || 0}%, ${c.subjectYPercent}%) scale(${c.subjectScale})`,
+        });
+        img.dataset.above = String(
+          aboveFlag != null ? Boolean(aboveFlag) : Boolean(c.breaksAboveLayout)
+        );
+        return img;
+      };
+
+      const breaks = [
+        mkBreak(c.breakHeadClip, c.breakHeadMask, c.breakHeadAbove),
+        mkBreak(c.breakShoulderClip, c.breakShoulderMask, c.breakShoulderAbove),
+        mkBreak(c.breakRightClip, c.breakRightMask, c.breakRightAbove),
+        mkBreak(c.breakExtraClip, c.breakExtraMask, c.breakExtraAbove),
+      ].filter(Boolean);
+
+      // Ordine: ink → cornice → break (sopra cornice) → testi → break above
+      const layoutInk = document.createElement('div');
+      layoutInk.className = 'layout layout-ink';
+      layoutInk.innerHTML = svg;
+      root.append(layoutInk);
+
+      if (frameUrl) {
+        const frame = document.createElement('img');
+        frame.className = 'frame';
+        frame.src = frameUrl;
+        root.append(frame);
+      }
+
+      for (const b of breaks) {
+        if (b.dataset.above !== 'true') root.append(b);
+      }
+
+      const layoutType = document.createElement('div');
+      layoutType.className = 'layout layout-type';
+      layoutType.innerHTML = svg;
+      root.append(layoutType);
+
+      for (const b of breaks) {
+        if (b.dataset.above === 'true') root.append(b);
+      }
+
+      const imgs = [...root.querySelectorAll('img')];
+      await Promise.all(
+        imgs.map((img) =>
+          img.decode().catch(() => {
+            /* missing optional frame ok */
+          })
+        )
+      );
+      // Fonts / SVG paint settle
+      await document.fonts.ready;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return {
+        id,
+        slug: kit.slug,
+        ok: true,
+        breakCount: breaks.length,
+        head: c.breakHeadClip,
+        shoulder: c.breakShoulderClip,
+        headAbove: c.breakHeadAbove,
+        shoulderAbove: c.breakShoulderAbove,
+      };
+    };
+  </script>
+</body>
+</html>

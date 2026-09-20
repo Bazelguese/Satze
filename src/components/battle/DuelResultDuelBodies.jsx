@@ -249,8 +249,13 @@ function FocusCoinOrbitCountRing({
   getFocusCoinGlowColor,
   armyName,
   direction = 1,
+  keepThroughClash = false,
 }) {
-  const isActive = duelPhase >= 2 && duelPhase < 4 && focusUsed > 0;
+  // keepThroughClash: overlap Aurora / clash senza VFX — evita sparizione anticipata FC.
+  const isActive =
+    focusUsed > 0 &&
+    duelPhase >= 2 &&
+    (keepThroughClash ? duelPhase < 5 : duelPhase < 4);
   const shownCount = Math.max(0, Math.min(focusUsed, coinsShown));
   const isRendered = isActive && shownCount > 0;
   // Rotazione via CSS: stessa velocità del vecchio clock rAF (rad/s -> periodo)
@@ -419,6 +424,8 @@ export function DuelResultEnemyResultBody({
   getAbilityCurrentValue,
   onCardHover,
   particleSeed = 1,
+  cinemaHideAgent = false,
+  keepOrbitThroughClash = false,
 }) {
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const focusPower = getDuelFocusPhasePower(battleResult, false);
@@ -472,6 +479,7 @@ export function DuelResultEnemyResultBody({
                 : {}),
           }}
         >
+          {!cinemaHideAgent && (
           <GameCard
             cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
             agent={battleResult.enemyAgent}
@@ -511,7 +519,8 @@ export function DuelResultEnemyResultBody({
             bonusNotTriggered={display.showEnemyBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
           />
-          <PerfectFocusStamp active={showPerfect} side="enemy" />
+          )}
+          {!cinemaHideAgent && <PerfectFocusStamp active={showPerfect} side="enemy" />}
           <FocusCoinOrbitCountRing
             duelPhase={duelPhase}
             focusUsed={battleResult.enemyFocusUsed}
@@ -520,10 +529,12 @@ export function DuelResultEnemyResultBody({
             getFocusCoinGlowColor={getFocusCoinGlowColor}
             armyName={battleResult.enemyAgent?.army}
             direction={1}
+            keepThroughClash={keepOrbitThroughClash}
           />
         </div>
       </div>
 
+      {!cinemaHideAgent && (
       <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px', transform: `translateX(${-DUEL_CLASH_START_OFFSET_PX}px)` }}>
         {duelPhase === 2 && battleResult && (
           <DuelVaPhase2LiveBlock
@@ -598,6 +609,7 @@ export function DuelResultEnemyResultBody({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -614,6 +626,8 @@ export function DuelResultPlayerResultBody({
   getAbilityCurrentValue,
   onCardHover,
   particleSeed = 2,
+  cinemaHideAgent = false,
+  keepOrbitThroughClash = false,
 }) {
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const focusPower = getDuelFocusPhasePower(battleResult, true);
@@ -667,6 +681,7 @@ export function DuelResultPlayerResultBody({
                 : {}),
           }}
         >
+          {!cinemaHideAgent && (
           <GameCard
             cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
             agent={battleResult.playerAgent}
@@ -706,7 +721,8 @@ export function DuelResultPlayerResultBody({
             bonusNotTriggered={display.showPlayerBonusNotTriggered}
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}
           />
-          <PerfectFocusStamp active={showPerfect} side="player" />
+          )}
+          {!cinemaHideAgent && <PerfectFocusStamp active={showPerfect} side="player" />}
           <FocusCoinOrbitCountRing
             duelPhase={duelPhase}
             focusUsed={battleResult.playerFocusUsed}
@@ -715,10 +731,12 @@ export function DuelResultPlayerResultBody({
             getFocusCoinGlowColor={getFocusCoinGlowColor}
             armyName={battleResult.playerAgent?.army}
             direction={-1}
+            keepThroughClash={keepOrbitThroughClash}
           />
         </div>
       </div>
 
+      {!cinemaHideAgent && (
       <div className="absolute top-full w-full" style={{ top: '100%', marginTop: '12px', transform: `translateX(${DUEL_CLASH_START_OFFSET_PX}px)` }}>
         {duelPhase === 2 && battleResult && (
           <DuelVaPhase2LiveBlock
@@ -793,6 +811,7 @@ export function DuelResultPlayerResultBody({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

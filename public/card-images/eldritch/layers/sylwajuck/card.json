@@ -1,0 +1,93 @@
+{
+  "id": 524,
+  "name": "Sylwajuck l'Estremo",
+  "league": 3,
+  "power": 3,
+  "damage": 4,
+  "icon": "wizard",
+  "ability": {
+    "title": "Magnanimo",
+    "text": "+3 POT"
+  },
+  "description": "Potere: Magnanimo: +3 POT",
+  "flavour": "Leshen delle profondità verdi: corna di legno, occhi di muschio, voce di tempesta lontana. Quando vince contro un avversario più debole, il bosco gli presta la forza dei caduti.",
+  "style": "Eldritch",
+  "faction": "Orathai",
+  "accent": "#5ad4bc",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Resa dei conti",
+    "text": "+2 DAN"
+  },
+  "layout": {
+    "name": {
+      "x": 215,
+      "y": 86,
+      "w": 570,
+      "h": 205,
+      "fontSize": 110,
+      "scaleX": 0.95
+    },
+    "faction": {
+      "x": 620,
+      "y": 285,
+      "w": 310,
+      "h": 60,
+      "fontSize": 40
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 524
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Sylwajuck-Soggetto.png",
+    "background": "Sylwajuck-Sfondo.png",
+    "frame": "Sylwajuck-Cornice.png",
+    "overlay": "Sylwajuck-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 0,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "cornice destra"
+    ],
+    "foregroundParts": [
+      "corna ramificate",
+      "artiglio destro"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

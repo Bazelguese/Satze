@@ -220,7 +220,14 @@ export function MenuAgentRain() {
               <div className="menu-rain__edge menu-rain__edge--r" />
               <div className="menu-rain__face">
                 <div className="menu-rain__scale">
-                  <CardReworkP4 key={`${agent.id}-${gen}`} agent={agent} showBonus suppressAnimations />
+                  <CardReworkP4
+                    key={`${agent.id}-${gen}`}
+                    agent={agent}
+                    showBonus
+                    suppressAnimations
+                    catalogPreview
+                    preferThumb
+                  />
                 </div>
                 <div className="menu-rain__sheen" />
                 {foil ? <div className="menu-rain__foil" /> : null}

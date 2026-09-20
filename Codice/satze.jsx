@@ -12,8 +12,11 @@ import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components
 import { CardBack } from '../src/components/cards/CardBack';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
+import { RuneTitle, setRuneDecodeProgress } from '../src/components/ui/RuneTitle.jsx';
+import { DuelCosmicHud } from '../src/components/battle/DuelCosmicHud.jsx';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
+import { useClashFocusHandoff } from '../src/components/battle/useClashFocusHandoff';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
@@ -135,7 +138,7 @@ import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
 import { CosmicScreenLayout } from '../src/components/menu/cosmic/CosmicScreenLayout';
 import ArmySelectCinematic from '../src/components/menu/cosmic/ArmySelectCinematic.jsx';
 import DeckSelectCinematic, { buildDeckPreviewPayload } from '../src/components/menu/cosmic/DeckSelectCinematic.jsx';
-import CardGallery from '../src/components/menu/gallery/CardGallery.jsx';
+import CardGallery, { GALLERY_AGENT_COUNT } from '../src/components/menu/gallery/CardGallery.jsx';
 import EminenceGallery from '../src/components/menu/gallery/EminenceGallery.jsx';
 import GalleryCinematic from '../src/components/menu/gallery/GalleryCinematic.jsx';
 import { EMINENCE_IDS } from '../src/data/eminences.js';
@@ -504,6 +507,17 @@ export default function SatzeGame() {
     waitForNotice: eminenceAnnounceHold && eminenceNotices.some((notice) => notice.kind !== 'setup'),
     resetKey: eminenceMatchState?.roundOpenedAt ?? `off-${roundNumber}`,
   });
+  // Titoli in rune: restano rune durante la smazzata e si decifrano con le carte consegnate.
+  const [dealProgress, setDealProgress] = useState(0);
+  useEffect(() => {
+    if (gamePhase === 'duelLoading') setDealProgress(0);
+  }, [gamePhase]);
+  useEffect(() => {
+    setRuneDecodeProgress(
+      gamePhase === 'duelLoading' ? 0 : gamePhase === 'shuffleDeal' ? (shuffleDealSetup ? dealProgress : 0) : 1
+    );
+  }, [gamePhase, shuffleDealSetup, dealProgress]);
+  useEffect(() => () => setRuneDecodeProgress(1), []);
   const handsDealt = Boolean(playerHand?.length && enemyHand?.length);
   const eminenceRoundPending =
     gamePhase !== 'shuffleDeal'
@@ -523,6 +537,7 @@ export default function SatzeGame() {
     roundPending: eminenceRoundPending,
     setupPending: eminenceSetupPending,
     markFlightHold: preyFlight.busy,
+    awaitingRevealParams,
   });
   const playerEminenceNotice = eminenceNotices.find((notice) => notice.side === 'player') || null;
   const enemyEminenceNotice = eminenceNotices.find((notice) => notice.side === 'enemy') || null;
@@ -683,6 +698,21 @@ export default function SatzeGame() {
   useEffect(() => {
     setEmDraftParams(null);
   }, [emDraftId]);
+
+  // Bozza slot/preda residua dopo confirm/reveal non deve più colorare il tabellone.
+  useEffect(() => {
+    if (awaitingEminenceChoice || awaitingRevealParams || eminenceChoiceView.self?.setup?.pending) {
+      return;
+    }
+    if (emDraftParams != null) setEmDraftParams(null);
+    if (emDraftId != null) setEmDraftId(null);
+  }, [
+    awaitingEminenceChoice,
+    awaitingRevealParams,
+    eminenceChoiceView.self?.setup?.pending,
+    emDraftParams,
+    emDraftId,
+  ]);
 
   useEffect(() => {
     setPeekCampo(false);
@@ -1068,6 +1098,10 @@ export default function SatzeGame() {
     if (r5Cinematic) return;
     if (eminenceAnnounceHold) return;
     if (awaitingEminenceChoice) return;
+    // PRE_FIELD con params AT_REVEAL (es. Maledizione su slot): non rivelare
+    // finché il giocatore non ha fissato il bersaglio, altrimenti il tabellone
+    // resta agganciato al targeting e il Campo non si può scegliere.
+    if (awaitingRevealParams) return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
     if (!areSelectionsComplete(eminenceMatchState)) return;
     if (eminenceChoiceFlushedRoundRef.current === roundNumber) return;
@@ -1080,6 +1114,7 @@ export default function SatzeGame() {
     r5Cinematic,
     eminenceAnnounceHold,
     awaitingEminenceChoice,
+    awaitingRevealParams,
     eminenceMatchState,
     roundNumber,
     commitEminenceAdvance,
@@ -1294,6 +1329,14 @@ export default function SatzeGame() {
     [duelVfxRev],
   );
   const vfxProfile = useMemo(() => getVfxQualityProfile(), [duelVfxRev]);
+  const {
+    showBodies: showDuelResultBodies,
+    cinemaHideAgent,
+    keepOrbitThroughClash,
+  } = useClashFocusHandoff(
+    gamePhase === 'result' && battleResult ? duelPhase : -1,
+    Boolean(vfxProfile.clashVfxEnabled)
+  );
   const duelLayoutBreathClass = useMemo(
     () => resolveDuelLayoutBreathClass(getDisplaySettings(), { isResult: gamePhase === 'result' }),
     [duelVfxRev, gamePhase],
@@ -2266,10 +2309,31 @@ export default function SatzeGame() {
     if (eminenceAnnounceHold || preyFlight.busy || slotIndex == null) return false;
     const legal = legalSlotIndicesForChoice(eminenceChoiceView, { draftId: emDraftId });
     if (!legal.includes(slotIndex)) return false;
+    const next = { slot: slotIndex };
+    const sealedId = eminenceChoiceView.self?.selectedAbilityId;
+    // AT_REVEAL già sigillata: il click sul tabellone fissa i params (come gli Agenti).
+    // Senza questo il draft resta appeso e i click non passano mai alla scelta Campo.
+    const sealedAwaitingParams = Boolean(
+      sealedId
+      && !emDraftId
+      && !eminenceChoiceView.self?.revealedAbilityId,
+    );
+    if (sealedAwaitingParams) {
+      setEmDraftParams(next);
+      confirmEminenceAbility(sealedId, next);
+      return true;
+    }
     if (emDraftParams?.slot === slotIndex) return true;
-    setEmDraftParams({ slot: slotIndex });
+    setEmDraftParams(next);
     return true;
-  }, [eminenceAnnounceHold, preyFlight.busy, eminenceChoiceView, emDraftId, emDraftParams]);
+  }, [
+    eminenceAnnounceHold,
+    preyFlight.busy,
+    eminenceChoiceView,
+    emDraftId,
+    emDraftParams,
+    confirmEminenceAbility,
+  ]);
 
   const tryPickEminenceCard = useCallback((cardId) => {
     if (eminenceAnnounceHold || preyFlight.busy || cardId == null) return false;
@@ -4023,6 +4087,16 @@ export default function SatzeGame() {
       url.searchParams.set('eminenceSystemLab', '1');
       window.location.href = url.toString();
     };
+    const openDuelLayoutLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('duelLayoutLab', '1');
+      window.location.href = url.toString();
+    };
+    const openCardFaceLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('cardFaceLab', '1');
+      window.location.href = url.toString();
+    };
     const launchArenaContesa = (playerArmy) => {
       const url = new URL(window.location.href);
       url.searchParams.set('arenaContesa', '1');
@@ -4054,12 +4128,9 @@ export default function SatzeGame() {
       {
         label: 'PARTITA LOCALE',
         sub: 'AVVIO',
-        meta: 'CLIC · POI SCEGLI LA MODALITÀ',
+        meta: 'VS IA · FORMATO IN SEGUITO',
         accent: MENU_ACCENTS.pink,
-        choices: [
-          { label: 'GIOCA VS IA', sub: 'VS IA', meta: 'CLASSIC', onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
-          { label: 'BARE HANDS', sub: 'MODALITÀ', meta: 'SENZA ESERCITO', onClick: () => { setSelectedMode('bareHands'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); } },
-        ],
+        onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
       },
       { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
       { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
@@ -4075,6 +4146,8 @@ export default function SatzeGame() {
         accent: '#94a3b8',
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
+          { label: 'DUEL LAYOUT LAB', sub: 'SKIN', meta: 'ALT ART · STY', onClick: openDuelLayoutLab },
+          { label: 'CARD FACE LAB', sub: 'CARTA', meta: 'ELDRITCH', onClick: openCardFaceLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
           { label: 'PERFECT FC LAB', sub: 'VFX', meta: 'STAMP DUELLO', onClick: openPerfectFocusLab },
           { label: 'EMINENCE LAB', sub: 'DUELLO', meta: 'FORMA · CARTA', onClick: openEminenceArtLab },
@@ -4640,7 +4713,7 @@ export default function SatzeGame() {
       galleryTab,
       // Non startTransition: il montaggio idle della griglia Agenti affamerebbe il tab.
       onGalleryTabChange: setGalleryTab,
-      agentCount: ALL_AGENTS.length,
+      agentCount: GALLERY_AGENT_COUNT,
       fieldCount: ALL_BATTLEFIELDS.length,
       eminenceCount: EMINENCE_IDS.length,
     };
@@ -4648,7 +4721,7 @@ export default function SatzeGame() {
     if (galleryTab === 'agents') {
       return (
         <CardGallery
-          totalCards={ALL_AGENTS.length}
+          totalCards={GALLERY_AGENT_COUNT}
           onBack={() => setGamePhase('menu')}
           {...galleryTabProps}
         />
@@ -4706,6 +4779,23 @@ export default function SatzeGame() {
   const iaCardPositions = IA_CARD_POSITIONS;
   const playerCardPositions = PLAYER_CARD_POSITIONS;
   const isShuffleDealPhase = gamePhase === 'shuffleDeal' && !!shuffleDealSetup;
+  // Di chi è il turno: dopo lo shuffle segue l'iniziativa, poi si scambia dopo Conferma / scelta avversario
+  const turnSideNow = ['result', 'battle', 'gameOver', 'shuffleDeal'].includes(gamePhase)
+    ? null
+    : (gamePhase === 'selectField'
+        ? isPlayerFirst
+        : gamePhase === 'selectAgent'
+          ? (isPlayerFirst
+              ? !playerConfirmedAwaitingAI
+              : Boolean(enemyAgent) && !playerConfirmedAwaitingAI)
+          : isPlayerFirst)
+      ? 'player'
+      : 'enemy';
+  const turnInfo = turnSideNow && {
+    side: turnSideNow,
+    label: turnSideNow === 'player' ? 'Tocca a te' : (isOnlinePvP ? 'Turno avversario' : 'Turno nemico'),
+    color: turnSideNow === 'player' ? playerIdentityColor : enemyIdentityColor,
+  };
   const agentsLockedAwaitingField =
     gamePhase === 'selectField' && Boolean(selectedAgent && enemyAgent);
   const showDeployedEnemyAgent = (gamePhase === 'selectAgent' || agentsLockedAwaitingField) && Boolean(enemyAgent);
@@ -4734,7 +4824,7 @@ export default function SatzeGame() {
 
   return (
     <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -4836,11 +4926,26 @@ export default function SatzeGame() {
         <div
           key={fieldBgImage}
           className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 0, isolation: 'isolate', contain: 'paint' }}
+          style={{ zIndex: 0 }}
         >
           <BattlefieldReveal imageSrc={fieldBgImage} animationType={entranceAnimationType} />
         </div>
       )}
+      {/* HUD cosmico: ogni pannello riceve la sua finestra sul cosmo (segue la 2.5D) */}
+      <DuelCosmicHud
+        playerHP={playerHP}
+        enemyHP={enemyHP}
+        playerFocus={playerFocus}
+        enemyFocus={enemyFocus}
+        conqueredFields={conqueredFields}
+        playerColor={playerIdentityColor}
+        enemyColor={enemyIdentityColor}
+        gamePhase={gamePhase}
+        duelPhase={duelPhase}
+        battleResult={battleResult}
+        eventsCount={Array.isArray(logPanelBattleEvents) ? logPanelBattleEvents.length : (logs?.length || 0)}
+        turnSide={turnSideNow /* la luce corre veloce sul box di chi agisce */}
+      />
       {/* ============================================ */}
       {/* COLONNA SINISTRA - z-index 1 */}
       {/* ============================================ */}
@@ -4874,7 +4979,7 @@ export default function SatzeGame() {
             className="text-sm font-bold mb-2 uppercase tracking-[0.15em]"
             style={{ color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` }}
           >
-            ANTEPRIMA
+            <RuneTitle text="Anteprima" />
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col items-center">
             {displayPreviewCard ? (
@@ -5161,7 +5266,7 @@ export default function SatzeGame() {
             className="text-sm font-bold mb-1 text-center uppercase tracking-[0.15em]"
             style={{ color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` }}
           >
-            Prossima conquista!
+            <RuneTitle text="Prossima conquista!" />
           </div>
 
           {/* Lista Campi di Battaglia - 5 righe */}
@@ -5236,7 +5341,7 @@ export default function SatzeGame() {
         </div>
         
         {/* Log Battaglia / Slider Focus Coin - flip come carta */}
-        <div className={`satze-panel-flip-container ${gamePhase === 'result' ? 'pointer-events-none' : ''}`}>
+        <div className={`satze-panel-flip-container ${gamePhase === 'result' ? 'pointer-events-none' : ''}${eminenceInspectable ? ' has-em-toggle' : ''}`}>
           <div className={`satze-panel-flip-inner ${gamePhase === 'selectAgent' && selectedAgent ? 'satze-panel-flipped' : ''}`}>
             {/* Fronte: Log */}
             <div className="satze-panel-flip-face">
@@ -5306,8 +5411,10 @@ export default function SatzeGame() {
         </div>
       </div>
 
+
       {eminenceInspectable && (
         <EminenzaTableToggle
+          anchorSelector=".satze-panel-flip-container"
           viewingEminence={showEminenceLayer}
           accent={playerIdentityColor}
           fragmentCount={(eminenceChoiceView.self?.persistent?.fragmentCardIds || []).length}
@@ -5368,6 +5475,7 @@ export default function SatzeGame() {
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
         arrivingPreyId={preyFlight.preyLandId}
         selectedAgent={selectedAgent}
+        hideSelected
         onAgentSelect={handleAgentSelect}
         onPreviewClick={handlePlayerPreviewClick}
         battleOutcomes={cardBattleOutcomes}
@@ -5445,6 +5553,7 @@ export default function SatzeGame() {
           draftParams={emDraftParams}
           onDraftParams={setEmDraftParams}
           paramMeta={eminenceChoiceView.paramMeta}
+          paramsOpen={awaitingRevealParams}
           announce={displayPlayerNotice}
           announceAutoDismiss={!sparkSequenceActive}
           hideRail={!shouldShowEminenceAbilityRail(eminenceChoiceView, {
@@ -5619,6 +5728,7 @@ export default function SatzeGame() {
           onComplete={completeShuffleDeal}
           launchRevealHoldMs={shuffleLaunchHoldMsRef.current ?? 0}
           onRevealPhaseChange={setDuelRevealPhase}
+          onDealProgress={setDealProgress}
         />
       )}
 
@@ -5656,49 +5766,7 @@ export default function SatzeGame() {
         curseAccent={slotCurseAccent}
       />
 
-      {/* Badge turno — dopo shuffle; segue iniziativa, poi si scambia dopo Conferma / scelta avversario */}
-      {gamePhase !== 'result' &&
-        gamePhase !== 'battle' &&
-        gamePhase !== 'gameOver' &&
-        gamePhase !== 'shuffleDeal' &&
-        (() => {
-        const isPlayersActionTurn =
-          gamePhase === 'selectField'
-            ? isPlayerFirst
-            : gamePhase === 'selectAgent'
-              ? (isPlayerFirst
-                  ? !playerConfirmedAwaitingAI
-                  : Boolean(enemyAgent) && !playerConfirmedAwaitingAI)
-              : isPlayerFirst;
-        const badgeLabel = isPlayersActionTurn
-          ? 'Tocca a te'
-          : (isOnlinePvP ? 'Turno avversario' : 'Turno nemico');
-        const badgeColor = isPlayersActionTurn ? playerIdentityColor : enemyIdentityColor;
-        return (
-        <div
-          className="absolute pointer-events-none flex justify-center"
-          style={{
-            top: 'calc(50% - 140px)',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 200,
-            zIndex: 12,
-          }}
-        >
-          <span
-            key={badgeLabel}
-            className="imp-turn-badge px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-[0.16em] whitespace-nowrap"
-            style={{
-              color: '#0c0814',
-              background: badgeColor,
-              boxShadow: `0 0 14px ${badgeColor}66, 0 2px 6px #000`,
-            }}
-          >
-            {badgeLabel}
-          </span>
-        </div>
-        );
-      })()}
+      {/* Il turno ora è dentro il portale del campo (BattlefieldPanel → turn) */}
 
       {/* Invito tabellone in selectField (sostituisce il placeholder del pannello) */}
       {gamePhase === 'selectField' && (
@@ -5722,6 +5790,10 @@ export default function SatzeGame() {
                 ? 'Un\'abilità Eminenza è in rivelazione. Il resto del round è in pausa.'
                 : awaitingEminenceChoice
                 ? 'Scegli un\'abilità Eminenza. Da qui puoi consultare il tabellone.'
+                : awaitingRevealParams
+                ? (legalSlotIndicesForChoice(eminenceChoiceView).length > 0
+                  ? 'Scegli uno slot dal tabellone, poi conferma l\'abilità.'
+                  : 'Scegli i parametri dell\'abilità Eminenza.')
                 : eminenceBlocksMatch
                 ? 'Le Eminenze stanno per entrare in scena.'
                 : isPlayerFirst
@@ -5749,6 +5821,10 @@ export default function SatzeGame() {
       )}
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
+        portalFrame
+        turn={turnInfo}
+        outcomeColor={gameResult?.winner === 'player' ? playerIdentityColor : gameResult?.winner === 'enemy' ? enemyIdentityColor : null}
+        commandPhase={forcedEminenceView}
         field={battlefields[currentFieldIndex]}
         cursed={slotShowsCurse(currentFieldIndex) && (
           gamePhase === 'selectAgent' || gamePhase === 'battle' || gamePhase === 'result'
@@ -5983,7 +6059,7 @@ export default function SatzeGame() {
           <div className="text-slate-500 text-sm text-center">In attesa...</div>
         )}
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}
-        {gamePhase === 'result' && battleResult && (duelPhase < 4 || !vfxProfile.clashVfxEnabled) && (
+        {gamePhase === 'result' && battleResult && showDuelResultBodies && (
           <DuelResultEnemyResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -5997,6 +6073,8 @@ export default function SatzeGame() {
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
             particleSeed={battleResult.enemyAgent?.id ?? 1}
+            cinemaHideAgent={cinemaHideAgent}
+            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -6116,7 +6194,7 @@ export default function SatzeGame() {
             </div>
           </div>
         )}
-        {gamePhase === 'result' && battleResult && (duelPhase < 4 || !vfxProfile.clashVfxEnabled) && (
+        {gamePhase === 'result' && battleResult && showDuelResultBodies && (
           <DuelResultPlayerResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -6130,6 +6208,8 @@ export default function SatzeGame() {
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
             particleSeed={battleResult.playerAgent?.id ?? 2}
+            cinemaHideAgent={cinemaHideAgent}
+            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -6188,7 +6268,7 @@ export default function SatzeGame() {
         }}
       >
         <div
-          className={`flex flex-col items-center justify-center gap-0.5 px-4 py-2 w-fit min-w-0 shrink-0 text-center satze-hud-panel ${gamePhase === 'result' ? 'animate-fade-out-panels' : ''}`}
+          className={`hud-round flex flex-col items-center justify-center gap-0.5 px-4 py-2 w-fit min-w-0 shrink-0 text-center satze-hud-panel ${gamePhase === 'result' ? 'animate-fade-out-panels' : ''}`}
           style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
         >
           <span className="font-bold text-sm uppercase tracking-wider" style={{ color: PALETTE.amber }}>
@@ -6199,7 +6279,7 @@ export default function SatzeGame() {
         <div
           role="button"
           tabIndex={0}
-          className={`bg-black/70 rounded-b-lg flex justify-center items-center px-4 py-2 cursor-pointer hover:bg-black/80 transition-colors w-fit shrink-0 pointer-events-auto ${
+          className={`hud-exit bg-black/70 rounded-b-lg flex justify-center items-center px-4 py-2 cursor-pointer hover:bg-black/80 transition-colors w-fit shrink-0 pointer-events-auto ${
             gamePhase === 'result' ? 'animate-fade-out-panels' : ''
           }`}
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
@@ -6221,7 +6301,7 @@ export default function SatzeGame() {
             }
           }}
         >
-          <span className="text-amber-400 font-bold">⚔️ SATZE</span>
+          <span className="text-amber-400 font-bold">SATZE</span>
         </div>
       </div>
 

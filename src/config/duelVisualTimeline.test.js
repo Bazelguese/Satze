@@ -10,6 +10,7 @@ import {
   getNextDuelPhase,
   computePhase0DurationMs,
   getRevealIndex,
+  syncDuelVisualsForPhase,
   BATTLE_REVEAL_AT_TO_PHASE,
 } from './duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS, DUEL_PHASE4_MIN_MS, computeDynamicClashVfx } from './duelVisualConfig.js';
@@ -190,4 +191,32 @@ test('focus coin: intervalli decrescenti (lento → veloce)', () => {
     computeFocusCoinAppearDelayMs(total - 1, total, vfx),
     intervals.reduce((a, b) => a + b, 0)
   );
+});
+
+test('syncDuelVisualsForPhase: dopo fase 2 monete piene anche con salto 2→4', () => {
+  const br = {
+    playerFocusUsed: 4,
+    enemyFocusUsed: 3,
+    visualSteps: [],
+    playerAssaultMod: 0,
+    enemyAssaultMod: 0,
+    playerPower: 2,
+    enemyPower: 2,
+    playerAssaultRaw: 8,
+    enemyAssaultRaw: 6,
+    playerAssaultMinFinal: 2,
+    enemyAssaultMinFinal: 2,
+  };
+  let coins = null;
+  let glow = false;
+  syncDuelVisualsForPhase(4, br, {
+    setFocusCoins: (p, e) => {
+      coins = [p, e];
+    },
+    setCardGlow: () => {
+      glow = true;
+    },
+  });
+  assert.deepEqual(coins, [4, 3]);
+  assert.equal(glow, true);
 });

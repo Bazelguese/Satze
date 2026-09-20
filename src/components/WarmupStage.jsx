@@ -16,7 +16,7 @@ import { CardReworkP4, CardBack } from './cards';
 import { MenuAgentRain } from './menu/MenuAgentRain';
 import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
 import { EminenceTarotCard } from './eminenceLab/EminenceTarotCard';
-import CardGallery from './menu/gallery/CardGallery';
+import CardGallery, { GALLERY_AGENT_COUNT } from './menu/gallery/CardGallery';
 import EminenceGallery from './menu/gallery/EminenceGallery';
 import ArmySelectCinematic from './menu/cosmic/ArmySelectCinematic';
 import { DeckConfirmTransition } from './menu/cosmic/DeckConfirmTransition';
@@ -112,7 +112,7 @@ export function WarmupStage({ onComplete, onProgress }) {
 
   const galleryCounts = useMemo(
     () => ({
-      agentCount: ALL_AGENTS.length,
+      agentCount: GALLERY_AGENT_COUNT,
       fieldCount: ALL_BATTLEFIELDS.length,
       eminenceCount: EMINENCE_IDS_BY_ARMY_ORDER.length,
     }),

@@ -1,0 +1,104 @@
+{
+  "id": 1122,
+  "name": "Terrore Cremisi",
+  "league": 4,
+  "power": 6,
+  "damage": 4,
+  "icon": "skull",
+  "ability": {
+    "title": "Conquista",
+    "text": "−5 PV (a te)"
+  },
+  "description": "Potere: Conquista: -5 PV (a te)",
+  "flavour": "Vincere costa sangue — spesso il tuo. Le Fumarole Rosse gli hanno insegnato il prezzo del calore.",
+  "style": "Eldritch",
+  "faction": "Apex",
+  "accent": "#d5ecf9",
+  "autoFaction": false,
+  "bonus": {
+    "title": "Invasione",
+    "text": "+5 VA"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 85,
+      "w": 725,
+      "h": 190,
+      "fontSize": 100
+    },
+    "subtitle": {
+      "x": 88,
+      "y": 212,
+      "w": 705,
+      "h": 100,
+      "fontSize": 43
+    },
+    "faction": {
+      "x": 705,
+      "y": 330,
+      "w": 220,
+      "h": 65,
+      "fontSize": 45
+    },
+    "abilityTitle": {
+      "x": 258,
+      "y": 1000,
+      "w": 400,
+      "h": 113
+    },
+    "abilityText": {
+      "x": 245,
+      "y": 1095,
+      "w": 338,
+      "h": 145
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "cardId": 1122
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "artworkFit": "cover"
+  },
+  "layers": {
+    "subject": "Terrore-Cremisi-Soggetto.png",
+    "background": "Terrore-Cremisi-Sfondo.png",
+    "frame": "Terrore-Cremisi-Cornice.png",
+    "overlay": "Terrore-Cremisi-Layout.svg",
+    "subjectScale": 0.9,
+    "subjectYPercent": 7.5,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "bordo inferiore",
+      "cornice destra"
+    ],
+    "foregroundParts": [
+      "spada innestata",
+      "mano libera"
+    ]
+  }
+}

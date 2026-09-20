@@ -3,13 +3,20 @@ import { useEffect, useRef } from 'react';
 /**
  * Tilt 3D + glare al puntatore (CSS vars, niente re-render per frame).
  * Imposta su root: --cpt-rx/ry/px/py/mx/my e data-tilt="1"|"0".
+ *
+ * Con hit-pad: le coordinate sono relative al box della carta (content),
+ * non al rettangolo padded — altrimenti il tilt non segue il bordo visivo.
  */
-export function useCardPointerTilt(maxTilt = 12) {
+export function useCardPointerTilt(maxTilt = 12, hitPadX = 0, hitPadY = 0) {
   const rootRef = useRef(null);
   const rafRef = useRef(0);
   const pendingRef = useRef(null);
   const maxTiltRef = useRef(maxTilt);
+  const padXRef = useRef(hitPadX);
+  const padYRef = useRef(hitPadY);
   maxTiltRef.current = maxTilt;
+  padXRef.current = Math.max(0, hitPadX);
+  padYRef.current = Math.max(0, hitPadY);
 
   useEffect(() => () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -33,9 +40,17 @@ export function useCardPointerTilt(maxTilt = 12) {
     const el = rootRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    if (rect.width < 1 || rect.height < 1) return;
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const padX = padXRef.current;
+    const padY = padYRef.current;
+    // Box carta = content area (esclude padding hit).
+    const left = rect.left + padX;
+    const top = rect.top + padY;
+    const width = rect.width - padX * 2;
+    const height = rect.height - padY * 2;
+    if (width < 1 || height < 1) return;
+
+    const x = (e.clientX - left) / width;
+    const y = (e.clientY - top) / height;
     const mx = Math.min(1, Math.max(-1, x * 2 - 1));
     const my = Math.min(1, Math.max(-1, y * 2 - 1));
     const tilt = maxTiltRef.current;

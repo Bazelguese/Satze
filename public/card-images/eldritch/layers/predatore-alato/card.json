@@ -1,0 +1,108 @@
+{
+  "id": 705,
+  "name": "Predatore Alato",
+  "league": 3,
+  "power": 4,
+  "damage": 2,
+  "icon": "🦅",
+  "ability": {
+    "title": "Imboscata",
+    "text": "+2 POT"
+  },
+  "description": "Potere: Imboscata: +2 POT",
+  "flavour": "L'ombra arriva prima del ruggito. Il ruggito arriva prima degli artigli. Gli artigli arrivano ultimi, ma sono gli unici che contano.",
+  "style": "Eldritch",
+  "faction": "L'Enclave delle Scaglie",
+  "accent": "#fb912d",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Conquista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "name": {
+      "x": 235,
+      "y": 85,
+      "w": 565,
+      "h": 205,
+      "fontSize": 110,
+      "scaleX": 0.94
+    },
+    "faction": {
+      "x": 640,
+      "y": 290,
+      "w": 300,
+      "h": 72,
+      "fontSize": 34
+    },
+    "abilityTitle": {
+      "x": 435,
+      "y": 1000,
+      "w": 360,
+      "h": 110,
+      "fontSize": 95
+    },
+    "abilityText": {
+      "x": 430,
+      "y": 1100,
+      "w": 320,
+      "h": 100,
+      "fontSize": 55
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 705
+  },
+  "presentationNote": "Nome privo di virgola: nessun sottotitolo aggiunto.",
+  "layers": {
+    "subject": "Predatore-Alato-Soggetto.png",
+    "background": "Predatore-Alato-Sfondo.png",
+    "frame": "Predatore-Alato-Cornice.png",
+    "overlay": "Predatore-Alato-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 0,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "cornice destra"
+    ],
+    "foregroundParts": [
+      "ali",
+      "zampe anteriori corte e raccolte",
+      "artigli delle due zampe posteriori"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

@@ -13,6 +13,7 @@ import './styles/satze-duello-animazioni.css'
 import './styles/satze-duello-ingresso-carta.css'
 import './styles/satze-duello-ingresso-carta-extra.css'
 import './styles/cosmic-tokens.css'
+import './styles/satze-duello-cosmo.css'
 import './lib/em-cells.js'
 
 import { App } from './App'

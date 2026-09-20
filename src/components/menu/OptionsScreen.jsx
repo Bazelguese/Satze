@@ -11,6 +11,7 @@ import {
   CURSOR_TRAIL_DURATION_PRESETS,
   VFX_QUALITY_LEVELS,
   DUEL_LAYOUT_BREATH_LEVELS,
+  FPS_CAP_PRESETS,
   applyElectronDisplay,
   getDisplaySettings,
   hasElectronDisplayApi,
@@ -53,6 +54,13 @@ const TRAIL_DURATION_LABELS = {
   200: 'Rapida',
   400: 'Media',
   700: 'Lunga',
+};
+
+const FPS_CAP_LABELS = {
+  0: 'Illimitato',
+  30: '30',
+  60: '60',
+  120: '120',
 };
 
 const selectStyle = {
@@ -122,6 +130,25 @@ function Row({ label, hint, children }) {
         )}
       </div>
       <div>{children}</div>
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <div
+      style={{
+        marginTop: '0.85rem',
+        marginBottom: '0.15rem',
+        paddingTop: '0.35rem',
+        fontFamily: "'Share Tech Mono', monospace",
+        fontSize: '0.62rem',
+        letterSpacing: '0.16em',
+        color: '#64748b',
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -270,6 +297,8 @@ export function OptionsScreen({ onClose }) {
             VIDEO
           </div>
 
+          <SectionLabel>Display</SectionLabel>
+
           <Row label="Modalità schermo" hint="Richiede Applica">
             <div style={{ display: 'flex', gap: 6 }}>
               {DISPLAY_MODES.map((mode) => (
@@ -312,6 +341,23 @@ export function OptionsScreen({ onClose }) {
             </select>
           </Row>
 
+          <Row label="Cap frame rate" hint="Limita gli aggiornamenti JS (animazioni, VFX, cursore)">
+            <div style={{ display: 'flex', gap: 6 }}>
+              {FPS_CAP_PRESETS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => persistPresentation({ fpsCap: n })}
+                  style={segmentBtnStyle(settings.fpsCap === n, '#38bdf8')}
+                >
+                  {FPS_CAP_LABELS[n]}
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          <SectionLabel>Grafica</SectionLabel>
+
           <Row label="Qualità effetti" hint="Particelle, overdrive, clash, zoom">
             <div style={{ display: 'flex', gap: 6 }}>
               {VFX_QUALITY_LEVELS.map((q) => (
@@ -325,6 +371,22 @@ export function OptionsScreen({ onClose }) {
                 </button>
               ))}
             </div>
+          </Row>
+
+          <Row label="Riduci animazioni" hint="Forza profilo effetti Basso">
+            <button
+              type="button"
+              onClick={() => persistPresentation({ reduceMotion: !settings.reduceMotion })}
+              style={{
+                ...segmentBtnStyle(settings.reduceMotion, '#38bdf8'),
+                flex: '0 0 auto',
+                minWidth: 120,
+                paddingLeft: '1.25rem',
+                paddingRight: '1.25rem',
+              }}
+            >
+              {settings.reduceMotion ? 'Attivo' : 'Disattivo'}
+            </button>
           </Row>
 
           <Row
@@ -353,6 +415,24 @@ export function OptionsScreen({ onClose }) {
               ))}
             </div>
           </Row>
+
+          <Row label="Eminenze foil" hint="Lamina olografica sulle tue Eminenze in partita">
+            <button
+              type="button"
+              onClick={() => persistPresentation({ eminenceFoil: !settings.eminenceFoil })}
+              style={{
+                ...segmentBtnStyle(settings.eminenceFoil, '#c084fc'),
+                flex: '0 0 auto',
+                minWidth: 120,
+                paddingLeft: '1.25rem',
+                paddingRight: '1.25rem',
+              }}
+            >
+              {settings.eminenceFoil ? 'Attivo' : 'Disattivo'}
+            </button>
+          </Row>
+
+          <SectionLabel>Interfaccia</SectionLabel>
 
           <Row
             label="Scala interfaccia"
@@ -439,38 +519,6 @@ export function OptionsScreen({ onClose }) {
             </div>
           </Row>
 
-          <Row label="Eminenze foil" hint="Lamina olografica sulle tue Eminenze in partita">
-            <button
-              type="button"
-              onClick={() => persistPresentation({ eminenceFoil: !settings.eminenceFoil })}
-              style={{
-                ...segmentBtnStyle(settings.eminenceFoil, '#c084fc'),
-                flex: '0 0 auto',
-                minWidth: 120,
-                paddingLeft: '1.25rem',
-                paddingRight: '1.25rem',
-              }}
-            >
-              {settings.eminenceFoil ? 'Attivo' : 'Disattivo'}
-            </button>
-          </Row>
-
-          <Row label="Riduci animazioni" hint="Forza profilo effetti Basso">
-            <button
-              type="button"
-              onClick={() => persistPresentation({ reduceMotion: !settings.reduceMotion })}
-              style={{
-                ...segmentBtnStyle(settings.reduceMotion, '#38bdf8'),
-                flex: '0 0 auto',
-                minWidth: 120,
-                paddingLeft: '1.25rem',
-                paddingRight: '1.25rem',
-              }}
-            >
-              {settings.reduceMotion ? 'Attivo' : 'Disattivo'}
-            </button>
-          </Row>
-
           <div
             style={{
               display: 'flex',
@@ -525,7 +573,7 @@ export function OptionsScreen({ onClose }) {
                 fontFamily: "'Share Tech Mono', monospace",
               }}
             >
-              Client web: qualità / scala / riduci animazioni funzionano. Modalità schermo e
+              Client web: qualità / scala / cap FPS / riduci animazioni funzionano. Modalità schermo e
               risoluzione richiedono l&apos;exe Electron.
             </p>
           )}

@@ -10,6 +10,7 @@ import React from 'react';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from './DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from './DuelClashAuroraSequence';
 import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
+import { useClashFocusHandoff } from './useClashFocusHandoff';
 
 const noopAbility = () => null;
 const noopHover = () => {};
@@ -42,8 +43,12 @@ export function ProductionDuelStage({
   const zoomMs = vfx.zoomTransitionMs ?? DUEL_VISUAL_DEFAULTS.zoomTransitionMs;
   const zoomDelay = vfx.zoomDelayMs ?? DUEL_VISUAL_DEFAULTS.zoomDelayMs;
   const isResult = mode === 'result' && Boolean(battleResult);
-  const showBodies = isResult && (duelPhase < 4 || !vfxProfile?.clashVfxEnabled);
-  const showAurora = isResult && duelPhase >= 4 && vfxProfile?.clashVfxEnabled;
+  const clashVfxEnabled = Boolean(vfxProfile?.clashVfxEnabled);
+  const { showBodies, cinemaHideAgent, keepOrbitThroughClash } = useClashFocusHandoff(
+    isResult ? duelPhase : -1,
+    clashVfxEnabled
+  );
+  const showAurora = isResult && duelPhase >= 4 && clashVfxEnabled;
 
   return (
     <>
@@ -76,7 +81,7 @@ export function ProductionDuelStage({
             {enemyLabel}
           </div>
         )}
-        {showBodies && (
+        {isResult && showBodies && (
           <DuelResultEnemyResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -90,6 +95,8 @@ export function ProductionDuelStage({
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
             particleSeed={battleResult.enemyAgent?.id ?? 1}
+            cinemaHideAgent={cinemaHideAgent}
+            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -116,7 +123,7 @@ export function ProductionDuelStage({
             {playerLabel}
           </div>
         )}
-        {showBodies && (
+        {isResult && showBodies && (
           <DuelResultPlayerResultBody
             battleResult={battleResult}
             duelPhase={duelPhase}
@@ -130,6 +137,8 @@ export function ProductionDuelStage({
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
             particleSeed={battleResult.playerAgent?.id ?? 2}
+            cinemaHideAgent={cinemaHideAgent}
+            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>

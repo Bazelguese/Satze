@@ -1,0 +1,111 @@
+{
+  "id": 1215,
+  "name": "Filomena \"Death Springboard\"",
+  "league": 3,
+  "power": 2,
+  "damage": 2,
+  "icon": "angry",
+  "ability": {
+    "title": "Alleato",
+    "text": "+3 POT"
+  },
+  "description": "Potere: Alleato: +3 POT",
+  "flavour": "Piranha da heel: con un pari in mano, il trampolino diventa una lama.",
+  "displayName": "Filomena,\"Death Springboard\"",
+  "style": "Eldritch",
+  "faction": "Mascarada",
+  "accent": "#437ef2",
+  "autoFaction": false,
+  "bonus": {
+    "title": "Opportunista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 85,
+      "w": 725,
+      "h": 115,
+      "fontSize": 112
+    },
+    "subtitle": {
+      "x": 88,
+      "y": 205,
+      "w": 705,
+      "h": 60,
+      "fontSize": 48
+    },
+    "faction": {
+      "x": 705,
+      "y": 330,
+      "w": 220,
+      "h": 65,
+      "fontSize": 45
+    },
+    "abilityTitle": {
+      "x": 258,
+      "y": 1000,
+      "w": 400,
+      "h": 113
+    },
+    "abilityText": {
+      "x": 245,
+      "y": 1095,
+      "w": 338,
+      "h": 145
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "cardId": 1215
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "artworkFit": "cover"
+  },
+  "layers": {
+    "subject": "Filomena-Soggetto.png",
+    "background": "Filomena-Sfondo.png",
+    "frame": "Filomena-Cornice.png",
+    "overlay": "Filomena-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 4,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "bordo superiore destro"
+    ],
+    "foregroundParts": [
+      "mano protesa",
+      "pinne del pesce"
+    ],
+    "fishColorTreatment": {
+      "type": "native CSS masked duplicate",
+      "saturation": 0.27,
+      "brightness": 0.78,
+      "note": "Il PNG soggetto conserva il colore estratto; la composizione applica la correzione grigio-malva al pesce."
+    }
+  }
+}

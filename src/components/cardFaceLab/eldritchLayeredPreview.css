@@ -1,0 +1,169 @@
+.eldritch-layered {
+  display: grid;
+  gap: 16px;
+  max-width: 470px;
+}
+
+.eldritch-layered__stage {
+  position: relative;
+  padding: 12px;
+  perspective: 1200px;
+}
+
+/* Zona interattiva = cornice (non tutto il canvas 1024×1536). */
+.eldritch-layered__hit {
+  position: absolute;
+  inset: 3.3% 4.5% 3.5% 4.5%;
+  z-index: 8;
+  cursor: grab;
+  touch-action: none;
+  background: transparent;
+}
+
+.eldritch-layered__card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 23 / 33;
+  transform-style: preserve-3d;
+  isolation: isolate;
+  filter: drop-shadow(0 22px 24px #0009);
+  /* Solo il soggetto (.break) può uscire; window + layout restano in cornice. */
+  --eld-cornice-clip: inset(3.3% 4.5% 3.5% 4.5% round 4.8%);
+}
+
+.eldritch-layered__card img,
+.eldritch-layered__layout {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Art 1024×1536 nello slot 23:33: fill come le anteprime ufficiali Serie 23-33
+   (cover sfalsava cornice, clip break e layout). */
+.eldritch-layered__bg,
+.eldritch-layered__subject,
+.eldritch-layered__frame,
+.eldritch-layered__break {
+  object-fit: fill;
+}
+
+.eldritch-layered__layout svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.eldritch-layered__window {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--eld-cornice-clip);
+  overflow: hidden;
+  background: #07070c;
+}
+
+.eldritch-layered__bg {
+  z-index: 0;
+  transform: scale(1.07);
+}
+
+.eldritch-layered__subject {
+  z-index: 1;
+  will-change: transform;
+}
+
+.eldritch-layered__frame {
+  z-index: 3;
+}
+
+/*
+ * Ordine:
+ * soggetto finestra → cornice → break (overflow sopra cornice) →
+ * macchie (sopra il soggetto/break, clipate dentro la cornice) → testi → break above.
+ * Così la macchia non resta sotto l’armatura, e la spada non finisce sotto il bordo.
+ */
+.eldritch-layered__layout--ink {
+  z-index: 5;
+  clip-path: var(--eld-cornice-clip);
+}
+.eldritch-layered__layout--type {
+  z-index: 6;
+}
+.eldritch-layered__layout--ink [data-layer='type'],
+.eldritch-layered__layout--ink [data-layer='league-ring'],
+.eldritch-layered__layout--ink [data-layer='frame'] {
+  display: none !important;
+}
+.eldritch-layered__layout--type [data-layer='ink'] {
+  display: none !important;
+}
+
+.eldritch-layered__break {
+  z-index: 4;
+  will-change: transform;
+}
+
+.eldritch-layered__break--above {
+  z-index: 7;
+}
+
+.eldritch-layered__card.no-break .eldritch-layered__break {
+  display: none;
+}
+
+.eldritch-layered__card.mode-subject .eldritch-layered__bg,
+.eldritch-layered__card.mode-subject .eldritch-layered__frame,
+.eldritch-layered__card.mode-subject .eldritch-layered__layout,
+.eldritch-layered__card.mode-subject .eldritch-layered__break {
+  display: none;
+}
+
+.eldritch-layered__card.mode-subject .eldritch-layered__window {
+  background-color: #d3cdd8;
+  background-image:
+    linear-gradient(45deg, #b1aaba 25%, transparent 25%),
+    linear-gradient(-45deg, #b1aaba 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #b1aaba 75%),
+    linear-gradient(-45deg, transparent 75%, #b1aaba 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+.eldritch-layered__card.mode-background .eldritch-layered__subject,
+.eldritch-layered__card.mode-background .eldritch-layered__frame,
+.eldritch-layered__card.mode-background .eldritch-layered__layout,
+.eldritch-layered__card.mode-background .eldritch-layered__break {
+  display: none;
+}
+
+.eldritch-layered__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--st-muted, #a49fa9);
+}
+
+.eldritch-layered__controls label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eldritch-layered__controls select {
+  margin-left: 8px;
+  background: var(--st-input-bg, #201b2b);
+  color: var(--st-text, #eee8da);
+  border: 1px solid var(--st-border, #665b75);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eldritch-layered__subject,
+  .eldritch-layered__break {
+    will-change: auto;
+  }
+}

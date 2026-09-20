@@ -2,16 +2,21 @@ import React from 'react';
 import { getOverdrivePalette } from '../../utils/overdrivePalette';
 import { getOverdriveEffectVariant } from '../../utils/overdriveEffectPreference';
 import { resolveOverdriveVariantForQuality } from '../../settings/vfxQualityProfile';
+import { useEldritchFacePreference } from '../../hooks/useEldritchFacePreference';
 import { OverdriveEffectOverlay } from './OverdriveEffectOverlay';
 import { CardReworkP4 } from './CardReworkP4';
+import { EldritchCardFace, ELDRITCH_FRAME_W } from './EldritchCardFace';
 
 /**
- * Carta in partita / anteprima: layout ufficiale P4 (HUD fascia + cerchi POT/DAN).
+ * Carta in partita / anteprima: layout ufficiale P4 (HUD fascia + cerchi POT/DAN),
+ * oppure faccia Eldritch se scelta in galleria.
  * La prop `cardLayout` è ignorata (resta per compatibilità con chiamate esistenti).
  * Memoizzata: evita di ridisegnare la carta quando le props non cambiano
  * (es. re-render per-frame della sequenza clash).
  */
 export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
+  const { showEldritch } = useEldritchFacePreference(agent?.id);
+
   if (!agent) return null;
 
   const {
@@ -94,7 +99,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
       onMouseDown={handleMouseDown}
       data-drag={canDrag ? 'true' : undefined}
       data-hot={canHot ? 'true' : undefined}
-      className={`inline-block select-none ${selected ? 'rounded-[14px] ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''} ${isDragging ? 'opacity-40 scale-95 transition-transform' : ''} ${disabled || isUsed ? 'opacity-90' : ''}`}
+      className={`inline-block select-none ${selected && !showEldritch ? 'rounded-[14px] ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : selected && showEldritch ? 'satze-eldritch-face-chrome is-selected' : ''} ${isDragging ? 'opacity-40 scale-95 transition-transform' : ''} ${disabled || isUsed ? 'opacity-90' : ''}`}
       style={{
         cursor:
           disabled && !onHover
@@ -105,37 +110,41 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
       }}
     >
       <div
-        className={`relative overflow-hidden rounded-[14px] ${overdriveCardClass}`}
+        className={`relative ${showEldritch ? '' : 'overflow-hidden rounded-[14px]'} ${overdriveCardClass}`}
         style={overdriveCardStyle}
       >
         <div className="pointer-events-none">
-          <CardReworkP4
-            agent={displayAgent}
-            duelBasePower={agent.power}
-            duelBaseDamage={agent.damage}
-            showBonus={showBonus}
-            abilityBlocked={abilityBlocked}
-            bonusBlocked={bonusBlocked}
-            showOperators={showOperators}
-            highlightAbility={highlightAbility}
-            highlightBonus={highlightBonus}
-            copiedAbility={copiedAbility}
-            copiedBonus={copiedBonus}
-            copiedAbilityNotTriggered={copiedAbilityNotTriggered}
-            copiedBonusNotTriggered={copiedBonusNotTriggered}
-            effectiveAbility={effectiveAbility}
-            effectiveArmyBonus={effectiveArmyBonus}
-            abilityNotTriggered={abilityNotTriggered}
-            bonusNotTriggered={bonusNotTriggered}
-            bonusBaseInactive={bonusBaseInactive}
-            abilityCurrentValue={abilityCurrentValue}
-            suppressAnimations={suppressAnimations}
-            visualStepKind={visualStepKind}
-            visualStepIndex={visualStepIndex}
-            copyAbilityAnim={copyAbilityAnim}
-            copyBonusAnim={copyBonusAnim}
-            fieldMinFloorReduction={fieldMinFloorReduction}
-          />
+          {showEldritch ? (
+            <EldritchCardFace agent={displayAgent} width={ELDRITCH_FRAME_W} />
+          ) : (
+            <CardReworkP4
+              agent={displayAgent}
+              duelBasePower={agent.power}
+              duelBaseDamage={agent.damage}
+              showBonus={showBonus}
+              abilityBlocked={abilityBlocked}
+              bonusBlocked={bonusBlocked}
+              showOperators={showOperators}
+              highlightAbility={highlightAbility}
+              highlightBonus={highlightBonus}
+              copiedAbility={copiedAbility}
+              copiedBonus={copiedBonus}
+              copiedAbilityNotTriggered={copiedAbilityNotTriggered}
+              copiedBonusNotTriggered={copiedBonusNotTriggered}
+              effectiveAbility={effectiveAbility}
+              effectiveArmyBonus={effectiveArmyBonus}
+              abilityNotTriggered={abilityNotTriggered}
+              bonusNotTriggered={bonusNotTriggered}
+              bonusBaseInactive={bonusBaseInactive}
+              abilityCurrentValue={abilityCurrentValue}
+              suppressAnimations={suppressAnimations}
+              visualStepKind={visualStepKind}
+              visualStepIndex={visualStepIndex}
+              copyAbilityAnim={copyAbilityAnim}
+              copyBonusAnim={copyBonusAnim}
+              fieldMinFloorReduction={fieldMinFloorReduction}
+            />
+          )}
         </div>
         {overdrivePreview && <OverdriveEffectOverlay variant={overdriveVariant} />}
       </div>

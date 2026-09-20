@@ -1,0 +1,104 @@
+{
+  "id": 1004,
+  "name": "Vel-Khar, il sigillatore",
+  "league": 4,
+  "power": 5,
+  "damage": 2,
+  "icon": "block",
+  "ability": {
+    "title": "Turbo",
+    "text": "Blocca Potere"
+  },
+  "description": "Potere: Turbo: Blocca Potere",
+  "flavour": "Quando il varco si apre nei primi respiri del duello, la sua mano spezza la volontà prima ancora che diventi incantesimo.",
+  "style": "Eldritch",
+  "faction": "Khemet",
+  "accent": "#26c4e8",
+  "autoFaction": false,
+  "bonus": {
+    "title": "Overdrive",
+    "text": "Immune"
+  },
+  "layout": {
+    "name": {
+      "x": 82,
+      "y": 85,
+      "w": 705,
+      "h": 120,
+      "fontSize": 122
+    },
+    "subtitle": {
+      "x": 88,
+      "y": 212,
+      "w": 705,
+      "h": 100,
+      "fontSize": 43
+    },
+    "faction": {
+      "x": 705,
+      "y": 330,
+      "w": 220,
+      "h": 65,
+      "fontSize": 45
+    },
+    "abilityTitle": {
+      "x": 258,
+      "y": 1000,
+      "w": 400,
+      "h": 113
+    },
+    "abilityText": {
+      "x": 245,
+      "y": 1095,
+      "w": 338,
+      "h": 145
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "cardId": 1004
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "artworkFit": "cover"
+  },
+  "layers": {
+    "subject": "Vel-Khar-Soggetto.png",
+    "background": "Vel-Khar-Sfondo.png",
+    "frame": "Vel-Khar-Cornice.png",
+    "overlay": "Vel-Khar-Layout.svg",
+    "subjectScale": 1.025,
+    "subjectYPercent": 4,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "bordo superiore destro"
+    ],
+    "foregroundParts": [
+      "mano in primo piano",
+      "mantello sopra la testa"
+    ]
+  }
+}

@@ -92,6 +92,21 @@ export function getCardImageUrl(cardType, agentId = null) {
   return CARD_IMAGE_PATHS[cardType] || null;
 }
 
+/**
+ * Variante leggera per cascata menu / anteprime piccole.
+ * Path: card-images/agents/thumbs/{id}.webp (generata da `npm run thumbs`).
+ * Se manca il file, il componente fa fallback sull'arte full.
+ */
+export function getAgentThumbUrl(agentId) {
+  if (agentId == null) return null;
+  const full = AGENT_IMAGE_PATHS[String(agentId)];
+  if (!full || typeof full !== 'string') return null;
+  // Override speciali (es. Nascente stadio): thumbs solo per path /agents/{id}.webp
+  const m = full.match(/^(.*\/card-images\/agents\/)([^/]+\.webp)$/i);
+  if (!m) return null;
+  return `${m[1]}thumbs/${m[2]}`;
+}
+
 const preloadedImageUrls = new Set();
 
 /** Segna un URL già in cache (usato dal boot preload). */
@@ -110,6 +125,24 @@ export function preloadCardImagesForAgents(agents, resolveSprite) {
     const agent = agents[i];
     const spriteInfo = resolveSprite(agent);
     const url = getCardImageUrl(spriteInfo?.type, spriteInfo?.agentId);
+    if (!url || preloadedImageUrls.has(url)) continue;
+    preloadedImageUrls.add(url);
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+  }
+}
+
+/**
+ * Precarica thumb agenti (griglia galleria / cascata). Fallback al full se thumb assente.
+ */
+export function preloadAgentThumbImagesForAgents(agents, resolveSprite) {
+  if (!agents?.length || typeof resolveSprite !== 'function') return;
+  for (let i = 0; i < agents.length; i += 1) {
+    const agent = agents[i];
+    const spriteInfo = resolveSprite(agent);
+    const thumb = spriteInfo?.agentId != null ? getAgentThumbUrl(spriteInfo.agentId) : null;
+    const url = thumb || getCardImageUrl(spriteInfo?.type, spriteInfo?.agentId);
     if (!url || preloadedImageUrls.has(url)) continue;
     preloadedImageUrls.add(url);
     const img = new Image();

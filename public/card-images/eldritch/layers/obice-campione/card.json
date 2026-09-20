@@ -1,0 +1,84 @@
+{
+  "id": 430,
+  "name": "Obice Campione",
+  "league": 5,
+  "power": 4,
+  "damage": 6,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Calibri Pesanti",
+  "accent": "#a9a294",
+  "autoFaction": false,
+  "ability": {
+    "title": "Overdrive",
+    "text": "Attrizione +5 VA"
+  },
+  "bonus": {
+    "title": "Sempre",
+    "text": "−2 DAN nem. (min 2)"
+  },
+  "layout": {
+    "abilityText": {
+      "fontSize": 46,
+      "w": 440
+    },
+    "name": {
+      "x": 450,
+      "y": 78,
+      "w": 350,
+      "h": 205,
+      "fontSize": 82
+    },
+    "faction": {
+      "x": 622,
+      "y": 840,
+      "w": 330,
+      "h": 65,
+      "fontSize": 36
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "foregroundParts": [
+      "scarica energetica sopra la cornice e la macchia del titolo"
+    ],
+    "anatomy": "Obice industriale fisso, canna segmentata e affusto corazzato. Scarica laser bianca con bordo cremisi e riflessi localizzati sul metallo."
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

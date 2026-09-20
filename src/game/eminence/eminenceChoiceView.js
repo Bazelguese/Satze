@@ -439,10 +439,29 @@ export function abilityRailExpandsDown(schema, { isLastOption = false } = {}) {
   return Boolean(isLastOption && schemaSelectsFragments(schema));
 }
 
+/**
+ * Schema bersagli ancora in gioco per la UI (Preda / slot / Frammenti / Agenti).
+ *
+ * - Setup e bozza (`draftId`) espongono sempre lo schema dell'opzione in esame.
+ * - Con abilità già sigillata, lo schema resta solo finché i params AT_REVEAL
+ *   non sono pronti: dopo il lock dei params (o il reveal) non deve più
+ *   dirottare i click del tabellone / delle mani sul targeting Eminenza.
+ */
 function schemaOfChoice(view, draftId = null) {
   if (view?.self?.setup?.pending) return view.self.setup.paramsSchema || null;
-  const pick = draftId || view?.self?.selectedAbilityId;
-  return view?.self?.options?.find((entry) => entry.id === pick)?.paramsSchema || null;
+  if (draftId) {
+    return view?.self?.options?.find((entry) => entry.id === draftId)?.paramsSchema || null;
+  }
+  const pick = view?.self?.selectedAbilityId;
+  if (!pick || view.self.revealedAbilityId) return null;
+  const option = view?.self?.options?.find((entry) => entry.id === pick);
+  if (!option?.paramsSchema) return null;
+  if (option.choiceParamsTiming === CHOICE_PARAMS_TIMING.AT_REVEAL) {
+    if (selectionParamsReady(option.paramsSchema, view.self.selectedParams)) return null;
+    return option.paramsSchema;
+  }
+  // AT_SELECTION: i params si chiudono al sigillo; senza bozza non c'è targeting residuo.
+  return null;
 }
 
 export function legalPreyIdsForChoice(view, { draftId = null } = {}) {

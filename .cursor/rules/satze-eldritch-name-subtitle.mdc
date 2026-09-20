@@ -1,0 +1,19 @@
+---
+description: Eldritch card name — comma splits title / subtitle
+globs: src/components/cardFaceLab/**,public/card-images/eldritch/**
+alwaysApply: false
+---
+
+# Eldritch — nome e sottotitolo
+
+Se il nome agente contiene una **virgola**, la parte dopo è un **sottotitolo**.
+
+- Input: `Sorethai, il Primo Ancorante` (o `displayName` se il nome sorgente non ha virgola)
+- Titolo (display, maiuscolo): `SORETHAI`
+- Sottotitolo (body, casing originale): `il Primo Ancorante`
+
+Senza virgola: tutto titolo, nessun sottotitolo.
+
+Eccezione editoriale: se i dati gioco non hanno virgola, il kit Eldritch può fornire `displayName` (es. Glauson).
+
+Implementazione: `splitEldritchName(displayName || name)` in `alfaCardRenderer.js` → elementi layout `name` + `nameSubtitle`.

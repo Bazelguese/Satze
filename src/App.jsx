@@ -39,6 +39,12 @@ const EminenceArtLabPage = lazy(() =>
 const EminenceSystemLabPage = lazy(() =>
   import('./components/eminenceLab/EminenceSystemLabPage').then((m) => ({ default: m.EminenceSystemLabPage }))
 );
+const DuelLayoutLabPage = lazy(() =>
+  import('./components/duelLayoutLab/DuelLayoutLabPage').then((m) => ({ default: m.DuelLayoutLabPage }))
+);
+const CardFaceLabPage = lazy(() =>
+  import('./components/cardFaceLab/CardFaceLabPage').then((m) => ({ default: m.CardFaceLabPage }))
+);
 
 /** Boot denso: aspetta fino a 90s prima di procedere comunque sugli asset. */
 const PRELOAD_TIMEOUT_MS = 90000;
@@ -183,6 +189,8 @@ function AppContent() {
   const showArenaContesa = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('arenaContesa') === '1';
   const showEminenceArtLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceArtLab') === '1';
   const showEminenceSystemLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceSystemLab') === '1';
+  const showDuelLayoutLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelLayoutLab') === '1';
+  const showCardFaceLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardFaceLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -250,6 +258,18 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeDuelLayoutLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('duelLayoutLab');
+    window.location.href = url.toString();
+  };
+
+  const closeCardFaceLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('cardFaceLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -272,6 +292,10 @@ function AppContent() {
         <EminenceArtLabPage onClose={closeEminenceArtLab} />
       ) : showEminenceSystemLab ? (
         <EminenceSystemLabPage onClose={closeEminenceSystemLab} />
+      ) : showDuelLayoutLab ? (
+        <DuelLayoutLabPage onClose={closeDuelLayoutLab} />
+      ) : showCardFaceLab ? (
+        <CardFaceLabPage onClose={closeCardFaceLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

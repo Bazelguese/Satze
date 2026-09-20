@@ -461,6 +461,47 @@ test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', (
     ],
   });
   assert.equal(isAwaitingRevealParams(done), false);
+  assert.deepEqual(legalCardIdsForChoice(done), []);
+});
+
+test('tabellone: dopo params slot pronti i click non restano in modalità Maledizione', () => {
+  const base = createEminenceMatchState({
+    format: EMINENCE_FORMAT.REQUIRED,
+    playerEminenceId: 'khemet_maledizioni',
+    enemyEminenceId: 'patto_grande_semaforo',
+  });
+  base.player.presence = 4;
+  const opened = beginEminenceRound(base, { roundNumber: 1 });
+  const sealed = selectEminenceAbility(
+    selectEminenceAbility(opened, SIDES.PLAYER, 'khemet_maledizione_va').matchState,
+    SIDES.ENEMY,
+    'semaforo_giallo',
+  ).matchState;
+
+  const awaiting = buildEminenceChoiceView(sealed, SIDES.PLAYER, { slotCount: 5 });
+  assert.equal(isAwaitingRevealParams(awaiting), true);
+  assert.deepEqual(legalSlotIndicesForChoice(awaiting), [0, 1, 2, 3, 4]);
+  assert.equal(shouldRevealBoardForEminenceChoice(awaiting), true);
+
+  const withSlot = {
+    ...sealed,
+    player: { ...sealed.player, selectedParams: { slot: 2 } },
+  };
+  const ready = buildEminenceChoiceView(withSlot, SIDES.PLAYER, { slotCount: 5 });
+  assert.equal(isAwaitingRevealParams(ready), false);
+  assert.deepEqual(legalSlotIndicesForChoice(ready), []);
+  assert.equal(shouldRevealBoardForEminenceChoice(ready), false);
+
+  const revealed = {
+    ...withSlot,
+    player: { ...withSlot.player, revealedAbilityId: 'khemet_maledizione_va' },
+  };
+  const afterReveal = buildEminenceChoiceView(revealed, SIDES.PLAYER, { slotCount: 5 });
+  assert.deepEqual(legalSlotIndicesForChoice(afterReveal), []);
+  assert.deepEqual(
+    legalSlotIndicesForChoice(afterReveal, { draftId: 'khemet_maledizione_va' }),
+    [0, 1, 2, 3, 4],
+  );
 });
 
 test('tabellone: dopo il flush Campo-prima il Campo resta cliccabile', () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ARMY_COLORS, ARMY_GIFS, ARMY_BONUSES } from '../../data';
 import { getDeckArmies, getHandAccentColor } from '../../utils/deckManager';
 import { battleOutcomeKey } from '../../game/duel/duelHelpers';
@@ -34,6 +34,8 @@ export const Hand = React.memo(({
   armyGifUrl, // override opzionale: percorso GIF custom per questa mano
   isActive = false, // true = tocca a questo giocatore
   selectedCardRef = null, // ref da assegnare alla carta selezionata (per scroll FC)
+  /** true: l'Agente già schierato sul campo non resta visibile anche in mano */
+  hideSelected = false,
   handCardLayout = 'reworkP4',
   hideCards = false,
   highlightedAgentId = null,
@@ -74,6 +76,16 @@ export const Hand = React.memo(({
     setGifError(false);
   }, [army, primaryZoneArmy, zoneArmiesResolved.join('|')]);
   
+  // Agenti usciti dalla mano verso il campo nell'ultimo render (per l'animazione di ritorno)
+  const leftHandRef = useRef(new Set());
+  useEffect(() => {
+    if (!hideSelected) return;
+    const onFieldId = gamePhase === 'selectAgent' && selectedAgent && !usedCards.includes(selectedAgent.id)
+      ? selectedAgent.id
+      : null;
+    leftHandRef.current = new Set(onFieldId ? [onFieldId] : []);
+  });
+
   if ((!hand || hand.length === 0) && !showZoneShell) return null;
   const gifSrc = armyGifUrl ?? (primaryZoneArmy && ARMY_GIFS[primaryZoneArmy]);
   const showGif = gifSrc && !gifError;
@@ -95,6 +107,7 @@ export const Hand = React.memo(({
   
   const style = positionStyles[position];
   
+
   return (
     <>
       {/* GIF armata sotto il triangolo (z-index 1) */}
@@ -226,11 +239,16 @@ export const Hand = React.memo(({
               };
           
           const isSelected = selectedAgent?.id === agent.id;
+          const onField = hideSelected && isSelected && gamePhase === 'selectAgent' && !usedCards.includes(agent.id);
+          // l'Agente schierato svanisce dalla mano; se torna indietro, riappare
+          const slotFx = onField
+            ? ' hand-slot-leaving'
+            : hideSelected && leftHandRef.current.has(agent.id) ? ' hand-slot-return' : '';
           return (
             <div 
               key={agent.id}
               ref={isSelected && selectedCardRef ? selectedCardRef : undefined}
-              className="absolute"
+              className={`absolute${slotFx}`}
               data-hand-agent={agent.id}
               style={cardStyle}
             >

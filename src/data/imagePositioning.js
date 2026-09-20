@@ -294,9 +294,18 @@ export const IMAGE_POSITIONING = {
     1221: { objectPosition: 'center 125%' },
     1223: { objectPosition: 'center 59%' },
     1224: { objectPosition: 'center 62%' },
+    1227: { containerLeft: '-0.96%', objectPosition: 'center 112%', scale: 133 },
     1228: { containerLeft: '1.68%', objectPosition: 'center -11%', scale: 112 },
     1229: { objectPosition: 'center -39%' },
-    1227: { containerLeft: '-0.96%', objectPosition: 'center 112%', scale: 133 },
+    9101: { objectPosition: 'center 120%' },
+    9102: { objectPosition: 'center 29%', scale: 120 },
+    9104: { objectPosition: 'center 83%' },
+    9106: { objectPosition: 'center 23%' },
+    9107: { objectPosition: 'center 65%' },
+    9110: { objectPosition: 'center 140%' },
+    9111: { objectPosition: 'center 134%' },
+    9112: { objectPosition: 'center 128%' },
+    9113: { objectPosition: 'center 137%' },
   }
 
 };

@@ -1,9 +1,8 @@
-import { FIRST_ACT_VERSION, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, FIGLI, NASCENTE, validateFirstActData } from '../data/firstAct.js';
+import { FIRST_ACT_VERSION, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, FIGLI, NASCENTE, validateFirstActData, campaignField } from '../data/firstAct.js';
 import { ARMY_SETS } from '../../data/cards.js';
 import { CONCORDIA_ARMY } from '../data/concordia.js';
 import { TRIGGER_NAMES } from '../../data/triggers.js';
 import { drawFirstActFields } from '../logic/firstActFields.js';
-import { campaignField } from '../data/firstAct.js';
 const clone = x => JSON.parse(JSON.stringify(x));
 export const isFirstActRun = r => r?.model === 'first-act';
 export function shuffled(values, seed, salt) {
@@ -30,6 +29,10 @@ export function nascenteCard(run) {
   return { id: NASCENTE, name: 'Il Nascente', army: FIGLI, power, damage, league: 2 + Number(n.statTaken), ability, description: label, icon: 'sun', campaignOnly: true };
 }
 function effectLabel(a) {
+  if (a.effect === 'terraform') {
+    const field = campaignField(a.value);
+    return field?.name ? `Terraformare ${field.name}` : 'Terraformare';
+  }
   const labels = { power: 'POT', damage: 'DAN', assaultValue: 'VA', focusCoin: 'FC', enemyPower: 'POT nemica', enemyDamage: 'DAN nemici', enemyAssault: 'VA nemico' };
   if (labels[a.effect]) return `${a.value > 0 ? '+' : ''}${a.value} ${labels[a.effect]}${a.minPower != null ? ` (min ${a.minPower})` : a.minDamage != null ? ` (min ${a.minDamage})` : a.minAssault != null ? ` (min ${a.minAssault})` : ''}`;
   return ({ blockBonus: 'Blocca Bonus', directDamage: `${a.value} danni diretti`, heal: `Cura ${a.value}`, selfDamage: `−${a.value} PV a te`, powerAndDamage: '+1 POT, +1 DAN', campaignStats: `+${a.value?.power} POT, +${a.value?.damage} DAN` })[a.effect] || a.effect;

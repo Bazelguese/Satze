@@ -1,5 +1,7 @@
 /** Preferenze video / display (Electron-first). */
 
+import { applyFrameRateCap } from './frameRateCap';
+
 export const DISPLAY_SETTINGS_STORAGE_KEY = 'satze_display_settings';
 export const DISPLAY_SETTINGS_CHANGED_EVENT = 'satze-display-settings-changed';
 export const DISPLAY_SETTINGS_SCHEMA_VERSION = 1;
@@ -16,7 +18,8 @@ export const CURSOR_TRAIL_LENGTH_PRESETS = /** @type {const} */ ([5, 10, 16]);
 export const CURSOR_TRAIL_DURATION_PRESETS = /** @type {const} */ ([200, 400, 700]);
 /** Respiro layout duello 2.5D: off / soft (mov-1) / strong (mov-2). */
 export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', 'strong']);
-
+/** Cap FPS (0 = illimitato / VSync monitor). */
+export const FPS_CAP_PRESETS = /** @type {const} */ ([0, 30, 60, 120]);
 
 export const RESOLUTION_PRESETS = [
   { key: 'native', label: 'Nativa (monitor)' },
@@ -32,6 +35,7 @@ export const RESOLUTION_PRESETS = [
  *   displayMode: typeof DISPLAY_MODES[number],
  *   resolutionPreset: string,
  *   customResolution: { width: number, height: number } | null,
+ *   fpsCap: typeof FPS_CAP_PRESETS[number],
  *   vfxQuality: typeof VFX_QUALITY_LEVELS[number],
  *   uiScale: typeof UI_SCALE_PRESETS[number],
  *   reduceMotion: boolean,
@@ -48,6 +52,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   displayMode: 'windowed',
   resolutionPreset: 'native',
   customResolution: null,
+  fpsCap: 0,
   vfxQuality: 'high',
   uiScale: 100,
   reduceMotion: false,
@@ -97,6 +102,10 @@ function isResolutionPreset(v) {
   return typeof v === 'string' && RESOLUTION_PRESETS.some((p) => p.key === v);
 }
 
+function isFpsCap(v) {
+  return FPS_CAP_PRESETS.includes(/** @type {typeof FPS_CAP_PRESETS[number]} */ (Number(v)));
+}
+
 /**
  * @param {unknown} raw
  * @returns {DisplaySettings}
@@ -108,6 +117,9 @@ export function normalizeDisplaySettings(raw) {
 
   if (isDisplayMode(o.displayMode)) base.displayMode = o.displayMode;
   if (isResolutionPreset(o.resolutionPreset)) base.resolutionPreset = o.resolutionPreset;
+  if (isFpsCap(o.fpsCap)) {
+    base.fpsCap = /** @type {typeof FPS_CAP_PRESETS[number]} */ (Number(o.fpsCap));
+  }
   if (isVfxQuality(o.vfxQuality)) base.vfxQuality = o.vfxQuality;
   if (isUiScale(o.uiScale)) {
     base.uiScale = /** @type {typeof UI_SCALE_PRESETS[number]} */ (Number(o.uiScale));
@@ -201,6 +213,7 @@ export function applyDisplaySettingsToDom(settings = getDisplaySettings()) {
   root.style.setProperty('--satze-ui-scale', String(s.uiScale / 100));
   root.classList.toggle('satze-reduce-motion', s.reduceMotion);
   document.body?.classList.toggle('satze-reduce-motion', s.reduceMotion);
+  applyFrameRateCap(s.fpsCap);
 }
 
 /**

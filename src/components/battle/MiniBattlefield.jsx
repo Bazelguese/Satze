@@ -1,4 +1,5 @@
 import React from 'react';
+import { WaxSeal } from './WaxSeal.jsx';
 import { ARMY_COLORS } from '../../data';
 import { FIELD_STYLES } from '../../utils/constants';
 import { resolveFieldThumbUrl, resolvePublicAssetUrl } from '../../utils/preloadAssets';
@@ -93,7 +94,7 @@ export const MiniBattlefield = React.memo(({
             alt=""
             aria-hidden
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover object-[center_35%]"
             onError={(e) => {
               // Miniatura assente (campo aggiunto senza rigenerare): usa l'originale.
               const img = e.currentTarget;
@@ -134,7 +135,7 @@ export const MiniBattlefield = React.memo(({
         />
       )}
       {/* Contenuto */}
-      <div className="flex-1 min-w-0 relative z-10">
+      <div className={`flex-1 min-w-0 relative z-10${conquered ? ' pr-10' : ''}`}>
         <h3 
           className={`font-bold leading-tight truncate ${conquered ? 'text-white' : 'text-white'}`}
           style={{ 
@@ -143,7 +144,7 @@ export const MiniBattlefield = React.memo(({
             WebkitFontSmoothing: 'antialiased',
           }}
         >
-          {conquered ? '🏆 ' : ''}{field.name}
+          {field.name}
         </h3>
         <p 
           className={`leading-tight truncate mt-0.5 font-medium ${conquered ? 'text-white' : 'text-slate-200'}`}
@@ -156,6 +157,15 @@ export const MiniBattlefield = React.memo(({
           {conquered ? 'CONQUISTATO' : field.effect}
         </p>
       </div>
+      {/* calco in ceralacca nel colore dell'armata che ha conquistato il campo */}
+      {conquered && (
+        <WaxSeal
+          className="mini-bf-seal"
+          color={conquestAccent || '#8b1e2d'}
+          rune={String(field.id ?? field.name).split('').reduce((a, c) => a + c.charCodeAt(0), 0)}
+          seed={(String(field.id ?? '').length % 7) + 1}
+        />
+      )}
       {cursed && <FieldCurseOverlay accent={curseAccent} arriving={curseArriving} />}
     </div>
   );

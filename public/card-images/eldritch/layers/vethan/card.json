@@ -1,0 +1,94 @@
+{
+  "id": 115,
+  "name": "Vethan, Guerriero per un Giorno",
+  "league": 2,
+  "power": 3,
+  "damage": 1,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Pennellate secche, gouache sporca, inchiostro opaco e graffiato",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Figli dell'Orizzonte",
+  "accent": "#a288fb",
+  "autoFaction": false,
+  "ability": {
+    "title": "Conquista",
+    "text": "+2 FC"
+  },
+  "bonus": {
+    "title": "Sempre",
+    "text": "−5 VA nem.\n(min 6)"
+  },
+  "layout": {
+    "name": {
+      "x": 270,
+      "y": 65,
+      "w": 515,
+      "h": 132,
+      "fontSize": 128
+    },
+    "subtitle": {
+      "x": 275,
+      "y": 193,
+      "w": 505,
+      "h": 72,
+      "fontSize": 45
+    },
+    "faction": {
+      "x": 615,
+      "y": 800,
+      "w": 310,
+      "h": 65,
+      "fontSize": 38
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 0.96,
+    "subjectYPercent": 1,
+    "foregroundParts": [
+      "lama sopra la cornice sinistra",
+      "innesto della falce in primo piano"
+    ],
+    "materials": {
+      "robe": "Tessuto opaco compatto con pieghe larghe",
+      "blade": "Acciaio brunito, filo continuo argento e graffi direzionali",
+      "shaft": "Asta unica dritta; collare a due rivetti a sinistra, breve estremità dopo la mano lontana a destra",
+      "dissolution": "Scia semitrasparente viola e carbone dalla schiena e dall’orlo"
+    },
+    "anatomy": "Due braccia; mano destra ossuta e spettrale in primo piano sotto l’asta con palmo verso l’alto; polso e lato esterno in dissoluzione, mano sinistra lontana;  volto totalmente vuoto con due fessure di luce contratte dal dolore."
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "e8d71260db3aedab5e2555bd32c604f9b0520b19",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

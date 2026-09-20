@@ -8,6 +8,8 @@
 
 import React, { useState, useMemo } from "react";
 import { ARMY_SETS, ARMY_COLORS } from "../../data";
+import { CONCORDIA_ARMY, CONCORDIA_CARDS } from "../../campaign/data/concordia.js";
+import { firstActCard } from "../../campaign/data/firstAct.js";
 import { LEAGUE_TIER_COLORS as LEAGUE_COLORS } from "../../data/leagueColors";
 import { getCardSprite } from "../../utils";
 import { getCardImageUrl } from "../../data/images";
@@ -51,16 +53,28 @@ const getArmyConfig = (armyName) => ({
   color: ARMY_COLORS[armyName]?.accent || PALETTE.amber,
 });
 
-// Carte normalizzate come nel deck builder
-const ALL_CARDS = Object.entries(ARMY_SETS).flatMap(([army, cards]) =>
-  cards.map((c) => ({
+function normalizeCropCard(c, army) {
+  return {
     ...c,
-    army,
+    army: army || c.army,
     pot: c.power,
     dan: c.damage,
     powerDesc: c.description?.replace(/^Potere: /, "") || "",
     trigger: c.ability?.trigger ? (TRIGGER_NAMES[c.ability.trigger] || "Sempre") : "Sempre",
-  }))
+  };
+}
+
+// Carte normalizzate come nel deck builder + armate nemiche di campagna
+const PLAYABLE_CARDS = Object.entries(ARMY_SETS).flatMap(([army, cards]) =>
+  cards.map((c) => normalizeCropCard(c, army))
+);
+const ENEMY_CARDS = CONCORDIA_CARDS.map((c) => firstActCard(c.id))
+  .filter(Boolean)
+  .map((c) => normalizeCropCard(c));
+const ALL_CARDS = [...PLAYABLE_CARDS, ...ENEMY_CARDS];
+const PLAYABLE_ARMIES = [...new Set(PLAYABLE_CARDS.map((c) => c.army))];
+const ENEMY_ARMIES = [CONCORDIA_ARMY].filter((army) =>
+  ENEMY_CARDS.some((c) => c.army === army)
 );
 
 // Parse deck summary config: string "25%" -> { x: 50, y: 25, scale: 100 }; object -> { x, y, scale }
@@ -454,9 +468,18 @@ export function getImagePositioning(cardId, army) {
             <label style={{ fontSize: 12, color: PALETTE.textSecondary, marginRight: 8 }}>Armata:</label>
             <select value={armyFilter ?? ""} onChange={(e) => setArmyFilter(e.target.value || null)} style={{ padding: "6px 10px", background: PALETTE.deepVoid, color: "#fff", border: `1px solid ${PALETTE.slate}` }}>
               <option value="">Tutte</option>
-              {[...new Set(ALL_CARDS.map((c) => c.army))].map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
+              <optgroup label="Armate">
+                {PLAYABLE_ARMIES.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </optgroup>
+              {ENEMY_ARMIES.length > 0 && (
+                <optgroup label="Armate nemiche">
+                  {ENEMY_ARMIES.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
           {filteredCards.map((c) => {

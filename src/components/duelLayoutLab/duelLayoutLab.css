@@ -1,0 +1,33 @@
+/* ============================================================
+   Duel Layout Lab — slot Alternative Art / layout WIP
+   Attivo quando sul root satze-scene c'è la classe `.layout-alt`
+   (toggle nel lab: Alt art → layout-alt).
+
+   REGOLE
+   - Non inventare un layout parallelo: stessi marker imp-* / dep-*.
+   - Qui iteri skin CSS; quando stabile, promuovi in satze-duello-2_5d.css
+     (es. sty-d) e/o wire in Codice/satze.jsx.
+   ============================================================ */
+
+.satze-scene.layout-alt {
+  /* Hook: variabili o override di chrome per l'alternative art */
+  /* Esempio:
+  --acc: …;
+  */
+}
+
+.satze-scene.layout-alt .imp-preview,
+.satze-scene.layout-alt .imp-board,
+.satze-scene.layout-alt .imp-topbar,
+.satze-scene.layout-alt .imp-victory {
+  /* Override pannelli HUD — lascia vuoto finché non hai art direction */
+}
+
+.satze-scene.layout-alt .satze-battlefield-panel {
+  /* Override campo centrale */
+}
+
+.satze-scene.layout-alt .imp-hand-enemy,
+.satze-scene.layout-alt .imp-hand-player {
+  /* Override zone mani (solo skin, non riposizionare coordinate Hand) */
+}

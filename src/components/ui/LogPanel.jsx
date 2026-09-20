@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { RuneTitle } from './RuneTitle.jsx';
 import { PALETTE, HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
 import { formatBattleEvent } from '../../game/duel/formatBattleEvent.js';
@@ -233,7 +234,7 @@ export const LogPanel = React.memo(({
           textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000`,
         }}
       >
-        LOG BATTAGLIA
+        <RuneTitle text="Log battaglia" />
       </div>
       <div
         className="w-full my-1.5"

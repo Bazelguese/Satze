@@ -1,0 +1,102 @@
+{
+  "id": 221,
+  "name": "Glauson il Secondo Architetto",
+  "league": 2,
+  "power": 2,
+  "damage": 2,
+  "icon": "brick",
+  "ability": {
+    "title": "Rimonta",
+    "text": "+1 POT, +1 DAN"
+  },
+  "description": "Potere: Rimonta: +1 POT, +1 DAN",
+  "flavour": "Dopo la caduta della Spira, qualcuno doveva ridisegnare ciò che restava. Lui non ricostruisce muri — ricostruisce possibilità, pezzo dopo pezzo, finché il nemico non regge più.",
+  "displayName": "Glauson, il Secondo Architetto",
+  "style": "Eldritch",
+  "faction": "Kethran",
+  "accent": "#eebf3c",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Rimonta",
+    "text": "+2 POT"
+  },
+  "layout": {
+    "name": {
+      "x": 330,
+      "y": 100,
+      "w": 462,
+      "h": 110,
+      "fontSize": 122,
+      "scaleX": 0.9
+    },
+    "subtitle": {
+      "x": 337,
+      "y": 220,
+      "w": 462,
+      "h": 70,
+      "fontSize": 45,
+      "scaleX": 0.88
+    },
+    "faction": {
+      "x": 720,
+      "y": 300,
+      "w": 218,
+      "h": 60,
+      "fontSize": 42
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 221
+  },
+  "presentationNote": "Il nome sorgente non ha virgola; displayName separa editorialmente Glauson dal suo epiteto per questa carta.",
+  "layers": {
+    "subject": "Glauson-Soggetto.png",
+    "background": "Glauson-Sfondo.png",
+    "frame": "Glauson-Cornice.png",
+    "overlay": "Glauson-Layout.svg",
+    "subjectScale": 1.045,
+    "subjectYPercent": 9,
+    "backgroundScale": 1.07,
+    "overlapRequired": true,
+    "overlapTargets": [
+      "cornice sinistra",
+      "macchia del titolo"
+    ],
+    "foregroundParts": [
+      "martello",
+      "mano con scalpello"
+    ]
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}

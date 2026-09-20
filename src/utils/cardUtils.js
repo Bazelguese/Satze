@@ -4,6 +4,13 @@
 
 import { ALL_AGENTS, TRIGGER_NAMES } from '../data';
 import { AGENT_IMAGES } from '../data/images';
+import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
+
+/** Nomi Campi campagna usati da Terraformare (non sono in ALL_BATTLEFIELDS). */
+const CAMPAIGN_TERRAFORM_FIELD_NAMES = {
+  9200: 'Il primo varco',
+  9201: 'Torre del Richiamo',
+};
 
 /**
  * Conta le armate presenti in una mano
@@ -148,13 +155,31 @@ export const formatAbilityHelper = (ability, options = {}) => {
       effect = ability.stat === 'powerAndDamage' ? `Escalation ${ability.value} POT, ${ability.value} DAN` : `Escalation ${ability.value} ${escalationStat}`;
       if (currentValue !== undefined && currentValue !== null) effect += ` (+${currentValue})`;
       break;
-    case 'attrition': 
+    case 'attrition': {
+      const attritionStatLabel = ability.stat === 'power'
+        ? 'POT'
+        : ability.stat === 'damage'
+          ? 'DAN'
+          : ability.stat === 'directDamage'
+            ? 'Danni dir.'
+            : ability.stat === 'assaultValue'
+              ? 'VA'
+              : ability.stat?.toUpperCase() || 'STAT';
       effect = ability.stat === 'powerAndDamage'
         ? `Attrizione ${ability.value} POT, ${ability.value} DAN`
-        : `Attrizione ${ability.value} ${ability.stat === 'power' ? 'POT' : (ability.stat === 'damage' ? 'DAN' : ability.stat === 'directDamage' ? 'Danni dir.' : ability.stat?.toUpperCase() || 'STAT')}`;
+        : `Attrizione ${ability.value} ${attritionStatLabel}`;
       if (currentValue !== undefined && currentValue !== null) effect += ` (+${currentValue})`;
       break;
+    }
     case 'inversion': effect = "Inversione"; break;
+    case 'terraform': {
+      const id = abilityForFormat.value;
+      const name =
+        CAMPAIGN_TERRAFORM_FIELD_NAMES[id] ||
+        ALL_BATTLEFIELDS.find((f) => f.id === id)?.name;
+      effect = name ? `Terraformare ${name}` : 'Terraformare';
+      break;
+    }
     default: effect = "—";
   }
   return trigger + effect;

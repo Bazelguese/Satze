@@ -1,0 +1,81 @@
+.card-face-lab-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 40px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px 0 32px;
+}
+
+.card-face-lab-stage__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-face-lab-stage__label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--st-muted, #a49fa9);
+}
+
+/* Studio: metà della precedente (~1040 → ~520). */
+.card-face-lab-stage__studio {
+  flex: 1 1 360px;
+  min-width: min(360px, 100%);
+  max-width: min(520px, 100%);
+}
+
+.card-face-lab-stage__studio .eldritch-layered {
+  max-width: none;
+  width: 100%;
+  gap: 12px;
+}
+
+.card-face-lab-stage__studio .eldritch-layered__stage {
+  padding: 4px;
+}
+
+/* In game: stessa EldritchCardFace della partita (cornice 230). */
+.card-face-lab-stage__ingame {
+  flex: 0 0 230px;
+  width: 230px;
+  position: sticky;
+  top: 16px;
+  overflow: visible;
+}
+
+.card-face-lab-stage__ingame .satze-eldritch-slot {
+  /* footprint cornice; overflow visibile fuori pannello */
+}
+
+.card-face-lab-stage__ingame-meta {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--st-muted, #a49fa9);
+  line-height: 1.4;
+}
+
+.card-face-svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.card-face-lab-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .card-face-lab-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .card-face-lab-stage__ingame {
+    position: static;
+  }
+}

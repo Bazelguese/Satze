@@ -226,7 +226,8 @@ export function syncDuelVisualsForPhase(duelPhase, battleResult, apply) {
   const pFc = battleResult.playerFocusUsed || 0;
   const eFc = battleResult.enemyFocusUsed || 0;
 
-  if (duelPhase >= 2 && !isDuelPhaseActive(2, battleResult)) {
+  // Dopo la fase FC le monete restano piene (anche con salto 2→4 tipico campagna).
+  if (duelPhase > 2 || (duelPhase >= 2 && !isDuelPhaseActive(2, battleResult))) {
     apply.setFocusCoins?.(pFc, eFc);
     apply.setCardGlow?.();
   }

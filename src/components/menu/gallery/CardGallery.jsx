@@ -3,33 +3,58 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ARMY_COLORS } from '../../../data/armies.js';
 import { ALL_AGENTS } from '../../../data/cards.js';
+import { CONCORDIA_ARMY, CONCORDIA_CARDS } from '../../../campaign/data/concordia.js';
+import { firstActCard } from '../../../campaign/data/firstAct.js';
 import { getCardDisplayLabels } from '../../../data/cardArchetypes.js';
 import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { CardPointerTilt, CardPointerTiltStyles } from '../../cards/CardPointerTilt.jsx';
 import { CardTagsRow } from '../../cards/CardTagBadges.jsx';
-import { useGalleryCardPool } from '../../../hooks/useGalleryCardPool.js';
 import { preloadCardImagesForAgents } from '../../../data/images.js';
 import { getCardSprite } from '../../../utils/cardUtils.js';
 import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
+import { EldritchCardFace, ELDRITCH_FRAME_W, ELDRITCH_FRAME_H } from '../../cards/EldritchCardFace.jsx';
+import { useEldritchFacePreference } from '../../../hooks/useEldritchFacePreference.js';
 import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
 
 const DEFAULT_GALLERY_ARMY = "Figli dell'Orizzonte";
-const TILE_WIDTH = 210;
-const TILE_PAD_X = 28; // spazio laterale per tilt 3D senza clip
-const TILE_PAD_Y = 22;
-const GRID_COLUMNS = 6;
-const GRID_GAP_X = 20;
-const GRID_GAP_Y = 40;
-const GRID_COL_WIDTH = TILE_WIDTH + TILE_PAD_X * 2;
+/** Armate solo campagna / non selezionabili nel deckbuilder. */
+export const ENEMY_GALLERY_ARMIES = [CONCORDIA_ARMY];
+/** Stessa larghezza nativa di CardReworkP4 — evita soft-downscale CSS sulla griglia. */
+const TILE_WIDTH = 230;
 const CARD_NATIVE_W = 230;
 const CARD_NATIVE_H = 330;
+/** Padding griglia (solo respiro visivo — niente tilt sulle tile). */
+const TILE_PAD_X = 16;
+const TILE_PAD_Y = 12;
+const GRID_COLUMNS = 4;
+const GRID_GAP_X = 36;
+const GRID_GAP_Y = 40;
+const GRID_COL_WIDTH = TILE_WIDTH + TILE_PAD_X * 2;
 const LIGHTBOX_SCALE = 1.35;
 const LIGHTBOX_CARD_W = Math.round(CARD_NATIVE_W * LIGHTBOX_SCALE);
 const LIGHTBOX_CARD_H = Math.round(CARD_NATIVE_H * LIGHTBOX_SCALE);
-const SORTED_AGENTS = [...ALL_AGENTS].sort((a, b) => {
-  if (b.league !== a.league) return b.league - a.league;
-  return a.id - b.id;
-});
+/** Eldritch lightbox: stessa larghezza P4 lightbox; altezza = cornice. */
+const LIGHTBOX_ELD_W = LIGHTBOX_CARD_W;
+const LIGHTBOX_ELD_H = Math.round((LIGHTBOX_ELD_W * ELDRITCH_FRAME_H) / ELDRITCH_FRAME_W);
+/** Zona tilt solo in lightbox (dopo click): cursore fuori dalla carta. */
+const LIGHTBOX_HIT_PAD_X = 72;
+const LIGHTBOX_HIT_PAD_Y = 72;
+const GRID_BATCH = 10;
+
+const CONCORDIA_GALLERY_CARDS = CONCORDIA_CARDS.map((c) => firstActCard(c.id)).filter(Boolean);
+
+function sortAgents(agents) {
+  return [...agents].sort((a, b) => {
+    if (b.league !== a.league) return b.league - a.league;
+    return a.id - b.id;
+  });
+}
+
+const PLAYABLE_AGENTS = sortAgents(ALL_AGENTS);
+const ENEMY_AGENTS = sortAgents(CONCORDIA_GALLERY_CARDS);
+/** Pool completo galleria (giocabili + armate nemiche di campagna). */
+export const GALLERY_AGENTS = [...PLAYABLE_AGENTS, ...ENEMY_AGENTS];
+export const GALLERY_AGENT_COUNT = GALLERY_AGENTS.length;
 
 function armyList(agents) {
   const seen = [];
@@ -39,37 +64,82 @@ function armyList(agents) {
   return seen;
 }
 
+const PLAYABLE_ARMIES = armyList(PLAYABLE_AGENTS);
+const ENEMY_ARMIES = ENEMY_GALLERY_ARMIES.filter((army) =>
+  ENEMY_AGENTS.some((a) => a.army === army),
+);
+
+function ArmyFilterChips({ armies, filter, onSelect }) {
+  return armies.map((a) => (
+    <button
+      key={a}
+      type="button"
+      className={`cgl-chip ${filter === a ? 'on' : ''}`}
+      style={{ '--c': (ARMY_COLORS[a] || {}).accent || '#94a3b8' }}
+      onClick={() => onSelect(a)}
+    >
+      <span className="dot" /><span>{a}</span>
+    </button>
+  ));
+}
+
+function scheduleIdleWork(fn) {
+  if (typeof requestIdleCallback === 'function') {
+    return requestIdleCallback(fn, { timeout: 120 });
+  }
+  return requestAnimationFrame(() => setTimeout(fn, 0));
+}
+
+function cancelIdleWork(id) {
+  if (typeof cancelIdleCallback === 'function') {
+    cancelIdleCallback(id);
+  } else {
+    cancelAnimationFrame(id);
+  }
+}
+
 export default function CardGallery({
   onBack,
-  totalCards = ALL_AGENTS.length,
+  totalCards = GALLERY_AGENT_COUNT,
   galleryTab,
   onGalleryTabChange,
-  agentCount = ALL_AGENTS.length,
+  agentCount = GALLERY_AGENT_COUNT,
   fieldCount,
   eminenceCount,
 }) {
-  const ARMIES = useMemo(() => armyList(SORTED_AGENTS), []);
   const [filter, setFilter] = useState(DEFAULT_GALLERY_ARMY);
   const [active, setActive] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(GRID_BATCH);
   const heavyOk = useCosmicHeavyContentReady();
 
   const shown = useMemo(
-    () => SORTED_AGENTS.filter((a) => a.army === filter),
+    () => GALLERY_AGENTS.filter((a) => a.army === filter),
     [filter],
   );
-  const { mountedCount } = useGalleryCardPool(SORTED_AGENTS.length, {
-    batchSize: 14,
-    enabled: heavyOk,
-  });
-  const poolAgents = useMemo(
-    () => (heavyOk ? SORTED_AGENTS.slice(0, mountedCount) : []),
-    [heavyOk, mountedCount],
+
+  // Solo l'armata attiva in DOM — niente centinaia di carte hidden.
+  useEffect(() => {
+    setVisibleCount(GRID_BATCH);
+  }, [filter]);
+
+  useEffect(() => {
+    if (!heavyOk) return undefined;
+    if (visibleCount >= shown.length) return undefined;
+    const idleId = scheduleIdleWork(() => {
+      setVisibleCount((prev) => Math.min(shown.length, prev + GRID_BATCH));
+    });
+    return () => cancelIdleWork(idleId);
+  }, [heavyOk, visibleCount, shown.length]);
+
+  const gridAgents = useMemo(
+    () => (heavyOk ? shown.slice(0, visibleCount) : []),
+    [heavyOk, shown, visibleCount],
   );
 
   useEffect(() => {
-    if (!heavyOk || mountedCount <= 0) return;
-    preloadCardImagesForAgents(SORTED_AGENTS.slice(0, mountedCount), getCardSprite);
-  }, [heavyOk, mountedCount]);
+    if (!heavyOk || gridAgents.length <= 0) return;
+    preloadCardImagesForAgents(gridAgents, getCardSprite);
+  }, [heavyOk, gridAgents]);
   const headAccent = (ARMY_COLORS[filter] || {}).accent || '#f5f3eb';
 
   useEffect(() => {
@@ -117,29 +187,28 @@ export default function CardGallery({
         </div>
 
         <div className="cgl-filters">
-          {ARMIES.map((a) => (
-            <button
-              key={a}
-              type="button"
-              className={`cgl-chip ${filter === a ? 'on' : ''}`}
-              style={{ '--c': (ARMY_COLORS[a] || {}).accent || '#94a3b8' }}
-              onClick={() => setFilter(a)}
-            >
-              <span className="dot" /><span>{a}</span>
-            </button>
-          ))}
+          <div className="cgl-filter-group" role="group" aria-label="Armate">
+            <ArmyFilterChips armies={PLAYABLE_ARMIES} filter={filter} onSelect={setFilter} />
+          </div>
+          {ENEMY_ARMIES.length > 0 && (
+            <div className="cgl-filter-group cgl-filter-group--enemy" role="group" aria-label="Armate nemiche">
+              <div className="cgl-filter-label">Armate nemiche</div>
+              <div className="cgl-filter-row">
+                <ArmyFilterChips armies={ENEMY_ARMIES} filter={filter} onSelect={setFilter} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="cgl-grid">
-        {poolAgents.map((agent) => (
-          <CardTile
-            key={agent.id}
-            agent={agent}
-            accent={(ARMY_COLORS[agent.army] || {}).accent || '#94a3b8'}
-            hidden={agent.army !== filter}
-            onClick={() => setActive(agent)}
-          />
-        ))}
+          {gridAgents.map((agent) => (
+            <CardTile
+              key={agent.id}
+              agent={agent}
+              accent={(ARMY_COLORS[agent.army] || {}).accent || '#94a3b8'}
+              onClick={() => setActive(agent)}
+            />
+          ))}
         </div>
       </div>
 
@@ -152,20 +221,31 @@ export default function CardGallery({
   );
 }
 
-function CardTile({ agent, accent, hidden, onClick }) {
+function CardTile({ agent, accent, onClick }) {
+  const { showEldritch } = useEldritchFacePreference(agent.id);
   return (
     <button
       type="button"
-      className={`cgl-tile${hidden ? ' cgl-tile--hidden' : ''}`}
+      className="cgl-tile"
       style={{ '--accent': accent }}
       onClick={onClick}
       aria-label={agent.name}
-      aria-hidden={hidden || undefined}
-      tabIndex={hidden ? -1 : 0}
     >
-      <CardPointerTilt shineAccent={accent} maxTilt={12} disabled={hidden}>
-        <CardReworkP4Scaled agent={agent} width={TILE_WIDTH} catalogPreview suppressAnimations />
-      </CardPointerTilt>
+      {showEldritch ? (
+        <EldritchCardFace
+          agent={agent}
+          width={ELDRITCH_FRAME_W}
+          variant="layered"
+          motion={false}
+        />
+      ) : (
+        <CardReworkP4Scaled
+          agent={agent}
+          width={TILE_WIDTH}
+          showBonus
+          suppressAnimations
+        />
+      )}
     </button>
   );
 }
@@ -179,23 +259,80 @@ function Lightbox({ agent, onClose }) {
   const accent = (ARMY_COLORS[agent.army] || {}).accent || '#94a3b8';
   const powerBody = powerDescription(agent);
   const tags = getCardDisplayLabels(agent.id);
+  const { hasKit, mode: faceMode, showEldritch, setPreference } = useEldritchFacePreference(agent.id);
+  const cardW = showEldritch ? LIGHTBOX_ELD_W : LIGHTBOX_CARD_W;
+  const cardH = showEldritch ? LIGHTBOX_ELD_H : LIGHTBOX_CARD_H;
 
   return (
     <div className="cgl-lb" onClick={onClose}>
       <div className="cgl-lb-inner" style={{ '--accent': accent }} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="cgl-lb-close" onClick={onClose} aria-label="Chiudi">✕</button>
 
+        {hasKit && (
+          <div className="cgl-lb-face-switch" role="tablist" aria-label="Versione carta">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={faceMode === 'standard'}
+              className={`cgl-lb-face-btn ${faceMode === 'standard' ? 'on' : ''}`}
+              onClick={() => setPreference('standard')}
+            >
+              Standard
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={faceMode === 'eldritch'}
+              className={`cgl-lb-face-btn ${faceMode === 'eldritch' ? 'on' : ''}`}
+              onClick={() => setPreference('eldritch')}
+            >
+              Eldritch
+            </button>
+          </div>
+        )}
+        {hasKit && (
+          <p className="cgl-lb-face-hint">
+            {showEldritch
+              ? 'Versione Eldritch attiva in partita'
+              : 'Scegli Eldritch per usarla in partita'}
+          </p>
+        )}
+
         <div className="cgl-lb-card-wrap">
-          <CardPointerTilt
-            shineAccent={accent}
-            maxTilt={16}
-            className="cgl-lb-tilt"
-            style={{ width: LIGHTBOX_CARD_W, height: LIGHTBOX_CARD_H }}
-          >
-            <div className="cgl-lb-card-scale">
-              <CardReworkP4 agent={agent} showBonus />
+          <div
+            className="cgl-lb-card-shadow"
+            style={{
+              width: cardW,
+              height: cardH,
+              marginLeft: -Math.round(cardW / 2),
+              top: showEldritch ? 12 : undefined,
+            }}
+            aria-hidden="true"
+          />
+          {showEldritch ? (
+            <div className="cgl-lb-eldritch" style={{ width: cardW, height: cardH }}>
+              <EldritchCardFace
+                agent={agent}
+                width={cardW}
+                variant="layered"
+                motion
+                idleMotion={false}
+              />
             </div>
-          </CardPointerTilt>
+          ) : (
+            <CardPointerTilt
+              shineAccent={accent}
+              maxTilt={16}
+              className="cgl-lb-tilt"
+              style={{ width: LIGHTBOX_CARD_W, height: LIGHTBOX_CARD_H }}
+              hitPadX={LIGHTBOX_HIT_PAD_X}
+              hitPadY={LIGHTBOX_HIT_PAD_Y}
+            >
+              <div className="cgl-lb-card-scale">
+                <CardReworkP4 agent={agent} showBonus />
+              </div>
+            </CardPointerTilt>
+          )}
         </div>
 
         <div className="cgl-lb-details">
@@ -293,8 +430,26 @@ function CardGalleryStyles() {
 
       .cgl-filters {
         flex: none; z-index: 9;
-        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
         padding: 10px 60px 12px;
+      }
+      .cgl-filter-group {
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+        max-width: 1400px;
+      }
+      .cgl-filter-group--enemy {
+        flex-direction: column; align-items: center; gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(199, 173, 113, 0.28);
+        width: min(100%, 920px);
+      }
+      .cgl-filter-label {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase;
+        color: #c7ad71;
+      }
+      .cgl-filter-row {
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
       }
       .cgl-chip {
         display: inline-flex; align-items: center; gap: 8px;
@@ -323,19 +478,22 @@ function CardGalleryStyles() {
       .cgl-tile {
         background: none; border: none;
         padding: ${TILE_PAD_Y}px ${TILE_PAD_X}px;
-        cursor: pointer; display: flex; flex-direction: column; align-items: center;
+        width: ${GRID_COL_WIDTH}px;
+        min-height: ${CARD_NATIVE_H + TILE_PAD_Y * 2}px;
+        cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
         position: relative; z-index: 1;
-        perspective: 920px; perspective-origin: 50% 40%;
         overflow: visible;
-        transition: z-index 0s;
+        transition: transform .18s ease, filter .18s ease;
         -webkit-tap-highlight-color: transparent;
-      }
-      .cgl-tile--hidden {
-        display: none;
+        content-visibility: auto;
+        contain-intrinsic-size: auto ${CARD_NATIVE_H + TILE_PAD_Y * 2}px;
       }
       .cgl-tile:hover,
       .cgl-tile:focus-visible {
-        z-index: 5;
+        transform: translateY(-4px);
+        filter: drop-shadow(0 10px 18px rgba(0,0,0,0.45))
+                drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 28%, transparent));
+        z-index: 2;
       }
 
       .cgl-lb {
@@ -354,28 +512,94 @@ function CardGalleryStyles() {
         gap: 40px;
       }
       .cgl-lb-close {
-        position: absolute; top: 0; right: 0; z-index: 2;
+        position: absolute; top: 0; right: 0; z-index: 50;
         background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.3);
         color: #f5f3eb; font-family: 'Share Tech Mono', monospace; font-size: 14px;
         width: 40px; height: 40px; cursor: pointer; transition: all .2s;
+        pointer-events: auto;
       }
       .cgl-lb-close:hover { border-color: var(--accent); color: var(--accent); }
+      .cgl-lb-face-switch {
+        display: flex; justify-content: center; gap: 8px;
+        margin: 4px 0 8px; position: relative; z-index: 5;
+      }
+      .cgl-lb-face-btn {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        padding: 8px 14px; border-radius: 999px; cursor: pointer;
+        color: rgba(226,232,240,0.75);
+        background: rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.14);
+        transition: border-color .2s, color .2s, background .2s;
+      }
+      .cgl-lb-face-btn:hover { color: #f8fafc; border-color: rgba(255,255,255,0.28); }
+      .cgl-lb-face-btn.on {
+        color: #0b0b0c; font-weight: 700;
+        background: color-mix(in srgb, var(--accent) 88%, #f8fafc);
+        border-color: color-mix(in srgb, var(--accent) 70%, #fff);
+      }
+      .cgl-lb-face-hint {
+        margin: 0 0 4px;
+        text-align: center;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(226,232,240,0.55);
+        position: relative;
+        z-index: 2;
+      }
       .cgl-lb-card-wrap {
+        position: relative;
+        z-index: 0;
+        isolation: isolate;
         display: flex; justify-content: center;
-        padding-top: 12px;
+        padding: 12px 8px ${Math.max(12, Math.round(LIGHTBOX_HIT_PAD_Y * 0.25))}px;
         margin: 0;
         perspective: 1200px;
         perspective-origin: 50% 40%;
       }
-      .cgl-lb-tilt { cursor: grab; flex: none; }
+      .cgl-lb-card-shadow {
+        position: absolute;
+        top: ${12 + LIGHTBOX_HIT_PAD_Y}px;
+        left: 50%;
+        width: ${LIGHTBOX_CARD_W}px;
+        height: ${LIGHTBOX_CARD_H}px;
+        margin-left: -${Math.round(LIGHTBOX_CARD_W / 2)}px;
+        border-radius: 16px;
+        pointer-events: none;
+        box-shadow:
+          0 0 48px color-mix(in srgb, var(--accent) 38%, transparent),
+          0 22px 34px rgba(0,0,0,0.55);
+      }
+      .cgl-lb-tilt { cursor: grab; flex: none; position: relative; z-index: 1; }
       .cgl-lb-tilt[data-tilt="1"] { cursor: grabbing; }
       .cgl-lb-card-scale {
         position: absolute; top: 0; left: 0;
         width: ${CARD_NATIVE_W}px; height: ${CARD_NATIVE_H}px;
         transform: scale(${LIGHTBOX_SCALE});
         transform-origin: top left;
-        filter: drop-shadow(0 0 48px color-mix(in srgb, var(--accent) 38%, transparent))
-                drop-shadow(0 22px 34px rgba(0,0,0,0.55));
+      }
+      .cgl-lb-eldritch {
+        position: relative; z-index: 1;
+        flex: none;
+        overflow: visible;
+        cursor: grab;
+        /* Hit solo via .eldritch-layered__hit (cornice); niente capture sul canvas oversized. */
+        pointer-events: none;
+      }
+      .cgl-lb-eldritch .eldritch-layered__hit {
+        pointer-events: auto;
+      }
+      .cgl-lb-eldritch .eldritch-layered {
+        max-width: none; gap: 0; width: 100%; height: 100%;
+      }
+      .cgl-lb-eldritch .eldritch-layered__stage {
+        padding: 0; width: 100%; height: 100%;
+        perspective: 1200px;
+      }
+      .cgl-lb-eldritch .eldritch-layered__card {
+        filter: none;
       }
       .cgl-lb-details {
         max-width: 720px; width: 100%; margin: 0 auto;

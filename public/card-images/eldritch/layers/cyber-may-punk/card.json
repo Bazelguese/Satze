@@ -1,0 +1,69 @@
+{
+  "id": 910,
+  "name": "Cyber May Punk",
+  "league": 3,
+  "power": 4,
+  "damage": 1,
+  "icon": "sparkle",
+  "ability": {
+    "title": "Attrizione",
+    "text": "1 DAN"
+  },
+  "description": "Potere: Attrizione 1 DAN",
+  "flavour": "Porta il caos addosso come una bandiera. Quando tutti la danno per finita, il suo sorriso diventa una minaccia.",
+  "style": "Eldritch",
+  "faction": "Patto degli Indocili",
+  "accent": "#e867c3",
+  "autoFaction": true,
+  "bonus": {
+    "title": "Rinforzi",
+    "text": "-1 POT, -1 DAN nem.\n(min 2)"
+  },
+  "layout": {
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "name": {
+      "x": 84,
+      "y": 104
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "artY": 0,
+  "artScale": 1,
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "commit": "094b4f7cd128d0575b2f795a81d43563770529eb",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js",
+    "cardId": 910
+  },
+  "layers": {
+    "subject": "Cyber-May-Punk-Soggetto.png",
+    "background": "Cyber-May-Punk-Sfondo.png"
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "standardCard": {
+      "width": 230,
+      "height": 330
+    },
+    "artworkFit": "cover",
+    "source": "src/components/cards/CardReworkP4.jsx",
+    "sourceCommit": "d8fa1dd5e6c5a917443e6f8e68a1d4ec8e1b136f"
+  }
+}
