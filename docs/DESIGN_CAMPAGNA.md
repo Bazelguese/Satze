@@ -6,6 +6,8 @@ Il riferimento di design è il documento unificato 0.25, riportato sotto con le 
 
 > **Aggiornamento di design del 20 settembre 2026:** per categorie sociali L1 e promozioni Concordia prevale la sezione finale «Registro delle modifiche da realizzare — L1 e promozioni». È una specifica da implementare dopo autorizzazione esplicita, non una modifica già presente nel gioco.
 
+> **Apertura aggiornata:** la prima tappa è ora un evento narrativo con scelta fra Piane di Cael, Altopiano smeraldo e Strada. La sezione finale «Apertura narrativa e scelta del percorso» prevale sulle precedenti indicazioni dell'avvio comune in combattimento; si tratta di design da implementare.
+
 ## Stato dell’implementazione
 
 I nuovi slot avviano il primo atto 0.25. I salvataggi dei due modelli precedenti continuano ad aprire il proprio hub.
@@ -1899,3 +1901,50 @@ Le modifiche già presenti prima del prototipo annullato restano distinte da que
 #### Verifiche richieste quando sarà autorizzata l'implementazione
 
 Verificare conteggio personale e distinzione delle copie, soglie per Lega, limite dinamico del Nascente, accumulo bloccato, reset dopo promozione, scelta soltanto tra candidati validi e applicazione unica dopo salvataggio. Verificare rollback dell'intero tentativo fallito, fasi multiple, riserva e budget, rapporto con maturazione e trasformazione. Provare che gli L1 abbiano occasioni reali di vittoria e che la loro presenza nei premi non renda il percorso impraticabile. Valori e roster saranno valutati con playtest; questa registrazione non attesta un bilanciamento.
+
+
+### Apertura narrativa e scelta del percorso — decisioni del 20 settembre 2026
+
+Stato: design concordato, da implementare soltanto su richiesta esplicita. Questa sezione aggiorna l'apertura precedentemente descritta come primo combattimento comune.
+
+#### Contesto e domanda della campagna
+
+Cael è il rifugio dell'umanità, un'ultima fortezza. Il primo atto racconta l'arrivo del Nascente attraverso la parte più esterna del territorio fino ai piedi della città. Mappa e Campi devono riflettere i luoghi attraversati. La distinzione geografica dettagliata fra confine del territorio e mura cittadine resta da sviluppare, senza presumere che il Nascente inizi già davanti al punto di arrivo dell'atto.
+
+La domanda cardine è «Perché sei venuto a Cael?». Il motivo dell'arrivo non è fissato preventivamente come conquista, ricerca di accoglienza o altra intenzione. Le formulazioni proposte dall'assistente per ripeterla nei diversi atti restano esempi da valutare.
+
+#### Prima tappa: evento di apertura e tre percorsi
+
+La prima tappa è un evento. Cliccando sul nodo compare esattamente questo testo:
+
+> Non so cosa sia, non so quanto sia lontano, so che devo arrivare fino in fondo
+
+Seguono le tre scelte indicate dal giocatore:
+
+| Scelta | Descrizione del percorso | Categoria sociale associata nel design |
+| --- | --- | --- |
+| Piane di Cael | Praterie dorate | Contadini armati |
+| Altopiano smeraldo | Verdi colline | Frati soldati |
+| Strada | Sentiero battuto, strade di cael | Mutilati volenterosi |
+
+Conservare queste diciture; non sostituirle con i nomi provvisori «Le campagne», «I reduci» o «I conventi». L'indicazione della categoria sociale è un'associazione di design; la sua eventuale visualizzazione fra parentesi nell'interfaccia resta da decidere.
+
+La scelta del percorso precede il primo combattimento. È quindi superata la proposta dell'assistente di collocare obbligatoriamente un 1v1 comune prima della prima diramazione. Il formato iniziale 1v1 e la crescita successiva dei formati restano il riferimento; i roster e la collocazione esatta dei combattimenti nei nuovi rami non sono ancora definiti.
+
+#### Identità dei rami e progressione
+
+La tipologia di percorso influisce soprattutto sugli eventi, sulle situazioni e sulle conseguenze delle decisioni. Le associazioni Contadini/Frati/Mutilati non stabiliscono pool esclusivi, catture garantite o un esercito predeterminato. Resta valida l'acquisizione di agenti realmente presenti nel roster affrontato secondo le regole di ricompensa.
+
+Il giocatore richiede più eventi e sequenze di tappe distribuite su rami alternativi e mutuamente esclusivi. Mantenere uguale il numero di combattimenti necessari lungo i percorsi e preservare gli sblocchi funzionali. Il numero e la posizione degli eventi, i collegamenti e i punti di ricongiungimento devono ancora essere definiti. L'evento iniziale non introduce di per sé un combattimento aggiuntivo.
+
+I potenziamenti prodotti dalle scelte restano permanenti e visibili in Status Esercito. Non assegnare buff, consumi di carte, promozioni o premi impliciti alla sola scelta geografica. Le precedenti proposte di affidare agenti alle comunità o ricevere benefici specifici non sono ancora eventi approvati.
+
+#### Dialoghi durante i duelli
+
+Riutilizzare il sistema di dialoghi già esistente esclusivamente all'interno dei duelli, per brevi battute degli agenti pertinenti al contesto della campagna. L'estensione proposta dall'assistente a conversazioni nella mappa, nei menu o negli eventi è stata respinta dal giocatore.
+
+Il testo del nodo iniziale è testo narrativo dell'evento e non richiede di estendere il sistema di battute del duello. Gli eventi e le loro scelte restano separati. Condizioni, interlocutori, frequenza e testi delle battute nei combattimenti devono ancora essere scelti e verificati rispetto alle capacità del sistema esistente.
+
+#### Prossimo blocco da elaborare
+
+Definire il primo combattimento raggiungibile da ciascuna scelta, il Campo coerente con il luogo e il primo evento specifico del percorso. Non fissare automaticamente tre tutorial con roster distinti, Poteri delle L1 o effetti degli eventi. Prima dell'implementazione verificare anche l'impatto delle nuove tappe narrative sulla maturazione delle trasformazioni, che dipende dalle tappe completate.
