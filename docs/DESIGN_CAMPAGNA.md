@@ -1960,13 +1960,15 @@ Stato: ricompense dei tre percorsi definite dal giocatore; quantità, testi degl
 | --- | --- | --- |
 | Piane di Cael | Aumento permanente dei PV massimi. | Entità dell'aumento e rapporto con PV iniziali e correnti. |
 | Altopiano smeraldo | Aumento permanente degli FC massimi. | Entità dell'aumento e rapporto con FC iniziali, correnti e reset fra fasi. |
-| Strada | Possibilità di trasformare/promuovere una folla L1 in una carta L2. | Promozione Concordia oppure trasformazione in Figlio; eventuale deroga alla soglia di vittorie e alla maturazione; modalità di scelta. |
+| Strada | Offre entrambe le opzioni: promuovere una folla Concordia L1 a Concordia L2 oppure trasformarla direttamente in un Figlio dell'Orizzonte L2. | Eventuale deroga alla soglia di vittorie e alla maturazione; dettagli operativi della scelta. |
 
 I bonus ai massimi non sono una cura o un ripristino una tantum, né un potenziamento temporaneo. Saranno visibili in Status Esercito secondo la regola generale. Per la Strada il cambiamento della carta è permanente; non equivale di per sé a un bonus statistico globale.
 
 Questa scelta sostituisce le precedenti proposte dell'assistente di distribuire PV a entrambe le parti nelle Piane e nell'Altopiano e FC a entrambe le parti sulla Strada. Non assegnare automaticamente un beneficio al nemico: nessun costo, potenziamento Concordia o alternativa di rifiuto è stato definito per questi tre eventi. Rimane valido l'obiettivo generale di avere altri eventi che permettano di rafforzare il nemico.
 
-Se l'effetto della Strada è una promozione, resta il limite della Lega del Nascente. La normale trasformazione a pari Lega non permette L1 → Figlio L2: quest'ultima possibilità richiederebbe un'eccezione esplicita. Proposta da scegliere: evento di promozione immediata Concordia L1 → L2, anche senza la vittoria personale richiesta, con scelta fra metà del pool L2 secondo la procedura ordinaria. Non considerare questa deroga approvata.
+Chiarimento del giocatore: l'evento della Strada offre entrambe le possibilità, promozione e trasformazione. Non occorre scegliere una sola delle due come funzione dell'evento. La scelta proposta al giocatore è fra promuovere la copia L1 a Concordia L2 e trasformarla direttamente in un Figlio dell'Orizzonte L2; non è un'assegnazione gratuita di due carte.
+
+La trasformazione L1 → Figlio L2 è un'eccezione esplicita di questo evento alla parità di Lega, che resta valida per le trasformazioni ordinarie. La promozione conserva il limite della Lega del Nascente e la scelta fra metà del pool della Lega superiore; la trasformazione conserva l'esito casuale secondo il proprio pool. Non estendere automaticamente alla trasformazione la selezione fra metà pool. Restano da chiudere eventuali deroghe alle vittorie personali richieste e alla maturazione; nessun costo o buff nemico aggiuntivo è implicito.
 
 #### Mappa progressiva
 
@@ -1985,9 +1987,11 @@ flowchart TD
     S --> S1["Primo scontro 1v1"]
     P1 --> PE["Evento: aumenta PV massimi"]
     H1 --> HE["Evento: aumenta FC massimi"]
-    S1 --> SE["Evento: folla L1 → carta L2"]
+    S1 --> SE["Evento: promuovi o trasforma una folla"]
+    SE --> PR["Concordia L2"]
+    SE --> TR["Figlio dell’Orizzonte L2"]
 ```
 
-**Punto attuale della progettazione:** primi eventi dei tre rami. Quantità e regola speciale della Strada da chiudere; tappe successive e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
+**Punto attuale della progettazione:** primi eventi dei tre rami. Quantità dei PV/FC e requisiti operativi della Strada da chiudere; la disponibilità di entrambe le opzioni è confermata; tappe successive e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
 
 La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
