@@ -1994,19 +1994,81 @@ flowchart TD
     HE --> H2["Secondo scontro: L2 + L1"]
     PR --> S2["Secondo scontro: L2 + L1"]
     TR --> S2
+    P2 --> E["Evento comune: +2 Lega esercito"]
+    H2 --> E
+    S2 --> E
+    E --> F3["3v3: L1 + due L2 diversi"]
+    F3 --> FA["3.A: quattro L1 · catture"]
+    F3 --> FB["3.B: L1 + tre L2 · PV"]
+    F3 --> FC["3.C: quattro L2 · ricompense miste"]
 ```
 
-**Punto attuale della progettazione:** secondo combattimento, subito dopo l'evento di percorso, con roster nemico composto da un L2 e un L1. Quantità dei PV/FC e requisiti operativi della Strada da chiudere; la disponibilità di entrambe le opzioni è confermata; tappe dopo il secondo combattimento e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
+**Punto attuale della progettazione:** dopo i 2v2, evento comune +2 Lega esercito, poi 3v3 e tre scontri speciali 3.A/3.B/3.C. La mappa rappresenta questi ultimi come alternative di una nuova diramazione: è una lettura di lavoro della numerazione del giocatore; l'eventuale collegamento vincolato ai percorsi iniziali resta da confermare. Il contenuto dei tre scontri è descritto sotto. Quantità dei primi bonus PV/FC e requisiti della Strada restano aperti.
 
 La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
 
 
 #### Secondo combattimento e accessibilità della promozione L1
 
-Decisione del giocatore: subito dopo il primo evento di percorso si affronta un esercito nemico composto da una carta L2 e una carta L1. Applicare questa composizione ai tre percorsi senza fissare ancora le identità. Il formato è 2v2 e segue il criterio già concordato: più Campi conquistati, poi PV in caso di parità. La mappa mantiene per ora i rami separati; non viene anticipato un ricongiungimento non scelto.
+Decisione del giocatore: subito dopo il primo evento di percorso si affronta un esercito nemico composto da una carta L2 e una carta L1. Applicare questa composizione ai tre percorsi senza fissare ancora le identità. Il formato è 2v2 e segue il criterio già concordato: più Campi conquistati, poi PV in caso di parità. I tre percorsi raggiungono successivamente l'evento comune +2 Lega esercito descritto nel nuovo blocco.
 
 Criticità segnalata: gli L1 possono avere difficoltà a vincere anche contro propri pari, rendendo poco accessibile la promozione per vittorie personali. È un problema di design/bilanciamento da verificare, non un bug confermato. Restano i profili L1 1 POT / 1 DAN e la soglia di una vittoria; nessun nuovo Potere o successo garantito viene assegnato da questa annotazione.
 
 La valutazione deve considerare FC disponibili e spesi, Campi, iniziativa, spareggi, Poteri e Bonus effettivamente attivi, oltre al confronto delle statistiche base. Provare se una folla può ottenere una vittoria con una decisione sostenibile e comprensibile al giocatore, senza richiedere soltanto un errore nemico. Il criterio del 2v2 può permettere di vincere l'incontro attraverso il Nascente e i PV senza che la folla vinca il proprio duello: vittoria dell'incontro e progresso individuale devono restare distinti.
 
 Confrontare i tre percorsi: PV massimi, FC massimi e accesso anticipato a un L2 possono influire diversamente sulle occasioni di promozione. La Strada non deve diventare l'unico modo praticabile di sviluppare gli L1. Effetti di supporto, Campi favorevoli o eventuali Poteri delle categorie sociali restano opzioni da discutere; non introdurli automaticamente.
+
+
+#### Blocco successivo: Lega esercito, 3v3 e incontri speciali
+
+Stato: decisioni del giocatore sul contenuto dei nodi, con ambiguità operative esplicitate sotto. Design soltanto. Il giocatore interrompe per ora la discussione sugli aiuti alla promozione L1: non aggiungere i Poteri o le specializzazioni proposti dall'assistente. Restano i valori 1 POT / 1 DAN e la meccanica di promozione già concordata.
+
+1. **Evento comune ai tre percorsi: +2 Lega esercito.** Registrato come aumento di 2 del budget massimo di Lega dell'Esercito del Nascente, permanente e visibile in Status Esercito. Non è +2 Lega alle carte o al Nascente e non aumenta automaticamente il numero di posti. Il valore totale dipende dal budget disponibile a questo punto, ancora da allineare alla nuova apertura.
+2. **Scontro 3v3:** roster nemico composto da un L1 e due L2 di identità diverse. Identità precise e Campi non ancora scelti. Si mantiene la regola dei formati ridotti: più Campi, poi PV.
+3. **Tre configurazioni speciali con quattro agenti nemici**, indicate dal giocatore come 3.A, 3.B e 3.C. Non aggiungerle tutte come combattimenti obbligatori in serie. La mappa le presenta come alternative; l'associazione ai rami precedenti o una scelta libera dopo il 3v3 resta da confermare.
+
+| Configurazione | Roster nemico | Campi specificati | Regole ulteriori |
+| --- | --- | --- | --- |
+| 3.A | Quattro L1. | Tre copie di Gabbie degli schiavisti e una di Porre il quesito. | Iniziativa sempre del giocatore; nessun agente come premio finale dell'incontro. |
+| 3.B | Un L1 e tre L2. | Due copie di Tempio nella natura. | Il beneficio conquistato dal nemico vale per tutti gli scontri successivi. |
+| 3.C | Quattro L2. | Un Tempio della natura, una Gabbia degli schiavisti e un Magazzino dell'esattore locale. | Il beneficio del Magazzino conquistato dal nemico vale per tutti gli scontri successivi. |
+
+Per 3.B e 3.C non è stato richiesto che tutti gli L2 siano distinti; questo requisito è esplicito soltanto per i due L2 del 3v3. Non dedurre identità o numero di copie ulteriori.
+
+##### 3.A — catture e scelta di concludere
+
+Testi forniti:
+- **Gabbie degli schiavisti:** «Ottieni l'agente sconfitto, non puoi vincere questo turno».
+- **Porre il quesito:** «Quando conquisti questo campo vinci immediatamente la partita».
+
+Intento esplicito: il giocatore ha sempre l'iniziativa e decide quanto prolungare l'incontro per ottenere L1 da utilizzare successivamente, oppure se chiuderlo attraverso Porre il quesito. Le catture delle Gabbie sono la ricompensa di questo incontro; al termine non viene aggiunto alcun agente tramite la normale ricompensa del nodo. L'agente catturato è quello realmente sconfitto; i doppioni seguono la riserva senza compensazioni.
+
+Da precisare prima di implementare:
+- «Non puoi vincere questo turno» deve distinguere il singolo duello dall'intero incontro: interpretazione funzionale proposta, si può vincere il confronto e catturare l'agente, ma non chiudere la battaglia in quel turno. Definire se il divieto prevale anche sull'annientamento, sulla chiusura a mano esaurita e su altre condizioni terminali. Non cambiare implicitamente la precedenza dello zero PV.
+- Definire disponibilità e timing dei quattro Campi. Per poter scegliere fin dall'inizio se catturare oppure concludere, Porre il quesito e le Gabbie devono essere selezionabili in quel momento: proporre una rivelazione iniziale completa per questo incontro, senza modificare il timing generale del gioco.
+- Precisare cosa accade se il giocatore perde il confronto su Porre il quesito e il nemico conquista il Campo, nonché il trattamento delle catture in caso di successivo fallimento/retry.
+- Le carte catturate non entrano automaticamente nella mano corrente; eventuali impieghi immediati richiederebbero una nuova regola.
+
+##### 3.B — PV permanenti
+
+**Tempio nella natura:** «Conquista: +1 PV permanente». Se il nemico conquista il Campo, il beneficio vale per tutti gli scontri successivi, secondo l'indicazione esplicita del giocatore.
+
+Non ridurre questo effetto a una cura del solo incontro. Precisare se +1 PV permanente aumenta PV massimi, iniziali e/o correnti; non attribuire un ripristino aggiuntivo non scelto. Specificare cumulo fra conquiste dei due Templi, salvataggio dell'effetto dopo un tentativo perso e comportamento al retry, evitando assegnazioni duplicate per la stessa risoluzione.
+
+Il giocatore ha indicato due Campi con quattro agenti. Restano da chiarire la presenza di altri due Campi oppure una regola speciale di riutilizzo/disponibilità. Non riempire gli spazi automaticamente.
+
+##### 3.C — effetti misti
+
+Campi indicati: **Tempio della natura**, **Gabbia degli schiavisti**, **Magazzino dell'esattore locale**. Tempio e Gabbia sono trattati provvisoriamente come riferimenti agli stessi effetti di 3.B e 3.A; uniformare le varianti dei nomi soltanto dopo conferma.
+
+**Magazzino dell'esattore locale:** «+1 FC massimo». Se acquisito dal nemico, vale per tutti gli scontri successivi. L'attivazione su Conquista è l'interpretazione di lavoro per coerenza con il blocco, ma il trigger non è scritto esplicitamente nel testo fornito. Precisare rapporto con FC correnti, iniziali e reset fra fasi.
+
+Sono specificati tre Campi con quattro agenti. Resta aperto se aggiungere un quarto Campo oppure adottare una disponibilità speciale; non inventare un Campo mancante.
+
+L'assenza di ricompensa finale e l'iniziativa sempre del giocatore sono esplicite per 3.A: non estenderle automaticamente a 3.B o 3.C. La Gabbia presente in 3.C richiede di chiarire l'interazione con il normale premio finale.
+
+##### Permanenza dei benefici nemici e verifiche future
+
+«Tutti gli scontri» è il requisito esplicito per i benefici nemici di questi Campi: non restringerli automaticamente alla sola Concordia sulla base delle precedenti regole dei piani di fazione. Rappresentarli in Status Esercito come effetti nemici globali, con origine identificabile, salvo una futura precisazione del giocatore.
+
+Prima dell'implementazione chiarire disponibilità dei Campi, priorità degli esiti, persistenza e cumulo; verificare che ogni alternativa richieda lo stesso numero di combattimenti obbligatori. Il numero di agenti effettivamente disponibili al giocatore dipende anche da doppioni e ricompense precedenti: non garantire le nuove taglie tramite rinforzi nascosti.
