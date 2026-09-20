@@ -1260,6 +1260,8 @@ Questi sono criteri da verificare in futuro: non test già eseguiti.
 
 Stato: prima Domanda dopo I.4 confermata. Blocco 0.22: testi, risposte, crescita e cambi dell’Atto I proposti; valori e Lega da validare.
 
+Aggiornamento della nuova apertura: la prima crescita di Lega e la scelta del Potere avvengono insieme nel nodo di convergenza dopo 3.A (Piane), 3.B (Altopiano) o 3.C (Strada). Questa collocazione sostituisce i vecchi riferimenti a I.4/I.5 per E01. I pacchetti sotto restano candidati; non vengono approvati automaticamente dalla nuova collocazione.
+
 Gli eventi pongono domande filosofiche e militari. Le risposte indirizzano verso Poteri completi formati da trigger ed effetto compatibili. L’archetipo organizza le possibilità e descrive lo stile: non blocca permanentemente la campagna in una classe. L’anteprima deve permettere di capire cosa cambia prima della conferma.
 
 | Evento | Collocazione | Funzione | Stato |
@@ -2003,9 +2005,12 @@ flowchart TD
     F3P --> FA["3.A · Piane: quattro L1 · catture"]
     F3H --> FB["3.B · Altopiano: L1 + tre L2 · PV"]
     F3S --> FC["3.C · Strada: quattro L2 · effetti misti"]
+    FA --> N["Evento comune: prima crescita di Lega e scelta del Potere"]
+    FB --> N
+    FC --> N
 ```
 
-**Punto attuale della progettazione:** A, B e C identificano i tre percorsi iniziali: **A = Piane di Cael, B = Altopiano smeraldo, C = Strada**. Dopo il proprio 2v2, ciascun percorso comprende l'evento +2 Lega esercito e il 3v3, quindi prosegue nel rispettivo scontro 3.A, 3.B o 3.C. Evento e composizione del 3v3 sono comuni come contenuto; non costituiscono una confluenza né aprono una nuova scelta di percorso. La scelta iniziale determina lo scontro speciale successivo. Nessuna riconvergenza dopo questi scontri è stata ancora definita. Quantità dei primi bonus PV/FC e requisiti della Strada restano aperti.
+**Punto attuale della progettazione:** A, B e C identificano i tre percorsi iniziali: **A = Piane di Cael, B = Altopiano smeraldo, C = Strada**. Dopo il proprio 2v2, ciascun percorso comprende l'evento +2 Lega esercito e il 3v3, quindi prosegue nel rispettivo scontro 3.A, 3.B o 3.C. Evento e composizione del 3v3 sono comuni come contenuto; non costituiscono una confluenza né aprono una nuova scelta di percorso. La scelta iniziale determina lo scontro speciale successivo. Dopo questi tre scontri i percorsi convergono in un unico evento: primo potenziamento di Lega del Nascente e scelta del suo Potere. Quantità dei primi bonus PV/FC e requisiti della Strada restano aperti.
 
 La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
 
@@ -2074,3 +2079,17 @@ L'assenza di ricompensa finale e l'iniziativa sempre del giocatore sono esplicit
 «Tutti gli scontri» è il requisito esplicito per i benefici nemici di questi Campi: non restringerli automaticamente alla sola Concordia sulla base delle precedenti regole dei piani di fazione. Rappresentarli in Status Esercito come effetti nemici globali, con origine identificabile, salvo una futura precisazione del giocatore.
 
 Prima dell'implementazione chiarire disponibilità dei Campi, priorità degli esiti, persistenza e cumulo; verificare che ogni alternativa richieda lo stesso numero di combattimenti obbligatori. Il numero di agenti effettivamente disponibili al giocatore dipende anche da doppioni e ricompense precedenti: non garantire le nuove taglie tramite rinforzi nascosti.
+
+#### Convergenza dei percorsi: prima crescita del Nascente
+
+Decisione del giocatore: concluso lo scontro speciale del percorso scelto, i tre rami confluiscono nello stesso evento. Collegamenti: **3.A → crescita**, **3.B → crescita**, **3.C → crescita**. Non occorre affrontare gli scontri degli altri due percorsi e non si aggiunge un combattimento alla convergenza.
+
+L'evento comprende entrambi i benefici:
+- **Primo potenziamento di Lega del Nascente**, con passaggio alla Lega successiva.
+- **Scelta del Potere del Nascente da parte del giocatore**, nello stesso evento. La scelta non è casuale e non sostituisce l'aumento di Lega.
+
+Il percorso iniziale non assegna automaticamente un Potere né vincola la scelta a un archetipo. Le opzioni effettivamente offerte, i valori e le eventuali variazioni statistiche restano da definire; il catalogo E01 esistente è materiale candidato. Non attribuire bonus statistici aggiuntivi impliciti.
+
+Questa è la prima acquisizione del Potere nella nuova apertura e sostituisce la precedente collocazione di E01: non duplicare la ricompensa. Il limite alle promozioni Concordia segue la nuova Lega del Nascente; le copie con la soglia di vittorie già raggiunta possono quindi diventare promuovibili, senza una promozione automatica o una deroga alle altre condizioni.
+
+La mappa converge mantenendo i benefici e le conseguenze permanenti del percorso svolto. Restano il limite del Nascente nell'Atto I già concordato e la distinzione tra Lega personale e budget di Lega dell'esercito. Stato: design aggiornato, nessuna implementazione.
