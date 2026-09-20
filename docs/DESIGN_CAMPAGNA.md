@@ -4,6 +4,8 @@
 
 Il riferimento di design è il documento unificato 0.25, riportato sotto con le sue tabelle. Le diciture storiche «da implementare» appartengono alla specifica: lo stato del codice è riepilogato qui. Bilanciamento e rifinitura degli incontri restano rinviati.
 
+> **Aggiornamento di design del 20 settembre 2026:** per categorie sociali L1 e promozioni Concordia prevale la sezione finale «Registro delle modifiche da realizzare — L1 e promozioni». È una specifica da implementare dopo autorizzazione esplicita, non una modifica già presente nel gioco.
+
 ## Stato dell’implementazione
 
 I nuovi slot avviano il primo atto 0.25. I salvataggi dei due modelli precedenti continuano ad aprire il proprio hub.
@@ -1783,6 +1785,9 @@ Rivedere anche la seconda squadra: N01 insieme a R01 e R02 concentra tre L4 pur 
 
 #### Folle di Lega 1
 
+**Ipotesi storiche superate per nomi e statistiche:** i tre profili correnti sono Contadini armati, Mutilati volenterosi e Frati soldati, tutti L1, POT 1 / DAN 1. Vedere il registro del 20 settembre in fondo. I nomi e i profili numerici seguenti documentano soltanto la proposta precedente.
+
+
 Una carta rappresenta un gruppo: per esempio Folla delle Porte, Lavoratori del Vallo o Pellegrini della Campana. Nomi e profili sono candidati. Il gruppo occupa un normale posto nell’esercito e segue le normali regole delle carte; non introduce pedine, azioni multiple o moltiplicatori per il numero di persone raffigurate.
 
 Primi profili da confrontare: POT 2 / DAN 1 oppure POT 1 / DAN 2, inizialmente senza Potere individuale. L’appartenenza all’armata e l’eventuale Bonus restano espliciti e vanno inclusi nella valutazione. Le L1 rappresentano una base più debole delle truppe regolari L2, non una nuova famiglia di carte con effetti complessi a basso costo.
@@ -1802,7 +1807,7 @@ Metodo concordato: prima elaborare e confrontare le opzioni; registrare nel docu
 
 #### Blocco aperto A — ruolo delle collettività L1
 
-Il punto di partenza del giocatore è rappresentare folle di persone comuni attraverso carte di Lega 1. Restano da scegliere numero di carte, nomi, POT/DAN, presenza di Poteri e ruolo nella progressione. La carta può rappresentare una folla senza introdurre azioni o pedine aggiuntive; anche questa impostazione va presentata come proposta.
+Il punto di partenza del giocatore è rappresentare folle di persone comuni attraverso carte di Lega 1. Aggiornamento del 20 settembre: sono ora definiti tre profili iniziali con nomi e POT/DAN nel registro finale; restano da scegliere Poteri e ruolo preciso nella progressione. La carta può rappresentare una folla senza introdurre azioni o pedine aggiuntive; anche questa impostazione va presentata come proposta.
 
 | Opzione da confrontare | Utilità | Compromesso |
 | --- | --- | --- |
@@ -1821,3 +1826,76 @@ Il giocatore propone L4 e segnala lo svantaggio di PV e DAN. Valutare separatame
 Prima proposta da discutere: firma L4 sostenuta prevalentemente da L2–L3, PV base uguali, e vantaggi ulteriori derivanti dai piani permanenti lasciati crescere dal giocatore. Alternativa: mantenere una scorta più forte ma ridurre maggiormente la pressione della firma. La scelta determina se il boss si presenta soprattutto come individuo dominante oppure come comandante di una squadra. Nessuna composizione o statistica viene approvata automaticamente da questa analisi.
 
 Ordine di lavoro proposto: scegliere il ruolo delle L1 e quello del boss; poi confrontare poche schede complete con POT, DAN, Potere e Bonus effettivo; infine scegliere roster e ricompense verificando un esercito realisticamente ottenibile. Mantenere invariato il numero degli incontri obbligatori.
+
+
+### Registro delle modifiche da realizzare — L1 e promozioni (20 settembre 2026)
+
+Stato: consolidamento delle decisioni di design della conversazione. Questo aggiornamento riguarda soltanto il documento principale; non autorizza implementazione, modifiche ai salvataggi o pubblicazione di codice di gameplay. Le decisioni qui riportate prevalgono sulle precedenti ipotesi incompatibili sulle L1 e sul tetto delle promozioni. I dettagli ancora proposti sono separati sotto.
+
+#### Categorie sociali Concordia L1 — nomi e statistiche definiti
+
+Le carte rappresentano gruppi di persone comuni identificati per categoria sociale. «Folle» può descrivere l'idea, ma non è il nome da assegnare alle carte né una nuova tipologia meccanica.
+
+| Carta | Armata | Lega | POT base | DAN base | Potere individuale |
+| --- | --- | --- | --- | --- | --- |
+| Contadini armati | Concordia | 1 | 1 | 1 | Da definire. |
+| Mutilati volenterosi | Concordia | 1 | 1 | 1 | Da definire. |
+| Frati soldati | Concordia | 1 | 1 | 1 | Da definire. |
+
+Questi valori sostituiscono le precedenti proposte 2 POT / 1 DAN e 1 POT / 2 DAN. Non assegnare automaticamente ruoli resistente/aggressivo/supporto né Poteri in base al nome. La presenza o assenza di un Potere resta aperta. Una collettività è rappresentata da una singola carta e non introduce automaticamente pedine o azioni aggiuntive.
+
+I gruppi possono essere impiegati nell'esercito e fatti crescere tramite promozione. Il giocatore può anche conservarli, compresi i doppioni in riserva, per possibili eventi da progettare. Non è ancora definito alcun evento che consumi o premi una specifica categoria. Le ricompense continuano a provenire dagli agenti realmente presenti nell'esercito avversario, senza sostituzioni occulte o compensazioni per doppioni.
+
+#### Promozione Concordia — regole concordate
+
+La promozione è una meccanica peculiare della campagna e riguarda le singole copie degli agenti Concordia del giocatore.
+
+- Una vittoria personale è la vittoria del confronto 1 contro 1 tra l'agente e il suo avversario su un Campo, anche all'interno di incontri 2v2–5v5 e delle relative fasi. Non coincide con la vittoria dell'intera battaglia e non viene attribuita a tutti gli agenti dell'esercito. Pareggi e sconfitte personali non incrementano il contatore.
+- Occorrono tante vittorie personali quanto il valore della Lega corrente: L1 richiede 1 vittoria per L2; L2 richiede 2 vittorie per L3; L3 richiede 3 vittorie per L4.
+- Il progresso appartiene alla copia, non all'identità di catalogo. I doppioni hanno contatori separati.
+- La promozione è facoltativa e avviene fuori dal combattimento: il giocatore può mantenere la carta originale.
+- L'esito è una carta Concordia della Lega immediatamente superiore. Il giocatore sceglie tra una metà casuale del pool di quella Lega, non fra l'intero catalogo e non lungo una linea evolutiva fissa.
+- **La Lega risultante non può superare quella attuale del Nascente.** Questo limite sostituisce il tetto fisso per atto proposto dall'assistente.
+- Le vittorie possono essere accumulate fino alla soglia anche mentre la promozione è bloccata dalla Lega del Nascente. Il progresso raggiunto rimane disponibile quando il Nascente cresce.
+- Dopo la promozione il contatore riparte da zero; non trasferire vittorie eccedenti alla Lega successiva.
+- La promozione sostituisce la copia originale, senza aggiungere un agente gratuito o una compensazione.
+- Su sconfitta o pareggio della battaglia, il retry ripristina anche il progresso di promozione precedente all'intero incontro. Evitare di accumulare vittorie ripetendo intenzionalmente un tentativo fallito; negli incontri a fasi il ripristino comprende tutte le fasi del tentativo.
+
+| Lega attuale del Nascente | Promozioni consentite dal limite |
+| --- | --- |
+| L2 | L1 → L2. |
+| L3 | L1 → L2 e L2 → L3. |
+| L4 | L1 → L2, L2 → L3 e L3 → L4. |
+
+Il limite riguarda la promozione; non introduce automaticamente un divieto generale sulle carte ottenibili come ricompensa. La trasformazione in Figlio dell'Orizzonte rimane una procedura distinta, casuale e di pari Lega: promuovere prima un Concordia cambia quindi la Lega del futuro pool di trasformazione. La promozione non autorizza una trasformazione gratuita o anticipata.
+
+#### Dettagli operativi proposti, ancora da chiudere
+
+Le seguenti precisazioni sono state proposte dall'assistente; non vanno confuse con una selezione esplicita di ogni dettaglio da parte del giocatore:
+
+- Arrotondare per eccesso la metà del pool (5 candidati → 3 offerte; 3 → 2), estraendo identità senza ripetizioni.
+- Rendere l'offerta stabile per la stessa promozione attraverso chiusura, rinvio e ricaricamento. Precisare quando generarla, senza possibilità di rilancio gratuito.
+- Includere e segnalare nell'offerta gli agenti già posseduti; un doppione scelto segue la riserva, senza bonus extra. La presenza dei doppioni nel pool va confermata.
+- Mostrare anteprima completa della carta risultante e variazione del costo in Leghe; definire la gestione di un esercito che supererebbe il budget dopo la promozione.
+- Mostrare per ogni copia vittorie/soglia, promozione disponibile o bloccata e Lega del Nascente richiesta. La collocazione esatta nell'interfaccia resta da scegliere.
+- Definire conservazione degli eventuali potenziamenti permanenti della copia e maturazione per la trasformazione dopo una promozione.
+- Stabilire il trattamento del pulsante di vittoria di test: non dedurre vittorie personali per duelli mai giocati.
+
+La pool Figli L1 resta da progettare se si vuole permettere la trasformazione diretta delle categorie L1. L'accesso a L2 tramite promozione non risolve da solo questa dipendenza e non modifica implicitamente la regola di pari Lega.
+
+#### Registro complessivo del lavoro pendente
+
+| Blocco | Direzione acquisita o richiesta | Da definire prima dell'implementazione |
+| --- | --- | --- |
+| Categorie sociali L1 | I tre nomi e i valori 1 POT / 1 DAN sopra; crescita possibile tramite promozione. | Poteri, Bonus applicabile, distribuzione negli incontri, eventuali esiti Figli L1 e usi negli eventi. |
+| Promozioni | Vittorie personali pari alla Lega, scelta su metà pool, limite della Lega del Nascente, progresso per copia. | Dettagli operativi elencati sopra, interfaccia e compatibilità dei salvataggi. |
+| Progressione nemica | Più eventi con conseguenze scelte dal giocatore; potenziamenti permanenti. | Effetti e valori dei singoli eventi, destinatari e regole di cumulo. |
+| Status Esercito | Visibilità degli effetti permanenti nel riepilogo del Nascente. | Presentazione e collegamento univoco fra status mostrati e applicati. |
+| Percorsi | Rami articolati e mutuamente esclusivi, mantenendo il numero di combattimenti necessari. | Grafo, contenuti e conseguenze dei nodi; Fonderie/Rifornimenti/Archivi restano proposte. |
+| Boss Atto I | Richiesta di un boss L4 e revisione della difficoltà segnalata dal playtest. | POT/DAN, Potere, PV e squadre. 4/3 e 25 PV rimangono ipotesi, non profilo approvato. |
+
+Le modifiche già presenti prima del prototipo annullato restano distinte da questo elenco di lavoro futuro. Nessuno dei nuovi blocchi è dichiarato implementato o bilanciato.
+
+#### Verifiche richieste quando sarà autorizzata l'implementazione
+
+Verificare conteggio personale e distinzione delle copie, soglie per Lega, limite dinamico del Nascente, accumulo bloccato, reset dopo promozione, scelta soltanto tra candidati validi e applicazione unica dopo salvataggio. Verificare rollback dell'intero tentativo fallito, fasi multiple, riserva e budget, rapporto con maturazione e trasformazione. Provare che gli L1 abbiano occasioni reali di vittoria e che la loro presenza nei premi non renda il percorso impraticabile. Valori e roster saranno valutati con playtest; questa registrazione non attesta un bilanciamento.
