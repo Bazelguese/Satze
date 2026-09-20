@@ -1990,8 +1990,23 @@ flowchart TD
     S1 --> SE["Evento: promuovi o trasforma una folla"]
     SE --> PR["Concordia L2"]
     SE --> TR["Figlio dell’Orizzonte L2"]
+    PE --> P2["Secondo scontro: L2 + L1"]
+    HE --> H2["Secondo scontro: L2 + L1"]
+    PR --> S2["Secondo scontro: L2 + L1"]
+    TR --> S2
 ```
 
-**Punto attuale della progettazione:** primi eventi dei tre rami. Quantità dei PV/FC e requisiti operativi della Strada da chiudere; la disponibilità di entrambe le opzioni è confermata; tappe successive e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
+**Punto attuale della progettazione:** secondo combattimento, subito dopo l'evento di percorso, con roster nemico composto da un L2 e un L1. Quantità dei PV/FC e requisiti operativi della Strada da chiudere; la disponibilità di entrambe le opzioni è confermata; tappe dopo il secondo combattimento e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
 
 La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
+
+
+#### Secondo combattimento e accessibilità della promozione L1
+
+Decisione del giocatore: subito dopo il primo evento di percorso si affronta un esercito nemico composto da una carta L2 e una carta L1. Applicare questa composizione ai tre percorsi senza fissare ancora le identità. Il formato è 2v2 e segue il criterio già concordato: più Campi conquistati, poi PV in caso di parità. La mappa mantiene per ora i rami separati; non viene anticipato un ricongiungimento non scelto.
+
+Criticità segnalata: gli L1 possono avere difficoltà a vincere anche contro propri pari, rendendo poco accessibile la promozione per vittorie personali. È un problema di design/bilanciamento da verificare, non un bug confermato. Restano i profili L1 1 POT / 1 DAN e la soglia di una vittoria; nessun nuovo Potere o successo garantito viene assegnato da questa annotazione.
+
+La valutazione deve considerare FC disponibili e spesi, Campi, iniziativa, spareggi, Poteri e Bonus effettivamente attivi, oltre al confronto delle statistiche base. Provare se una folla può ottenere una vittoria con una decisione sostenibile e comprensibile al giocatore, senza richiedere soltanto un errore nemico. Il criterio del 2v2 può permettere di vincere l'incontro attraverso il Nascente e i PV senza che la folla vinca il proprio duello: vittoria dell'incontro e progresso individuale devono restare distinti.
+
+Confrontare i tre percorsi: PV massimi, FC massimi e accesso anticipato a un L2 possono influire diversamente sulle occasioni di promozione. La Strada non deve diventare l'unico modo praticabile di sviluppare gli L1. Effetti di supporto, Campi favorevoli o eventuali Poteri delle categorie sociali restano opzioni da discutere; non introdurli automaticamente.
