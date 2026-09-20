@@ -1994,23 +1994,25 @@ flowchart TD
     HE --> H2["Secondo scontro: L2 + L1"]
     PR --> S2["Secondo scontro: L2 + L1"]
     TR --> S2
-    P2 --> E["Evento comune: +2 Lega esercito"]
-    H2 --> E
-    S2 --> E
-    E --> F3["3v3: L1 + due L2 diversi"]
-    F3 --> FA["3.A: quattro L1 · catture"]
-    F3 --> FB["3.B: L1 + tre L2 · PV"]
-    F3 --> FC["3.C: quattro L2 · ricompense miste"]
+    P2 --> EP["Evento: +2 Lega esercito"]
+    H2 --> EH["Evento: +2 Lega esercito"]
+    S2 --> ES["Evento: +2 Lega esercito"]
+    EP --> F3P["3v3: L1 + due L2 diversi"]
+    EH --> F3H["3v3: L1 + due L2 diversi"]
+    ES --> F3S["3v3: L1 + due L2 diversi"]
+    F3P --> FA["3.A · Piane: quattro L1 · catture"]
+    F3H --> FB["3.B · Altopiano: L1 + tre L2 · PV"]
+    F3S --> FC["3.C · Strada: quattro L2 · effetti misti"]
 ```
 
-**Punto attuale della progettazione:** dopo i 2v2, evento comune +2 Lega esercito, poi 3v3 e tre scontri speciali 3.A/3.B/3.C. La mappa rappresenta questi ultimi come alternative di una nuova diramazione: è una lettura di lavoro della numerazione del giocatore; l'eventuale collegamento vincolato ai percorsi iniziali resta da confermare. Il contenuto dei tre scontri è descritto sotto. Quantità dei primi bonus PV/FC e requisiti della Strada restano aperti.
+**Punto attuale della progettazione:** A, B e C identificano i tre percorsi iniziali: **A = Piane di Cael, B = Altopiano smeraldo, C = Strada**. Dopo il proprio 2v2, ciascun percorso comprende l'evento +2 Lega esercito e il 3v3, quindi prosegue nel rispettivo scontro 3.A, 3.B o 3.C. Evento e composizione del 3v3 sono comuni come contenuto; non costituiscono una confluenza né aprono una nuova scelta di percorso. La scelta iniziale determina lo scontro speciale successivo. Nessuna riconvergenza dopo questi scontri è stata ancora definita. Quantità dei primi bonus PV/FC e requisiti della Strada restano aperti.
 
 La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
 
 
 #### Secondo combattimento e accessibilità della promozione L1
 
-Decisione del giocatore: subito dopo il primo evento di percorso si affronta un esercito nemico composto da una carta L2 e una carta L1. Applicare questa composizione ai tre percorsi senza fissare ancora le identità. Il formato è 2v2 e segue il criterio già concordato: più Campi conquistati, poi PV in caso di parità. I tre percorsi raggiungono successivamente l'evento comune +2 Lega esercito descritto nel nuovo blocco.
+Decisione del giocatore: subito dopo il primo evento di percorso si affronta un esercito nemico composto da una carta L2 e una carta L1. Applicare questa composizione ai tre percorsi senza fissare ancora le identità. Il formato è 2v2 e segue il criterio già concordato: più Campi conquistati, poi PV in caso di parità. Ciascun percorso raggiunge successivamente il proprio evento +2 Lega esercito descritto nel nuovo blocco: l'effetto è identico nei tre rami, che restano distinti.
 
 Criticità segnalata: gli L1 possono avere difficoltà a vincere anche contro propri pari, rendendo poco accessibile la promozione per vittorie personali. È un problema di design/bilanciamento da verificare, non un bug confermato. Restano i profili L1 1 POT / 1 DAN e la soglia di una vittoria; nessun nuovo Potere o successo garantito viene assegnato da questa annotazione.
 
@@ -2025,17 +2027,17 @@ Stato: decisioni del giocatore sul contenuto dei nodi, con ambiguità operative 
 
 1. **Evento comune ai tre percorsi: +2 Lega esercito.** Registrato come aumento di 2 del budget massimo di Lega dell'Esercito del Nascente, permanente e visibile in Status Esercito. Non è +2 Lega alle carte o al Nascente e non aumenta automaticamente il numero di posti. Il valore totale dipende dal budget disponibile a questo punto, ancora da allineare alla nuova apertura.
 2. **Scontro 3v3:** roster nemico composto da un L1 e due L2 di identità diverse. Identità precise e Campi non ancora scelti. Si mantiene la regola dei formati ridotti: più Campi, poi PV.
-3. **Tre configurazioni speciali con quattro agenti nemici**, indicate dal giocatore come 3.A, 3.B e 3.C. Non aggiungerle tutte come combattimenti obbligatori in serie. La mappa le presenta come alternative; l'associazione ai rami precedenti o una scelta libera dopo il 3v3 resta da confermare.
+3. **Tre configurazioni speciali con quattro agenti nemici**, indicate dal giocatore come 3.A, 3.B e 3.C. Sono le continuazioni dei percorsi scelti all'inizio: 3.A nelle Piane di Cael, 3.B nell'Altopiano smeraldo e 3.C sulla Strada. Non costituiscono un nuovo bivio dopo il 3v3 e non si affrontano tutte in serie.
 
 | Configurazione | Roster nemico | Campi specificati | Regole ulteriori |
 | --- | --- | --- | --- |
-| 3.A | Quattro L1. | Tre copie di Gabbie degli schiavisti e una di Porre il quesito. | Iniziativa sempre del giocatore; nessun agente come premio finale dell'incontro. |
-| 3.B | Un L1 e tre L2. | Due copie di Tempio nella natura. | Il beneficio conquistato dal nemico vale per tutti gli scontri successivi. |
-| 3.C | Quattro L2. | Un Tempio della natura, una Gabbia degli schiavisti e un Magazzino dell'esattore locale. | Il beneficio del Magazzino conquistato dal nemico vale per tutti gli scontri successivi. |
+| 3.A — Piane di Cael | Quattro L1. | Tre copie di Gabbie degli schiavisti e una di Porre il quesito. | Iniziativa sempre del giocatore; nessun agente come premio finale dell'incontro. |
+| 3.B — Altopiano smeraldo | Un L1 e tre L2. | Due copie di Tempio nella natura. | Il beneficio conquistato dal nemico vale per tutti gli scontri successivi. |
+| 3.C — Strada | Quattro L2. | Un Tempio della natura, una Gabbia degli schiavisti e un Magazzino dell'esattore locale. | Il beneficio del Magazzino conquistato dal nemico vale per tutti gli scontri successivi. |
 
 Per 3.B e 3.C non è stato richiesto che tutti gli L2 siano distinti; questo requisito è esplicito soltanto per i due L2 del 3v3. Non dedurre identità o numero di copie ulteriori.
 
-##### 3.A — catture e scelta di concludere
+##### 3.A — Piane di Cael: catture e scelta di concludere
 
 Testi forniti:
 - **Gabbie degli schiavisti:** «Ottieni l'agente sconfitto, non puoi vincere questo turno».
@@ -2049,7 +2051,7 @@ Da precisare prima di implementare:
 - Precisare cosa accade se il giocatore perde il confronto su Porre il quesito e il nemico conquista il Campo, nonché il trattamento delle catture in caso di successivo fallimento/retry.
 - Le carte catturate non entrano automaticamente nella mano corrente; eventuali impieghi immediati richiederebbero una nuova regola.
 
-##### 3.B — PV permanenti
+##### 3.B — Altopiano smeraldo: PV permanenti
 
 **Tempio nella natura:** «Conquista: +1 PV permanente». Se il nemico conquista il Campo, il beneficio vale per tutti gli scontri successivi, secondo l'indicazione esplicita del giocatore.
 
@@ -2057,7 +2059,7 @@ Non ridurre questo effetto a una cura del solo incontro. Precisare se +1 PV perm
 
 Il giocatore ha indicato due Campi con quattro agenti. Restano da chiarire la presenza di altri due Campi oppure una regola speciale di riutilizzo/disponibilità. Non riempire gli spazi automaticamente.
 
-##### 3.C — effetti misti
+##### 3.C — Strada: effetti misti
 
 Campi indicati: **Tempio della natura**, **Gabbia degli schiavisti**, **Magazzino dell'esattore locale**. Tempio e Gabbia sono trattati provvisoriamente come riferimenti agli stessi effetti di 3.B e 3.A; uniformare le varianti dei nomi soltanto dopo conferma.
 
