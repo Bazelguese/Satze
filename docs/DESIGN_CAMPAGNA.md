@@ -1947,4 +1947,47 @@ Il testo del nodo iniziale è testo narrativo dell'evento e non richiede di este
 
 #### Prossimo blocco da elaborare
 
-Definire il primo combattimento raggiungibile da ciascuna scelta, il Campo coerente con il luogo e il primo evento specifico del percorso. Non fissare automaticamente tre tutorial con roster distinti, Poteri delle L1 o effetti degli eventi. Prima dell'implementazione verificare anche l'impatto delle nuove tappe narrative sulla maturazione delle trasformazioni, che dipende dalle tappe completate.
+Le ricompense dei primi eventi sono ora indicate nella mappa di lavoro successiva. Restano da definire il primo combattimento raggiungibile da ciascuna scelta, il Campo coerente con il luogo e i dettagli degli eventi. Non fissare automaticamente tre tutorial con roster distinti o Poteri delle L1. Prima dell'implementazione verificare anche l'impatto delle nuove tappe narrative sulla maturazione delle trasformazioni, che dipende dalle tappe completate.
+
+
+### Mappa di lavoro dell'apertura e primi eventi di percorso
+
+Stato: ricompense dei tre percorsi definite dal giocatore; quantità, testi degli eventi e dettagli operativi restano da valutare. Solo aggiornamento di design, nessuna implementazione.
+
+#### Ricompense definite
+
+| Percorso | Effetto richiesto per il giocatore | Dettagli ancora aperti |
+| --- | --- | --- |
+| Piane di Cael | Aumento permanente dei PV massimi. | Entità dell'aumento e rapporto con PV iniziali e correnti. |
+| Altopiano smeraldo | Aumento permanente degli FC massimi. | Entità dell'aumento e rapporto con FC iniziali, correnti e reset fra fasi. |
+| Strada | Possibilità di trasformare/promuovere una folla L1 in una carta L2. | Promozione Concordia oppure trasformazione in Figlio; eventuale deroga alla soglia di vittorie e alla maturazione; modalità di scelta. |
+
+I bonus ai massimi non sono una cura o un ripristino una tantum, né un potenziamento temporaneo. Saranno visibili in Status Esercito secondo la regola generale. Per la Strada il cambiamento della carta è permanente; non equivale di per sé a un bonus statistico globale.
+
+Questa scelta sostituisce le precedenti proposte dell'assistente di distribuire PV a entrambe le parti nelle Piane e nell'Altopiano e FC a entrambe le parti sulla Strada. Non assegnare automaticamente un beneficio al nemico: nessun costo, potenziamento Concordia o alternativa di rifiuto è stato definito per questi tre eventi. Rimane valido l'obiettivo generale di avere altri eventi che permettano di rafforzare il nemico.
+
+Se l'effetto della Strada è una promozione, resta il limite della Lega del Nascente. La normale trasformazione a pari Lega non permette L1 → Figlio L2: quest'ultima possibilità richiederebbe un'eccezione esplicita. Proposta da scegliere: evento di promozione immediata Concordia L1 → L2, anche senza la vittoria personale richiesta, con scelta fra metà del pool L2 secondo la procedura ordinaria. Non considerare questa deroga approvata.
+
+#### Mappa progressiva
+
+Il giocatore richiede una mappa aggiornata man mano che definiamo le tappe e gli eventi. Mantenere questa rappresentazione nel documento principale, aggiornandola anziché creare documenti separati per ogni ramo.
+
+Legenda: il nodo iniziale e le destinazioni sono definiti; le ricompense dei primi eventi sono definite; la sequenza «primo scontro 1v1 → evento di percorso» è la collocazione di lavoro proposta e deve essere confermata. Nomi dei Campi, roster e battute precedentemente suggeriti restano proposte.
+
+```mermaid
+flowchart TD
+    A["Evento iniziale: scegli il percorso"]
+    A --> P["Piane di Cael"]
+    A --> H["Altopiano smeraldo"]
+    A --> S["Strada"]
+    P --> P1["Primo scontro 1v1"]
+    H --> H1["Primo scontro 1v1"]
+    S --> S1["Primo scontro 1v1"]
+    P1 --> PE["Evento: aumenta PV massimi"]
+    H1 --> HE["Evento: aumenta FC massimi"]
+    S1 --> SE["Evento: folla L1 → carta L2"]
+```
+
+**Punto attuale della progettazione:** primi eventi dei tre rami. Quantità e regola speciale della Strada da chiudere; tappe successive e ricongiungimento non ancora disegnati. L'assenza di collegamenti successivi nella mappa indica contenuto da definire, non un vicolo cieco previsto nel gioco.
+
+La scelta dei rami resta mutuamente esclusiva. Conservare la parità del numero di combattimenti necessari e gli sblocchi equivalenti, senza dedurre che ogni percorso debba avere carte esclusive. La ricompensa L2 della Strada richiede una copia L1 disponibile: evitare di aggiungere implicitamente una carta gratuita se manca il requisito.
