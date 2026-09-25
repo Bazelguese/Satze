@@ -2184,3 +2184,37 @@ Nella ricompensa mostrare l'unità realmente affrontata. Una breve descrizione p
 Risultato atteso del blocco: il giocatore ha conquistato un passaggio, ha ottenuto un primo seguito e comprende che l'impiego di un'unità debole può influenzarne lo sviluppo. Non garantire automaticamente una vittoria personale all'L1 né la sua promozione.
 
 La mappa di lavoro resta articolata nei tre accessi iniziali. I blocchi successivi e la precedente convergenza nella crescita del Nascente restano da rivalutare nel contesto; non ripristinare implicitamente tutta la vecchia sequenza come definitiva.
+
+### Secondo blocco — prima risposta organizzata e deviazioni
+
+Stato: struttura di lavoro approvata dall'autore con «Va bene» dopo la proposta successiva al blocco iniziale. Solo design. Le scene dettagliate, i testi e le composizioni non già definite restano da valutare.
+
+Dopo il 2v2 la progressione comprende l'evento +2 Lega esercito e il 3v3 contro un L1 e due L2 diversi. La crescita della resistenza viene contestualizzata come primo intervento organizzato: un piccolo reparto, affiancato da persone della zona, cerca di fermare il Nascente. Le notizie della sua avanzata e della presenza di persone del luogo al seguito motivano la reazione. Non introdurre per questo un contatore automatico di allarme o buff nemici non scelti.
+
+L'evento +2 Lega amplia il budget dell'esercito già previsto. Il suo significato narrativo preciso resta da definire; la pausa nell'avanzata non è una spiegazione definitiva della Lega. Non aumenta la Lega del Nascente o delle singole carte.
+
+Nel 3v3 si può introdurre una prima reazione nemica alla presenza di Concordia al seguito del Nascente, attraverso il dialogo durante il duello. La battuta «Perché combatti dalla sua parte?» resta un esempio candidato. Deve dipendere dalla presenza effettiva di un Concordia: non presupporre una carta che il giocatore ha trasformato o non schierato.
+
+Dopo il 3v3, all'interno del percorso iniziale scelto, il giocatore può:
+- **Affrontare la difesa sul percorso** per continuare ad avanzare.
+- **Deviare verso un luogo d'interesse** per ottenere qualcosa, lasciando aperta la possibilità reale di non attaccarlo.
+
+Le due alternative sono mutuamente esclusive e richiedono lo stesso numero di combattimenti. Non aggiungere la deviazione come scontro obbligatorio in più e non obbligare poi ad affrontare anche la difesa evitata. Il collegamento geografico fra le alternative e la loro uscita comune deve essere reso comprensibile.
+
+I luoghi speciali riprendono il materiale precedente: 3.A nelle Piane, 3.B sull'Altopiano, 3.C sulla Strada. Non diventano una nuova scelta libera fra i tre percorsi iniziali. Il giocatore sceglie se interessarsi al luogo del proprio percorso; le regole specifiche di Gabbie, Templi e Magazzino restano da allineare ai punti operativi già aperti. La scelta di lasciare intatto un luogo non assegna automaticamente bonus al nemico.
+
+#### Mappa di lavoro aggiornata del secondo blocco
+
+Questo schema si applica al ramo iniziale già scelto; non rappresenta una confluenza anticipata fra Piane, Altopiano e Strada.
+
+```mermaid
+flowchart TD
+    D["2v2 completato"] --> E["Evento: +2 Lega esercito"]
+    E --> T["3v3: un L1 e due L2 diversi"]
+    T --> P["Difesa sul percorso"]
+    T --> L["Luogo speciale del proprio percorso"]
+    P --> U["Prosecuzione comune"]
+    L --> U
+```
+
+La prosecuzione comune indica l'uscita equivalente delle due alternative locali. Posizione geografica, convergenza fra tutti e tre i percorsi iniziali e collocazione della crescita del Nascente restano da definire. Non interpretare questo schema come approvazione automatica dell'evento di crescita precedentemente sospeso.
