@@ -2096,7 +2096,7 @@ La mappa converge mantenendo i benefici e le conseguenze permanenti del percorso
 
 ## Contesto narrativo dell'Atto I — risposte dell'autore, 25 settembre 2026
 
-Fonte: risposte dell'autore al questionario di contesto, allegato «Pasted text.txt». Le indicazioni seguenti prevalgono sulle precedenti interpretazioni narrative incompatibili. Solo documentazione: nessuna implementazione di gameplay.
+Fonte: risposte dell'autore al questionario di contesto, allegato «Pasted text.txt», e successive rettifiche del 25 settembre 2026. Le indicazioni seguenti prevalgono sulle precedenti interpretazioni narrative incompatibili. Solo documentazione: nessuna implementazione di gameplay.
 
 ### Stato della progettazione
 
@@ -2111,7 +2111,7 @@ L'autore richiede di costruire prima un contesto coerente e poi tradurlo in mecc
 - Frati, abbazie e conventi offrono ristoro ad avventurieri e soldati di ritorno o sperduti. Sulla Strada passano militari e mercanti; nelle Piane vivono contadini e allevatori e si trovano attività produttive, per esempio distillerie.
 - Questa società è forte e sopravvive da millenni. Premia la forza, ma assegna ai forti la responsabilità dei deboli; interpreta la propria severità come condizione di giustizia e forza. Questa convinzione va rappresentata come parte della sua cultura, non come un giudizio morale imposto al giocatore.
 - Non è definita una specifica crisi interna precedente. La minaccia che destabilizza il sistema solare è l'arrivo della Nebula: gli oracoli ne hanno avvertito il presagio e, già a distanza, parte della fauna viene alterata in forme abominevoli. L'influenza iniziale è lenta, non ancora un disastro evidente e generalizzato.
-- I tre percorsi sono luoghi con funzioni e popolazioni concrete; non richiedono tre morali, filosofie o identità simboliche obbligatorie. Rapporti economici e prestazioni dovute alla città non sono ancora dettagliati.
+- Piane, Altopiano e Strada costituiscono un semplice bivio contestualizzato. Non sono i pilastri narrativi dell'atto e non richiedono tre temi, filosofie o archi distinti. La costruzione del contesto deve procedere oltre questa scelta locale.
 
 ### Il Nascente e chi lo guida
 
@@ -2126,9 +2126,9 @@ L'autore richiede di costruire prima un contesto coerente e poi tradurlo in mecc
 
 - La Domanda è un dubbio esistenziale individuale che provoca un panico continuo e crescente; corrode ciò che la mente ritiene reale fino al collasso della logica razionale.
 - Il contenuto cambia da persona a persona. Non ridurla a un'unica frase universale recitata da tutti.
-- È portata dalla Nebula; chi la trasmette è composto in larga parte dal suo materiale. Non attribuire a un semplice contatto o a una sconfitta un trigger preciso non ancora scelto.
+- È portata dalla Nebula; chi la trasmette è composto in larga parte dal suo materiale. Per l'ottenimento di unità in campagna è ora esplicito che l'unità casuale acquisita a fine scontro è un sopravvissuto colpito dalla Domanda. Non dedurne che ogni partecipante o ogni persona che vede il Nascente venga necessariamente infettata.
 - La Domanda piega alla Nebula ciò che può pensare.
-- L'autore descrive la trasformazione come immediata, con un tempo soggettivo infinito: la persona non si accorge ancora che il corpo è già mutato e si è unito alla Nebula. Descrive anche un intervallo di ore dal radicamento del dubbio alla trasformazione completa. Il rapporto tra queste due descrizioni resta da chiarire.
+- Sequenza chiarita dall'autore: una giornata di attacchi di panico sempre crescenti precede la mutazione. La mutazione corporea è istantanea nel tempo esterno e vissuta come infinita dalla vittima. Non tradurre automaticamente la giornata narrativa in un timer di gioco o nel numero di tappe.
 - Una volta trasformata, la persona condivide la disperazione e le domande degli altri; finché cerca risposta obbedisce alla Nebula.
 - Reazioni e tentativi di resistenza differiscono, ma senza l'aiuto di un Figlio dell'Orizzonte resistere è tendenzialmente impossibile.
 - La trasformazione è forzata, dolorosa e irreversibile. L'agente conserva parte del proprio io in misura variabile, amalgamata al resto della Nebula e condizionata dalla Domanda.
@@ -2137,11 +2137,12 @@ L'autore richiede di costruire prima un contesto coerente e poi tradurlo in mecc
 ### Sconfitta e servizio nell'esercito
 
 - Gli avversari combattono perché riconoscono nel Nascente una minaccia proveniente dallo spazio, coerente con i presagi degli oracoli.
-- Il Nascente può attenuare la Domanda di chi sconfigge, come se se ne facesse carico. L'assenza del tormento è illusoria: il dubbio è depotenziato abbastanza da non distruggere il raziocinio, ma piega l'agente al suo seguito.
-- Il rapporto è assimilabile a prigionia e controllo mentale. Non descrivere il reclutamento genericamente come adesione volontaria, gratitudine libera o conversione ideologica.
-- Il significato soggettivo del servizio per un Concordia non trasformato resta aperto: quanto capisce, cosa ricorda, cosa prova e quali intenzioni può conservare.
-- Mantenere la forma Concordia non equivale automaticamente a liberare la persona. Non attribuire però un preciso grado di autonomia finché non viene definito.
-- Resta da conciliare la catalessi delle persone comuni con le unità collettive L1 già proposte; non assegnare loro automaticamente immunità, protezioni o volontà eccezionale.
+- Regola espressa dall'autore: a ogni fine scontro il Nascente ottiene un'unità casuale. Narrativamente quell'unità è un sopravvissuto vittima della Domanda, non un agente estraneo sostituito dal pool. Questa rettifica definisce la condizione dell'unità ottenuta; il dettaglio di eventuali eccezioni dei nodi e dei tentativi falliti va allineato prima dell'implementazione, senza introdurre qui modifiche al codice.
+- Rimane la capacità descritta del Nascente di attenuare il tormento della Domanda. Viene invece rettificata l'interpretazione dei Concordia al seguito come soggetti a controllo mentale diretto.
+- I Concordia non pensano di essere controllati e, secondo la precisazione dell'autore, non lo sono in quel senso. La Domanda mette in crisi le loro convinzioni personali. Esempio dell'autore: un prete dalla fede cieca può iniziare a dubitare di quella fede.
+- Il dubbio non comporta automaticamente conversione alla fede opposta, perdita dell'identità, odio verso Cael o obbedienza da marionetta. Non fissare una stessa risposta psicologica per tutti. La motivazione concreta del singolo nel seguire il Nascente può essere sviluppata in seguito.
+- Distinguere la condizione del Concordia colpito dalla Domanda da quella del Figlio già trasformato e amalgamato alla Nebula.
+- Le unità L1 rappresentano folle, non singoli comuni individui. La volontà comune che le guida basta per resistere alla forma iniziale del Nascente. Non trasformare questa spiegazione in immunità generale alla Domanda o in resistenza garantita a ogni successiva forma del Nascente.
 
 ### Esperienza desiderata e conseguenze
 
@@ -2154,8 +2155,8 @@ L'autore richiede di costruire prima un contesto coerente e poi tradurlo in mecc
 
 ### Questioni di coerenza da affrontare prima delle nuove tappe
 
-1. Distinguere eventuale esposizione, radicamento del dubbio e mutazione, chiarendo tempo oggettivo e soggettivo. Una scansione in fasi è una possibile soluzione, non una decisione già presa.
-2. Definire come gli L1 possano affrontare il Nascente se una persona comune cade in catalessi alla sua vista.
-3. Definire la condizione dei Concordia al seguito: consapevolezza e autonomia mentre il Nascente attenua la Domanda.
-4. Precisare cosa il giocatore vede e sa prima di trasformare o distruggere, affinché possa riconoscere il proprio ruolo nelle conseguenze senza richiedere un giudizio morale prestabilito.
-5. Collocare poi luoghi, incontri e crescita nel contesto. Non confermare nuove statistiche, Poteri, bonus o sequenze per risolvere automaticamente i punti narrativi aperti.
+Tempi della mutazione, resistenza collettiva degli L1 e distinzione fra dubbio e controllo mentale sono stati chiariti nelle rettifiche sopra. Non riproporli come questioni irrisolte.
+
+1. Sviluppare, dove utile, le reazioni individuali dei Concordia al dubbio e le motivazioni concrete del loro seguito, senza uniformarle.
+2. Precisare cosa il giocatore vede e sa prima di trasformare o distruggere, affinché possa riconoscere il proprio ruolo nelle conseguenze senza richiedere un giudizio morale prestabilito.
+3. Collocare poi luoghi, incontri e crescita nel contesto. Il bivio iniziale rimane una scelta locale. Non confermare nuove statistiche, Poteri, bonus o sequenze per risolvere automaticamente i punti narrativi aperti.
