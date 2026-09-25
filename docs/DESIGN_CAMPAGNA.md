@@ -2093,3 +2093,69 @@ Il percorso iniziale non assegna automaticamente un Potere né vincola la scelta
 Questa è la prima acquisizione del Potere nella nuova apertura e sostituisce la precedente collocazione di E01: non duplicare la ricompensa. Il limite alle promozioni Concordia segue la nuova Lega del Nascente; le copie con la soglia di vittorie già raggiunta possono quindi diventare promuovibili, senza una promozione automatica o una deroga alle altre condizioni.
 
 La mappa converge mantenendo i benefici e le conseguenze permanenti del percorso svolto. Restano il limite del Nascente nell'Atto I già concordato e la distinzione tra Lega personale e budget di Lega dell'esercito. Stato: design aggiornato, nessuna implementazione.
+
+## Contesto narrativo dell'Atto I — risposte dell'autore, 25 settembre 2026
+
+Fonte: risposte dell'autore al questionario di contesto, allegato «Pasted text.txt». Le indicazioni seguenti prevalgono sulle precedenti interpretazioni narrative incompatibili. Solo documentazione: nessuna implementazione di gameplay.
+
+### Stato della progettazione
+
+L'autore richiede di costruire prima un contesto coerente e poi tradurlo in meccanica, senza imporre necessariamente una trama lineare. La sequenza di tappe precedentemente costruita, compresa la convergenza nella prima crescita di Lega e scelta del Potere, rimane materiale di lavoro provvisorio da rivalutare alla luce del contesto. Non cancellare le idee meccaniche né implementarle automaticamente. La Domanda deve essere percepibile, ma il gameplay deve reggere anche per chi ignora i testi e vive la campagna come una macchina da guerra.
+
+### Cael e il territorio
+
+- Cael è una città guidata da un «Dio», con una cosmogonia centrata sul sole e sulla figura divina.
+- Tradimento e blasfemia sono categorie molto ampie, usate come controllo più che come giustizia. La società considera questo controllo giusto e necessario.
+- Il mondo esterno è pericoloso: esistono creature come draghi, grifoni e basilischi, oltre ad altre nazioni umane. Non presentare Cael come unica comunità umana esistente sulla base della precedente espressione «ultimo rifugio».
+- La città è abitata tendenzialmente dai cavalieri, dai loro familiari e dagli aiutanti più vicini. Allontanandosi dal centro diminuisce il controllo e aumenta la libertà, con vantaggi e svantaggi. Non dedurre che tutti gli abitanti esterni siano stati espulsi.
+- Frati, abbazie e conventi offrono ristoro ad avventurieri e soldati di ritorno o sperduti. Sulla Strada passano militari e mercanti; nelle Piane vivono contadini e allevatori e si trovano attività produttive, per esempio distillerie.
+- Questa società è forte e sopravvive da millenni. Premia la forza, ma assegna ai forti la responsabilità dei deboli; interpreta la propria severità come condizione di giustizia e forza. Questa convinzione va rappresentata come parte della sua cultura, non come un giudizio morale imposto al giocatore.
+- Non è definita una specifica crisi interna precedente. La minaccia che destabilizza il sistema solare è l'arrivo della Nebula: gli oracoli ne hanno avvertito il presagio e, già a distanza, parte della fauna viene alterata in forme abominevoli. L'influenza iniziale è lenta, non ancora un disastro evidente e generalizzato.
+- I tre percorsi sono luoghi con funzioni e popolazioni concrete; non richiedono tre morali, filosofie o identità simboliche obbligatorie. Rapporti economici e prestazioni dovute alla città non sono ancora dettagliati.
+
+### Il Nascente e chi lo guida
+
+- Il Nascente percepisce una debole fiaccola di luce al centro di Cael anche a occhi chiusi. Sente il bisogno irresistibile di raggiungerla e vederla meglio; essa gli dà conforto anche se non lo cerca. L'identità della luce non è stata specificata.
+- Attrazione, bisogno e istinto lo guidano: raggiungerla è sentito come qualcosa intimamente legato al motivo della sua esistenza.
+- Una persona normale che lo guarda cade in catalessi per ore o giorni. Gli agenti, dotati di volontà superiore alla media, ne vedono la forma cosmica: umanoide, con arco, testa simile a un globo di luce scura e particelle cosmiche che creano un'aura eterea.
+- Trasformare è per lui un atto naturale che richiede sforzo, come se ogni trasformazione fosse un tentativo di rispondere alla Domanda.
+- Verità d'autore: il giocatore è la Nebula e comanda letteralmente il Nascente, che è un agente a tutti gli effetti. Il giocatore inizialmente non lo sa. La campagna racconta un frammento della storia dell'armata guidata verso la conquista dal giocatore che l'ha presa.
+- Questa verità non implica automaticamente una scena di rivelazione, un ribaltamento morale o una rottura della quarta parete: modalità e momento dell'eventuale comunicazione restano da definire.
+
+### La Domanda e la trasformazione
+
+- La Domanda è un dubbio esistenziale individuale che provoca un panico continuo e crescente; corrode ciò che la mente ritiene reale fino al collasso della logica razionale.
+- Il contenuto cambia da persona a persona. Non ridurla a un'unica frase universale recitata da tutti.
+- È portata dalla Nebula; chi la trasmette è composto in larga parte dal suo materiale. Non attribuire a un semplice contatto o a una sconfitta un trigger preciso non ancora scelto.
+- La Domanda piega alla Nebula ciò che può pensare.
+- L'autore descrive la trasformazione come immediata, con un tempo soggettivo infinito: la persona non si accorge ancora che il corpo è già mutato e si è unito alla Nebula. Descrive anche un intervallo di ore dal radicamento del dubbio alla trasformazione completa. Il rapporto tra queste due descrizioni resta da chiarire.
+- Una volta trasformata, la persona condivide la disperazione e le domande degli altri; finché cerca risposta obbedisce alla Nebula.
+- Reazioni e tentativi di resistenza differiscono, ma senza l'aiuto di un Figlio dell'Orizzonte resistere è tendenzialmente impossibile.
+- La trasformazione è forzata, dolorosa e irreversibile. L'agente conserva parte del proprio io in misura variabile, amalgamata al resto della Nebula e condizionata dalla Domanda.
+- Chi vede un compagno trasformato reagisce molto male: non comprende l'accaduto, ma ne riconosce la gravità.
+
+### Sconfitta e servizio nell'esercito
+
+- Gli avversari combattono perché riconoscono nel Nascente una minaccia proveniente dallo spazio, coerente con i presagi degli oracoli.
+- Il Nascente può attenuare la Domanda di chi sconfigge, come se se ne facesse carico. L'assenza del tormento è illusoria: il dubbio è depotenziato abbastanza da non distruggere il raziocinio, ma piega l'agente al suo seguito.
+- Il rapporto è assimilabile a prigionia e controllo mentale. Non descrivere il reclutamento genericamente come adesione volontaria, gratitudine libera o conversione ideologica.
+- Il significato soggettivo del servizio per un Concordia non trasformato resta aperto: quanto capisce, cosa ricorda, cosa prova e quali intenzioni può conservare.
+- Mantenere la forma Concordia non equivale automaticamente a liberare la persona. Non attribuire però un preciso grado di autonomia finché non viene definito.
+- Resta da conciliare la catalessi delle persone comuni con le unità collettive L1 già proposte; non assegnare loro automaticamente immunità, protezioni o volontà eccezionale.
+
+### Esperienza desiderata e conseguenze
+
+- Sensazione centrale: controllo, accompagnato dalla responsabilità delle scelte. Il giocatore conosce la meta e decide come arrivarci.
+- Non è desiderato un cliché che ribalti il giudizio su Cael o sul protagonista. Il giocatore deve poter agire per simpatia, antipatia, interesse o capriccio e costruirsi le proprie giustificazioni.
+- La domanda che si vorrebbe far emergere spontaneamente nel giocatore è «Perché l'ho fatto?». È un obiettivo dell'esperienza, distinto dal contenuto individuale della Domanda subita dagli abitanti.
+- Conseguenze da poter riconoscere: Concordia conservati o trasformati; aggressione a tutto ciò che si incontra oppure scelta di passare oltre; distruzione anche di ciò che non ostacolava il percorso.
+- Non sono ancora decisi il cambiamento finale percepito nell'Atto I, il grado di anticipazione delle conseguenze e il minimo narrativo da trasmettere a chi ignora i testi.
+- Si mantiene il vincolo già concordato: battute degli agenti mediante il sistema di dialoghi durante i duelli. Non introdurre automaticamente conversazioni sulla mappa.
+
+### Questioni di coerenza da affrontare prima delle nuove tappe
+
+1. Distinguere eventuale esposizione, radicamento del dubbio e mutazione, chiarendo tempo oggettivo e soggettivo. Una scansione in fasi è una possibile soluzione, non una decisione già presa.
+2. Definire come gli L1 possano affrontare il Nascente se una persona comune cade in catalessi alla sua vista.
+3. Definire la condizione dei Concordia al seguito: consapevolezza e autonomia mentre il Nascente attenua la Domanda.
+4. Precisare cosa il giocatore vede e sa prima di trasformare o distruggere, affinché possa riconoscere il proprio ruolo nelle conseguenze senza richiedere un giudizio morale prestabilito.
+5. Collocare poi luoghi, incontri e crescita nel contesto. Non confermare nuove statistiche, Poteri, bonus o sequenze per risolvere automaticamente i punti narrativi aperti.
