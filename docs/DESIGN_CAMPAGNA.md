@@ -2160,3 +2160,27 @@ Tempi della mutazione, resistenza collettiva degli L1 e distinzione fra dubbio e
 1. Sviluppare, dove utile, le reazioni individuali dei Concordia al dubbio e le motivazioni concrete del loro seguito, senza uniformarle.
 2. Precisare cosa il giocatore vede e sa prima di trasformare o distruggere, affinché possa riconoscere il proprio ruolo nelle conseguenze senza richiedere un giudizio morale prestabilito.
 3. Collocare poi luoghi, incontri e crescita nel contesto. Il bivio iniziale rimane una scelta locale. Non confermare nuove statistiche, Poteri, bonus o sequenze per risolvere automaticamente i punti narrativi aperti.
+
+### Costruzione integrata del primo atto — blocco iniziale approvato
+
+L'autore precisa che il contesto dell'atto va definito insieme al sistema della campagna. Ogni nodo deve avere una situazione comprensibile, un'azione per il giocatore, un effetto concreto e un riscontro riconoscibile. La Domanda attraversa reclutamento, trasformazione e reazioni nei duelli; non richiede una successione obbligatoria di domande filosofiche.
+
+Il successivo assenso approva come struttura di lavoro il blocco «arrivo → primo contatto → primo seguito → evento di percorso → 2v2». Questa approvazione non autorizza implementazione e non chiude testi, roster nominativi o valori ancora aperti.
+
+| Tappa | Situazione e funzione narrativa | Funzione di campagna |
+| --- | --- | --- |
+| Arrivo | Il Nascente percepisce la luce verso Cael e sceglie un accesso al territorio. | Scelta locale fra Piane, Altopiano e Strada. |
+| Primo contatto, 1v1 | Una folla locale riconosce la minaccia annunciata dagli oracoli e difende un passaggio. La volontà comune le consente di resistere al Nascente iniziale. | Unità nemica L1; introduzione al duello e alla conquista. |
+| Ottenimento del sopravvissuto | L'unità acquisita è quella affrontata, sopravvissuta e colpita dalla Domanda. È la risoluzione dello scontro, non un ulteriore nodo obbligatorio. | Introduzione all'ottenimento e alla consultazione dell'agente. |
+| Primo evento di percorso | Un luogo legato all'attività della zona. | Beneficio già ipotizzato: PV massimi nelle Piane, FC massimi sull'Altopiano, scelta promozione/trasformazione sulla Strada. Quantità e requisiti aperti restano tali. |
+| Secondo scontro, 2v2 | Il Nascente combatte accompagnato contro una resistenza di un L1 e un L2. | Gestione di due agenti e occasione di usare l'unità acquisita, eventualmente già modificata dall'evento. |
+
+Testo iniziale confermato: «Non so cosa sia, non so quanto sia lontano, so che devo arrivare fino in fondo».
+
+La resistenza iniziale difende qualcosa di concreto. Abitazioni, convento e convoglio sono esempi di ambientazione da valutare, non tre trame obbligatorie. La battuta «Restate insieme. Non lasciatelo passare.» resta un esempio di tono per il dialogo durante il duello, non testo definitivo.
+
+Nella ricompensa mostrare l'unità realmente affrontata. Una breve descrizione può suggerire l'incrinatura delle sue certezze; non imporre un nuovo dialogo sulla mappa. La prima scelta è come usare il nuovo seguito. Promozione e trasformazione vengono spiegate quando applicabili secondo le rispettive regole, senza concessioni gratuite o soglie modificate.
+
+Risultato atteso del blocco: il giocatore ha conquistato un passaggio, ha ottenuto un primo seguito e comprende che l'impiego di un'unità debole può influenzarne lo sviluppo. Non garantire automaticamente una vittoria personale all'L1 né la sua promozione.
+
+La mappa di lavoro resta articolata nei tre accessi iniziali. I blocchi successivi e la precedente convergenza nella crescita del Nascente restano da rivalutare nel contesto; non ripristinare implicitamente tutta la vecchia sequenza come definitiva.
