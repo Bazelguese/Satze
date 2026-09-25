@@ -1,5 +1,372 @@
 # SATZE — Campagna del Nascente
 
+**Atto I · Redazione integrata di contesto e campagna · 25 settembre 2026**
+
+Questa sezione è il riferimento corrente per il primo atto. Riunisce le decisioni dell'autore e una proposta completa per collegarle fino alla conclusione. Non descrive modifiche già implementate né un bilanciamento verificato.
+
+**Come leggere il documento.** «Definito» indica una decisione già presa nella conversazione; «proposta» indica il completamento redazionale da valutare. Nomi di nuove tappe, scene, offerte e numeri di prova sono proposte anche quando esposti in forma operativa. Le sequenze precedenti sono conservate nell'archivio in fondo; non si sommano a questa mappa. Le regole di altri atti restano fuori dalla revisione.
+
+## Atto I — Fino ai piedi di Cael
+
+### 1. Obiettivo ed esperienza
+
+**Definito.** Il Nascente attraversa i territori esterni di Cael fino ai piedi della città. Una luce al suo centro gli è sempre percepibile, anche a occhi chiusi. Vuole raggiungerla e vederla meglio; ne riceve conforto senza cercarlo. L'identità della luce rimane indeterminata.
+
+Il giocatore decide come arrivare: quali luoghi interessargli, quali sopravvissuti conservare, chi promuovere o trasformare e quali conseguenze permanenti accettare. La sensazione cercata è controllo accompagnato dalla responsabilità. Nessun punteggio morale decide se abbia agito bene. «Perché l'ho fatto?» deve poter nascere dalle sue azioni, senza obbligo di introspezione o comprensione della lore.
+
+**Esito proposto dell'atto.** All'inizio il Nascente arriva solo; alla fine raggiunge il basamento della città con un esercito che porta le tracce delle scelte fatte. Il mondo reagisce alla sua avanzata. La luce resta davanti a lui, ancora irraggiunta. L'atto termina prima dell'esplorazione interna di Cael e non conclude la conquista del regno.
+
+### 2. Regole del contesto
+
+- Cael è guidata da un Dio e da una cosmogonia solare. Premia i forti e assegna loro la responsabilità dei deboli; tradimento e blasfemia sono categorie ampie di controllo, considerate necessarie dalla società.
+- Cavalieri, familiari e stretti aiutanti abitano prevalentemente la città. Allontanandosi dal centro diminuisce il controllo. All'esterno esistono attività produttive, luoghi di ospitalità, commercio, fauna pericolosa e altre nazioni umane.
+- Il sistema non è già in rovina: la Nebula provoca la crisi. Gli oracoli l'hanno preannunciata; alcune alterazioni della fauna sono cominciate lentamente a distanza.
+- Le persone combattono il Nascente come minaccia riconoscibile. Possono difendere altri, obbedire, proteggere beni o temere la propria condanna; non servono nemici tutti crudeli né tutti esemplari.
+- Un individuo comune può cadere in catalessi vedendolo. Gli agenti resistono meglio; le folle L1 resistono alla sua forma iniziale attraverso una volontà comune. Questo non concede immunità universale.
+- La Domanda mette in crisi convinzioni personali, diverse per ciascuno. Una giornata di panico crescente precede una mutazione istantanea nel tempo esterno, vissuta come infinita dalla vittima.
+- Il Nascente può attenuare il tormento. I Concordia al seguito non sono marionette: il dubbio altera le loro certezze senza imporre una risposta psicologica uguale per tutti. Il reclutato è il sopravvissuto colpito dalla Domanda.
+- La trasformazione è forzata, dolorosa e irreversibile. Il Figlio conserva una parte variabile del proprio io, amalgamata alla Nebula. Trasformare è naturale per il Nascente e gli richiede uno sforzo.
+- Verità d'autore: il giocatore è la Nebula che guida il Nascente. Il primo atto non deve rivelarlo attraverso un colpo di scena obbligatorio.
+- Il tempo narrativo della Domanda non introduce un calendario o un timer automatico di trasformazione. Conservare un agente rimane una possibilità del sistema; l'attenuazione del Nascente ne sostiene il contesto.
+
+Piane, Altopiano e Strada sono un accesso geografico contestualizzato. Non rappresentano tre filosofie, tre trame autonome o tre classi del protagonista.
+
+### 3. Struttura e conteggio
+
+**Vincoli mantenuti:** 13 incontri necessari, di cui 12 contro la Concordia e una Faglia obbligatoria; 14 affrontando anche la seconda Faglia. I rami sono esclusivi. Eventi e gestione dell'esercito non aggiungono combattimenti. Il boss occupa un solo nodo, pur avendo due fasi.
+
+**Stato:** apertura, scelte locali, crescita alla convergenza e prima Faglia dopo la crescita sono definite come struttura. Il tratto A06–A13 è la proposta completa di questa redazione. I precedenti ID I.1–I.12 non sono una seconda serie da aggiungere: qui si usano A01–A13 per l'ordine effettivo, Faglia compresa.
+
+| Posizione | Nodo / varianti | Tipo e funzione |
+| --- | --- | --- |
+| A01 | Primo contatto, nel percorso scelto | 1v1 contro un L1; conquista del primo passaggio. |
+| A02 | La piccola difesa | 2v2 contro un L1 e un L2. |
+| A03 | Il reparto inviato | 3v3 contro un L1 e due L2 diversi. |
+| A04 | Presidio oppure luogo speciale del proprio percorso | Quattro agenti nemici; una sola delle alternative. |
+| A05 | Prima Faglia | Incursione obbligatoria dopo la prima crescita del Nascente. |
+| A06 | La linea di raccolta | Primo confronto ordinario dopo l'incursione. |
+| A07 | Fonderia: accesso / Convogli: scorta | Primo incontro di una delle due operazioni. |
+| A08 | Fonderia: presidio / Convogli: deposito | Secondo incontro della stessa operazione; le alternative si ricongiungono. |
+| A09 | Il responsabile del Vallo | Prima élite, una fase. |
+| F2 | Seconda Faglia | Facoltativa, dopo A09 e prima di A10. |
+| A10 | Via del terrapieno / Passaggio dei canali | Un incontro per raggiungere il sistema di difesa inferiore. |
+| A11 | La difesa della Seconda Campana | Seconda élite, una fase; verifica di coordinamento e Campi. |
+| A12 | L'ultimo accesso esterno | Ultimo scontro ordinario prima del boss. |
+| A13 | Il presidio ai piedi di Cael | Boss L4 in due fasi; chiusura dell'atto. |
+
+Nomi funzionali candidati. Non cambiano automaticamente i nomi delle carte del catalogo.
+
+#### Mappa dell'apertura
+
+```mermaid
+flowchart TD
+    E0["E0 · Arrivo e scelta"] --> P["Piane · A01, evento PV, A02"]
+    E0 --> H["Altopiano · A01, evento FC, A02"]
+    E0 --> S["Strada · A01, evento agente, A02"]
+    P --> P3["+2 Lega esercito · A03"]
+    H --> H3["+2 Lega esercito · A03"]
+    S --> S3["+2 Lega esercito · A03"]
+    P3 --> P4["A04 · Presidio oppure Gabbie"]
+    H3 --> H4["A04 · Presidio oppure Templi"]
+    S3 --> S4["A04 · Presidio oppure luogo misto"]
+    P4 --> E3["E3 · Nascente L3 e scelta del Potere"]
+    H4 --> E3
+    S4 --> E3
+    E3 --> A5["A05 · Prima Faglia"]
+```
+
+Ogni nodo «oppure» contiene esattamente un combat a scelta. Il +2 è lo stesso contenuto ripetuto nei tre rami; non è una precedente confluenza. L'ottenimento del sopravvissuto è la risoluzione dell'incontro, non un nodo extra.
+
+#### Mappa della seconda parte — proposta
+
+```mermaid
+flowchart TD
+    A5["A05 completato"] --> E4["E4 · Rifornimenti e gestione"]
+    E4 --> A6["A06 · Linea di raccolta"]
+    A6 --> E5["E5 · Scegli l'operazione"]
+    E5 --> F7["A07-F · Accesso alla fonderia"]
+    F7 --> F8["A08-F · Presidio della fonderia"]
+    E5 --> C7["A07-C · Scorta dei convogli"]
+    C7 --> C8["A08-C · Deposito dei convogli"]
+    F8 --> E6["E6 · Esito dell'operazione"]
+    C8 --> E6
+    E6 --> A9["A09 · Élite del Vallo"]
+    A9 --> E7["E7 · Ospizio e seconda Faglia"]
+    E7 --> F2["F2 · Affronta l'incursione"]
+    E7 --> B["Prosegui senza F2"]
+    F2 --> B
+    B --> T["A10-T · Terrapieno"]
+    B --> C["A10-C · Canali"]
+    T --> A11["A11 · Seconda Campana"]
+    C --> A11
+    A11 --> E8["E8 · Crescita statistica e gestione"]
+    E8 --> A12["A12 · Ultimo accesso"]
+    A12 --> A13["A13 · Boss in due fasi"]
+    A13 --> END["Ai piedi di Cael · Fine atto"]
+```
+
+### 4. Blocco iniziale — arrivo e primo seguito
+
+**E0, definito.** L'evento iniziale mostra: «Non so cosa sia, non so quanto sia lontano, so che devo arrivare fino in fondo». Offre Piane di Cael / Praterie dorate; Altopiano smeraldo / Verdi colline; Strada / Sentiero battuto, strade di Cael.
+
+**A01.** Una folla locale sbarra un passaggio. Contadini armati, Frati soldati o Mutilati volenterosi secondo l'accesso: L1, POT 1 / DAN 1. Poteri e Bonus delle categorie non sono ancora approvati. Il Campo iniziale porta «Conquista: Vinci la partita» e un'ambientazione compatibile con il luogo. Il Nascente parte L2, 2 POT / 2 DAN, senza Potere. La configurazione deve lasciare una linea di vittoria comprensibile, non affidata a un pareggio inevitabile.
+
+Dopo la vittoria si vede la stessa unità nemica acquisita. Con un solo candidato il caso non cambia identità. Il gruppo rimasto è rappresentato da una singola carta: non moltiplicare il premio per ogni persona illustrata. Una breve descrizione suggerisce l'incrinatura delle certezze, senza un colloquio sulla mappa.
+
+**E1, evento del percorso.** Piane: aumento permanente PV massimi. Altopiano: aumento permanente FC massimi. Strada: permette di scegliere fra promuovere una folla a Concordia L2 e trasformarla direttamente in un Figlio L2 casuale. Quest'ultima è una deroga esplicita alla pari Lega della trasformazione ordinaria. La copia originale viene sostituita, non si ricevono due carte.
+
+Proposta operativa per rendere E1 giocabile prima che il primo L1 abbia combattuto al fianco del Nascente: la promozione dell'evento deroga alla soglia di vittorie; la trasformazione deroga alla maturazione. Vale soltanto qui. Entrambe richiedono la copia L1, usano i rispettivi modi di offerta e non assegnano una carta se manca. Questa deroga va approvata prima di implementare. Numeri candidati: +1 PV massimo nelle Piane, +1 FC massimo sull'Altopiano.
+
+**A02.** Un L1 e un L2 difendono il successivo passaggio. Si introduce l'ordine delle giocate e il confronto Campi/PV. Il Concordia ottenuto in A01 può partecipare o essere già sostituito da E1; non scrivere dialoghi che ne presuppongano la presenza.
+
+**E2.** +2 al budget massimo di Lega dell'esercito, permanente. È distinto da numero di posti e Lega del Nascente. Presentazione candidata: il seguito si riordina dopo il primo combattimento comune; il numero è un limite di preparazione del gioco, non una sostanza magica trovata sul terreno.
+
+**A03.** Un L1 e due L2 diversi: arriva una prima forza organizzata. I difensori sanno di un'incursione annunciata dai presagi, senza conoscere tutta la natura della Nebula. Battute condizionali possono riconoscere un Concordia nell'esercito avversario. Non è necessario un personaggio che spieghi il sistema.
+
+### 5. A04 — passare oppure prendere
+
+**Definito.** Nel proprio percorso il giocatore sceglie una difesa da superare o una deviazione verso un luogo d'interesse. Entrambe consentono di proseguire con un incontro. La deviazione non obbliga ad affrontare poi il presidio evitato. Mostrare sentieri coerenti, uso del luogo e beneficio ottenibile prima della conferma.
+
+**Presidio, proposta.** Quattro agenti Concordia, prevalentemente L2 con eventuale L1; roster preciso aperto. Combat ordinario del formato ridotto, Campi locali senza nuove ricompense permanenti. Premio ordinario dal nemico. Non deve essere una falsa scelta sistematicamente peggiore della deviazione: difficoltà, composizione dei premi e vantaggi speciali devono essere confrontati in playtest.
+
+**Luoghi speciali, contenuti definiti:**
+
+| Percorso | Nemici | Campi speciali e intenzione |
+| --- | --- | --- |
+| Piane, 3.A | Quattro L1 | Tre Gabbie degli schiavisti e Porre il quesito. Il giocatore decide quante catture tentare prima di chiudere. |
+| Altopiano, 3.B | Un L1 e tre L2 | Due Templi nella natura: «Conquista: +1 PV permanente». Anche il nemico può ottenere il beneficio, valido negli scontri successivi. |
+| Strada, 3.C | Quattro L2 | Un Tempio, una Gabbia e un Magazzino dell'esattore locale: +1 FC massimo; il beneficio nemico prosegue negli scontri successivi. |
+
+La Gabbia recita «Ottieni l'agente sconfitto, non puoi vincere questo turno». Porre il quesito concede vittoria immediata alla conquista. Solo 3.A garantisce sempre l'iniziativa al giocatore e non assegna un agente alla fine: le catture sono il suo premio. Questa eccezione esplicita va mantenuta visibile accanto alla regola generale di acquisizione.
+
+**Risoluzione candidata delle ambiguità, non regole già approvate:**
+- Quattro Campi totali in ogni variante. Per 3.B: i due Templi più due Campi ordinari locali; per 3.C: i tre speciali più un ordinario. Scelta dei Campi ordinari aperta. Si propone di uniformare i nomi Tempio e Gabbia al medesimo tipo di effetto.
+- In 3.A mostrare tutte e quattro le opzioni fin dall'inizio, come eccezione dichiarata di questo incontro. Consente di scegliere realmente quando tentare la chiusura; non accelera la comparsa generale dei Campi.
+- La Gabbia assegna al vincitore il nemico realmente sconfitto e sospende la vittoria territoriale della battaglia per quel turno; il duello personale è vinto e conta per la promozione. Non impedisce all'altro lato di vincere e non protegge dallo zero PV. Per l'IA, l'eventuale cattura di un agente del giocatore non può essere interpretata automaticamente come perdita permanente della carta: questo caso resta bloccante da decidere.
+- L'annientamento mantiene la precedenza del motore. In 3.A bisogna provare che non renda normale chiudere sulle Gabbie vanificando la scelta del Quesito. Se accade si rivedono PV/roster o si decide esplicitamente un'eccezione; non introdurre immortalità nascosta.
+- Se a mano esaurita non c'è stato né annientamento né conquista del Quesito, si propone pareggio. Conquista del Quesito da parte del nemico significa sconfitta. Le catture restano pendenti fino alla vittoria del nodo e sono annullate dal retry.
+- Tempio: +1 ai PV massimi e alla base iniziale futura del beneficiario. Non è una cura aggiuntiva nel duello corrente. Due conquiste di due Templi possono dare +2. Magazzino: trigger Conquista, +1 al massimo FC e alla base iniziale/reset futura, senza aggiungere FC spendibili retroattivamente.
+- I benefici conquistati dai nemici di Tempio/Magazzino hanno destinatario «tutti i nemici», comprese le Faglie, come richiesto. I normali effetti istantanei di altri Campi rimangono invariati.
+- In 3.C la cattura della Gabbia è separata dal premio ordinario finale. Nessun reroll se le due assegnazioni hanno la stessa identità; il doppione resta in riserva.
+
+Gabbie, Templi e Magazzino sono luoghi preesistenti con funzioni concrete. Attaccarli non impone distruzione totale, liberazione altruistica o condanna morale. Registrare soltanto le azioni effettivamente offerte e scelte.
+
+### 6. E3 e A05 — prima crescita e prima incursione
+
+**E3, definito.** Dopo A04 tutti i percorsi convergono. Il Nascente passa da L2 a L3 e il giocatore sceglie un Potere. Il suo archetipo descrive il pacchetto attuale; non chiude le altre direzioni. Nessuna scelta precedente obbliga un esito. Questa è l'unica crescita di Lega prevista per il Nascente nell'Atto I.
+
+Presentazione candidata: sosta su un rialzo da cui la città appare più vicina; il Nascente mette a fuoco una possibilità del proprio agire. È una schermata di scelta con anteprima completa, non un dialogo con un interlocutore. Non dichiarare che la luce gli abbia donato il potere o che risponda alla Domanda. Nessun bonus statistico aggiuntivo è implicito.
+
+Il catalogo storico di 15 Poteri (Campione, Assaltatore, Soffocatore, Guardiano, Carnefice, Catalizzatore, Sabotatore, Colosso) resta la base candidata da revisionare: selezione libera, trigger ed effetto leggibili, nessuna estrazione casuale del Potere. Valori e offerta finale sono aperti. Le domande filosofiche del vecchio E01 possono essere una presentazione facoltativa da valutare, non un esame morale obbligatorio.
+
+**A05, definito come collocazione e funzione.** Prima Faglia obbligatoria: una deformazione spaziale introduce l'attacco di un esercito di un'altra volontà/giocatore. L'aspetto del nodo permette di riconoscere più avanti F2. Non serve sapere chi sia il comandante o il ruolo del giocatore come Nebula.
+
+Proposta di contenuto: avanguardia contenuta, senza Eminenza e senza L5, con identità diversa dalla Concordia. La fazione non è ancora scelta: i vecchi Calibri e Kethran sono candidati storici, non conferme. Le incursioni devono essere fruibili senza richiedere la presenza sincrona di un altro giocatore; controllo IA o dati di eserciti di giocatori sono scelte di implementazione da definire.
+
+A05 usa una mano fino a cinque secondo le risorse realmente disponibili e le regole comuni di capienza; non regala agenti per pareggiare i numeri. Premia con un'unità casuale del roster invasore. Introduce concretamente la possibilità di conservare origini diverse, senza obbligare il futuro ramo di Comunione.
+
+### 7. A06–A09 — controllare l'avanzata
+
+**Tutto questo blocco è proposto.** Il territorio reagisce a fatti già avvenuti. Ordini, ritirate e presidî compaiono al completamento dei nodi, senza simulazione a tempo reale o crescita nemica mentre il giocatore consulta la mappa.
+
+**E4, La rete dei rifornimenti.** Dopo F1, il seguito può rimettere in uso un collegamento logistico che servirebbe anche la difesa locale. Scelta proposta:
+- Riaprirlo: +1 FC massimo/base futura al giocatore e +1 FC massimo/base futura ai nemici Concordia, permanenti.
+- Proseguire senza intervenire: nessuno dei due status.
+
+Si opera tramite il seguito; non si presuppone che civili comuni restino tranquillamente davanti al Nascente. L'offerta dichiara entrambi gli effetti, e rifiutarla non comporta una penalità segreta. È la prima scelta esplicita di accettare anche un rafforzamento nemico per un vantaggio proprio.
+
+**A06, La linea di raccolta.** Soldati tengono un passaggio mentre altri si ritirano verso le difese interne. Cinque agenti in mano nemica, L2 e prima presenza L3: squadra precisa candidata. Il giocatore ha modo di provare il proprio Potere contro la Concordia senza un nuovo sistema simultaneo. La presenza di un Concordia conservato o di un Figlio già trasformato può cambiare una battuta, non il roster in segreto.
+
+**E5, Operazioni concorrenti.** Due preparativi visibili sostengono il Vallo: una fonderia prepara protezioni, una rete di convogli accumula risorse. Il giocatore può colpirne uno lungo l'avanzata. La scelta mostra le due sequenze complete e gli effetti permanenti attesi.
+
+| Operazione | A07 | A08 | Esito in E6, valori candidati |
+| --- | --- | --- | --- |
+| Fonderia | Difesa dell'accesso; L2 e supporto L3. | Presidio dell'officina; recupero del materiale. | Giocatore +1 PV massimo/base futura. Il convoglio non interrotto completa i rifornimenti: nemici Concordia +1 FC massimo/base futura. |
+| Convogli | Scorta lungo il percorso; L2 e supporto L3. | Deposito di distribuzione; controllo delle riserve. | Giocatore +1 FC massimo/base futura. La fonderia non interrotta completa le protezioni: nemici Concordia +1 PV massimo/base futura. |
+
+Ogni operazione richiede due combattimenti e due normali ricompense. Non è consentito completarle entrambe. Un fallimento non completa il preparativo ignorato: i due status vengono registrati insieme alla vittoria di A08. Il piano ignorato è noto prima di scegliere; non è un aumento nascosto per turno. Gli effetti sono permanenti anche oltre l'atto quando ricompare il destinatario. Non annullano status ottenuti prima.
+
+Le scene non devono assumere che il Nascente desideri personalmente cibo o armature: il beneficio riguarda il seguito e la capacità di sostenere l'esercito. Sono proposte di ambientazione per risorse astratte.
+
+**A09, Il responsabile del Vallo.** Prima élite. Un ufficiale coordina la difesa del territorio di cui risponde. Possibile identità: Portastendardo o Duellante L3 del catalogo; ruolo narrativo proposto, nessun nuovo personaggio canonico obbligatorio. Il roster conta meno di dieci agenti e usa una sola fase. I contenuti mettono alla prova più linee tattiche senza statistiche innalzate solo perché il nodo è élite.
+
+La reazione dell'ufficiale può distinguere un'incursione diretta dagli attacchi a strutture locali. Non conosce scelte che nessuno può avergli riferito; le battute fanno riferimento a fatti plausibilmente osservabili. Sconfitta l'élite si apre il tratto verso il basamento di Cael, non l'interno della città.
+
+### 8. E7, F2 e A10 — altri interessi lungo il cammino
+
+**E7, L'ospizio sul percorso, proposta.** Un luogo di assistenza rende concreta la responsabilità che la società attribuisce ai forti. È ancora funzionante e ha una propria utilità prima del Nascente.
+
+Scelta candidata: lasciare che il seguito ripristini l'approvvigionamento del luogo dà +1 PV massimo/base futura al giocatore e ai nemici Concordia, permanentemente; proseguire lascia entrambi invariati. Non viene presentata come scelta buona obbligatoria e non sottrae carte senza preavviso. PV è una risorsa del sistema, non una guarigione individuale descritta impropriamente.
+
+Se esistono Concordia conservati o copie in riserva, la scena può riconoscerli con una variante testuale: qualcuno sa come il luogo funziona. La variante non assegna compensazioni ai doppioni e non richiede una specifica estrazione per proseguire. Il precedente desiderio di un premio futuro per copie non consumate rimane separato e non viene convertito in bonus automatico qui.
+
+**F2, facoltativa.** Dopo E7 si può affrontare un'altra incursione oppure continuare. Un incontro extra porta un agente del nemico effettivamente affrontato e l'opportunità di sviluppare le copie schierate. Saltare non assegna premi né penalità, non aumenta il boss e non impedisce di completare l'atto. Dopo un fallimento si può ancora rinunciare; il tentativo viene annullato senza trattenere progressi o benefici.
+
+Origine e composizione della seconda incursione restano da scegliere. Proposta: una diversa armata rispetto a F1, così la deviazione offre un'opzione di composizione distinta, non un requisito nascosto.
+
+**A10, accessi al basamento, proposta.** Terrapieno presidiato oppure passaggio dei canali: un incontro in entrambi. La scelta è geografica e tattica; avversari e Campi danno informazioni utili senza promettere il premio casuale esatto. Si ricongiungono prima di A11. Non occorrono ulteriori buffs o giudizi morali per giustificare ogni biforcazione.
+
+### 9. A11–A13 — fino ai piedi della città
+
+**A11, La difesa della Seconda Campana, proposta.** Seconda élite, roster di nove agenti al massimo, una sola mano da cinque. Un nucleo Concordia usa Staffetta e un agente con Terraformare Torre del Richiamo. Si recupera il Cavaliere della Seconda Campana come candidato senza cambiare automaticamente la sua carta di catalogo.
+
+Terraformare X rimane generico e segue il timing ordinario del Potere. La Torre rende soddisfatta la condizione prevista per Staffetta, non concede immunità ai blocchi né attiva un Bonus indisponibile. Il sabotaggio può avere effetto; l'avversario ha strumenti dichiarati per riprendere il coordinamento. Lista delle destinazioni ed effetti dei Campi devono essere completi prima di implementare.
+
+**E8, crescita statistica e preparazione, proposta di collocazione.** Una scelta permanente: +1 POT oppure +1 DAN al Nascente, senza aumento di Lega. Eventuale Cambio Potere rimane un'alternativa separata da approvare; non concedere nello stesso click statistica e cambio. Anteprima completa e nessuna trasformazione obbligatoria degli agenti prima del finale.
+
+**A12, L'ultimo accesso esterno, proposta.** Ultimo scontro ordinario contro L2/L3. Serve a usare l'ultimo incremento, far maturare le acquisizioni e leggere gli status prima del boss. Nessun aumento automatico di Lega o nuovo sistema introdotto all'ultimo momento. Campi e presidio mostrano che ci si trova ormai sotto la città.
+
+**A13, Il presidio ai piedi di Cael.** Boss L4, due fasi con PV conservati e FC resettati. Identità candidata: variante di campagna del Cavaliere Nero della Corona Vuota, distinta dalla versione L5 del catalogo. Non cambiare la carta condivisa. Il comandante tiene l'ultimo accesso del territorio esterno; non è il Dio di Cael e non occorre rivelare l'origine della luce.
+
+Proposta di squadre: fase 1, boss più quattro scorte L2/L3; fase 2, stesso boss nuovamente disponibile più quattro scorte diverse L2/L3. Sono nove identità realmente schierate e dieci presenze. Non mantenere una decima carta invisibile soltanto per riempire una vecchia tabella. La firma è il solo L4 di questa proposta; POT/DAN e Potere richiedono revisione dell'intero profilo, non un semplice cambio dell'etichetta L5.
+
+Proposta di base: nessun +4 PV automatico del boss e nessun +2 PV automatico delle élite. La difficoltà viene da composizione, strumenti e ritorno della firma, oltre agli status derivati dalle decisioni. Parità di risorse base fra i lati, poi modificatori dichiarati. Questa proposta numerica non è un bilanciamento certificato.
+
+Il cambio fase non azzera lo svantaggio subito. Con entrambi vivi, vincere la prima fase avvia la seconda; sconfitta o pareggio non la avviano. L'annientamento del nemico conclude l'intero incontro e impedisce il ritorno, secondo la regola precedente. Annientamento del giocatore comporta sconfitta; doppio zero, pareggio. Il premio finale si assegna una sola volta. Il ritorno del boss non crea una nuova copia.
+
+### 10. Chiusura e restituzione delle scelte
+
+**Proposta.** Il giocatore arriva ai piedi di Cael e vede la meta ancora sopra di sé. Testo candidato essenziale: «La città è davanti a te. La luce è ancora al suo centro». Non si dichiara vinta la campagna né conquistata la città.
+
+Il riepilogo riporta fatti, non interpretazioni morali:
+- percorso iniziale e passaggi effettivamente attraversati;
+- luoghi attaccati, lasciati intatti o riattivati;
+- sopravvissuti ottenuti, Concordia conservati e trasformazioni effettuate;
+- promozioni delle singole copie;
+- status propri e nemici con origine;
+- Faglie vinte; la facoltativa ignorata non è un fallimento;
+- vittorie, sconfitte e pareggi registrati, senza confondere tentativi e nodi completati.
+
+Non attribuire al giocatore la volontà di ottenere un'identità estratta casualmente. Non affermare che tutti abbiano assistito a ogni sua scelta. Varianti brevi dei dialoghi durante il finale possono riconoscere un agente o un luogo, se le condizioni lo consentono.
+
+Il passaggio all'Atto II conserva esercito, riserva, modifiche, promozioni e status permanenti di entrambe le parti. Non cancella i piani alla fine dell'atto. Non assegna un premio ulteriore o un'Eminenza gratuitamente. Il futuro percorso con almeno tre armate rimane una possibilità degli atti seguenti, non un requisito per chiudere questo.
+
+### 11. Esercito, copie e ricompense
+
+**Regole definite.** Esercito è il deck; armata indica l'appartenenza. Il Nascente è incluso. I doppioni Concordia vanno in riserva, senza reroll, compensazioni o altra carta. Una sola copia per identità viene schierata secondo la regola esistente. Possedere un posto non garantisce una carta che lo riempia.
+
+La formula dell'autore «ogni fine scontro ottiene un'unità casuale» descrive il reclutamento. Per evitare premi ripetibili nei retry, questa stesura propone di applicarla alla vittoria conclusiva del nodo; sconfitta e pareggio non producono acquisizioni persistenti. A04-Gabbie mantiene l'eccezione esplicita senza premio finale. Il conflitto con eventuali vecchie offerte élite/boss fra due candidati è risolto in questa proposta a favore dell'unità casuale unica, senza scelta. Confermare questo dettaglio prima dell'implementazione.
+
+Il pool deriva dal roster reale avversario; non viene sostituito da un generico pool di armata se il risultato è doppione. Proposta per il boss: includere la firma L4 una sola volta come ogni nemico realmente affrontato, senza la vecchia esclusione automatica. Questo non consente promozioni Concordia oltre L3 finché il Nascente resta L3.
+
+La carta mostrata, quella salvata e quella inserita in esercito/riserva devono essere la stessa copia. Salvare l'esito prima di presentarlo; ricaricare non rilancia il premio.
+
+**Promozione Concordia:** vittorie personali pari alla Lega corrente, per singola copia; L1 richiede una vittoria, L2 due. Facoltativa, fuori dal duello, verso una carta Concordia della Lega successiva scelta fra metà casuale del pool. Lega risultante non superiore al Nascente; accumulo possibile mentre il limite blocca la promozione; contatore azzerato dopo. Retry annulla il progresso del tentativo fallito, comprese tutte le fasi.
+
+Dettagli candidati: metà arrotondata per eccesso, offerte stabili, identità senza ripetizioni nell'offerta, doppioni posseduti segnalati. Nessuna offerta deve mettere l'utente davanti a un risultato diverso da quello confermato. Budget insufficiente: consentire riorganizzazione o rinvio, senza cancellare carte o promuovere illegalmente.
+
+**Trasformazione ordinaria:** dopo una successiva tappa completata, scelta della copia, esito Figlio casuale di pari Lega; niente scelta manuale dell'identità. La deroga L1→L2 è soltanto E1-Strada. Conservare rimane possibile. Se non esistono esiti validi, mostrare l'indisponibilità senza inventare un L2.
+
+**Dipendenza aperta:** i Figli L1 non sono ancora definiti. Questa redazione non li inventa: le folle restano conservabili e promuovibili, ma non si può promettere la loro trasformazione ordinaria finché manca il pool. Non equiparare «hai vinto la battaglia» a «ogni tua unità ha vinto il proprio duello».
+
+### 12. Capienza, mani e basi numeriche candidate
+
+Questa tabella propone un raccordo completo per la nuova mappa. Sono valori di prova da approvare: non una crescita già applicata al codice né ricompense aggiuntive in carte.
+
+| Momento | Capienza massima dell'esercito | Budget massimo di Lega candidato |
+| --- | --- | --- |
+| Inizio / prima di A01 | 1 | 10 |
+| Dopo A01 | 2 | 10 |
+| Dopo A02 ed E2 | 3 | 12, compreso il +2 definito |
+| Dopo A03 | 4 | 12 |
+| Dopo A04 / E3 | 5 | 12; E3 non aumenta il budget |
+| Dopo A05 | 5 | 12 |
+| Dopo A06 | 6 | 18 |
+| Dopo A08 | 7 | 21 |
+| Dopo A09 | 8 | 24 |
+| Dopo A10 | 9 | 27 |
+| Dopo A11 | 10 | 30 |
+| F2 | Nessun incremento | Nessun incremento |
+
+Gli aumenti di capienza e budget successivi sono sblocchi espliciti della preparazione, non crescita nemica. Il budget include Nascente e copie schierate, non la riserva. Nessun potenziamento all'agente è implicito. Si possono schierare meno carte e riorganizzare dopo un aumento di Lega.
+
+Formati nominali: A01 1v1, A02 2v2, A03 3v3, A04 4v4; da A05, Classico con mano fino a cinque. I formati nominali non nascondono i posti vuoti. Fino a quattro entrano le copie schierate; da cinque, mano casuale con Nascente garantito nella prima secondo la regola precedente. Le carte escluse non entrano negli incontri ordinari. Il giocatore sceglie l'esercito e l'ordine delle giocate, non la mano casuale.
+
+Il boss richiede due mani complementari senza duplicare il Nascente. Se ci sono 6–10 identità, cinque nella prima e le restanti nella seconda. Se ce ne sono 2–5, proposta ereditata: riservarne casualmente almeno una alla seconda; le dimensioni esatte devono essere comunicate prima di affrontare. Un esercito incapace di produrre due mani non può essere corretto da rinforzi invisibili. La sostenibilità dei casi estremi è una verifica bloccante, non una garanzia già dimostrata.
+
+**Rischio concreto:** Nascente + tre premi prima di A04 danno al massimo quattro identità, ma i doppioni possono ridurle. Chi conclude presto le Gabbie può arrivare a F1 senza cinque carte. Né promozione né trasformazione aumentano di per sé il numero di copie. Nessuna scena o formazione obbligatoria deve richiedere una quinta identità garantita.
+
+PV/FC candidati: 10/10 per i formati ridotti; 25/18 dal Classico, uguali per entrambi prima degli status. L'aumento della base al cambio di formato va mostrato. I massimi PV/FC permanenti modificano le basi future e, per FC, i reset di fase. Il cambio fase conserva i PV correnti e non aggiunge nuovamente gli aumenti di PV.
+
+Questi numeri sono punti di partenza da confrontare con carte realmente ottenibili, DAN basso, budget, posti vuoti e combinazioni di status. La campagna non è dichiarata bilanciata.
+
+### 13. Status permanenti — registro unico
+
+Tutti i potenziamenti da evento sono permanenti nella run. Il normale timing e la durata dei Poteri di duello non cambiano. I seguenti valori non già fissati dall'autore sono candidati.
+
+| Origine | Effetto | Destinatario | Stato |
+| --- | --- | --- | --- |
+| E1 Piane | +1 PV massimo/base futura | Giocatore | Tipo definito; quantità proposta. |
+| E1 Altopiano | +1 FC massimo/base futura/reset | Giocatore | Tipo definito; quantità proposta. |
+| E2 | +2 budget Lega esercito | Giocatore | Definito. |
+| Tempio conquistato | +1 PV massimo/base futura per conquista | Vincitore; se nemico, tutti i nemici futuri | Quantità e permanenza definite; dettaglio risorse/cumulo proposto. |
+| Magazzino conquistato | +1 FC massimo/base futura/reset | Vincitore; se nemico, tutti i nemici futuri | Quantità e permanenza definite; trigger e dettaglio reset proposti. |
+| E4 riapertura | +1 FC massimo/base futura/reset a entrambi | Giocatore e nemici Concordia | Proposta. |
+| E6 dopo Fonderia | +1 PV al giocatore; +1 FC nemico | Giocatore / nemici Concordia | Proposta. |
+| E6 dopo Convogli | +1 FC al giocatore; +1 PV nemico | Giocatore / nemici Concordia | Proposta. |
+| E7 ripristino ospizio | +1 PV massimo/base futura a entrambi | Giocatore e nemici Concordia | Proposta. |
+| E8 | +1 POT oppure +1 DAN, senza Lega | Nascente | Effetto richiesto in precedenza; collocazione proposta. |
+
+In E6, PV/FC indicano le stesse componenti permanenti delle altre righe; non risorse usa e getta. Gli effetti del beneficiario sono una sola applicazione per origine. Due Templi distinti sono due origini. Gli status globali dei Campi possono sommare quelli di Concordia, ma questi ultimi non si applicano automaticamente alle Faglie.
+
+Mostrare in Status Esercito: effetto, valore, destinatari, origine, scelta e permanenza. Mostrare il totale applicabile nell'anteprima di ogni nemico. Non basta un elenco narrativo scollegato dai valori del duello. Ignorare un luogo o F2 non genera di per sé un buff: l'eccezione è il piano concorrente E5/E6, comunicato prima della scelta.
+
+### 14. Campi, esiti e salvataggio
+
+- 1v1: Campo Conquista/vittoria. 2–4: Campi conquistati, poi PV; uguaglianza completa produce pareggio. Da cinque: Classico. Lo zero PV mantiene la priorità già descritta; non inventare uno spareggio diverso per i singoli agenti.
+- Normale comparsa dei Campi: tre iniziali quando il formato li prevede, quarto al round 3; quinto al round 4 come configurazione candidata del Classico. A01 ha un solo Campo; A02 due; A03 tre. Durata delle animazioni ordinaria. L'eccezione iniziale dei quattro Campi delle Gabbie richiede approvazione esplicita.
+- Ogni nuovo incontro/retry ricostruisce il proprio stato; non eredita campi, conquiste o modifiche dal precedente. I nodi con Campi sceneggiati mantengono quegli obblighi: «reset» non significa cancellare le caratteristiche scelte del nodo.
+- I Campi ordinari vengono estratti dal pool configurato; quelli speciali restano garantiti. Riprendere una partita sospesa conserva l'estrazione già salvata. Non riestrarre ad ogni render.
+- Fasi: azzerare conquiste e memoria locale prevista, preparare i Campi della fase, ricalcolare i Bonus sulla nuova mano. FC resettati alla base modificata dagli status, PV correnti conservati.
+- Premi, catture, vittorie personali e status ottenuti nel combattimento restano pendenti fino alla risoluzione vittoriosa del nodo; retry ripristina il checkpoint d'ingresso. Le acquisizioni durante il combattimento non aggiungono carte alla mano.
+- Confermare ogni evento e premio una sola volta. Riprendere un salvataggio non riapre scelte già concluse. Gli status precedenti al tentativo restano attivi ma non si sommano di nuovo.
+- Una vittoria di test risolve il nodo attraverso il percorso ordinario senza attribuire duelli personali mai giocati. L'uso del comando va distinguibile dalle vittorie reali.
+- Nessun guadagno persistente per sconfitte/pareggi ripetuti; questi possono comunque comparire nelle statistiche dei tentativi.
+
+Queste sono specifiche da verificare nel motore prima di sviluppare la nuova versione. Non attestano test eseguiti sul codice.
+
+### 15. Presentazione del contesto e interfaccia
+
+I dialoghi degli agenti avvengono solo durante i duelli. Gli eventi mostrano situazione, azioni ed effetti; niente nuovo sistema di conversazioni sulla mappa. Ogni battuta candidata deve avere una condizione osservabile e una variante neutra.
+
+Esempi di tono, non testi definitivi:
+- Folla iniziale: «Restate insieme. Non lasciatelo passare.»
+- Avversario davanti a un Concordia: «Perché combatti dalla sua parte?»
+- Concordia dalla fede incrinata: una preghiera interrotta; non proclamare automaticamente una conversione.
+- Nemico che riconosce un trasformato: prima incredulità e gravità, senza conoscenza onnisciente della Nebula.
+- Comandante del Vallo: ordini che mostrano per chi si ritiene responsabile.
+
+La carta, l'artwork e l'esito della trasformazione devono far riconoscere la decisione presa; eventuali legami specifici fra agenti vanno progettati senza negare il pool casuale. Non descrivere ogni trasformazione come rapporto biografico fisso fra due identità.
+
+Mappa alla stessa dimensione logica del duello, scorrevole, con percorsi e posizioni condivise; nessuna navigazione a pagine. Animazioni di comparsa e transizione leggibili. Il Nascente in basso a sinistra apre riepilogo e Status Esercito; il comando dell'esercito a destra apre Esercito del Nascente e riserva. Conservare tempi normali di comparsa dei Campi e sequenza di trasformazione.
+
+Ingresso in campagna: precaricare risorse del duello e riutilizzarle. Fine battaglia: Prosegui dopo vittoria, Ritenta dopo sconfitta/pareggio; nessun ragionamento IA o menù ordinario nel pannello centrale. Eventuale rinuncia a F2 è un controllo specifico della campagna. Il pulsante di test resta esplicito.
+
+### 16. Cosa è completo e cosa deve ancora essere scelto
+
+La redazione copre arrivo, formazione, prima reazione, decisioni di percorso, crescita del Nascente, incursioni, operazioni, élite, boss ed epilogo. Tutte le alternative hanno un seguito; i conteggi non richiedono di completare rami esclusi.
+
+**Decisioni da valutare sulla bozza:** contenuti A06–A13; E4/E7 con benefici reciproci; operazioni E5/E6 e relativi status; collocazione di E8; raccordo di capienza/budget; identità e composizione del boss. Sono proposte dell'assistente, non precedenti decisioni dell'autore.
+
+**Dati bloccanti prima dell'implementazione:**
+1. Poteri e Bonus L1, pool Figli L1, offerte finali del Potere del Nascente.
+2. Deroghe dell'evento Strada; arrotondamento e stabilità offerte promozione.
+3. Campi mancanti di Templi/Strada; priorità e disponibilità nelle Gabbie; cattura operata dal nemico.
+4. Risorse, budget, roster e strategia per disponibilità insufficiente senza rinforzi; nessuna promessa di completabilità matematica finché questi casi non sono provati.
+5. Profilo completo L4 del boss, costo delle due squadre e premio della firma.
+6. Scope dei premi su vittoria, eccezione Gabbie e rimozione della vecchia scelta fra candidati élite/boss.
+7. Fazioni e controllo delle Faglie, liste di carte reali e Campi territorialmente coerenti.
+
+**Verifiche di design effettuabili su questa redazione:** 13 incontri su ogni percorso necessario; 14 con F2; 12 Concordia + una Faglia; due combattimenti in entrambe le operazioni; uno in entrambe le varianti A04 e A10; E3 raggiungibile da tutti; F2 non necessaria per sbloccare capacità o budget; nessun evento che porti il Nascente a L4; nessuno status che scada automaticamente.
+
+**Verifiche future:** percorso con soli premi duplicati, rinuncia alle trasformazioni, Gabbie concluse subito, esercito incompleto, DAN basso contro il boss, mani sfavorevoli in seconda fase, tutte le combinazioni di status, retry e ricaricamenti in ogni stato pendente. Non sono test già passati.
+
+---
+
+## Archivio delle versioni precedenti e approfondimenti
+
+Il materiale seguente è conservato per tracciabilità, cataloghi candidati e temi degli altri atti. Per l'Atto I prevale la redazione integrata sopra nei punti definiti; le nuove proposte richiedono valutazione. Riferimenti storici a implementazioni e test descrivono il lavoro precedente, non la consegna odierna. Non ripristinare dal materiale storico rinforzi sui doppioni, status temporanei, boss L5, crescita del Nascente a L4 o la cancellazione dei piani a fine atto.
+
 **Design 0.25 · Implementazione del primo atto · 10 settembre 2026**
 
 Il riferimento di design è il documento unificato 0.25, riportato sotto con le sue tabelle. Le diciture storiche «da implementare» appartengono alla specifica: lo stato del codice è riepilogato qui. Bilanciamento e rifinitura degli incontri restano rinviati.
