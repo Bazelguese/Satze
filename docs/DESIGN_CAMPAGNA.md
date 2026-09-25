@@ -2217,4 +2217,30 @@ flowchart TD
     L --> U
 ```
 
-La prosecuzione comune indica l'uscita equivalente delle due alternative locali. Posizione geografica, convergenza fra tutti e tre i percorsi iniziali e collocazione della crescita del Nascente restano da definire. Non interpretare questo schema come approvazione automatica dell'evento di crescita precedentemente sospeso.
+La prosecuzione comune conduce ora, per conferma dell'autore, alla convergenza di tutti e tre i percorsi iniziali nel primo evento di crescita del Nascente. La posizione geografica precisa resta da definire. Il nodo concede insieme aumento di Lega e scelta libera del Potere, come dettagliato sotto.
+
+### Convergenza e prima crescita — conferma nella nuova struttura
+
+Stato: approvato dall'autore dopo la revisione del contesto e del sistema di campagna. Questa conferma sostituisce la sospensione della collocazione del primo potenziamento, senza approvare automaticamente le restanti tappe del vecchio atto.
+
+Dopo aver affrontato la difesa sul percorso oppure il luogo speciale del proprio ramo, il giocatore raggiunge la convergenza comune a Piane di Cael, Altopiano smeraldo e Strada. Entrambe le alternative locali conducono allo stesso evento; non bisogna completarle entrambe.
+
+L'evento concede il primo aumento di Lega del Nascente e, insieme, la scelta del suo Potere. Il giocatore può scegliere con una prima esperienza del proprio esercito. Attaccare un Tempio, conservare un Concordia o trasformare un agente non assegna automaticamente un archetipo e non vincola le opzioni del Potere. Si conservano le conseguenze concrete dei percorsi.
+
+Restano da definire il luogo e la rappresentazione narrativa della crescita, i Poteri effettivamente offerti e gli eventuali valori numerici ancora aperti. Non attribuire bonus ulteriori. L'evento non aumenta implicitamente il budget di Lega dell'esercito: resta distinto dall'evento +2 Lega esercito.
+
+La scelta precedente deve essere leggibile: difesa che blocca l'avanzata oppure luogo attaccabile per interesse del giocatore. Mostrare chi usa il luogo e quale beneficio è disponibile. Carri in partenza e distribuzione di provviste al Magazzino sono esempi di ambientazione candidati, non una scena obbligatoria.
+
+#### Mappa della convergenza confermata
+
+Ogni nodo di percorso riassume l'alternativa locale già definita; A, B e C restano i tre accessi iniziali.
+
+```mermaid
+flowchart TD
+    A["Piane: difesa oppure luogo speciale"] --> N["Prima crescita del Nascente"]
+    B["Altopiano: difesa oppure luogo speciale"] --> N
+    C["Strada: difesa oppure luogo speciale"] --> N
+    N --> P["Aumento di Lega e scelta del Potere"]
+```
+
+Le tappe successive, inclusa la collocazione esatta della Faglia obbligatoria, richiedono una proposta distinta. Nessuna implementazione è autorizzata da questa conferma del design.
