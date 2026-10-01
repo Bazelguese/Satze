@@ -6,7 +6,7 @@ import { TOWER_ID } from '../data/firstAct.js';
 
 /** One draw per attempt and squad. Resuming uses the persisted IDs, never a reroll. */
 export function drawFirstActFields(run, node, phase) {
-  if (node.winRule === 'varco') return [...node.fieldIds];
+  if (node.fixedFields || node.winRule === 'varco') return [...node.fieldIds];
   let seed = run.seed >>> 0;
   for (const ch of `${node.id}:fields:${run.attempt + 1}:${phase}`) {
     seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619) >>> 0;

@@ -2095,7 +2095,7 @@ export function agentToFaceData(agent, style = 'eldritch') {
     style === 'eldritch'
       ? ELDRITCH_COLORS[army] || ARMY_COLORS[army]?.accent || ALFA_DEFAULTS.accent
       : ARMY_COLORS[army]?.accent || ALFA_DEFAULTS.accent;
-  const kit = style === 'eldritch' ? LAYERED_CARD_KITS[agent.id] : null;
+  const kit = style === 'eldritch' ? LAYERED_CARD_KITS[agent.artId ?? agent.id] : null;
   const layout =
     style === 'eldritch'
       ? sanitizeLayout({ ...ELDRITCH_DEFAULT_LAYOUT, ...(kit?.layout || {}) })
@@ -2123,7 +2123,7 @@ export function agentToFaceData(agent, style = 'eldritch') {
     description: agent.description,
     flavour: agent.flavour,
     layout,
-    illustration: getCardImageUrl(null, agent.id) || undefined,
+    illustration: getCardImageUrl(null, agent.artId ?? agent.id) || undefined,
   };
 }
 

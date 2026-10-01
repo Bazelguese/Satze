@@ -1,3 +1,9 @@
+import { CAEL_NODES, caelNode, caelStages } from '../data/caelAct.js';
+import { isCaelRun, createCaelRun, caelRunCard, caelLeague, availableCaelNodes, validCaelDeck, legalCaelArmy, assertCaelRun, createCaelAttempt, caelTransformationPool, caelEventChoices, previewCaelChoice, caelReducer } from './caelState.js';
+export { isCaelRun, promotionOffer, caelChoiceLabel, statusTotal } from './caelState.js';
+export const firstActStages = r => isCaelRun(r) ? caelStages(r) : FIRST_ACT_STAGES;
+export const firstActNodes = r => isCaelRun(r) ? CAEL_NODES : FIRST_ACT_STAGES.flat().map(firstActNode);
+export const firstActRunNode = (r,id) => isCaelRun(r) ? caelNode(id) : firstActNode(id);
 import { FIRST_ACT_VERSION, FIRST_ACT_STAGES, firstActNode, firstActCard, POWER_PACKAGES, FIGLI, NASCENTE, validateFirstActData, campaignField } from '../data/firstAct.js';
 import { ARMY_SETS } from '../../data/cards.js';
 import { CONCORDIA_ARMY } from '../data/concordia.js';
@@ -37,7 +43,7 @@ function effectLabel(a) {
   if (labels[a.effect]) return `${a.value > 0 ? '+' : ''}${a.value} ${labels[a.effect]}${a.minPower != null ? ` (min ${a.minPower})` : a.minDamage != null ? ` (min ${a.minDamage})` : a.minAssault != null ? ` (min ${a.minAssault})` : ''}`;
   return ({ blockBonus: 'Blocca Bonus', directDamage: `${a.value} danni diretti`, heal: `Cura ${a.value}`, selfDamage: `−${a.value} PV a te`, powerAndDamage: '+1 POT, +1 DAN', campaignStats: `+${a.value?.power} POT, +${a.value?.damage} DAN` })[a.effect] || a.effect;
 }
-export const runCard = (r, id) => id === NASCENTE ? nascenteCard(r) : firstActCard(id);
+export const runCard = (r, id) => isCaelRun(r) ? caelRunCard(r,id) : id === NASCENTE ? nascenteCard(r) : firstActCard(id);
 export function firstActStats(r) {
   if (r.stats) return r.stats;
   // Legacy history stores completed events as victories too: count combat nodes only.
@@ -53,7 +59,7 @@ function recordFirstActResult(r, winner) {
   return { ...stats, [key]: stats[key] + 1 };
 }
 export function migrateFirstActGrowth(r) {
-  if (!isFirstActRun(r)) return r;
+  if (!isFirstActRun(r) || isCaelRun(r)) return r;
   let next=r;
   if (r.nascente?.evolution) {
     next={...r,nascente:{...r.nascente,finalStat:r.nascente.finalStat || (r.nascente.evolution==='damage'?'damage':'power'),evolution:null}};
@@ -76,22 +82,26 @@ export function migrateFirstActGrowth(r) {
   }
   return { ...next, stats:firstActStats(next) };
 }
-export const runLeague = (r, ids = r.deck) => ids.reduce((s, id) => s + (runCard(r, id)?.league ?? Infinity), 0);
-export const availableFirstActNodes = r => (r.outcome ? [] : FIRST_ACT_STAGES[r.stage] || []).filter(id => !r.branch || id === r.branch).map(firstActNode);
+export const runLeague = (r, ids = r.deck) => isCaelRun(r) ? caelLeague(r,ids) : ids.reduce((s, id) => s + (runCard(r, id)?.league ?? Infinity), 0);
+export const availableFirstActNodes = r => isCaelRun(r) ? availableCaelNodes(r) : (r.outcome ? [] : FIRST_ACT_STAGES[r.stage] || []).filter(id => !r.branch || id === r.branch).map(firstActNode);
 export const mature = (r, c) => r.completed >= c.acquiredAt + 1;
-export function createFirstActRun({ seed = Math.floor(Math.random() * 2 ** 31) } = {}) {
+export const createFirstActRun = opts => createCaelRun(opts);
+export function createLegacyFirstActRun({ seed = Math.floor(Math.random() * 2 ** 31) } = {}) {
   validateFirstActData();
   return { version: 3, designVersion: FIRST_ACT_VERSION, model: 'first-act', actId: 'first-act', stage: 0, completed: 0, slots: 1, seed, stats: { wins:0, losses:0, draws:0, transformed:0, partial:false }, deck: [NASCENTE], copies: [], nextCopy: 1, nascente: { packageId: null, power: 0, damage: 0, statTaken: false, finalStat: null, evolution: null }, flags: {}, plans: {}, preparation: null, branch: null, active: null, pendingReward: null, pendingEvent: null, lastResult: null, history: [], checkpoints: [], attempt: 0, outcome: null };
 }
 export function validateFirstActDeck(r, deck = r.deck) {
+  if(isCaelRun(r))return validCaelDeck(r,deck);
   return Array.isArray(deck) && deck.length === r.slots && new Set(deck).size === deck.length && deck.includes(NASCENTE) && deck.every(id => id === NASCENTE || r.copies.some(c => c.cardId === id)) && runLeague(r, deck) <= 30;
 }
 export function legalArmy(r) {
+  if(isCaelRun(r))return legalCaelArmy(r);
   const ids = [...new Set(r.copies.map(c => c.cardId))].sort((a, b) => runCard(r, a).league - runCard(r, b).league || a - b);
   const result = [NASCENTE, ...ids.slice(0, r.slots - 1)];
   return validateFirstActDeck(r, result) ? result : null;
 }
 export function assertFirstActRun(r) {
+  if(isCaelRun(r))return assertCaelRun(r);
   if (!isFirstActRun(r) || r.version !== 3 || r.designVersion !== FIRST_ACT_VERSION) throw new Error('Versione del primo atto non riconosciuta.');
   if (!Number.isInteger(r.stage) || r.stage < 0 || r.stage > FIRST_ACT_STAGES.length || !Number.isInteger(r.slots) || r.slots < 1 || r.slots > 10) throw new Error('Progressione non valida.');
   if (!Array.isArray(r.copies) || new Set(r.copies.map(c => c.uid)).size !== r.copies.length || r.copies.some(c => !firstActCard(c.cardId) || !Number.isInteger(c.acquiredAt))) throw new Error('Riserva non valida.');
@@ -115,6 +125,7 @@ function hand(ids, required, r, salt) {
   return [...required, ...shuffled([...ids].sort((a,b) => a-b).filter(id => !required.includes(id)), r.seed, salt)].slice(0, Math.min(5, ids.length));
 }
 export function createAttempt(r, node) {
+  if(isCaelRun(r))return createCaelAttempt(r,node);
   const player = hand(r.deck, [NASCENTE], r, `${node.id}:hands:player`);
   const enemy = node.squads?.[0] || hand(node.roster, node.required, r, `${node.id}:hands:enemy`);
   const multi = node.squads || (node.kind === 'elite' && node.roster.length === 10 ? [enemy, node.roster.filter(id => !enemy.includes(id))] : null);
@@ -146,19 +157,21 @@ export function previewFirstActReward(r, cardId) {
     slots: next.slots,
     copies: next.copies.slice(r.copies.length).map((copy, index) => ({
       ...copy,
-      reinforcement: index > 0,
+      reinforcement: !isCaelRun(r) && index > 0,
       ownedBefore: r.copies.filter(c => c.cardId === copy.cardId).length,
       totalCopies: next.copies.filter(c => c.cardId === copy.cardId).length,
     })),
   };
 }
 export function transformationPool(r, uid) {
+  if(isCaelRun(r))return caelTransformationPool(r,uid);
   const copy = r.copies.find(c => c.uid === uid);
   if (!copy || !mature(r, copy) || firstActCard(copy.cardId).army === FIGLI) return [];
   const owned = new Set([NASCENTE, ...r.copies.map(c => c.cardId)]);
   return (ARMY_SETS[FIGLI] || []).filter(c => c.league === firstActCard(copy.cardId).league && !owned.has(c.id)).map(c => c.id).sort((a,b)=>a-b);
 }
 export function eventChoices(r) {
+  if(isCaelRun(r))return caelEventChoices(r);
   const ev = r.pendingEvent;
   if (!ev) return [];
   if (ev.id === 'E06') return ['liberi', 'trattenuti', ...(ev.communion ? ['comunione'] : [])];
@@ -169,6 +182,7 @@ export function eventChoices(r) {
   return choices;
 }
 export function previewFirstActChoice(r, choice) {
+  if(isCaelRun(r))return previewCaelChoice(r,choice);
   if (!eventChoices(r).includes(choice)) throw new Error('Risposta non disponibile.');
   let n = { ...r.nascente }, next = { ...r };
   if (r.pendingEvent.id === 'E06') {
@@ -182,6 +196,7 @@ export function previewFirstActChoice(r, choice) {
   return next;
 }
 export function firstActReducer(r, action) {
+  if(isCaelRun(r))return caelReducer(r,action);
   let next = r;
   switch (action.type) {
     case 'START': {

@@ -67,7 +67,7 @@ export function EldritchCardFace({
   layoutSvg: layoutOverride,
   composition: compositionOverride,
 }) {
-  const kit = getLayeredAltArt(agent?.id);
+  const kit = getLayeredAltArt(agent?.artId ?? agent?.id);
   const useLayered =
     variant === 'layered' ||
     Boolean(backgroundOverride || subjectOverride || layoutOverride != null);

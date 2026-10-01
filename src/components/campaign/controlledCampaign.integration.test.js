@@ -105,7 +105,7 @@ it('Ricognizione mostra le carte reali e restituisce il focus con Escape', () =>
   inspect.focus();
   act(() => inspect.click());
   const dialog = host.querySelector('[role="dialog"]');
-  expect(dialog.textContent).toContain('Scudiero del Vallo');
+  expect(dialog.textContent).toContain('Scudiero di Concordia');
   expect(dialog.contains(document.activeElement)).toBe(true);
   act(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })));
   expect(dialog.contains(document.activeElement)).toBe(true);

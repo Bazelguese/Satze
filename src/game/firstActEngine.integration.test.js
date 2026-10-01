@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {computeDuelResolution} from './duelResolve.js';
 import {firstActCard,campaignField,codes,TOWER_ID,POWER_PACKAGES,NASCENTE} from '../campaign/data/firstAct.js';
-import {createFirstActRun,nascenteCard,firstActReducer} from '../campaign/state/firstActState.js';
+import {createLegacyFirstActRun,nascenteCard,firstActReducer} from '../campaign/state/firstActState.js';
 import {firstActDuelConfig,firstActMatchOutcome} from '../campaign/logic/firstActBattle.js';
 import {calcInitialBonuses} from '../utils/onlineMatch.js';
 const card=code=>firstActCard(codes(code)[0]);
@@ -46,13 +46,13 @@ describe('first act engine integration',()=>{
  });
  it.each(POWER_PACKAGES.map(p=>[p.id]))('resolves initial and stat-enhanced package %s',(id)=>{
   for(const finalStat of [null,'power','damage']){
-   const r=createFirstActRun();r.nascente={...r.nascente,packageId:id,finalStat};
+   const r=createLegacyFirstActRun();r.nascente={...r.nascente,packageId:id,finalStat};
    const result=duel({selectedAgent:nascenteCard(r),conqueredFields:{1:{winner:'enemy'}},playerHP:10,isPlayerFirst:id==='G2'||id==='B1'?false:true});
    expect(Number.isFinite(result.finalPlayerHP)).toBe(true);expect(Number.isFinite(result.playerPower)).toBe(true);
   }
  });
  it('Colosso reaching zero PV cannot recover at the Mine or deal subsequent damage',()=>{
-  const run=createFirstActRun();run.nascente.packageId='O1';
+  const run=createLegacyFirstActRun();run.nascente.packageId='O1';
   const r=duel({selectedAgent:nascenteCard(run),field:campaignField(4),selectedFocus:10,enemySelectedFocus:1,playerHP:3});
   expect(r.campaignTerminal.playerHP).toBe(0);expect(r.finalPlayerHP).toBe(0);expect(r.finalEnemyHP).toBe(25);
  });
@@ -69,7 +69,7 @@ describe('first act engine integration',()=>{
 
 describe('first encounter is winnable independently of the campaign seed',()=>{
  it.each([1,2,3,4,6,31,999])('conquers the varco against every legal enemy commitment, seed %s',seed=>{
-  const run=firstActReducer(createFirstActRun({seed}),{type:'START',nodeId:'I1'}),config=firstActDuelConfig(run),hands=config.startOptions.fixedHands;
+  const run=firstActReducer(createLegacyFirstActRun({seed}),{type:'START',nodeId:'I1'}),config=firstActDuelConfig(run),hands=config.startOptions.fixedHands;
   expect(run.active.opening[0]).toBe(false);
   for(let focus=0;focus<=10;focus++){
    const result=duel({field:config.campaignDuelMod.fixedFields[0],campaign:config.campaignDuelMod,selectedAgent:hands.playerHand[0],enemyAgent:hands.enemyHand[0],...hands,selectedFocus:10,enemySelectedFocus:focus,playerHP:10,enemyHP:10,playerFocus:10,enemyFocus:10,isPlayerFirst:run.active.opening[0],enemyArmyBonuses:{}});
@@ -78,7 +78,7 @@ describe('first encounter is winnable independently of the campaign seed',()=>{
   }
  });
  it('still permits defeat when the player commits too few FC',()=>{
-  const r=firstActReducer(createFirstActRun({seed:2}),{type:'START',nodeId:'I1'}),c=firstActDuelConfig(r),h=c.startOptions.fixedHands;
+  const r=firstActReducer(createLegacyFirstActRun({seed:2}),{type:'START',nodeId:'I1'}),c=firstActDuelConfig(r),h=c.startOptions.fixedHands;
   expect(duel({field:c.campaignDuelMod.fixedFields[0],campaign:c.campaignDuelMod,selectedAgent:h.playerHand[0],enemyAgent:h.enemyHand[0],...h,selectedFocus:1,enemySelectedFocus:10,isPlayerFirst:false,enemyArmyBonuses:{}}).winner).toBe('enemy');
  });
 });

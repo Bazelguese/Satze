@@ -16,7 +16,7 @@ import { ELDRITCH_FRAME_W } from './EldritchCardFace';
  * (es. re-render per-frame della sequenza clash).
  */
 export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
-  const { showEldritch } = useEldritchFacePreference(agent?.id);
+  const { showEldritch } = useEldritchFacePreference(agent?.artId ?? agent?.id);
 
   if (!agent) return null;
 

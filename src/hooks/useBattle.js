@@ -189,7 +189,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     }
 
     if (gameState.campaignDuelMod?.firstAct) {
-      gameState.setCampaignDuelMod(prev => ({ ...prev, previousBonus: result.previousBonus, planUsed: result.campaignPlanUsed }));
+      gameState.setCampaignDuelMod(prev => ({ ...prev, previousBonus: result.previousBonus, planUsed: result.campaignPlanUsed, ...(result.campaignProgress ? {duels:[...(prev.duels||[]).filter(e=>e.key!==result.campaignProgress.key),result.campaignProgress]} : {}) }));
       if (result.resolvedField) gameState.setBattlefields(prev => prev.map((f,i)=>i===currentFieldIndex ? result.resolvedField : f));
     }
     setPlayerHP(result.finalPlayerHP);

@@ -156,8 +156,8 @@
 .cs-first-act .cs-reward-option > button { margin-top:auto; align-items:center; }
 
 /* Separate footer entry points: deck left, protagonist right. */
-.cs-first-act .cs-party-deck { grid-column:1; grid-row:1; }
-.cs-first-act .cs-hero-summary { grid-column:2; grid-row:1; justify-self:end; }
+.cs-first-act .cs-party-deck { grid-column:2; grid-row:1; }
+.cs-first-act .cs-hero-summary { grid-column:1; grid-row:1; justify-self:start; }
 .cs-nascente-summary { display:grid; grid-template-columns:300px minmax(0,1fr); gap:48px; padding:24px; }
 .cs-summary-card { display:flex; flex-direction:column; align-items:center; gap:18px; }
 .cs-summary-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:0 0 20px; }
@@ -169,3 +169,20 @@
 .cs-summary-details p { line-height:1.6; }
 .cs-summary-details blockquote { margin:12px 0; color:#c7d2c8; font-style:italic; }
 .cs-summary-legacy { color:#dec18b; }
+
+/* Cael 0.26: copy management and concrete event choices. */
+.cs-cael-event-body { display:grid; grid-template-columns:minmax(0,1fr) 300px; min-height:0; max-height:640px; overflow:auto; }
+.cs-cael-event-body .cs-question-answers { max-height:620px; overflow:auto; }
+.cs-cael-event-body .cs-question-preview { padding:18px; gap:10px; }
+.cs-cael-army-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,1fr); gap:24px; height:560px; }
+.cs-cael-copies { display:flex; flex-wrap:wrap; align-content:start; gap:16px; overflow:auto; }
+.cs-cael-copies article { width:178px; padding:6px; border:1px solid #d5b77b40; }
+.cs-cael-copies article.selected { border-color:#d5b77b; }
+.cs-cael-copies label, .cs-cael-copies small { display:block; }
+.cs-cael-copies button { padding:0; background:transparent; border:0; }
+.cs-cael-evolution { overflow:auto; padding:16px; background:#071217b0; }
+.cs-cael-promotions { display:flex; flex-wrap:wrap; gap:10px; }
+.cs-cael-promotions button { width:160px; padding:8px; }
+.cs-cael-promotions span,.cs-cael-promotions small { display:block; }
+.cs-summary-details ul { padding-left:20px; }
+.cs-summary-details li { margin-bottom:12px; }

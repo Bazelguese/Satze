@@ -1,3 +1,5 @@
+import { CaelArmyDialog } from './CaelArmyDialog.jsx';
+import { isCaelRun } from '../../campaign/state/firstActState.js';
 import React, { useRef, useState } from 'react';
 import { CampaignTransformation } from './CampaignTransformation.jsx';
 import { CampaignDialog } from './CampaignDialog.jsx';
@@ -6,7 +8,10 @@ import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { NASCENTE, firstActCard } from '../../campaign/data/firstAct.js';
 import { runCard, runLeague, mature, transformationPool } from '../../campaign/state/firstActState.js';
 
-export function FirstActArmyDialog({ run, draft, setDraft, commit, error, onClose }) {
+export function FirstActArmyDialog(props) {
+  return isCaelRun(props.run) ? <CaelArmyDialog {...props}/> : <LegacyFirstActArmyDialog {...props}/>;
+}
+function LegacyFirstActArmyDialog({ run, draft, setDraft, commit, error, onClose }) {
   const [tab,setTab] = useState('army');
   const [selected,setSelected] = useState(null);
   const [received,setReceived] = useState(null);

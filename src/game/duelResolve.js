@@ -1025,6 +1025,7 @@ export function computeDuelResolution({
       ...(campaign?.firstAct ? {resolvedField: field,
       campaignPlanUsed: Boolean(campaign?.planUsed || planApplies),
       campaignTerminal,
+      ...(campaign.cael ? {campaignProgress:{key:`${campaign.phase}:${roundNumber}`,phase:campaign.phase,round:roundNumber,playerId:pAgent.id,enemyId:eAgent.id,winner:builtResult.winner,fieldId:field.id,conquered:builtResult.winner!=='draw'&&!conquestOverride.suppressConquest&&!conquestOverride.destroyField}} : {}),
       previousBonus: { player: Boolean(finalPHasBonus && pHasBonus && !pBonusBlocked), enemy: Boolean(finalEHasBonus && eHasBonus && !eBonusBlocked) }} : {}),
       eminenceTriggerRules: eminenceBundle?.triggerRules || null,
       fieldDestroyed: conquestOverride.destroyField,

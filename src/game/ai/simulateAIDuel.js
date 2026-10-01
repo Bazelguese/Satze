@@ -43,6 +43,7 @@ export function resolveTerminalStatus(context, {
   playerFieldsAfter,
   aiCardsRemaining,
   playerCardsRemaining,
+  battleResult,
 }) {
   if (playerHpAfter <= 0 && aiHpAfter > 0) return 'ai_win_hp';
   if (aiHpAfter <= 0 && playerHpAfter > 0) return 'ai_loss_hp';
@@ -50,7 +51,7 @@ export function resolveTerminalStatus(context, {
 
   const round = context.roundNumber || 1;
   if (context.campaignDuelMod?.firstAct) {
-    const result=firstActMatchOutcome({playerHP:playerHpAfter,enemyHP:aiHpAfter,playerFields:playerFieldsAfter,enemyFields:aiFieldsAfter,exhausted:aiCardsRemaining<=0||playerCardsRemaining<=0,round,rule:context.campaignDuelMod.winRule});
+    const result=firstActMatchOutcome({playerHP:playerHpAfter,enemyHP:aiHpAfter,playerFields:playerFieldsAfter,enemyFields:aiFieldsAfter,exhausted:aiCardsRemaining<=0||playerCardsRemaining<=0,round,rule:context.campaignDuelMod.winRule,conquestEffect:battleResult?.resolvedField?.campaignEffect,duelWinner:winner,conquered:!battleResult?.skipConquest});
     if (result?.claim) return 'player_threat_fields';
     if (result?.winner) return result.winner==='player'?'ai_loss_cards':result.winner==='enemy'?'ai_win_cards':'draw_cards';
     return null;

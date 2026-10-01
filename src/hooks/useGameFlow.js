@@ -282,7 +282,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setEnemyToxin(null);
     
     // In Bare Hands tutti i campi sono visibili fin da subito
-    setRevealedFields(mode === 'bareHands' ? fields.length : Math.min(3, fields.length));
+    setRevealedFields(campaignDuelMod?.firstAct ? campaignDuelMod.revealRounds.filter(r=>r<=1).length : mode === 'bareHands' ? fields.length : Math.min(3, fields.length));
     
     setSelectedAgent(null);
     setEnemyAgent(null);

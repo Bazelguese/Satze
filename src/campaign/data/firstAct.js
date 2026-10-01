@@ -8,6 +8,10 @@ export const FIGLI = "Figli dell'Orizzonte";
 export const TOWER_ID = 9201;
 export const VARCO_ID = 9200;
 export const SPECIAL_FIELDS = [
+  ...[9211,9212,9213].map((id,i)=>({id,name:`Gabbia degli schiavisti ${i+1}`,description:'Conquista: ottieni l’agente sconfitto. Non puoi vincere per territorio questo turno.',campaignOnly:true,campaignEffect:'capture',category:'special'})),
+  {id:9214,name:'Porre il quesito',description:'Conquista: Vinci la partita.',campaignOnly:true,campaignEffect:'win',category:'special'},
+  ...[9215,9216].map((id,i)=>({id,name:`Tempio nella natura ${i+1}`,description:'Conquista: +1 PV massimo permanente.',campaignOnly:true,campaignEffect:'life',category:'special'})),
+  {id:9217,name:'Magazzino dell’esattore locale',description:'Conquista: +1 FC massimo permanente.',campaignOnly:true,campaignEffect:'focus',category:'special'},
   { id: VARCO_ID, name: 'Il primo varco', description: 'Conquista: Vinci la partita.', effect: 'Conquista: Vinci la partita.', category: 'neutral', campaignOnly: true, bgImage: './campi_bg/campo-9200.webp' },
   { id: TOWER_ID, name: 'Torre del Richiamo', description: 'Staffetta è soddisfatto. Disponibilità e blocchi restano validi.', effect: 'Staffetta è soddisfatto.', category: 'special', campaignOnly: true, forceStaffetta: true, bgImage: './campi_bg/campo-9201.webp' },
 ];
@@ -18,6 +22,13 @@ export const codes = text => text.split(' ').map(code => {
   return c.id;
 });
 export function firstActCard(id) {
+  // Enemy instances retain a unique duel identity while sharing their catalog artwork.
+  if (typeof id === 'string' && id.startsWith('enemy:')) {
+    const cardId=Number(id.split(':').at(-1)), card=firstActCard(cardId);
+    return card ? {...card,id,cardId,artId:card.artId ?? cardId} : null;
+  }
+  if ([9151,9152,9153].includes(id)) return {id, code:`L0${id-9150}`, name:['Contadini armati','Frati soldati','Mutilati volenterosi'][id-9151], league:1,power:1,damage:1,ability:null,description:'Nessun Potere personale',army:CONCORDIA_ARMY,campaignOnly:true,icon:'shield',armyBonusOverride:{trigger:'staffetta',effects:[{effect:'power',value:1}],description:'Staffetta: +1 POT'}};
+  if(id===9154) return {...firstActCard(9114),id,artId:9114,league:4,power:4,damage:3,campaignOnly:true};
   let c = concordiaCardById(id) || Object.entries(ARMY_SETS).flatMap(([army, cards]) => cards.map(c => ({ ...c, army: c.army || army }))).find(c => c.id === id);
   if (!c) return null;
   if (c.army === CONCORDIA_ARMY) c = {...c, armyBonusOverride: {trigger:'staffetta',effects:[{effect:'power',value:1}],description:'Staffetta: +1 POT'}};
