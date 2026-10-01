@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { createFirstActRun,firstActReducer as reduce,availableFirstActNodes,runCard,runLeague,legalArmy,transformationPool,previewFirstActChoice,assertFirstActRun } from './state/firstActState.js';
+import { createLegacyFirstActRun,firstActReducer as reduce,availableFirstActNodes,runCard,runLeague,legalArmy,transformationPool,previewFirstActChoice,assertFirstActRun } from './state/firstActState.js';
 import { FIRST_ACT_STAGES,firstActNode,NASCENTE,codes,POWER_PACKAGES,TOWER_ID,FIRST_ACT_NODES,validateFirstActData } from './data/firstAct.js';
 import { firstActDuelConfig,firstActMatchOutcome,revealedAt } from './logic/firstActBattle.js';
 import { restartCampaignEncounter } from './logic/missionAdapter.js';
@@ -8,7 +8,7 @@ import { calcInitialBonuses } from '../utils/onlineMatch.js';
 function result(r,winner='player',playerHP=22,enemyHP=20){return reduce(r,{type:'RESULT',attempt:r.active.id,phase:r.active.phase,winner,playerHP,enemyHP});}
 function win(r,id=availableFirstActNodes(r)[0].id){r=reduce(r,{type:'START',nodeId:id});while(r.active)r=result(r);return reduce(r,{type:'REWARD',cardId:r.pendingReward.offer[0]});}
 function until(id,choices={}){
- let r=createFirstActRun({seed:31});
+ let r=createLegacyFirstActRun({seed:31});
  while(!availableFirstActNodes(r).some(n=>n.id===id)){
   const n=availableFirstActNodes(r)[0];
   if(n.kind==='event'){r=reduce(r,{type:'ENTER_EVENT'});r=reduce(r,{type:'CHOICE',choice:choices[n.id]|| (n.id==='E06'?'liberi':'conserva')});}
@@ -19,7 +19,7 @@ function until(id,choices={}){
 describe('Atto I 0.25',()=>{
  it('progresses both branches with and without F2, grows distinct legal armies and pays once',()=>{
   for(const alternate of [false,true])for(const skip of [false,true]){
-   let r=createFirstActRun({seed:32});
+   let r=createLegacyFirstActRun({seed:32});
    while(!r.outcome){
     const ns=availableFirstActNodes(r),n=ns[alternate?ns.length-1:0];
     if(n.id==='F2'&&skip){r=reduce(r,{type:'SKIP'});continue;}
@@ -32,7 +32,7 @@ describe('Atto I 0.25',()=>{
   }
  });
  it('starts with one unpowered 2/2, 10 PV/FC and the victory field',()=>{
-  let r=createFirstActRun({seed:1});expect(runCard(r,NASCENTE)).toMatchObject({power:2,damage:2,ability:null,league:2});
+  let r=createLegacyFirstActRun({seed:1});expect(runCard(r,NASCENTE)).toMatchObject({power:2,damage:2,ability:null,league:2});
   r=reduce(r,{type:'START',nodeId:'I1'});const cfg=firstActDuelConfig(r);
   expect(cfg.campaignDuelMod).toMatchObject({playerLife:10,enemyLife:10,playerFocus:10,enemyFocus:10,winRule:'varco'});
   expect(cfg.startOptions.fixedHands.playerHand).toHaveLength(1);
@@ -77,7 +77,7 @@ describe('Atto I 0.25',()=>{
   const changed=previewFirstActChoice(r,'C1');expect(runCard(changed,NASCENTE)).toMatchObject({power:2,damage:3,league:3});
  });
  it('matures only after a subsequent completed stage and transforms uniformly within league',()=>{
-  let r=win(createFirstActRun({seed:1}));const c=r.copies[0];expect(transformationPool(r,c.uid)).toEqual([]);
+  let r=win(createLegacyFirstActRun({seed:1}));const c=r.copies[0];expect(transformationPool(r,c.uid)).toEqual([]);
   r=win(r);const pool=transformationPool(r,c.uid);expect(pool.length).toBeGreaterThan(0);
   const next=reduce(r,{type:'TRANSFORM',uid:c.uid});expect(pool).toContain(next.copies[0].cardId);expect(runCard(next,next.copies[0].cardId).league).toBe(2);
   expect(()=>reduce(next,{type:'TRANSFORM',uid:c.uid})).toThrow();
@@ -94,7 +94,7 @@ describe('Atto I 0.25',()=>{
  });
  it('rewards originate in the encountered roster including duplicates',()=>{
   for(let seed=1;seed<30;seed++){
-   let r=createFirstActRun({seed});r=win(r);r=win(r);r=reduce(r,{type:'START',nodeId:'I3'});r=result(r);
+   let r=createLegacyFirstActRun({seed});r=win(r);r=win(r);r=reduce(r,{type:'START',nodeId:'I3'});r=result(r);
    expect(firstActNode('I3').roster).toContain(r.pendingReward.offer[0]);
   }
  });
@@ -168,7 +168,7 @@ it('preserves phase-specific fields and PV across the boss squad transition',()=
 });
 
 it('reads old E03 upgrades as a single stat without reaching L4',()=>{
- for(const evolution of ['power','damage']){const r=createFirstActRun();r.nascente={...r.nascente,packageId:'C1',statTaken:true,damage:1,evolution};
+ for(const evolution of ['power','damage']){const r=createLegacyFirstActRun();r.nascente={...r.nascente,packageId:'C1',statTaken:true,damage:1,evolution};
  expect(runCard(r,NASCENTE)).toMatchObject({league:3,power:evolution==='power'?3:2,damage:evolution==='damage'?4:3,ability:{effect:'power',value:2}});
  }
 });
@@ -181,7 +181,7 @@ it('offers the final stat choice even with no power and consumes the event once'
 
 
 it('counts terminal encounters once, including retries and abandonments, but not events or intermediate phases',()=>{
- let r=createFirstActRun({seed:1});
+ let r=createLegacyFirstActRun({seed:1});
  for(const winner of ['enemy','draw','player']) {
   r=reduce(r,{type:'START',nodeId:'I1'});const action={type:'RESULT',attempt:r.active.id,phase:0,winner,playerHP:10,enemyHP:9};
   r=reduce(r,action);expect(reduce(r,action)).toBe(r);

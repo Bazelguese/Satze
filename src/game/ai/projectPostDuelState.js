@@ -9,14 +9,14 @@ function usedList(ids) {
   return Array.isArray(ids) ? ids.map((id) => id) : [];
 }
 
-function resolveTerminalFromProjected(state) {
+function resolveTerminalFromProjected(state, simulation) {
   if (state.playerHP <= 0 && state.aiHP > 0) return 'ai_win_hp';
   if (state.aiHP <= 0 && state.playerHP > 0) return 'ai_loss_hp';
   if (state.playerHP <= 0 && state.aiHP <= 0) return 'draw_hp';
 
   const round = state.roundNumber || 1;
   if (state._refs?.campaignDuelMod?.firstAct) {
-    const r=firstActMatchOutcome({playerHP:state.playerHP,enemyHP:state.aiHP,playerFields:state.playerFieldsConquered,enemyFields:state.enemyFieldsConquered,exhausted:state.aiRemainingCardIds.length===0||state.playerRemainingCardIds.length===0,round:Math.max(1,round-1),rule:state._refs.campaignDuelMod.winRule});
+    const r=firstActMatchOutcome({playerHP:state.playerHP,enemyHP:state.aiHP,playerFields:state.playerFieldsConquered,enemyFields:state.enemyFieldsConquered,exhausted:state.aiRemainingCardIds.length===0||state.playerRemainingCardIds.length===0,round:Math.max(1,round-1),rule:state._refs.campaignDuelMod.winRule,conquestEffect:simulation?.battleResult?.resolvedField?.campaignEffect,duelWinner:simulation?.winner,conquered:!simulation?.battleResult?.skipConquest});
     if (r?.claim) return 'player_threat_fields';
     return r ? (r.winner==='player'?'ai_loss_cards':r.winner==='enemy'?'ai_win_cards':'draw_cards') : null;
   }
@@ -114,7 +114,7 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
   if (simulation?.winner === 'enemy') enemyFieldsConquered += 1;
 
   const nextRound = (strategicState.roundNumber || 1) + 1;
-  const nextIsPlayerFirst = resolveNextInitiativeFromWinner(
+  const nextIsPlayerFirst = strategicState._refs?.campaignDuelMod?.alwaysPlayerFirst || resolveNextInitiativeFromWinner(
     simulation?.winner,
     strategicState.isPlayerFirst !== false
   );
@@ -177,7 +177,7 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
   };
 
   if (!projected.terminalStatus) {
-    projected.terminalStatus = resolveTerminalFromProjected(projected);
+    projected.terminalStatus = resolveTerminalFromProjected(projected, simulation);
   }
 
   return projected;

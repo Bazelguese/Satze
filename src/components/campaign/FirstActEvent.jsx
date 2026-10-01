@@ -1,3 +1,5 @@
+import { CaelEvent } from './CaelEvent.jsx';
+import { isCaelRun } from '../../campaign/state/firstActState.js';
 import React from 'react';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { firstActNode, POWER_PACKAGES, NASCENTE } from '../../campaign/data/firstAct.js';
@@ -6,6 +8,7 @@ import { eventChoices, previewFirstActChoice, runCard, runLeague } from '../../c
 const labels = { conserva:'Per ora, ciò che sono basta.', power:'La forza per contendere il terreno. (+1 POT)', damage:'Rendere decisiva una vittoria. (+1 DAN)', finalPower:'Accrescere la mia forza. (+1 POT, stessa Lega)', finalDamage:'Rendere più incisivi i miei colpi. (+1 DAN, stessa Lega)', liberi:'Liberali. (+3 PV alla prossima battaglia)', trattenuti:'Trattienili. (+2 FC alla prossima battaglia)', comunione:'Lascia parlare i Concordia conservati. (+2 FC e Comunione)' };
 
 export function FirstActEvent({run,choice,setChoice,family,setFamily,commit}) {
+  if(isCaelRun(run))return <CaelEvent {...{run,choice,setChoice,commit}}/>;
   const options = eventChoices(run);
   const packages = POWER_PACKAGES.filter(p=>options.includes(p.id));
   const families = [...new Set(packages.map(p=>p.family))];

@@ -837,7 +837,7 @@ export default function SatzeGame() {
 
   const matchArmyBonuses = campaignDuelMod?.firstAct ? {...ARMY_BONUSES, 'Concordia di Caelion':{trigger:'staffetta',effects:[{effect:'power',value:1}],description:'Staffetta: +1 POT'}} : ARMY_BONUSES;
   const campaignPersistenceError = useFirstActPersistence(gameState);
-  const campaignOutcomeError = useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP });
+  const campaignOutcomeError = useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP, campaignDuelMod });
 
   const setGamePhaseAnimated = useTransitionedSetGamePhase(setGamePhaseRaw, gamePhase);
   const setGamePhaseFromMainMenu = useCallback((nextPhase) => {
@@ -3692,7 +3692,7 @@ export default function SatzeGame() {
     const newEnemyHP = currentEnemyHP;
     if (campaignDuelMod?.firstAct) {
       const outcome = firstActMatchOutcome({ playerHP:newPlayerHP,enemyHP:newEnemyHP,playerFields,enemyFields,
-        exhausted:playerAvailable.length===0||enemyAvailable.length===0,round:roundNumber,rule:campaignDuelMod.winRule });
+        exhausted:playerAvailable.length===0||enemyAvailable.length===0,round:roundNumber,rule:campaignDuelMod.winRule,conquestEffect:battleResult?.resolvedField?.campaignEffect,duelWinner:battleResult?.winner,conquered:!battleResult?.skipConquest });
       if (outcome && !(outcome.claim && skipTerritorialWin)) {
         if (outcome.claim) setShowClaimVictoryChoice({winner:'player',playerFields,enemyFields});
         else { setGameResult({...outcome,playerFields,enemyFields}); setGamePhase('gameOver'); }
@@ -3822,7 +3822,7 @@ export default function SatzeGame() {
 
     setRoundNumber(nextRoundNum);
     setIsPlayerFirst(
-      resolveRoundInitiative({
+      campaignDuelMod?.alwaysPlayerFirst ? true : resolveRoundInitiative({
         roundNumber: nextRoundNum,
         openingPlayerFirst,
         initiativeProfile: campaignDuelMod?.initiativeProfile ?? null,

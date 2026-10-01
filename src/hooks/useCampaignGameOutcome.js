@@ -12,7 +12,7 @@ import { loadCampaignRun, saveCampaignRun } from '../campaign/state/persistence.
  * @param {{ gamePhase: string, campaignLevel: Object|null, gameResult: Object|null, campaignSaveSlot?: number }} params
  *   campaignLevel = missione del modello Atto I ({ id, node, objective, enemy, … })
  */
-export function useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot = 0, playerHP, enemyHP }) {
+export function useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot = 0, playerHP, enemyHP, campaignDuelMod }) {
   const handledRef = useRef(false);
   const [error,setError] = useState('');
 
@@ -29,7 +29,7 @@ export function useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, c
     try {
       const run = loadCampaignRun(campaignSaveSlot, ACT);
       if (!run) return;
-      const next = isFirstActRun(run) ? firstActReducer(run, {type:'RESULT',attempt:campaignLevel.campaignAttempt,phase:campaignLevel.campaignPhase,winner:gameResult.winner,playerHP,enemyHP}) : applyDuelResult(run, ACT, campaignLevel, gameResult);
+      const next = isFirstActRun(run) ? firstActReducer(run, {type:'RESULT',attempt:campaignLevel.campaignAttempt,phase:campaignLevel.campaignPhase,winner:gameResult.winner,playerHP,enemyHP,progress:campaignDuelMod?.duels}) : applyDuelResult(run, ACT, campaignLevel, gameResult);
       if (!saveCampaignRun(next, campaignSaveSlot)) throw new Error('Salvataggio esito non riuscito. Riprendi lo scontro salvato per confermarlo.');
       setError('');
     } catch (e) {
@@ -37,6 +37,6 @@ export function useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, c
       setError(e.message);
       console.error("Errore nell'applicare l'esito campagna:", e);
     }
-  }, [gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP]);
+  }, [gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP, campaignDuelMod]);
   return error;
 }

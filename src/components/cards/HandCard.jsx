@@ -35,7 +35,7 @@ export const HandCard = React.memo(({
   preyArriving = false,
   cardLayout: _legacyCardLayout,
 }) => {
-  const { showEldritch } = useEldritchFacePreference(agent?.id);
+  const { showEldritch } = useEldritchFacePreference(agent?.artId ?? agent?.id);
   const isUsed = usedCards.includes(agent?.id);
   const isFragment = fragmentCardIds.includes(agent?.id);
   const isPrey = preyCardIds.includes(agent?.id);
