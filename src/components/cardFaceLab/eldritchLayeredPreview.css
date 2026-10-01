@@ -8,6 +8,7 @@
   position: relative;
   padding: 12px;
   perspective: 1200px;
+  --eld-stage-pad: 12px;
 }
 
 /* Zona interattiva = cornice (non tutto il canvas 1024×1536). */
@@ -26,9 +27,18 @@
   aspect-ratio: 23 / 33;
   transform-style: preserve-3d;
   isolation: isolate;
-  filter: drop-shadow(0 22px 24px #0009);
   /* Solo il soggetto (.break) può uscire; window + layout restano in cornice. */
   --eld-cornice-clip: inset(3.3% 4.5% 3.5% 4.5% round 4.8%);
+}
+
+.eldritch-layered__stage::before {
+  content: '';
+  position: absolute;
+  inset: var(--eld-stage-pad, 12px);
+  border-radius: 4.8%;
+  box-shadow: 0 22px 24px #0009;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .eldritch-layered__card img,
@@ -79,34 +89,95 @@
 }
 
 /*
- * Ordine:
- * soggetto finestra → cornice → break (overflow sopra cornice) →
- * macchie (sopra il soggetto/break, clipate dentro la cornice) → testi → break above.
- * Così la macchia non resta sotto l’armatura, e la spada non finisce sotto il bordo.
+ * Ordine default:
+ * soggetto finestra → cornice → break (overflow) →
+ * macchia nome + macchie stats → testi → break above.
+ *
+ * name-ink-under: macchia NOME sotto i break (corona/scettro sopra il nero del titolo);
+ * macchie potere/bonus/potenza/danno restano SOPRA il soggetto.
  */
+.eldritch-layered__layout--ink-name,
 .eldritch-layered__layout--ink {
   z-index: 5;
   clip-path: var(--eld-cornice-clip);
 }
-.eldritch-layered__layout--type {
+
+/* name-ink-under: macchia NOME sopra l’arte, sotto i break (cresta/scettro sopra il nero). */
+.eldritch-layered__card.name-ink-under .eldritch-layered__layout--ink-name {
+  z-index: 4;
+}
+
+.eldritch-layered__card.name-ink-under .eldritch-layered__break {
+  z-index: 5;
+}
+
+.eldritch-layered__card.name-ink-under .eldritch-layered__layout--ink {
   z-index: 6;
 }
+
+.eldritch-layered__card.name-ink-under .eldritch-layered__break--over-ink {
+  z-index: 7;
+}
+
+.eldritch-layered__card.name-ink-under .eldritch-layered__layout--type {
+  z-index: 8;
+}
+
+.eldritch-layered__card.name-ink-under .eldritch-layered__break--above {
+  z-index: 9;
+}
+
+/* Tutte le macchie sotto il soggetto (raro). */
+.eldritch-layered__card.ink-under-subject .eldritch-layered__layout--ink-name,
+.eldritch-layered__card.ink-under-subject .eldritch-layered__layout--ink {
+  z-index: 1;
+}
+
+.eldritch-layered__card.ink-under-subject .eldritch-layered__window {
+  z-index: 2;
+}
+.eldritch-layered__layout--type {
+  z-index: 7;
+}
+.eldritch-layered__layout--ink-name [data-layer='type'],
+.eldritch-layered__layout--ink-name [data-layer='league-ring'],
+.eldritch-layered__layout--ink-name [data-layer='frame'],
+.eldritch-layered__layout--ink-name [data-layer='ink'],
 .eldritch-layered__layout--ink [data-layer='type'],
 .eldritch-layered__layout--ink [data-layer='league-ring'],
-.eldritch-layered__layout--ink [data-layer='frame'] {
+.eldritch-layered__layout--ink [data-layer='frame'],
+.eldritch-layered__layout--ink [data-layer='ink-name'] {
   display: none !important;
 }
-.eldritch-layered__layout--type [data-layer='ink'] {
+.eldritch-layered__layout--type [data-layer='ink'],
+.eldritch-layered__layout--type [data-layer='ink-name'] {
   display: none !important;
 }
 
-.eldritch-layered__break {
-  z-index: 4;
+.eldritch-layered__layout--gallery {
+  z-index: 7;
+  clip-path: var(--eld-cornice-clip);
+}
+
+.eldritch-layered__card.perf-gallery {
+  /* Evita promote permanente di troppi layer. */
+  transform-style: flat;
+}
+.eldritch-layered__card.perf-gallery .eldritch-layered__subject,
+.eldritch-layered__card.perf-gallery .eldritch-layered__bg {
   will-change: transform;
+}
+.eldritch-layered__card.perf-gallery .eldritch-layered__break {
+  display: none !important;
+}
+
+/* Sopra macchia ink, sotto testi (es. coda sotto Potenza). */
+.eldritch-layered__break--over-ink {
+  z-index: 6;
 }
 
 .eldritch-layered__break--above {
-  z-index: 7;
+  z-index: 8;
 }
 
 .eldritch-layered__card.no-break .eldritch-layered__break {

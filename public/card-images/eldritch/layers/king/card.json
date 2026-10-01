@@ -1,0 +1,93 @@
+{
+  "id": 929,
+  "name": "King",
+  "league": 4,
+  "power": 5,
+  "damage": 4,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Patto degli Indocili",
+  "accent": "#e867c3",
+  "autoFaction": false,
+  "ability": {
+    "title": "Resistenza",
+    "text": "-2 DAN nem. (min 2)"
+  },
+  "bonus": {
+    "title": "Rinforzi",
+    "text": "-1 POT, -1 DAN nem. (min 2)"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 740,
+      "y": 955,
+      "w": 265,
+      "fontSize": 52
+    },
+    "abilityText": {
+      "x": 750,
+      "y": 1060,
+      "fontSize": 46,
+      "w": 245
+    },
+    "name": {
+      "x": 80,
+      "y": 65,
+      "w": 740,
+      "h": 110,
+      "fontSize": 100
+    },
+    "faction": {
+      "x": 70,
+      "y": 755,
+      "w": 455,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Cresta, scope e chitarra davanti alla cornice"
+    ],
+    "anatomy": "King con chitarra, occhiali, sigaro e trono di predoni e robot. Intero gruppo nel livello anteriore; vicolo ricostruito nel livello posteriore.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

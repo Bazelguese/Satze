@@ -2,7 +2,8 @@ import React from 'react';
 import { ARMY_COLORS } from '../../data';
 import { useEldritchFacePreference } from '../../hooks/useEldritchFacePreference';
 import { CardReworkP4 } from './CardReworkP4';
-import { EldritchCardFace, ELDRITCH_FRAME_W, ELDRITCH_FRAME_H } from './EldritchCardFace';
+import { AltArtCardFace } from './AltArtCardFace';
+import { ELDRITCH_FRAME_W, ELDRITCH_FRAME_H } from './EldritchCardFace';
 
 /**
  * Componente carta per la mano - dimensioni medie
@@ -123,7 +124,7 @@ export const HandCard = React.memo(({
             transform: `translate(-50%, -50%) scale(${HAND_ELD_SCALE})`,
           }}
         >
-          <EldritchCardFace agent={agent} width={ELDRITCH_FRAME_W} />
+          <AltArtCardFace agent={agent} width={ELDRITCH_FRAME_W} />
         </div>
       ) : (
         <div

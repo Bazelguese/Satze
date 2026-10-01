@@ -211,7 +211,6 @@ export const Hand = React.memo(({
           willChange: 'transform',
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
-          contain: 'layout style paint'
         }}
       >
         <div 

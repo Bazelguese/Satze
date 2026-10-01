@@ -69,19 +69,56 @@ function stripFxClasses(el) {
   if (!el.classList.contains('em-arm-fx')) el.classList.add('em-arm-fx');
 }
 
-/** Kethran / Khemet: pezzi = copie della carta (cloneNode), non solo arte. */
+/** Kethran / Khemet: pezzi = silhouette leggera (arte), non cloneNode della carta tarocco. */
+function makeLiteCardPiece(card) {
+  const piece = document.createElement('div');
+  piece.className = 'em-card em-card--fx-lite';
+  piece.setAttribute('aria-hidden', 'true');
+  Object.assign(piece.style, {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    background: '#0a0a0d',
+    borderRadius: '0 0 14px 14px',
+    position: 'relative',
+  });
+
+  const art =
+    card?.querySelector?.('.eminence-tarot__art img')
+    || card?.querySelector?.('.eminence-tarot img')
+    || card?.querySelector?.('img');
+  const src = art?.currentSrc || art?.src;
+  if (src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.draggable = false;
+    img.decoding = 'async';
+    Object.assign(img.style, {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      objectPosition: '50% 30%',
+      display: 'block',
+      pointerEvents: 'none',
+    });
+    piece.appendChild(img);
+  } else {
+    // Fallback: clone nudo senza figli SVG filter / canvas pesanti
+    const clone = card.cloneNode(true);
+    clone.className = 'em-card';
+    clone.style.animation = 'none';
+    clone.style.width = '100%';
+    clone.style.height = '100%';
+    clone.querySelectorAll('svg.eminence-tarot__defs, canvas, video').forEach((el) => el.remove());
+    piece.appendChild(clone);
+  }
+  return piece;
+}
+
 function fillEffectLayer(fx, slug, card) {
   fx.innerHTML = '';
   if (!card || (slug !== 'kethran' && slug !== 'khemet')) return;
-
-  const piece = () => {
-    const c = card.cloneNode(true);
-    c.className = 'em-card';
-    c.style.animation = 'none';
-    c.style.width = '100%';
-    c.style.height = '100%';
-    return c;
-  };
 
   if (slug === 'kethran') {
     for (let i = 0; i < 20; i += 1) {
@@ -99,7 +136,7 @@ function fillEffectLayer(fx, slug, card) {
       inner.className = 'em-frag-in';
       inner.style.setProperty('--cx', String(cx));
       inner.style.setProperty('--cy', String(cy));
-      inner.appendChild(piece());
+      inner.appendChild(makeLiteCardPiece(card));
       cell.appendChild(inner);
       fx.appendChild(cell);
     }
@@ -110,7 +147,7 @@ function fillEffectLayer(fx, slug, card) {
     const ring = document.createElement('span');
     ring.className = 'em-ring';
     ring.style.setProperty('--r', String(r));
-    ring.appendChild(piece());
+    ring.appendChild(makeLiteCardPiece(card));
     fx.appendChild(ring);
   }
 }

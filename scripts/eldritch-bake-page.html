@@ -45,14 +45,31 @@
     #card .subject { z-index: 1; }
     #card .frame { z-index: 3; }
     #card .break { z-index: 4; }
-    /* Macchie sopra break/soggetto, clipate in cornice (bordo libero per overflow). */
+    #card .layout-ink-name,
     #card .layout-ink { z-index: 5; clip-path: var(--eld-cornice-clip); }
-    #card .layout-type { z-index: 6; }
-    #card .break.above { z-index: 7; }
+    /* Macchia nome sopra l’arte, sotto i break. */
+    #card.name-ink-under .layout-ink-name { z-index: 4; }
+    #card.name-ink-under .break { z-index: 5; }
+    #card.name-ink-under .layout-ink { z-index: 6; }
+    #card.name-ink-under .break.over-ink { z-index: 7; }
+    #card.name-ink-under .layout-type { z-index: 8; }
+    #card.name-ink-under .break.above { z-index: 9; }
+    #card.ink-under-subject .layout-ink-name,
+    #card.ink-under-subject .layout-ink { z-index: 1; }
+    #card.ink-under-subject .window { z-index: 2; }
+    #card .break.over-ink { z-index: 6; }
+    #card .layout-type { z-index: 7; }
+    #card .break.above { z-index: 8; }
+    #card .layout-ink-name [data-layer="type"],
+    #card .layout-ink-name [data-layer="league-ring"],
+    #card .layout-ink-name [data-layer="frame"],
+    #card .layout-ink-name [data-layer="ink"],
     #card .layout-ink [data-layer="type"],
     #card .layout-ink [data-layer="league-ring"],
-    #card .layout-ink [data-layer="frame"] { display: none !important; }
-    #card .layout-type [data-layer="ink"] { display: none !important; }
+    #card .layout-ink [data-layer="frame"],
+    #card .layout-ink [data-layer="ink-name"] { display: none !important; }
+    #card .layout-type [data-layer="ink"],
+    #card .layout-type [data-layer="ink-name"] { display: none !important; }
     #card .layout svg { display: block; width: 100%; height: 100%; }
   </style>
 </head>
@@ -76,8 +93,9 @@
       subjectYPercent: 0,
       backgroundScale: 1.07,
       backgroundYPercent: 0,
-      breakHeadClip: 'polygon(16% 0, 82% 0, 82% 31%, 16% 31%)',
+      breakHeadClip: 'polygon(0 0, 100% 0, 100% 29%, 0 29%)',
       breakHeadMask: undefined,
+      breakHeadAbove: true,
       breakShoulderClip: 'polygon(0 31%, 31% 31%, 31% 71%, 0 71%)',
       breakShoulderMask:
         'linear-gradient(to bottom, transparent 31%, #000 40%, #000 59%, transparent 71%)',
@@ -104,6 +122,24 @@
         if (kitComp && Object.prototype.hasOwnProperty.call(kitComp, key) && !kitComp[key]) {
           c[key] = null;
         }
+      }
+      // Kit con head clip spento = tutto in cornice (non forzare Berserker).
+      const headOff =
+        kitComp &&
+        Object.prototype.hasOwnProperty.call(kitComp, 'breakHeadClip') &&
+        !kitComp.breakHeadClip;
+      const headAboveExplicit =
+        kitComp && Object.prototype.hasOwnProperty.call(kitComp, 'breakHeadAbove');
+      if (headOff) {
+        c.breakHeadClip = null;
+        c.breakHeadAbove = false;
+      } else {
+        if (!c.breakHeadClip) c.breakHeadClip = DEFAULT_COMPOSITION.breakHeadClip;
+        c.breakHeadAbove = headAboveExplicit
+          ? kitComp.breakHeadAbove
+          : c.breakHeadAbove == null
+            ? true
+            : c.breakHeadAbove;
       }
       return c;
     }
@@ -175,6 +211,10 @@
 
       const root = document.getElementById('card');
       root.innerHTML = '';
+      const classes = [];
+      if (c.inkAboveSubject === false) classes.push('ink-under-subject');
+      if (c.nameInkUnderSubject) classes.push('name-ink-under');
+      root.className = classes.join(' ');
 
       const windowEl = document.createElement('div');
       windowEl.className = 'window';
@@ -196,21 +236,26 @@
       windowEl.append(bg, subject);
       root.append(windowEl);
 
-      const breakAboveClass = (flag) =>
-        (flag != null ? flag : c.breaksAboveLayout) ? ' above' : '';
+      const breakTier = (flag) => {
+        const v = flag != null ? flag : c.breaksAboveLayout;
+        if (v === 'ink' || v === 'over-ink') return 'over-ink';
+        if (v === true || v === 'type' || v === 'above') return 'above';
+        return 'below';
+      };
 
       const mkBreak = (clip, mask, aboveFlag) => {
         if (!clip) return null;
+        const tier = breakTier(aboveFlag);
         const img = document.createElement('img');
-        img.className = `break${breakAboveClass(aboveFlag)}`;
+        img.className =
+          'break' +
+          (tier === 'above' ? ' above' : tier === 'over-ink' ? ' over-ink' : '');
         img.src = subjectUrl;
         applyStyle(img, {
           ...maskStyle(clip, mask),
           transform: `translate(${c.subjectXPercent || 0}%, ${c.subjectYPercent}%) scale(${c.subjectScale})`,
         });
-        img.dataset.above = String(
-          aboveFlag != null ? Boolean(aboveFlag) : Boolean(c.breaksAboveLayout)
-        );
+        img.dataset.tier = tier;
         return img;
       };
 
@@ -221,12 +266,6 @@
         mkBreak(c.breakExtraClip, c.breakExtraMask, c.breakExtraAbove),
       ].filter(Boolean);
 
-      // Ordine: ink → cornice → break (sopra cornice) → testi → break above
-      const layoutInk = document.createElement('div');
-      layoutInk.className = 'layout layout-ink';
-      layoutInk.innerHTML = svg;
-      root.append(layoutInk);
-
       if (frameUrl) {
         const frame = document.createElement('img');
         frame.className = 'frame';
@@ -234,17 +273,26 @@
         root.append(frame);
       }
 
+      const mkLayout = (cls) => {
+        const el = document.createElement('div');
+        el.className = `layout ${cls}`;
+        el.innerHTML = svg;
+        return el;
+      };
+
+      // name-ink-under: macchia nome → break → macchie stats → testi
+      if (c.nameInkUnderSubject) root.append(mkLayout('layout-ink-name'));
       for (const b of breaks) {
-        if (b.dataset.above !== 'true') root.append(b);
+        if (b.dataset.tier === 'below') root.append(b);
       }
-
-      const layoutType = document.createElement('div');
-      layoutType.className = 'layout layout-type';
-      layoutType.innerHTML = svg;
-      root.append(layoutType);
-
+      root.append(mkLayout('layout-ink'));
+      if (!c.nameInkUnderSubject) root.append(mkLayout('layout-ink-name'));
       for (const b of breaks) {
-        if (b.dataset.above === 'true') root.append(b);
+        if (b.dataset.tier === 'over-ink') root.append(b);
+      }
+      root.append(mkLayout('layout-type'));
+      for (const b of breaks) {
+        if (b.dataset.tier === 'above') root.append(b);
       }
 
       const imgs = [...root.querySelectorAll('img')];
@@ -267,6 +315,7 @@
         shoulder: c.breakShoulderClip,
         headAbove: c.breakHeadAbove,
         shoulderAbove: c.breakShoulderAbove,
+        nameInkUnder: !!c.nameInkUnderSubject,
       };
     };
   </script>

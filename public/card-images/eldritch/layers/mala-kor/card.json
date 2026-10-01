@@ -1,0 +1,95 @@
+{
+  "id": 1013,
+  "name": "Mala-Kor, il Campione dell’Esterno",
+  "league": 3,
+  "power": 5,
+  "damage": 3,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Khemet",
+  "accent": "#26c4e8",
+  "autoFaction": false,
+  "ability": {
+    "title": "Conquista",
+    "text": "−4 PV (a te)"
+  },
+  "bonus": {
+    "title": "Overdrive",
+    "text": "Immune"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 740,
+      "y": 955,
+      "w": 265,
+      "fontSize": 52
+    },
+    "abilityText": {
+      "x": 750,
+      "y": 1060,
+      "fontSize": 46,
+      "w": 245
+    },
+    "name": {
+      "x": 80,
+      "y": 65,
+      "w": 740,
+      "h": 110,
+      "fontSize": 100
+    },
+    "faction": {
+      "x": 70,
+      "y": 755,
+      "w": 455,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 0.95,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Mano demoniaca in primo piano sopra la cornice"
+    ],
+    "anatomy": "Presenza scheletrica viola e rosso scuro in attacco; mago arretrato che la comanda. Entrambi sullo stesso livello trasparente; sigillo sullo sfondo.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "8e4176a3bd7f22e4ef6a3d6305011dd879589158",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

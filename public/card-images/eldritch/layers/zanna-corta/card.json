@@ -1,0 +1,100 @@
+{
+  "id": 1106,
+  "name": "Zanna Corta, l’abile lanciere",
+  "league": 2,
+  "power": 3,
+  "damage": 2,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Apex",
+  "accent": "#d5ecf9",
+  "autoFaction": false,
+  "ability": {
+    "title": "Sfida",
+    "text": "+1 POT,\n+1 DAN"
+  },
+  "bonus": {
+    "title": "Invasione",
+    "text": "+5 VA"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 430,
+      "y": 955,
+      "w": 265,
+      "fontSize": 65
+    },
+    "abilityText": {
+      "x": 450,
+      "y": 1060,
+      "fontSize": 45,
+      "w": 200
+    },
+    "name": {
+      "x": 290,
+      "y": 65,
+      "w": 505,
+      "h": 150,
+      "fontSize": 84
+    },
+    "faction": {
+      "x": 70,
+      "y": 755,
+      "w": 455,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 725,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 730,
+      "y": 1120
+    },
+    "subtitle": {
+      "x": 325,
+      "y": 158,
+      "w": 410,
+      "h": 65,
+      "fontSize": 40
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Scimmione e lancia davanti alla cornice"
+    ],
+    "anatomy": "Scimmione minuto in balzo furioso nella parte alta, lancia lunga fino in basso a destra. Soggetto e lancia nello stesso livello anteriore, cimitero di megafauna innevato ricostruito dietro.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

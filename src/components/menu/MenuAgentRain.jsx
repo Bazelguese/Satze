@@ -26,9 +26,10 @@ const DROPS = [
 ];
 
 const TIERS = {
-  far: { w: 120, k: 120 / 230, t: 1.5, filter: 'blur(2.4px) brightness(.32) saturate(.6) contrast(1.05)' },
-  mid: { w: 190, k: 190 / 230, t: 2.5, filter: 'blur(1px) brightness(.48) saturate(.8)' },
-  near: { w: 280, k: 280 / 230, t: 3.5, filter: 'brightness(.68)' },
+  /* Niente blur live: brightness/opacity bastano e costano molto meno. */
+  far: { w: 120, k: 120 / 230, t: 1.5, filter: 'brightness(.32) saturate(.6) contrast(1.05)', opacity: 0.72 },
+  mid: { w: 190, k: 190 / 230, t: 2.5, filter: 'brightness(.48) saturate(.8)', opacity: 0.88 },
+  near: { w: 280, k: 280 / 230, t: 3.5, filter: 'brightness(.68)', opacity: 1 },
 };
 
 /** In qualità bassa restano solo i piani lontani. */
@@ -92,8 +93,8 @@ const FOIL_SPAWN_CHANCE = 0.01;
 
 const CSS = `
 .menu-rain{position:absolute;inset:-12% -6%;z-index:1;perspective:1700px;perspective-origin:50% 38%;pointer-events:none;overflow:hidden}
-.menu-rain__card{position:absolute;top:0;left:var(--x);width:var(--w);aspect-ratio:230/330;transform-style:preserve-3d;animation:menu-rain-drop var(--dur) linear var(--d) infinite;will-change:transform;filter:var(--f)}
-.menu-rain__spin{position:absolute;inset:0;transform-style:preserve-3d;animation:menu-rain-spin var(--sdur) linear var(--d) infinite}
+.menu-rain__card{position:absolute;top:0;left:var(--x);width:var(--w);aspect-ratio:230/330;transform-style:preserve-3d;animation:menu-rain-drop var(--dur) linear var(--d) infinite;animation-play-state:var(--rain-play,running);will-change:transform;filter:var(--f);opacity:var(--op,1)}
+.menu-rain__spin{position:absolute;inset:0;transform-style:preserve-3d;animation:menu-rain-spin var(--sdur) linear var(--d) infinite;animation-play-state:var(--rain-play,running)}
 .menu-rain__face{position:absolute;inset:0;backface-visibility:hidden;transform:translateZ(calc(var(--t)/2))}
 .menu-rain__face--back{transform:rotateY(180deg) translateZ(calc(var(--t)/2))}
 .menu-rain__scale{position:absolute;top:0;left:0;width:230px;height:330px;transform:scale(var(--k));transform-origin:top left}
@@ -101,8 +102,8 @@ const CSS = `
 .menu-rain__edge::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.10) 0 .5px,transparent .5px 1.6px),linear-gradient(90deg,color-mix(in srgb,var(--a) 35%,transparent),transparent 70%)}
 .menu-rain__edge--l{left:0;transform-origin:0 50%;transform:translateZ(calc(var(--t)/-2)) rotateY(-90deg)}
 .menu-rain__edge--r{right:0;transform-origin:100% 50%;transform:translateZ(calc(var(--t)/-2)) rotateY(90deg)}
-.menu-rain__sheen{position:absolute;inset:0;border-radius:0 0 14px 14px;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.5) 46%,rgba(255,255,255,.08) 56%,transparent 74%);mix-blend-mode:screen;opacity:0;animation:menu-rain-sheen var(--sdur) linear var(--d) infinite}
-.menu-rain__foil{position:absolute;inset:0;border-radius:0 0 14px 14px;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgb(255,119,115) 0%,rgba(255,237,95,1) 8%,rgba(168,255,95,1) 16%,rgba(131,255,247,1) 24%,rgba(120,148,255,1) 32%,rgb(216,117,255) 40%,rgb(255,119,115) 48%),repeating-linear-gradient(133deg,#0e152e 0%,hsl(180,10%,60%) 4%,hsl(180,29%,66%) 5%,hsl(180,10%,60%) 7%,#0e152e 9%,#0e152e 14%);background-size:400% 400%,200% 200%;mix-blend-mode:color-dodge;filter:brightness(.82) contrast(1.28) saturate(1.12);opacity:.52;animation:menu-rain-foil var(--sdur) linear var(--d) infinite}
+.menu-rain__sheen{position:absolute;inset:0;border-radius:0 0 14px 14px;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.5) 46%,rgba(255,255,255,.08) 56%,transparent 74%);mix-blend-mode:screen;opacity:0;animation:menu-rain-sheen var(--sdur) linear var(--d) infinite;animation-play-state:var(--rain-play,running)}
+.menu-rain__foil{position:absolute;inset:0;border-radius:0 0 14px 14px;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgb(255,119,115) 0%,rgba(255,237,95,1) 8%,rgba(168,255,95,1) 16%,rgba(131,255,247,1) 24%,rgba(120,148,255,1) 32%,rgb(216,117,255) 40%,rgb(255,119,115) 48%),repeating-linear-gradient(133deg,#0e152e 0%,hsl(180,10%,60%) 4%,hsl(180,29%,66%) 5%,hsl(180,10%,60%) 7%,#0e152e 9%,#0e152e 14%);background-size:400% 400%,200% 200%;mix-blend-mode:color-dodge;filter:brightness(.82) contrast(1.28) saturate(1.12);opacity:.52;animation:menu-rain-foil var(--sdur) linear var(--d) infinite;animation-play-state:var(--rain-play,running)}
 .menu-rain__card--foil .menu-rain__sheen{animation-duration:calc(var(--sdur)*.9)}
 .menu-rain::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 38% 42%,rgba(6,3,10,.25) 12%,rgba(6,3,10,.72) 62%,rgba(6,3,10,.97) 100%)}
 @keyframes menu-rain-drop{from{transform:translate3d(0,-75vh,0) rotate(var(--tilt))}to{transform:translate3d(var(--dx),135vh,0) rotate(var(--tilt))}}
@@ -169,6 +170,21 @@ export function MenuAgentRain() {
     return () => window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
   }, []);
 
+  useEffect(() => {
+    const syncPlay = () => {
+      document.documentElement.style.setProperty(
+        '--rain-play',
+        document.hidden ? 'paused' : 'running',
+      );
+    };
+    syncPlay();
+    document.addEventListener('visibilitychange', syncPlay);
+    return () => {
+      document.removeEventListener('visibilitychange', syncPlay);
+      document.documentElement.style.removeProperty('--rain-play');
+    };
+  }, []);
+
   const reduceMotion =
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -206,7 +222,7 @@ export function MenuAgentRain() {
             className={`menu-rain__card${foil ? ' menu-rain__card--foil' : ''}`}
             style={{
               '--x': x, '--w': `${T.w}px`, '--k': T.k, '--t': `${T.t}px`, '--f': T.filter,
-              '--a': accent, '--dur': `${dur}s`, '--sdur': `${sdur}s`, '--d': `${d}s`,
+              '--op': T.opacity, '--a': accent, '--dur': `${dur}s`, '--sdur': `${sdur}s`, '--d': `${d}s`,
               '--dx': dx, '--tilt': tilt,
             }}
             onAnimationIteration={(e) => {
@@ -225,7 +241,6 @@ export function MenuAgentRain() {
                     agent={agent}
                     showBonus
                     suppressAnimations
-                    catalogPreview
                     preferThumb
                   />
                 </div>

@@ -59,6 +59,8 @@ export function EldritchCardFace({
   parallaxOnly = false,
   idleMotion = true,
   variant = 'static',
+  /** `gallery` → layered lite in EldritchLayeredPreview. */
+  performance = 'full',
   backgroundUrl: backgroundOverride,
   subjectUrl: subjectOverride,
   frameUrl: frameOverride,
@@ -113,8 +115,9 @@ export function EldritchCardFace({
       className={className}
       showControls={showControls}
       motion={motion}
-      parallaxOnly={parallaxOnly}
+      parallaxOnly={parallaxOnly || performance === 'gallery'}
       idleMotion={idleMotion}
+      performance={performance}
       backgroundOverride={backgroundOverride}
       subjectOverride={subjectOverride}
       frameOverride={frameOverride}
@@ -138,6 +141,7 @@ function EldritchCardFaceLayered({
   motion,
   parallaxOnly,
   idleMotion,
+  performance = 'full',
   backgroundOverride,
   subjectOverride,
   frameOverride,
@@ -264,6 +268,7 @@ function EldritchCardFaceLayered({
             motionDefault={motion}
             parallaxOnly={parallaxOnly}
             idleMotion={idleMotion}
+            performance={performance}
             className="satze-eldritch-card-face"
           />
         ) : (

@@ -122,7 +122,7 @@ test('buildPhaseAdvanceDelaysMs: fallback robusto con dati non numerici', () => 
   };
   const dyn = computeDynamicClashVfx(br);
   const d = buildPhaseAdvanceDelaysMs(vfx, 0, 0, br);
-  assert.equal(dyn.clashSpeed, 0.7);
+  assert.equal(dyn.clashSpeed, 0.75);
   assert.equal(dyn.intensity, 0.3);
   assert.ok(Number.isFinite(d[4]));
   assert.ok(d[4] >= DUEL_PHASE4_MIN_MS);

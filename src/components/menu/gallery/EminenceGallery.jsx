@@ -49,6 +49,7 @@ export default function EminenceGallery({
   galleryTab,
   onGalleryTabChange,
   agentCount,
+  alternativeCount,
   fieldCount,
   eminenceCount = ALL_EMINENCES.length,
 }) {
@@ -90,6 +91,7 @@ export default function EminenceGallery({
               activeTab={galleryTab}
               onTabChange={onGalleryTabChange}
               agentCount={agentCount}
+              alternativeCount={alternativeCount}
               fieldCount={fieldCount}
               eminenceCount={eminenceCount}
             />
@@ -124,13 +126,12 @@ export default function EminenceGallery({
           ))}
         </div>
 
-        <div className="egl-grid">
-          {ALL_EMINENCES.map((eminence) => (
+        <div className="egl-grid" aria-hidden={active ? true : undefined}>
+          {!active && shown.map((eminence) => (
             <EminenceTile
               key={eminence.id}
               eminence={eminence}
               accent={(ARMY_COLORS[eminence.army] || {}).accent || '#94a3b8'}
-              hidden={eminence.army !== filter}
               onClick={() => setActive(eminence)}
             />
           ))}
@@ -145,7 +146,7 @@ export default function EminenceGallery({
   );
 }
 
-function EminenceTile({ eminence, accent, hidden, onClick }) {
+function EminenceTile({ eminence, accent, onClick }) {
   const artUrl = getEminenceArtUrl(eminence);
   const frame = getEminenceArtFrame(eminence.id);
   const staticText = eminence.static?.name || eminence.static?.text || '';
@@ -153,12 +154,10 @@ function EminenceTile({ eminence, accent, hidden, onClick }) {
   return (
     <button
       type="button"
-      className={`egl-tile${hidden ? ' egl-tile--hidden' : ''}`}
+      className="egl-tile"
       style={{ '--accent': accent }}
       onClick={onClick}
       aria-label={eminence.name}
-      aria-hidden={hidden || undefined}
-      tabIndex={hidden ? -1 : 0}
     >
       <div
         className="egl-tile-scale"
@@ -182,9 +181,9 @@ function EminenceTile({ eminence, accent, hidden, onClick }) {
             presence={eminence.initialPresence ?? 0}
             artUrl={artUrl}
             accent={accent}
-            life="arena"
-            intensity={1}
-            tiltEnabled={!hidden}
+            life="flat"
+            intensity={0.85}
+            tiltEnabled={false}
             artX={frame.artX}
             artY={frame.artY}
             artZoom={frame.zoom}
@@ -272,11 +271,12 @@ function Lightbox({ eminence, onClose }) {
                     presence={eminence.initialPresence ?? 0}
                     artUrl={artUrl}
                     accent={accent}
-                    life="arena"
-                    intensity={1.05}
+                    life="tilt"
+                    intensity={1}
                     tiltEnabled={!cardArmClass}
-                    artX={frame.artX}
-                    artY={frame.artY}
+                    idleOrbit={false}
+                    artX={50}
+                    artY={50}
                     artZoom={frame.zoom}
                     artFocusX={frame.focusX}
                     artFocusY={frame.focusY}
@@ -451,8 +451,9 @@ function EminenceGalleryStyles() {
         position: relative; z-index: 1;
         overflow: visible;
         -webkit-tap-highlight-color: transparent;
+        content-visibility: auto;
+        contain-intrinsic-size: auto ${Math.round(CARD_NATIVE_H * TILE_SCALE) + TILE_PAD_Y * 2}px;
       }
-      .egl-tile--hidden { display: none; }
       .egl-tile:hover, .egl-tile:focus-visible { z-index: 5; }
       .egl-tile-scale { position: relative; overflow: visible; }
       .egl-tile-card {
@@ -464,7 +465,7 @@ function EminenceGalleryStyles() {
 
       .egl-lb {
         position: absolute; inset: 0; z-index: 100;
-        background: rgba(3,4,6,0.9); backdrop-filter: blur(8px);
+        background: rgba(3,4,6,0.94);
         display: flex; align-items: flex-start; justify-content: center;
         animation: egl-lb-in .2s ease;
         overflow-y: auto; padding: 40px 32px 56px;
@@ -508,9 +509,8 @@ function EminenceGalleryStyles() {
       .egl-lb-details {
         max-width: 760px; width: 100%; margin: 0 auto;
         padding: 28px 28px 32px;
-        background: rgba(0,0,0,0.52);
+        background: rgba(0,0,0,0.78);
         border: 1px solid rgba(255,255,255,0.12);
-        backdrop-filter: blur(6px);
         display: flex; flex-direction: column; gap: 22px;
       }
       .egl-lb-meta {

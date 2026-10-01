@@ -19,6 +19,8 @@ export function ToolPageShell({
   headerActions,
   /** Classi aggiuntive sul contenitore interno (es. `style-lab-root` per scope CSS). */
   contentClassName = '',
+  /** Se false: niente scroll pagina — utile per lab a schermo intero. */
+  scrollable = true,
   children,
 }) {
   useEffect(() => {
@@ -52,12 +54,16 @@ export function ToolPageShell({
 
   return (
     <div
-      className="satze-tool-page fixed inset-0 z-[9998] overflow-y-auto overflow-x-hidden overscroll-y-contain"
+      className={`satze-tool-page fixed inset-0 z-[9998] overflow-x-hidden overscroll-y-contain ${
+        scrollable ? 'overflow-y-auto' : 'overflow-hidden'
+      }`}
       style={{ WebkitOverflowScrolling: 'touch', backgroundColor: PALETTE.deepVoid, ...shellVars }}
     >
       <div
+        className={scrollable ? '' : 'flex h-full min-h-0 flex-col'}
         style={{
-          minHeight: '100%',
+          minHeight: scrollable ? '100%' : undefined,
+          height: scrollable ? undefined : '100%',
           position: 'relative',
           background: buildSatzeCosmicBackgroundCSS(),
           fontFamily: HUD_ORATORIO_FONT_UI,
@@ -81,18 +87,32 @@ export function ToolPageShell({
           }}
         />
         <div
-          className={`relative z-[1] mx-auto max-w-7xl px-4 py-8 pb-16 sm:px-8 ${contentClassName}`.trim()}
+          className={`relative z-[1] mx-auto flex w-full max-w-[1600px] flex-col px-3 sm:px-5 ${
+            scrollable ? 'max-w-7xl py-8 pb-16' : 'h-full min-h-0 py-2'
+          } ${contentClassName}`.trim()}
         >
-          <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <header
+            className={`flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between ${
+              scrollable ? 'mb-8 gap-4 lg:items-start' : 'mb-2'
+            }`}
+          >
             <div className="min-w-0 flex-1">
               <h1
-                className="text-2xl font-bold tracking-tight text-[var(--st-text)] sm:text-3xl"
+                className={`font-bold tracking-tight text-[var(--st-text)] ${
+                  scrollable ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'
+                }`}
                 style={{ fontFamily: HUD_ORATORIO_FONT_DISPLAY }}
               >
                 {title}
               </h1>
               {subtitle ? (
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--st-muted)]">{subtitle}</p>
+                <p
+                  className={`max-w-2xl text-[var(--st-muted)] ${
+                    scrollable ? 'mt-1 text-sm leading-relaxed' : 'mt-0.5 text-[11px] leading-snug line-clamp-1'
+                  }`}
+                >
+                  {subtitle}
+                </p>
               ) : null}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -104,7 +124,7 @@ export function ToolPageShell({
               ) : null}
             </div>
           </header>
-          {children}
+          <div className={scrollable ? '' : 'min-h-0 flex-1'}>{children}</div>
         </div>
       </div>
     </div>

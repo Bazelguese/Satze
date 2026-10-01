@@ -131,7 +131,8 @@ export function EminenceTarotCard({
   const barrelFilter = needsBarrel ? `url(#et-barrel-${filterUid})` : '';
   const warpX = Math.round(((artX - 50) / 50) * 24 * intensity);
   const warpY = Math.round(((artY - 50) / 50) * 24 * intensity);
-  const artFilter = [((warpX || warpY) ? `url(#et-warp-${filterUid})` : ''), barrelFilter].filter(Boolean).join(' ');
+  const needsWarp = Boolean(warpX || warpY);
+  const artFilter = [needsWarp ? `url(#et-warp-${filterUid})` : '', barrelFilter].filter(Boolean).join(' ');
   const panX = (50 - artFocusX) / 50;
   const panY = (50 - artFocusY) / 50;
   const cover = 1 + Math.max(Math.abs(panX), Math.abs(panY)) * 0.28;
@@ -161,8 +162,10 @@ export function EminenceTarotCard({
       onPointerMove={onPointerMove}
       onPointerLeave={reset}
     >
+      {(needsWarp || needsBarrel) && (
       <svg className="eminence-tarot__defs" aria-hidden>
         <defs>
+          {needsWarp && (
           <filter
             id={`et-warp-${filterUid}`}
             x="-14%"
@@ -201,6 +204,7 @@ export function EminenceTarotCard({
               yChannelSelector="G"
             />
           </filter>
+          )}
           {needsBarrel ? (
             <filter
               id={`et-barrel-${filterUid}`}
@@ -242,6 +246,7 @@ export function EminenceTarotCard({
           ) : null}
         </defs>
       </svg>
+      )}
 
       <div className="eminence-tarot__frame">
         <div className="eminence-tarot__art-wrap">

@@ -5,22 +5,21 @@ import React, { useEffect, useRef } from 'react';
  *
  * Ogni pannello reale (stats, Anteprima, insegna di conquista, tabellone,
  * log/FC, pannello campo, round, uscita) riceve un proprio <canvas> come
- * figlio, dietro al contenuto: così eredita trasformazioni 2.5D, respiro,
+ * figlio, dietro al contenuto: cos├¼ eredita trasformazioni 2.5D, respiro,
  * dissolvenze e flip del pannello senza calcoli. Un solo contesto WebGL
  * fuori schermo disegna, pannello per pannello, una finestra sul cosmo
  * (nebulosa e tre livelli di stelle in parallasse col mouse, bordo di luce,
  * costola d'accento) e la copia nel canvas del pannello.
  *
- * Il pannello campo al centro è un portale: ellisse con l'anteprima del campo,
+ * Il pannello campo al centro ├¿ un portale: ellisse con l'anteprima del campo,
  * cornice di anelli in rotazione continua e anello di avanzamento del round.
- * Il fondo di ogni pannello è spazio profondo sempre in moto: banchi di
+ * Il fondo di ogni pannello ├¿ spazio profondo sempre in moto: banchi di
  * nebulosa che scorrono e stelle che vengono incontro, come oltre un portale.
  * Sui box PV/FC corre un flusso di luce lungo il bordo, veloce per chi sta
  * agendo e lento per l'altro: a ogni PV perso si glitcha, e a soglie di PV (18, 12, 6) diventa
- * sempre più rosso, spezzato e corrotto. Altri effetti: cosmo che si spegne
+ * sempre pi├╣ rosso, spezzato e corrotto. Altri effetti: cosmo che si spegne
  * coi PV, impulso sugli FC spesi, sigillo runico sul campo conquistato (canvas sopra le righe del
- * tabellone), stella nel log a ogni evento, lampo e onda d'urto allo scontro
- * (canvas 2D a tutta scena).
+ * tabellone), stella nel log a ogni evento.
  */
 
 const W = 1920;
@@ -33,7 +32,7 @@ const SC = 0.75; // risoluzione del disegno rispetto ai px CSS
 // argento freddo: il colore nel duello resta alle due armate (box PV/FC, sigilli, lampo)
 const SILVER = '#b4bfd0';
 
-// kind: 0 pannello · 1 stats · 2 log · 3 portale (pannello campo con .satze-bf-portal-disc)
+// kind: 0 pannello ┬À 1 stats ┬À 2 log ┬À 3 portale (pannello campo con .satze-bf-portal-disc)
 const PANEL_DEFS = [
   { sel: '.satze-stats-panel--enemy', acc: 'enemy', cut: 12, kind: 1, side: 0, seed: 0 },
   { sel: '.satze-stats-panel--player', acc: 'player', cut: 12, kind: 1, side: 1, seed: 1 },
@@ -51,7 +50,7 @@ const VS = 'attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }';
 const FS = `
 precision highp float;
 uniform float uScale; uniform float uVH; uniform float uPad;
-uniform float uMode;            // 0 finestra cosmica · 1 sigilli sul tabellone
+uniform float uMode;            // 0 finestra cosmica ┬À 1 sigilli sul tabellone
 uniform vec2 uSize; uniform float uSeed;
 uniform vec3 uAcc; uniform float uCut; uniform float uKind;
 uniform float uTime; uniform vec2 uLook;
@@ -91,7 +90,7 @@ vec3 nebula(vec2 p, float seed){
   c+=vec3(.45,.58,.72)*smoothstep(.72,.95,n2)*.12;
   return c; }
 // finestra sullo spazio profondo, sempre in moto: due banchi di nebulosa che
-// scorrono a velocità diverse (profondità) e stelle che vengono incontro
+// scorrono a velocit├á diverse (profondit├á) e stelle che vengono incontro
 // in un risucchio continuo, come oltre un portale
 vec3 portal(vec2 q, vec2 s, float seed, float lum){
   vec2 d=q-s*.5+uLook*vec2(14.,10.);
@@ -123,7 +122,7 @@ void main(){
     // portale del campo: ellisse (coperta dall'anteprima), cornice di anelli e
     // anello di avanzamento del round in cinque tratti. L'anello di rune che
     // gira sta nel DOM (SVG), tra il filo del bordo e le tacche.
-    // uEll.z = apertura 0→1: l'ellisse cresce dal centro all'inizio del round
+    // uEll.z = apertura 0ÔåÆ1: l'ellisse cresce dal centro all'inizio del round
     float op=clamp(uEll.z,0.,1.2);
     vec2 s=uSize; vec2 c=uCircle.xy; vec2 ab=vec2(uCircle.z,uEll.x)*max(op,.001);
     vec2 dd=q-c; float t=uTime;
@@ -253,7 +252,7 @@ function hexToRgb(hex, fallback = [0.75, 0.15, 0.83]) {
   return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
 }
 
-/** soglie di corruzione del box PV/FC: integro sopra 18, poi ≤18, ≤12, ≤6 */
+/** soglie di corruzione del box PV/FC: integro sopra 18, poi Ôëñ18, Ôëñ12, Ôëñ6 */
 function corruptionStage(hp, max) {
   const f = (hp ?? max) / max;
   if (f <= 0.24) return 3;
@@ -308,14 +307,15 @@ export function DuelCosmicHud({
   conqueredFields,
   playerColor,
   enemyColor,
-  gamePhase,
-  duelPhase,
-  battleResult,
+  gamePhase = null,
+  duelPhase = -1,
+  battleResult: _battleResult,
   eventsCount = 0,
   maxHP = 25,
-  /** 'player' | 'enemy' | null — chi sta agendo (come il badge "Tocca a te") */
+  /** 'player' | 'enemy' | null ÔÇö chi sta agendo (come il badge "Tocca a te") */
   turnSide = null,
 }) {
+  void _battleResult;
   const hostRef = useRef(null);
   const stateRef = useRef({
     hitAt: [-99, -99],
@@ -323,15 +323,14 @@ export function DuelCosmicHud({
     sealAt: [-1, -1, -1, -1, -1],
     sealWho: [0, 0, 0, 0, 0],
     starAt: -99,
-    flash: [0, 0, -99, 0],
   });
   const propsRef = useRef({});
   const t0Ref = useRef(performance.now());
   const now = () => (performance.now() - t0Ref.current) / 1000;
 
-  propsRef.current = { playerHP, enemyHP, playerColor, enemyColor, maxHP, turnSide };
+  propsRef.current = { playerHP, enemyHP, playerColor, enemyColor, maxHP, turnSide, gamePhase, duelPhase };
 
-  // PV persi → raffica di glitch sul box di chi è colpito
+  // PV persi ÔåÆ raffica di glitch sul box di chi ├¿ colpito
   const prevHp = useRef({ p: playerHP, e: enemyHP });
   useEffect(() => {
     const st = stateRef.current;
@@ -341,7 +340,7 @@ export function DuelCosmicHud({
     prevHp.current = { p: playerHP, e: enemyHP };
   }, [playerHP, enemyHP]);
 
-  // FC spesi → impulso sul pannello stats
+  // FC spesi ÔåÆ impulso sul pannello stats
   const prevFc = useRef({ p: playerFocus, e: enemyFocus });
   useEffect(() => {
     const st = stateRef.current;
@@ -350,7 +349,7 @@ export function DuelCosmicHud({
     prevFc.current = { p: playerFocus, e: enemyFocus };
   }, [playerFocus, enemyFocus]);
 
-  // campo conquistato → sigillo runico sulla riga del tabellone
+  // campo conquistato ÔåÆ sigillo runico sulla riga del tabellone
   useEffect(() => {
     const st = stateRef.current;
     for (let i = 0; i < 5; i++) {
@@ -361,33 +360,18 @@ export function DuelCosmicHud({
     }
   }, [conqueredFields]);
 
-  // nuovo evento nel log → stella
+  // nuovo evento nel log ÔåÆ stella
   const prevEvents = useRef(eventsCount);
   useEffect(() => {
     if (eventsCount > prevEvents.current) stateRef.current.starAt = now();
     prevEvents.current = eventsCount;
   }, [eventsCount]);
 
-  // scontro (fase 4) → lampo e onda d'urto nel colore di chi vince
-  useEffect(() => {
-    if (gamePhase === 'result' && duelPhase === 4 && battleResult) {
-      const w = battleResult.winner === 'player' ? 1 : battleResult.winner === 'enemy' ? -1 : 0;
-      stateRef.current.flash = [W / 2 - 120, H / 2, now(), w];
-    }
-  }, [gamePhase, duelPhase, battleResult]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
     const scene = host.parentElement;
-
-    // lampo dello scontro: canvas 2D a tutta scena
-    const flashCv = document.createElement('canvas');
-    flashCv.width = Math.round(W * 0.5);
-    flashCv.height = Math.round(H * 0.5);
-    Object.assign(flashCv.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', pointerEvents: 'none' });
-    host.appendChild(flashCv);
-    const fctx = flashCv.getContext('2d');
 
     // contesto WebGL unico, fuori dal DOM
     const glCv = document.createElement('canvas');
@@ -396,7 +380,7 @@ export function DuelCosmicHud({
     glCv.width = glW;
     glCv.height = glH;
     const gl = glCv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: false });
-    if (!gl) { flashCv.remove(); return undefined; }
+    if (!gl) return undefined;
     let dead = false;
     let raf = 0;
     const onLost = (e) => { e.preventDefault(); dead = true; cancelAnimationFrame(raf); };
@@ -414,14 +398,13 @@ export function DuelCosmicHud({
     };
     const vs = compile(gl.VERTEX_SHADER, VS);
     const fs = compile(gl.FRAGMENT_SHADER, FS);
-    if (!vs || !fs) { flashCv.remove(); return undefined; }
+    if (!vs || !fs) return undefined;
     const prog = gl.createProgram();
     gl.attachShader(prog, vs);
     gl.attachShader(prog, fs);
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
       console.error('[DuelCosmicHud]', gl.getProgramInfoLog(prog));
-      flashCv.remove();
       return undefined;
     }
     gl.useProgram(prog);
@@ -455,8 +438,14 @@ export function DuelCosmicHud({
     const head = [0, 0.37];
     let lastT = now();
     const hosts = new Set();
+    let frameCount = 0;
+    const panelCache = PANEL_DEFS.map((def) => ({ def, el: null }));
+    const resyncPanels = () => {
+      for (const entry of panelCache) entry.el = scene.querySelector(entry.def.sel);
+    };
+    resyncPanels();
 
-    // disegna una regione (cw × ch) nel contesto GL e la copia nel canvas del pannello
+    // disegna una regione (cw ├ù ch) nel contesto GL e la copia nel canvas del pannello
     const blit = (cv, cw, ch) => {
       if (cv.width !== cw) cv.width = cw;
       if (cv.height !== ch) cv.height = ch;
@@ -470,16 +459,40 @@ export function DuelCosmicHud({
       gl.uniform1f(U.uVH, ch);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      const ctx = cv.getContext('2d');
+      let ctx = cv.__cosmo2d;
+      if (!ctx) {
+        ctx = cv.getContext('2d');
+        cv.__cosmo2d = ctx;
+      }
       ctx.clearRect(0, 0, cw, ch);
       ctx.drawImage(glCv, 0, glCv.height - ch, cw, ch, 0, 0, cw, ch);
     };
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        return;
+      }
+      if (!raf && !dead) raf = requestAnimationFrame(frame);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     const frame = () => {
       if (dead) return;
+      if (document.hidden) {
+        raf = 0;
+        return;
+      }
+      const pr = propsRef.current;
+      // Durante Aurora clash il cosmo resta congelato: libera GPU per lo scontro.
+      if (pr.gamePhase === 'result' && Number(pr.duelPhase) >= 4) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      raf = requestAnimationFrame(frame);
       const t = now();
       const st = stateRef.current;
-      const pr = propsRef.current;
       const colP = hexToRgb(pr.playerColor, [0.635, 0.533, 0.984]);
       const colE = hexToRgb(pr.enemyColor, [0.984, 0.569, 0.176]);
       const mh = Math.max(1, pr.maxHP || 25);
@@ -495,12 +508,14 @@ export function DuelCosmicHud({
       gl.uniform3f(U.uColP, colP[0], colP[1], colP[2]);
       gl.uniform3f(U.uColE, colE[0], colE[1], colE[2]);
 
-      PANEL_DEFS.forEach((def) => {
-        const el = scene.querySelector(def.sel);
-        if (!el) return;
+      frameCount += 1;
+      if (frameCount % 45 === 0) resyncPanels();
+      for (const { def, el: cachedEl } of panelCache) {
+        const el = cachedEl || scene.querySelector(def.sel);
+        if (!el) continue;
         const w = el.offsetWidth;
         const h = el.offsetHeight;
-        if (w < 3 || h < 3) return;
+        if (w < 3 || h < 3) continue;
         hosts.add(el);
         const cv = ensurePanelCanvas(el, '__cosmoBg', -1);
         const cw = Math.round((w + PAD * 2) * SC);
@@ -515,9 +530,10 @@ export function DuelCosmicHud({
         let kind = def.kind;
         if (def.portal && !el.querySelector('.satze-bf-portal-disc')) {
           // pannello campo senza portale (fine partita, passaggi di fase): niente riquadro
-          const ctx = cv.getContext('2d');
-          ctx.clearRect(0, 0, cv.width, cv.height);
-          return;
+          const ctxClear = cv.__cosmo2d || cv.getContext('2d');
+          cv.__cosmo2d = ctxClear;
+          ctxClear.clearRect(0, 0, cv.width, cv.height);
+          continue;
         }
         if (def.portal) {
           const disc = el.querySelector('.satze-bf-portal-disc');
@@ -568,39 +584,7 @@ export function DuelCosmicHud({
         blit(cv, cw, ch);
 
         // i campi conquistati hanno il sigillo di ceralacca in DOM (WaxSeal)
-      });
-
-      // lampo dello scontro
-      const fa = t - st.flash[2];
-      fctx.clearRect(0, 0, flashCv.width, flashCv.height);
-      if (fa >= 0 && fa < 3) {
-        const k = flashCv.width / W;
-        const x = st.flash[0] * k;
-        const y = st.flash[1] * k;
-        const wc = st.flash[3] > 0.5 ? colP : st.flash[3] < -0.5 ? colE : [1, 1, 1];
-        const rgb = (c, a) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a})`;
-        const f1 = Math.exp(-fa * 5) * 0.9;
-        if (f1 > 0.01) {
-          const g = fctx.createRadialGradient(x, y, 0, x, y, 900 * k);
-          g.addColorStop(0, `rgba(255,242,255,${f1})`);
-          g.addColorStop(1, 'rgba(255,242,255,0)');
-          fctx.fillStyle = g;
-          fctx.fillRect(0, 0, flashCv.width, flashCv.height);
-        }
-        const f2 = Math.exp(-fa * 1.8) * 1.2;
-        if (f2 > 0.01) {
-          fctx.strokeStyle = rgb(wc, Math.min(1, f2));
-          fctx.lineWidth = 10 * k;
-          fctx.shadowColor = rgb(wc, Math.min(1, f2));
-          fctx.shadowBlur = 24 * k;
-          fctx.beginPath();
-          fctx.arc(x, y, fa * 900 * k, 0, Math.PI * 2);
-          fctx.stroke();
-          fctx.shadowBlur = 0;
-        }
       }
-
-      raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
 
@@ -608,9 +592,9 @@ export function DuelCosmicHud({
       dead = true;
       cancelAnimationFrame(raf);
       window.removeEventListener('pointermove', onMove);
+      document.removeEventListener('visibilitychange', onVisibility);
       glCv.removeEventListener('webglcontextlost', onLost);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
-      flashCv.remove();
       hosts.forEach((el) => {
         el.__cosmoBg?.remove();
         el.__cosmoTop?.remove();

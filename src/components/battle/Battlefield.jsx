@@ -511,7 +511,11 @@ export const BattlefieldBackground = React.memo(({ activeField, cursed = false, 
         if (particle['--vortex-y']) styleObj['--vortex-y'] = particle['--vortex-y'];
         
         if (particleConfig.glow) {
-          styleObj.boxShadow = `0 0 ${particle.size * 2}px ${particleConfig.accent}`;
+          // Stesso alone senza box-shadow per-particella (più economico sotto scale viewport).
+          styleObj.backgroundImage = `radial-gradient(circle, ${particleConfig.accent} 0%, transparent 70%)`;
+          styleObj.backgroundColor = 'transparent';
+          styleObj.width = `${particle.size * 2.2}px`;
+          styleObj.height = `${particle.size * 2.2}px`;
         }
         
         return (

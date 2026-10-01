@@ -62,8 +62,8 @@ function profileForQuality(quality) {
   }
   return {
     quality: 'high',
-    menuParticleCount: 100,
-    menuBlurPx: 26,
+    menuParticleCount: 72,
+    menuBlurPx: 16,
     menuGlowEnabled: true,
     menuParallaxEnabled: true,
     menuSigilAnimation: true,

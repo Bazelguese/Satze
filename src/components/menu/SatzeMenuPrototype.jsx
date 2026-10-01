@@ -290,7 +290,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
     >
       <style>{`
         @keyframes satze-v5-float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
-        @keyframes satze-v5-pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
+        @keyframes satze-v5-pulse-glow { 0%,100% { opacity: 0.72 } 50% { opacity: 1 } }
         @keyframes satze-v5-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
         @keyframes satze-v5-slide-in { from { transform: translateX(-30px) skewX(-12deg); opacity: 0 } to { transform: translateX(0) skewX(-8deg); opacity: 1 } }
       `}</style>
@@ -313,10 +313,12 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
             height: "min(880px, 95vh)",
             background:
               "radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.24) 0%, rgba(88,28,135,0.2) 30%, transparent 64%)",
-            filter: vfxProfile.menuBlurPx > 0 ? `blur(${vfxProfile.menuBlurPx}px)` : "none",
+            filter: vfxProfile.menuBlurPx > 0 ? `blur(${Math.min(vfxProfile.menuBlurPx, 16)}px)` : "none",
+            boxShadow: `0 0 48px ${ACCENT}55`,
             animation: vfxProfile.menuSigilAnimation ? "satze-v5-pulse-glow 6s ease-in-out infinite" : "none",
             color: ACCENT,
             pointerEvents: "none",
+            willChange: "opacity, transform",
           }}
         />
       )}

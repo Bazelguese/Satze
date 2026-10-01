@@ -1,0 +1,120 @@
+{
+  "id": 1205,
+  "name": "Castillo, “Tornillo”",
+  "league": 2,
+  "power": 2,
+  "damage": 2,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Mascarada",
+  "accent": "#437ef2",
+  "autoFaction": false,
+  "ability": {
+    "title": "Gloria",
+    "text": "+3 POT"
+  },
+  "bonus": {
+    "title": "Opportunista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 790,
+      "y": 950,
+      "w": 220,
+      "fontSize": 74
+    },
+    "abilityText": {
+      "x": 790,
+      "y": 1060,
+      "fontSize": 54,
+      "w": 220
+    },
+    "name": {
+      "x": 65,
+      "y": 55,
+      "w": 360,
+      "h": 100,
+      "fontSize": 76
+    },
+    "faction": {
+      "x": 75,
+      "y": 795,
+      "w": 360,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 68,
+      "y": 1195,
+      "w": 190
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    },
+    "subtitle": {
+      "x": 80,
+      "y": 153,
+      "w": 310,
+      "h": 70,
+      "fontSize": 45
+    },
+    "power": {
+      "x": 70,
+      "y": 975,
+      "w": 160,
+      "fontSize": 220
+    },
+    "bonusTitle": {
+      "x": 230,
+      "y": 1225,
+      "w": 540,
+      "h": 120,
+      "fontSize": 80
+    },
+    "bonusText": {
+      "x": 260,
+      "y": 1345,
+      "w": 230,
+      "fontSize": 55
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Lottatore e pavone energetico davanti alla cornice"
+    ],
+    "anatomy": "Lottatore in posa trionfale, vestito dallo spirito del pavone, pavone di energia alle spalle. Ring completo ricostruito.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

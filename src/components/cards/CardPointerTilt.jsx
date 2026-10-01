@@ -90,11 +90,14 @@ export function CardPointerTiltStyles() {
         height: 100%;
         overflow: visible;
         transform: translateZ(0.1px);
-        transition: filter .25s ease;
+        transition: box-shadow .25s ease;
+        /* box-shadow: niente re-raster filter/drop-shadow sul sottoalbero carta. */
+        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
       }
       .cpt-hit[data-tilt="1"] .cpt-card {
-        filter: drop-shadow(0 12px 18px rgba(0,0,0,0.5))
-                drop-shadow(0 0 10px color-mix(in srgb, var(--cpt-accent) 28%, transparent));
+        box-shadow:
+          0 14px 28px rgba(0,0,0,0.55),
+          0 0 18px color-mix(in srgb, var(--cpt-accent) 28%, transparent);
       }
       .cpt-card > .overflow-hidden {
         overflow: visible !important;

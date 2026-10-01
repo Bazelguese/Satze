@@ -138,7 +138,7 @@ import { DECK_SUMMARY_BG_POSITION } from '../src/data/deckSummaryCropConfig';
 import { CosmicScreenLayout } from '../src/components/menu/cosmic/CosmicScreenLayout';
 import ArmySelectCinematic from '../src/components/menu/cosmic/ArmySelectCinematic.jsx';
 import DeckSelectCinematic, { buildDeckPreviewPayload } from '../src/components/menu/cosmic/DeckSelectCinematic.jsx';
-import CardGallery, { GALLERY_AGENT_COUNT } from '../src/components/menu/gallery/CardGallery.jsx';
+import CardGallery, { GALLERY_AGENT_COUNT, GALLERY_ALTERNATIVE_COUNT } from '../src/components/menu/gallery/CardGallery.jsx';
 import EminenceGallery from '../src/components/menu/gallery/EminenceGallery.jsx';
 import GalleryCinematic from '../src/components/menu/gallery/GalleryCinematic.jsx';
 import { EMINENCE_IDS } from '../src/data/eminences.js';
@@ -173,6 +173,11 @@ import { countDuelEffectSteps, countDuelPostEffectSteps } from '../src/game/duel
 import { DUEL_VISUAL_DEFAULTS } from '../src/config/duelVisualConfig.js';
 import { useSafeDuelEffectStep } from '../src/components/battle/useSafeDuelEffectStep.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils/focusCoinGlow.js';
+import {
+  startRainbowGlowClock,
+  stopRainbowGlowClock,
+  getRainbowGlowTime,
+} from '../src/utils/rainbowGlowClock.js';
 import {
   IS_PUBLIC_PLAYTEST_BUILD,
   PUBLIC_BUILD_MARQUEE,
@@ -1189,9 +1194,9 @@ export default function SatzeGame() {
     }
   }, [gamePhase]);
 
-  // Tab Agenti: differisci la griglia pesante quando si passa da Campi ad Agenti
+  // Tab Agenti / Alternative: differisci la griglia pesante quando si passa da Campi
   useEffect(() => {
-    if (gamePhase === 'gallery' && galleryTab === 'agents') {
+    if (gamePhase === 'gallery' && (galleryTab === 'agents' || galleryTab === 'alternative')) {
       setAgentsTabReady(false);
       const id = requestAnimationFrame(() => {
         requestAnimationFrame(() => setAgentsTabReady(true));
@@ -1307,8 +1312,9 @@ export default function SatzeGame() {
     isZoomed, setIsZoomed,
     showFinalRoundAnimation, setShowFinalRoundAnimation,
     showClashAnimation, setShowClashAnimation,
-    rainbowTime, setRainbowTime,
+    rainbowTime: _unusedRainbowTime, setRainbowTime,
   } = animations;
+  void _unusedRainbowTime;
 
   /** Round 5: tiene la vecchia condizione finché non parte il flip reveal. */
   const [victoryCondFx, setVictoryCondFx] = useState(/** @type {null | 'hold' | 'reveal'} */ (null));
@@ -2111,6 +2117,7 @@ export default function SatzeGame() {
     setEnemyCardGlow(1);
     setCardGlowIntensity(1);
     setRainbowTime(0);
+    stopRainbowGlowClock({ reset: true });
     setDuelPhase(6);
     if (guidedPause === 'duel') {
       setGuidedPause(null);
@@ -2141,6 +2148,7 @@ export default function SatzeGame() {
     setEnemyCardGlow(0);
     setCardGlowIntensity(0);
     setRainbowTime(0);
+    stopRainbowGlowClock({ reset: true });
   }, [
     clearFocusCoinTimers,
     setDuelPhase,
@@ -3471,12 +3479,15 @@ export default function SatzeGame() {
     guidedPause,
   ]);
   
-  const getFocusCoinGlowColor = (focusCount, intensity) =>
-    computeFocusCoinGlowColor(focusCount, intensity, rainbowTime, {
-      rainbowHueMul12: duelVfx.rainbowHueMul12,
-      rainbowHueMul13: duelVfx.rainbowHueMul13,
-      rainbowHueMul14: duelVfx.rainbowHueMul14,
-    });
+  const getFocusCoinGlowColor = useCallback(
+    (focusCount, intensity) =>
+      computeFocusCoinGlowColor(focusCount, intensity, getRainbowGlowTime(), {
+        rainbowHueMul12: duelVfx.rainbowHueMul12,
+        rainbowHueMul13: duelVfx.rainbowHueMul13,
+        rainbowHueMul14: duelVfx.rainbowHueMul14,
+      }),
+    [duelVfx.rainbowHueMul12, duelVfx.rainbowHueMul13, duelVfx.rainbowHueMul14]
+  );
 
   
   // Animazione focus coin sequenziali (fase 2)
@@ -3521,22 +3532,19 @@ export default function SatzeGame() {
     // Non resettare quando si esce dalla fase 2 - i focus coin devono rimanere visibili
   }, [gamePhase, duelPhase, battleResult, duelVfx, clearFocusCoinTimers]);
   
-  // Aggiorna continuamente i colori arcobaleno e diamante (per animazione).
-  // I colori speciali esistono solo da 12 FC in su: sotto quella soglia
-  // l'interval non parte, evitando ~20 re-render/s inutili.
+  // Colori arcobaleno/diamante: clock esterno → solo i corpi risultato si aggiornano.
   useEffect(() => {
     const needsRainbow =
       battleResult &&
       Math.max(battleResult.playerFocusUsed || 0, battleResult.enemyFocusUsed || 0) >= 12;
-    // Fase 4: il clash ha il proprio loop rAF — evitare ~20 re-render/s del root in parallelo.
-    if (gamePhase === 'result' && needsRainbow && duelPhase >= 2 && duelPhase < 4) {
-      const interval = setInterval(() => {
-        setRainbowTime((prev) => prev + duelVfx.rainbowStep);
-      }, duelVfx.rainbowIntervalMs);
-      return () => clearInterval(interval);
-    } else {
-      setRainbowTime(0);
-    }
+    const active =
+      gamePhase === 'result' && needsRainbow && duelPhase >= 2 && duelPhase < 4;
+    if (!active) return undefined;
+    startRainbowGlowClock({
+      intervalMs: duelVfx.rainbowIntervalMs,
+      step: duelVfx.rainbowStep,
+    });
+    return () => stopRainbowGlowClock({ reset: true });
   }, [gamePhase, duelPhase, battleResult, duelVfx.rainbowIntervalMs, duelVfx.rainbowStep]);
 
   // Risoluzione battaglia
@@ -4714,6 +4722,7 @@ export default function SatzeGame() {
       // Non startTransition: il montaggio idle della griglia Agenti affamerebbe il tab.
       onGalleryTabChange: setGalleryTab,
       agentCount: GALLERY_AGENT_COUNT,
+      alternativeCount: GALLERY_ALTERNATIVE_COUNT,
       fieldCount: ALL_BATTLEFIELDS.length,
       eminenceCount: EMINENCE_IDS.length,
     };
@@ -4722,6 +4731,16 @@ export default function SatzeGame() {
       return (
         <CardGallery
           totalCards={GALLERY_AGENT_COUNT}
+          onBack={() => setGamePhase('menu')}
+          {...galleryTabProps}
+        />
+      );
+    }
+    if (galleryTab === 'alternative') {
+      return (
+        <CardGallery
+          alternativeOnly
+          totalCards={GALLERY_ALTERNATIVE_COUNT}
           onBack={() => setGamePhase('menu')}
           {...galleryTabProps}
         />

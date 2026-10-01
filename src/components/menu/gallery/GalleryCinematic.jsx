@@ -96,6 +96,7 @@ export default function GalleryCinematic({
   galleryTab,
   onGalleryTabChange,
   agentCount,
+  alternativeCount,
   fieldCount = ALL_BATTLEFIELDS.length,
   eminenceCount,
 }) {
@@ -172,6 +173,7 @@ export default function GalleryCinematic({
             activeTab={galleryTab}
             onTabChange={onGalleryTabChange}
             agentCount={agentCount}
+            alternativeCount={alternativeCount}
             fieldCount={fieldCount}
             eminenceCount={eminenceCount}
           />
@@ -320,10 +322,10 @@ function GalleryStyles() {
       .glc-bg {
         position: absolute; inset: -3%;
         background-size: cover; background-position: center;
-        filter: brightness(0.32) saturate(1.05) blur(2px);
+        filter: brightness(0.32) saturate(1.05);
         animation: glc-bg-in 1.1s cubic-bezier(.2,.7,.2,1);
       }
-      @keyframes glc-bg-in { from { opacity: 0; transform: scale(1.12); filter: brightness(0.08) blur(10px); } }
+      @keyframes glc-bg-in { from { opacity: 0; transform: scale(1.08); } }
       .glc-bg-vignette {
         position: absolute; inset: 0;
         background:
@@ -331,16 +333,14 @@ function GalleryStyles() {
           linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 26%, rgba(0,0,0,0.15) 58%, rgba(0,0,0,0.95) 100%);
       }
       .glc-stars {
-        position: absolute; inset: 0; opacity: 0.55;
+        position: absolute; inset: 0; opacity: 0.45;
         background-image:
           radial-gradient(1px 1px at 18% 22%, #fff 0%, transparent 100%),
           radial-gradient(1px 1px at 64% 14%, rgba(255,255,255,0.6), transparent 100%),
           radial-gradient(1.5px 1.5px at 88% 38%, #fff 0%, transparent 100%),
           radial-gradient(1px 1px at 12% 78%, rgba(255,255,255,0.5), transparent 100%),
           radial-gradient(1.5px 1.5px at 38% 92%, rgba(255,255,255,0.7), transparent 100%);
-        animation: glc-stars 120s linear infinite;
       }
-      @keyframes glc-stars { to { transform: translate(-30px,-20px); } }
       .glc-diag {
         position: absolute; inset: 0; opacity: 0.04;
         background-image: repeating-linear-gradient(115deg, var(--accent) 0 1px, transparent 1px 22px);
@@ -391,8 +391,7 @@ function GalleryStyles() {
       /* Nav arrows */
       .glc-nav {
         position: absolute; top: 54%; transform: translateY(-50%); z-index: 30;
-        width: 60px; height: 80px; background: rgba(5,6,8,0.6);
-        backdrop-filter: blur(6px);
+        width: 60px; height: 80px; background: rgba(5,6,8,0.82);
         border: 1.5px solid color-mix(in srgb, var(--accent) 50%, rgba(255,255,255,0.18));
         color: var(--accent); cursor: pointer;
         font-family: 'Cinzel', serif; font-weight: 900; font-size: 40px;
@@ -431,8 +430,7 @@ function GalleryStyles() {
         position: absolute; top: 20px; left: 20px; z-index: 8;
         display: flex; align-items: center; gap: 10px;
         padding: 9px 16px 9px 12px;
-        background: rgba(5,6,8,0.72); border-left: 3px solid var(--accent);
-        backdrop-filter: blur(4px);
+        background: rgba(5,6,8,0.86); border-left: 3px solid var(--accent);
       }
       .glc-tape .glyph { font-family: 'Cinzel', serif; font-size: 18px; color: var(--accent); text-shadow: 0 0 14px var(--accent); }
       .glc-tape .nm { font-family: 'Cinzel', serif; font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #f5f3eb; }
@@ -442,17 +440,17 @@ function GalleryStyles() {
         padding: 9px 16px;
         font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.28em;
         color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-        background: rgba(5,6,8,0.72); backdrop-filter: blur(4px);
+        background: rgba(5,6,8,0.86);
       }
 
       .glc-replay {
         position: absolute; bottom: 96px; right: 20px; z-index: 9;
         display: inline-flex; align-items: center; gap: 8px;
         padding: 10px 16px;
-        background: rgba(5,6,8,0.75); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, rgba(255,255,255,0.2));
+        background: rgba(5,6,8,0.88); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, rgba(255,255,255,0.2));
         color: #f5f3eb; font-family: 'Share Tech Mono', monospace;
         font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
-        cursor: pointer; transition: all .2s; backdrop-filter: blur(4px);
+        cursor: pointer; transition: all .2s;
       }
       .glc-replay:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent); }
       .glc-replay .ic { font-size: 15px; }

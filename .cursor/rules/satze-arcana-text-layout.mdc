@@ -1,0 +1,82 @@
+---
+description: Arcana card text — positions, formatting, style (parallel to Eldritch)
+globs: src/components/cardFaceLab/**,public/card-images/arcana/**,**/Arcana*.{js,jsx,css},**/arcanaLiveText.js
+alwaysApply: false
+---
+
+# Arcana — testi (posizioni, formattazione, stile)
+
+Source of truth tipografia live: `arcanaLiveText.js` + `ArcanaTextOverlay.jsx`.
+Coordinate in **spazio arte 1024×1536**; montaggio canvas 1104×1584 = `translate(24 0) scale(1.03125)` (come kit).
+In partita/tile i testi sono già in **`composita.webp`** / `layout.webp` — non reinventarli.
+
+## Font e colori
+
+- Font live (layered): **Lora Semibold** (600) — `public/fonts/Lora-600.woff2`.
+  Tutti i testi (nome, trigger, sigilli, effetti). Sigilli con stroke. Niente tilt.
+- Composita kit bakeata: resta il raster del kit.
+- Allineamento: `text-anchor="middle"`, `dominant-baseline="middle"`.
+- Sigilli: centri `ARCANA_SEALS`; lega nudge `ARCANA_SEAL_Y_NUDGE` (0);
+  pot/dan `ARCANA_STAT_SEAL_Y_NUDGE` (−16, alza i numeri).
+  Size fissa (power/damage 118, league 74) — **niente** `fitArcanaFontSize` sui sigilli
+  (altrimenti cifre larghe tipo 4/5 risultano più piccole di 1).
+- Inchiostro: `#080704` (`ink`). Sigillo lega: `#fff1ce` (`leagueInk`).
+
+## Nome e sottotitolo (come Eldritch)
+
+Se il nome contiene una **virgola**, la parte dopo è sottotitolo.
+
+| | Titolo | Sottotitolo |
+|---|---|---|
+| Input | `Mezzanotte, il Mai Nato` | |
+| Testo | `MEZZANOTTE` (MAIUSCOLO) | `il Mai Nato` (casing originale) |
+| Righe | 1–2 (solo il titolo può andare a capo) | **sempre 1 riga** |
+| Box | `ARCANA_NAME_BOX` — il titolo **riempie** larghezza/altezza (`fitArcanaNameToBox`) | sotto il box nome |
+
+- 1 parola → 1 riga; 2 parole → 2 righe; 3+ → prima parola / resto.
+- **Niente curva / textPath** sulla 2ª riga: righe dritte, corpo adattato al cartiglio.
+- Senza virgola: solo titolo, nessun `subtitle`.
+- Implementazione: `splitArcanaDisplayName` / `formatArcanaNameLines` / `fitArcanaNameToBox`.
+
+## Trigger e effetti
+
+| Campo | Formato | Box default (arte) — **locked** |
+|---|---|---|
+| `abilityTitle` | Trigger in **MAIUSCOLO** + `:` finale (`ULTIMA CHANCE:`) | x367 y1114 w425 size 52 |
+| `abilityText` | Effetto, **1 sola riga**, casing naturale | x377 y1172 w420 size 44 |
+| `bonusTitle` | Come abilityTitle (`SEMPRE:`, `RIMONTA:`) | x672 y1298 w320 size 46 |
+| `bonusText` | Effetto armata, **1 sola riga** | x672 y1352 w430 size 38 |
+
+- `formatArcanaTriggerTitle`: strip `:` finali → uppercase IT → riaggiungi `:`.
+- Auto-fit: se la riga supera `w`, riduci il corpo (`fitArcanaFontSize`, min ~18).
+- Dati da `cards.js` / `TRIGGER_NAMES` / `ARMY_BONUSES` — il JSON kit non è regolamento.
+- `ARCANA_LOCKED_LAYOUT_KEYS` forza questi box da `ARCANA_DEFAULT_TEXT_LAYOUT` in
+  `buildArcanaLiveTexts` — **niente override per kit** su nome/sottotitolo/cartigli.
+
+## Sigilli
+
+| Campo | Formato | Box default |
+|---|---|---|
+| `league` | `L` + numero (`L2`) | cx/cy + `ARCANA_SEAL_Y_NUDGE` (0) · fill `leagueInk` |
+| `power` | cifra | cx/cy + `ARCANA_STAT_SEAL_Y_NUDGE` (−16) |
+| `damage` | cifra | cx/cy + `ARCANA_STAT_SEAL_Y_NUDGE` (−16) |
+
+Centri da `ARCANA_SEALS`; Y e size forzati in `buildArcanaLiveTexts` (uguali su tutti i kit).
+
+## Layout bloccato (non spostare a caso)
+
+Come Eldritch `ELDRITCH_LOCKED_LAYOUT_KEYS`, i box tipografici Arcana restano stabili tra kit:
+
+`name`, `subtitle`, `abilityTitle`, `abilityText`, `bonusTitle`, `bonusText`
+
+Non mettere questi campi in `kit.textLayout` — vengono ignorati. Sigilli sempre da GEOMETRY + nudge.
+
+## Hard rules
+
+- ❌ Non mescolare layout SVG Eldritch / `alfaCardRenderer` sui testi Arcana.
+- ❌ Non spezzare trigger o effetti su più righe (solo il **nome** può).
+- ❌ Non muovere i testi con la parallasse — restano fissi sulla carta.
+- ✅ Live text = `buildArcanaLiveTexts` → overlay su **layered** (lab / lightbox) di default.
+  Statico / partita = `composita.webp`. Raster `layout.webp` solo con `layoutUrl` esplicito.
+- ✅ Nuovi kit: tipografia live da `ARCANA_DEFAULT_TEXT_LAYOUT` (locked). Non passare
+  `textLayout` per cartigli/sigilli — solo colori/parallasse/displayName se serve.

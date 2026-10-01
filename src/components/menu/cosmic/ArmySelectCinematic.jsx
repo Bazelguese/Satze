@@ -228,6 +228,17 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     };
   }, []);
 
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return undefined;
+    const onVis = () => {
+      el.classList.toggle('is-vfx-paused', document.hidden);
+    };
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   return (
     <div
       ref={rootRef}
@@ -568,6 +579,12 @@ function V3CinematicStyles() {
         isolation: isolate;
         z-index: 1000;
       }
+      .v3c.is-vfx-paused .v3cc-holo,
+      .v3c.is-vfx-paused .v3cc-holo-ring,
+      .v3c.is-vfx-paused .v3cc-scan,
+      .v3c.is-vfx-paused .v3cc-sigillo-spin {
+        animation-play-state: paused !important;
+      }
       .v3c.phase-intro { cursor: wait; }
 
       /* BG */
@@ -635,7 +652,7 @@ function V3CinematicStyles() {
         padding: 12px 18px;
         cursor: pointer;
         transition: all .2s;
-        backdrop-filter: blur(6px);
+        background: rgba(0,0,0,0.72);
       }
       .v3c-back:hover { border-color: var(--accent); color: var(--accent); }
       .v3c-back .ar { font-size: 16px; }
@@ -688,8 +705,7 @@ function V3CinematicStyles() {
         position: absolute; top: 50%; transform: translateY(-50%);
         z-index: 11;
         width: 64px; height: 64px;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(6px);
+        background: rgba(0,0,0,0.72);
         border: 1px solid rgba(255,255,255,0.18);
         color: rgba(255,255,255,0.7);
         cursor: pointer;
@@ -712,13 +728,12 @@ function V3CinematicStyles() {
           translateZ(calc(abs(var(--off)) * -200px))
           rotateY(calc(var(--off) * -18deg))
           scale(calc(1 - 0.12 * abs(var(--off))));
-        opacity: calc(1 - 0.35 * abs(var(--off)));
-        filter: blur(calc(abs(var(--off)) * 1.8px));
+        opacity: calc(1 - 0.48 * abs(var(--off)));
         border: 1px solid rgba(255,255,255,0.1);
         background: #0d0e13;
         cursor: pointer;
         overflow: hidden;
-        transition: transform .65s cubic-bezier(.2,.7,.2,1), opacity .55s, filter .55s, border-color .35s, box-shadow .35s;
+        transition: transform .65s cubic-bezier(.2,.7,.2,1), opacity .55s, border-color .35s, box-shadow .35s;
         will-change: transform;
       }
       .v3cc.intro { animation: v3cc-intro 1.6s cubic-bezier(.2,.7,.2,1) backwards; animation-delay: calc(0.04s * abs(var(--off))); }
@@ -727,7 +742,7 @@ function V3CinematicStyles() {
           translate(-50%, -50%)
           translateX(calc(var(--off) * 280px))
           scale(0.4)
-          rotateY(calc(var(--off) * -40deg)); filter: blur(20px); }
+          rotateY(calc(var(--off) * -40deg)); }
       }
       .v3cc.is-center {
         width: 400px; height: 520px;
@@ -737,7 +752,6 @@ function V3CinematicStyles() {
           0 0 0 1px var(--accent),
           0 30px 100px rgba(0,0,0,0.85),
           0 0 80px color-mix(in srgb, var(--accent) 40%, transparent);
-        filter: blur(0);
         opacity: 1;
       }
       .v3cc-bg {
@@ -806,8 +820,7 @@ function V3CinematicStyles() {
           transparent 240deg,
           var(--accent) 300deg,
           transparent 360deg);
-        opacity: 0.45;
-        filter: blur(4px);
+        opacity: 0.4;
         animation: v3cc-holo-spin 5s linear infinite;
         pointer-events: none;
         z-index: 1;
@@ -889,10 +902,9 @@ function V3CinematicStyles() {
         position: relative;
         height: 100%;
         padding: 28px 26px;
-        background: linear-gradient(135deg, rgba(8,9,12,0.55) 0%, rgba(8,9,12,0.35) 100%);
+        background: linear-gradient(135deg, rgba(8,9,12,0.88) 0%, rgba(8,9,12,0.78) 100%);
         border: 1px solid rgba(255,255,255,0.12);
         border-top: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-        backdrop-filter: blur(8px);
         box-shadow:
           0 30px 80px rgba(0,0,0,0.5),
           inset 0 1px 0 rgba(255,255,255,0.06);
@@ -1012,8 +1024,7 @@ function V3CinematicStyles() {
         z-index: 9;
         display: flex; gap: 6px;
         padding: 8px 12px;
-        background: rgba(0,0,0,0.45);
-        backdrop-filter: blur(6px);
+        background: rgba(0,0,0,0.78);
         border: 1px solid rgba(255,255,255,0.08);
         flex-wrap: nowrap;
         max-width: min(90vw, 1100px);

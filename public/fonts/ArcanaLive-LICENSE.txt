@@ -1,0 +1,5 @@
+Lora Semibold (600) — SIL Open Font License 1.1
+https://fonts.google.com/specimen/Lora
+File: Lora-600.woff2 (latin, fontsource)
+
+Used for all Arcana card live typography (Satze).

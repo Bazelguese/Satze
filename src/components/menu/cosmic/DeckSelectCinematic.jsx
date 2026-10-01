@@ -466,6 +466,17 @@ export default function DeckSelectCinematic({
     return () => window.removeEventListener('keydown', onKey);
   }, [onBack, go, confirm]);
 
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const onVis = () => {
+      el.classList.toggle('is-vfx-paused', document.hidden);
+    };
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   // Scroll / trackpad: scorre tra gli eserciti
   useEffect(() => {
     const el = rootRef.current;
@@ -577,18 +588,18 @@ export default function DeckSelectCinematic({
         <button className="dsk-nav right" onClick={() => go(1)} aria-label="next">›</button>
       )}
 
-      {/* Carousel — tutte le carte montate, --off guida lo scroll */}
+      {/* Carousel — solo ticket vicini montati (≤2 off) */}
       <div className="dsk-stage">
         <div className="dsk-track">
           {DECKS.map((d, i) => {
             const off = computeOff(i);
+            if (Math.abs(off) > 2) return null;
             const isCenter = off === 0;
-            const visible = Math.abs(off) <= 4;
             return (
               <DeckTicket
                 key={d.deckKey}
                 deck={d} number={i + 1} total={total}
-                offset={off} isCenter={isCenter} visible={visible}
+                offset={off} isCenter={isCenter} visible
                 onClick={() => !isCenter && goTo(i)}
               />
             );
@@ -972,7 +983,7 @@ function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick })
         {isCenter && <>
           <div className="dsk-tk-flash f1"/>
           <div className="dsk-tk-flash f2"/>
-          <div className="dsk-tk-sparks"><span/><span/><span/><span/><span/></div>
+          <div className="dsk-tk-sparks"><span/><span/><span/></div>
           <div className="dsk-tk-burst" key={`burst-${deck.deckKey}`}/>
           <div className="dsk-tk-scan-v"/>
         </>}
@@ -1081,6 +1092,7 @@ function DuelAnimPreview({
 
   useEffect(() => {
     if (mode === 'shuffle') return undefined;
+    if (typeof document !== 'undefined' && document.hidden) return undefined;
     const t = setTimeout(() => setTick((n) => n + 1), duration + 700);
     return () => clearTimeout(t);
   }, [mode, pose, placeFx.style, tick, duration]);
@@ -1292,6 +1304,16 @@ function DeckSelectStyles() {
         font-family: 'Chakra Petch', sans-serif;
         overflow: hidden; isolation: isolate; z-index: 1000;
       }
+      .dsk.is-vfx-paused .dsk-holo,
+      .dsk.is-vfx-paused .dsk-holo-ring,
+      .dsk.is-vfx-paused .dsk-scan,
+      .dsk.is-vfx-paused .dsk-tk-scan-v,
+      .dsk.is-vfx-paused .dsk-tk-flash,
+      .dsk.is-vfx-paused .dsk-tk-sparks span,
+      .dsk.is-vfx-paused .dsk-sigillo-spin,
+      .dsk.is-vfx-paused .dsk-tk.is-center .dsk-tk-league {
+        animation-play-state: paused !important;
+      }
       .dsk * { box-sizing: border-box; }
       .dsk.phase-intro { cursor: wait; }
       .dsk kbd {
@@ -1403,8 +1425,7 @@ function DeckSelectStyles() {
         top: calc(50% - 360px - 52px);
         z-index: 30;
         width: 96px; height: 42px;
-        background: rgba(5,6,8,0.6);
-        backdrop-filter: blur(6px);
+        background: rgba(5,6,8,0.82);
         border: 1.5px solid color-mix(in srgb, var(--accent) 50%, rgba(255,255,255,0.18));
         color: var(--accent); cursor: pointer;
         font-family: 'Cinzel', serif; font-weight: 900; font-size: 28px;
@@ -1436,13 +1457,12 @@ function DeckSelectStyles() {
           translateZ(calc(abs(var(--off)) * -220px))
           rotateY(calc(var(--off) * -16deg))
           scale(calc(1 - 0.16 * abs(var(--off))));
-        opacity: calc(1 - 0.35 * abs(var(--off)));
-        filter: blur(calc(abs(var(--off)) * 1.6px));
+        opacity: calc(1 - 0.48 * abs(var(--off)));
         cursor: pointer; will-change: transform;
-        transition: transform 0.65s cubic-bezier(0.2,0.7,0.2,1), opacity 0.55s, filter 0.55s, width 0.65s cubic-bezier(0.2,0.7,0.2,1), height 0.65s cubic-bezier(0.2,0.7,0.2,1);
+        transition: transform 0.65s cubic-bezier(0.2,0.7,0.2,1), opacity 0.55s, width 0.65s cubic-bezier(0.2,0.7,0.2,1), height 0.65s cubic-bezier(0.2,0.7,0.2,1);
       }
-      .dsk-tk.is-hidden { opacity: 0; pointer-events: none; transition: transform 0.65s cubic-bezier(0.2,0.7,0.2,1), opacity 0.35s ease-out, filter 0.55s, width 0.65s, height 0.65s; }
-      .dsk-tk.is-center { width: 480px; height: 720px; z-index: 25; filter: blur(0); opacity: 1; cursor: default; }
+      .dsk-tk.is-hidden { opacity: 0; pointer-events: none; transition: transform 0.65s cubic-bezier(0.2,0.7,0.2,1), opacity 0.35s ease-out, width 0.65s, height 0.65s; }
+      .dsk-tk.is-center { width: 480px; height: 720px; z-index: 25; opacity: 1; cursor: default; }
 
       .dsk-tk-inner {
         position: relative; width: 100%; height: 100%;
@@ -1603,7 +1623,7 @@ function DeckSelectStyles() {
 
       /* Holo + sigillo + scan (portrait) */
       .dsk-holo {
-        position: absolute; inset: -2px; z-index: 2; pointer-events: none; opacity: 0.4; filter: blur(3px);
+        position: absolute; inset: -2px; z-index: 2; pointer-events: none; opacity: 0.32;
         background: conic-gradient(from var(--dskang, 0deg), transparent 0deg, var(--accent) 30deg, transparent 90deg, color-mix(in srgb, var(--accent) 70%, white 30%) 180deg, transparent 240deg, var(--accent) 300deg, transparent 360deg);
         animation: dsk-holo-spin 5s linear infinite;
       }

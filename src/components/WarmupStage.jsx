@@ -16,8 +16,6 @@ import { CardReworkP4, CardBack } from './cards';
 import { MenuAgentRain } from './menu/MenuAgentRain';
 import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
 import { EminenceTarotCard } from './eminenceLab/EminenceTarotCard';
-import CardGallery, { GALLERY_AGENT_COUNT } from './menu/gallery/CardGallery';
-import EminenceGallery from './menu/gallery/EminenceGallery';
 import ArmySelectCinematic from './menu/cosmic/ArmySelectCinematic';
 import { DeckConfirmTransition } from './menu/cosmic/DeckConfirmTransition';
 
@@ -36,19 +34,16 @@ const PLACE_WARMUP = [
 ];
 
 /**
- * Solo ciò che il boot deve riscaldare (menu / gallerie / transizioni).
- * Esclusi: campi full-res (duel load), catalogo builder (builder load),
- * GalleryCinematic full-res, DeckSelect / shuffle pesanti.
+ * Warm-up leggero: niente CardGallery/EminenceGallery (troppe carte → FPS bassi
+ * e splash che sembra bloccato). Bastano rain + poche P4 + army/transizioni.
  */
 const SCREEN_SCHEDULE = [
-  { id: 'cardGallery', ms: 900 },
-  { id: 'eminenceGallery', ms: 700 },
-  { id: 'armySelect', ms: 700 },
-  { id: 'transitions', ms: 800 },
+  { id: 'armySelect', ms: 500 },
+  { id: 'transitions', ms: 600 },
 ];
 
-const WARMUP_MS = 3600;
-const WARMUP_HARD_CAP_MS = 5200;
+const WARMUP_MS = 1800;
+const WARMUP_HARD_CAP_MS = 3200;
 
 const noop = () => {};
 
@@ -107,15 +102,6 @@ export function WarmupStage({ onComplete, onProgress }) {
           artUrl: getEminenceArtUrl(em),
           accent: ARMY_COLORS[em.army]?.accent || '#c9a227',
         })),
-    []
-  );
-
-  const galleryCounts = useMemo(
-    () => ({
-      agentCount: GALLERY_AGENT_COUNT,
-      fieldCount: ALL_BATTLEFIELDS.length,
-      eminenceCount: EMINENCE_IDS_BY_ARMY_ORDER.length,
-    }),
     []
   );
 
@@ -216,26 +202,6 @@ export function WarmupStage({ onComplete, onProgress }) {
   const styleClass = placeFxStyleClass(styleKey);
 
   const screenLayer = (() => {
-    if (screenId === 'cardGallery') {
-      return (
-        <CardGallery
-          onBack={noop}
-          galleryTab="agents"
-          onGalleryTabChange={noop}
-          {...galleryCounts}
-        />
-      );
-    }
-    if (screenId === 'eminenceGallery') {
-      return (
-        <EminenceGallery
-          onBack={noop}
-          galleryTab="eminences"
-          onGalleryTabChange={noop}
-          {...galleryCounts}
-        />
-      );
-    }
     if (screenId === 'armySelect') {
       return <ArmySelectCinematic onSelect={noop} onBack={noop} />;
     }
@@ -398,3 +364,5 @@ export function WarmupStage({ onComplete, onProgress }) {
   if (typeof document === 'undefined') return null;
   return createPortal(stage, document.body);
 }
+
+export default WarmupStage;

@@ -17,3 +17,5 @@ Senza virgola: tutto titolo, nessun sottotitolo.
 Eccezione editoriale: se i dati gioco non hanno virgola, il kit Eldritch può fornire `displayName` (es. Glauson).
 
 Implementazione: `splitEldritchName(displayName || name)` in `alfaCardRenderer.js` → elementi layout `name` + `nameSubtitle`.
+
+Parallelo Arcana (stessa regola virgola, font/box diversi): `satze-arcana-text-layout.mdc` + `splitArcanaDisplayName`.

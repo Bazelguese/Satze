@@ -332,8 +332,9 @@ function EminenzaCard({
         artUrl={artUrl}
         accent={accent}
         life={life}
-        tiltEnabled
-        idleOrbit
+        /* Durante l'ingresso armata: niente tilt/orbit (rAF + filter mentre la carta anima). */
+        tiltEnabled={!cardArmClass && !holdHidden}
+        idleOrbit={false}
         lockPlane
         showChrome={false}
         showEdge={false}

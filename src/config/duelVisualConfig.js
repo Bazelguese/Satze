@@ -4,10 +4,10 @@
 // ============================================
 
 /** Incrementa quando cambiano i default di timing (reset override obsoleti in localStorage). */
-export const DUEL_VISUAL_DEFAULTS_VERSION = 4;
+export const DUEL_VISUAL_DEFAULTS_VERSION = 5;
 
 /** Floor ms fase 4 (scontro) dopo clashSpeed — evita scontri troppo brevi. */
-export const DUEL_PHASE4_MIN_MS = 1200;
+export const DUEL_PHASE4_MIN_MS = 2600;
 
 /** @typedef {typeof DUEL_VISUAL_DEFAULTS} DuelVisualConfig */
 
@@ -34,8 +34,8 @@ export const DUEL_VISUAL_DEFAULTS = {
   phaseMs3: 1100,
   /** Fase 3 senza mod VA né clamp al minimo: passaggio rapido (ms) */
   phaseMs3Empty: 280,
-  /** Durata fase 4 — Scontro (ms) */
-  phaseMs4: 2200,
+  /** Durata fase 4 — Scontro (ms) — base; clashSpeed può allungare/accorciare entro il floor */
+  phaseMs4: 3600,
   /** Durata fase 5 — Risultato prima del pulsante (ms) */
   phaseMs5: 900,
   /** Tick animazione arcobaleno / diamante (ms tra un frame e l’altro) */
@@ -60,7 +60,8 @@ export const DUEL_VFX_CHANGED_EVENT = 'satze-duel-vfx-changed';
 
 /** Mapping lineare-clamped dei VFX clash (fase 4) basato su gap VA e FC totali. */
 export const CLASH_VFX_RANGES = {
-  gap: { min: 0, max: 15, speedMin: 0.7, speedMax: 1.5 },
+  /** Gap alto = un filo più rapido, mai un rush (speedMax vicino a 1). */
+  gap: { min: 0, max: 15, speedMin: 0.75, speedMax: 1.15 },
   fc: { min: 2, max: 16, intMin: 0.3, intMax: 1.6 },
 };
 

@@ -77,6 +77,9 @@
 .dep-1 .imp-colL .satze-hud-panel,.dep-2 .imp-colL .satze-hud-panel,
 .dep-1 .imp-colR .satze-hud-panel,.dep-2 .imp-colR .satze-hud-panel{backdrop-filter:blur(2px)}
 .imp-colL > *,.imp-colR > *{transform-style:flat}
+/* Isola layout colonne HUD (non le mani: absolute bottom/top fuori dal wrapper) */
+.satze-scene .imp-colL,
+.satze-scene .imp-colR{contain:layout style}
 
 /* Tabellone: pulsanti a rilievo — la prospettiva la dà la colonna, non le singole righe */
 .dep-1 .imp-fields .imp-row,.dep-2 .imp-fields .imp-row{border-radius:8px;transition:transform .22s ease,box-shadow .22s ease,filter .22s ease;

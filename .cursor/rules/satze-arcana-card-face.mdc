@@ -1,0 +1,43 @@
+---
+description: Arcana card face style — parallel to Eldritch (layered alt art)
+globs: "**/arcana*/**","**/Arcana*.{js,jsx,css}","**/cardFaceLabData.js","**/AltArtCardFace.jsx"
+alwaysApply: false
+---
+
+# SATZE Arcana — carte alternative a livelli
+
+**Arcana** è uno stile di alternative art parallelo a **Eldritch**: stesso pipeline di integrazione (kit → `public/` → `LAYERED_CARD_KITS` → preferenza galleria → partita), ma linguaggio visivo e ordine livelli diversi.
+
+## Source of truth
+
+- Asset: `public/card-images/arcana/layers/<slug>/`
+- Registrazione: `arcanaKitFromFolder` in `src/components/cardFaceLab/cardFaceLabData.js` (`style: 'arcana'`)
+- Faccia: `ArcanaCardFace` / `ArcanaLayeredPreview`; in partita tramite `AltArtCardFace`
+- Preferenza: stesso storage Eldritch (`showEldritch` = alt art on); label UI = `getAltFaceStyleLabel` → «Arcana»
+- Import: `node scripts/import-arcana-kit.mjs`
+- Schema kit: `satze.arcana-kit.v1` (JSON editor); formato canvas **1104×1584** (23:33)
+
+## Differenze vs Eldritch (obbligatorie)
+
+| | Eldritch | Arcana |
+|---|---|---|
+| Ordine | sfondo → soggetto → cornice → pop → ink | sfondo → **cornice** → **soggetto sopra** → layout |
+| Cornice | PNG dipinta per esercito + macchie | Vetro + cartigli/sigilli (tinta colori kit) |
+| Font layout | Alfa display/body | Layered live: **Lora Semibold**; composita kit: bake raster |
+| Pop | clip/mask pezzi soggetto | soggetto intero sopra il vetro |
+
+Non riusare `EldritchLayeredPreview` per i kit Arcana. Non mescolare asset Eldritch nel path Arcana.
+
+## Hard rules
+
+- Stesso slot plancia degli Eldritch (`ELDRITCH_CORNICE` / frame 230×H): non inventare un secondo layout di carta in duello.
+- In partita / mano: **layered** (`composition` kit + testi live Lora). Niente parallasse (`motion`/`idleMotion` off).
+- Tile galleria: può restare `variant="static"` → `composita.webp` (bake kit; non riflette composition finché non rebake).
+- Lab / lightbox layered: ordine kit **sfondo → vetro → soggetto → cartigli → layout**
+  (Cornice mascherata con GEOMETRY pannelli/sigilli). Parallasse solo su sfondo/soggetto.
+- **Layered testi live** (`useLiveText`, default): `buildArcanaLiveTexts` — non `layout.webp`.
+  Override raster solo con `layoutUrl` esplicito / `variant="static"`.
+- Nuovi kit: copiare file → registrare con `arcanaKitFromFolder` → compaiono in tab Alternative.
+  Composition soggetto (`subjectScale` / `subjectXPercent` / `subjectYPercent`) dal lab → kit.
+- Dati gioco (potere, bonus, stats) da `cards.js` / armate; il JSON kit è layout/grafica, non regolamento.
+- **Testi** (posizioni / formattazione / stile): regola `satze-arcana-text-layout.mdc` + `arcanaLiveText.js`.

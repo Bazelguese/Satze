@@ -3,7 +3,7 @@
 // Duello ufficiale: Codice/satze.jsx — anteprima: DuelVfxSimulator / Duel VFX Lab.
 // ============================================
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { GameCard } from '../cards/GameCard';
 import { Icon } from '../ui/Icon';
 import { computePhase3DurationMs, countDuelPhase3SubSteps } from '../../config/duelVisualTimeline.js';
@@ -22,6 +22,12 @@ import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
 import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
+import { subscribeRainbowGlow, getRainbowGlowEpoch } from '../../utils/rainbowGlowClock.js';
+
+/** Re-render locale quando gira il clock arcobaleno (senza toccare il root Satze). */
+function useRainbowGlowTick() {
+  return useSyncExternalStore(subscribeRainbowGlow, getRainbowGlowEpoch, () => 0);
+}
 
 /** Armata con bonus in dati ma regola mazzo non soddisfatta (non trigger, non copia, non blocco). */
 function duelBonusBaseInactive(agent, hasBonus, bonusNotTriggered, bonusBlocked, bonusCopied) {
@@ -427,6 +433,7 @@ export function DuelResultEnemyResultBody({
   cinemaHideAgent = false,
   keepOrbitThroughClash = false,
 }) {
+  useRainbowGlowTick();
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const focusPower = getDuelFocusPhasePower(battleResult, false);
   const dyn = normalizeClashDyn(useClashDynamicSnapshot(battleResult, duelPhase));
@@ -629,6 +636,7 @@ export function DuelResultPlayerResultBody({
   cinemaHideAgent = false,
   keepOrbitThroughClash = false,
 }) {
+  useRainbowGlowTick();
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const focusPower = getDuelFocusPhasePower(battleResult, true);
   const dyn = normalizeClashDyn(useClashDynamicSnapshot(battleResult, duelPhase));

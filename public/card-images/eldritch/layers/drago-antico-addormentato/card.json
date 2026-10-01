@@ -1,0 +1,95 @@
+{
+  "id": 711,
+  "name": "Drago Antico Addormentato",
+  "league": 5,
+  "power": 6,
+  "damage": 4,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "L’Enclave delle Scaglie",
+  "accent": "#fb912d",
+  "autoFaction": false,
+  "ability": {
+    "title": "Rimonta",
+    "text": "Immune"
+  },
+  "bonus": {
+    "title": "Conquista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 740,
+      "y": 955,
+      "w": 265,
+      "fontSize": 72
+    },
+    "abilityText": {
+      "x": 750,
+      "y": 1060,
+      "fontSize": 46,
+      "w": 245
+    },
+    "name": {
+      "x": 80,
+      "y": 65,
+      "w": 740,
+      "h": 110,
+      "fontSize": 66
+    },
+    "faction": {
+      "x": 70,
+      "y": 755,
+      "w": 455,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "mask": "Maschera-generata.png",
+    "subjectScale": 1.025,
+    "subjectXPercent": 0,
+    "subjectYPercent": 0,
+    "frameOverlapClip": "polygon(0 14%,100% 14%,100% 62%,0 62%)",
+    "textOverlapClip": "polygon(58% 45%,66% 45%,66% 56%,55% 56%,53% 54%,51% 53.2%,53% 52.5%,50.5% 51.9%,52% 51.2%,49.8% 50.8%,52% 50.1%,50.9% 49.5%,53.3% 48.6%,52.8% 47.8%,55% 47.4%)",
+    "description": "Il drago con l’oro che lo ricopre è separato dalla caverna. I rilievi dorati passano davanti alla cornice e all’estremità della fascia dell’esercito.",
+    "alpha": "RGBA reale, esportato tramite maschera di luminanza SVG generata con imagegen"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "cardBlobSha": "8e4176a3bd7f22e4ef6a3d6305011dd879589158",
+    "armyFile": "src/data/armies.js",
+    "armyBlobSha": "f5da463eb42f11452e6fcb6e14a38e74285eb06c"
+  }
+}

@@ -23,7 +23,7 @@ export function CosmicMenuBackground({ parallaxRef }) {
     <>
     <style>{`
       @keyframes satze-cosmic-menu-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
-      @keyframes satze-cosmic-menu-pulse { 0%,100% { filter: drop-shadow(0 0 8px currentColor) } 50% { filter: drop-shadow(0 0 18px currentColor) } }
+      @keyframes satze-cosmic-menu-pulse { 0%,100% { opacity: 0.72 } 50% { opacity: 1 } }
     `}</style>
       <div
         style={{
@@ -43,12 +43,14 @@ export function CosmicMenuBackground({ parallaxRef }) {
             width: "min(920px, 95vw)",
             height: "min(880px, 95vh)",
             background:
-              "radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.2) 0%, rgba(88,28,135,0.18) 30%, transparent 64%)",
-            filter: blurPx > 0 ? `blur(${blurPx}px)` : 'none',
+              "radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.28) 0%, rgba(88,28,135,0.22) 30%, transparent 64%)",
+            /* Blur statico: animare filter/drop-shadow ogni frame costa troppo. */
+            filter: blurPx > 0 ? `blur(${Math.min(blurPx, 16)}px)` : 'none',
+            boxShadow: `0 0 48px ${ACCENT}55`,
             animation: profile.menuSigilAnimation ? "satze-cosmic-menu-pulse 6s ease-in-out infinite" : 'none',
             color: ACCENT,
             pointerEvents: "none",
-            willChange: "transform",
+            willChange: "opacity, transform",
           }}
         />
       )}

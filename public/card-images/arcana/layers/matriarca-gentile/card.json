@@ -1,0 +1,171 @@
+{
+  "schema": "satze.arcana-kit.v1",
+  "typography": {
+    "family": "Lora",
+    "weight": 600,
+    "approved": true,
+    "numerals": "lining tabular"
+  },
+  "id": 625,
+  "name": "Matriarca Gentile",
+  "style": "ARCANA",
+  "faction": "Mounthborn",
+  "league": 3,
+  "power": 4,
+  "damage": 3,
+  "ability": {
+    "title": "Gloria:",
+    "text": "Cura 2"
+  },
+  "bonus": {
+    "title": "Imboscata:",
+    "text": "+1 POT, +1 DAN"
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "artWidth": 1024,
+    "artHeight": 1536,
+    "artScale": 1.03125,
+    "artX": 24
+  },
+  "colors": {
+    "frame": "#c9e238",
+    "paper": "#fff0bc",
+    "power": "#ffdd13",
+    "damage": "#8731fa",
+    "league": "#73757a",
+    "ink": "#080704",
+    "leagueInk": "#fff1ce"
+  },
+  "parallax": {
+    "subjectX": 5,
+    "subjectY": 3,
+    "backgroundX": -6,
+    "backgroundY": -4,
+    "tiltX": 3,
+    "tiltY": 4
+  },
+  "layers": {
+    "subject": {
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "background": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.04
+    }
+  },
+  "layout": {
+    "name": {
+      "text": "MATRIARCA\nGentile",
+      "x": 362,
+      "y": 110,
+      "w": 510,
+      "size": 56,
+      "lineHeight": 68
+    },
+    "subtitle": {
+      "text": "",
+      "x": 362,
+      "y": 188,
+      "w": 490,
+      "size": 50
+    },
+    "league": {
+      "text": "L3",
+      "x": 884,
+      "y": 143,
+      "w": 118,
+      "size": 76
+    },
+    "power": {
+      "text": "4",
+      "x": 145,
+      "y": 906,
+      "w": 125,
+      "size": 123
+    },
+    "damage": {
+      "text": "3",
+      "x": 880,
+      "y": 906,
+      "w": 125,
+      "size": 123
+    },
+    "abilityTitle": {
+      "text": "Gloria:",
+      "x": 367,
+      "y": 1117,
+      "w": 425,
+      "size": 50
+    },
+    "abilityText": {
+      "text": "Cura 2",
+      "x": 377,
+      "y": 1170,
+      "w": 420,
+      "size": 55
+    },
+    "bonusTitle": {
+      "text": "Imboscata:",
+      "x": 672,
+      "y": 1301,
+      "w": 320,
+      "size": 44
+    },
+    "bonusText": {
+      "text": "+1 POT, +1 DAN",
+      "x": 672,
+      "y": 1352,
+      "w": 430,
+      "size": 44
+    }
+  },
+  "components": {
+    "frame": {
+      "x": 0,
+      "y": 0
+    },
+    "name": {
+      "x": 0,
+      "y": 0
+    },
+    "ability": {
+      "x": 0,
+      "y": 0
+    },
+    "bonus": {
+      "x": 0,
+      "y": 0
+    },
+    "league": {
+      "x": 0,
+      "y": 0
+    },
+    "power": {
+      "x": 0,
+      "y": 0
+    },
+    "damage": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  },
+  "files": {
+    "background": "Sfondo.png",
+    "subject": "Soggetto.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "mask": "Maschera.png",
+    "artwork": "Artwork.png"
+  }
+}

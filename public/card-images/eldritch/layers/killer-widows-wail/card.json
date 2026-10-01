@@ -1,0 +1,106 @@
+{
+  "id": 1229,
+  "name": "Killer “Widow’s Wail”",
+  "league": 5,
+  "power": 5,
+  "damage": 4,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Mascarada",
+  "accent": "#437ef2",
+  "autoFaction": false,
+  "ability": {
+    "title": "Ultimo desiderio",
+    "text": "+2 FC"
+  },
+  "bonus": {
+    "title": "Opportunista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 710,
+      "y": 955,
+      "w": 310,
+      "fontSize": 44
+    },
+    "abilityText": {
+      "x": 750,
+      "y": 1060,
+      "fontSize": 46,
+      "w": 245
+    },
+    "name": {
+      "x": 70,
+      "y": 65,
+      "w": 740,
+      "h": 130,
+      "fontSize": 74
+    },
+    "faction": {
+      "x": 280,
+      "y": 755,
+      "w": 370,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 72,
+      "y": 1176
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    },
+    "bonusTitle": {
+      "x": 240,
+      "y": 1230,
+      "w": 540,
+      "h": 120,
+      "fontSize": 80
+    },
+    "bonusText": {
+      "x": 300,
+      "y": 1340,
+      "w": 300,
+      "fontSize": 55
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Donna-ragno con zampe davanti alla cornice"
+    ],
+    "anatomy": "Busto umano collegato al corpo di ragno spettrale, maschera aderente originale a occhi aracnidi. Ring ricostruito integralmente. Zampe oltre la cornice dipinta e dentro il rettangolo massimo della carta.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

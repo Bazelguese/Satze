@@ -1,0 +1,113 @@
+{
+  "id": 405,
+  "name": "Guardiano di Settore",
+  "league": 3,
+  "power": 4,
+  "damage": 2,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Calibri Pesanti",
+  "accent": "#a9a294",
+  "autoFaction": false,
+  "ability": {
+    "title": "Sfida",
+    "text": "Blocca Potere"
+  },
+  "bonus": {
+    "title": "−2 DAN nem.",
+    "text": "(min 2)"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 790,
+      "y": 950,
+      "w": 220,
+      "fontSize": 74
+    },
+    "abilityText": {
+      "x": 785,
+      "y": 1060,
+      "fontSize": 48,
+      "w": 220
+    },
+    "name": {
+      "x": 60,
+      "y": 45,
+      "w": 785,
+      "h": 95,
+      "fontSize": 71
+    },
+    "faction": {
+      "x": 70,
+      "y": 760,
+      "w": 415,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 68,
+      "y": 1195,
+      "w": 190
+    },
+    "league": {
+      "x": 60,
+      "y": 190
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    },
+    "power": {
+      "x": 70,
+      "y": 975,
+      "w": 160,
+      "fontSize": 220
+    },
+    "bonusTitle": {
+      "x": 245,
+      "y": 1225,
+      "w": 490,
+      "h": 115,
+      "fontSize": 72
+    },
+    "bonusText": {
+      "x": 260,
+      "y": 1345,
+      "w": 230,
+      "fontSize": 55
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Cyborg con pistola e scudo davanti alla cornice"
+    ],
+    "anatomy": "Cyborg in avanzata con pistola e scudo. Corridoio ricostruito interamente.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

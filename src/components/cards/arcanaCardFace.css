@@ -1,0 +1,41 @@
+/* Faccia Arcana — stesso slot Eldritch. */
+
+.satze-arcana-slot {
+  /* allinea .satze-eldritch-slot */
+}
+
+.satze-eldritch-bitmap .satze-arcana-card-face.arcana-layered {
+  max-width: none;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.satze-eldritch-bitmap .arcana-layered__stage {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  --arcana-stage-pad: 0px;
+  perspective: 1200px;
+}
+
+.satze-eldritch-bitmap .arcana-layered__hit {
+  inset: 0;
+  pointer-events: auto;
+}
+
+.satze-eldritch-bitmap .arcana-layered__tilt,
+.satze-eldritch-bitmap .arcana-layered__stack {
+  filter: none;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.satze-eldritch-face-chrome.is-selected .satze-eldritch-static img,
+.satze-eldritch-face-chrome.is-selected .arcana-layered__tilt {
+  filter:
+    drop-shadow(0 0 2px rgba(250, 204, 21, 0.95))
+    drop-shadow(0 0 10px rgba(250, 204, 21, 0.55))
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.55));
+}

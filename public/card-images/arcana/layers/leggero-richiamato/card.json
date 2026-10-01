@@ -1,0 +1,158 @@
+{
+  "schema": "satze.arcana-kit.v1",
+  "id": 108,
+  "name": "Leggero Richiamato",
+  "style": "ARCANA",
+  "faction": "Figli dell’Orizzonte",
+  "league": 2,
+  "power": 3,
+  "damage": 1,
+  "ability": {
+    "title": "ULTIMA CHANCE:",
+    "text": "4 Danni dir."
+  },
+  "bonus": {
+    "title": "Sempre:",
+    "text": "−5 VA nem. (min 6)"
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584,
+    "artWidth": 1024,
+    "artHeight": 1536,
+    "artScale": 1.03125,
+    "artX": 24
+  },
+  "colors": {
+    "frame": "#a288fb",
+    "paper": "#fff0bc",
+    "power": "#ffdd13",
+    "damage": "#8731fa",
+    "league": "#73757a",
+    "ink": "#080704",
+    "leagueInk": "#fff1ce"
+  },
+  "parallax": {
+    "subjectX": 5,
+    "subjectY": 3,
+    "backgroundX": -6,
+    "backgroundY": -4,
+    "tiltX": 3,
+    "tiltY": 4
+  },
+  "layers": {
+    "subject": {
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "background": {
+      "x": 0,
+      "y": 110,
+      "scale": 1.06
+    }
+  },
+  "layout": {
+    "name": {
+      "text": "LEGGERO\nRICHIAMATO",
+      "x": 362,
+      "y": 104,
+      "w": 530,
+      "size": 74,
+      "lineHeight": 78
+    },
+    "league": {
+      "text": "L2",
+      "x": 884,
+      "y": 159,
+      "w": 118,
+      "size": 68
+    },
+    "power": {
+      "text": "3",
+      "x": 145,
+      "y": 922,
+      "w": 125,
+      "size": 112
+    },
+    "damage": {
+      "text": "1",
+      "x": 880,
+      "y": 922,
+      "w": 125,
+      "size": 112
+    },
+    "abilityTitle": {
+      "text": "ULTIMA CHANCE:",
+      "x": 367,
+      "y": 1117,
+      "w": 425,
+      "size": 46
+    },
+    "abilityText": {
+      "text": "4 Danni dir.",
+      "x": 377,
+      "y": 1170,
+      "w": 420,
+      "size": 55
+    },
+    "bonusTitle": {
+      "text": "Sempre:",
+      "x": 672,
+      "y": 1301,
+      "w": 320,
+      "size": 44
+    },
+    "bonusText": {
+      "text": "−5 VA nem. (min 6)",
+      "x": 672,
+      "y": 1352,
+      "w": 430,
+      "size": 44
+    }
+  },
+  "components": {
+    "frame": {
+      "x": 0,
+      "y": 0
+    },
+    "name": {
+      "x": 0,
+      "y": 0
+    },
+    "ability": {
+      "x": 0,
+      "y": 0
+    },
+    "bonus": {
+      "x": 0,
+      "y": 0
+    },
+    "league": {
+      "x": 0,
+      "y": 0
+    },
+    "power": {
+      "x": 0,
+      "y": 0
+    },
+    "damage": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  },
+  "files": {
+    "background": "Sfondo.png",
+    "subject": "Soggetto.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "mask": "Maschera.png",
+    "artwork": "Artwork.png"
+  }
+}

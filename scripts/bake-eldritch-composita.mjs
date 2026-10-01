@@ -14,7 +14,7 @@ import { createServer } from 'vite';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const LAYERS = path.join(ROOT, 'public', 'card-images', 'eldritch', 'layers');
-const IDS = [101, 103, 104, 115, 206, 211, 221, 226, 301, 302, 315, 323, 402, 407, 419, 430, 524, 611, 705, 830, 910, 1004, 1122, 1215];
+const IDS = [101, 103, 104, 115, 206, 211, 221, 226, 301, 302, 315, 323, 402, 405, 407, 419, 430, 501, 520, 524, 526, 604, 611, 615, 618, 705, 711, 721, 726, 807, 815, 826, 830, 910, 916, 929, 1001, 1004, 1013, 1020, 1106, 1108, 1122, 1127, 1205, 1207, 1215, 1222, 1229];
 
 async function main() {
   console.log('Kits:', IDS.join(', '));

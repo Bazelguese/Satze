@@ -75,25 +75,45 @@ export function splitEldritchName(fullName) {
   };
 }
 
-/** Layout tipico salvato dall’Atelier Eldritch (Sorethai). */
+/**
+ * Layout Eldritch condiviso.
+ * Nome/macchia: base Portatore della Domanda (box fisso + testo centrato).
+ * Effetti: tipografia fissa sul bonus Portatore (SEMPRE: grande / testo piccolo).
+ */
 export const ELDRITCH_DEFAULT_LAYOUT = {
   damageLabel: { x: 794, y: 1340 },
   powerLabel: { x: 72, y: 1176 },
   league: { x: 836, y: 93 },
-  name: { x: 82, y: 90, w: 715, h: 205, fontSize: 116, scaleX: 0.9 },
-  nameSubtitle: { x: 88, y: 228, w: 500, h: 72, fontSize: 48 },
+  // Macchia nome sempre uguale; testo centrato nel box (non sposta la macchia).
+  name: { x: 82, y: 82, w: 725, h: 175, fontSize: 97, scaleX: 0.9, anchor: 'middle' },
+  nameSubtitle: {
+    x: 82,
+    y: 230,
+    w: 725,
+    h: 72,
+    fontSize: 48,
+    scaleX: 0.9,
+    anchor: 'middle',
+  },
   // Targhetta armata — bordo destro fisso (Nucleo Comando Nord); il nome cresce a sinistra.
   faction: { x: 620, y: 285, w: 310, h: 60, fontSize: 40, anchor: 'end' },
-  // Colonne effetti — regola unica (stesso x titolo/testo; sinistra↔potenza, destra↔danno).
-  abilityTitle: { x: 248, y: 1000, w: 400, h: 110 },
-  abilityText: { x: 248, y: 1095, w: 400, h: 80 },
-  bonusTitle: { x: 530, y: 1180, w: 290, h: 110 },
-  bonusText: { x: 530, y: 1275, w: 290, h: 80 },
+  // Colonne effetti — stesso x titolo/testo; max font = Portatore, autoFit se non entra.
+  abilityTitle: { x: 240, y: 1000, w: 520, h: 110, fontSize: 88, autoFit: true },
+  abilityText: { x: 240, y: 1095, w: 520, h: 80, fontSize: 48, autoFit: true },
+  // Bonus: bordo destro = x danno (come potere sta a filo con potenza); cresce solo a sinistra.
+  bonusTitle: { x: 240, y: 1180, w: 580, h: 110, fontSize: 88, autoFit: true },
+  bonusText: { x: 240, y: 1275, w: 580, h: 80, fontSize: 48, autoFit: true },
   damage: { x: 803, y: 1120 },
 };
 
+/** Bordo destro bonus = bordo sinistro danno (820), specchio del filo potere↔potenza. */
+export const ELDRITCH_BONUS_RIGHT = 820;
+export const ELDRITCH_BONUS_LEFT_MIN = 240;
+
 /** Chiavi layout bloccate: i kit non le spostano. */
 export const ELDRITCH_LOCKED_LAYOUT_KEYS = [
+  'name',
+  'nameSubtitle',
   'abilityTitle',
   'abilityText',
   'bonusTitle',
@@ -160,6 +180,9 @@ export function sanitizeLayout(input) {
     }
     if (/^#[0-9a-f]{6}$/i.test(src.color)) item.color = src.color;
     if (typeof src.autoFit === 'boolean') item.autoFit = src.autoFit;
+    if (src.anchor === 'start' || src.anchor === 'middle' || src.anchor === 'end') {
+      item.anchor = src.anchor;
+    }
     result[key] = item;
   }
   return result;
@@ -299,11 +322,15 @@ export function renderCardFace(input = {}, assets = {}) {
       ...(column ? {} : d.layout[key] || {}),
       ...(column || {}),
     };
+    // Colonna bonus condivisa: override dopo il lock layout (stesso X trigger/effetto).
+    if (Number.isFinite(style.columnX)) cfg.x = style.columnX;
+    if (Number.isFinite(style.columnW)) cfg.w = style.columnW;
     box = { x: cfg.x, y: cfg.y, w: cfg.w, h: cfg.h };
     const sx = cfg.scaleX;
     const tilt = cfg.rotation;
     const slant = cfg.slant;
     const anchorEnd = cfg.anchor === 'end';
+    const anchorMiddle = cfg.anchor === 'middle';
     const local = { w: (box.w - 20) / sx, h: box.h };
     const singleLine = maxLines === 1;
     const f = singleLine
@@ -326,20 +353,60 @@ export function renderCardFace(input = {}, assets = {}) {
         );
     // Lega: il glifo (scaleX ~0.82) resta a sinistra del centro anello con pad 16;
     // +14 allinea il numero nel foro dell’anello (Livelli / motion).
-    const padX = key === 'league' ? 30 : key === 'leagueMark' ? 4 : 16;
-    const padY = key === 'leagueMark' ? 8 : 12;
+    let padX = key === 'league' ? 30 : key === 'leagueMark' ? 4 : 16;
+    let padY = key === 'leagueMark' ? 8 : 12;
     // Ancoraggio a destra: bordo destro fisso, box si allarga a sinistra sul testo reale.
-    // Testo sempre left-aligned nel box (niente text-anchor end: con skew/scale spariva).
+    // Testo sempre left-aligned nel box (niente text-anchor end/middle SVG: con skew/scale spariva).
+    const mctx = getMeasureCtx();
+    const lineWidths = f.lines.map((l) => {
+      if (!mctx) return local.w;
+      mctx.font = `${f.size}px ${family}`;
+      return Math.max(1, mctx.measureText(l).width);
+    });
+    const glyphW = Math.max(1, ...lineWidths);
+    let lineXs = f.lines.map(() => 0);
     if (anchorEnd) {
       const right = box.x + box.w;
-      const mctx = getMeasureCtx();
-      let glyphW = local.w;
-      if (mctx) {
-        mctx.font = `${f.size}px ${family}`;
-        glyphW = Math.max(1, ...f.lines.map((l) => mctx.measureText(l).width));
-      }
       const tightW = Math.min(box.w, Math.max(80, glyphW * sx + padX * 2 + 36));
       box = { x: right - tightW, y: box.y, w: tightW, h: box.h };
+    } else if (anchorMiddle) {
+      // Centra il blocco nel box senza stringere w/h → macchia ink invariata.
+      padX = Math.max(8, (box.w - glyphW * sx) / 2);
+      lineXs = lineWidths.map((w) => (glyphW - w) / 2);
+      // Nome: centro ottico a metà banner; con sottotitolo alza e lascia spazio sotto.
+      if (key === 'name') {
+        const raise = style.nameRaise || 0;
+        padY = box.h / 2 - f.size * 0.4 - raise;
+      } else if (key === 'nameSubtitle' && style.attachUnderName) {
+        const nameL = layouts.find((l) => l.key === 'name');
+        if (nameL) {
+          const gap = 2;
+          const nameBottom =
+            nameL.box.y + (nameL.padY ?? 12) + nameL.size * 0.78 + nameL.size * 0.08;
+          box = { x: nameL.box.x, y: nameBottom + gap, w: nameL.box.w, h: 64 };
+          padY = 2;
+        } else {
+          const blockH = f.lines.length * f.leading;
+          padY = Math.max(4, (box.h - blockH) / 2);
+        }
+      } else if (key === 'nameSubtitle') {
+        const blockH = f.lines.length * f.leading;
+        padY = Math.max(4, (box.h - blockH) / 2);
+      }
+    }
+    // Potere/bonus: box stretto sul testo reale → macchia ink segue la lunghezza.
+    const isBonus = key === 'bonusTitle' || key === 'bonusText';
+    const isAbility = key === 'abilityTitle' || key === 'abilityText';
+    const isEffect = isBonus || isAbility;
+    if (isEffect) {
+      const padRight = 40;
+      const contentW = Math.max(64, glyphW * sx + padX + padRight);
+      const tightH = Math.min(
+        box.h,
+        Math.max(44, padY + f.lines.length * f.leading + 16)
+      );
+      const tightW = Math.min(box.w, contentW);
+      box = { x: box.x, y: box.y, w: tightW, h: tightH };
     }
     layouts.push({
       key,
@@ -350,6 +417,7 @@ export function renderCardFace(input = {}, assets = {}) {
       config: cfg,
       scaleX: sx,
       rotation: tilt,
+      padY,
     });
     if (f.overflow) warnings.push(`${ELEMENT_NAMES[key]}: testo oltre lo spazio disponibile.`);
     if (box.x + box.w > CARD_FACE_W || box.y + box.h > CARD_FACE_H) {
@@ -361,9 +429,13 @@ export function renderCardFace(input = {}, assets = {}) {
       key === 'name' || key === 'nameSubtitle'
         ? ''
         : `mask="url(#${family === 'AlfaBody' ? `${id}-light` : `${id}-wear`})"`;
-    // Slant negativo spinge i glifi a sinistra: clip largo altrimenti taglia la P e l'ala sotto sembra sopra.
-    const clipPadX = key === 'name' || key === 'nameSubtitle' ? 90 : 20;
-    return `<g data-alfa-key="${key}" transform="translate(${box.x + padX} ${box.y + padY}) rotate(${tilt})"><g transform="skewX(${slant}) scale(${sx} 1)"><defs><clipPath id="${cid}"><rect x="${-clipPadX}" y="-10" width="${local.w + clipPadX * 2}" height="${box.h + 20}"/></clipPath></defs><text ${maskAttr} clip-path="url(#${cid})" fill="${cfg.color}" font-family="${family}" font-size="${f.size}">${f.lines.map((l, i) => `<tspan x="0" y="${f.size * 0.86 + i * f.leading}">${esc(l)}</tspan>`).join('')}</text></g></g>`;
+    // Slant negativo spinge i glifi a sinistra: clip largo altrimenti taglia lettere/effetto.
+    const clipPadX = key === 'name' || key === 'nameSubtitle' ? 90 : isEffect ? 48 : 20;
+    const firstBaseline = key === 'name' || key === 'nameSubtitle' ? f.size * 0.78 : f.size * 0.86;
+    // Clip sulla larghezza misurata (non sul box stretto) così il testo non viene tagliato.
+    const clipLocalW = Math.max(local.w, glyphW + 24);
+    const clipH = Math.max(box.h, f.lines.length * f.leading + firstBaseline) + 28;
+    return `<g data-alfa-key="${key}" transform="translate(${box.x + padX} ${box.y + padY}) rotate(${tilt})"><g transform="skewX(${slant}) scale(${sx} 1)"><defs><clipPath id="${cid}"><rect x="${-clipPadX}" y="-10" width="${clipLocalW + clipPadX * 2}" height="${clipH}"/></clipPath></defs><text ${maskAttr} clip-path="url(#${cid})" fill="${cfg.color}" font-family="${family}" font-size="${f.size}">${f.lines.map((l, i) => `<tspan x="${lineXs[i] ?? 0}" y="${firstBaseline + i * f.leading}">${esc(l)}</tspan>`).join('')}</text></g></g>`;
   };
 
   const imageUrl = d.illustration || assets.art || '';
@@ -387,27 +459,44 @@ export function renderCardFace(input = {}, assets = {}) {
   }
 
   const { title: nameTitle, subtitle: nameSub } = splitEldritchName(d.displayName || d.name);
+  const nameBox = ELDRITCH_DEFAULT_LAYOUT.name;
+  const nameSubBox = ELDRITCH_DEFAULT_LAYOUT.nameSubtitle;
+  const hasNameSub = Boolean(nameSub);
+  // Sempre 1 riga: stessa altezza nel banner; con sottotitolo alza il nome.
   const title = text(
     'name',
     String(nameTitle).toUpperCase(),
-    nameSub ? { x: 82, y: 82, w: 705, h: 140 } : { x: 82, y: 82, w: 705, h: 194 },
+    nameBox,
     'AlfaDisplay',
-    nameSub ? 148 : 174,
+    nameBox.fontSize,
     65,
     '#eee8c9',
-    nameSub ? 1 : 2
+    1,
+    {
+      scaleX: nameBox.scaleX,
+      rotation: -3.5,
+      slant: -6,
+      anchor: 'middle',
+      nameRaise: hasNameSub ? 28 : 0,
+    }
   );
-  const nameSubtitle = nameSub
+  const nameSubtitle = hasNameSub
     ? text(
         'nameSubtitle',
         nameSub,
-        { x: 88, y: 228, w: 500, h: 72 },
+        nameSubBox,
         'AlfaBody',
-        48,
+        nameSubBox.fontSize,
         28,
         '#eee8c9',
-        2,
-        { scaleX: 0.9, rotation: -3, slant: -4 }
+        1,
+        {
+          scaleX: nameSubBox.scaleX,
+          rotation: -3,
+          slant: -4,
+          anchor: 'middle',
+          attachUnderName: true,
+        }
       )
     : '';
   // Tag armata: non più nel layout Eldritch (fazione resta nei dati per cornice/colori).
@@ -432,7 +521,7 @@ export function renderCardFace(input = {}, assets = {}) {
       ELDRITCH_DEFAULT_LAYOUT.abilityTitle,
       'AlfaDisplay',
       88,
-      36,
+      40,
       ELDRITCH_UI_COLORS.ability,
       1,
       { scaleX: 0.72, rotation: -3.5, slant: -3 }
@@ -443,33 +532,73 @@ export function renderCardFace(input = {}, assets = {}) {
       ELDRITCH_DEFAULT_LAYOUT.abilityText,
       'AlfaBody',
       48,
-      30,
+      28,
       ELDRITCH_UI_COLORS.ability,
       1,
       { scaleX: 0.88, rotation: -3, slant: -3 }
     );
+  // Bonus: stesso X per trigger ed effetto (allineati come potere); colonna ancorata a destra sul danno.
+  const bonusTitleStr = triggerLabel(d.bonus.title);
+  const bonusTextStr = oneLine(d.bonus.text);
+  const bonusTitleLay = ELDRITCH_DEFAULT_LAYOUT.bonusTitle;
+  const bonusTextLay = ELDRITCH_DEFAULT_LAYOUT.bonusText;
+  const bonusPadX = 16;
+  const bonusPadRight = 40;
+  const bonusTitleSx = 0.72;
+  const bonusTextSx = 0.88;
+  const bonusTitleFit = fitSingleLine(
+    bonusTitleStr,
+    (bonusTitleLay.w - 20) / bonusTitleSx,
+    'AlfaDisplay',
+    88,
+    40
+  );
+  const bonusTextFit = fitSingleLine(
+    bonusTextStr,
+    (bonusTextLay.w - 20) / bonusTextSx,
+    'AlfaBody',
+    48,
+    28
+  );
+  const measureBonusW = (str, family, size, scaleX) => {
+    const ctx = getMeasureCtx();
+    let gw = 120;
+    if (ctx) {
+      ctx.font = `${size}px ${family}`;
+      gw = Math.max(1, ctx.measureText(str).width);
+    }
+    return Math.max(64, gw * scaleX + bonusPadX + bonusPadRight);
+  };
+  const bonusColW = Math.min(
+    ELDRITCH_BONUS_RIGHT - ELDRITCH_BONUS_LEFT_MIN,
+    Math.max(
+      measureBonusW(bonusTitleStr, 'AlfaDisplay', bonusTitleFit.size, bonusTitleSx),
+      measureBonusW(bonusTextStr, 'AlfaBody', bonusTextFit.size, bonusTextSx)
+    )
+  );
+  const bonusColX = ELDRITCH_BONUS_RIGHT - bonusColW;
   const bonus =
     text(
       'bonusTitle',
-      triggerLabel(d.bonus.title),
-      ELDRITCH_DEFAULT_LAYOUT.bonusTitle,
+      bonusTitleStr,
+      { ...bonusTitleLay, x: bonusColX, w: bonusColW },
       'AlfaDisplay',
       88,
-      36,
+      40,
       ELDRITCH_UI_COLORS.bonus,
       1,
-      { scaleX: 0.72, rotation: -3, slant: -3 }
+      { scaleX: bonusTitleSx, rotation: -3, slant: -3, columnX: bonusColX, columnW: bonusColW }
     ) +
     text(
       'bonusText',
-      oneLine(d.bonus.text),
-      ELDRITCH_DEFAULT_LAYOUT.bonusText,
+      bonusTextStr,
+      { ...bonusTextLay, x: bonusColX, w: bonusColW },
       'AlfaBody',
       48,
-      30,
+      28,
       ELDRITCH_UI_COLORS.bonus,
       1,
-      { scaleX: 0.88, rotation: -3, slant: -3 }
+      { scaleX: bonusTextSx, rotation: -3, slant: -3, columnX: bonusColX, columnW: bonusColW }
     );
   const leagueColor = leagueTierColorHex(d.league);
   const numeral = (key, v, x, y, size, width, scaleX = 0.82, color = ELDRITCH_UI_COLORS.cream) =>
@@ -575,14 +704,26 @@ export function renderCardFace(input = {}, assets = {}) {
     return `<image data-raster="${key}" href="${esc(href)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none" ${extra}/>`;
   };
 
-  const patch = (key, keys, asset = 'wide') => {
-    const els = layouts.filter((l) => keys.includes(l.key));
-    if (!els.length) return '';
-    const x = Math.min(...els.map((l) => l.box.x));
-    const y = Math.min(...els.map((l) => l.box.y));
-    const w = Math.max(...els.map((l) => l.box.x + l.box.w)) - x;
-    const h =
-      Math.max(...els.map((l) => l.box.y + Math.min(l.box.h, l.lines.length * l.leading))) - y;
+  const patch = (key, keys, asset = 'wide', fixedBox = null) => {
+    let x;
+    let y;
+    let w;
+    let h;
+    if (fixedBox) {
+      // Banner nome: stesso box Portatore per tutte le carte (ignora righe/sottotitolo).
+      x = fixedBox.x;
+      y = fixedBox.y;
+      w = fixedBox.w;
+      h = fixedBox.h;
+    } else {
+      const els = layouts.filter((l) => keys.includes(l.key));
+      if (!els.length) return '';
+      x = Math.min(...els.map((l) => l.box.x));
+      y = Math.min(...els.map((l) => l.box.y));
+      w = Math.max(...els.map((l) => l.box.x + l.box.w)) - x;
+      // Altezza sul testo reale (non sul box layout pieno).
+      h = Math.max(...els.map((l) => l.box.y + l.box.h)) - y;
+    }
     return asset === 'wide'
       ? raster(key, asset, x - w * 0.32, y - h * 0.65, w * 1.65, h * 2.25)
       : raster(key, asset, x - w * 0.6, y - h * 0.35, w * 2.2, h * 1.7);
@@ -590,8 +731,8 @@ export function renderCardFace(input = {}, assets = {}) {
 
   let body;
   if (hasPainted) {
-    const stains =
-      patch('ink-name', nameSub ? ['name', 'nameSubtitle'] : ['name']) +
+    const stainName = patch('ink-name', ['name'], 'wide', ELDRITCH_DEFAULT_LAYOUT.name);
+    const stainStats =
       patch('ink-ability', ['abilityTitle', 'abilityText']) +
       patch('ink-bonus', ['bonusTitle', 'bonusText']) +
       patch('ink-power', ['power', 'powerLabel'], 'compact') +
@@ -616,8 +757,8 @@ export function renderCardFace(input = {}, assets = {}) {
     // Clip tondo sempre: in layoutOnly le macchie altrimenti finivano sulla cornice PNG.
     const clipOpen = `<g clip-path="url(#${id}-round)">`;
     const clipClose = `</g>`;
-    // ink sotto la cornice (clip + z-order bake/layered); type sopra.
-    body = `<rect width="1024" height="1536" fill="${baseFill}"/>${clipOpen}${artLayer}<g data-layer="ink">${stains}</g>${clipClose}<g data-layer="frame">${frame}</g><g data-layer="league-ring">${ring}</g><g data-layer="type">${title}${nameSubtitle}${faction}${leagueMark}${league}${ability}${bonus}${power}${damage}${labels}</g>`;
+    // ink-name separato da ink (stats): il layered preview può mettere solo il nome sotto i break.
+    body = `<rect width="1024" height="1536" fill="${baseFill}"/>${clipOpen}${artLayer}<g data-layer="ink-name">${stainName}</g><g data-layer="ink">${stainStats}</g>${clipClose}<g data-layer="frame">${frame}</g><g data-layer="league-ring">${ring}</g><g data-layer="type">${title}${nameSubtitle}${faction}${leagueMark}${league}${ability}${bonus}${power}${damage}${labels}</g>`;
   } else {
     // Fallback Alfa 1.x (bordo SVG) se mancano gli asset dipinti
     let flecks = '';

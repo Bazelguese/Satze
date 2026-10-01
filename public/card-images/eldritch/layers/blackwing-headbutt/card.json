@@ -1,0 +1,120 @@
+{
+  "id": 1207,
+  "name": "Blackwing, “Headbutt”",
+  "league": 2,
+  "power": 3,
+  "damage": 1,
+  "style": "Eldritch",
+  "styleRules": {
+    "surface": "Contorni a pennello e inchiostro nero, ombre profonde, luci spezzate e graffiate che seguono anatomia e materiali; riferimenti visivi Cyber May Punk, Sorethai e Filomena. Evitare modellazione pittorica morbida, faccette e microframmentazione uniforme",
+    "decorativeGlowingParticles": false,
+    "lighting": "Luce localizzata solo nei punti narrativi; niente scintille, bokeh, stelline o puntini luminosi"
+  },
+  "faction": "Mascarada",
+  "accent": "#437ef2",
+  "autoFaction": false,
+  "ability": {
+    "title": "Resa dei conti",
+    "text": "+3 DAN"
+  },
+  "bonus": {
+    "title": "Opportunista",
+    "text": "+2 FC"
+  },
+  "layout": {
+    "abilityTitle": {
+      "x": 790,
+      "y": 925,
+      "w": 210,
+      "fontSize": 56
+    },
+    "abilityText": {
+      "x": 810,
+      "y": 1090,
+      "fontSize": 54,
+      "w": 195
+    },
+    "name": {
+      "x": 65,
+      "y": 55,
+      "w": 475,
+      "h": 100,
+      "fontSize": 74
+    },
+    "faction": {
+      "x": 75,
+      "y": 800,
+      "w": 380,
+      "h": 65,
+      "fontSize": 37
+    },
+    "damageLabel": {
+      "x": 794,
+      "y": 1354
+    },
+    "powerLabel": {
+      "x": 68,
+      "y": 1195,
+      "w": 190
+    },
+    "league": {
+      "x": 836,
+      "y": 93
+    },
+    "damage": {
+      "x": 803,
+      "y": 1120
+    },
+    "subtitle": {
+      "x": 90,
+      "y": 153,
+      "w": 350,
+      "h": 70,
+      "fontSize": 45
+    },
+    "power": {
+      "x": 70,
+      "y": 975,
+      "w": 160,
+      "fontSize": 220
+    },
+    "bonusTitle": {
+      "x": 230,
+      "y": 1225,
+      "w": 540,
+      "h": 120,
+      "fontSize": 80
+    },
+    "bonusText": {
+      "x": 260,
+      "y": 1345,
+      "w": 230,
+      "fontSize": 55
+    }
+  },
+  "format": {
+    "ratio": "23:33",
+    "width": 1104,
+    "height": 1584
+  },
+  "layers": {
+    "artwork": "Artwork.png",
+    "subject": "Soggetto.png",
+    "background": "Sfondo.png",
+    "frame": "Cornice.png",
+    "layout": "Layout.svg",
+    "subjectScale": 1,
+    "subjectYPercent": 0,
+    "backgroundComplete": true,
+    "foregroundParts": [
+      "Lottatore e rapace energetico davanti alla cornice"
+    ],
+    "anatomy": "Lottatore raccolto sul paletto, rapace di energia alle spalle. Ring completo ricostruito.",
+    "previewTemplate": "Filomena / Il Gondoliere"
+  },
+  "source": {
+    "repository": "Bazelguese/Satze",
+    "cardFile": "src/data/cards.js",
+    "armyFile": "src/data/armies.js"
+  }
+}

@@ -54,6 +54,10 @@ export function CosmicMenuOverlay() {
     };
 
     const animate = () => {
+      if (document.hidden) {
+        rafId = 0;
+        return;
+      }
       ctx.clearRect(0, 0, width, height);
       for (const p of particles) {
         p.y -= p.speedY;
@@ -74,13 +78,24 @@ export function CosmicMenuOverlay() {
       rafId = window.requestAnimationFrame(animate);
     };
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        window.cancelAnimationFrame(rafId);
+        rafId = 0;
+        return;
+      }
+      if (!rafId) rafId = window.requestAnimationFrame(animate);
+    };
+
     resize();
     seed();
     animate();
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibility);
       window.cancelAnimationFrame(rafId);
     };
   }, [profile.menuParticleCount]);

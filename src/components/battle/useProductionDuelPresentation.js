@@ -14,6 +14,11 @@ import { getDuelVisualConfig } from '../../config/duelVisualConfigStore.js';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 import { DISPLAY_SETTINGS_CHANGED_EVENT } from '../../settings/displaySettings.js';
 import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../../utils/focusCoinGlow.js';
+import {
+  startRainbowGlowClock,
+  stopRainbowGlowClock,
+  getRainbowGlowTime,
+} from '../../utils/rainbowGlowClock.js';
 import { countDuelEffectSteps, countDuelPostEffectSteps } from '../../game/duel/duelVisualSteps.js';
 import { useSafeDuelEffectStep } from './useSafeDuelEffectStep.js';
 
@@ -239,12 +244,13 @@ export function useProductionDuelPresentation({
       battleResult &&
       Math.max(battleResult.playerFocusUsed || 0, battleResult.enemyFocusUsed || 0) >= 12;
     if (sessionKey && needsRainbow && duelPhase >= 2 && duelPhase < 4) {
-      const interval = setInterval(() => {
-        setRainbowTime((prev) => prev + duelVfx.rainbowStep);
-      }, duelVfx.rainbowIntervalMs);
-      return () => clearInterval(interval);
+      startRainbowGlowClock({
+        intervalMs: duelVfx.rainbowIntervalMs,
+        step: duelVfx.rainbowStep,
+      });
+      return () => stopRainbowGlowClock({ reset: true });
     }
-    setRainbowTime(0);
+    stopRainbowGlowClock({ reset: true });
     return undefined;
   }, [sessionKey, duelPhase, battleResult, duelVfx.rainbowIntervalMs, duelVfx.rainbowStep]);
 
@@ -266,6 +272,7 @@ export function useProductionDuelPresentation({
     setPlayerCardGlow(1);
     setEnemyCardGlow(1);
     setRainbowTime(0);
+    stopRainbowGlowClock({ reset: true });
     setDuelPhase(6);
   }, [battleResult, duelPhase, clearFocusCoinTimers]);
 
@@ -287,12 +294,12 @@ export function useProductionDuelPresentation({
 
   const getFocusCoinGlowColor = useCallback(
     (focusCount, intensity) =>
-      computeFocusCoinGlowColor(focusCount, intensity, rainbowTime, {
+      computeFocusCoinGlowColor(focusCount, intensity, getRainbowGlowTime(), {
         rainbowHueMul12: duelVfx.rainbowHueMul12,
         rainbowHueMul13: duelVfx.rainbowHueMul13,
         rainbowHueMul14: duelVfx.rainbowHueMul14,
       }),
-    [rainbowTime, duelVfx]
+    [duelVfx.rainbowHueMul12, duelVfx.rainbowHueMul13, duelVfx.rainbowHueMul14]
   );
 
   return {

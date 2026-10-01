@@ -46,9 +46,11 @@ const CardFaceLabPage = lazy(() =>
   import('./components/cardFaceLab/CardFaceLabPage').then((m) => ({ default: m.CardFaceLabPage }))
 );
 
-/** Boot denso: aspetta fino a 90s prima di procedere comunque sugli asset. */
-const PRELOAD_TIMEOUT_MS = 90000;
-const MIN_LOADING_DISPLAY_MS = 600;
+/** Boot: non restare bloccati su OneDrive/rete lenta — poi warm-up + failsafe. */
+const PRELOAD_TIMEOUT_MS = 12000;
+const MIN_LOADING_DISPLAY_MS = 400;
+/** Se assets/chunk non finiscono, esci comunque dallo splash (con o senza gioco). */
+const BOOT_HARD_CAP_MS = 20000;
 
 export function App() {
   return (
@@ -83,6 +85,14 @@ function AppContent() {
     let cancelled = false;
     const startTime = Date.now();
 
+    const enterWarmup = (GameComponent) => {
+      if (cancelled || !GameComponent) return;
+      setSatzeGame(() => GameComponent);
+      setProgress(82);
+      setDetail('Preparazione animazioni');
+      setBootPhase('warmup');
+    };
+
     const run = async () => {
       let assetPercent = 0;
       let gameLoaded = false;
@@ -114,32 +124,45 @@ function AppContent() {
         })
         .catch((err) => {
           console.error('Caricamento SatzeGame fallito:', err);
-          throw err;
+          return null;
         });
 
-      let GameComponent = null;
-      try {
-        const [, gameDefault] = await Promise.all([assetsWithTimeout, gamePromise]);
-        GameComponent = gameDefault;
-      } catch (err) {
-        console.error('Impossibile caricare il gioco:', err);
+      const [, GameComponent] = await Promise.all([assetsWithTimeout, gamePromise]);
+      if (cancelled) return;
+
+      if (!GameComponent) {
+        setDetail('Errore caricamento — ricarica la pagina');
+        setProgress(100);
+        return;
       }
 
-      if (cancelled || !GameComponent) return;
-
-      setSatzeGame(() => GameComponent);
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
       await new Promise((r) => setTimeout(r, remaining));
       if (cancelled) return;
-
-      setProgress(82);
-      setDetail('Preparazione animazioni');
-      setBootPhase('warmup');
+      enterWarmup(GameComponent);
     };
 
     run();
-    return () => { cancelled = true; };
+
+    const hardCap = window.setTimeout(() => {
+      if (cancelled) return;
+      satzeGameModulePromise
+        .then((mod) => {
+          if (cancelled) return;
+          const Game = mod?.default;
+          if (Game) enterWarmup(Game);
+          else setDetail('Errore caricamento — ricarica la pagina');
+        })
+        .catch(() => {
+          if (!cancelled) setDetail('Errore caricamento — ricarica la pagina');
+        });
+    }, BOOT_HARD_CAP_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(hardCap);
+    };
   }, []);
 
   const onWarmupProgress = useCallback((p) => {
@@ -162,7 +185,7 @@ function AppContent() {
     if (bootPhase !== 'warmup') return undefined;
     const t = window.setTimeout(() => {
       onWarmupComplete();
-    }, 7000);
+    }, 4500);
     return () => window.clearTimeout(t);
   }, [bootPhase, onWarmupComplete]);
 

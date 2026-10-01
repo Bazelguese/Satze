@@ -13,6 +13,8 @@ export {
 } from './CardReworkP4';
 export { CardReworkP4AsHtml } from './CardReworkP4AsHtml';
 export { EldritchCardFace, ELDRITCH_IN_P4_SLOT_W, ELDRITCH_GAME_W, ELDRITCH_GAME_H, ELDRITCH_FRAME_W, ELDRITCH_FRAME_H } from './EldritchCardFace';
+export { ArcanaCardFace, ARCANA_FRAME_W, ARCANA_FRAME_H } from './ArcanaCardFace';
+export { AltArtCardFace } from './AltArtCardFace';
 export { HandCard } from './HandCard';
 export { CardBack } from './CardBack';
 export { Hand } from './Hand';

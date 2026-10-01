@@ -5,11 +5,12 @@ import { resolveOverdriveVariantForQuality } from '../../settings/vfxQualityProf
 import { useEldritchFacePreference } from '../../hooks/useEldritchFacePreference';
 import { OverdriveEffectOverlay } from './OverdriveEffectOverlay';
 import { CardReworkP4 } from './CardReworkP4';
-import { EldritchCardFace, ELDRITCH_FRAME_W } from './EldritchCardFace';
+import { AltArtCardFace } from './AltArtCardFace';
+import { ELDRITCH_FRAME_W } from './EldritchCardFace';
 
 /**
  * Carta in partita / anteprima: layout ufficiale P4 (HUD fascia + cerchi POT/DAN),
- * oppure faccia Eldritch se scelta in galleria.
+ * oppure faccia alternativa (Eldritch / Arcana) se scelta in galleria.
  * La prop `cardLayout` è ignorata (resta per compatibilità con chiamate esistenti).
  * Memoizzata: evita di ridisegnare la carta quando le props non cambiano
  * (es. re-render per-frame della sequenza clash).
@@ -115,7 +116,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
       >
         <div className="pointer-events-none">
           {showEldritch ? (
-            <EldritchCardFace agent={displayAgent} width={ELDRITCH_FRAME_W} />
+            <AltArtCardFace agent={displayAgent} width={ELDRITCH_FRAME_W} />
           ) : (
             <CardReworkP4
               agent={displayAgent}
