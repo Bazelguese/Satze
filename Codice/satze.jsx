@@ -6341,7 +6341,7 @@ export default function SatzeGame() {
       <StatsPanel
         label={mpEnemyLabel}
         hp={shownEnemyHP}
-        hpBurst={duelHp.bursts.enemy}
+        hpBursts={duelHp.bursts.enemy}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
         focus={enemyFocus}
@@ -6357,7 +6357,7 @@ export default function SatzeGame() {
       <StatsPanel
         label={mpSelfLabel}
         hp={shownPlayerHP}
-        hpBurst={duelHp.bursts.player}
+        hpBursts={duelHp.bursts.player}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
         focus={playerFocus}

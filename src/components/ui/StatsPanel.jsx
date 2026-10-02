@@ -50,18 +50,22 @@ function RollingValue({ value }) {
   );
 }
 
-/** Etichetta della raffica di PV (−1 → −2 → …, o +1 → +2 · Campo) accanto al box. */
-function HpBurst({ burst, side }) {
-  if (!burst) return null;
-  return (
+/**
+ * Raffiche di PV accanto al box: una per fonte (DAN, Potere, Bonus, Campo, Eminenza).
+ * Ognuna somma i suoi punti (−1 → −2 → …, +1 → +2 · fonte) e ha il suo posto, una sotto l'altra.
+ */
+function HpBursts({ bursts, side }) {
+  if (!bursts?.length) return null;
+  return bursts.map((burst) => (
     <span
       key={burst.key}
       className={`satze-stats-burst satze-stats-burst--${side} satze-stats-burst--${burst.kind}${burst.leaving ? ' is-leaving' : ''}`}
+      style={{ '--burst-slot': burst.slot ?? 0 }}
       aria-live="polite"
     >
       <span key={burst.n} className="satze-stats-burst__text">{burst.text}</span>
     </span>
-  );
+  ));
 }
 
 function ToxinBadge({ toxin, hp, showAnimation }) {
@@ -106,8 +110,8 @@ export const StatsPanel = React.memo(({
   accentColor = null,
   /** Nel risultato del duello il box resta in scena (PV che scendono colpo per colpo) */
   fadeOnResult = true,
-  /** Raffica di PV in corso: { key, n, kind: 'hit'|'heal', text, leaving } */
-  hpBurst = null,
+  /** Raffiche di PV in corso, una per fonte: [{ key, n, kind: 'hit'|'heal', text, slot, leaving }] */
+  hpBursts = null,
 }) => {
   const [showToxinAnimation, setShowToxinAnimation] = useState(false);
   const [previousToxinValue, setPreviousToxinValue] = useState(null);
@@ -197,7 +201,7 @@ export const StatsPanel = React.memo(({
           </>
         )}
       </div>
-      <HpBurst burst={hpBurst} side={side} />
+      <HpBursts bursts={hpBursts} side={side} />
     </div>
   );
 });

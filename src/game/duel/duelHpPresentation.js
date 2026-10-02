@@ -1,26 +1,55 @@
 // Sequenza PV mostrata nel risultato del duello (solo presentazione).
-// I PV veri si applicano su «Continua» (proceedToNextRound): qui si ricostruisce
-// come arrivarci un punto alla volta — prima il DAN dello scontro, poi il resto
-// del delta (cura o perdita del Campo) — senza toccare le regole.
+// I PV finali arrivano dal motore (battleResult): qui si ricostruisce come arrivarci
+// un punto alla volta — prima il DAN dello scontro, poi ogni altra fonte (Potere,
+// Bonus, Campo, Eminenza) con la sua raffica — senza toccare le regole.
 
 export const HP_PROJECTILE_GAP_MS = 340;
 export const HP_PROJECTILE_FLIGHT_MS = 720;
 export const HP_AFTERMATH_DELAY_MS = 500;
 export const HP_AFTERMATH_STEP_MS = 320;
+/** Raffiche di fonti diverse partono insieme, sfalsate di poco: il numero cambia sempre di un punto alla volta. */
+export const HP_SOURCE_STAGGER_MS = 160;
 /** Quota della fase 4 (scontro) dopo cui partono i proiettili: lo sconfitto è già stato sbalzato. */
 export const HP_PROJECTILE_START_RATIO = 0.85;
+
+/** Fasi del log dopo lo schieramento: le variazioni `deploy` sono già nei PV di partenza. */
+const DUEL_REVEAL = new Set(['abilityFx', 'focusFx', 'assaultFx', 'outcome', 'postFx']);
 
 function toInt(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.round(n) : fallback;
 }
 
+function engineSide(battleSide) {
+  if (battleSide === 'local' || battleSide === 'player') return 'player';
+  if (battleSide === 'opponent' || battleSide === 'enemy') return 'enemy';
+  return null;
+}
+
+/** «TU (Nome Agente)» / «IA (Nome Agente) (copiato)» → «Nome Agente». */
+function agentNameOf(name) {
+  const m = /^(?:TU|IA)\s*\((.+?)\)/.exec(String(name || ''));
+  return m ? m[1] : null;
+}
+
+/** Nome leggibile della fonte: l'Agente per i Poteri, «Bonus Armata» per i Bonus, il Campo, l'Eminenza. */
+function sourceLabel(src, battleResult) {
+  if (!src) return null;
+  const owner = engineSide(src.ownerSide);
+  const agent = owner === 'player' ? battleResult.playerAgent : owner === 'enemy' ? battleResult.enemyAgent : null;
+  if (src.kind === 'field') return src.name || null;
+  if (src.kind === 'ability') return agentNameOf(src.name) || agent?.name || src.name || null;
+  if (src.kind === 'bonus') return agent?.army ? `Bonus ${agent.army}` : src.name || 'Bonus';
+  if (src.kind === 'eminence') return 'Eminenza';
+  return src.name || null;
+}
+
 /**
- * Raffiche di PV per lato.
+ * Raffiche di PV.
  * @param {object|null} battleResult
  * @param {{ player: number, enemy: number }} startHP PV a schermo prima del risultato
  * @returns {{ damage: { side: 'player'|'enemy', amount: number } | null,
- *   aftermath: Array<{ side: 'player'|'enemy', kind: 'hit'|'heal', amount: number, label: string|null }> }}
+ *   aftermath: Array<{ side: 'player'|'enemy', kind: 'hit'|'heal', amount: number, label: string|null, key: string }> }}
  */
 export function buildDuelHpBursts(battleResult, startHP) {
   const out = { damage: null, aftermath: [] };
@@ -33,55 +62,99 @@ export function buildDuelHpBursts(battleResult, startHP) {
     enemy: toInt(battleResult.finalEnemyHP, start.enemy),
   };
 
-  const afterDamage = { ...start };
-  if (loser) {
-    // Il DAN non scende sotto 0 PV; quel che resta del delta finisce nella raffica del Campo
-    const amount = Math.max(0, Math.min(toInt(battleResult.damageDealt), start[loser]));
-    if (amount > 0) {
-      out.damage = { side: loser, amount };
-      afterDamage[loser] = start[loser] - amount;
+  // Fonti dal log strutturato del motore (stessa fonte = stessa raffica)
+  const sources = new Map();
+  let damageApplied = 0;
+  const pvEvents = (Array.isArray(battleResult.events) ? battleResult.events : []).filter(
+    (e) => e && e.type === 'resourceChange' && e.stat === 'PV' && DUEL_REVEAL.has(e.revealAt)
+  );
+  for (const e of pvEvents) {
+    const side = engineSide(e.target?.side);
+    if (!side) continue;
+    let delta = toInt(e.after) - toInt(e.before);
+    // L'aftermath del Campo è misurato prima del DAN: il DAN dello scontro va tolto dalla sua parte
+    if (e.source?.kind === 'field' && e.phase === 'post' && side === loser && damageApplied === 0) {
+      damageApplied = Math.max(0, Math.min(toInt(battleResult.damageDealt), toInt(e.before)));
+      delta += damageApplied;
     }
+    if (!delta) continue;
+    const label = sourceLabel(e.source, battleResult);
+    const key = `${side}:${e.source?.kind || 'x'}:${label || e.source?.id || ''}`;
+    const cur = sources.get(key) || { side, delta: 0, label, key };
+    cur.delta += delta;
+    sources.set(key, cur);
   }
 
-  const fieldName = battleResult.field?.name || null;
+  if (loser) {
+    // Senza evento del Campo (nessun aftermath) il DAN non è passato da lì: vale il DAN dichiarato
+    const amount = damageApplied || Math.max(0, Math.min(toInt(battleResult.damageDealt), start[loser]));
+    if (amount > 0) out.damage = { side: loser, amount };
+  }
+
+  // Quel che il log non spiega (es. Eminenze a fine duello, aggiunte da resolveBattle) è una fonte a sé
   ['player', 'enemy'].forEach((side) => {
-    const rest = final[side] - afterDamage[side];
-    if (rest === 0) return;
-    out.aftermath.push({ side, kind: rest > 0 ? 'heal' : 'hit', amount: Math.abs(rest), label: fieldName });
+    let accounted = start[side] - (out.damage && out.damage.side === side ? out.damage.amount : 0);
+    sources.forEach((s) => { if (s.side === side) accounted += s.delta; });
+    const rest = final[side] - accounted;
+    if (rest) {
+      const key = `${side}:rest`;
+      const label = battleResult.eminenceOutcomeNotices?.length ? 'Eminenza' : null;
+      sources.set(key, { side, delta: rest, label, key });
+    }
+  });
+
+  sources.forEach((s) => {
+    if (!s.delta) return;
+    out.aftermath.push({ side: s.side, kind: s.delta > 0 ? 'heal' : 'hit', amount: Math.abs(s.delta), label: s.label, key: s.key });
   });
   return out;
 }
 
 /**
  * Eventi PV punto per punto con l'istante (ms) relativo all'inizio dei proiettili.
- * Ogni evento porta il gruppo (raffica) e il conteggio cumulativo per l'etichetta −1 → −2 → …
+ * Ogni evento porta la sua raffica (group) e il conteggio cumulativo per l'etichetta −1 → −2 → …
+ * Le raffiche delle varie fonti partono insieme, sfalsate di HP_SOURCE_STAGGER_MS.
  * @returns {Array<{ t: number, side: string, from: number, to: number, kind: 'hit'|'heal',
- *   cause: 'damage'|'aftermath', n: number, total: number, label: string|null, group: string, projectile?: number }>}
+ *   cause: 'damage'|'aftermath', n: number, total: number, label: string|null, group: string, slot: number, projectile?: number }>}
  */
 export function scheduleDuelHpEvents(battleResult, startHP) {
   const { damage, aftermath } = buildDuelHpBursts(battleResult, startHP);
-  const hp = { player: toInt(startHP?.player), enemy: toInt(startHP?.enemy) };
-  const events = [];
+  const ticks = [];
   let tEnd = 0;
   if (damage) {
     for (let i = 0; i < damage.amount; i++) {
       const t = i * HP_PROJECTILE_GAP_MS + HP_PROJECTILE_FLIGHT_MS;
-      const from = hp[damage.side];
-      hp[damage.side] = from - 1;
-      events.push({ t, side: damage.side, from, to: from - 1, kind: 'hit', cause: 'damage', n: i + 1, total: damage.amount, label: null, group: `damage-${damage.side}`, projectile: i });
+      ticks.push({ t, side: damage.side, step: -1, kind: 'hit', cause: 'damage', n: i + 1, total: damage.amount, label: null, group: `damage-${damage.side}`, slot: 0, projectile: i });
       tEnd = t;
     }
   }
-  let t0 = tEnd + HP_AFTERMATH_DELAY_MS;
+  const t0 = tEnd + HP_AFTERMATH_DELAY_MS;
+  const slotBySide = { player: 0, enemy: 0 };
   aftermath.forEach((b) => {
+    const slot = slotBySide[b.side]++;
     for (let i = 0; i < b.amount; i++) {
-      const from = hp[b.side];
-      const to = from + (b.kind === 'heal' ? 1 : -1);
-      hp[b.side] = to;
-      events.push({ t: t0 + i * HP_AFTERMATH_STEP_MS, side: b.side, from, to, kind: b.kind, cause: 'aftermath', n: i + 1, total: b.amount, label: b.label, group: `aftermath-${b.side}` });
+      ticks.push({
+        t: t0 + slot * HP_SOURCE_STAGGER_MS + i * HP_AFTERMATH_STEP_MS,
+        side: b.side,
+        step: b.kind === 'heal' ? 1 : -1,
+        kind: b.kind,
+        cause: 'aftermath',
+        n: i + 1,
+        total: b.amount,
+        label: b.label,
+        group: `aftermath-${b.key}`,
+        // la raffica del DAN occupa il primo posto dello stesso lato
+        slot: slot + (damage && damage.side === b.side ? 1 : 0),
+      });
     }
   });
-  return events.sort((a, b) => a.t - b.t);
+  ticks.sort((a, b) => a.t - b.t);
+  const hp = { player: toInt(startHP?.player), enemy: toInt(startHP?.enemy) };
+  return ticks.map(({ step, ...e }) => {
+    const from = hp[e.side];
+    hp[e.side] = from + step;
+    return { ...e, from, to: from + step };
+  });
 }
 
 /** PV a schermo dopo gli eventi già avvenuti all'istante `elapsedMs`. */

@@ -106,25 +106,29 @@ export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, play
 
   const displayHP = key && startHP ? displayedHpAt(events, startHP, elapsed < 0 ? -1 : elapsed) : null;
 
-  const bursts = { player: null, enemy: null };
+  // Una raffica per fonte: fonti diverse convivono, ognuna al suo posto (slot) senza sovrapporsi
+  const bursts = { player: [], enemy: [] };
   if (key && elapsed >= 0 && elapsed !== Infinity) {
-    ['player', 'enemy'].forEach((side) => {
-      let cur = null;
-      for (const e of events) {
-        if (e.side !== side || e.t > elapsed) continue;
-        cur = e;
-      }
-      if (!cur) return;
-      const groupEnd = events.filter((e) => e.group === cur.group).reduce((m, e) => Math.max(m, e.t), 0);
-      if (elapsed > groupEnd + BURST_HOLD_MS + BURST_LEAVE_MS) return;
-      bursts[side] = {
-        key: `${key}:${cur.group}`,
+    const latest = new Map();
+    const groupEnd = new Map();
+    for (const e of events) {
+      groupEnd.set(e.group, Math.max(groupEnd.get(e.group) ?? 0, e.t));
+      if (e.t <= elapsed) latest.set(e.group, e);
+    }
+    latest.forEach((cur, group) => {
+      const end = groupEnd.get(group);
+      if (elapsed > end + BURST_HOLD_MS + BURST_LEAVE_MS) return;
+      bursts[cur.side].push({
+        key: `${key}:${group}`,
         n: cur.n,
         kind: cur.kind,
         text: burstText(cur),
-        leaving: elapsed > groupEnd + BURST_HOLD_MS,
-      };
+        slot: cur.slot ?? 0,
+        leaving: elapsed > end + BURST_HOLD_MS,
+      });
     });
+    bursts.player.sort((a, b) => a.slot - b.slot);
+    bursts.enemy.sort((a, b) => a.slot - b.slot);
   }
 
   // oggetto stabile: il canvas dei proiettili riparte solo quando cambia davvero
