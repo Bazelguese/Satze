@@ -43,8 +43,11 @@ export const DUEL_STEPS = [
   { num: '5.5', name: 'Esito', desc: 'Danni e conseguenze del risultato' },
   { num: '5.6', name: 'Chiusura', desc: 'Effetti di fine Duello' },
 ];
-/** duelPhase dell'animazione (0 deploy … 6 continue) → sottofase 5.x del regolamento */
-const DUEL_PHASE_TO_STEP = [0, 1, 2, 2, 3, 4, 5];
+/**
+ * duelPhase dell'animazione (0 deploy … 6 continue) → sottofase 5.x del regolamento.
+ * La fase 5 dell'animazione sono gli effetti di fine Duello (Chiusura); a Continua resta l'Esito.
+ */
+const DUEL_PHASE_TO_STEP = [0, 1, 2, 2, 3, 5, 4];
 
 /**
  * Fase del round da mostrare nel portale e avanzamento dell'anello (0–1):
@@ -137,7 +140,7 @@ function PortalArcActions({ actions, RX, RY }) {
         const [rx2, ry2] = ellPt(cx, cy, RX + base, RY + base, act.dR);
         const span = (Math.abs(act.dL - act.dR) * Math.PI) / 180;
         const approxLen = span * Math.sqrt(((RX + base) ** 2 + (RY + base) ** 2) / 2) * 0.86;
-        const estLabel = act.label.length * 10.5 * 0.9;
+        const estLabel = (act.label.length + (act.keyHint ? 2 : 0)) * 10.5 * 0.9;
         const onKey = (e) => {
           if (act.disabled) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act.onClick?.(); }
@@ -146,7 +149,7 @@ function PortalArcActions({ actions, RX, RY }) {
           <g
             key={act.key}
             ref={act.anchorRef}
-            className={`satze-bf-arc-btn is-${act.variant}${act.disabled ? ' is-disabled' : ''}${act.pressed ? ' is-pressed' : ''}`}
+            className={`satze-bf-arc-btn is-${act.variant}${act.disabled ? ' is-disabled' : ''}${act.pressed ? ' is-pressed' : ''}${act.waiting ? ' is-waiting' : ''}`}
             style={{ animationDelay: `${i * 0.12}s`, '--arc-delay': `${i * 0.12 + 0.45}s` }}
             role={act.onClick ? 'button' : undefined}
             tabIndex={act.onClick && !act.disabled ? 0 : undefined}
@@ -169,6 +172,7 @@ function PortalArcActions({ actions, RX, RY }) {
                 {...(estLabel > approxLen ? { textLength: approxLen, lengthAdjust: 'spacingAndGlyphs' } : {})}
               >
                 {act.label.toUpperCase()}
+                {act.keyHint ? <tspan className="satze-bf-arc-key">{` ${act.keyHint}`}</tspan> : null}
               </textPath>
             </text>
           </g>
@@ -184,7 +188,7 @@ function PortalArcActions({ actions, RX, RY }) {
  * rotazione e anello di avanzamento li disegna lo shader dell'HUD attorno a
  * `.satze-bf-portal-disc` (legge `data-progress`).
  */
-function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions = null, turn = null, outcome = null, children }) {
+function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions = null, turn = null, outcome = null, decide = false, children }) {
   const glow = turn?.color || outcome?.color || null;
   const RX = PORTAL_RX;
   const RY = PORTAL_RY;
@@ -202,9 +206,12 @@ function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions =
   const bottomArcLen = halfLen(RX + tBot, RY + tBot) * 0.9;
   const estEff = effect.length * effFont * 0.62;
   return (
-    <div className="satze-bf-portal" style={{ width: RX * 2, height: RY * 2 }}>
+    <div className={`satze-bf-portal${decide ? ' is-decide' : ''}`} style={{ width: RX * 2, height: RY * 2 }}>
+      {/* tocca a te scegliere: onde che partono dal bordo */}
+      {decide && <><span className="satze-bf-portal-call" aria-hidden /><span className="satze-bf-portal-call is-b" aria-hidden /></>}
       <div
         className="satze-bf-portal-disc"
+        data-decide={decide ? '1' : undefined}
         data-progress={outcome ? '1' : step ? String(step.progress) : '0'}
         data-intro={String(introKey)}
         style={{ width: RX * 2, height: RY * 2, backgroundImage: thumb ? `url("${thumb}")` : undefined }}
@@ -232,8 +239,8 @@ function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions =
           </div>
         )}
         {step && !outcome && (
-          <div key={step.num} className={`satze-bf-portal-step${step.duel ? ' is-duel' : ''}`}>
-            {step.duel && <span className="satze-bf-portal-step-kicker">Duello</span>}
+          <div key={step.key || step.num} className={`satze-bf-portal-step${step.duel ? ' is-duel' : ''}${String(step.name || '').length > 13 ? ' is-long' : ''}`}>
+            {(step.kicker || step.duel) && <span className="satze-bf-portal-step-kicker">{step.kicker || 'Duello'}</span>}
             <span className="satze-bf-portal-step-name">{step.name}</span>
             <span className="satze-bf-portal-step-desc">{step.desc}</span>
           </div>
@@ -583,6 +590,15 @@ export const BattlefieldPanel = ({
   portalFrame = false,
   /** true mentre si scelgono le abilità dell'Eminenza (fase 1 · Comando) */
   commandPhase = false,
+  /** false finché la sequenza del risultato (PV, FC, Tossina) non è finita: resta «Salta» */
+  continueReady = true,
+  /** esito del duello al centro del portale: { title, desc } */
+  duelEsito = null,
+  /**
+   * tocca al giocatore scegliere: il portale vira all'ambra e chiama.
+   * { kicker, name, desc, options?: [{ key, label, variant, onClick, disabled, waiting }], note? }
+   */
+  decision = null,
 }) => {
   const oppWait = isOnlinePvP
     ? "L'avversario sta scegliendo il campo di battaglia"
@@ -598,9 +614,15 @@ export const BattlefieldPanel = ({
     if (pre(gamePhase) && !pre(introRef.current.prev)) introRef.current.key += 1;
     introRef.current.prev = gamePhase;
   }
-  const roundStep = portalFrame
+  let roundStep = portalFrame
     ? resolveRoundStep({ gamePhase, duelPhase, selectedAgent, battleResult, commandPhase })
     : null;
+  if (roundStep && duelEsito && gamePhase === 'result') {
+    roundStep = { ...roundStep, key: 'esito', kicker: 'Esito', name: duelEsito.title, desc: duelEsito.desc };
+  }
+  if (portalFrame && decision) {
+    roundStep = { ...(roundStep || { progress: 0.1 }), key: `decide-${decision.name}`, kicker: decision.kicker, name: decision.name, desc: decision.desc };
+  }
   const [riepilogoOpen, setRiepilogoOpen] = useState(false);
   const [aiLogOpen, setAiLogOpen] = useState(false);
   const [aiLogCopied, setAiLogCopied] = useState(false);
@@ -613,15 +635,22 @@ export const BattlefieldPanel = ({
         ? { key: 'wait', label: oppThink.replace(/\.+$/, '…'), variant: 'wait', dL: 132, dR: 48 }
         : { key: 'confirm', label: 'Conferma', variant: 'primary', dL: 128, dR: 52, onClick: onConfirm, disabled: confirmDisabled });
     }
-    if (gamePhase === 'result' && battleResult && duelPhase < 6 && onSkipDuel) {
-      portalActions.push({ key: 'skip', label: 'Salta', aria: 'Salta l\'animazione del duello', variant: 'secondary', dL: 112, dR: 68, onClick: onSkipDuel });
+    // Salta finché il duello e la sequenza del risultato non sono finiti; poi Riepilogo e Continua (che chiama)
+    const resultSettled = duelPhase >= 6 && continueReady;
+    if (gamePhase === 'result' && battleResult && !resultSettled && onSkipDuel) {
+      portalActions.push({ key: 'skip', label: 'Salta', aria: 'Salta l\'animazione del duello', variant: 'secondary', dL: 112, dR: 68, onClick: onSkipDuel, keyHint: 'S' });
     }
-    if (gamePhase === 'result' && battleResult && duelPhase >= 6) {
+    if (gamePhase === 'result' && battleResult && resultSettled) {
       portalActions.push({
         key: 'recap', label: 'Riepilogo', variant: 'secondary', dL: 156, dR: 96,
-        onClick: () => setRiepilogoOpen((o) => !o), expanded: riepilogoOpen, pressed: riepilogoOpen,
+        onClick: () => setRiepilogoOpen((o) => !o), expanded: riepilogoOpen, pressed: riepilogoOpen, keyHint: 'R',
       });
-      portalActions.push({ key: 'continue', label: 'Continua', variant: 'primary', dL: 84, dR: 24, onClick: onContinue });
+      portalActions.push({ key: 'continue', label: 'Continua', variant: 'primary', dL: 84, dR: 24, onClick: onContinue, waiting: true, keyHint: '↵' });
+    }
+    if (decision?.options?.length) {
+      portalActions.length = 0;
+      const spans = decision.options.length === 2 ? [[156, 96], [84, 24]] : [[128, 52]];
+      decision.options.forEach((o, i) => portalActions.push({ variant: 'secondary', ...o, dL: spans[i][0], dR: spans[i][1] }));
     }
   }
   const [riepilogoRect, setRiepilogoRect] = useState(null);
@@ -663,12 +692,39 @@ export const BattlefieldPanel = ({
         ? { kind: 'lose', title: 'Sconfitta', desc: getDuelOutcomeSubtitle(gameResult, 'lose'), color: outcomeColor }
         : { kind: 'draw', title: 'Pareggio', desc: 'Nessun vincitore', color: null }
   ) : null;
+  // nota sotto il portale: cosa fare adesso
+  const continueShown = portalActions.some((a) => a.key === 'continue');
+  const portalNote = !portalFrame ? null
+    : decision?.note || (continueShown && !riepilogoOpen ? 'Premi Continua per scartare gli Agenti' : null);
   const aiLogAnchorRef = useRef(null);
   const [aiLogRect, setAiLogRect] = useState(null);
 
   useEffect(() => {
     setRiepilogoOpen(false);
   }, [duelPhase]);
+
+  // Scorciatoie del risultato: S Salta, R Riepilogo, Invio Continua (come gli archi)
+  const shortcutsRef = useRef({});
+  shortcutsRef.current = {
+    skip: portalActions.find((a) => a.key === 'skip')?.onClick,
+    recap: portalActions.find((a) => a.key === 'recap')?.onClick,
+    cont: portalActions.find((a) => a.key === 'continue')?.onClick,
+  };
+  useEffect(() => {
+    if (!portalFrame || gamePhase !== 'result') return undefined;
+    const onKey = (e) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+      // Invio su un pulsante o su un arco attivo lo gestisce quell'elemento
+      if (e.key === 'Enter' && (tag === 'BUTTON' || e.target?.getAttribute?.('role') === 'button')) return;
+      const k = e.key.toLowerCase();
+      const fn = k === 's' ? shortcutsRef.current.skip : k === 'r' ? shortcutsRef.current.recap : k === 'enter' ? shortcutsRef.current.cont : null;
+      if (fn) { e.preventDefault(); fn(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [portalFrame, gamePhase]);
 
   useEffect(() => {
     if (gamePhase !== 'gameOver') {
@@ -883,7 +939,8 @@ export const BattlefieldPanel = ({
             key={endPortal ? 'end' : `round-${introRef.current.key}`}
             introKey={endPortal ? introRef.current.key + 1000 : introRef.current.key}
             actions={portalActions}
-            turn={endPortal ? null : turn}
+            turn={endPortal ? null : decision ? { side: 'decide', label: 'Scegli ora', color: '#f5c451' } : turn}
+            decide={Boolean(decision)}
             outcome={outcome}
             field={gamePhase === 'selectField' || endPortal ? null : field}
             cursed={cursed}
@@ -907,6 +964,9 @@ export const BattlefieldPanel = ({
           {gamePhase === 'result' && battleResult && duelPhase >= 6 && (
             // il riepilogo si apre sotto i comandi ad arco
             <div ref={riepilogoAnchorRef} className="satze-bf-recap-anchor" aria-hidden />
+          )}
+          {portalNote && (
+            <div className={`satze-bf-portal-note${decision ? ' is-decide' : ''}`} role="status">{portalNote}</div>
           )}
           {endPortal && hasAiLog && (
             <div ref={aiLogAnchorRef} className="satze-bf-recap-anchor is-wide" aria-hidden />

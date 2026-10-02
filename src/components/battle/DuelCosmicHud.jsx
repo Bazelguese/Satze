@@ -31,6 +31,8 @@ const SC = 0.75; // risoluzione del disegno rispetto ai px CSS
 
 // argento freddo: il colore nel duello resta alle due armate (box PV/FC, sigilli, lampo)
 const SILVER = '#b4bfd0';
+/** cornice del portale quando tocca al giocatore scegliere */
+const AMBER_HEX = '#f5c451';
 
 // kind: 0 pannello ┬À 1 stats ┬À 2 log ┬À 3 portale (pannello campo con .satze-bf-portal-disc)
 const PANEL_DEFS = [
@@ -251,6 +253,7 @@ function hexToRgb(hex, fallback = [0.75, 0.15, 0.83]) {
   if (!m) return fallback;
   return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
 }
+const AMBER = hexToRgb(AMBER_HEX);
 
 /** soglie di corruzione del box PV/FC: integro sopra 18, poi Ôëñ18, Ôëñ12, Ôëñ6 */
 function corruptionStage(hp, max) {
@@ -553,6 +556,11 @@ export function DuelCosmicHud({
             const u = Math.min(1, (t - (el.__cosmoIntroAt ?? -9)) / PORTAL_INTRO_S);
             const back = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2); // ease-out con leggero rimbalzo
             gl.uniform3f(U.uEll, disc.offsetHeight / 2, el.__cosmoProg, reduce ? 1 : back);
+            // tocca a te scegliere (Affare, Comando): la cornice vira dall'argento all'ambra
+            const dk = disc.dataset.decide === '1' ? 1 : 0;
+            el.__cosmoDecide = (el.__cosmoDecide ?? dk) + (dk - (el.__cosmoDecide ?? dk)) * 0.08;
+            const k = el.__cosmoDecide;
+            if (k > 0.002) gl.uniform3f(U.uAcc, acc[0] + (AMBER[0] - acc[0]) * k, acc[1] + (AMBER[1] - acc[1]) * k, acc[2] + (AMBER[2] - acc[2]) * k);
             kind = 3;
           }
         }

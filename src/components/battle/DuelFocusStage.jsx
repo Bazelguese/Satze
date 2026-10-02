@@ -4,6 +4,7 @@
  * poi prende posto su un'orbita ellittica attorno alla base della carta, davanti o dietro;
  * l'orbita accelera a ogni moneta. Nello scontro le monete collassano nella carta e svaniscono.
  * Le posizioni si leggono dal DOM (carte, schede VA) in coordinate di scena 1920×1080.
+ * Regia del portale nelle stesse fasi: pulsa a ogni moneta, si fa da parte nello scontro.
  */
 import React, { useEffect, useRef } from 'react';
 import { Icon } from '../ui/Icon';
@@ -219,10 +220,48 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
           card.style.filter = kick > 1.0005 ? `brightness(${1 + (kick - 1) * 6})` : '';
         }
       });
-      if (p4StartRef.current == null || (t - p4StartRef.current) / dur4 < 0.6) raf = requestAnimationFrame(frame);
+
+      // Portale: pulsa a ogni moneta che atterra, si fa da parte nello scontro, lampeggia all'impatto
+      const portal = scene?.querySelector('.satze-bf-portal');
+      const disc = portal?.querySelector('.satze-bf-portal-disc');
+      if (portal && disc) {
+        let sc = 1;
+        let op = 1;
+        let glow = '';
+        if (!reduce) {
+          SIDES.forEach((side) => {
+            (launchesRef.current?.[side] || []).forEach((l) => {
+              const pk = pop(t, l + FOCUS_SLAM_MS, 260, 0.05);
+              if (pk > 1) { sc = Math.max(sc, pk); glow = `0 0 26px ${accent[side]}`; }
+            });
+          });
+          if (inClash) {
+            const aside = ss(0.2, 0.45, u) * (1 - ss(0.68, 0.9, u));
+            op = 1 - aside * 0.8;
+            sc *= 1 - aside * 0.15;
+            const fl = ss(0.55, 0.57, u) * (1 - ss(0.6, 0.8, u));
+            const w = battleResult.winner === 'enemy' ? 'enemy' : 'player';
+            if (fl > 0) glow = `0 0 ${30 + fl * 50}px ${accent[w]}`;
+          }
+        }
+        portal.style.scale = sc !== 1 ? String(sc) : '';
+        portal.style.filter = op < 0.999 ? `opacity(${op})` : '';
+        disc.style.boxShadow = glow ? `inset 0 0 26px 8px rgba(4,6,10,.88), ${glow}` : '';
+      }
+      if (p4StartRef.current == null || (t - p4StartRef.current) / dur4 < 1) raf = requestAnimationFrame(frame);
+      else resetPortal();
+    };
+    const resetPortal = () => {
+      const portal = scene?.querySelector('.satze-bf-portal');
+      if (portal) { portal.style.scale = ''; portal.style.filter = ''; }
+      const disc = portal?.querySelector('.satze-bf-portal-disc');
+      if (disc) disc.style.boxShadow = '';
     };
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      resetPortal();
+    };
   }, [live, battleResult, launchesRef, accent?.player, accent?.enemy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!live || !battleResult) return null;

@@ -103,7 +103,8 @@ function burstOf(key, group, e, elapsed, end) {
  *   displayFC: { player: number, enemy: number } | null,
  *   displayToxin: { player: object|null, enemy: object|null } | null,
  *   bursts: { player: object[], enemy: object[] }, fcBursts: { player: object[], enemy: object[] },
- *   projectiles: Array<{ key: string, launch: number, origin: object, target: 'player'|'enemy', stat: 'PV'|'FC' }>|null }}
+ *   projectiles: Array<{ key: string, launch: number, origin: object, target: 'player'|'enemy', stat: 'PV'|'FC' }>|null,
+ *   settled: boolean, skip: () => void }}
  */
 export function useDuelHpPresentation({
   battleResult, gamePhase, duelPhase, duelEffectStep = 1,
@@ -309,5 +310,16 @@ export function useDuelHpPresentation({
   // oggetto stabile: il canvas dei proiettili riparte solo quando cambia davvero
   const projectiles = useMemo(() => (shots.length ? shots : null), [shotsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { active: Boolean(key), displayHP, displayFC, displayToxin, bursts, fcBursts, projectiles };
+  // Sequenza finita: «Continua» può comparire. Senza eventi basta che i proiettili siano partiti.
+  const lastT = events.length ? events[events.length - 1].t : 0;
+  const settled = !key || elapsed === Infinity || (elapsed >= 0 && elapsed >= lastT + (events.length ? BURST_HOLD_MS : 0));
+
+  return {
+    active: Boolean(key), displayHP, displayFC, displayToxin, bursts, fcBursts, projectiles,
+    settled,
+    /** i proiettili del DAN sono partiti (o il risultato è stato saltato) */
+    started: Boolean(key) && elapsed >= 0,
+    /** «Salta» a risultato aperto: valori finali subito */
+    skip: () => setElapsed(Infinity),
+  };
 }

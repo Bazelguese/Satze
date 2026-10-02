@@ -84,6 +84,7 @@ import {
   legalFragmentIdsForChoice,
   legalCardIdsForChoice,
   legalSlotIndicesForChoice,
+  CHOICE_STATES,
 } from '../src/game/eminence/eminenceChoiceView.js';
 import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
@@ -1386,6 +1387,64 @@ export default function SatzeGame() {
   const duelOverdriveOn = (side) => Boolean(
     duelStamp && overdriveAt[side] != null && duelPhase >= 2 && focusLaunch.landed[side] >= overdriveAt[side]
   );
+  // Portale: esito del duello al centro quando partono i proiettili (e a Continua);
+  // nella Chiusura (fase 5) resta il nome della sottofase
+  const portalDuelEsito = useMemo(() => {
+    if (!battleResult || gamePhase !== 'result' || !duelHp.started || duelPhase === 5) return null;
+    const w = battleResult.winner;
+    if (w !== 'player' && w !== 'enemy') return { title: 'Pareggio', desc: `VA ${battleResult.playerAssault}–${battleResult.enemyAssault}` };
+    const l = w === 'player' ? 'enemy' : 'player';
+    const wa = w === 'player' ? battleResult.playerAgent : battleResult.enemyAgent;
+    const la = w === 'player' ? battleResult.enemyAgent : battleResult.playerAgent;
+    const vaW = w === 'player' ? battleResult.playerAssault : battleResult.enemyAssault;
+    const vaL = l === 'player' ? battleResult.playerAssault : battleResult.enemyAssault;
+    const tie = vaW === vaL && wa?.league != null ? ` · Lega ${wa.league}` : '';
+    return { title: `Vince ${String(wa?.name || '').split(',')[0]}`, desc: `VA ${vaW}–${vaL}${tie} · −${battleResult.damageDealt ?? 0} PV` };
+  }, [battleResult, gamePhase, duelHp.started, duelPhase]);
+
+  // Portale ambra: tocca al giocatore scegliere (Affare proposto, abilità del Comando)
+  const pendingDeal = !eminenceAnnounceHold ? pendingEminenceDeals[0] : null;
+  const commandChoosing = gamePhase === 'selectField'
+    && eminenceChoiceView?.self?.state === CHOICE_STATES.CHOOSING
+    && Boolean(eminenceChoiceView?.self?.mustChoose);
+  let portalDecision = null;
+  if (pendingDeal) {
+    const ownerEminenceId = eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId;
+    const ability = ownerEminenceId ? getEminenceAbility(ownerEminenceId, pendingDeal.source) : null;
+    const title = ability?.name || 'Affare';
+    if (pendingDeal.mode === 'CHOOSE_ONE') {
+      const presence = eminenceMatchState?.player?.presence ?? 0;
+      const names = ['Primo', 'Secondo'];
+      const opts = (pendingDeal.deals || []).slice(0, 2);
+      portalDecision = {
+        kicker: 'Affare',
+        name: title,
+        desc: 'Scegli uno dei due Affari',
+        options: opts.map((option, i) => ({
+          key: `deal-${option.id}`,
+          label: names[i],
+          variant: i === opts.length - 1 ? 'primary' : 'secondary',
+          disabled: option.minPresence != null && presence < Math.abs(option.minPresence),
+          onClick: () => confirmPendingEminenceDeal({ dealChoice: option.id, opponentPresence: presence }),
+        })),
+        note: opts.map((o, i) => `${names[i]}: ${formatEminenceDealEffects(o.effects) || o.id}`).join(' · '),
+      };
+    } else {
+      portalDecision = {
+        kicker: 'Affare',
+        name: title,
+        desc: formatEminenceDealEffects(pendingDeal.deal?.effects) || "Accetti l'Affare proposto?",
+        options: [
+          { key: 'deal-refuse', label: 'Rifiuta', variant: 'secondary', onClick: () => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' }) },
+          { key: 'deal-accept', label: 'Accetta', variant: 'primary', waiting: true, onClick: () => confirmPendingEminenceDeal({ dealAccepted: true }) },
+        ],
+        note: "Se rifiuti, l'effetto si risolve come se l'avesse accettato chi l'ha proposto.",
+      };
+    }
+  } else if (commandChoosing) {
+    portalDecision = { kicker: 'Scelta', name: 'Comando', desc: "Abilità dell'Eminenza", note: "Scegli un'abilità dell'Eminenza e confermala" };
+  }
+
   const duelHpColors = useMemo(() => ({ player: playerIdentityColor, enemy: enemyIdentityColor }), [playerIdentityColor, enemyIdentityColor]);
   const duelFocusGlow = (side) => {
     const total = side === 'player' ? battleResult?.playerFocusUsed : battleResult?.enemyFocusUsed;
@@ -2175,6 +2234,12 @@ export default function SatzeGame() {
     guidedPause,
     setGuidedPause,
   ]);
+
+  // «Salta»: chiude l'animazione del duello e porta subito ai valori finali del risultato
+  const skipDuelAndResult = () => {
+    skipDuelAnimation();
+    duelHp.skip();
+  };
 
   const replayDuelAnimation = useCallback(() => {
     clearFocusCoinTimers();
@@ -5682,131 +5747,7 @@ export default function SatzeGame() {
         />
       )}
 
-      {!eminenceAnnounceHold && pendingEminenceDeals[0] && (() => {
-        const deal = pendingEminenceDeals[0];
-        const ownerEminenceId = eminenceMatchState?.[deal.ownerSide]?.eminenceId;
-        const ability = ownerEminenceId
-          ? getEminenceAbility(ownerEminenceId, deal.source)
-          : null;
-        const title = ability?.name || 'Affare';
-        if (deal.mode === 'CHOOSE_ONE') {
-          const presence = eminenceMatchState?.player?.presence ?? 0;
-          return (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ zIndex: 28, background: 'rgba(0,0,0,0.55)' }}
-            >
-              <div
-                className="satze-hud-panel"
-                style={{
-                  maxWidth: 520,
-                  padding: '22px 26px',
-                  color: '#f4efe6',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: 13, letterSpacing: '0.14em', opacity: 0.7, marginBottom: 6 }}>
-                  AFFARE PROPOSTO
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>{title}</div>
-                <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 18 }}>
-                  Scegli uno dei due Affari.
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(deal.deals || []).map((option) => {
-                    const illegal = option.minPresence != null
-                      && presence < Math.abs(option.minPresence);
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        disabled={illegal}
-                        onClick={() => confirmPendingEminenceDeal({
-                          dealChoice: option.id,
-                          opponentPresence: presence,
-                        })}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: 8,
-                          border: '1px solid rgba(244,239,230,0.35)',
-                          background: illegal ? 'rgba(80,80,80,0.35)' : 'rgba(40,28,20,0.9)',
-                          color: '#f4efe6',
-                          opacity: illegal ? 0.45 : 1,
-                          cursor: illegal ? 'not-allowed' : 'pointer',
-                          fontSize: 14,
-                          lineHeight: 1.35,
-                        }}
-                      >
-                        {formatEminenceDealEffects(option.effects)
-                          || option.id}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        }
-        return (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ zIndex: 28, background: 'rgba(0,0,0,0.55)' }}
-          >
-            <div
-              className="satze-hud-panel"
-              style={{
-                maxWidth: 480,
-                padding: '22px 26px',
-                color: '#f4efe6',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 13, letterSpacing: '0.14em', opacity: 0.7, marginBottom: 6 }}>
-                AFFARE PROPOSTO
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>{title}</div>
-              <div style={{ fontSize: 15, lineHeight: 1.45, marginBottom: 18, opacity: 0.9 }}>
-                {formatEminenceDealEffects(deal.deal?.effects)
-                  || 'Accetti l\'Affare proposto?'}
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.65, marginBottom: 16 }}>
-                Se rifiuti, l&apos;effetto si risolve come se l&apos;avesse accettato chi l&apos;ha proposto.
-              </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => confirmPendingEminenceDeal({ dealAccepted: true })}
-                  style={{
-                    padding: '10px 22px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(201,226,56,0.55)',
-                    background: 'rgba(70,90,20,0.85)',
-                    color: '#f4efe6',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Accetta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' })}
-                  style={{
-                    padding: '10px 22px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(244,239,230,0.35)',
-                    background: 'rgba(40,28,20,0.9)',
-                    color: '#f4efe6',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Rifiuta
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* L'Affare si sceglie nel portale (BattlefieldPanel · decision) */}
 
       {isShuffleDealPhase && (
         <div className="absolute inset-0 z-[24] pointer-events-auto" aria-hidden />
@@ -6027,7 +5968,10 @@ export default function SatzeGame() {
           setGamePhase('playtestHistory');
         }}
         onReplayDuel={replayDuelAnimation}
-        onSkipDuel={skipDuelAnimation}
+        onSkipDuel={skipDuelAndResult}
+        continueReady={duelHp.settled}
+        duelEsito={portalDuelEsito}
+        decision={portalDecision}
       />
 
       <GuidedTutorialOverlay

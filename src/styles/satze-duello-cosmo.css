@@ -716,6 +716,80 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 }
 @keyframes bf-arc-wait { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 
+/* comando che aspetta te (Continua, Accetta): pulsa di luce */
+.satze-bf-arc-btn.is-waiting .satze-bf-arc-shape { animation: bf-arc-call 1.4s ease-in-out infinite; }
+@keyframes bf-arc-call {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(207, 216, 230, .35)); }
+  50% { filter: drop-shadow(0 0 16px rgba(255, 255, 255, .95)); }
+}
+/* scorciatoia da tastiera accanto al nome del comando */
+.satze-bf-arc-key { fill: #9aa6b8; font-size: 9px; font-weight: 600; letter-spacing: .04em; }
+
+/* tocca a te scegliere (Affare, Comando): il portale vira all'ambra, pulsa e manda onde */
+.satze-bf-portal-call {
+  position: absolute;
+  z-index: 0;
+  left: -31px;
+  top: -31px;
+  width: calc(100% + 62px);
+  height: calc(100% + 62px);
+  border-radius: 50%;
+  border: 2px solid rgba(245, 196, 81, .85);
+  box-shadow: 0 0 18px rgba(245, 196, 81, .55), inset 0 0 12px rgba(245, 196, 81, .35);
+  opacity: 0;
+  pointer-events: none;
+  animation: bf-call 1.7s cubic-bezier(.2, .6, .3, 1) infinite;
+}
+.satze-bf-portal-call.is-b { animation-delay: .85s; }
+@keyframes bf-call { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
+.satze-bf-portal.is-decide .satze-bf-portal-disc { animation: bf-portal-drift 22s ease-in-out infinite alternate, bf-decide-pop .3s ease-out both; }
+@keyframes bf-decide-pop { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.satze-bf-portal.is-decide .satze-bf-portal-rune { stroke: #f5c451; }
+.satze-bf-portal.is-decide .satze-bf-portal-step-kicker { color: #f5c451; }
+.satze-bf-portal.is-decide .satze-bf-portal-step-name { text-shadow: 0 0 12px rgba(245, 196, 81, .9), 0 1px 2px #000, 0 2px 6px #000; }
+.satze-bf-portal.is-decide .satze-bf-portal-turn-label { animation: bf-turn-blink 1.2s ease-in-out infinite; }
+@keyframes bf-turn-blink { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.satze-bf-portal.is-decide .satze-bf-arc-shape { stroke: rgba(245, 196, 81, .8); }
+.satze-bf-portal.is-decide .satze-bf-arc-btn.is-primary .satze-bf-arc-shape { stroke: #ffe3a3; }
+.satze-bf-portal.is-decide .satze-bf-arc-btn.is-waiting .satze-bf-arc-shape { animation-name: bf-arc-call-amber; }
+@keyframes bf-arc-call-amber {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(245, 196, 81, .4)); }
+  50% { filter: drop-shadow(0 0 18px rgba(255, 214, 120, 1)); }
+}
+
+/* nomi lunghi (esito con il nome del vincitore, Affari): vanno a capo dentro il portale */
+.satze-bf-portal-step.is-long .satze-bf-portal-step-name {
+  white-space: normal;
+  max-width: 100px;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* nota sotto il portale: cosa fare adesso */
+.satze-bf-portal-note {
+  position: absolute;
+  left: 50%;
+  top: 246px;
+  width: 280px;
+  margin-left: -140px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #aeb8c8;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+  animation: bf-note-in .4s ease-out .3s both;
+}
+.satze-bf-portal-note.is-decide { color: #f5d58a; }
+@keyframes bf-note-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .satze-bf-arc-btn.is-waiting .satze-bf-arc-shape, .satze-bf-portal-call, .satze-bf-portal.is-decide .satze-bf-portal-disc,
+  .satze-bf-portal.is-decide .satze-bf-portal-turn-label, .satze-bf-portal-note { animation: none; }
+  .satze-bf-portal-call { display: none; }
+}
+
 /* ancora invisibile sotto gli archi: da qui si apre il riepilogo */
 .satze-bf-recap-anchor {
   position: absolute;
