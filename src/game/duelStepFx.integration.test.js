@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeDuelResolution } from '../../game/duelResolve.js';
-import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
-import { ALL_AGENTS } from '../../data/cards.js';
-import { buildDuelStepFx, currentStepFx, STEP_FX_TAGS } from './duelStepFx.js';
-import { buildDuelVaLedgerRows } from './duelVaLedger.js';
-import { countDuelEffectSteps, countDuelPostEffectSteps } from './duelVisualSteps.js';
+import { computeDuelResolution } from './duelResolve.js';
+import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
+import { ALL_AGENTS } from '../data/cards.js';
+import { buildDuelStepFx, currentStepFx, STEP_FX_TAGS } from './duel/duelStepFx.js';
+import { buildDuelVaLedgerRows } from './duel/duelVaLedger.js';
+import { countDuelEffectSteps, countDuelPostEffectSteps } from './duel/duelVisualSteps.js';
 
 const baseInput = {
   selectedFocus: 5, enemySelectedFocus: 2, playerHP: 12, enemyHP: 20, playerFocus: 12, enemyFocus: 12,
