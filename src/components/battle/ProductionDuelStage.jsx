@@ -88,14 +88,11 @@ export function ProductionDuelStage({
             duelEffectStep={duelEffectStep}
             duelVfx={vfx}
             showClashAnimation={showClashAnimation}
-            enemyFocusCoinsShown={enemyFocusCoinsShown}
             enemyCardGlow={enemyCardGlow}
-            getFocusCoinGlowColor={getFocusCoinGlowColor}
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
             cinemaHideAgent={cinemaHideAgent}
-            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -129,14 +126,11 @@ export function ProductionDuelStage({
             duelEffectStep={duelEffectStep}
             duelVfx={vfx}
             showClashAnimation={showClashAnimation}
-            playerFocusCoinsShown={playerFocusCoinsShown}
             playerCardGlow={playerCardGlow}
-            getFocusCoinGlowColor={getFocusCoinGlowColor}
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
             cinemaHideAgent={cinemaHideAgent}
-            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>

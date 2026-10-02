@@ -498,9 +498,7 @@ export function DuelVfxSimulator({ vfx }) {
                 duelPhase={simPhase}
                 duelVfx={vfx}
                 showClashAnimation={false}
-                enemyFocusCoinsShown={enemyFocusCoinsShown}
                 enemyCardGlow={enemyCardGlow}
-                getFocusCoinGlowColor={getFocusCoinGlowColor}
                 galleryCardLayout={galleryCardLayout}
                 getAbilityCurrentValue={noopAbility}
                 onCardHover={noopHover}
@@ -532,9 +530,7 @@ export function DuelVfxSimulator({ vfx }) {
                 duelPhase={simPhase}
                 duelVfx={vfx}
                 showClashAnimation={false}
-                playerFocusCoinsShown={playerFocusCoinsShown}
                 playerCardGlow={playerCardGlow}
-                getFocusCoinGlowColor={getFocusCoinGlowColor}
                 galleryCardLayout={galleryCardLayout}
                 getAbilityCurrentValue={noopAbility}
                 onCardHover={noopHover}

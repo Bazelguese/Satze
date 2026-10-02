@@ -28,8 +28,8 @@ export const DUEL_VISUAL_DEFAULTS = {
   focusCoinEaseSlowMul: 1.55,
   /** Moltiplicatore intervallo ultima moneta (finale veloce) */
   focusCoinEaseFastMul: 0.35,
-  /** Buffer aggiunto dopo l’ultimo focus coin prima della fase 3 (ms) */
-  focusPhaseBufferMs: 350,
+  /** Pausa dopo l’ultimo focus coin prima della fase 3 (ms): la moneta atterra (380) e prende posto in orbita */
+  focusPhaseBufferMs: 900,
   /** Durata fase 3 — Calcolo VA (ms) */
   phaseMs3: 1100,
   /** Fase 3 senza mod VA né clamp al minimo: passaggio rapido (ms) */

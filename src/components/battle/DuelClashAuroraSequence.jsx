@@ -1006,7 +1006,7 @@ function applyFocusCoinTokenDom(el, x, y, size, alpha, glowColor) {
 
 function applyFocusCoinOrbitCollapseDom(container, coinEls, crestEl, opts) {
   if (!container) return;
-  const { t, orbitSec, focusCount, side, armyVisual, offsetX, offsetY } = opts;
+  const { t, orbitSec, focusCount, side, armyVisual, offsetX, offsetY, hideCoins = false } = opts;
   const count = Math.min(coinEls.length, clamp(Math.round(Number(focusCount) || 0), 0, 14));
   if (count <= 0) {
     setElOpacity(container, 0);
@@ -1019,7 +1019,7 @@ function applyFocusCoinOrbitCollapseDom(container, coinEls, crestEl, opts) {
   for (let i = 0; i < coinEls.length; i += 1) {
     const el = coinEls[i];
     if (!el) continue;
-    if (i >= count) {
+    if (i >= count || hideCoins) {
       el.style.visibility = 'hidden';
       el.style.opacity = '0';
       continue;
@@ -1131,6 +1131,8 @@ function applyAfterImageDom(container, ghostEls, opts) {
 const ClashCardAgents = React.memo(function ClashCardAgents({
   battleResult,
   display,
+  playerOverdrive = false,
+  enemyOverdrive = false,
   cardLayout,
   playerAbilityCurrentValue,
   enemyAbilityCurrentValue,
@@ -1189,6 +1191,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           bonusNotTriggered={display.showPlayerBonusNotTriggered}
           suppressAnimations
           footerSweep
+          overdrivePreview={playerOverdrive}
         />
         <PerfectFocusStamp active={showPerfectPlayer} side="player" compact holdMs={1500} />
       </div>
@@ -1237,6 +1240,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           bonusNotTriggered={display.showEnemyBonusNotTriggered}
           suppressAnimations
           footerSweep
+          overdrivePreview={enemyOverdrive}
         />
         <PerfectFocusStamp active={showPerfectEnemy} side="enemy" compact holdMs={1500} />
       </div>
@@ -1438,6 +1442,10 @@ export function DuelClashAuroraSequence({
   galleryCardLayout,
   getAbilityCurrentValue,
   isZoomed = true,
+  /** Monete in orbita disegnate fuori (DuelFocusStage): qui resta solo lo stemma del collasso. */
+  hideOrbitCoins = false,
+  playerOverdrive = false,
+  enemyOverdrive = false,
 }) {
   const { runId, active } = useSequenceRun(duelPhase);
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
@@ -1651,6 +1659,7 @@ export function DuelClashAuroraSequence({
         t: frame.t,
         orbitSec: frame.orbitSec,
         focusCount: battleResult?.playerFocusUsed,
+        hideCoins: hideOrbitCoins,
         side: 'right',
         armyVisual: playerArmy,
         offsetX: frame.pX + frame.sx,
@@ -1660,6 +1669,7 @@ export function DuelClashAuroraSequence({
         t: frame.t,
         orbitSec: frame.orbitSec,
         focusCount: battleResult?.enemyFocusUsed,
+        hideCoins: hideOrbitCoins,
         side: 'left',
         armyVisual: enemyArmy,
         offsetX: frame.eX + frame.sx,
@@ -1990,6 +2000,8 @@ export function DuelClashAuroraSequence({
         enemyClashAnchor={enemyClashAnchor}
         playerWrapRef={playerWrapRef}
         enemyWrapRef={enemyWrapRef}
+        playerOverdrive={playerOverdrive}
+        enemyOverdrive={enemyOverdrive}
         showPerfectPlayer={perfectShown && perfectFocusSide === 'player'}
         showPerfectEnemy={perfectShown && perfectFocusSide === 'enemy'}
       />

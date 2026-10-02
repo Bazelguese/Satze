@@ -139,7 +139,7 @@ export function DuelVaLedger({
                 {pips.map((p, i) => (p ? <i key={i} className={p === 'off' ? 'is-off' : undefined} /> : null))}
               </span>
             </span>
-            <b key={`fc-${st.fc}`} className={st.fc == null ? 'is-empty' : 'satze-va-ledger__pop'}>{st.fc == null ? '—' : st.fc}</b>
+            <b key={`fc-${st.fc}`} data-ledger-fc className={st.fc == null ? 'is-empty' : 'satze-va-ledger__pop'}>{st.fc == null ? '—' : st.fc}</b>
           </div>
           {st.mods.map((m, i) => (m.arrived ? (
             <div

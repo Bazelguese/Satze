@@ -2535,12 +2535,24 @@ button:disabled {
 .satze-step-callout__eff { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 24px; color: #f5f3ec; line-height: 1.15; margin-top: 4px; }
 .satze-step-callout__eff.is-struck { text-decoration: line-through; text-decoration-color: #f87171; color: #8b887f; }
 .satze-step-callout__tgt { font-size: 11px; color: #8b887f; letter-spacing: 0.04em; margin-top: 2px; }
-.satze-step-callout__sub { margin-top: 6px; display: flex; gap: 8px; align-items: center; background: rgba(7, 7, 7, 0.88); border: 1px solid rgba(245, 243, 236, 0.18); border-left: 4px solid #64748b; padding: 5px 10px; font-size: 11px; color: #c9c6bc; animation: satzeStepCalloutIn 150ms ease-out 380ms both; }
+.satze-step-callout__sub { margin-top: 6px; display: flex; gap: 8px; align-items: center; background: rgba(7, 7, 7, 0.88); border: 1px solid rgba(245, 243, 236, 0.18); border-left: 4px solid #64748b; padding: 5px 10px; font-size: 11px; color: #c9c6bc; animation: satzeStepCalloutSubIn 150ms ease-out 380ms both; }
+@keyframes satzeStepCalloutSubIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .satze-step-callout__sub .satze-step-callout__tag { background: #64748b; }
 @media (prefers-reduced-motion: reduce) {
   .satze-footer-sweep__fill, .satze-footer-sweep__edge, .satze-footer-label-pop, .satze-step-callout, .satze-step-callout__sub { animation: none !important; }
   .satze-footer-sweep__edge { display: none; }
 }
+
+/* Conta scenica delle Focus Coin (DuelFocusStage) */
+.satze-focus-layer { position: absolute; inset: 0; pointer-events: none; }
+.satze-focus-coin { position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; display: grid; place-items: center; opacity: 0; will-change: transform, opacity; }
+.satze-focus-orbit { position: absolute; left: 0; top: 0; border: 1px solid; border-radius: 50%; opacity: 0; }
+.satze-focus-shock { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 0; }
+.satze-focus-counter { position: absolute; left: 0; top: 0; text-align: center; opacity: 0; transform-origin: 50% 60%; white-space: nowrap; transition: opacity 250ms ease; }
+.satze-focus-counter__x { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 104px; line-height: 1; color: #f5f3ec; letter-spacing: -0.02em; }
+.satze-focus-counter__x small { font-size: 0.5em; vertical-align: 0.45em; margin-right: 4px; color: #c9c6bc; }
+.satze-focus-counter__f { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 20px; color: #c9c6bc; letter-spacing: 0.08em; margin-top: 2px; text-shadow: 0 2px 6px #000; }
+.satze-focus-counter__f b { font-weight: 400; color: #f5f3ec; }
 
 /* Tossina — cerchio viola + etichetta Tox */
 .satze-stats-toxin {

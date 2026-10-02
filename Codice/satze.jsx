@@ -21,6 +21,9 @@ import { useDuelHpPresentation } from '../src/components/battle/useDuelHpPresent
 import { DuelHpProjectiles } from '../src/components/battle/DuelHpProjectiles';
 import { DuelVaLedger } from '../src/components/battle/DuelVaLedger';
 import { DuelStepFx } from '../src/components/battle/DuelStepFx.jsx';
+import { DuelFocusStage } from '../src/components/battle/DuelFocusStage.jsx';
+import { useFocusLaunches } from '../src/components/battle/useFocusLaunches.js';
+import { overdriveCoinThreshold } from '../src/game/duel/duelOverdriveTrigger.js';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
@@ -176,7 +179,6 @@ import { createBattleLogChannel, emitInfo } from '../src/game/duel/battleEventEm
 import { countDuelEffectSteps, countDuelPostEffectSteps } from '../src/game/duel/duelVisualSteps.js';
 import { DUEL_VISUAL_DEFAULTS } from '../src/config/duelVisualConfig.js';
 import { useSafeDuelEffectStep } from '../src/components/battle/useSafeDuelEffectStep.js';
-import { getFocusCoinGlowColor as computeFocusCoinGlowColor } from '../src/utils/focusCoinGlow.js';
 import {
   startRainbowGlowClock,
   stopRainbowGlowClock,
@@ -1342,7 +1344,6 @@ export default function SatzeGame() {
   const {
     showBodies: showDuelResultBodies,
     cinemaHideAgent,
-    keepOrbitThroughClash,
   } = useClashFocusHandoff(
     gamePhase === 'result' && battleResult ? duelPhase : -1,
     Boolean(vfxProfile.clashVfxEnabled)
@@ -1361,6 +1362,29 @@ export default function SatzeGame() {
   const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep: visualEffectStep, playerHP, enemyHP, duelVfx });
   const shownPlayerHP = duelHp.displayHP ? duelHp.displayHP.player : playerHP;
   const shownEnemyHP = duelHp.displayHP ? duelHp.displayHP.enemy : enemyHP;
+  // Conta scenica delle FC: partenza e atterraggio delle monete, bagliore e Overdrive sulla carta
+  const duelStamp = gamePhase === 'result' && battleResult
+    ? [battleResult.playerAgent?.id, battleResult.enemyAgent?.id, battleResult.playerAssault, battleResult.enemyAssault, battleResult.finalPlayerHP, battleResult.finalEnemyHP].join('|')
+    : null;
+  const focusLaunch = useFocusLaunches({
+    duelKey: duelStamp,
+    duelPhase,
+    playerCoins: playerFocusCoinsShown,
+    enemyCoins: enemyFocusCoinsShown,
+    playerTotal: battleResult?.playerFocusUsed || 0,
+    enemyTotal: battleResult?.enemyFocusUsed || 0,
+  });
+  const overdriveAt = useMemo(
+    () => ({ player: overdriveCoinThreshold(battleResult, 'player'), enemy: overdriveCoinThreshold(battleResult, 'enemy') }),
+    [battleResult],
+  );
+  const duelOverdriveOn = (side) => Boolean(
+    duelStamp && overdriveAt[side] != null && duelPhase >= 2 && focusLaunch.landed[side] >= overdriveAt[side]
+  );
+  const duelFocusGlow = (side) => {
+    const total = side === 'player' ? battleResult?.playerFocusUsed : battleResult?.enemyFocusUsed;
+    return total ? focusLaunch.landed[side] / total : 0;
+  };
 
   // Hook per la logica di battaglia
   const { resolveBattle } = useBattle(gameState, animations, { revealHpCommittedRef });
@@ -3487,15 +3511,7 @@ export default function SatzeGame() {
     guidedPause,
   ]);
   
-  const getFocusCoinGlowColor = useCallback(
-    (focusCount, intensity) =>
-      computeFocusCoinGlowColor(focusCount, intensity, getRainbowGlowTime(), {
-        rainbowHueMul12: duelVfx.rainbowHueMul12,
-        rainbowHueMul13: duelVfx.rainbowHueMul13,
-        rainbowHueMul14: duelVfx.rainbowHueMul14,
-      }),
-    [duelVfx.rainbowHueMul12, duelVfx.rainbowHueMul13, duelVfx.rainbowHueMul14]
-  );
+
 
   
   // Animazione focus coin sequenziali (fase 2)
@@ -4981,12 +4997,19 @@ export default function SatzeGame() {
       {/* Schede VA laterali: POT, × FC, modificatori per fonte, VA (fuori dalle carte, nascoste nello zoom) */}
       {gamePhase === 'result' && battleResult && (
         <>
+          {/* Conta scenica delle FC: monete dalla scheda VA alla carta, orbita, contatore */}
+          <DuelFocusStage
+            battleResult={battleResult}
+            duelPhase={duelPhase}
+            launchesRef={focusLaunch.launchesRef}
+            accent={{ player: playerIdentityColor, enemy: enemyIdentityColor }}
+          />
           <DuelVaLedger
             battleResult={battleResult}
             side="enemy"
             duelPhase={duelPhase}
             duelEffectStep={visualEffectStep}
-            coinsShown={enemyFocusCoinsShown}
+            coinsShown={focusLaunch.landed.enemy}
             duelVfx={duelVfx}
             accentColor={enemyIdentityColor}
             kicker={mpEnemyLabel}
@@ -4996,7 +5019,7 @@ export default function SatzeGame() {
             side="player"
             duelPhase={duelPhase}
             duelEffectStep={visualEffectStep}
-            coinsShown={playerFocusCoinsShown}
+            coinsShown={focusLaunch.landed.player}
             duelVfx={duelVfx}
             accentColor={playerIdentityColor}
             kicker={isOnlinePvP ? mpSelfLabel : 'Tu'}
@@ -6125,14 +6148,13 @@ export default function SatzeGame() {
             duelEffectStep={visualEffectStep}
             duelVfx={duelVfx}
             showClashAnimation={showClashAnimation}
-            enemyFocusCoinsShown={enemyFocusCoinsShown}
-            enemyCardGlow={enemyCardGlow}
-            getFocusCoinGlowColor={getFocusCoinGlowColor}
+            focusGlow={duelFocusGlow('enemy')}
+            focusAccent={enemyIdentityColor}
+            overdrive={duelOverdriveOn('enemy')}
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
             cinemaHideAgent={cinemaHideAgent}
-            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -6259,14 +6281,13 @@ export default function SatzeGame() {
             duelEffectStep={visualEffectStep}
             duelVfx={duelVfx}
             showClashAnimation={showClashAnimation}
-            playerFocusCoinsShown={playerFocusCoinsShown}
-            playerCardGlow={playerCardGlow}
-            getFocusCoinGlowColor={getFocusCoinGlowColor}
+            focusGlow={duelFocusGlow('player')}
+            focusAccent={playerIdentityColor}
+            overdrive={duelOverdriveOn('player')}
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
             cinemaHideAgent={cinemaHideAgent}
-            keepOrbitThroughClash={keepOrbitThroughClash}
           />
         )}
       </div>
@@ -6280,6 +6301,9 @@ export default function SatzeGame() {
           galleryCardLayout={galleryCardLayout}
           getAbilityCurrentValue={getAbilityCurrentValue}
           isZoomed={isZoomed}
+          hideOrbitCoins
+          playerOverdrive={duelOverdriveOn('player')}
+          enemyOverdrive={duelOverdriveOn('enemy')}
         />
       )}
 
