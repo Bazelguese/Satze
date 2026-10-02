@@ -11,6 +11,7 @@ import {
 import {
   getDuelAgentBaseScale,
   getDuelAgentCenterY,
+  getDuelAgentCenterYOffset,
   getEnemyClashAnchorX,
   getPlayerClashAnchorX,
   getScaledClashStartOffset,
@@ -21,6 +22,15 @@ import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
 import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
+import {
+  warpClashTime,
+  clashCardMotion,
+  clashCamera,
+  clashImpactFx,
+  clashRnd,
+  ss as clashSs,
+  CLASH_TITLE_OUT,
+} from '../../game/duel/duelClashMotion.js';
 
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
@@ -598,6 +608,7 @@ function buildClashMotionConfig({
     playerClashAnchor,
     enemyClashAnchor,
     agentCenterY,
+    agentCenterDy: getDuelAgentCenterYOffset(isZoomed),
     playerArmy,
     enemyArmy,
     playerFocusCount: battleResult.playerFocusUsed || 1,
@@ -948,6 +959,106 @@ function applyImpactRingsDom(outer, inner, impact) {
   inner.style.height = `${iw}px`;
   inner.style.border = `${3 - impact * 2.5}px solid rgba(251,179,71,${0.8 - impact * 0.7})`;
   setElOpacity(inner, 1);
+}
+
+function hexA(hex, a) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  if (!m) return `rgba(245,243,236,${a})`;
+  return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})`;
+}
+
+/** Anelli d'impatto nel colore dell'armata vincitrice (regia nuova, n5). */
+function applyImpactRingsAccentDom(outer, inner, impact, accent) {
+  if (!outer || !inner) return;
+  if (impact <= 0) {
+    setElOpacity(outer, 0);
+    setElOpacity(inner, 0);
+    return;
+  }
+  const ow = 120 + impact * 1500;
+  const iw = 70 + impact * 1000;
+  outer.style.width = `${ow}px`;
+  outer.style.height = `${ow}px`;
+  outer.style.border = `${4 - impact * 3}px solid ${hexA(accent, 0.9 - impact * 0.8)}`;
+  outer.style.boxShadow = `0 0 ${80 * impact}px ${hexA(accent, 0.8)}`;
+  setElOpacity(outer, 1);
+  inner.style.width = `${iw}px`;
+  inner.style.height = `${iw}px`;
+  inner.style.border = `${3 - impact * 2.5}px solid rgba(245,243,236,${0.8 - impact * 0.7})`;
+  setElOpacity(inner, 1);
+}
+
+const CLASH_SPARKS = 30;
+
+/** «NOME · VA 24 CONTRO 15 · 4 DAN»; a parità di VA vince la Lega più bassa. */
+function clashSubtitle(br) {
+  const w = br.winner === 'enemy' ? 'enemy' : 'player';
+  const l = w === 'player' ? 'enemy' : 'player';
+  const wa = w === 'player' ? br.playerAgent : br.enemyAgent;
+  const la = w === 'player' ? br.enemyAgent : br.playerAgent;
+  const vaW = w === 'player' ? br.playerAssault : br.enemyAssault;
+  const vaL = l === 'player' ? br.playerAssault : br.enemyAssault;
+  const name = String(wa?.name || '').split(',')[0].toUpperCase();
+  const vs = vaW === vaL && wa?.league != null && la?.league != null
+    ? `PARI · LEGA ${wa.league} < ${la.league}`
+    : `CONTRO ${vaL}`;
+  return `${name} · VA ${vaW} ${vs} · ${br.damageDealt ?? 0} DAN`;
+}
+
+/** Due lame di luce incrociate e scintille dal punto d'impatto. */
+function applyClashSlashSparksDom(refs, fx, accent, loserAccent) {
+  [[refs.slashA, 24, 1, '#f5f3ec'], [refs.slashB, -16, 0.7, accent]].forEach(([el, deg, op, col], i) => {
+    if (!el) return;
+    const rev = fx.slashReveal[i];
+    setElOpacity(el, fx.slashOn * op);
+    el.style.transform = `translate(-50%, -50%) rotate(${deg}deg) scaleY(${rev}) scaleX(${1 + (1 - fx.slashOn) * 2})`;
+    el.style.background = `linear-gradient(180deg, transparent, ${col} 30%, #fff 50%, ${col} 70%, transparent)`;
+    el.style.boxShadow = `0 0 24px ${accent}`;
+  });
+  const su = fx.sparks;
+  (refs.sparkEls || []).forEach((el, i) => {
+    if (!el) return;
+    if (su <= 0 || su >= 1) { el.style.opacity = '0'; return; }
+    const ang = clashRnd(i) * Math.PI * 2;
+    const dist = (1 - Math.pow(1 - su, 3)) * (180 + clashRnd(i + 40) * 320);
+    el.style.width = `${(10 + clashRnd(i + 9) * 22) * (1 - su)}px`;
+    el.style.transform = `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist + su * su * 120}px) rotate(${(ang * 180) / Math.PI}deg)`;
+    el.style.background = i % 6 === 0 ? loserAccent : i % 3 === 0 ? '#f5f3ec' : accent;
+    el.style.opacity = String(1 - su);
+  });
+}
+
+/**
+ * Camera dello scontro: zoom e scossa sullo strato della sequenza, parallasse sullo
+ * sfondo del Campo, bande cinema più alte. `reset` riporta tutto com'era.
+ */
+function applyClashCameraDom(root, cam, reset = false) {
+  if (!root) return;
+  const scene = root.closest('.satze-scene');
+  if (reset) {
+    root.style.transform = '';
+    scene?.querySelectorAll('[data-clash-cam-bg]').forEach((el) => { el.style.translate = ''; el.style.scale = ''; el.removeAttribute('data-clash-cam-bg'); });
+    scene?.querySelectorAll('.cinema-bar-top, .cinema-bar-bottom').forEach((el) => { el.style.height = ''; });
+    return;
+  }
+  root.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.scale})`;
+  if (!scene) return;
+  // sfondo del Campo: le immagini a tutta scena dietro le carte, in parallasse (metà zoom, 0.4 spostamento)
+  if (!root.__clashBg) {
+    root.__clashBg = [...scene.querySelectorAll('img')].filter((img) => {
+      const r = img.getBoundingClientRect();
+      const rs = scene.getBoundingClientRect();
+      return r.width >= rs.width * 0.95 && r.height >= rs.height * 0.95;
+    });
+    root.__clashBg.forEach((el) => el.setAttribute('data-clash-cam-bg', ''));
+  }
+  root.__clashBg.forEach((el) => {
+    el.style.translate = `${cam.x * 0.4}px ${cam.y * 0.4}px`;
+    el.style.scale = String(1 + (cam.scale - 1) * 0.5);
+  });
+  scene.querySelectorAll('.cinema-bar-top, .cinema-bar-bottom').forEach((el) => {
+    el.style.height = cam.bars > 0.5 ? `${120 + cam.bars}px` : '';
+  });
 }
 
 function applyAgentAuraDom(el, opts) {
@@ -1509,10 +1620,53 @@ export function DuelClashAuroraSequence({
     const cfg = motionCfgRef.current;
     if (!cfg) return;
     const motion = computeCardMotion(t, orbitSec, cfg);
+    const frame = computeClashOverlayFrame(t, orbitSec, cfg);
+    let impactFx = null;
+    let cam = null;
+    if (cfg.isN5) {
+      // Regia nuova: carica, rinculo, sbalzo dello sconfitto, vincitore che torna al suo posto
+      const aw = warpClashTime(t);
+      const mm = clashCardMotion(aw, { winner: cfg.winner, start: cfg.scaledStartDistance, baseScale: cfg.baseAgentScale });
+      const auraW = clamp(1 + clashSs(0.48, 0.82, aw) * 0.9, 0, 2);
+      const auraL = clamp(1 - clashSs(0.52, 0.92, aw), 0, 2);
+      ['player', 'enemy'].forEach((side) => {
+        const accent = side === 'player' ? cfg.playerArmy.color : cfg.enemyArmy.color;
+        const aura = cfg.winner === side ? auraW : auraL;
+        motion[side] = {
+          ...motion[side],
+          ...mm[side],
+          zIndex: cfg.winner === side ? 140 : 130,
+          boxShadow: aura > 0
+            ? `0 0 ${10 + aura * 30}px ${hexA(accent, 1)}, 0 0 ${5 + aura * 15}px ${hexA(accent, 0.8)} inset, 0 0 ${20 + aura * 40}px ${hexA(accent, 1)}`
+            : '',
+        };
+      });
+      impactFx = clashImpactFx(aw, mm.impact, mm.settle);
+      cam = clashCamera(t, aw, mm.impact, cfg.agentCenterDy || 0);
+      Object.assign(frame, {
+        impact: mm.impact,
+        aftermath: mm.settle,
+        sx: 0,
+        sy: 0,
+        pX: mm.player.x,
+        eX: mm.enemy.x,
+        pScale: mm.player.scale,
+        eScale: mm.enemy.scale,
+        pRot: mm.player.rot,
+        eRot: mm.enemy.rot,
+        flash: impactFx.flash * cfg.intensity,
+        showSigil: impactFx.sigil > 0.01,
+        sigilOpacity: impactFx.sigil * cfg.intensity,
+        sigilScale: impactFx.sigilScale,
+        sigilRot: impactFx.sigilRot,
+        bannerReveal: impactFx.titleScale,
+        bannerOpacity: impactFx.title * (1 - clashSs(CLASH_TITLE_OUT, CLASH_TITLE_OUT + 0.06, t)),
+        playerFocusGlow: { main: hexA(cfg.playerArmy.color, 1), secondary: hexA(cfg.playerArmy.color, 0.8) },
+        enemyFocusGlow: { main: hexA(cfg.enemyArmy.color, 1), secondary: hexA(cfg.enemyArmy.color, 0.8) },
+      });
+    }
     applyCardWrapperMotion(playerWrapRef.current, motion.player);
     applyCardWrapperMotion(enemyWrapRef.current, motion.enemy);
-
-    const frame = computeClashOverlayFrame(t, orbitSec, cfg);
     const {
       playerClashAnchor,
       enemyClashAnchor,
@@ -1554,7 +1708,15 @@ export function DuelClashAuroraSequence({
       anchorX: enemyClashAnchor,
     });
 
-    applyImpactRingsDom(refs.impactOuter, refs.impactInner, frame.impact);
+    if (cfg.isN5) {
+      const winAccent = cfg.winner === 'enemy' ? cfg.enemyArmy.color : cfg.playerArmy.color;
+      const loseAccent = cfg.winner === 'enemy' ? cfg.playerArmy.color : cfg.enemyArmy.color;
+      applyImpactRingsAccentDom(refs.impactOuter, refs.impactInner, frame.impact, winAccent);
+      applyClashSlashSparksDom(refs, impactFx, winAccent, loseAccent);
+      applyClashCameraDom(refs.root, cam, t >= 1);
+    } else {
+      applyImpactRingsDom(refs.impactOuter, refs.impactInner, frame.impact);
+    }
 
     if (showOrbitSparks) {
       applyOrbitSparksDom(refs.playerSparks, refs.playerSparkEls, {
@@ -1709,6 +1871,15 @@ export function DuelClashAuroraSequence({
     setPerfectShown(false);
   }, [runId]);
 
+  // la camera dello scontro non deve restare applicata a sfondo e bande
+  React.useEffect(() => () => {
+    const root = refs.lastRoot;
+    if (root) {
+      applyClashCameraDom(root, null, true);
+      root.__clashBg = null;
+    }
+  }, [runId, refs]);
+
   React.useLayoutEffect(() => {
     if (!active || !battleResult || !motionCfgRef.current) return;
     const { t, orbitSec } = animRef.current;
@@ -1774,6 +1945,11 @@ export function DuelClashAuroraSequence({
 
   return (
     <div
+      ref={(el) => {
+        refs.root = el;
+        if (el) refs.lastRoot = el;
+      }}
+      data-clash-root
       style={{
         position: 'absolute',
         inset: 0,
@@ -2038,6 +2214,40 @@ export function DuelClashAuroraSequence({
       )}
 
 
+      {isN5 && (
+        <>
+          {['slashA', 'slashB'].map((k) => (
+            <div
+              key={k}
+              ref={(el) => {
+                bindClashEl(refs, k, el);
+              }}
+              style={{
+                position: 'absolute',
+                top: agentCenterY,
+                left: '50%',
+                width: 10,
+                height: 820,
+                borderRadius: 6,
+                zIndex: 160,
+              }}
+            />
+          ))}
+          <div style={{ position: 'absolute', top: agentCenterY, left: '50%', zIndex: 165 }}>
+            {Array.from({ length: CLASH_SPARKS }, (_, i) => (
+              <div
+                key={i}
+                ref={(el) => {
+                  refs.sparkEls = refs.sparkEls || [];
+                  refs.sparkEls[i] = el;
+                }}
+                style={{ position: 'absolute', left: 0, top: 0, height: 3, borderRadius: 2, opacity: 0, transformOrigin: '0 50%' }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
       <div
         ref={(el) => {
           bindClashEl(refs, 'flash', el);
@@ -2068,12 +2278,14 @@ export function DuelClashAuroraSequence({
             fontFamily: 'Chakra Petch',
             fontSize: 46,
             fontWeight: 800,
-            color: winner === 'player' ? DUEL_ACCENTS.victoryGold : DUEL_ACCENTS.defeatBlood,
+            color: isN5 ? '#f5f3ec' : winner === 'player' ? DUEL_ACCENTS.victoryGold : DUEL_ACCENTS.defeatBlood,
             letterSpacing: '0.3em',
             textTransform: 'uppercase',
-            textShadow: `0 0 24px ${
-              winner === 'player' ? DUEL_ACCENTS.victoryGold : DUEL_ACCENTS.defeatBlood
-            }, 0 0 48px ${winArmy.color}, 0 4px 12px #000`,
+            textShadow: isN5
+              ? `0 0 24px rgba(245,243,236,0.55), 0 0 48px ${winArmy.color}, 0 4px 12px #000`
+              : `0 0 24px ${
+                  winner === 'player' ? DUEL_ACCENTS.victoryGold : DUEL_ACCENTS.defeatBlood
+                }, 0 0 48px ${winArmy.color}, 0 4px 12px #000`,
             WebkitTextStroke: '1.5px rgba(0,0,0,0.8)',
           }}
         >
@@ -2089,12 +2301,16 @@ export function DuelClashAuroraSequence({
             textShadow: '0 0 8px #000',
           }}
         >
-          {(
-            (winner === 'player' ? battleResult.playerAgent?.name : battleResult.enemyAgent?.name) ||
-            ''
-          ).toUpperCase()}{' '}
-          · VA {winner === 'player' ? battleResult.playerAssault : battleResult.enemyAssault} → −
-          {battleResult.damageDealt} PV
+          {isN5 ? clashSubtitle(battleResult) : (
+            <>
+              {(
+                (winner === 'player' ? battleResult.playerAgent?.name : battleResult.enemyAgent?.name) ||
+                ''
+              ).toUpperCase()}{' '}
+              · VA {winner === 'player' ? battleResult.playerAssault : battleResult.enemyAssault} → −
+              {battleResult.damageDealt} PV
+            </>
+          )}
         </div>
       </div>
     </div>

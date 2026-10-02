@@ -10,6 +10,7 @@ import { Icon } from '../ui/Icon';
 import { DUEL_VISUAL_DEFAULTS, DUEL_PHASE4_MIN_MS, computeDynamicClashVfx } from '../../config/duelVisualConfig.js';
 import { FOCUS_RISE_MS, FOCUS_SLAM_MS } from './useFocusLaunches.js';
 import { getDuelFocusPhasePower } from './duelVisualDisplay.js';
+import { warpClashTime } from '../../game/duel/duelClashMotion.js';
 
 const W = 1920;
 const SIDES = ['enemy', 'player'];
@@ -98,7 +99,8 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
     const frame = () => {
       const t = performance.now();
       const inClash = p4StartRef.current != null;
-      const u = inClash ? (t - p4StartRef.current) / dur4 : 0;
+      // stesso tempo deformato dello scontro: le monete collassano mentre le carte si scontrano
+      const u = inClash ? warpClashTime((t - p4StartRef.current) / dur4) : 0;
       const collapse = inClash ? ss(0.37, 0.445, u) : 0;
       const pull = inClash ? ss(0.395, 0.445, u) : 0;
       const vanish = inClash ? ss(0.44, 0.52, u) : 0;
