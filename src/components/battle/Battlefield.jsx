@@ -5,7 +5,6 @@ import { Icon } from '../ui/Icon';
 import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVisualTimeline.js';
 import { getDuelOutcomeSubtitle } from './DuelCinematicOverlays';
 import { FieldCurseOverlay } from './FieldCurseOverlay.jsx';
-import { resolveFieldThumbUrl } from '../../utils/preloadAssets';
 import { RuneTitle } from '../ui/RuneTitle.jsx';
 
 /** semiassi dell'ellisse del portale (px): più alta che larga. La cornice la disegna DuelCosmicHud */
@@ -183,13 +182,14 @@ function PortalArcActions({ actions, RX, RY }) {
 }
 
 /**
- * Portale del campo: ellisse con l'anteprima del campo e, al centro, la fase
+ * Portale del campo: ellisse a fondo neutro, tinto col colore di chi agisce, e al centro la fase
  * del round; nome del campo sull'arco alto, effetto sull'arco basso. Anelli in
  * rotazione e anello di avanzamento li disegna lo shader dell'HUD attorno a
  * `.satze-bf-portal-disc` (legge `data-progress`).
  */
-function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions = null, turn = null, outcome = null, decide = false, children }) {
-  const glow = turn?.color || outcome?.color || null;
+function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions = null, turn = null, outcome = null, decide = false, tint, children }) {
+  // tinta del disco: chi agisce (turno; nel duello chi attiva il passo, poi chi vince); `null` = neutro
+  const glow = tint !== undefined ? tint : (turn?.color || outcome?.color || null);
   const RX = PORTAL_RX;
   const RY = PORTAL_RY;
   const bw = (RX + 60) * 2;
@@ -198,7 +198,6 @@ function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions =
   const cy = bh / 2;
   const tTop = 31;
   const tBot = 40;
-  const thumb = field?.bgImage ? resolveFieldThumbUrl(field.bgImage) : null;
   const effect = field?.effect || '';
   const effFont = effect.length > 46 ? 9 : 10;
   // mezza ellisse ≈ π·√((a²+b²)/2); si lascia un margine per gli estremi
@@ -214,7 +213,7 @@ function FieldPortal({ field, cursed, curseAccent, step, introKey = 0, actions =
         data-decide={decide ? '1' : undefined}
         data-progress={outcome ? '1' : step ? String(step.progress) : '0'}
         data-intro={String(introKey)}
-        style={{ width: RX * 2, height: RY * 2, backgroundImage: thumb ? `url("${thumb}")` : undefined }}
+        style={{ width: RX * 2, height: RY * 2, ...(glow ? { '--disc-c': glow } : null) }}
       >
         {/* bagliore interno nel colore di chi deve agire: sfuma da un'armata all'altra */}
         <span
@@ -574,6 +573,8 @@ export const BattlefieldPanel = ({
   turn = null,
   /** colore del vincitore per il bagliore del portale a fine partita */
   outcomeColor = null,
+  /** nel duello: colore di chi agisce nel passo (all'Esito chi vince); null = disco neutro */
+  duelTint = null,
   rematchLabel = 'Rematch',
   rematchChangeDeckLabel = 'Cambia mazzo',
   /** false mentre overlay TRIONFO/SCONFITTA è attivo — i tasti compaiono dopo */
@@ -942,6 +943,7 @@ export const BattlefieldPanel = ({
             turn={endPortal ? null : decision ? { side: 'decide', label: 'Scegli ora', color: '#f5c451' } : turn}
             decide={Boolean(decision)}
             outcome={outcome}
+            tint={isDuelPhase && !endPortal && !decision ? duelTint : undefined}
             field={gamePhase === 'selectField' || endPortal ? null : field}
             cursed={cursed}
             curseAccent={curseAccent}

@@ -263,13 +263,13 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: auto 115%;   /* l'ellisse è alta: si scala sull'altezza, non sulla larghezza */
-  animation: bf-portal-drift 22s ease-in-out infinite alternate;
+  /* fondo neutro; --disc-c (chi agisce) lo tinge dal centro */
+  --disc-c: #1b2230;
+  background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--disc-c) 42%, #0b0f17) 0%, color-mix(in srgb, var(--disc-c) 16%, #07090e) 62%, #05070b 100%);
+  transition: --disc-c .35s ease;
   box-shadow: inset 0 0 26px 8px rgba(4, 6, 10, .88);
 }
+@property --disc-c { syntax: '<color>'; inherits: true; initial-value: #1b2230; }
 .satze-bf-portal-disc::after {
   content: '';
   position: absolute;
@@ -277,10 +277,6 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(ellipse, rgba(4, 6, 10, .35) 0%, transparent 45%, rgba(4, 6, 10, .6) 100%);
-}
-@keyframes bf-portal-drift {
-  from { background-size: auto 115%; background-position: 40% 50%; }
-  to   { background-size: auto 130%; background-position: 60% 45%; }
 }
 .satze-bf-portal-text {
   position: absolute;
@@ -742,7 +738,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 }
 .satze-bf-portal-call.is-b { animation-delay: .85s; }
 @keyframes bf-call { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
-.satze-bf-portal.is-decide .satze-bf-portal-disc { animation: bf-portal-drift 22s ease-in-out infinite alternate, bf-decide-pop .3s ease-out both; }
+.satze-bf-portal.is-decide .satze-bf-portal-disc { animation: bf-decide-pop .3s ease-out both; }
 @keyframes bf-decide-pop { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
 .satze-bf-portal.is-decide .satze-bf-portal-rune { stroke: #f5c451; }
 .satze-bf-portal.is-decide .satze-bf-portal-step-kicker { color: #f5c451; }

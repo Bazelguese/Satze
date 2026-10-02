@@ -86,6 +86,7 @@ import {
   legalSlotIndicesForChoice,
   CHOICE_STATES,
 } from '../src/game/eminence/eminenceChoiceView.js';
+import { buildDuelStepFx, currentStepFx } from '../src/game/duel/duelStepFx.js';
 import { EminencePresenceSparks, useEminencePresenceLink } from '../src/components/eminence/useEminencePresenceLink.jsx';
 import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
@@ -1408,6 +1409,15 @@ export default function SatzeGame() {
     const tie = vaW === vaL && wa?.league != null ? ` · Lega ${wa.league}` : '';
     return { title: `Vince ${String(wa?.name || '').split(',')[0]}`, desc: `VA ${vaW}–${vaL}${tie} · −${battleResult.damageDealt ?? 0} PV` };
   }, [battleResult, gamePhase, duelHp.started, duelPhase]);
+
+  // Portale nel duello: tinto col colore di chi attiva il passo; all'Esito chi vince; neutro altrimenti
+  const duelStepFxList = useMemo(() => (battleResult ? buildDuelStepFx(battleResult) : []), [battleResult]);
+  const sideColor = (side) => (side === 'player' ? playerIdentityColor : side === 'enemy' ? enemyIdentityColor : null);
+  let portalDuelTint = null;
+  if (gamePhase === 'result' && battleResult) {
+    if (portalDuelEsito) portalDuelTint = sideColor(battleResult.winner);
+    else portalDuelTint = sideColor(currentStepFx(duelStepFxList, duelPhase, visualEffectStep)?.side);
+  }
 
   // Portale ambra: tocca al giocatore scegliere (Affare proposto, abilità del Comando)
   const pendingDeal = !eminenceAnnounceHold ? pendingEminenceDeals[0] : null;
@@ -5865,6 +5875,7 @@ export default function SatzeGame() {
       <BattlefieldPanel
         portalFrame
         turn={turnInfo}
+        duelTint={portalDuelTint}
         outcomeColor={gameResult?.winner === 'player' ? playerIdentityColor : gameResult?.winner === 'enemy' ? enemyIdentityColor : null}
         commandPhase={forcedEminenceView}
         field={battlefields[currentFieldIndex]}
