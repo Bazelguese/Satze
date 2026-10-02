@@ -5,7 +5,7 @@
  * Le posizioni si leggono dal DOM (carte, righe, schede VA) in coordinate di scena 1920×1080.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { buildDuelStepFx, currentStepFx } from './duelStepFx.js';
+import { buildDuelStepFx, currentStepFx } from '../../game/duel/duelStepFx.js';
 
 const W = 1920;
 const H = 1080;

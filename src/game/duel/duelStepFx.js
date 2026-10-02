@@ -6,9 +6,9 @@
 
 import { TRIGGER_NAMES } from '../../data/triggers.js';
 import { formatAbilityHelper } from '../../utils/cardUtils.js';
-import { getPreVaStepIndex, getPostStepsStartIndex } from '../../game/duel/duelVisualSteps.js';
-import { getDuelVisualDisplay, resolveDuelArmyBonusDisplay } from './duelVisualDisplay.js';
-import { buildDuelVaLedgerRows } from '../../game/duel/duelVaLedger.js';
+import { getDuelVisualDisplay, resolveDuelArmyBonusDisplay } from '../../components/battle/duelVisualDisplay.js';
+import { getPreVaStepIndex, getPostStepsStartIndex } from './duelVisualSteps.js';
+import { buildDuelVaLedgerRows } from './duelVaLedger.js';
 
 export const STEP_FX_COLORS = Object.freeze({
   ability: '#fb923c',

@@ -3,8 +3,8 @@ import { computeDuelResolution } from '../../game/duelResolve.js';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
 import { ALL_AGENTS } from '../../data/cards.js';
 import { buildDuelStepFx, currentStepFx, STEP_FX_TAGS } from './duelStepFx.js';
-import { buildDuelVaLedgerRows } from '../../game/duel/duelVaLedger.js';
-import { countDuelEffectSteps, countDuelPostEffectSteps } from '../../game/duel/duelVisualSteps.js';
+import { buildDuelVaLedgerRows } from './duelVaLedger.js';
+import { countDuelEffectSteps, countDuelPostEffectSteps } from './duelVisualSteps.js';
 
 const baseInput = {
   selectedFocus: 5, enemySelectedFocus: 2, playerHP: 12, enemyHP: 20, playerFocus: 12, enemyFocus: 12,

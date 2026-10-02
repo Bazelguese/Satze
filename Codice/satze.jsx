@@ -20,7 +20,7 @@ import { useClashFocusHandoff } from '../src/components/battle/useClashFocusHand
 import { useDuelHpPresentation } from '../src/components/battle/useDuelHpPresentation';
 import { DuelHpProjectiles } from '../src/components/battle/DuelHpProjectiles';
 import { DuelVaLedger } from '../src/components/battle/DuelVaLedger';
-import { DuelStepFx } from '../src/components/battle/DuelStepFx';
+import { DuelStepFx } from '../src/components/battle/DuelStepFx.jsx';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
