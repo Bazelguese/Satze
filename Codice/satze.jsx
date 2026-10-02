@@ -86,6 +86,7 @@ import {
   legalSlotIndicesForChoice,
   CHOICE_STATES,
 } from '../src/game/eminence/eminenceChoiceView.js';
+import { EminencePresenceSparks, useEminencePresenceLink } from '../src/components/eminence/useEminencePresenceLink.jsx';
 import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
 import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence/EminenceMarkFlight.jsx';
@@ -560,6 +561,12 @@ export default function SatzeGame() {
   const displayEnemyNotice = sparkSequenceActive
     ? (enemyEminenceNotice?.id === activeSparkNoticeId ? enemyEminenceNotice : null)
     : enemyEminenceNotice;
+  // Avviso → Presenza: il contatore sulla carta cambia quando arrivano le scintille dell'avviso
+  const presenceLink = useEminencePresenceLink({
+    notices: eminenceNotices,
+    shown: [displayPlayerNotice, displayEnemyNotice],
+    live: { player: eminenceChoiceView.self?.presence ?? 0, enemy: eminenceChoiceView.opponent?.presence ?? 0 },
+  });
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
     !r5Cinematic
@@ -5665,7 +5672,8 @@ export default function SatzeGame() {
           stowed={!showEnemyEminenceZone}
           announceHeld={announceHeldId != null && announceHeldId === enemyEminenceNotice?.id}
           eminence={eminenceChoiceView.opponent.eminence}
-          presence={eminenceChoiceView.opponent.presence}
+          presence={presenceLink.presence.enemy}
+          presencePulse={presenceLink.pulse.enemy}
           options={eminenceChoiceView.opponent.options}
           pickedId={eminenceChoiceView.opponent.revealedAbilityId}
           choiceState={eminenceChoiceView.opponent.state}
@@ -5691,7 +5699,8 @@ export default function SatzeGame() {
           stowed={!showPlayerEminenceZone}
           announceHeld={announceHeldId != null && announceHeldId === playerEminenceNotice?.id}
           eminence={eminenceChoiceView.self.eminence}
-          presence={eminenceChoiceView.self.presence}
+          presence={presenceLink.presence.player}
+          presencePulse={presenceLink.pulse.player}
           options={eminenceChoiceView.self.options}
           pickedId={emDraftId || eminenceChoiceView.self.selectedAbilityId}
           choiceState={eminenceChoiceView.self.state}
@@ -5719,6 +5728,7 @@ export default function SatzeGame() {
           onDismissAnnounce={dismissEminenceNotice}
         />
       )}
+      <EminencePresenceSparks flights={presenceLink.flights} />
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div

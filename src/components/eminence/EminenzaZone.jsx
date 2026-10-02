@@ -275,6 +275,7 @@ function Sash({ accent, name, gradId }) {
 function EminenzaCard({
   eminence,
   presence,
+  presencePulse = 0,
   accent,
   appearance,
   artX,
@@ -452,8 +453,11 @@ function EminenzaCard({
               iniziale
             </span>
             <span
+              key={`presence-${presencePulse}`}
               data-em-presence
+              className={presencePulse ? 'em-presence-pop' : undefined}
               style={{
+              display: 'inline-block',
               fontFamily: EM_UI_FONT,
               fontSize: 24,
               fontWeight: 800,
@@ -1239,6 +1243,7 @@ export function EminenzaZone({
   side,
   eminence,
   presence,
+  presencePulse = 0,
   accent: accentOverride,
   options = [],
   pickedId = null,
@@ -1373,6 +1378,7 @@ export function EminenzaZone({
               <EminenzaCard
                 eminence={eminence}
                 presence={presence}
+                presencePulse={presencePulse}
                 accent={accent}
                 appearance={style}
                 artX={artX}

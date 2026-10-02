@@ -2461,6 +2461,8 @@ button:disabled {
 .satze-va-ledger__pips { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
 .satze-va-ledger__pips i { display: inline-block; width: 11px; height: 5px; background: #c7dbfa; box-shadow: 0 0 6px rgba(199, 219, 250, 0.9); transform: skewX(-24deg); animation: satzeVaLedgerPip 320ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
 .satze-va-ledger__pips i.is-off { background: transparent; box-shadow: none; outline: 1px solid rgba(199, 219, 250, 0.35); }
+.satze-va-ledger__pips i.is-temp { background: transparent; border: 1px dashed #f5f3ec; box-shadow: 0 0 6px rgba(245, 243, 236, 0.7); }
+.satze-va-ledger__row b small { margin-left: 3px; font-size: 10px; letter-spacing: 0.08em; color: #9aa6b8; }
 @keyframes satzeVaLedgerPip { from { opacity: 0; transform: skewX(-24deg) scale(2.4); filter: brightness(2.5); } to { opacity: 1; transform: skewX(-24deg) scale(1); filter: none; } }
 .satze-va-ledger__mod { display: grid; grid-template-columns: 34px 1fr; gap: 6px; align-items: baseline; margin: 3px 0 1px; padding: 3px 0 3px 7px; border-left: 2px solid color-mix(in srgb, var(--sc) 40%, transparent); font-size: 10px; letter-spacing: 0.04em; color: #aeb8c8; animation: satzeVaLedgerArrive 350ms ease-out both; }
 .satze-va-ledger__mod b { font-size: 13px; font-weight: 800; color: var(--sc); opacity: 0.6; font-variant-numeric: tabular-nums; }
@@ -2559,6 +2561,10 @@ button:disabled {
 .satze-focus-counter__x small { font-size: 0.5em; vertical-align: 0.45em; margin-right: 4px; color: #c9c6bc; }
 .satze-focus-counter__f { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 20px; color: #c9c6bc; letter-spacing: 0.08em; margin-top: 2px; text-shadow: 0 2px 6px #000; }
 .satze-focus-counter__f b { font-weight: 400; color: #f5f3ec; }
+.satze-focus-counter__f small { font-size: 15px; color: #f5f3ec; }
+/* FC temporaneo (Eminenze): moneta tratteggiata con la «T», etichetta mentre attende sopra la carta */
+.satze-focus-coin.is-temp::after { content: "T"; position: absolute; right: -4px; top: -6px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: #f5f3ec; color: #0b0b0b; font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 12px; line-height: 1; }
+.satze-focus-tempchip { position: absolute; left: 0; top: 0; padding: 3px 9px 2px; background: #f5f3ec; color: #0b0b0b; font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 15px; letter-spacing: 0.08em; white-space: nowrap; box-shadow: 0 0 16px rgba(245, 243, 236, 0.6); opacity: 0; transition: opacity 250ms ease; pointer-events: none; }
 
 /* Tossina — cerchio viola + etichetta Tox */
 .satze-stats-toxin {

@@ -104,6 +104,8 @@ export function DuelVaLedger({
   // segmenti: uno per moneta atterrata; quelli che il Campo non conta restano spenti
   const landed = st.fcCounted != null ? st.fcTotal : st.fc ?? 0;
   const pips = Array.from({ length: st.fcTotal }, (_, i) => (i < landed ? (st.fcCounted != null && i >= st.fcCounted ? 'off' : 'on') : null));
+  // FC temporanei (Eminenze): gli ultimi della conta, tratteggiati; il valore porta «+T»
+  const firstTemp = st.fcTotal - Math.min(st.fcTotal, Math.max(0, Number(isPlayer ? battleResult.playerTemporaryFocus : battleResult.enemyTemporaryFocus) || 0));
 
   return (
     <div
@@ -136,10 +138,10 @@ export function DuelVaLedger({
             <span>
               × FC
               <span className="satze-va-ledger__pips">
-                {pips.map((p, i) => (p ? <i key={i} className={p === 'off' ? 'is-off' : undefined} /> : null))}
+                {pips.map((p, i) => (p ? <i key={i} className={p === 'off' ? 'is-off' : (i >= firstTemp ? 'is-temp' : undefined)} /> : null))}
               </span>
             </span>
-            <b key={`fc-${st.fc}`} data-ledger-fc className={st.fc == null ? 'is-empty' : 'satze-va-ledger__pop'}>{st.fc == null ? '—' : st.fc}</b>
+            <b key={`fc-${st.fc}`} data-ledger-fc className={st.fc == null ? 'is-empty' : 'satze-va-ledger__pop'}>{st.fc == null ? '—' : st.fc}{st.fc != null && st.fc > firstTemp ? <small>+T</small> : null}</b>
           </div>
           {st.mods.map((m, i) => (m.arrived ? (
             <div

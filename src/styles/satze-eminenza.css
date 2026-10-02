@@ -161,6 +161,11 @@
 
 /* accessori: onda d'urto di "martello", lama di "taglio", sweep e pulsazione */
 @keyframes emRing{0%{opacity:.85;transform:scale(.3)}100%{opacity:0;transform:scale(2.6)}}
+/* Avviso → Presenza: scintille dall'avviso al contatore, che pulsa all'arrivo */
+.em-presence-sparks{position:fixed;inset:0;z-index:400;pointer-events:none}
+.em-presence-sparks i{position:absolute;left:0;top:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;opacity:0;will-change:transform,opacity}
+.em-presence-pop{animation:emPresencePop 420ms ease-out both}
+@keyframes emPresencePop{0%{transform:scale(1)}50%{transform:scale(1.4);color:#e0f2fe}100%{transform:scale(1)}}
 @keyframes emSlashLine{0%{opacity:0;transform:translateX(-40%) scaleY(0)}18%{opacity:1;transform:translateX(-20%) scaleY(1)}100%{opacity:0;transform:translateX(120%) scaleY(1)}}
 @keyframes emSweep{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
 @keyframes emSelPulse{0%,100%{box-shadow:inset 0 2px 6px rgba(0,0,0,.5),3px 3px 0 rgba(0,0,0,.7),0 0 16px var(--em-sel)}50%{box-shadow:inset 0 2px 6px rgba(0,0,0,.5),3px 3px 0 rgba(0,0,0,.7),0 0 34px var(--em-sel)}}

@@ -57,12 +57,15 @@ function orbitAngle(slams, t, sign) {
   return ang * sign;
 }
 
-function Coin({ army, accent, refFn }) {
+/** Bordo e alone della moneta FC temporanea (tratteggiata, con la «T»). */
+const TEMP_INK = '#f5f3ec';
+
+function Coin({ army, accent, temp = false, refFn }) {
   return (
     <div
       ref={refFn}
-      className="satze-focus-coin"
-      style={{ border: `1px solid ${accent}`, backgroundColor: hexA(accent, 0.24) }}
+      className={temp ? 'satze-focus-coin is-temp' : 'satze-focus-coin'}
+      style={{ border: `1px ${temp ? 'dashed' : 'solid'} ${temp ? TEMP_INK : accent}`, backgroundColor: hexA(accent, 0.24) }}
     >
       {army ? <Icon name={army} type="army" size={24} /> : <Icon name="coin" type="cardIcon" size={24} />}
     </div>
@@ -79,6 +82,11 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
     player: Math.min(MAX_COINS, Number(battleResult?.playerFocusUsed) || 0),
     enemy: Math.min(MAX_COINS, Number(battleResult?.enemyFocusUsed) || 0),
   };
+  // FC temporanei (Eminenze): le ultime monete della conta; prima di partire aspettano sopra la carta
+  const temp = {
+    player: Math.min(total.player, Math.max(0, Number(battleResult?.playerTemporaryFocus) || 0)),
+    enemy: Math.min(total.enemy, Math.max(0, Number(battleResult?.enemyTemporaryFocus) || 0)),
+  };
   // POT del Calcolo (dopo gli effetti), come nella scheda VA
   const power = {
     player: battleResult ? getDuelFocusPhasePower(battleResult, true) ?? 0 : 0,
@@ -88,7 +96,8 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
   if (duelPhase === 4 && p4StartRef.current == null) p4StartRef.current = performance.now();
   if (duelPhase < 4) p4StartRef.current = null;
 
-  const live = duelPhase >= 2 && duelPhase <= 4;
+  const hasTemp = temp.player > 0 || temp.enemy > 0;
+  const live = (duelPhase >= 2 || (hasTemp && duelPhase >= 0)) && duelPhase <= 4;
 
   useEffect(() => {
     if (!live || !battleResult) return undefined;
@@ -136,12 +145,27 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
         const fcEl = scene.querySelector(`[data-va-ledger="${side}"] [data-ledger-fc]`);
         const fr = rectIn(scene, fcEl);
         const src = fr ? { x: fr.x + fr.w / 2, y: fr.y + fr.h / 2 } : cnt;
+        const firstTemp = n - temp[side];
+        const tempSrc = { x: cx, y: cy - 220 * sc };
+        // la moneta temporanea attende sopra la carta finché non parte (fasi 0-2)
+        const tempWaiting = temp[side] > 0 && !inClash && launches.length <= firstTemp;
 
         for (let i = 0; i < MAX_COINS; i += 1) {
           const fEl = R.front?.[i];
           const bEl = R.back?.[i];
           if (!fEl || !bEl) continue;
           const launch = launches[i];
+          const isT = i >= firstTemp && i < n;
+          if (isT && launch == null && tempWaiting) {
+            const k = i - firstTemp;
+            const hx = cx + (k - (temp[side] - 1) / 2) * 46 * sc;
+            const hy = tempSrc.y + (reduce ? 0 : Math.sin(t / 300 + k) * 6);
+            bEl.style.opacity = '0';
+            fEl.style.opacity = '1';
+            fEl.style.transform = `translate(${hx}px, ${hy}px) scale(${sc})`;
+            fEl.style.boxShadow = '0 0 12px rgba(245,243,236,.9)';
+            continue;
+          }
           if (i >= n || launch == null || vanish >= 1) { fEl.style.opacity = '0'; bEl.style.opacity = '0'; continue; }
           const slot = i / n;
           const ang = (angBase + slot * Math.PI * 2 - Math.PI / 2) * (1 + collapse * 0.35);
@@ -156,7 +180,8 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
             px = ox; py = oy; vis = (1 - vanish) * 0.95; scl = (1 - collapse * 0.25) * (front ? 1 : 0.82);
           } else if (t < launch + FOCUS_RISE_MS) {
             const q = ease((t - launch) / FOCUS_RISE_MS);
-            px = src.x + (cnt.x - src.x) * q; py = src.y + (cnt.y - src.y) * q - Math.sin(Math.PI * q) * 60;
+            const from = isT ? tempSrc : src;
+            px = from.x + (cnt.x - from.x) * q; py = from.y + (cnt.y - from.y) * q - Math.sin(Math.PI * q) * 60;
             scl = 0.7 + q * 0.9; front = true;
           } else if (t < sl) {
             const q = easeIn((t - launch - FOCUS_RISE_MS) / (FOCUS_SLAM_MS - FOCUS_RISE_MS));
@@ -174,9 +199,14 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
           other.style.opacity = '0';
           el.style.opacity = String(vis);
           el.style.transform = `translate(${px}px, ${py}px) scale(${scl * sc})`;
-          el.style.boxShadow = `0 0 ${8 + landed * 3}px ${accent[side]}`;
+          el.style.boxShadow = `0 0 ${8 + landed * 3}px ${isT ? 'rgba(245,243,236,.9)' : accent[side]}`;
         }
 
+        // etichetta della moneta temporanea in attesa
+        if (R.tempChip) {
+          R.tempChip.style.opacity = tempWaiting ? '1' : '0';
+          R.tempChip.style.transform = `translate(${cx}px, ${tempSrc.y - 48 * sc}px) translate(-50%, -50%)`;
+        }
         // orbita
         if (R.orbit) {
           const on = inClash ? 0 : 0.25 + 0.55 * cg;
@@ -193,10 +223,13 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
           R.counter.style.transform = `translate(${cnt.x}px, ${cnt.y}px) translate(-50%, -50%) scale(${reduce ? 1 : pop(t, lastSlam, 280, 0.45)})`;
           if (R.counterN && R.counterN.textContent !== String(landed)) R.counterN.textContent = String(landed);
           const f = `POT ${power[side]} × ${landed} = `;
-          if (R.counterF && R.counterF.dataset.v !== f) {
-            R.counterF.dataset.v = f;
-            R.counterF.firstChild.textContent = f;
-            R.counterF.lastChild.textContent = String(power[side] * landed);
+          const landedT = Math.max(0, landed - firstTemp);
+          const key = `${f}|${landedT}`;
+          if (R.counterF && R.counterF.dataset.v !== key) {
+            R.counterF.dataset.v = key;
+            R.counterF.children[0].textContent = f;
+            R.counterF.children[1].textContent = String(power[side] * landed);
+            R.counterF.children[2].textContent = landedT ? ` (+${landedT} T)` : '';
           }
           R.counter.style.textShadow = `0 0 ${14 + cg * 30}px ${accent[side]}, 0 4px 12px #000`;
         }
@@ -281,7 +314,7 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
           <React.Fragment key={side}>
             <div ref={setRef(side, 'orbit')} className="satze-focus-orbit" style={{ borderColor: hexA(accent[side], 0.55) }} />
             {Array.from({ length: MAX_COINS }, (_, i) => (
-              <Coin key={i} army={agentOf(side)?.army} accent={accent[side]} refFn={setRef(side, 'back', i)} />
+              <Coin key={i} army={agentOf(side)?.army} accent={accent[side]} temp={i >= total[side] - temp[side] && i < total[side]} refFn={setRef(side, 'back', i)} />
             ))}
           </React.Fragment>
         ))}
@@ -291,11 +324,16 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
           <React.Fragment key={side}>
             {[0, 1].map((j) => <div key={j} ref={setRef(side, 'shock', j)} className="satze-focus-shock" />)}
             {Array.from({ length: MAX_COINS }, (_, i) => (
-              <Coin key={i} army={agentOf(side)?.army} accent={accent[side]} refFn={setRef(side, 'front', i)} />
+              <Coin key={i} army={agentOf(side)?.army} accent={accent[side]} temp={i >= total[side] - temp[side] && i < total[side]} refFn={setRef(side, 'front', i)} />
             ))}
+            {temp[side] > 0 && (
+              <div ref={setRef(side, 'tempChip')} className="satze-focus-tempchip">
+                +{temp[side]} FC {temp[side] === 1 ? 'temporaneo' : 'temporanei'}
+              </div>
+            )}
             <div ref={setRef(side, 'counter')} className="satze-focus-counter">
               <div className="satze-focus-counter__x"><small>×</small><span ref={setRef(side, 'counterN')} /></div>
-              <div ref={setRef(side, 'counterF')} className="satze-focus-counter__f"><span /><b /></div>
+              <div ref={setRef(side, 'counterF')} className="satze-focus-counter__f"><span /><b /><small /></div>
             </div>
           </React.Fragment>
         ))}
