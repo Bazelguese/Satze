@@ -22,11 +22,12 @@ function CornerBrackets() {
   );
 }
 
-function StatCell({ label, value, valueClass = '', dataEmHp = null }) {
+function StatCell({ label, value, valueClass = '', dataEmHp = null, dataEmFc = null, children = null }) {
   return (
-    <div className="satze-stats-cell" data-em-hp={dataEmHp || undefined}>
+    <div className="satze-stats-cell" data-em-hp={dataEmHp || undefined} data-em-fc={dataEmFc || undefined}>
       <span className="satze-stats-cell__label">{label}</span>
       <span className={`satze-stats-cell__value ${valueClass}`}>{value}</span>
+      {children}
     </div>
   );
 }
@@ -54,12 +55,12 @@ function RollingValue({ value }) {
  * Raffiche di PV accanto al box: una per fonte (DAN, Potere, Bonus, Campo, Eminenza).
  * Ognuna somma i suoi punti (−1 → −2 → …, +1 → +2 · fonte) e ha il suo posto, una sotto l'altra.
  */
-function HpBursts({ bursts, side }) {
+function HpBursts({ bursts, side, cell = null }) {
   if (!bursts?.length) return null;
   return bursts.map((burst) => (
     <span
       key={burst.key}
-      className={`satze-stats-burst satze-stats-burst--${side} satze-stats-burst--${burst.kind}${burst.leaving ? ' is-leaving' : ''}`}
+      className={`satze-stats-burst satze-stats-burst--${side}${cell ? ` satze-stats-burst--in-${cell}` : ''} satze-stats-burst--${burst.kind}${burst.leaving ? ' is-leaving' : ''}`}
       style={{ '--burst-slot': burst.slot ?? 0 }}
       aria-live="polite"
     >
@@ -68,11 +69,12 @@ function HpBursts({ bursts, side }) {
   ));
 }
 
-function ToxinBadge({ toxin, hp, showAnimation }) {
+function ToxinBadge({ toxin, hp, showAnimation, side }) {
   const canApply = hp >= toxin.minHealth;
 
   return (
     <div
+      data-em-tox={side}
       className={`satze-stats-toxin ${canApply ? '' : 'satze-stats-toxin--blocked'} ${
         showAnimation ? 'satze-stats-toxin--pulse' : ''
       }`}
@@ -110,8 +112,10 @@ export const StatsPanel = React.memo(({
   accentColor = null,
   /** Nel risultato del duello il box resta in scena (PV che scendono colpo per colpo) */
   fadeOnResult = true,
-  /** Raffiche di PV in corso, una per fonte: [{ key, n, kind: 'hit'|'heal', text, slot, leaving }] */
+  /** Raffiche di PV in corso, una per fonte: [{ key, n, kind: 'hit'|'heal'|'tox', text, slot, leaving }] */
   hpBursts = null,
+  /** Raffiche di FC aggiunte, una per fonte, accanto alla cella FC */
+  fcBursts = null,
 }) => {
   const [showToxinAnimation, setShowToxinAnimation] = useState(false);
   const [previousToxinValue, setPreviousToxinValue] = useState(null);
@@ -192,12 +196,14 @@ export const StatsPanel = React.memo(({
 
         <span className="satze-stats-panel__divider" aria-hidden />
 
-        <StatCell label="FC" value={focus} valueClass="satze-stats-cell__value--fc" />
+        <StatCell label="FC" value={<RollingValue value={focus} />} valueClass="satze-stats-cell__value--fc" dataEmFc={side}>
+          <HpBursts bursts={fcBursts} side={side} cell="fc" />
+        </StatCell>
 
         {isToxinActive && (
           <>
             <span className="satze-stats-panel__divider" aria-hidden />
-            <ToxinBadge toxin={toxin} hp={hp} showAnimation={showToxinAnimation} />
+            <ToxinBadge toxin={toxin} hp={hp} showAnimation={showToxinAnimation} side={side} />
           </>
         )}
       </div>

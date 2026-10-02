@@ -2393,6 +2393,12 @@ button:disabled {
 .satze-stats-burst--player { bottom: calc(100% + 8px + var(--burst-slot, 0) * 26px); right: 18px; transform-origin: 100% 50%; text-align: right; }
 .satze-stats-burst--hit { color: #ef4444; }
 .satze-stats-burst--heal { color: #86efac; font-size: 18px; }
+/* FC aggiunte (accanto alla cella FC) e Tossina applicata (sotto i PV) */
+.satze-stats-burst--gain { color: #fbbf24; font-size: 18px; }
+.satze-stats-burst--tox { color: #c084fc; font-size: 18px; }
+[data-em-fc] { position: relative; }
+.satze-stats-burst--in-fc.satze-stats-burst--enemy { top: calc(100% + 18px + var(--burst-slot, 0) * 26px); left: 0; }
+.satze-stats-burst--in-fc.satze-stats-burst--player { bottom: calc(100% + 18px + var(--burst-slot, 0) * 26px); right: 0; }
 .satze-stats-burst.is-leaving { animation: satzeStatsBurstOut 400ms ease-in both; }
 .satze-stats-burst__text {
   display: inline-block;

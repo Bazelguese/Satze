@@ -1359,9 +1359,14 @@ export default function SatzeGame() {
     duelEffectStep,
     setDuelEffectStep
   );
-  const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep: visualEffectStep, playerHP, enemyHP, duelVfx });
+  const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep: visualEffectStep, playerHP, enemyHP, playerToxin, enemyToxin, duelVfx });
   const shownPlayerHP = duelHp.displayHP ? duelHp.displayHP.player : playerHP;
   const shownEnemyHP = duelHp.displayHP ? duelHp.displayHP.enemy : enemyHP;
+  // FC aggiunte dagli effetti e Tossina: stessa regia dei PV nel risultato
+  const shownPlayerFC = duelHp.displayFC ? duelHp.displayFC.player : playerFocus;
+  const shownEnemyFC = duelHp.displayFC ? duelHp.displayFC.enemy : enemyFocus;
+  const shownPlayerToxin = duelHp.displayToxin ? duelHp.displayToxin.player : playerToxin;
+  const shownEnemyToxin = duelHp.displayToxin ? duelHp.displayToxin.enemy : enemyToxin;
   // Conta scenica delle FC: partenza e atterraggio delle monete, bagliore e Overdrive sulla carta
   const duelStamp = gamePhase === 'result' && battleResult
     ? [battleResult.playerAgent?.id, battleResult.enemyAgent?.id, battleResult.playerAssault, battleResult.enemyAssault, battleResult.finalPlayerHP, battleResult.finalEnemyHP].join('|')
@@ -4980,8 +4985,8 @@ export default function SatzeGame() {
       <DuelCosmicHud
         playerHP={shownPlayerHP}
         enemyHP={shownEnemyHP}
-        playerFocus={playerFocus}
-        enemyFocus={enemyFocus}
+        playerFocus={shownPlayerFC}
+        enemyFocus={shownEnemyFC}
         conqueredFields={conqueredFields}
         playerColor={playerIdentityColor}
         enemyColor={enemyIdentityColor}
@@ -6395,10 +6400,11 @@ export default function SatzeGame() {
         label={mpEnemyLabel}
         hp={shownEnemyHP}
         hpBursts={duelHp.bursts.enemy}
+        fcBursts={duelHp.fcBursts.enemy}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={enemyFocus}
-        toxin={enemyToxin}
+        focus={shownEnemyFC}
+        toxin={shownEnemyToxin}
         position="top-left"
         gamePhase={gamePhase}
         accentColor={ARMY_COLORS[enemyHand?.[0]?.army]?.accent}
@@ -6411,10 +6417,11 @@ export default function SatzeGame() {
         label={mpSelfLabel}
         hp={shownPlayerHP}
         hpBursts={duelHp.bursts.player}
+        fcBursts={duelHp.fcBursts.player}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={playerFocus}
-        toxin={playerToxin}
+        focus={shownPlayerFC}
+        toxin={shownPlayerToxin}
         position="bottom-right"
         gamePhase={gamePhase}
         accentColor={playerIdentityColor}

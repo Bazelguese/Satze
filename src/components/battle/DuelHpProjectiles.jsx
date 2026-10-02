@@ -1,7 +1,8 @@
 /**
- * Danno visibile: ogni PV tolto ha il suo proiettile, in arco dalla fonte al numero PV di chi
- * lo perde — dalla carta del vincitore per lo scontro, dalla carta di chi infligge per un
- * Potere o un Bonus, dal portale per il Campo, dalla carta dell'Eminenza per i suoi effetti.
+ * Danno visibile: ogni PV tolto (e ogni FC aggiunta, ogni Tossina) ha il suo proiettile, in arco
+ * dalla fonte al pannello — dalla carta del vincitore per lo scontro, dalla carta di chi infligge
+ * per un Potere o un Bonus, dal portale per il Campo, dalla carta dell'Eminenza per i suoi
+ * effetti, dal segno Tossina per il suo danno di fine turno. Le FC sono ambra, la Tossina viola.
  * Ogni impatto coincide con il punto che scende nello StatsPanel (stessi tempi di
  * duelHpPresentation). Canvas 2D a tutta scena.
  */
@@ -35,9 +36,10 @@ function rectIn(scene, el) {
   return { x: (r.left - rs.left) * k, y: (r.top - rs.top) * k, w: r.width * k, h: r.height * k };
 }
 
-/** Centro del numero PV del lato `side`, in coordinate scena (1920×1080). */
-function pvTarget(scene, side) {
-  const r = rectIn(scene, scene?.querySelector(`[data-em-hp="${side}"] .satze-stats-cell__value`));
+/** Centro del numero PV (o FC) del lato `side`, in coordinate scena (1920×1080). */
+function pvTarget(scene, side, stat = 'PV') {
+  const sel = stat === 'FC' ? `[data-em-fc="${side}"] .satze-stats-cell__value` : `[data-em-hp="${side}"] .satze-stats-cell__value`;
+  const r = rectIn(scene, scene?.querySelector(sel));
   if (!r) return side === 'enemy' ? { x: 100, y: 46 } : { x: 1800, y: 1036 };
   return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
 }
@@ -50,6 +52,12 @@ function originPoint(scene, origin) {
     if (r) return { x: r.x + r.w / 2, y: r.y + r.h * 0.38 };
     return origin.card === 'enemy' ? { x: 600, y: 455 } : { x: 1320, y: 455 };
   }
+  if (origin?.toxin) {
+    // il danno della Tossina parte dal suo segno nel pannello
+    const r = rectIn(scene, scene?.querySelector(`[data-em-tox="${origin.toxin}"]`));
+    if (r) return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+    return pvTarget(scene, origin.toxin);
+  }
   if (origin?.eminence) {
     const r = rectIn(scene, scene?.querySelector(`.em-zone-${origin.eminence} .em-card`) || scene?.querySelector(`.em-zone-${origin.eminence}`));
     if (r) return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
@@ -59,7 +67,12 @@ function originPoint(scene, origin) {
   return { x: 960, y: 380 };
 }
 
-function colorOf(origin, colors) {
+const TOXIN_COLOR = '#a855f7';
+const FC_COLOR = '#fbbf24';
+
+function colorOf(origin, colors, stat) {
+  if (origin?.toxin) return TOXIN_COLOR;
+  if (stat === 'FC') return FC_COLOR;
   if (origin?.card) return colors?.[origin.card] || PORTAL_COLOR;
   if (origin?.eminence) return colors?.[origin.eminence] || PORTAL_COLOR;
   return PORTAL_COLOR;
@@ -94,9 +107,9 @@ export function DuelHpProjectiles({ projectiles, colors }) {
         const u = (now - s.launch) / HP_PROJECTILE_FLIGHT_MS;
         const hu = (now - (s.launch + HP_PROJECTILE_FLIGHT_MS)) / IMPACT_MS;
         if (u < 0 || hu > 1) return;
-        const color = colorOf(s.origin, colors);
+        const color = colorOf(s.origin, colors, s.stat);
         const src = originPoint(scene, s.origin);
-        const tgt = pvTarget(scene, s.target);
+        const tgt = pvTarget(scene, s.target, s.stat);
         const lane = lanes[idx];
         const ctrl = {
           x: (src.x + tgt.x) / 2 + (lane % 2 ? -1 : 1) * lane * 20,

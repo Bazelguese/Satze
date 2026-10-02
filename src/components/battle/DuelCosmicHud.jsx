@@ -344,8 +344,9 @@ export function DuelCosmicHud({
   const prevFc = useRef({ p: playerFocus, e: enemyFocus });
   useEffect(() => {
     const st = stateRef.current;
-    if (playerFocus < prevFc.current.p) st.fcAt[1] = now();
-    if (enemyFocus < prevFc.current.e) st.fcAt[0] = now();
+    // FC spese o aggiunte da un effetto: lo stesso guizzo sul pannello
+    if (playerFocus !== prevFc.current.p) st.fcAt[1] = now();
+    if (enemyFocus !== prevFc.current.e) st.fcAt[0] = now();
     prevFc.current = { p: playerFocus, e: enemyFocus };
   }, [playerFocus, enemyFocus]);
 

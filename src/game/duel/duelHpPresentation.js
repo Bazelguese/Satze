@@ -16,12 +16,12 @@ export const HP_PROJECTILE_START_RATIO = 0.88;
 /** Fasi del log dopo lo schieramento: le variazioni `deploy` sono già nei PV di partenza. */
 const DUEL_REVEAL = new Set(['abilityFx', 'focusFx', 'assaultFx', 'outcome', 'postFx']);
 
-function toInt(v, fallback = 0) {
+export function toInt(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.round(n) : fallback;
 }
 
-function engineSide(battleSide) {
+export function engineSide(battleSide) {
   if (battleSide === 'local' || battleSide === 'player') return 'player';
   if (battleSide === 'opponent' || battleSide === 'enemy') return 'enemy';
   return null;
@@ -38,7 +38,7 @@ function agentNameOf(name) {
  * il portale del Campo, la carta dell'Eminenza; senza fonte nota, il portale.
  * @returns {{ card: 'player'|'enemy' } | { eminence: 'player'|'enemy'|null } | { portal: true }}
  */
-function originOf(src) {
+export function originOf(src) {
   const owner = engineSide(src?.ownerSide);
   if ((src?.kind === 'ability' || src?.kind === 'bonus') && owner) return { card: owner };
   if (src?.kind === 'eminence') return { eminence: owner };
@@ -52,7 +52,7 @@ function eminenceSideOf(battleResult) {
 }
 
 /** Nome leggibile della fonte: l'Agente per i Poteri, «Bonus Armata» per i Bonus, il Campo, l'Eminenza. */
-function sourceLabel(src, battleResult) {
+export function sourceLabel(src, battleResult) {
   if (!src) return null;
   const owner = engineSide(src.ownerSide);
   const agent = owner === 'player' ? battleResult.playerAgent : owner === 'enemy' ? battleResult.enemyAgent : null;
@@ -66,7 +66,7 @@ function sourceLabel(src, battleResult) {
 const STEP_ABILITY_KINDS = new Set(['power', 'inversion', 'block']);
 
 /** Step visivo (fase 1) in cui si attiva il Potere di un lato, o -1. */
-function abilityStepOf(battleResult, side) {
+export function abilityStepOf(battleResult, side) {
   const steps = Array.isArray(battleResult?.visualSteps) ? battleResult.visualSteps : [];
   const preVa = steps.findIndex((s) => s.kind === 'preVa');
   const end = preVa >= 0 ? preVa : steps.length;
