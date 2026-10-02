@@ -5684,6 +5684,7 @@ export default function SatzeGame() {
           onMarkFocus={(cardId, kind) => focusMarkToken(cardId, 'enemy', kind)}
           announce={displayEnemyNotice}
           announceAutoDismiss={!sparkSequenceActive}
+          announceEdge={gamePhase === 'result'}
           hideRail={!shouldShowEminenceAbilityRail(eminenceChoiceView, {
             announcing: eminenceAnnounceHold,
             peeking: peekEminence,
@@ -5719,6 +5720,7 @@ export default function SatzeGame() {
           paramsOpen={awaitingRevealParams}
           announce={displayPlayerNotice}
           announceAutoDismiss={!sparkSequenceActive}
+          announceEdge={gamePhase === 'result'}
           hideRail={!shouldShowEminenceAbilityRail(eminenceChoiceView, {
             announcing: eminenceAnnounceHold,
             peeking: peekEminence,
