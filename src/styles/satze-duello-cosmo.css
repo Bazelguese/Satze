@@ -263,9 +263,9 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   display: flex;
   align-items: center;
   justify-content: center;
-  /* fondo neutro; --disc-c (chi agisce) lo tinge dal centro */
+  /* fondo neutro; --disc-c (chi agisce) lo tinge verso il bordo, attorno al testo della fase */
   --disc-c: #1b2230;
-  background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--disc-c) 42%, #0b0f17) 0%, color-mix(in srgb, var(--disc-c) 16%, #07090e) 62%, #05070b 100%);
+  background: radial-gradient(ellipse at 50% 50%, #07090e 0%, color-mix(in srgb, var(--disc-c) 20%, #07090e) 38%, color-mix(in srgb, var(--disc-c) 62%, #090c13) 80%, color-mix(in srgb, var(--disc-c) 40%, #05070b) 100%);
   transition: --disc-c .35s ease;
   box-shadow: inset 0 0 26px 8px rgba(4, 6, 10, .88);
 }
