@@ -94,7 +94,6 @@ export function ProductionDuelStage({
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
-            particleSeed={battleResult.enemyAgent?.id ?? 1}
             cinemaHideAgent={cinemaHideAgent}
             keepOrbitThroughClash={keepOrbitThroughClash}
           />
@@ -136,7 +135,6 @@ export function ProductionDuelStage({
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={onCardHover}
-            particleSeed={battleResult.playerAgent?.id ?? 2}
             cinemaHideAgent={cinemaHideAgent}
             keepOrbitThroughClash={keepOrbitThroughClash}
           />

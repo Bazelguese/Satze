@@ -307,54 +307,6 @@ function FocusChargeAura({ x, y, scale = 1, glowColor, intensity = 1, centerY = 
   );
 }
 
-function VaTag({ x, value, winner, t, motion, centerY = '50%' }) {
-  const reveal = smoothstep(0.3, 0.55, t);
-  const winPulse = winner ? 1 + Math.sin(t * 24) * 0.06 * smoothstep(0.6, 0.9, t) : 1;
-  if (reveal < 0.02) return null;
-  const mx = Number.isFinite(motion?.x) ? motion.x : 0;
-  const my = Number.isFinite(motion?.y) ? motion.y : 0;
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: centerY,
-        left: x,
-        transform: `translate(calc(-50% + ${mx}px), calc(270px + ${my}px)) scale(${0.6 + reveal * 0.4 * winPulse})`,
-        opacity: reveal,
-        zIndex: 92,
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: 'rgba(251, 191, 36, 0.95)',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            marginBottom: 8,
-            textShadow: '0 0 8px rgba(0,0,0,0.8)',
-          }}
-        >
-          Valore Assalto
-        </div>
-        <div
-          style={{
-            fontSize: winner ? 36 : 32,
-            fontWeight: 900,
-            color: winner ? DUEL_ACCENTS.vaWinner : DUEL_ACCENTS.vaLoser,
-            textShadow: winner ? `0 0 20px ${DUEL_ACCENTS.vaWinner}, 0 0 12px rgba(255,179,71,0.5), 0 2px 4px #000` : '0 2px 4px #000',
-            WebkitTextStroke: '0px transparent',
-            lineHeight: 1,
-          }}
-        >
-          {value}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AgentOrbitSparks({ t, color, x, y, centerY = '50%', zIndex = 128 }) {
   return (
     <div
@@ -1037,19 +989,6 @@ function applyFocusChargeAuraDom(el, opts) {
   setElOpacity(el, opacity);
 }
 
-function applyVaTagDom(el, opts) {
-  if (!el) return;
-  const { t, winner, offsetX, offsetY } = opts;
-  const reveal = smoothstep(0.3, 0.55, t);
-  if (reveal < 0.02) {
-    setElOpacity(el, 0);
-    return;
-  }
-  const winPulse = winner ? 1 + Math.sin(t * 24) * 0.06 * smoothstep(0.6, 0.9, t) : 1;
-  el.style.transform = `translate(calc(-50% + ${offsetX}px), calc(270px + ${offsetY}px)) scale(${0.6 + reveal * 0.4 * winPulse})`;
-  setElOpacity(el, reveal);
-}
-
 function applyFocusCoinTokenDom(el, x, y, size, alpha, glowColor) {
   if (!el) return;
   el.style.left = `${x}px`;
@@ -1487,49 +1426,6 @@ function AfterImageShell({ centerY, anchorX, containerRef, ghostsRef }) {
   );
 }
 
-function VaTagShell({ value, winner, centerY, anchorX, wrapRef }) {
-  return (
-    <div
-      ref={wrapRef}
-      style={{
-        position: 'absolute',
-        top: centerY,
-        left: anchorX,
-        zIndex: 92,
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: 'rgba(251, 191, 36, 0.95)',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            marginBottom: 8,
-            textShadow: '0 0 8px rgba(0,0,0,0.8)',
-          }}
-        >
-          Valore Assalto
-        </div>
-        <div
-          style={{
-            fontSize: winner ? 36 : 32,
-            fontWeight: 900,
-            color: winner ? DUEL_ACCENTS.vaWinner : DUEL_ACCENTS.vaLoser,
-            textShadow: winner
-              ? `0 0 20px ${DUEL_ACCENTS.vaWinner}, 0 0 12px rgba(255,179,71,0.5), 0 2px 4px #000`
-              : '0 2px 4px #000',
-            lineHeight: 1,
-          }}
-        >
-          {value}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function DuelClashAuroraSequence({
   battleResult,
   duelPhase,
@@ -1567,8 +1463,6 @@ export function DuelClashAuroraSequence({
       enemyAura: null,
       playerFocusAura: null,
       enemyFocusAura: null,
-      playerVa: null,
-      enemyVa: null,
       playerRays: null,
       enemyRays: null,
       playerRayEls: [],
@@ -1768,19 +1662,6 @@ export function DuelClashAuroraSequence({
         offsetY: frame.sy,
       });
     }
-
-    applyVaTagDom(refs.playerVa, {
-      t: frame.t,
-      winner: winner === 'player',
-      offsetX: frame.pX + frame.sx,
-      offsetY: frame.sy,
-    });
-    applyVaTagDom(refs.enemyVa, {
-      t: frame.t,
-      winner: winner === 'enemy',
-      offsetX: frame.eX + frame.sx,
-      offsetY: frame.sy,
-    });
 
     if (refs.flash) {
       refs.flash.style.opacity = String(frame.flash * 0.7);
@@ -2140,24 +2021,6 @@ export function DuelClashAuroraSequence({
         </>
       )}
 
-      <VaTagShell
-        value={battleResult.playerAssault}
-        winner={winner === 'player'}
-        centerY={agentCenterY}
-        anchorX={playerClashAnchor}
-        wrapRef={(el) => {
-          refs.playerVa = el;
-        }}
-      />
-      <VaTagShell
-        value={battleResult.enemyAssault}
-        winner={winner === 'enemy'}
-        centerY={agentCenterY}
-        anchorX={enemyClashAnchor}
-        wrapRef={(el) => {
-          refs.enemyVa = el;
-        }}
-      />
 
       <div
         ref={(el) => {

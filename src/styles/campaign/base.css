@@ -66,13 +66,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important;
   -webkit-text-stroke: 1px rgba(0, 0, 0, 0.95);
   paint-order: stroke fill;
 }
-.satze-va-number {
-  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.9);
-  paint-order: stroke fill;
-  text-shadow:
-    1px 1px 0 rgba(0,0,0,.95), -1px -1px 0 rgba(0,0,0,.95),
-    1px -1px 0 rgba(0,0,0,.95), -1px 1px 0 rgba(0,0,0,.95);
-}
 .satze-result-victory { color: #f5f3ec; text-shadow: 0 0 20px rgba(245,243,236,.6), 0 0 8px rgba(245,243,236,.35); }
 .satze-result-defeat  { color: #e8189a; text-shadow: 0 0 15px rgba(232,24,154,.5); }
 

@@ -504,7 +504,6 @@ export function DuelVfxSimulator({ vfx }) {
                 galleryCardLayout={galleryCardLayout}
                 getAbilityCurrentValue={noopAbility}
                 onCardHover={noopHover}
-                particleSeed={battle.enemyAgent?.id ?? 1}
               />
             </div>
 
@@ -539,7 +538,6 @@ export function DuelVfxSimulator({ vfx }) {
                 galleryCardLayout={galleryCardLayout}
                 getAbilityCurrentValue={noopAbility}
                 onCardHover={noopHover}
-                particleSeed={battle.playerAgent?.id ?? 2}
               />
             </div>
           </div>

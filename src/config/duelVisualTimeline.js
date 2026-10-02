@@ -274,9 +274,9 @@ export function buildPhaseAdvanceDelaysMs(vfx, playerFocusUsed, enemyFocusUsed, 
 export const DUEL_PHASE_META = [
   { id: 0, code: 'deploy', label: 'Schieramento', where: 'Carte in campo + zoom pannelli' },
   { id: 1, code: 'powers', label: 'Poteri e bonus', where: 'Sub-step per iniziativa: poteri 1°→2°, poi bonus 1°→2°; stat progressive' },
-  { id: 2, code: 'focus', label: 'Focus coin', where: 'Monete FC + POT×FC in tempo reale sotto la carta' },
-  { id: 3, code: 'calc', label: 'Mod VA', where: 'Solo mod e minimo VA se presenti; altrimenti passaggio breve' },
-  { id: 4, code: 'clash', label: 'Scontro', where: 'Numero VA + animate-clash + particelle vincitore' },
+  { id: 2, code: 'focus', label: 'Focus coin', where: 'Monete FC + POT × FC in tempo reale nella scheda VA laterale' },
+  { id: 3, code: 'calc', label: 'Mod VA', where: 'Mod VA e minimo entrano nel totale della scheda VA; altrimenti passaggio breve' },
+  { id: 4, code: 'clash', label: 'Scontro', where: 'Sequenza Aurora; la scheda VA torna con l\'esito (barrato chi perde)' },
   { id: 5, code: 'outcome', label: 'Risultato', where: 'Testo vittoria/sconfitta prima del riepilogo' },
   { id: 6, code: 'continue', label: 'Continua', where: 'Pulsante; clash su “Continua” usa nextRoundClashHoldMs' },
 ];

@@ -19,6 +19,7 @@ import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuror
 import { useClashFocusHandoff } from '../src/components/battle/useClashFocusHandoff';
 import { useDuelHpPresentation } from '../src/components/battle/useDuelHpPresentation';
 import { DuelHpProjectiles } from '../src/components/battle/DuelHpProjectiles';
+import { DuelVaLedger } from '../src/components/battle/DuelVaLedger';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
@@ -4976,6 +4977,31 @@ export default function SatzeGame() {
         projectiles={duelHp.projectiles}
         winnerColor={battleResult?.winner === 'enemy' ? enemyIdentityColor : playerIdentityColor}
       />
+      {/* Schede VA laterali: POT, × FC, modificatori per fonte, VA (fuori dalle carte, nascoste nello zoom) */}
+      {gamePhase === 'result' && battleResult && (
+        <>
+          <DuelVaLedger
+            battleResult={battleResult}
+            side="enemy"
+            duelPhase={duelPhase}
+            duelEffectStep={visualEffectStep}
+            coinsShown={enemyFocusCoinsShown}
+            duelVfx={duelVfx}
+            accentColor={enemyIdentityColor}
+            kicker={mpEnemyLabel}
+          />
+          <DuelVaLedger
+            battleResult={battleResult}
+            side="player"
+            duelPhase={duelPhase}
+            duelEffectStep={visualEffectStep}
+            coinsShown={playerFocusCoinsShown}
+            duelVfx={duelVfx}
+            accentColor={playerIdentityColor}
+            kicker={isOnlinePvP ? mpSelfLabel : 'Tu'}
+          />
+        </>
+      )}
       {/* ============================================ */}
       {/* COLONNA SINISTRA - z-index 1 */}
       {/* ============================================ */}
@@ -6102,7 +6128,6 @@ export default function SatzeGame() {
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
-            particleSeed={battleResult.enemyAgent?.id ?? 1}
             cinemaHideAgent={cinemaHideAgent}
             keepOrbitThroughClash={keepOrbitThroughClash}
           />
@@ -6237,7 +6262,6 @@ export default function SatzeGame() {
             galleryCardLayout={galleryCardLayout}
             getAbilityCurrentValue={getAbilityCurrentValue}
             onCardHover={handleCardPreviewClick}
-            particleSeed={battleResult.playerAgent?.id ?? 2}
             cinemaHideAgent={cinemaHideAgent}
             keepOrbitThroughClash={keepOrbitThroughClash}
           />

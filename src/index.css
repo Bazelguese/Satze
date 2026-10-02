@@ -690,104 +690,6 @@ button:disabled {
   }
 }
 
-/* Animazione clash legacy (mantenuta per retrocompatibilita'). */
-@keyframes clash {
-  0% {
-    transform: scale(1) translateX(0);
-    filter: brightness(1);
-  }
-  10% {
-    transform: scale(1.2) translateX(-8px);
-    filter: brightness(1.7) drop-shadow(0 0 22px rgba(79, 209, 197, 0.7));
-  }
-  20% {
-    transform: scale(0.85) translateX(8px);
-    filter: brightness(1.25) drop-shadow(0 0 25px rgba(255, 179, 71, 0.5));
-  }
-  30% {
-    transform: scale(1.15) translateX(-5px);
-    filter: brightness(1.5) drop-shadow(0 0 20px rgba(79, 209, 197, 0.6));
-  }
-  40% {
-    transform: scale(0.9) translateX(5px);
-    filter: brightness(1.15) drop-shadow(0 0 12px rgba(255, 179, 71, 0.4));
-  }
-  50% {
-    transform: scale(1.1) translateX(-3px);
-    filter: brightness(1.4) drop-shadow(0 0 18px rgba(79, 209, 197, 0.5));
-  }
-  60% {
-    transform: scale(0.95) translateX(3px);
-    filter: brightness(1.05) drop-shadow(0 0 8px rgba(79, 209, 197, 0.3));
-  }
-  70% {
-    transform: scale(1.05) translateX(-2px);
-    filter: brightness(1.25) drop-shadow(0 0 12px rgba(79, 209, 197, 0.4));
-  }
-  80% {
-    transform: scale(0.98) translateX(2px);
-    filter: brightness(1.05) drop-shadow(0 0 6px rgba(79, 209, 197, 0.25));
-  }
-  90% {
-    transform: scale(1.02) translateX(-1px);
-    filter: brightness(1.15) drop-shadow(0 0 8px rgba(79, 209, 197, 0.3));
-  }
-  100% {
-    transform: scale(1) translateX(0);
-    filter: brightness(1);
-  }
-}
-
-/* Animazione esplosione/celebrazione per vincitore - stile aurora cosmica */
-@keyframes victoryExplosion {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-    filter: brightness(1);
-  }
-  20% {
-    transform: scale(1.25) rotate(4deg);
-    opacity: 1;
-    filter: brightness(1.4) drop-shadow(0 0 35px rgba(79, 209, 197, 0.8)) drop-shadow(0 0 10px rgba(255, 179, 71, 0.4));
-  }
-  40% {
-    transform: scale(1.08) rotate(-2deg);
-    opacity: 1;
-    filter: brightness(1.25) drop-shadow(0 0 25px rgba(79, 209, 197, 0.6));
-  }
-  60% {
-    transform: scale(1.15) rotate(1deg);
-    opacity: 1;
-    filter: brightness(1.3) drop-shadow(0 0 30px rgba(255, 179, 71, 0.5)) drop-shadow(0 0 15px rgba(79, 209, 197, 0.4));
-  }
-  80% {
-    transform: scale(1.03) rotate(0deg);
-    opacity: 1;
-    filter: brightness(1.15) drop-shadow(0 0 18px rgba(79, 209, 197, 0.5));
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-    filter: brightness(1.08) drop-shadow(0 0 12px rgba(79, 209, 197, 0.35));
-  }
-}
-
-/* Animazione particelle esplosione */
-@keyframes explosionParticles {
-  0% {
-    opacity: 1;
-    transform: scale(0) translate(0, 0);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.5) translate(var(--particle-x, 50px), var(--particle-y, -50px));
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.5) translate(var(--particle-x, 100px), var(--particle-y, -100px));
-  }
-}
-
 /* Animazione carta vincente - avanza con glow aurora (enemy vince) */
 @keyframes clashWinnerLeft {
   0% {
@@ -1044,18 +946,6 @@ button:disabled {
 
 .animate-modifier-flash {
   animation: modifierFlash 0.5s ease-in-out;
-}
-
-.animate-clash {
-  animation: clash 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.animate-victory-explosion {
-  animation: victoryExplosion 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.animate-explosion-particles {
-  animation: explosionParticles 1s ease-out forwards;
 }
 
 .animate-clash-winner-left {
@@ -2164,17 +2054,6 @@ button:disabled {
   50% { opacity: 1; }
 }
 
-/* Numero VA - bordo nero per distacco dallo sfondo */
-.satze-va-number {
-  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.9);
-  paint-order: stroke fill;
-  text-shadow: 
-    1px 1px 0 rgba(0, 0, 0, 0.95),
-    -1px -1px 0 rgba(0, 0, 0, 0.95),
-    1px -1px 0 rgba(0, 0, 0, 0.95),
-    -1px 1px 0 rgba(0, 0, 0, 0.95);
-}
-
 /* Bordo nero per testo Trionfo/Sconfitta */
 .satze-outcome-text-border {
   -webkit-text-stroke: 1px rgba(0, 0, 0, 0.95);
@@ -2526,6 +2405,92 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   .satze-stats-roll__in, .satze-stats-roll__out, .satze-stats-burst, .satze-stats-burst__text { animation: none !important; }
   .satze-stats-roll__out { display: none; }
+}
+
+/* Scheda VA del duello (stile portale): fuori dalla carta, a sinistra l'avversario e a destra tu */
+.satze-va-ledger {
+  position: absolute;
+  top: 351px;
+  width: 220px;
+  z-index: 30;
+  pointer-events: none;
+  color: #cfd8e6;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  text-align: left;
+  transition: opacity 300ms ease, translate 300ms ease;
+}
+.satze-va-ledger--enemy { left: 152px; --ledger-from: 70px; --ledger-hide: -60px; }
+.satze-va-ledger--player { left: 1548px; --ledger-from: -70px; --ledger-hide: 60px; }
+.satze-va-ledger.is-hidden { opacity: 0; translate: var(--ledger-hide) 0; }
+@keyframes satzeVaLedgerIn { from { opacity: 0; transform: translateX(var(--ledger-from)); } to { opacity: 1; transform: none; } }
+.satze-va-ledger__shell {
+  position: relative;
+  animation: satzeVaLedgerIn 450ms cubic-bezier(0.2, 0.8, 0.25, 1) 300ms both;
+  padding: 11px 14px 12px;
+  background: linear-gradient(180deg, rgba(180, 191, 208, 0.12) 0%, rgba(8, 10, 14, 0.92) 34%, rgba(4, 6, 10, 0.96) 100%);
+  box-shadow: inset 0 0 0 1px rgba(180, 191, 208, 0.45);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+}
+.satze-va-ledger__shell::before {
+  content: '';
+  position: absolute;
+  left: 14px; right: 14px; top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  opacity: 0.8;
+}
+.satze-va-ledger__head { display: flex; align-items: center; gap: 9px; }
+.satze-va-ledger__node { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px var(--acc), 0 0 2px #fff; }
+.satze-va-ledger__id { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.satze-va-ledger__kick { font-size: 8.5px; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; color: #9aa6b8; }
+.satze-va-ledger__name { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; line-height: 1.15; text-shadow: 0 0 10px rgba(207, 216, 230, 0.55), 0 1px 2px #000; }
+.satze-va-ledger__ini { flex: none; font-size: 9px; font-weight: 800; letter-spacing: 0.12em; color: #cfd8e6; border: 1px solid rgba(207, 216, 230, 0.5); border-radius: 999px; padding: 2px 7px; }
+.satze-va-ledger__ticks { position: relative; height: 3px; margin: 8px 0 6px; background: repeating-linear-gradient(90deg, rgba(209, 222, 242, 0.5) 0 2px, transparent 2px 7px); animation: satzeVaLedgerTicks 8s linear infinite; }
+.satze-va-ledger__ticks::after { content: ''; position: absolute; left: 0; top: -1px; width: 64px; height: 5px; background: linear-gradient(90deg, var(--acc), transparent); opacity: 0.85; }
+@keyframes satzeVaLedgerTicks { to { background-position: 70px 0; } }
+.satze-va-ledger__body { position: relative; display: grid; }
+.satze-va-ledger__row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 27px; border-bottom: 1px solid rgba(180, 191, 208, 0.1); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #8f9bae; }
+.satze-va-ledger__row b { display: inline-block; font-size: 17px; font-weight: 700; letter-spacing: 0.02em; line-height: 1; color: #e9eef6; font-variant-numeric: tabular-nums; }
+.satze-va-ledger__row b.is-empty, .satze-va-ledger__total b.is-empty { color: #5f6b7d; text-shadow: none; }
+.satze-va-ledger__pips { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
+.satze-va-ledger__pips i { display: inline-block; width: 11px; height: 5px; background: #c7dbfa; box-shadow: 0 0 6px rgba(199, 219, 250, 0.9); transform: skewX(-24deg); animation: satzeVaLedgerPip 320ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.satze-va-ledger__pips i.is-off { background: transparent; box-shadow: none; outline: 1px solid rgba(199, 219, 250, 0.35); }
+@keyframes satzeVaLedgerPip { from { opacity: 0; transform: skewX(-24deg) scale(2.4); filter: brightness(2.5); } to { opacity: 1; transform: skewX(-24deg) scale(1); filter: none; } }
+.satze-va-ledger__mod { display: grid; grid-template-columns: 34px 1fr; gap: 6px; align-items: baseline; margin: 3px 0 1px; padding: 3px 0 3px 7px; border-left: 2px solid color-mix(in srgb, var(--sc) 40%, transparent); font-size: 10px; letter-spacing: 0.04em; color: #aeb8c8; animation: satzeVaLedgerArrive 350ms ease-out both; }
+.satze-va-ledger__mod b { font-size: 13px; font-weight: 800; color: var(--sc); opacity: 0.6; font-variant-numeric: tabular-nums; }
+.satze-va-ledger__mod.is-on { border-left-color: var(--sc); background: linear-gradient(90deg, color-mix(in srgb, var(--sc) 16%, transparent), transparent 80%); color: #e9eef6; }
+.satze-va-ledger__mod.is-on b { opacity: 1; text-shadow: 0 0 8px var(--sc); }
+@keyframes satzeVaLedgerArrive { 0% { opacity: 0; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+.satze-va-ledger__rule { height: 1px; margin: 7px 0 5px; background: linear-gradient(90deg, transparent, rgba(180, 191, 208, 0.6), transparent); }
+.satze-va-ledger__total { position: relative; display: flex; justify-content: space-between; align-items: baseline; }
+.satze-va-ledger__total span { font-size: 9px; font-weight: 800; letter-spacing: 0.3em; color: #9aa6b8; }
+.satze-va-ledger__total b { display: inline-block; font-size: 46px; font-weight: 800; line-height: 0.95; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(207, 216, 230, 0.45); transform-origin: 100% 60%; }
+.satze-va-ledger.is-win .satze-va-ledger__total b { color: #f5f3ec; text-shadow: 0 0 18px rgba(245, 243, 236, 0.6), 0 0 34px var(--acc); animation: satzeVaLedgerWin 500ms ease-out both; }
+.satze-va-ledger.is-lose .satze-va-ledger__total b { color: #6d6b64; text-shadow: none; animation: satzeVaLedgerShake 380ms ease-out both; }
+.satze-va-ledger__strike { position: absolute; right: -6px; top: 52%; height: 3px; width: 0; background: #dc5f52; box-shadow: 0 0 8px #dc5f52; transition: width 260ms ease-out; }
+.satze-va-ledger.is-lose .satze-va-ledger__strike { width: 110px; }
+.satze-va-ledger__pop { animation: satzeVaLedgerPop 450ms ease-out both; }
+@keyframes satzeVaLedgerPop { 0% { transform: scale(1); } 35% { transform: scale(1.22); } 100% { transform: scale(1); } }
+@keyframes satzeVaLedgerWin { 0% { transform: scale(1); } 35% { transform: scale(1.45); } 100% { transform: scale(1); } }
+@keyframes satzeVaLedgerShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+.satze-va-ledger__fly {
+  position: absolute;
+  left: 0; top: 0;
+  font-size: 18px;
+  font-weight: 800;
+  pointer-events: none;
+  text-shadow: 0 0 8px currentColor, 0 1px 2px #000;
+  animation-name: satzeVaLedgerFly;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+@keyframes satzeVaLedgerFly {
+  from { opacity: 1; transform: translate(16px, var(--fly-y0)) scale(1); }
+  to { opacity: 1; transform: translate(136px, var(--fly-y1)) scale(1.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .satze-va-ledger, .satze-va-ledger *, .satze-va-ledger__ticks { animation: none !important; transition: none !important; }
+  .satze-va-ledger__fly { display: none; }
 }
 
 /* Tossina — cerchio viola + etichetta Tox */
