@@ -20,6 +20,8 @@ export const DUEL_VISUAL_DEFAULTS = {
   phaseMs1: 2500,
   /** Durata di ogni sub-step potere/bonus in fase 1 (ms) */
   effectStepMs: 900,
+  /** Respiro tra un'animazione in coda e la successiva (passi di effetti, Calcolo, post-duello) (ms) */
+  animationBeatMs: 450,
   /** Buffer dopo l'ultimo sub-step effetti prima della fase 2 (ms) */
   effectPhaseBufferMs: 400,
   /** Intervallo tra ogni focus coin in fase 2 (ms) — riferimento per easing lento→veloce */

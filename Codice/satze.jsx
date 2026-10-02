@@ -172,7 +172,7 @@ import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
 import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
 import { getDuelVisualConfig } from '../src/config/duelVisualConfigStore.js';
 import { DUEL_VFX_CHANGED_EVENT } from '../src/config/duelVisualConfig.js';
-import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps, computeFocusCoinAppearDelayMs, getNextDuelPhase, syncDuelVisualsForPhase } from '../src/config/duelVisualTimeline.js';
+import { buildPhaseAdvanceDelaysMs, countDuelPhase3SubSteps, computeFocusCoinAppearDelayMs, getNextDuelPhase, syncDuelVisualsForPhase, effectStepPeriodMs } from '../src/config/duelVisualTimeline.js';
 import { keepLastRounds } from '../src/game/duel/battleEventSelectors.js';
 import { BATTLE_EVENT_TYPES, createBattleEventEmitter } from '../src/game/duel/battleEventTypes.js';
 import { createBattleLogChannel, emitInfo } from '../src/game/duel/battleEventEmit.js';
@@ -1381,6 +1381,7 @@ export default function SatzeGame() {
   const duelOverdriveOn = (side) => Boolean(
     duelStamp && overdriveAt[side] != null && duelPhase >= 2 && focusLaunch.landed[side] >= overdriveAt[side]
   );
+  const duelHpColors = useMemo(() => ({ player: playerIdentityColor, enemy: enemyIdentityColor }), [playerIdentityColor, enemyIdentityColor]);
   const duelFocusGlow = (side) => {
     const total = side === 'player' ? battleResult?.playerFocusUsed : battleResult?.enemyFocusUsed;
     return total ? focusLaunch.landed[side] / total : 0;
@@ -3453,7 +3454,8 @@ export default function SatzeGame() {
       const effectCount = countDuelEffectSteps(battleResult.visualSteps);
       const phase3SubCount = countDuelPhase3SubSteps(battleResult);
       const postCount = countDuelPostEffectSteps(battleResult.visualSteps);
-      const stepMs = duelVfx.effectStepMs ?? DUEL_VISUAL_DEFAULTS.effectStepMs;
+      // ogni passo dura l'animazione più un respiro; anche l'ultimo, prima della fase successiva
+      const stepMs = effectStepPeriodMs(duelVfx);
       const bufferMs = duelVfx.effectPhaseBufferMs ?? DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs;
 
       if (duelPhase === 1 && effectCount > 0) {
@@ -3461,7 +3463,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -3470,7 +3472,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -3479,7 +3481,7 @@ export default function SatzeGame() {
           const timer = setTimeout(() => advanceEffectStep(), stepMs);
           return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+        const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
         return () => clearTimeout(timer);
       }
 
@@ -4989,10 +4991,10 @@ export default function SatzeGame() {
         eventsCount={Array.isArray(logPanelBattleEvents) ? logPanelBattleEvents.length : (logs?.length || 0)}
         turnSide={turnSideNow /* la luce corre veloce sul box di chi agisce */}
       />
-      {/* Danno visibile: un proiettile per ogni PV tolto, dal vincitore al box PV dello sconfitto */}
+      {/* Danno visibile: un proiettile per ogni PV tolto, dalla sua fonte al pannello PV colpito */}
       <DuelHpProjectiles
         projectiles={duelHp.projectiles}
-        winnerColor={battleResult?.winner === 'enemy' ? enemyIdentityColor : playerIdentityColor}
+        colors={duelHpColors}
       />
       {/* Schede VA laterali: POT, × FC, modificatori per fonte, VA (fuori dalle carte, nascoste nello zoom) */}
       {gamePhase === 'result' && battleResult && (

@@ -8,6 +8,7 @@ import {
   countDuelPhase3SubSteps,
   getNextDuelPhase,
   syncDuelVisualsForPhase,
+  effectStepPeriodMs,
 } from '../../config/duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS, DUEL_VFX_CHANGED_EVENT } from '../../config/duelVisualConfig.js';
 import { getDuelVisualConfig } from '../../config/duelVisualConfigStore.js';
@@ -157,7 +158,8 @@ export function useProductionDuelPresentation({
     const effectCount = countDuelEffectSteps(battleResult.visualSteps);
     const phase3SubCount = countDuelPhase3SubSteps(battleResult);
     const postCount = countDuelPostEffectSteps(battleResult.visualSteps);
-    const stepMs = duelVfx.effectStepMs ?? DUEL_VISUAL_DEFAULTS.effectStepMs;
+    // ogni passo dura l'animazione più un respiro; anche l'ultimo, prima della fase successiva
+    const stepMs = effectStepPeriodMs(duelVfx);
     const bufferMs = duelVfx.effectPhaseBufferMs ?? DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs;
 
     if (duelPhase === 1 && effectCount > 0) {
@@ -165,7 +167,7 @@ export function useProductionDuelPresentation({
         const timer = setTimeout(() => advanceEffectStep(), stepMs);
         return () => clearTimeout(timer);
       }
-      const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+      const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
       return () => clearTimeout(timer);
     }
 
@@ -174,7 +176,7 @@ export function useProductionDuelPresentation({
         const timer = setTimeout(() => advanceEffectStep(), stepMs);
         return () => clearTimeout(timer);
       }
-      const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+      const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
       return () => clearTimeout(timer);
     }
 
@@ -183,7 +185,7 @@ export function useProductionDuelPresentation({
         const timer = setTimeout(() => advanceEffectStep(), stepMs);
         return () => clearTimeout(timer);
       }
-      const timer = setTimeout(() => advanceDuelPhase(), bufferMs);
+      const timer = setTimeout(() => advanceDuelPhase(), stepMs + bufferMs);
       return () => clearTimeout(timer);
     }
 

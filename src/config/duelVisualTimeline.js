@@ -123,12 +123,22 @@ export function countDuelPhase3SubSteps(battleResult) {
   return modSteps + floorStep;
 }
 
+/**
+ * Durata di un passo (fasi 1, 3, 5): l'animazione del passo più un respiro prima del successivo,
+ * così una non parte appena finisce l'altra.
+ */
+export function effectStepPeriodMs(vfx) {
+  const stepMs = safeMs(vfx?.effectStepMs, DUEL_VISUAL_DEFAULTS.effectStepMs, 200);
+  const beat = safeMs(vfx?.animationBeatMs, DUEL_VISUAL_DEFAULTS.animationBeatMs, 0);
+  return stepMs + beat;
+}
+
 /** Durata fase 3 in ms (piena se serve lavoro; fase inattiva → 0). */
 export function computePhase3DurationMs(vfx, battleResult) {
   if (!isDuelPhaseActive(3, battleResult)) return 0;
   const full = safeMs(vfx.phaseMs3, DUEL_VISUAL_DEFAULTS.phaseMs3, 120);
   const subCount = countDuelPhase3SubSteps(battleResult);
-  const stepMs = safeMs(vfx.effectStepMs, DUEL_VISUAL_DEFAULTS.effectStepMs, 200);
+  const stepMs = effectStepPeriodMs(vfx);
   const buffer = safeMs(vfx.effectPhaseBufferMs, DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs, 0);
   if (subCount > 1) return subCount * stepMs + buffer;
   return full;
@@ -138,7 +148,7 @@ export function computePhase3DurationMs(vfx, battleResult) {
 export function computePhase5DurationMs(vfx, battleResult) {
   const postCount = countDuelPostEffectSteps(battleResult?.visualSteps);
   if (postCount <= 0) return 0;
-  const stepMs = safeMs(vfx.effectStepMs, DUEL_VISUAL_DEFAULTS.effectStepMs, 200);
+  const stepMs = effectStepPeriodMs(vfx);
   const buffer = safeMs(vfx.effectPhaseBufferMs, DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs, 0);
   return postCount * stepMs + buffer;
 }
@@ -147,7 +157,7 @@ export function computePhase5DurationMs(vfx, battleResult) {
 export function computePhase1DurationMs(vfx, battleResult) {
   const effectCount = countDuelEffectSteps(battleResult?.visualSteps);
   if (effectCount <= 0) return 0;
-  const stepMs = safeMs(vfx.effectStepMs, DUEL_VISUAL_DEFAULTS.effectStepMs, 200);
+  const stepMs = effectStepPeriodMs(vfx);
   const buffer = safeMs(vfx.effectPhaseBufferMs, DUEL_VISUAL_DEFAULTS.effectPhaseBufferMs, 0);
   return effectCount * stepMs + buffer;
 }

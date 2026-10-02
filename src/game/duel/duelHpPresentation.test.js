@@ -23,7 +23,7 @@ test('DAN al perdente, poi la cura del Campo al vincitore (aftermath misurato pr
     events: [pv('opponent', 21, 17, fieldSrc), pv('local', 18, 20, fieldSrc)],
   };
   const b = buildDuelHpBursts(br, { player: 18, enemy: 21 });
-  assert.deepEqual(b.damage, { side: 'enemy', amount: 4 });
+  assert.deepEqual(b.damage, { side: 'enemy', amount: 4, origin: { card: 'player' } });
   assert.deepEqual(b.aftermath.map(({ side, kind, amount, label }) => ({ side, kind, amount, label })), [
     { side: 'player', kind: 'heal', amount: 2, label: 'Miniera di Lacrime' },
   ]);
@@ -59,7 +59,7 @@ test('perdita extra del vincitore (Nido di Spine) come raffica di colpi', () => 
     events: [pv('local', 25, 22, nido), pv('opponent', 20, 15, nido)],
   };
   const b = buildDuelHpBursts(br, { player: 25, enemy: 20 });
-  assert.deepEqual(b.damage, { side: 'player', amount: 3 });
+  assert.deepEqual(b.damage, { side: 'player', amount: 3, origin: { card: 'enemy' } });
   assert.deepEqual(b.aftermath.map(({ side, kind, amount, label }) => [side, kind, amount, label]), [['enemy', 'hit', 5, 'Nido di Spine']]);
 });
 
@@ -69,13 +69,13 @@ test('quel che il log non spiega (Eminenze a fine duello) diventa una fonte a sÃ
     events: [pv('opponent', 25, 23, fieldSrc)],
   };
   const b = buildDuelHpBursts(br, { player: 25, enemy: 25 });
-  assert.deepEqual(b.damage, { side: 'enemy', amount: 2 });
-  assert.deepEqual(b.aftermath.map(({ side, kind, amount, label }) => [side, kind, amount, label]), [['player', 'hit', 1, 'Eminenza']]);
+  assert.deepEqual(b.damage, { side: 'enemy', amount: 2, origin: { card: 'player' } });
+  assert.deepEqual(b.aftermath.map(({ side, kind, amount, label, origin }) => [side, kind, amount, label, origin]), [['player', 'hit', 1, 'Eminenza', { eminence: null }]]);
 });
 
 test('il DAN non scende sotto 0 PV; senza log vale il DAN dichiarato', () => {
   const b = buildDuelHpBursts({ winner: 'player', damageDealt: 6, finalPlayerHP: 10, finalEnemyHP: 0 }, { player: 10, enemy: 2 });
-  assert.deepEqual(b.damage, { side: 'enemy', amount: 2 });
+  assert.deepEqual(b.damage, { side: 'enemy', amount: 2, origin: { card: 'player' } });
   assert.equal(b.aftermath.length, 0);
 });
 
@@ -102,4 +102,23 @@ test('eventi punto per punto: il numero scende di uno a ogni colpo e la raffica 
   assert.deepEqual(displayedHpAt(ev, start, 0), { player: 18, enemy: 21 });
   assert.deepEqual(displayedHpAt(ev, start, hits[1].t), { player: 18, enemy: 19 });
   assert.deepEqual(displayedHpAt(ev, start, 1e9), { player: 20, enemy: 18 });
+});
+
+test('ogni colpo ha il suo proiettile: dal portale per il Campo, dalla carta per un Potere', () => {
+  const nido = { kind: 'field', id: '9', name: 'Nido di Spine', ownerSide: null };
+  const ability = { kind: 'ability', id: 'IA (Bombarda)', name: 'IA (Bombarda)', ownerSide: 'opponent' };
+  const br = {
+    winner: 'enemy', damageDealt: 3, finalPlayerHP: 20, finalEnemyHP: 15, field: { name: 'Nido di Spine' },
+    events: [pv('local', 25, 22, nido), pv('local', 22, 20, ability), pv('opponent', 20, 15, nido)],
+  };
+  const ev = scheduleDuelHpEvents(br, { player: 25, enemy: 20 });
+  const hits = ev.filter((e) => e.kind === 'hit');
+  assert.ok(hits.every((e) => e.origin));
+  assert.deepEqual(ev.find((e) => e.cause === 'damage').origin, { card: 'enemy' });
+  assert.deepEqual(ev.find((e) => e.label === 'Nido di Spine').origin, { portal: true });
+  assert.deepEqual(ev.find((e) => e.label === 'Bombarda').origin, { card: 'enemy' });
+  // il proiettile di una raffica di fine duello parte dopo l'ultimo colpo dello scontro
+  const lastDamage = Math.max(...ev.filter((e) => e.cause === 'damage').map((e) => e.t));
+  const firstLaunch = Math.min(...hits.filter((e) => e.cause === 'aftermath').map((e) => e.t - HP_PROJECTILE_FLIGHT_MS));
+  assert.ok(firstLaunch > lastDamage);
 });

@@ -19,6 +19,7 @@ const LABELS = {
   phaseMs0: 'Fase 0 — Schieramento (ms)',
   phaseMs1: 'Fase 1 — Poteri (ms, se nessun effetto)',
   effectStepMs: 'Fase 1 — durata ogni potere/bonus (ms)',
+  animationBeatMs: 'Respiro tra animazioni in coda (ms)',
   effectPhaseBufferMs: 'Fase 1 — pausa dopo l’ultimo effetto (ms)',
   focusCoinStepMs: 'Focus coin — passo tra una moneta e l’altra (ms)',
   focusPhaseBufferMs: 'Focus coin — buffer dopo l’ultima moneta (ms)',

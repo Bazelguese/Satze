@@ -8,6 +8,8 @@ import { buildPhaseAdvanceDelaysMs } from '../../config/duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
 import {
   HP_PROJECTILE_START_RATIO,
+  HP_PROJECTILE_FLIGHT_MS,
+  HP_PROJECTILE_GAP_MS,
   HP_AFTERMATH_STEP_MS,
   HP_SOURCE_STAGGER_MS,
   scheduleDuelHpEvents,
@@ -19,8 +21,10 @@ import {
 /** Quanto resta l'etichetta della raffica dopo l'ultimo punto, e quanto dura la sua uscita (ms). */
 const BURST_HOLD_MS = 700;
 const BURST_LEAVE_MS = 400;
-/** PV degli effetti: partono quando il fascio del Potere arriva (DuelStepFx: 60 + 480 ms). */
+/** Cure degli effetti: partono quando il fascio del Potere arriva (DuelStepFx: 60 + 480 ms). */
 const STEP_PV_DELAY_MS = 540;
+/** Danni degli effetti: il proiettile parte poco dopo l'inizio dello step, mentre compare il riquadro. */
+const STEP_HIT_LAUNCH_MS = 200;
 
 /** Punti PV degli effetti, uno per tick, con l'istante relativo all'inizio del loro step. */
 function scheduleStepTicks(stepBursts) {
@@ -33,7 +37,10 @@ function scheduleStepTicks(stepBursts) {
     for (let i = 0; i < b.amount; i += 1) {
       ticks.push({
         stepIndex: b.stepIndex,
-        t: STEP_PV_DELAY_MS + slot * HP_SOURCE_STAGGER_MS + i * HP_AFTERMATH_STEP_MS,
+        t: b.kind === 'hit'
+          ? STEP_HIT_LAUNCH_MS + slot * HP_SOURCE_STAGGER_MS + HP_PROJECTILE_FLIGHT_MS + i * HP_PROJECTILE_GAP_MS
+          : STEP_PV_DELAY_MS + slot * HP_SOURCE_STAGGER_MS + i * HP_AFTERMATH_STEP_MS,
+        origin: b.kind === 'hit' ? b.origin : null,
         side: b.side,
         kind: b.kind,
         step: b.kind === 'heal' ? 1 : -1,
@@ -67,7 +74,8 @@ function burstText(e) {
 
 /**
  * @returns {{ active: boolean, displayHP: { player: number, enemy: number } | null,
- *   bursts: { player: object|null, enemy: object|null }, projectiles: object|null }}
+ *   bursts: { player: object|null, enemy: object|null },
+ *   projectiles: Array<{ key: string, launch: number, origin: object, target: 'player'|'enemy' }>|null }}
  */
 export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep = 1, playerHP, enemyHP, duelVfx }) {
   const inResult = gamePhase === 'result' && Boolean(battleResult);
@@ -112,6 +120,8 @@ export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duel
     stepStartRef.current.set(idx, performance.now());
     const mine = stepTicks.filter((x) => x.stepIndex === idx);
     if (!mine.length) return undefined;
+    // ridisegna subito: i proiettili dello step partono prima del primo punto
+    setStepTick((n) => n + 1);
     const marks = new Set();
     mine.forEach((x) => { marks.add(x.t); marks.add(x.t + BURST_HOLD_MS); marks.add(x.t + BURST_HOLD_MS + BURST_LEAVE_MS); });
     const ids = [...marks].map((m) => setTimeout(() => setStepTick((n) => n + 1), m + 5));
@@ -229,12 +239,26 @@ export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duel
   }
 
   // oggetto stabile: il canvas dei proiettili riparte solo quando cambia davvero
+  // Proiettili: uno per ogni colpo, dalla sua fonte (carta, portale, Eminenza) al pannello PV colpito.
+  // Partono un volo prima dell'istante in cui il numero scende.
   const skipped = elapsed === Infinity;
-  const projectiles = useMemo(() => {
-    const damage = events.filter((e) => e.cause === 'damage');
-    if (!key || t0 == null || skipped || !damage.length) return null;
-    return { t0, target: damage[0].side, count: damage.length, winner: battleResult.winner };
-  }, [key, t0, skipped, events]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shots = [];
+  if (key && !skipped) {
+    if (t0 != null) {
+      events.forEach((e, i) => {
+        if (e.kind === 'hit' && e.origin) shots.push({ key: `m${i}`, launch: t0 + e.t - HP_PROJECTILE_FLIGHT_MS, origin: e.origin, target: e.side });
+      });
+    }
+    {
+      stepTicks.forEach((x, i) => {
+        const st = stepStartRef.current.get(x.stepIndex);
+        if (x.kind === 'hit' && x.origin && st != null) shots.push({ key: `s${i}`, launch: st + x.t - HP_PROJECTILE_FLIGHT_MS, origin: x.origin, target: x.side });
+      });
+    }
+  }
+  const shotsKey = shots.map((x) => `${x.key}@${Math.round(x.launch)}`).join('|');
+  // oggetto stabile: il canvas dei proiettili riparte solo quando cambia davvero
+  const projectiles = useMemo(() => (shots.length ? shots : null), [shotsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { active: Boolean(key), displayHP, bursts, projectiles };
 }

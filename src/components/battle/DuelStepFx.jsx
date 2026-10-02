@@ -14,8 +14,8 @@ const BEAM_MS = 480;
 const TRAIL = 14;
 const PULSE_MS = 600;
 const BURST_MS = 450;
-/** Il riquadro resta per quasi tutto lo step, poi esce. */
-const CALLOUT_HOLD_MS = 760;
+/** Il riquadro resta per l'animazione del passo (effectStepMs), poi esce: segue il respiro prima del prossimo. */
+const CALLOUT_HOLD_MS = 900;
 
 function easeIn(u) { return u * u; }
 function ease(u) { return 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 3); }

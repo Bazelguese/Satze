@@ -1,19 +1,19 @@
 /**
- * Danno visibile: dal vincitore partono tanti proiettili quanti PV toglie, in arco
- * verso il numero PV dello sconfitto. Ogni impatto coincide con il punto che scende
- * nello StatsPanel (stessi tempi di duelHpPresentation). Canvas 2D a tutta scena.
+ * Danno visibile: ogni PV tolto ha il suo proiettile, in arco dalla fonte al numero PV di chi
+ * lo perde — dalla carta del vincitore per lo scontro, dalla carta di chi infligge per un
+ * Potere o un Bonus, dal portale per il Campo, dalla carta dell'Eminenza per i suoi effetti.
+ * Ogni impatto coincide con il punto che scende nello StatsPanel (stessi tempi di
+ * duelHpPresentation). Canvas 2D a tutta scena.
  */
 import React, { useEffect, useRef } from 'react';
-import { HP_PROJECTILE_FLIGHT_MS, HP_PROJECTILE_GAP_MS } from '../../game/duel/duelHpPresentation.js';
+import { HP_PROJECTILE_FLIGHT_MS } from '../../game/duel/duelHpPresentation.js';
 
 const W = 1920;
 const H = 1080;
 const SC = 0.5;
 const TRAIL = 6;
 const IMPACT_MS = 420;
-
-/** Centro (circa all'altezza dell'arte) della carta del vincitore nel risultato zoomato. */
-const SOURCE = { enemy: { x: 600, y: 455 }, player: { x: 1320, y: 455 } };
+const PORTAL_COLOR = '#f5f3ec';
 
 function rgba(hex, a) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
@@ -26,29 +26,63 @@ function bez(p0, p1, p2, u) {
   return { x: v * v * p0.x + 2 * v * u * p1.x + u * u * p2.x, y: v * v * p0.y + 2 * v * u * p1.y + u * u * p2.y };
 }
 
-/** Centro del numero PV del lato `side`, in coordinate scena (1920×1080). */
-function pvTarget(scene, side) {
-  const cell = scene?.querySelector(`[data-em-hp="${side}"] .satze-stats-cell__value`);
-  if (!cell) return side === 'enemy' ? { x: 100, y: 46 } : { x: 1800, y: 1036 };
+function rectIn(scene, el) {
+  if (!scene || !el) return null;
   const rs = scene.getBoundingClientRect();
-  const rc = cell.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  if (!r.width && !r.height) return null;
   const k = W / (rs.width || W);
-  return { x: (rc.left + rc.width / 2 - rs.left) * k, y: (rc.top + rc.height / 2 - rs.top) * k };
+  return { x: (r.left - rs.left) * k, y: (r.top - rs.top) * k, w: r.width * k, h: r.height * k };
 }
 
-export function DuelHpProjectiles({ projectiles, winnerColor }) {
+/** Centro del numero PV del lato `side`, in coordinate scena (1920×1080). */
+function pvTarget(scene, side) {
+  const r = rectIn(scene, scene?.querySelector(`[data-em-hp="${side}"] .satze-stats-cell__value`));
+  if (!r) return side === 'enemy' ? { x: 100, y: 46 } : { x: 1800, y: 1036 };
+  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+}
+
+/** Punto di partenza del proiettile per la sua fonte. */
+function originPoint(scene, origin) {
+  if (origin?.card) {
+    const r = rectIn(scene, scene?.querySelector(`[data-duel-card="${origin.card}"]`));
+    // all'altezza dell'arte della carta
+    if (r) return { x: r.x + r.w / 2, y: r.y + r.h * 0.38 };
+    return origin.card === 'enemy' ? { x: 600, y: 455 } : { x: 1320, y: 455 };
+  }
+  if (origin?.eminence) {
+    const r = rectIn(scene, scene?.querySelector(`.em-zone-${origin.eminence} .em-card`) || scene?.querySelector(`.em-zone-${origin.eminence}`));
+    if (r) return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  }
+  const r = rectIn(scene, scene?.querySelector('.satze-bf-portal-disc'));
+  if (r) return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  return { x: 960, y: 380 };
+}
+
+function colorOf(origin, colors) {
+  if (origin?.card) return colors?.[origin.card] || PORTAL_COLOR;
+  if (origin?.eminence) return colors?.[origin.eminence] || PORTAL_COLOR;
+  return PORTAL_COLOR;
+}
+
+export function DuelHpProjectiles({ projectiles, colors }) {
   const cvRef = useRef(null);
 
   useEffect(() => {
     const cv = cvRef.current;
-    if (!cv || !projectiles) return undefined;
+    if (!cv || !projectiles?.length) return undefined;
     const ctx = cv.getContext('2d');
     const scene = cv.parentElement;
-    const { t0, target, count, winner } = projectiles;
-    const src = SOURCE[winner] || SOURCE.player;
-    const color = winnerColor || '#f5f3ec';
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const end = t0 + (count - 1) * HP_PROJECTILE_GAP_MS + HP_PROJECTILE_FLIGHT_MS + IMPACT_MS;
+    const end = Math.max(...projectiles.map((s) => s.launch)) + HP_PROJECTILE_FLIGHT_MS + IMPACT_MS;
+    // traiettoria: ogni proiettile curva un po' diversamente dagli altri della stessa fonte
+    const bend = new Map();
+    const lanes = projectiles.map((s) => {
+      const k = `${JSON.stringify(s.origin)}>${s.target}`;
+      const n = bend.get(k) ?? 0;
+      bend.set(k, n + 1);
+      return n;
+    });
     let raf = 0;
 
     const frame = () => {
@@ -56,16 +90,20 @@ export function DuelHpProjectiles({ projectiles, winnerColor }) {
       ctx.clearRect(0, 0, cv.width, cv.height);
       ctx.save();
       ctx.scale(SC, SC);
-      const tgt = pvTarget(scene, target);
-      for (let i = 0; i < count; i++) {
-        const launch = t0 + i * HP_PROJECTILE_GAP_MS;
-        const u = (now - launch) / HP_PROJECTILE_FLIGHT_MS;
-        // arco: sale verso il centro della scena, alternando di poco la curva
-        const ctrl = target === 'enemy'
-          ? { x: 760 + i * 40, y: 300 - i * 30 }
-          : { x: 1250 - i * 40, y: 380 + i * 30 };
+      projectiles.forEach((s, idx) => {
+        const u = (now - s.launch) / HP_PROJECTILE_FLIGHT_MS;
+        const hu = (now - (s.launch + HP_PROJECTILE_FLIGHT_MS)) / IMPACT_MS;
+        if (u < 0 || hu > 1) return;
+        const color = colorOf(s.origin, colors);
+        const src = originPoint(scene, s.origin);
+        const tgt = pvTarget(scene, s.target);
+        const lane = lanes[idx];
+        const ctrl = {
+          x: (src.x + tgt.x) / 2 + (lane % 2 ? -1 : 1) * lane * 20,
+          y: Math.min(src.y, tgt.y) - 160 - lane * 24,
+        };
         if (!reduce && u > 0 && u < 1) {
-          for (let j = TRAIL; j >= 1; j--) {
+          for (let j = TRAIL; j >= 1; j -= 1) {
             const tu = u - j * 0.035;
             if (tu <= 0) continue;
             const q = bez(src, ctrl, tgt, tu * tu);
@@ -75,17 +113,15 @@ export function DuelHpProjectiles({ projectiles, winnerColor }) {
             ctx.fill();
           }
           const q = bez(src, ctrl, tgt, u * u);
-          const r = 9 * (0.6 + u * 0.6);
           ctx.shadowColor = color;
           ctx.shadowBlur = 28;
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
+          ctx.arc(q.x, q.y, 9 * (0.6 + u * 0.6), 0, Math.PI * 2);
           ctx.fill();
           ctx.shadowBlur = 0;
         }
         // impatto sul numero PV
-        const hu = (now - (launch + HP_PROJECTILE_FLIGHT_MS)) / IMPACT_MS;
         if (hu >= 0 && hu <= 1) {
           const rr = (20 + (1 - Math.pow(1 - hu, 3)) * 110) / 2;
           ctx.strokeStyle = rgba(color, 1 - hu);
@@ -97,7 +133,7 @@ export function DuelHpProjectiles({ projectiles, winnerColor }) {
           ctx.stroke();
           ctx.shadowBlur = 0;
         }
-      }
+      });
       ctx.restore();
       if (now < end) raf = requestAnimationFrame(frame);
       else ctx.clearRect(0, 0, cv.width, cv.height);
@@ -107,9 +143,9 @@ export function DuelHpProjectiles({ projectiles, winnerColor }) {
       cancelAnimationFrame(raf);
       ctx.clearRect(0, 0, cv.width, cv.height);
     };
-  }, [projectiles, winnerColor]);
+  }, [projectiles, colors?.player, colors?.enemy]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!projectiles) return null;
+  if (!projectiles?.length) return null;
   return (
     <canvas
       ref={cvRef}
