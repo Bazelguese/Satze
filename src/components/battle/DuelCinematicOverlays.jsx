@@ -3,13 +3,13 @@ import { RuneTitle, CARD_RUNES } from '../ui/RuneTitle.jsx';
 
 /** Durate ufficiali handoff duello2 (ms). */
 export const DUEL_OV_DUR = {
-  r5: 6200,
+  r5: 8000,
   win: 4400,
   lose: 5200,
 };
 
 /** Flip condizione vittoria: a fine tenda Round 5 (uscita verso sinistra). */
-export const DUEL_R5_VICTORY_FLIP_MS = 5400;
+export const DUEL_R5_VICTORY_FLIP_MS = 7200;
 
 const WIN_WORD = 'TRIONFO';
 const LOSE_WORD = 'SCONFITTA';
@@ -155,11 +155,11 @@ export function DuelRound5Overlay({ active }) {
         <RuneTitle text="È il quinto turno!" global={false} delay={950} stepMs={45} reverseAt={2700} className="cine-r5-lead" />
       </div>
       <div className="cine-r5-beat-b">
-        <div className="cine-kicker"><RuneTitle text="Round finale" global={false} delay={2900} stepMs={45} reverseAt={4700} /></div>
-        <div className="cine-r5-title"><RuneTitle text="ANNIENTA" global={false} delay={3000} stepMs={75} reverseAt={4650} /></div>
-        <div className="cine-r5-sub"><RuneTitle text="il nemico" global={false} delay={3350} stepMs={55} reverseAt={4700} /></div>
+        <div className="cine-kicker"><RuneTitle text="Round finale" global={false} delay={2900} stepMs={45} reverseAt={6500} /></div>
+        <div className="cine-r5-title"><RuneTitle text="ANNIENTA" global={false} delay={3000} stepMs={75} reverseAt={6450} /></div>
+        <div className="cine-r5-sub"><RuneTitle text="il nemico" global={false} delay={3350} stepMs={55} reverseAt={6500} /></div>
         <div className="cine-rule" />
-        <div className="cine-r5-note"><RuneTitle text="Vince chi ha più Punti Vita" global={false} delay={3550} stepMs={28} reverseAt={4750} /></div>
+        <div className="cine-r5-note"><RuneTitle text="Vince chi ha più Punti Vita" global={false} delay={3550} stepMs={28} reverseAt={6550} /></div>
       </div>
       <div className="cine-flash" />
     </div>

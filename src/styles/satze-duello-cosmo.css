@@ -932,7 +932,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
    scorre lungo il bordo; i testi si decifrano dalle rune (RuneTitle) e, dove
    serve, tornano rune prima di sparire. Argento freddo; il colore d'armata
    solo nei bagliori (--acc giocatore, --acc-en avversario).
-   Durate: DUEL_OV_DUR (r5 6.2s, win 4.4s, lose 5.2s).
+   Durate: DUEL_OV_DUR (r5 8s, win 4.4s, lose 5.2s).
    ══════════════════════════════════════════════════════════════════════════ */
 .cine {
   --c: var(--acc, #b4bfd0);
@@ -962,7 +962,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 }
 @keyframes cine-veil-in { to { opacity: 1; } }
 @keyframes cine-veil-out { from { opacity: 1; } to { opacity: 0; } }
-.cine-r5 { --out-at: 5.5s; }
+.cine-r5 { --out-at: 7.3s; }
 .cine-win { --out-at: 3.7s; }
 .cine-lose { --out-at: 4.5s; }
 
@@ -976,7 +976,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
     cine-open .9s cubic-bezier(.3, 1.5, .5, 1) .12s forwards,
     cine-close .6s cubic-bezier(.6, 0, .9, .4) var(--close-at, 4.25s) forwards;
 }
-.cine-r5 { --close-at: 5.25s; }
+.cine-r5 { --close-at: 7.05s; }
 .cine-win { --close-at: 3.55s; }
 .cine-lose { --close-at: 4.35s; }
 @keyframes cine-open {
@@ -1106,7 +1106,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   justify-content: center;
   text-align: center;
   opacity: 0;
-  animation: cine-pop .35s ease-out 2.85s forwards, cine-fade .4s ease-in 4.85s forwards;
+  animation: cine-pop .35s ease-out 2.85s forwards, cine-fade .4s ease-in 6.65s forwards;
 }
 .cine-r5-beat-b .cine-rule { animation: cine-rule .6s cubic-bezier(.16, 1, .3, 1) 3.1s forwards; }
 @keyframes cine-rule { to { width: 560px; } }
