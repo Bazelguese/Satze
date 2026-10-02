@@ -243,13 +243,20 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
    l'Eminenza resta nello stesso angolo del tavolo, 745 + binario 920. */
 .em-zone-player{left:auto;right:255px;top:auto;bottom:32px}
 .em-zone-enemy{left:255px;right:auto;top:32px;bottom:auto}
-/* Fine round (dopo il duello): carte ai bordi laterali; l'infobox sta nel .em-stage e le segue.
+/* Avviso al bordo (dopo il duello, e durante il duello a zone riposte): ai bordi laterali; l'infobox sta nel .em-stage e le segue.
    Inset ≥ metà gettone (~54px) altrimenti il cerchio costo finisce fuori dal canvas (overflow hidden). */
-.em-zone-player:has(.em-announce[data-post-duel="1"]){
+.em-zone-player:has(.em-announce[data-edge="1"]){
   right:60px;
 }
-.em-zone-enemy:has(.em-announce[data-post-duel="1"]){
+.em-zone-enemy:has(.em-announce[data-edge="1"]){
   left:60px;
+}
+/* Durante il duello: sotto le schede VA, lontano da pannelli PV/FC, conta delle monete e portale */
+.em-zone-enemy:has(.em-announce[data-duel="1"]){
+  top:730px;
+}
+.em-zone-player:has(.em-announce[data-duel="1"]){
+  top:730px;bottom:auto;
 }
 .em-stage{display:flex;align-items:center;transform-style:preserve-3d}
 .em-zone-player .em-stage{flex-direction:row-reverse}
@@ -557,10 +564,10 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
 .em-announce[data-phase="miss"]{--em-ann-phase:#c97878}
 .em-zone-player .em-announce{margin-right:8px;--em-ann-from-x:210px;--em-ann-from-y:300px}
 .em-zone-enemy .em-announce{margin-left:8px;--em-ann-from-x:-210px;--em-ann-from-y:-300px}
-.em-zone-player:has(.em-announce[data-post-duel="1"]) .em-announce{
+.em-zone-player:has(.em-announce[data-edge="1"]) .em-announce{
   --em-ann-from-x:140px;--em-ann-from-y:24px;
 }
-.em-zone-enemy:has(.em-announce[data-post-duel="1"]) .em-announce{
+.em-zone-enemy:has(.em-announce[data-edge="1"]) .em-announce{
   --em-ann-from-x:-140px;--em-ann-from-y:-24px;
 }
 .em-announce.is-held{

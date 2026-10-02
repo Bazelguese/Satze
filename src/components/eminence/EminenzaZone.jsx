@@ -1041,7 +1041,7 @@ function isPostDuelAnnounce(notice) {
 
 const ANNOUNCE_EXIT_MS = 460;
 
-function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoDismiss = true }) {
+function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoDismiss = true, edge = false, duel = false }) {
   const holdMs = getEminenceAnnounceHoldMs() || EMINENCE_ANNOUNCE_HOLD_MS_DEFAULT;
   const [exiting, setExiting] = useState(false);
   const exitTimerRef = useRef(null);
@@ -1081,7 +1081,7 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoD
   if (!notice) return null;
 
   const phaseKey = (notice.phase || 'REVEAL').toLowerCase();
-  const postDuel = isPostDuelAnnounce(notice);
+  const onEdge = edge || isPostDuelAnnounce(notice);
   const isEnemy = notice.side === 'enemy';
   const ownerLabel = notice.ownerLabel
     || (notice.side === 'player' ? 'La tua Eminenza' : 'Eminenza avversaria');
@@ -1103,7 +1103,8 @@ function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoD
         exiting ? 'is-exiting' : '',
       ].filter(Boolean).join(' ')}
       data-phase={phaseKey}
-      data-post-duel={postDuel ? '1' : undefined}
+      data-edge={onEdge ? '1' : undefined}
+      data-duel={duel ? '1' : undefined}
       data-em-announce={notice.side}
       onPointerDown={(event) => {
         event.stopPropagation();
@@ -1279,6 +1280,7 @@ export function EminenzaZone({
   stowed = false,
   announceHeld = false,
   announceAutoDismiss = true,
+  announceEdge = false,
 }) {
   const displaySettings = useDisplaySettings();
   const style = APPEARANCES[appearance] || APPEARANCES[DEFAULT_APPEARANCE];
@@ -1286,7 +1288,8 @@ export function EminenzaZone({
     || (eminence ? ARMY_COLORS[eminence.army]?.accent : null)
     || '#d5ecf9';
   const isPlayer = side === 'player';
-  const announceOnly = Boolean(announce) && isPostDuelAnnounce(announce);
+  // A fine Duello, e durante il Duello (zone riposte), solo l'avviso al bordo laterale: niente carta
+  const announceOnly = Boolean(announce) && (announceEdge || isPostDuelAnnounce(announce));
   const skipCardEntrance = !eminence
     || stowed
     || announceOnly
@@ -1412,6 +1415,8 @@ export function EminenzaZone({
               accent={accent}
               held={announceHeld}
               autoDismiss={announceAutoDismiss}
+              edge={announceOnly}
+              duel={announceEdge}
               onDismiss={onDismissAnnounce}
             />
           ) : (
