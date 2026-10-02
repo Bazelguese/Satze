@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PALETTE, HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 
 const STATS_FONT = "'Chakra Petch', 'Segoe UI', system-ui, sans-serif";
@@ -28,6 +28,39 @@ function StatCell({ label, value, valueClass = '', dataEmHp = null }) {
       <span className="satze-stats-cell__label">{label}</span>
       <span className={`satze-stats-cell__value ${valueClass}`}>{value}</span>
     </div>
+  );
+}
+
+/** PV che scorrono: a ogni punto il numero vecchio esce e il nuovo entra (giù se cala, su se cresce). */
+function RollingValue({ value }) {
+  const prevRef = useRef(value);
+  const [roll, setRoll] = useState(null);
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = value;
+    if (prev === value || prev == null || value == null) return;
+    setRoll({ from: prev, to: value, dir: value < prev ? 'down' : 'up', key: `${prev}>${value}` });
+  }, [value]);
+  if (!roll || roll.to !== value) return value;
+  return (
+    <span className={`satze-stats-roll satze-stats-roll--${roll.dir}`} key={roll.key}>
+      <span className="satze-stats-roll__out" aria-hidden>{roll.from}</span>
+      <span className="satze-stats-roll__in">{roll.to}</span>
+    </span>
+  );
+}
+
+/** Etichetta della raffica di PV (−1 → −2 → …, o +1 → +2 · Campo) accanto al box. */
+function HpBurst({ burst, side }) {
+  if (!burst) return null;
+  return (
+    <span
+      key={burst.key}
+      className={`satze-stats-burst satze-stats-burst--${side} satze-stats-burst--${burst.kind}${burst.leaving ? ' is-leaving' : ''}`}
+      aria-live="polite"
+    >
+      <span key={burst.n} className="satze-stats-burst__text">{burst.text}</span>
+    </span>
   );
 }
 
@@ -71,6 +104,10 @@ export const StatsPanel = React.memo(({
   duelShell = true,
   /** Colore identità esercito — bordo, angoli e nome */
   accentColor = null,
+  /** Nel risultato del duello il box resta in scena (PV che scendono colpo per colpo) */
+  fadeOnResult = true,
+  /** Raffica di PV in corso: { key, n, kind: 'hit'|'heal', text, leaving } */
+  hpBurst = null,
 }) => {
   const [showToxinAnimation, setShowToxinAnimation] = useState(false);
   const [previousToxinValue, setPreviousToxinValue] = useState(null);
@@ -119,7 +156,7 @@ export const StatsPanel = React.memo(({
       className={`absolute satze-stats-panel satze-stats-panel--${side} ${
         useHudShell ? 'satze-stats-panel--shell' : ''
       } ${isToxinActive ? 'satze-stats-panel--has-toxin' : ''} ${
-        gamePhase === 'result' ? `${animationClass} pointer-events-none` : ''
+        gamePhase === 'result' && fadeOnResult ? `${animationClass} pointer-events-none` : ''
       } ${className}`}
       style={{
         ...positionStyles[position],
@@ -147,7 +184,7 @@ export const StatsPanel = React.memo(({
 
         <span className="satze-stats-panel__divider" aria-hidden />
 
-        <StatCell label="PV" value={hp} valueClass="satze-stats-cell__value--pv" dataEmHp={side} />
+        <StatCell label="PV" value={<RollingValue value={hp} />} valueClass="satze-stats-cell__value--pv" dataEmHp={side} />
 
         <span className="satze-stats-panel__divider" aria-hidden />
 
@@ -160,6 +197,7 @@ export const StatsPanel = React.memo(({
           </>
         )}
       </div>
+      <HpBurst burst={hpBurst} side={side} />
     </div>
   );
 });

@@ -17,6 +17,8 @@ import { DuelCosmicHud } from '../src/components/battle/DuelCosmicHud.jsx';
 import { DuelResultEnemyResultBody, DuelResultPlayerResultBody } from '../src/components/battle/DuelResultDuelBodies';
 import { DuelClashAuroraSequence } from '../src/components/battle/DuelClashAuroraSequence';
 import { useClashFocusHandoff } from '../src/components/battle/useClashFocusHandoff';
+import { useDuelHpPresentation } from '../src/components/battle/useDuelHpPresentation';
+import { DuelHpProjectiles } from '../src/components/battle/DuelHpProjectiles';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
@@ -1343,6 +1345,10 @@ export default function SatzeGame() {
     gamePhase === 'result' && battleResult ? duelPhase : -1,
     Boolean(vfxProfile.clashVfxEnabled)
   );
+  // PV a schermo nel risultato: scendono colpo per colpo (i PV veri cambiano su «Continua»)
+  const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, playerHP, enemyHP, duelVfx });
+  const shownPlayerHP = duelHp.displayHP ? duelHp.displayHP.player : playerHP;
+  const shownEnemyHP = duelHp.displayHP ? duelHp.displayHP.enemy : enemyHP;
   const duelLayoutBreathClass = useMemo(
     () => resolveDuelLayoutBreathClass(getDisplaySettings(), { isResult: gamePhase === 'result' }),
     [duelVfxRev, gamePhase],
@@ -4952,8 +4958,8 @@ export default function SatzeGame() {
       )}
       {/* HUD cosmico: ogni pannello riceve la sua finestra sul cosmo (segue la 2.5D) */}
       <DuelCosmicHud
-        playerHP={playerHP}
-        enemyHP={enemyHP}
+        playerHP={shownPlayerHP}
+        enemyHP={shownEnemyHP}
         playerFocus={playerFocus}
         enemyFocus={enemyFocus}
         conqueredFields={conqueredFields}
@@ -4964,6 +4970,11 @@ export default function SatzeGame() {
         battleResult={battleResult}
         eventsCount={Array.isArray(logPanelBattleEvents) ? logPanelBattleEvents.length : (logs?.length || 0)}
         turnSide={turnSideNow /* la luce corre veloce sul box di chi agisce */}
+      />
+      {/* Danno visibile: un proiettile per ogni PV tolto, dal vincitore al box PV dello sconfitto */}
+      <DuelHpProjectiles
+        projectiles={duelHp.projectiles}
+        winnerColor={battleResult?.winner === 'enemy' ? enemyIdentityColor : playerIdentityColor}
       />
       {/* ============================================ */}
       {/* COLONNA SINISTRA - z-index 1 */}
@@ -6329,7 +6340,10 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpEnemyLabel}
-        hp={enemyHP}
+        hp={shownEnemyHP}
+        hpBurst={duelHp.bursts.enemy}
+        fadeOnResult={false}
+        styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
         focus={enemyFocus}
         toxin={enemyToxin}
         position="top-left"
@@ -6342,7 +6356,10 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpSelfLabel}
-        hp={playerHP}
+        hp={shownPlayerHP}
+        hpBurst={duelHp.bursts.player}
+        fadeOnResult={false}
+        styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
         focus={playerFocus}
         toxin={playerToxin}
         position="bottom-right"
