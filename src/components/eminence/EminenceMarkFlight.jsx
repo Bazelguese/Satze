@@ -236,7 +236,9 @@ export function useEminencePreyFlight({
   useEffect(() => {
     seenRef.current = remember(marks);
     queueRef.current = [];
-    setConcealed([]);
+    // I default `= []` cambiano a ogni render: senza questa guardia
+    // setConcealed([]) ri-renderizza il chiamante all'infinito.
+    setConcealed((prev) => (prev.length === 0 ? prev : []));
     setMarkFlight(null);
     setLinkFlight(null);
   }, [
