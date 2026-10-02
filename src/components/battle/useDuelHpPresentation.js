@@ -8,13 +8,44 @@ import { buildPhaseAdvanceDelaysMs } from '../../config/duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
 import {
   HP_PROJECTILE_START_RATIO,
+  HP_AFTERMATH_STEP_MS,
+  HP_SOURCE_STAGGER_MS,
   scheduleDuelHpEvents,
   displayedHpAt,
+  buildDuelHpStepBursts,
+  hpAfterDuelSteps,
 } from '../../game/duel/duelHpPresentation.js';
 
 /** Quanto resta l'etichetta della raffica dopo l'ultimo punto, e quanto dura la sua uscita (ms). */
 const BURST_HOLD_MS = 700;
 const BURST_LEAVE_MS = 400;
+/** PV degli effetti: partono quando il fascio del Potere arriva (DuelStepFx: 60 + 480 ms). */
+const STEP_PV_DELAY_MS = 540;
+
+/** Punti PV degli effetti, uno per tick, con l'istante relativo all'inizio del loro step. */
+function scheduleStepTicks(stepBursts) {
+  const ticks = [];
+  const slotOf = new Map();
+  stepBursts.forEach((b) => {
+    const k = `${b.stepIndex}:${b.side}`;
+    const slot = slotOf.get(k) ?? 0;
+    slotOf.set(k, slot + 1);
+    for (let i = 0; i < b.amount; i += 1) {
+      ticks.push({
+        stepIndex: b.stepIndex,
+        t: STEP_PV_DELAY_MS + slot * HP_SOURCE_STAGGER_MS + i * HP_AFTERMATH_STEP_MS,
+        side: b.side,
+        kind: b.kind,
+        step: b.kind === 'heal' ? 1 : -1,
+        n: i + 1,
+        label: b.label,
+        group: `step-${b.key}`,
+        slot,
+      });
+    }
+  });
+  return ticks;
+}
 
 function sessionKeyOf(battleResult) {
   if (!battleResult) return null;
@@ -38,7 +69,7 @@ function burstText(e) {
  * @returns {{ active: boolean, displayHP: { player: number, enemy: number } | null,
  *   bursts: { player: object|null, enemy: object|null }, projectiles: object|null }}
  */
-export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, playerHP, enemyHP, duelVfx }) {
+export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep = 1, playerHP, enemyHP, duelVfx }) {
   const inResult = gamePhase === 'result' && Boolean(battleResult);
   const key = inResult ? sessionKeyOf(battleResult) : null;
 
@@ -51,11 +82,41 @@ export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, play
   if (!key && startRef.current.key) startRef.current = { key: null, hp: null };
   const startHP = startRef.current.hp;
 
-  const events = useMemo(
-    () => (key && startHP ? scheduleDuelHpEvents(battleResult, startHP) : []),
+  // PV degli effetti (fase 1) e PV di partenza della sequenza dopo lo scontro
+  const stepTicks = useMemo(
+    () => (key ? scheduleStepTicks(buildDuelHpStepBursts(battleResult)) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [key]
   );
+  const afterSteps = useMemo(
+    () => (key && startHP ? hpAfterDuelSteps(battleResult, startHP) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key]
+  );
+  const events = useMemo(
+    () => (key && afterSteps ? scheduleDuelHpEvents(battleResult, afterSteps) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key]
+  );
+
+  // Inizio di ogni step della fase 1 (performance.now) e ridisegno sugli istanti dei tick
+  const stepStartRef = useRef(new Map());
+  const [, setStepTick] = useState(0);
+  useEffect(() => {
+    stepStartRef.current = new Map();
+  }, [key]);
+  useEffect(() => {
+    if (!key || duelPhase !== 1 || !stepTicks.length) return undefined;
+    const idx = Math.max(1, duelEffectStep || 1);
+    if (stepStartRef.current.has(idx)) return undefined;
+    stepStartRef.current.set(idx, performance.now());
+    const mine = stepTicks.filter((x) => x.stepIndex === idx);
+    if (!mine.length) return undefined;
+    const marks = new Set();
+    mine.forEach((x) => { marks.add(x.t); marks.add(x.t + BURST_HOLD_MS); marks.add(x.t + BURST_HOLD_MS + BURST_LEAVE_MS); });
+    const ids = [...marks].map((m) => setTimeout(() => setStepTick((n) => n + 1), m + 5));
+    return () => ids.forEach(clearTimeout);
+  }, [key, duelPhase, duelEffectStep, stepTicks]);
 
   // t0 (performance.now) dei proiettili: all'85% della fase 4; «Salta» (fase 6 diretta) = tutto subito
   const [t0, setT0] = useState(null);
@@ -104,10 +165,46 @@ export function useDuelHpPresentation({ battleResult, gamePhase, duelPhase, play
     return () => timers.forEach(clearTimeout);
   }, [key, t0, events, elapsed === Infinity]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const displayHP = key && startHP ? displayedHpAt(events, startHP, elapsed < 0 ? -1 : elapsed) : null;
+  // Fase 0-1: partenza + tick degli effetti già avvenuti; poi la sequenza dopo lo scontro
+  const now = performance.now();
+  const stepsDone = duelPhase >= 2 || elapsed === Infinity;
+  const stepElapsed = (x) => {
+    const st = stepStartRef.current.get(x.stepIndex);
+    return st == null ? -1 : now - st;
+  };
+  let displayHP = null;
+  if (key && startHP) {
+    if (stepsDone) displayHP = displayedHpAt(events, afterSteps, elapsed < 0 ? -1 : elapsed);
+    else {
+      displayHP = { player: startHP.player, enemy: startHP.enemy };
+      stepTicks.forEach((x) => { if (stepElapsed(x) >= x.t) displayHP[x.side] += x.step; });
+    }
+  }
 
   // Una raffica per fonte: fonti diverse convivono, ognuna al suo posto (slot) senza sovrapporsi
   const bursts = { player: [], enemy: [] };
+  if (key && !stepsDone) {
+    const latest = new Map();
+    const groupEnd = new Map();
+    stepTicks.forEach((x) => {
+      const se = stepElapsed(x);
+      if (se < 0) return;
+      groupEnd.set(x.group, Math.max(groupEnd.get(x.group) ?? 0, x.t));
+      if (se >= x.t) latest.set(x.group, { x, se });
+    });
+    latest.forEach(({ x, se }, group) => {
+      const end = groupEnd.get(group);
+      if (se > end + BURST_HOLD_MS + BURST_LEAVE_MS) return;
+      bursts[x.side].push({
+        key: `${key}:${group}`,
+        n: x.n,
+        kind: x.kind,
+        text: `${x.kind === 'heal' ? '+' : '−'}${x.n}${x.label ? ` · ${x.label}` : ''}`,
+        slot: x.slot,
+        leaving: se > end + BURST_HOLD_MS,
+      });
+    });
+  }
   if (key && elapsed >= 0 && elapsed !== Infinity) {
     const latest = new Map();
     const groupEnd = new Map();

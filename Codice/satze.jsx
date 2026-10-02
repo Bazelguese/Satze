@@ -20,6 +20,7 @@ import { useClashFocusHandoff } from '../src/components/battle/useClashFocusHand
 import { useDuelHpPresentation } from '../src/components/battle/useDuelHpPresentation';
 import { DuelHpProjectiles } from '../src/components/battle/DuelHpProjectiles';
 import { DuelVaLedger } from '../src/components/battle/DuelVaLedger';
+import { DuelStepFx } from '../src/components/battle/DuelStepFx';
 import {
   DuelRound5Overlay,
   DuelWinOverlay,
@@ -1347,9 +1348,6 @@ export default function SatzeGame() {
     Boolean(vfxProfile.clashVfxEnabled)
   );
   // PV a schermo nel risultato: scendono colpo per colpo (i PV veri cambiano su «Continua»)
-  const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, playerHP, enemyHP, duelVfx });
-  const shownPlayerHP = duelHp.displayHP ? duelHp.displayHP.player : playerHP;
-  const shownEnemyHP = duelHp.displayHP ? duelHp.displayHP.enemy : enemyHP;
   const duelLayoutBreathClass = useMemo(
     () => resolveDuelLayoutBreathClass(getDisplaySettings(), { isResult: gamePhase === 'result' }),
     [duelVfxRev, gamePhase],
@@ -1360,6 +1358,9 @@ export default function SatzeGame() {
     duelEffectStep,
     setDuelEffectStep
   );
+  const duelHp = useDuelHpPresentation({ battleResult, gamePhase, duelPhase, duelEffectStep: visualEffectStep, playerHP, enemyHP, duelVfx });
+  const shownPlayerHP = duelHp.displayHP ? duelHp.displayHP.player : playerHP;
+  const shownEnemyHP = duelHp.displayHP ? duelHp.displayHP.enemy : enemyHP;
 
   // Hook per la logica di battaglia
   const { resolveBattle } = useBattle(gameState, animations, { revealHpCommittedRef });
@@ -5000,6 +5001,8 @@ export default function SatzeGame() {
             accentColor={playerIdentityColor}
             kicker={isOnlinePvP ? mpSelfLabel : 'Tu'}
           />
+          {/* Passi del duello: riquadro con fonte e stato, fasci verso il bersaglio */}
+          <DuelStepFx battleResult={battleResult} duelPhase={duelPhase} duelEffectStep={visualEffectStep} />
         </>
       )}
       {/* ============================================ */}

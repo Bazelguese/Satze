@@ -1146,6 +1146,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
     <>
       <div
         ref={playerWrapRef}
+        data-duel-card="player"
         style={{
           position: 'absolute',
           top: agentCenterY,
@@ -1187,11 +1188,13 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           abilityNotTriggered={display.showPlayerAbilityNotTriggered}
           bonusNotTriggered={display.showPlayerBonusNotTriggered}
           suppressAnimations
+          footerSweep
         />
         <PerfectFocusStamp active={showPerfectPlayer} side="player" compact holdMs={1500} />
       </div>
       <div
         ref={enemyWrapRef}
+        data-duel-card="enemy"
         style={{
           position: 'absolute',
           top: agentCenterY,
@@ -1233,6 +1236,7 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           abilityNotTriggered={display.showEnemyAbilityNotTriggered}
           bonusNotTriggered={display.showEnemyBonusNotTriggered}
           suppressAnimations
+          footerSweep
         />
         <PerfectFocusStamp active={showPerfectEnemy} side="enemy" compact holdMs={1500} />
       </div>

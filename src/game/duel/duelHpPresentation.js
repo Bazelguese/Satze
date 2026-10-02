@@ -44,8 +44,65 @@ function sourceLabel(src, battleResult) {
   return src.name || null;
 }
 
+const STEP_ABILITY_KINDS = new Set(['power', 'inversion', 'block']);
+
+/** Step visivo (fase 1) in cui si attiva il Potere di un lato, o -1. */
+function abilityStepOf(battleResult, side) {
+  const steps = Array.isArray(battleResult?.visualSteps) ? battleResult.visualSteps : [];
+  const preVa = steps.findIndex((s) => s.kind === 'preVa');
+  const end = preVa >= 0 ? preVa : steps.length;
+  for (let i = 1; i < end; i += 1) {
+    if (steps[i].side === side && STEP_ABILITY_KINDS.has(steps[i].kind)) return i;
+  }
+  return -1;
+}
+
+/** Eventi PV dei Poteri durante gli effetti, ognuno con lo step del suo Agente. */
+function steppedPvEvents(battleResult) {
+  const out = [];
+  (Array.isArray(battleResult?.events) ? battleResult.events : []).forEach((e) => {
+    if (!e || e.type !== 'resourceChange' || e.stat !== 'PV' || e.revealAt !== 'abilityFx') return;
+    if (e.source?.kind !== 'ability') return;
+    const owner = engineSide(e.source.ownerSide);
+    const step = owner ? abilityStepOf(battleResult, owner) : -1;
+    if (step < 0) return;
+    out.push({ e, step });
+  });
+  return out;
+}
+
 /**
- * Raffiche di PV.
+ * PV che cambiano durante gli effetti (es. «Turbo: 2 Danni dir.»): una raffica per fonte
+ * nello step in cui si attiva il Potere.
+ * @returns {Array<{ stepIndex: number, side: 'player'|'enemy', kind: 'hit'|'heal', amount: number, label: string|null, key: string }>}
+ */
+export function buildDuelHpStepBursts(battleResult) {
+  const map = new Map();
+  steppedPvEvents(battleResult).forEach(({ e, step }) => {
+    const side = engineSide(e.target?.side);
+    if (!side) return;
+    const delta = toInt(e.after) - toInt(e.before);
+    if (!delta) return;
+    const label = sourceLabel(e.source, battleResult);
+    const key = `${step}:${side}:${label || ''}`;
+    const cur = map.get(key) || { stepIndex: step, side, delta: 0, label, key };
+    cur.delta += delta;
+    map.set(key, cur);
+  });
+  return [...map.values()]
+    .filter((b) => b.delta)
+    .map(({ delta, ...b }) => ({ ...b, kind: delta > 0 ? 'heal' : 'hit', amount: Math.abs(delta) }));
+}
+
+/** PV a schermo dopo gli effetti (partenza della sequenza del risultato). */
+export function hpAfterDuelSteps(battleResult, startHP) {
+  const hp = { player: toInt(startHP?.player), enemy: toInt(startHP?.enemy) };
+  buildDuelHpStepBursts(battleResult).forEach((b) => { hp[b.side] += b.kind === 'heal' ? b.amount : -b.amount; });
+  return hp;
+}
+
+/**
+ * Raffiche di PV dopo lo scontro (i PV degli effetti sono già in `startHP`: vedi hpAfterDuelSteps).
  * @param {object|null} battleResult
  * @param {{ player: number, enemy: number }} startHP PV a schermo prima del risultato
  * @returns {{ damage: { side: 'player'|'enemy', amount: number } | null,
@@ -65,8 +122,9 @@ export function buildDuelHpBursts(battleResult, startHP) {
   // Fonti dal log strutturato del motore (stessa fonte = stessa raffica)
   const sources = new Map();
   let damageApplied = 0;
+  const stepped = new Set(steppedPvEvents(battleResult).map((x) => x.e));
   const pvEvents = (Array.isArray(battleResult.events) ? battleResult.events : []).filter(
-    (e) => e && e.type === 'resourceChange' && e.stat === 'PV' && DUEL_REVEAL.has(e.revealAt)
+    (e) => e && e.type === 'resourceChange' && e.stat === 'PV' && DUEL_REVEAL.has(e.revealAt) && !stepped.has(e)
   );
   for (const e of pvEvents) {
     const side = engineSide(e.target?.side);

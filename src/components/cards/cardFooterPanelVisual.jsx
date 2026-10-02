@@ -138,3 +138,44 @@ export function CardFooterBlockIconOverlay({
     </div>
   );
 }
+
+/** Colori della passata per stato (Potere/Bonus attivati, copia, bloccato, non soddisfatto). */
+export const CARD_FOOTER_SWEEP_COLORS = {
+  ability: '#fb923c',
+  bonus: '#38bdf8',
+  copied: '#86efac',
+  blocked: '#f87171',
+  inactive: '#64748b',
+};
+
+/**
+ * Stato della passata di una riga nel duello: chi attiva, copia, blocca o resta non soddisfatto.
+ * @returns {'active'|'copied'|'blocked'|'inactive'|null}
+ */
+export function resolveCardFooterSweepState({ blocked, inactive, highlight, copied }) {
+  if (blocked) return 'blocked';
+  if (inactive) return 'inactive';
+  if (highlight) return copied ? 'copied' : 'active';
+  return null;
+}
+
+/**
+ * Passata da sinistra a destra nel colore dello stato, con il bordo luminoso che corre:
+ * il colore resta sulla riga finché lo stato non cambia (nuova passata).
+ */
+export function CardFooterSweepLayer({ state, row, suppressAnimations = false }) {
+  if (!state) return null;
+  const color = state === 'active' ? CARD_FOOTER_SWEEP_COLORS[row] : CARD_FOOTER_SWEEP_COLORS[state];
+  const delay = state === 'blocked' ? CARD_FOOTER_BLOCKED_EFFECT_DELAY_MS : 0;
+  return (
+    <div
+      key={state}
+      className={`satze-footer-sweep${suppressAnimations ? ' is-static' : ''}`}
+      style={{ '--fc': color, '--sweep-delay': `${delay}ms` }}
+      aria-hidden
+    >
+      <div className="satze-footer-sweep__fill" />
+      <div className="satze-footer-sweep__edge" />
+    </div>
+  );
+}

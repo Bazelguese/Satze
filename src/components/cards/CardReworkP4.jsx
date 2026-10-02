@@ -24,6 +24,8 @@ import {
   CardFooterBlockIconOverlay,
   getBlockedFooterFxClasses,
   resolveCardFooterPanelVisual,
+  resolveCardFooterSweepState,
+  CardFooterSweepLayer,
 } from './cardFooterPanelVisual';
 
 const GAME_CARD_UI_FONT = "'Chakra Petch', 'Segoe UI', system-ui, sans-serif";
@@ -767,6 +769,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   catalogPreview = false,
   /** Arte thumb leggera (cascata menu). */
   preferThumb = false,
+  /** Duello: passata di colore sulle righe Potere/Bonus quando cambiano stato. */
+  footerSweep = false,
 }) {
   const colors = ARMY_COLORS[agent.army] || { accent: '#94a3b8' };
   const accent = colors.accent;
@@ -844,7 +848,8 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
     inactive: duelFooterPanelFx && abilityPanelInactive,
     highlight: abilityFooterHighlight,
     highlightTint: CARD_FOOTER_ABILITY_HIGHLIGHT_TINT,
-    suppressAnimations,
+    // nel duello la tinta entra senza salire: l'ingresso lo fa la passata (CardFooterSweepLayer)
+    suppressAnimations: suppressAnimations || footerSweep,
   });
   const bonusPanelVisual = resolveCardFooterPanelVisual({
     blocked: duelFooterPanelFx && bonusBlocked,
@@ -852,8 +857,19 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
     highlight: bonusFooterHighlight,
     highlightTint: CARD_FOOTER_BONUS_HIGHLIGHT_TINT,
     stagger: true,
-    suppressAnimations,
+    suppressAnimations: suppressAnimations || footerSweep,
   });
+  const abilitySweepState = footerSweep
+    ? resolveCardFooterSweepState({ blocked: abilityBlocked, inactive: abilityFooterInactive, highlight: abilityFooterHighlight, copied: Boolean(copiedAbility) })
+    : null;
+  const bonusSweepState = footerSweep
+    ? resolveCardFooterSweepState({ blocked: bonusBlocked, inactive: bonusFooterInactive, highlight: bonusFooterHighlight, copied: Boolean(copiedBonus) })
+    : null;
+  // Carte che entrano a stato già deciso (es. sequenza dello scontro): la passata non si ripete,
+  // si anima solo un cambio di stato successivo (post-duello).
+  const initialSweepRef = useRef({ ability: abilitySweepState, bonus: bonusSweepState });
+  const abilitySweepStatic = suppressAnimations && abilitySweepState === initialSweepRef.current.ability;
+  const bonusSweepStatic = suppressAnimations && bonusSweepState === initialSweepRef.current.bonus;
   const abilityBlockedFx = abilityBlocked
     ? getBlockedFooterFxClasses(suppressAnimations, false, 'ability')
     : null;
@@ -1055,6 +1071,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
         )}
         <div
           key={abilityCopyPanelKey}
+          data-footer-row="ability"
           className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2.5 px-2.5 ${abilityPanelVisual.shellPadding}`}
         >
           <CardFooterTintLayer
@@ -1063,13 +1080,15 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
             animClass={abilityPanelVisual.animClass}
             blockedPanel={abilityPanelVisual.blockedPanel}
           />
+          <CardFooterSweepLayer state={abilitySweepState} row="ability" suppressAnimations={abilitySweepStatic} />
           <div
             className={`relative z-[1] flex justify-between items-baseline gap-2 min-h-[1.375rem] ${
               abilityBlocked ? abilityBlockedFx?.dim ?? 'opacity-60' : ''
             }`}
           >
             <span
-              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${
+              key={abilitySweepState || 'none'}
+              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${abilitySweepState && !abilitySweepStatic ? 'satze-footer-label-pop ' : ''}${
                 abilityBlocked
                   ? abilityBlockedFx?.label ?? 'text-red-400'
                   : abilityFooterInactive
@@ -1163,6 +1182,7 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
         />
         <div
           key={bonusCopyPanelKey}
+          data-footer-row="bonus"
           className={`${CARD_FOOTER_ROW_SHELL_CLASS} -mx-2.5 px-2.5 ${bonusPanelVisual.shellPadding}`}
         >
           <CardFooterTintLayer
@@ -1171,13 +1191,15 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
             animClass={bonusPanelVisual.animClass}
             blockedPanel={bonusPanelVisual.blockedPanel}
           />
+          <CardFooterSweepLayer state={bonusSweepState} row="bonus" suppressAnimations={bonusSweepStatic} />
           <div
             className={`relative z-[1] flex justify-between items-baseline gap-2 min-h-[1.375rem] ${
               bonusBlocked ? bonusBlockedFx?.dim ?? 'opacity-60' : ''
             }`}
           >
             <span
-              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${
+              key={bonusSweepState || 'none'}
+              className={`text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 self-start pt-px ${bonusSweepState && !bonusSweepStatic ? 'satze-footer-label-pop ' : ''}${
                 bonusBlocked
                   ? bonusBlockedFx?.label ?? 'text-red-400'
                   : bonusFooterInactive

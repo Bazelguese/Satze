@@ -14,6 +14,8 @@ import { getDuelVisualDisplay } from './duelVisualDisplay.js';
 const DECIDED_RATIO = 0.78;
 /** Volo del modificatore verso il totale, prima che entri nel conto (ms). */
 const FLY_MS = 380;
+/** Ritardo d'ingresso di un modificatore nello step in cui scatta: il fascio parte a 60 ms e dura 480. */
+const MOD_ARRIVE_DELAY_MS = 540;
 
 function fmt(v) {
   return String(v).replace('-', '−');
@@ -144,7 +146,8 @@ export function DuelVaLedger({
               key={m.key}
               data-ledger-row={i}
               className={`satze-va-ledger__mod${m.on ? ' is-on' : ''}`}
-              style={{ '--sc': m.color }}
+              // arriva quando il fascio dalla carta la raggiunge (DuelStepFx)
+              style={{ '--sc': m.color, animationDelay: duelPhase === 1 && m.arriveStep === duelEffectStep ? `${MOD_ARRIVE_DELAY_MS}ms` : undefined }}
             >
               <b>{signed(m.v)}</b>
               <div>{m.label}</div>

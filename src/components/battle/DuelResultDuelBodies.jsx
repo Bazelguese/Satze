@@ -210,6 +210,7 @@ export function DuelResultEnemyResultBody({
     <div className="relative w-full h-full flex flex-col items-center">
       <div className="relative flex items-center">
         <div
+          data-duel-card="enemy"
           className={`relative inline-flex ${duelPhase >= 0 ? 'animate-card-enter-left' : 'opacity-0'}`}
           style={{
             marginTop: '0',
@@ -280,6 +281,7 @@ export function DuelResultEnemyResultBody({
             effectiveAbility={fieldAbilityDisplay(battleResult, false)}
             abilityNotTriggered={display.showEnemyAbilityNotTriggered}
             bonusNotTriggered={display.showEnemyBonusNotTriggered}
+            footerSweep
             onHover={(data) => onCardHover({ ...data, isPlayer: false })}
           />
           )}
@@ -325,6 +327,7 @@ export function DuelResultPlayerResultBody({
     <div className="relative w-full h-full flex flex-col items-center pointer-events-auto">
       <div className="relative flex items-center">
         <div
+          data-duel-card="player"
           className={`relative inline-flex ${duelPhase >= 0 ? 'animate-card-enter-right' : 'opacity-0'}`}
           style={{
             marginTop: '0',
@@ -395,6 +398,7 @@ export function DuelResultPlayerResultBody({
             effectiveAbility={fieldAbilityDisplay(battleResult, true)}
             abilityNotTriggered={display.showPlayerAbilityNotTriggered}
             bonusNotTriggered={display.showPlayerBonusNotTriggered}
+            footerSweep
             onHover={(data) => onCardHover({ ...data, isPlayer: true })}
           />
           )}

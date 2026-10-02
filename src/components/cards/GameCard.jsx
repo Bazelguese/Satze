@@ -52,6 +52,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
     copyAbilityAnim = false,
     copyBonusAnim = false,
     fieldMinFloorReduction = 0,
+    footerSweep = false,
     overdrivePreview = false,
     overdriveEffectVariant = null,
   } = rest;
@@ -144,6 +145,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
               copyAbilityAnim={copyAbilityAnim}
               copyBonusAnim={copyBonusAnim}
               fieldMinFloorReduction={fieldMinFloorReduction}
+              footerSweep={footerSweep}
             />
           )}
         </div>
