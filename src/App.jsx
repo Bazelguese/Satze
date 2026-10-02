@@ -83,10 +83,13 @@ function AppContent() {
     if (el) el.remove();
 
     let cancelled = false;
+    let entered = false;
     const startTime = Date.now();
 
+    // Una sola volta: il failsafe non deve riportare al warm-up chi è già entrato nel gioco.
     const enterWarmup = (GameComponent) => {
-      if (cancelled || !GameComponent) return;
+      if (cancelled || entered || !GameComponent) return;
+      entered = true;
       setSatzeGame(() => GameComponent);
       setProgress(82);
       setDetail('Preparazione animazioni');
