@@ -275,12 +275,85 @@ void main() {
 }
 `;
 
+/**
+ * Vertex shader d'entrata: i pezzi partono lontani (stessa spinta di PIECE_VERT) e arrivano
+ * al loro posto. uCrackTime = quando parte il primo, uStagger = scaglionamento, uTravel =
+ * durata del volo, uEase: 0 planata (rallenta all'arrivo), 1 schianto (accelera e sbatte).
+ * vAge = quanto manca all'arrivo (1 lontano, 0 a posto); vSince = tempo dall'arrivo.
+ */
+export const PIECE_ENTRY_VERT = `
+attribute vec2 aPos;
+attribute vec2 aCenter;
+attribute float aEdge;
+attribute vec3 aRand;
+attribute float aDelay;
+attribute float aDist;
+attribute float aExtra;
+uniform vec4 uRect;
+uniform float uAspect;
+uniform float uProgress;
+uniform float uCrackTime;
+uniform float uStagger;
+uniform vec2 uOrigin;
+uniform float uForce;
+uniform float uGravity;
+uniform float uSpin;
+uniform float uTumble;
+uniform float uRadial;
+uniform vec2 uBias;
+uniform float uSwell;
+uniform vec2 uJolt;
+uniform float uTravel;
+uniform float uEase;
+varying vec2 vSrc;
+varying float vEdge;
+varying float vDist;
+varying float vAge;
+varying vec3 vRand;
+varying float vAngle;
+varying float vFlip;
+varying float vExtra;
+varying float vSince;
+
+void main() {
+  float begin = uCrackTime + aDelay * uStagger;
+  float fly = max(uTravel, 0.02);
+  float k = clamp((uProgress - begin) / fly, 0.0, 1.0);
+  float glide = 1.0 - (1.0 - k) * (1.0 - k) * (1.0 - k);
+  float slam = k * k * k;
+  float away = 1.0 - mix(glide, slam, uEase);
+  vec2 c = vec2(aCenter.x * uAspect, aCenter.y);
+  vec2 v = vec2(aPos.x * uAspect, aPos.y) - c;
+  vec2 o = vec2(uOrigin.x * uAspect, uOrigin.y);
+  vec2 dirOut = normalize(c - o + vec2(1e-4, 0.0));
+  float ang = (aRand.x - 0.5) * 2.0 * 6.2832 * uSpin * away;
+  float flip = cos(away * 6.2832 * uTumble * (0.4 + aRand.y));
+  v.x *= flip;
+  v = vec2(v.x * cos(ang) - v.y * sin(ang), v.x * sin(ang) + v.y * cos(ang));
+  vec2 dir = dirOut * uRadial + uBias + (aRand.yz - 0.5) * 0.6;
+  vec2 move = dir * uForce * (0.6 + aRand.z * 0.8) * away - vec2(0.0, uGravity * away * (1.0 - away));
+  vec2 q = c + v + move + uJolt;
+  vec2 uv = vec2(q.x / uAspect, q.y);
+  vec2 cv = uRect.xy + uv * uRect.zw;
+  gl_Position = vec4(cv.x * 2.0 - 1.0, 1.0 - cv.y * 2.0, 0.0, 1.0);
+  vSrc = aPos;
+  vEdge = aEdge;
+  vDist = aDist;
+  vAge = away;
+  vRand = aRand;
+  vAngle = ang;
+  vFlip = flip;
+  vExtra = aExtra;
+  vSince = uProgress - (begin + fly);
+}
+`;
+
 const MOTION_UNIFORMS = ['uRect', 'uAspect', 'uProgress', 'uCrackTime', 'uStagger', 'uOrigin', 'uForce', 'uGravity', 'uSpin', 'uTumble', 'uRadial', 'uBias', 'uSwell', 'uJolt'];
 
 /**
  * Renderer a pezzi.
- * spec: frag, uniforms (extra), mesh(params, aspect) → { cells, opts }, meshKey(params, aspect),
- *   motion(params, state) → { crackTime, stagger, force, gravity, spin, tumble, radial, bias:[x,y], swell, jolt:[x,y], origin:[x,y] },
+ * spec: frag, vert (opzionale: PIECE_ENTRY_VERT per i pezzi che arrivano), uniforms (extra), mesh(params, aspect) → { cells, opts }, meshKey(params, aspect),
+ *   motion(params, state) → { crackTime, stagger, force, gravity, spin, tumble, radial, bias:[x,y], swell, jolt:[x,y], origin:[x,y], travel, ease },
  *   bind(gl, u, state, env), particles(state, env), passes (opzionale: disegni extra prima dei pezzi).
  */
 export function createPiecesRenderer(canvas, spec) {
@@ -288,9 +361,9 @@ export function createPiecesRenderer(canvas, spec) {
   if (!gl) return null;
   const { prog, u, a } = createProgram(
     gl,
-    PIECE_VERT,
+    spec.vert || PIECE_VERT,
     spec.frag,
-    ['uTex', 'uColor', ...MOTION_UNIFORMS, ...(spec.uniforms || [])],
+    ['uTex', 'uColor', ...MOTION_UNIFORMS, ...(spec.vert === PIECE_ENTRY_VERT ? ['uTravel', 'uEase'] : []), ...(spec.uniforms || [])],
     ['aPos', 'aCenter', 'aEdge', 'aRand', 'aDelay', 'aDist', 'aExtra'],
   );
   const source = createSourceTexture(gl);
@@ -349,6 +422,8 @@ export function createPiecesRenderer(canvas, spec) {
       gl.uniform1f(u.uSwell, m.swell ?? 0.004);
       // scossa di tutta la carta (coordinate quadrate), es. un colpo violento
       gl.uniform2f(u.uJolt, (m.jolt || [0, 0])[0], (m.jolt || [0, 0])[1]);
+      if (u.uTravel) gl.uniform1f(u.uTravel, m.travel ?? Math.max(0.05, 1 - m.crackTime - m.stagger));
+      if (u.uEase) gl.uniform1f(u.uEase, m.ease ?? 0);
       spec.bind?.(gl, u, state, env);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       const stride = PIECE_STRIDE * 4;

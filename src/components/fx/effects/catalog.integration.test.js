@@ -9,11 +9,13 @@ describe('catalogo degli effetti carta', () => {
     expect(FX_CATALOG).toEqual(fromEffects);
   });
 
-  it('ogni armata ha al più una sconfitta e un ingresso', () => {
-    for (const role of ['defeat', 'entry']) {
-      const armies = FX_CATALOG.filter((fx) => fx.role === role).map((fx) => fx.army);
-      expect(new Set(armies).size).toBe(armies.length);
-    }
+  it('ogni armata ha al più una sconfitta (gli ingressi possono avere più varianti)', () => {
+    const armies = FX_CATALOG.filter((fx) => fx.role === 'defeat').map((fx) => fx.army);
+    expect(new Set(armies).size).toBe(armies.length);
+  });
+
+  it('gli ingressi d\'armata sono effetti in entrata', () => {
+    for (const fx of FX_CATALOG.filter((f) => f.role === 'entry')) expect(fx.kind).toBe('in');
   });
 
   it('ogni armata giocabile ha la sua sconfitta', () => {
