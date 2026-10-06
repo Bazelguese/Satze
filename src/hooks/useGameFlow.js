@@ -60,6 +60,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setCampaignDuelMod,
     setShuffleDealSetup,
     setPendingDuelPhase,
+    setDuelDeckKeys,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
     setEminenceMatchState,
@@ -174,6 +175,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     // L'IA sceglie un deck random (o usa quello specificato per campagna:
     // chiave di ARMY_DECKS oppure array di card IDs per missione)
     let enemySet;
+    let versusEnemyDeckKey = null;
     if (Array.isArray(enemyDeckKey)) {
       enemySet = resolveCardIdsAcrossArmies(enemyDeckKey, enemyArmySelected);
     } else {
@@ -184,8 +186,14 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       }
       const enemyDeck = ARMY_DECKS[enemyArmySelected][enemyDeckSelectedKey];
       enemySet = resolveCardIdsAcrossArmies(enemyDeck.cards, enemyArmySelected);
+      versusEnemyDeckKey = enemyDeckSelectedKey;
     }
     
+    setDuelDeckKeys?.({
+      player: typeof selectedDeckKey === 'string' ? selectedDeckKey : null,
+      enemy: versusEnemyDeckKey,
+    });
+
     const deal = computeShuffleDealFromSets(
       playerSet,
       enemySet,
@@ -375,6 +383,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setCampaignDuelMod,
     setShuffleDealSetup,
     setPendingDuelPhase,
+    setDuelDeckKeys,
     setPlayerDeckVisual,
     setEnemyDeckVisual,
     setShowClaimVictoryChoice,
@@ -515,6 +524,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
 
       setOpeningPlayerFirst(isPlayerFirst);
       setIsPlayerFirst(isPlayerFirst);
+      // Online il mazzo avversario per il VS arriva dal messaggio «pronto», non da ARMY_DECKS.
+      setDuelDeckKeys?.(null);
       setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
       setGamePhase('duelLoading');
     },
@@ -557,6 +568,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setCampaignDuelMod,
       setShuffleDealSetup,
       setPendingDuelPhase,
+      setDuelDeckKeys,
       initEminences,
     ]
   );

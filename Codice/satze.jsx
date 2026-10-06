@@ -157,6 +157,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { DuelLoadingOverlay } from '../src/components/DuelLoadingOverlay';
+import { buildDuelVersusData } from '../src/components/versus/versusMatchData';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
 import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDeckBuilderWrapper';
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
@@ -313,6 +314,7 @@ export default function SatzeGame() {
     setShuffleDealSetup,
     pendingDuelPhase,
     setPendingDuelPhase,
+    duelDeckKeys,
     playerDeckVisual,
     enemyDeckVisual,
     eminenceMatchState,
@@ -4896,6 +4898,22 @@ export default function SatzeGame() {
     const duelEnemyArmy = setup?.enemyArmy || duelEnemyCards?.[0]?.army || null;
     // Non coprire l'ultima animazione di passaggio (iris DeckConfirm → fadeOut/hold)
     const launchHandoffBusy = Boolean(pendingGameLaunch?.sessionId) || Boolean(launchVisualPhase);
+    // Schermata VS (IA e multiplayer; la campagna tiene il suo caricamento).
+    const duelVersus = buildDuelVersusData({
+      gameMode,
+      isOnline: isOnlinePvP,
+      difficulty: aiDifficulty,
+      selfName: multiplayerSession?.playerName,
+      peerName: onlinePeerName,
+      playerArmy: duelPlayerArmy,
+      playerDeckKey: isOnlinePvP ? selectedDeckKey : duelDeckKeys?.player,
+      playerSet: setup?.playerSet || null,
+      enemyArmy: duelEnemyArmy,
+      enemyDeckKey: duelDeckKeys?.enemy,
+      enemySet: setup?.enemySet || null,
+      peerDeck: onlinePeerDeck,
+      eminenceMatchState,
+    });
     return (
       <DuelLoadingOverlay
         battlefields={battlefields}
@@ -4907,6 +4925,7 @@ export default function SatzeGame() {
         enemyArmy={duelEnemyArmy}
         eminenceMatchState={eminenceMatchState}
         showChrome={!launchHandoffBusy}
+        versus={duelVersus}
         onComplete={() => {
           const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');
           setPendingDuelPhase(null);

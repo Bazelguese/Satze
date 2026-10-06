@@ -418,7 +418,7 @@ export default function DeckSelectCinematic({
   const [pulse, setPulse] = useState(0);
   const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
   const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
-  /** Stile copertina (proposte in prova dal VS LAB; default = ticket attuale). */
+  /** Stile copertina (default scatola 3D; le altre proposte si scelgono dal VS LAB). */
   const [coverStyle] = useState(() => getDeckCoverStyle());
   /** Anteprima attiva: shuffle | click | drop | effects */
   const [previewMode, setPreviewMode] = useState('shuffle');
