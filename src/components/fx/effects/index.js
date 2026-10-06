@@ -26,18 +26,17 @@ import { khemetSigilloEffect } from './armies/khemetSigillo.js';
 import { apexEffect } from './armies/apex.js';
 import { mascaradaSmascheratoEffect } from './armies/mascaradaSmascherato.js';
 import { concordiaEffect } from './armies/concordia.js';
-import { figliOcchioEffect } from './armies/figliOcchio.js';
+import { figliCostellazioneEffect } from './armies/figliCostellazione.js';
 import { corteFiammataEffect } from './armies/corteFiammata.js';
-import { calibriForgiaEffect } from './armies/calibriForgia.js';
-import { enclaveSchiusaEffect } from './armies/enclaveSchiusa.js';
-import { rattiBacioEffect } from './armies/rattiBacio.js';
+import { calibriSaldaturaEffect } from './armies/calibriSaldatura.js';
+import { enclaveDoraturaEffect } from './armies/enclaveDoratura.js';
+import { rattiMuffaEffect } from './armies/rattiMuffa.js';
 import { pattoRicucituraEffect } from './armies/pattoRicucitura.js';
-import { orathaiFiorituraEffect } from './armies/orathaiFioritura.js';
+import { orathaiLinfaEffect } from './armies/orathaiLinfa.js';
 import { mounthbornBrulicareEffect } from './armies/mounthbornBrulicare.js';
-import { mounthbornBoccaEffect } from './armies/mounthbornBocca.js';
 import { khemetEvocazioneEffect } from './armies/khemetEvocazione.js';
 import { apexGeloEffect } from './armies/apexGelo.js';
-import { mascaradaEntrataEffect } from './armies/mascaradaEntrata.js';
+import { mascaradaCoriandoliEffect } from './armies/mascaradaCoriandoli.js';
 import { concordiaStendardoEffect } from './armies/concordiaStendardo.js';
 
 export { burnEffect, dustEffect, shatterEffect, vortexEffect, materializeEffect };
@@ -56,22 +55,21 @@ export const FX_GENERIC_EFFECTS = [
 
 /** Effetti d'armata (campo `army` e `role`), in ordine di selezione armata. */
 export const FX_ARMY_EFFECTS = [
-  figliOcchioEffect,
+  figliCostellazioneEffect,
   figliEffect,
   kethranEffect,
   kethranSchiantoEffect,
   corteFiammataEffect,
   corteContrattoEffect,
-  calibriForgiaEffect,
+  calibriSaldaturaEffect,
   calibriEffect,
-  orathaiFiorituraEffect,
+  orathaiLinfaEffect,
   orathaiRoviEffect,
   mounthbornBrulicareEffect,
-  mounthbornBoccaEffect,
   mounthbornFameEffect,
-  enclaveSchiusaEffect,
+  enclaveDoraturaEffect,
   enclaveEffect,
-  rattiBacioEffect,
+  rattiMuffaEffect,
   rattiEffect,
   pattoRicucituraEffect,
   pattoRafficaEffect,
@@ -79,7 +77,7 @@ export const FX_ARMY_EFFECTS = [
   khemetSigilloEffect,
   apexGeloEffect,
   apexEffect,
-  mascaradaEntrataEffect,
+  mascaradaCoriandoliEffect,
   mascaradaSmascheratoEffect,
   concordiaStendardoEffect,
   concordiaEffect,
