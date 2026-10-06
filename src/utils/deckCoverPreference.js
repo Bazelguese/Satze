@@ -1,12 +1,12 @@
 /**
  * Stile della copertina dell'esercito (scelta mazzo + schermata VS).
- * Proposte in prova: si sceglie dal VS LAB; default = ticket attuale.
+ * Default = scatola 3D (modello scelto); le altre proposte restano selezionabili dal VS LAB.
  */
 
 const STORAGE_KEY = 'satze_deck_cover_style';
 
 export const DECK_COVER_STYLES = [
-  { key: 'ticket', label: 'Attuale', meta: 'Ticket con info boss' },
+  { key: 'ticket', label: 'Ticket', meta: 'Ticket con info boss (vecchia copertina)' },
   { key: 'fullart', label: 'Full-art', meta: 'Leader a tutta altezza' },
   { key: 'box', label: 'Scatola 3D', meta: 'Custodia con dorso' },
   { key: 'tarot', label: 'Tarocco', meta: 'Come le Eminenze' },
@@ -14,7 +14,7 @@ export const DECK_COVER_STYLES = [
 
 const VALID = new Set(DECK_COVER_STYLES.map((s) => s.key));
 
-export const DEFAULT_DECK_COVER_STYLE = 'ticket';
+export const DEFAULT_DECK_COVER_STYLE = 'box';
 
 export function getDeckCoverStyle() {
   try {

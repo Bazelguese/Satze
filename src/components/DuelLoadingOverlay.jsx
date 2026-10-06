@@ -22,10 +22,24 @@ import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
 import { EminenzaZone } from './eminence/EminenzaZone';
 import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
 import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
+import { DuelVersusScreen } from './versus/DuelVersusScreen';
+import { computeViewportScale } from '../settings/viewportScale';
 import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
 
 const WARMUP_MS = 3800;
+/**
+ * Durata minima della schermata VS: apertura scatola (≈3.1s) + caduta del VS e impatto.
+ * Se il caricamento finisce prima, il VS resta fino a qui; se dura di più, la scatola gira.
+ */
+const VS_MIN_MS = 5200;
+const VS_LEAVE_MS = 450;
+/** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
+const VS_LAYOUT = 'shadow';
+const VS_COVER = 'box';
+const VS_FX = Object.freeze({ open: true, spin: true, awaken: true, impact: true, parallax: true });
+const CANVAS_W = 1920;
+const CANVAS_H = 1080;
 const EMPTY_ASSETS = Object.freeze([]);
 
 const PLACE_WARMUP = [
@@ -66,6 +80,56 @@ function BlackProgressBar({ progress = 0 }) {
             transition: 'width 0.28s ease-out',
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+/** Canvas 1920×1080 scalato in contain sopra a tutto (il portale esce da GameViewport). */
+function VersusViewport({ leaving, children }) {
+  const [scale, setScale] = useState(() =>
+    typeof window === 'undefined' ? 1 : computeViewportScale(window.innerWidth, window.innerHeight, CANVAS_W, CANVAS_H)
+  );
+  useEffect(() => {
+    const update = () => {
+      const vw = window.visualViewport?.width ?? window.innerWidth;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setScale(computeViewportScale(vw, vh, CANVAS_W, CANVAS_H));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        background: '#000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        opacity: leaving ? 0 : 1,
+        transition: `opacity ${VS_LEAVE_MS}ms ease-in`,
+      }}
+    >
+      <div style={{ position: 'relative', width: CANVAS_W * scale, height: CANVAS_H * scale, flexShrink: 0 }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: CANVAS_W,
+            height: CANVAS_H,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            overflow: 'hidden',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -137,6 +201,7 @@ export function DuelLoadingOverlay({
   showChrome = true,
   preloadCards = EMPTY_ASSETS,
   preloadUrls = EMPTY_ASSETS,
+  versus = null,
   onComplete,
 }) {
   const rootRef = useRef(null);
@@ -151,6 +216,41 @@ export function DuelLoadingOverlay({
   const [clashPhase, setClashPhase] = useState(0);
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [markFlight, setMarkFlight] = useState(null);
+  const [loadDone, setLoadDone] = useState(false);
+  const [vsLeaving, setVsLeaving] = useState(false);
+  const vsStartRef = useRef(0);
+  // Il VS compare solo quando non copre l'ultima transizione di lancio (showChrome).
+  const vsActive = Boolean(versus) && showChrome;
+
+  useEffect(() => {
+    if (vsActive && !vsStartRef.current) vsStartRef.current = performance.now();
+  }, [vsActive]);
+
+  // Fine: senza VS come prima; con VS dopo la durata minima e la dissolvenza d'uscita.
+  useEffect(() => {
+    if (!loadDone) return undefined;
+    if (!versus) {
+      let t = 0;
+      const raf = requestAnimationFrame(() => {
+        t = window.setTimeout(() => onCompleteRef.current?.(), 160);
+      });
+      return () => {
+        cancelAnimationFrame(raf);
+        window.clearTimeout(t);
+      };
+    }
+    if (!vsActive) return undefined;
+    const shownFor = performance.now() - vsStartRef.current;
+    let leaveT = 0;
+    const holdT = window.setTimeout(() => {
+      setVsLeaving(true);
+      leaveT = window.setTimeout(() => onCompleteRef.current?.(), VS_LEAVE_MS);
+    }, Math.max(0, VS_MIN_MS - shownFor));
+    return () => {
+      window.clearTimeout(holdT);
+      window.clearTimeout(leaveT);
+    };
+  }, [loadDone, versus, vsActive]);
 
   const fields = useMemo(
     () => (Array.isArray(battlefields) ? battlefields.filter(Boolean) : []),
@@ -237,9 +337,7 @@ export function DuelLoadingOverlay({
       if (cancelled || doneRef.current) return;
       doneRef.current = true;
       setProgress(100);
-      requestAnimationFrame(() => {
-        setTimeout(() => onCompleteRef.current?.(), 160);
-      });
+      setLoadDone(true);
     };
 
     const run = async () => {
@@ -538,7 +636,26 @@ export function DuelLoadingOverlay({
   return createPortal(
     <>
       {stage}
-      {showChrome ? <BlackProgressBar progress={progress} /> : null}
+      {vsActive ? (
+        <VersusViewport leaving={vsLeaving}>
+          <DuelVersusScreen
+            playerIdentity={versus.playerIdentity}
+            enemyIdentity={versus.enemyIdentity}
+            playerDeck={versus.playerDeck}
+            enemyDeck={versus.enemyDeck}
+            layout={VS_LAYOUT}
+            coverStyle={VS_COVER}
+            eminenceFormat={versus.eminenceFormat}
+            playerEminenceId={versus.playerEminenceId}
+            enemyEminenceId={versus.enemyEminenceId}
+            playerCardBack={playerCardBack}
+            enemyCardBack={enemyCardBack}
+            fx={VS_FX}
+            progress={progress}
+          />
+        </VersusViewport>
+      ) : null}
+      {!versus && showChrome ? <BlackProgressBar progress={progress} /> : null}
     </>,
     document.body
   );

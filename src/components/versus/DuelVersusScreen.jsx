@@ -20,8 +20,10 @@ import { getEminenceArtUrl } from '../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
-import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
 import { pickDistinctCardBackPair } from '../../utils/cardBackPicker.js';
+import { buildVersusIdentity } from './versusMatchData.js';
+
+export { buildVersusIdentity };
 import {
   DeckTicket,
   DeckSelectStyles,
@@ -57,27 +59,6 @@ const SPARKS = Array.from({ length: 14 }, (_, i) => ({
   a: `${Math.round((360 / 14) * i + seeded(i + 7) * 18)}deg`,
   d: `${170 + Math.round(seeded(i + 17) * 150)}px`,
 }));
-
-/**
- * Etichette dei due lati.
- * Contro l'IA: «TU» vs «IA · <difficoltà>»; online: nomi scelti in lobby.
- */
-export function buildVersusIdentity({ isOnline = false, difficulty = 'medium', selfName = '', peerName = '' } = {}) {
-  if (isOnline) {
-    return {
-      player: { eyebrow: 'TU', name: String(selfName || '').trim() || 'Giocatore', sub: null },
-      enemy: { eyebrow: 'AVVERSARIO', name: String(peerName || '').trim() || 'Avversario', sub: null },
-    };
-  }
-  return {
-    player: { eyebrow: 'GIOCATORE', name: 'TU', sub: null },
-    enemy: {
-      eyebrow: 'AVVERSARIO',
-      name: 'IA',
-      sub: DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES.medium,
-    },
-  };
-}
 
 /**
  * Eminenza di un lato: id dallo stato partita se c'è, altrimenti stessa regola

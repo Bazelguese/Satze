@@ -138,6 +138,11 @@ export function useGameState() {
   const [shuffleDealSetup, setShuffleDealSetup] = useState(null);
   /** Fase duello da aprire dopo `duelLoading` (`shuffleDeal` | `selectField`). */
   const [pendingDuelPhase, setPendingDuelPhase] = useState(null);
+  /**
+   * Chiavi dei mazzi effettivamente in campo per la schermata VS ({ player, enemy }: chiave
+   * ARMY_DECKS o `custom_<id>`, null se mazzo da array di id). null online: lì vale la scelta UI.
+   */
+  const [duelDeckKeys, setDuelDeckKeys] = useState(null);
   /** Identità visiva mazzo (accent + armate dal deck da 10) — persiste per tutta la partita. */
   const [playerDeckVisual, setPlayerDeckVisual] = useState(null);
   const [enemyDeckVisual, setEnemyDeckVisual] = useState(null);
@@ -293,6 +298,8 @@ export function useGameState() {
     setShuffleDealSetup,
     pendingDuelPhase,
     setPendingDuelPhase,
+    duelDeckKeys,
+    setDuelDeckKeys,
     playerDeckVisual,
     setPlayerDeckVisual,
     enemyDeckVisual,
