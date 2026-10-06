@@ -164,17 +164,20 @@
 }
 
 /* ============================================================
-   B · SCATOLA 3D
-   cubo: fronte 66cqw × 80cqh, profondità 15cqw
+   B · SCATOLA 3D — custodia a 6 facce
+   Il fronte ha le proporzioni di una carta normale (144×208, dorsi 660×947 → ~0.69),
+   non quelle della carta Eminenza (340×588).
    ============================================================ */
 .dcv-box {
-  --bw: 62cqw;
-  --bh: 80cqh;
-  --bd: 20cqw;
+  --bw: 66cqw;
+  --bh: calc(var(--bw) * 1.43);
+  --bd: 18cqw;
   --ry: -32deg;
   --rx: -7deg;
 }
 .dcv-box.is-mirror { --ry: 32deg; }
+.dcv-box.is-spin { cursor: grab; touch-action: none; }
+.dcv-box.is-spin.is-dragging { cursor: grabbing; }
 .dcv-box-stage {
   position: absolute;
   inset: 0;
@@ -184,13 +187,17 @@
 .dcv-box-cube {
   position: absolute;
   left: 50%;
-  top: 48%;
+  top: 50%;
   width: var(--bw);
   height: var(--bh);
   transform-style: preserve-3d;
-  transform: translate(-50%, -50%) rotateX(var(--rx)) rotateY(var(--ry));
+  transform: translate(-50%, -50%)
+    rotateX(calc(var(--rx) + var(--spin-x, 0deg)))
+    rotateY(calc(var(--ry) + var(--spin-y, 0deg)));
 }
 .dcv-box.is-center .dcv-box-cube { animation: dcv-box-sway 7s ease-in-out infinite alternate; }
+.dcv-box.is-spin .dcv-box-cube,
+.dcv-box.is-opening .dcv-box-cube { animation: none; }
 @keyframes dcv-box-sway {
   from { transform: translate(-50%, -50%) rotateX(var(--rx)) rotateY(var(--ry)); }
   to { transform: translate(-50%, -50%) rotateX(calc(var(--rx) + 2deg)) rotateY(calc(var(--ry) * 0.7)); }
@@ -199,6 +206,8 @@
   position: absolute;
   backface-visibility: hidden;
 }
+
+/* fronte: illustrazione + nome, nessun simbolo d'armata (sta sui dorsi) */
 .dcv-box-front {
   inset: 0;
   overflow: hidden;
@@ -217,14 +226,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(5, 6, 8, 0.45) 0%, transparent 22%, transparent 55%, rgba(5, 6, 8, 0.92) 82%),
+    linear-gradient(180deg, rgba(5, 6, 8, 0.35) 0%, transparent 20%, transparent 52%, rgba(5, 6, 8, 0.92) 80%),
     linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0%, transparent 25%);
-}
-.dcv-box-seal {
-  position: absolute;
-  top: 3.5cqw;
-  left: 50%;
-  transform: translateX(-50%);
 }
 .dcv-box-label {
   position: absolute;
@@ -254,8 +257,8 @@
   letter-spacing: 0.28em;
   color: var(--accent);
 }
-/* dorso sulla faccia che la rotazione porta verso chi guarda:
-   destra con --ry negativo, sinistra se specchiata */
+
+/* dorsi (destro e sinistro): simboli d'armata + nome */
 .dcv-box-spine {
   top: 0;
   left: calc(50% - var(--bd) / 2);
@@ -264,16 +267,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: 3cqw;
   padding: 4cqw 0;
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.55)),
     color-mix(in srgb, var(--spine) 55%, #0a0a0e);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spine) 80%, #fff);
-  transform: rotateY(90deg) translateZ(calc(var(--bw) / 2));
 }
-.dcv-box.is-mirror .dcv-box-spine { transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2)); }
+.dcv-box-spine--right { transform: rotateY(90deg) translateZ(calc(var(--bw) / 2)); }
+.dcv-box-spine--left { transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2)); }
 .dcv-box-spine-name {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
@@ -285,25 +288,80 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-height: 70%;
+  min-height: 0;
+  flex: 1 1 auto;
   color: #f5f3eb;
   text-shadow: 0 0 1.5cqw rgba(0, 0, 0, 0.9);
 }
-.dcv-box-spine-glyphs { flex-direction: column; }
-.dcv-box-spine-glyphs .dcv-glyph { width: 8.5cqw; height: 8.5cqw; }
-.dcv-box-top {
+.dcv-box-spine-glyphs { flex-direction: column; flex-shrink: 0; }
+.dcv-box-spine-glyphs .dcv-glyph { width: 10cqw; height: 10cqw; }
+
+/* retro: contenuto del mazzo */
+.dcv-box-back {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4cqw;
+  padding: 6cqw 6cqw 5cqw;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%),
+    #0a0a0e;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent);
+  transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
+}
+.dcv-box-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+}
+.dcv-box-list li {
+  display: flex;
+  gap: 2cqw;
+  align-items: baseline;
+  padding-bottom: 1cqw;
+  border-bottom: 1px solid rgba(245, 243, 235, 0.08);
+  font-size: 3.2cqw;
+  line-height: 1.15;
+}
+.dcv-box-list b {
+  flex-shrink: 0;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 400;
+  color: var(--accent);
+}
+.dcv-box-list span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcv-box-back-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8cqw;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.4cqw;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 235, 0.6);
+}
+
+/* coperchio e fondo */
+.dcv-box-top,
+.dcv-box-bottom {
   left: 0;
   top: calc(50% - var(--bd) / 2);
   width: 100%;
   height: var(--bd);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 30%, #1a1a20), #0a0a0e);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent);
-  transform: rotateX(90deg) translateZ(calc(var(--bh) / 2));
 }
+.dcv-box-top { transform: rotateX(90deg) translateZ(calc(var(--bh) / 2)); }
+.dcv-box-bottom { transform: rotateX(-90deg) translateZ(calc(var(--bh) / 2)); background: #08080b; }
+
 /* ---------- apertura (solo VS): coperchio incernierato sul retro + carte a ventaglio ----------
    Sequenza su 3.4s: coperchio 29–40% su, carte 37–51% fuori, 69–81% dentro, coperchio 79–90% giù. */
 .dcv-box.is-opening { --rx: 10deg; }
-.dcv-box.is-opening .dcv-box-cube { animation: none; }
 .dcv-box-cavity,
 .dcv-box-lid-hinge {
   left: 0;
@@ -333,12 +391,13 @@
   inset: 0;
   transform-style: preserve-3d;
 }
+/* carte del ventaglio in proporzione da carta normale (84% della larghezza → ~85% dell'altezza) */
 .dcv-box-card {
   position: absolute;
-  left: 18%;
-  top: 8%;
-  width: 64%;
-  height: 78%;
+  left: 8%;
+  top: 7.5%;
+  width: 84%;
+  aspect-ratio: 144 / 208;
   transform-origin: 50% 100%;
   overflow: hidden;
   background: #0a0a0e;
@@ -357,22 +416,17 @@
 @keyframes dcv-card-out {
   0%, 36% { opacity: 0; transform: translateY(0) rotate(0deg); }
   37% { opacity: 1; transform: translateY(0) rotate(0deg); }
-  51%, 69% { opacity: 1; transform: translateY(-64%) rotate(calc(var(--i) * 10deg)); }
+  51%, 69% { opacity: 1; transform: translateY(-66%) rotate(calc(var(--i) * 6deg)); }
   81% { opacity: 1; transform: translateY(0) rotate(0deg); }
   82%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
 }
 
-.dcv-box-back {
-  inset: 0;
-  background: #0a0a0e;
-  transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
-}
 .dcv-box-floor {
   position: absolute;
   left: 50%;
-  bottom: 3cqh;
+  top: calc(50% + var(--bh) / 2 - 2cqw);
   width: 80cqw;
-  height: 6cqh;
+  height: 10cqw;
   transform: translateX(-50%);
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, transparent 70%);
   filter: blur(4px);

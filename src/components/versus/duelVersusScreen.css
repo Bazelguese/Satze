@@ -3,8 +3,8 @@
    ============================================================ */
 
 .vsx {
-  --pa: #a288fb;
-  --ea: #f8504f;
+  --la: #a288fb;
+  --ra: #f8504f;
   --vsx-ticket-scale: 0.78;
   position: absolute;
   inset: 0;
@@ -26,13 +26,13 @@
   overflow: hidden;
   z-index: 0;
 }
-.vsx-half--p {
+.vsx-half--l {
   clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%);
-  animation: vsx-half-in-p 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: vsx-half-in-l 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.vsx-half--e {
+.vsx-half--r {
   clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
-  animation: vsx-half-in-e 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: vsx-half-in-r 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .vsx-half-bg {
   position: absolute;
@@ -42,16 +42,16 @@
   filter: brightness(0.32) saturate(1.1);
   animation: vsx-drift 14s ease-in-out infinite alternate;
 }
-.vsx-half--e .vsx-half-bg { animation-direction: alternate-reverse; }
+.vsx-half--r .vsx-half-bg { animation-direction: alternate-reverse; }
 .vsx-half-tint { position: absolute; inset: 0; }
-.vsx-half--p .vsx-half-tint {
+.vsx-half--l .vsx-half-tint {
   background:
-    radial-gradient(circle at 25% 50%, color-mix(in srgb, var(--pa) 34%, transparent) 0%, transparent 58%),
+    radial-gradient(circle at 25% 50%, color-mix(in srgb, var(--la) 34%, transparent) 0%, transparent 58%),
     linear-gradient(90deg, rgba(5, 6, 8, 0.15) 0%, rgba(5, 6, 8, 0.7) 100%);
 }
-.vsx-half--e .vsx-half-tint {
+.vsx-half--r .vsx-half-tint {
   background:
-    radial-gradient(circle at 75% 50%, color-mix(in srgb, var(--ea) 34%, transparent) 0%, transparent 58%),
+    radial-gradient(circle at 75% 50%, color-mix(in srgb, var(--ra) 34%, transparent) 0%, transparent 58%),
     linear-gradient(270deg, rgba(5, 6, 8, 0.15) 0%, rgba(5, 6, 8, 0.7) 100%);
 }
 
@@ -64,11 +64,11 @@
   height: 1180px;
   z-index: 2;
   transform: translate(-50%, -50%) rotate(12.04deg);
-  background: linear-gradient(180deg, var(--ea) 0%, #f5f3eb 50%, var(--pa) 100%);
+  background: linear-gradient(180deg, var(--ra) 0%, #f5f3eb 50%, var(--la) 100%);
   box-shadow:
     0 0 18px rgba(245, 243, 235, 0.55),
-    0 0 60px color-mix(in srgb, var(--pa) 45%, transparent),
-    0 0 60px color-mix(in srgb, var(--ea) 45%, transparent);
+    0 0 60px color-mix(in srgb, var(--la) 45%, transparent),
+    0 0 60px color-mix(in srgb, var(--ra) 45%, transparent);
   animation:
     vsx-seam-in 0.5s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both,
     vsx-seam-pulse 2.6s 1s ease-in-out infinite;
@@ -86,13 +86,13 @@
   gap: 22px;
   transform: translate(-50%, -50%);
 }
-.vsx-side--p {
+.vsx-side--l {
   left: 25%;
-  animation: vsx-side-in-p 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: vsx-side-in-l 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.vsx-side--e {
+.vsx-side--r {
   left: 75%;
-  animation: vsx-side-in-e 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: vsx-side-in-r 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .vsx-who {
@@ -221,8 +221,8 @@
   border: 2px solid rgba(245, 243, 235, 0.55);
   background: radial-gradient(circle, rgba(5, 6, 8, 0.92) 0%, rgba(5, 6, 8, 0.75) 62%, transparent 72%);
   box-shadow:
-    -14px 0 40px color-mix(in srgb, var(--pa) 55%, transparent),
-    14px 0 40px color-mix(in srgb, var(--ea) 55%, transparent);
+    -14px 0 40px color-mix(in srgb, var(--la) 55%, transparent),
+    14px 0 40px color-mix(in srgb, var(--ra) 55%, transparent);
   animation: vsx-ring-spin 18s linear infinite;
 }
 .vsx-vs-ring::before,
@@ -235,8 +235,8 @@
   margin-top: -7px;
   transform: rotate(45deg);
 }
-.vsx-vs-ring::before { left: -8px; background: var(--pa); box-shadow: 0 0 12px var(--pa); }
-.vsx-vs-ring::after { right: -8px; background: var(--ea); box-shadow: 0 0 12px var(--ea); }
+.vsx-vs-ring::before { left: -8px; background: var(--la); box-shadow: 0 0 12px var(--la); }
+.vsx-vs-ring::after { right: -8px; background: var(--ra); box-shadow: 0 0 12px var(--ra); }
 .vsx-vs-flash {
   position: absolute;
   inset: -80px;
@@ -258,11 +258,11 @@
 }
 .vsx-vs-v {
   transform: translateY(-8px);
-  text-shadow: -4px 0 0 var(--pa), 0 0 30px color-mix(in srgb, var(--pa) 70%, transparent);
+  text-shadow: -4px 0 0 var(--la), 0 0 30px color-mix(in srgb, var(--la) 70%, transparent);
 }
 .vsx-vs-s {
   transform: translateY(8px);
-  text-shadow: 4px 0 0 var(--ea), 0 0 30px color-mix(in srgb, var(--ea) 70%, transparent);
+  text-shadow: 4px 0 0 var(--ra), 0 0 30px color-mix(in srgb, var(--ra) 70%, transparent);
 }
 
 /* ---------- barra di caricamento ---------- */
@@ -288,7 +288,7 @@
 }
 .vsx-foot-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--pa), #f5f3eb 50%, var(--ea));
+  background: linear-gradient(90deg, var(--la), #f5f3eb 50%, var(--ra));
   box-shadow: 0 0 12px rgba(245, 243, 235, 0.45);
   transition: width 0.28s ease-out;
 }
@@ -310,19 +310,19 @@
 }
 
 /* ---------- keyframes ---------- */
-@keyframes vsx-half-in-p { from { transform: translateX(-60%); } to { transform: translateX(0); } }
-@keyframes vsx-half-in-e { from { transform: translateX(60%); } to { transform: translateX(0); } }
+@keyframes vsx-half-in-l { from { transform: translateX(-60%); } to { transform: translateX(0); } }
+@keyframes vsx-half-in-r { from { transform: translateX(60%); } to { transform: translateX(0); } }
 @keyframes vsx-drift { from { transform: scale(1) translateX(-1%); } to { transform: scale(1.06) translateX(1%); } }
 @keyframes vsx-seam-in {
   from { opacity: 0; transform: translate(-50%, -50%) rotate(12.04deg) scaleY(0); }
   to { opacity: 1; transform: translate(-50%, -50%) rotate(12.04deg) scaleY(1); }
 }
 @keyframes vsx-seam-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.45); } }
-@keyframes vsx-side-in-p {
+@keyframes vsx-side-in-l {
   from { opacity: 0; transform: translate(calc(-50% - 120px), -50%); }
   to { opacity: 1; transform: translate(-50%, -50%); }
 }
-@keyframes vsx-side-in-e {
+@keyframes vsx-side-in-r {
   from { opacity: 0; transform: translate(calc(-50% + 120px), -50%); }
   to { opacity: 1; transform: translate(-50%, -50%); }
 }
@@ -355,7 +355,7 @@
   align-items: center;
   gap: 26px;
 }
-.vsx-side--e .vsx-stage { flex-direction: row-reverse; }
+.vsx-side--r .vsx-stage { flex-direction: row-reverse; }
 
 .vsx-em {
   position: relative;
@@ -413,15 +413,15 @@
   z-index: 2;
   filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.85));
 }
-.vsx-lay-hero .vsx-side--p .vsx-stage-cover {
+.vsx-lay-hero .vsx-side--l .vsx-stage-cover {
   left: -215px;
   transform: rotate(-6deg);
-  animation: vsx-cover-drop-p 0.55s 0.85s cubic-bezier(0.3, 1.3, 0.4, 1) both;
+  animation: vsx-cover-drop-l 0.55s 0.85s cubic-bezier(0.3, 1.3, 0.4, 1) both;
 }
-.vsx-lay-hero .vsx-side--e .vsx-stage-cover {
+.vsx-lay-hero .vsx-side--r .vsx-stage-cover {
   right: -215px;
   transform: rotate(6deg);
-  animation: vsx-cover-drop-e 0.55s 0.85s cubic-bezier(0.3, 1.3, 0.4, 1) both;
+  animation: vsx-cover-drop-r 0.55s 0.85s cubic-bezier(0.3, 1.3, 0.4, 1) both;
 }
 
 /* --- shadow: arte dell'Eminenza come sfondo della metà --- */
@@ -432,7 +432,7 @@
   background-position: center 22%;
   filter: brightness(0.5) saturate(1.15);
 }
-.vsx-lay-shadow .vsx-half--e .vsx-half-bg { left: auto; right: -2%; }
+.vsx-lay-shadow .vsx-half--r .vsx-half-bg { left: auto; right: -2%; }
 .vsx-em-banner {
   display: flex;
   flex-direction: column;
@@ -480,11 +480,11 @@
   from { opacity: 0; transform: translateY(40px) scale(0.92); filter: brightness(2); }
   to { opacity: 1; transform: none; filter: none; }
 }
-@keyframes vsx-cover-drop-p {
+@keyframes vsx-cover-drop-l {
   from { opacity: 0; transform: translateY(-60px) rotate(-18deg) scale(1.2); }
   to { opacity: 1; transform: rotate(-6deg); }
 }
-@keyframes vsx-cover-drop-e {
+@keyframes vsx-cover-drop-r {
   from { opacity: 0; transform: translateY(-60px) rotate(18deg) scale(1.2); }
   to { opacity: 1; transform: rotate(6deg); }
 }
@@ -499,14 +499,14 @@
 
 /* Risveglio Eminenza: sfondo spento → acceso, con ondata di luce nel colore dell'armata. */
 .vsx-half-glow { position: absolute; inset: 0; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
-.vsx-half--p .vsx-half-glow { background: radial-gradient(ellipse at 26% 45%, color-mix(in srgb, var(--pa) 75%, #fff) 0%, transparent 55%); }
-.vsx-half--e .vsx-half-glow { background: radial-gradient(ellipse at 74% 45%, color-mix(in srgb, var(--ea) 75%, #fff) 0%, transparent 55%); }
+.vsx-half--l .vsx-half-glow { background: radial-gradient(ellipse at 26% 45%, color-mix(in srgb, var(--la) 75%, #fff) 0%, transparent 55%); }
+.vsx-half--r .vsx-half-glow { background: radial-gradient(ellipse at 74% 45%, color-mix(in srgb, var(--ra) 75%, #fff) 0%, transparent 55%); }
 .vsx-fx-awaken .vsx-half-bg {
   animation:
     vsx-drift 14s ease-in-out infinite alternate,
     vsx-awaken 1.6s 0.55s cubic-bezier(0.3, 0.6, 0.3, 1) backwards;
 }
-.vsx-fx-awaken .vsx-half--e .vsx-half-bg { animation-direction: alternate-reverse, normal; }
+.vsx-fx-awaken .vsx-half--r .vsx-half-bg { animation-direction: alternate-reverse, normal; }
 .vsx-fx-awaken .vsx-half-glow { animation: vsx-glow 2.2s 0.9s ease-out both; }
 @keyframes vsx-awaken { from { filter: brightness(0.05) saturate(0); } }
 @keyframes vsx-glow { 0% { opacity: 0; } 25% { opacity: 0.75; } 100% { opacity: 0.18; } }
@@ -529,7 +529,7 @@
   width: 4px;
   height: 24px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--pa) 50%, var(--ea)));
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--la) 50%, var(--ra)));
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
   opacity: 0;
   transform: rotate(var(--a)) translateY(0);
@@ -539,27 +539,6 @@
   0% { opacity: 0; transform: rotate(var(--a)) translateY(-40px) scaleY(1.6); }
   4% { opacity: 1; transform: rotate(var(--a)) translateY(-52px) scaleY(1.6); }
   100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scaleY(0.4); }
-}
-
-/* Particelle d'armata: braci che salgono, ritagliate dalla propria metà. */
-.vsx-embers { position: absolute; inset: 0; pointer-events: none; }
-.vsx-embers span {
-  position: absolute;
-  bottom: -12px;
-  left: var(--x);
-  width: var(--s);
-  height: var(--s);
-  border-radius: 50%;
-  opacity: 0;
-  animation: vsx-ember var(--t) var(--dl) linear infinite;
-}
-.vsx-half--p .vsx-embers span { background: color-mix(in srgb, var(--pa) 70%, #fff); box-shadow: 0 0 10px var(--pa); }
-.vsx-half--e .vsx-embers span { background: color-mix(in srgb, var(--ea) 70%, #fff); box-shadow: 0 0 10px var(--ea); }
-@keyframes vsx-ember {
-  0% { opacity: 0; transform: translate(0, 0); }
-  12% { opacity: 0.9; }
-  80% { opacity: 0.5; }
-  100% { opacity: 0; transform: translate(var(--dx), -1120px); }
 }
 
 /* Parallasse: proprietà `translate` separata, non tocca le animazioni su `transform`. */

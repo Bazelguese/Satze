@@ -7,7 +7,7 @@
 // `deck` = voce costruita da buildDeckEntry (DeckSelectCinematic).
 // ============================================================
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { CARD_IMAGES, AGENT_IMAGES } from '../../data/images.js';
 import { DECK_SUMMARY_BG_POSITION } from '../../data/deckSummaryCropConfig.js';
@@ -107,19 +107,136 @@ function fanCards(deck) {
     .map((c) => ({ id: c.id, name: c.name, src: CARD_IMAGES?.[c.id] || AGENT_IMAGES?.[c.id] }));
 }
 
-function BoxCover({ deck, art, armies, isCenter, mirror, opening }) {
+/**
+ * Rotazione stile schermate di caricamento: lenta in automatico (dopo `delayMs`),
+ * trascinabile col puntatore (orizzontale = giro, verticale = inclinazione) con inerzia.
+ * Scrive solo variabili CSS sul nodo: nessun re-render per fotogramma.
+ */
+function useBoxSpin(enabled, { delayMs = 0, dir = 1 } = {}) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!enabled || !el) return undefined;
+    const reduce = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const autoSpeed = reduce ? 0 : 16 * dir; // gradi/secondo
+    let angle = 0;
+    let tilt = 0;
+    let vel = 0;
+    let dragging = false;
+    let startAt = performance.now() + delayMs;
+    let last = performance.now();
+    let lastX = 0;
+    let lastY = 0;
+    let lastMove = 0;
+    let raf = 0;
+
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (!dragging) {
+        if (now >= startAt) {
+          vel += (autoSpeed - vel) * Math.min(1, dt * 1.2);
+          angle += vel * dt;
+        }
+        tilt += (0 - tilt) * Math.min(1, dt * 2.5);
+      }
+      el.style.setProperty('--spin-y', `${angle.toFixed(2)}deg`);
+      el.style.setProperty('--spin-x', `${tilt.toFixed(2)}deg`);
+      raf = requestAnimationFrame(tick);
+    };
+    const onDown = (e) => {
+      dragging = true;
+      startAt = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMove = performance.now();
+      vel = 0;
+      el.setPointerCapture?.(e.pointerId);
+      el.classList.add('is-dragging');
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      const now = performance.now();
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      const dts = Math.max(0.008, (now - lastMove) / 1000);
+      angle += dx * 0.6;
+      tilt = Math.max(-28, Math.min(28, tilt - dy * 0.35));
+      vel = Math.max(-720, Math.min(720, (dx * 0.6) / dts));
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMove = now;
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (performance.now() - lastMove > 90) vel = 0;
+      el.releasePointerCapture?.(e.pointerId);
+      el.classList.remove('is-dragging');
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
+  }, [enabled, delayMs, dir]);
+  return ref;
+}
+
+function BoxSpine({ deck, armies, spineArmy, side }) {
+  return (
+    <div className={`dcv-box-face dcv-box-spine dcv-box-spine--${side}`} style={{ '--spine': spineArmy }}>
+      <ArmyGlyphs armies={armies} className="dcv-glyphs dcv-box-spine-glyphs" />
+      <span className="dcv-box-spine-name">{deck.name}</span>
+    </div>
+  );
+}
+
+/** Retro della scatola: il contenuto, come l'etichetta di una confezione. */
+function BoxBack({ deck, armies }) {
+  const cards = (deck.deckCards || []).slice(0, 10);
+  return (
+    <div className="dcv-box-face dcv-box-back">
+      <span className="dcv-eyebrow">CONTENUTO</span>
+      <ol className="dcv-box-list">
+        {cards.map((c) => (
+          <li key={c.id}>
+            <b>L{c.league}</b>
+            <span>{c.name}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="dcv-box-back-foot">
+        <span>{armies.map((a) => a.army).join(' · ')}</span>
+        <span>{deck.cards ?? cards.length} CARTE · LEGA {deck.totalLeague ?? 30}</span>
+      </div>
+    </div>
+  );
+}
+
+function BoxCover({ deck, art, armies, isCenter, mirror, opening, spin }) {
   const spineArmy = armies[0]?.accent || deck.accent;
   const fan = opening ? fanCards(deck) : [];
+  // Nel VS la rotazione parte dopo l'ingresso (o dopo che la scatola si è richiusa).
+  const spinRef = useBoxSpin(spin, { delayMs: opening ? 3100 : 1100, dir: mirror ? -1 : 1 });
   return (
-    <div className={`dcv dcv-box${isCenter ? ' is-center' : ''}${mirror ? ' is-mirror' : ''}${opening ? ' is-opening' : ''}`}>
+    <div
+      ref={spinRef}
+      className={`dcv dcv-box${isCenter ? ' is-center' : ''}${mirror ? ' is-mirror' : ''}${opening ? ' is-opening' : ''}${spin ? ' is-spin' : ''}`}
+    >
       <div className="dcv-box-stage">
         <div className="dcv-box-cube">
           <div className="dcv-box-face dcv-box-front">
             <ArtImg art={art} className="dcv-box-art" />
             <div className="dcv-box-front-shade" />
-            <div className="dcv-box-seal">
-              <ArmyGlyphs armies={armies} />
-            </div>
             <div className="dcv-box-label">
               <span className="dcv-box-name">{deck.name}</span>
               <span className="dcv-box-meta">
@@ -127,10 +244,10 @@ function BoxCover({ deck, art, armies, isCenter, mirror, opening }) {
               </span>
             </div>
           </div>
-          <div className="dcv-box-face dcv-box-spine" style={{ '--spine': spineArmy }}>
-            <span className="dcv-box-spine-name">{deck.name}</span>
-            <ArmyGlyphs armies={armies} className="dcv-glyphs dcv-box-spine-glyphs" />
-          </div>
+          <BoxSpine deck={deck} armies={armies} spineArmy={spineArmy} side="right" />
+          <BoxSpine deck={deck} armies={armies} spineArmy={spineArmy} side="left" />
+          <BoxBack deck={deck} armies={armies} />
+          <div className="dcv-box-face dcv-box-bottom" />
           {opening ? (
             <>
               <div className="dcv-box-face dcv-box-cavity" />
@@ -148,7 +265,6 @@ function BoxCover({ deck, art, armies, isCenter, mirror, opening }) {
           ) : (
             <div className="dcv-box-face dcv-box-top" />
           )}
-          <div className="dcv-box-face dcv-box-back" />
         </div>
         <div className="dcv-box-floor" />
       </div>
@@ -191,12 +307,13 @@ function TarotCover({ deck, art, armies, isCenter }) {
  * @param {boolean} [props.isCenter] decorazioni e animazioni piene
  * @param {boolean} [props.mirror] scatola ruotata dall'altro lato (lato avversario nel VS)
  * @param {boolean} [props.opening] scatola: all'ingresso si apre e mostra le carte (solo VS)
+ * @param {boolean} [props.spin] scatola: rotazione lenta + trascinabile (solo VS)
  */
-export function DeckCover({ deck, variant, isCenter = true, mirror = false, opening = false }) {
+export function DeckCover({ deck, variant, isCenter = true, mirror = false, opening = false, spin = false }) {
   if (!deck) return null;
   const art = coverArt(deck);
   const armies = deckArmies(deck);
-  const props = { deck, art, armies, isCenter, mirror, opening };
+  const props = { deck, art, armies, isCenter, mirror, opening, spin };
   return (
     <div className="dcv-root" style={{ '--accent': deck.accent }}>
       {variant === 'box' ? <BoxCover {...props} />
