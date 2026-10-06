@@ -14,33 +14,31 @@ import { mirrorEffect } from './mirror.js';
 import { derezEffect } from './derez.js';
 import { figliEffect } from './armies/figli.js';
 import { kethranEffect } from './armies/kethran.js';
-import { kethranMutilazioneEffect } from './armies/kethranMutilazione.js';
+import { kethranSchiantoEffect } from './armies/kethranSchianto.js';
 import { corteContrattoEffect } from './armies/corteContratto.js';
 import { calibriEffect } from './armies/calibri.js';
 import { orathaiRoviEffect } from './armies/orathaiRovi.js';
 import { mounthbornFameEffect } from './armies/mounthbornFame.js';
 import { enclaveEffect } from './armies/enclave.js';
 import { rattiEffect } from './armies/ratti.js';
-import { pattoEffect } from './armies/patto.js';
+import { pattoRafficaEffect } from './armies/pattoRaffica.js';
 import { khemetSigilloEffect } from './armies/khemetSigillo.js';
 import { apexEffect } from './armies/apex.js';
-import { mascaradaEffect } from './armies/mascarada.js';
+import { mascaradaSmascheratoEffect } from './armies/mascaradaSmascherato.js';
 import { concordiaEffect } from './armies/concordia.js';
-import { figliNebulaEffect } from './armies/figliNebula.js';
+import { figliOcchioEffect } from './armies/figliOcchio.js';
 import { corteFiammataEffect } from './armies/corteFiammata.js';
-import { calibriCorazzaEffect } from './armies/calibriCorazza.js';
-import { enclaveTesoroEffect } from './armies/enclaveTesoro.js';
-import { rattiPozzaEffect } from './armies/rattiPozza.js';
+import { calibriForgiaEffect } from './armies/calibriForgia.js';
+import { enclaveSchiusaEffect } from './armies/enclaveSchiusa.js';
+import { rattiBacioEffect } from './armies/rattiBacio.js';
 import { pattoRicucituraEffect } from './armies/pattoRicucitura.js';
-import { orathaiVarcoEffect } from './armies/orathaiVarco.js';
-import { orathaiCortecciaEffect } from './armies/orathaiCorteccia.js';
-import { mounthbornSciameEffect } from './armies/mounthbornSciame.js';
+import { orathaiFiorituraEffect } from './armies/orathaiFioritura.js';
 import { mounthbornBrulicareEffect } from './armies/mounthbornBrulicare.js';
 import { mounthbornBoccaEffect } from './armies/mounthbornBocca.js';
 import { khemetEvocazioneEffect } from './armies/khemetEvocazione.js';
 import { apexGeloEffect } from './armies/apexGelo.js';
 import { mascaradaEntrataEffect } from './armies/mascaradaEntrata.js';
-import { concordiaDiscesaEffect } from './armies/concordiaDiscesa.js';
+import { concordiaStendardoEffect } from './armies/concordiaStendardo.js';
 
 export { burnEffect, dustEffect, shatterEffect, vortexEffect, materializeEffect };
 
@@ -58,34 +56,32 @@ export const FX_GENERIC_EFFECTS = [
 
 /** Effetti d'armata (campo `army` e `role`), in ordine di selezione armata. */
 export const FX_ARMY_EFFECTS = [
-  figliNebulaEffect,
+  figliOcchioEffect,
   figliEffect,
   kethranEffect,
-  kethranMutilazioneEffect,
+  kethranSchiantoEffect,
   corteFiammataEffect,
   corteContrattoEffect,
-  calibriCorazzaEffect,
+  calibriForgiaEffect,
   calibriEffect,
-  orathaiVarcoEffect,
-  orathaiCortecciaEffect,
+  orathaiFiorituraEffect,
   orathaiRoviEffect,
-  mounthbornSciameEffect,
   mounthbornBrulicareEffect,
   mounthbornBoccaEffect,
   mounthbornFameEffect,
-  enclaveTesoroEffect,
+  enclaveSchiusaEffect,
   enclaveEffect,
-  rattiPozzaEffect,
+  rattiBacioEffect,
   rattiEffect,
   pattoRicucituraEffect,
-  pattoEffect,
+  pattoRafficaEffect,
   khemetEvocazioneEffect,
   khemetSigilloEffect,
   apexGeloEffect,
   apexEffect,
   mascaradaEntrataEffect,
-  mascaradaEffect,
-  concordiaDiscesaEffect,
+  mascaradaSmascheratoEffect,
+  concordiaStendardoEffect,
   concordiaEffect,
 ];
 
