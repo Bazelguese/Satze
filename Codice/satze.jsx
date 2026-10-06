@@ -4337,14 +4337,14 @@ export default function SatzeGame() {
               { label: 'TUTTE', sub: 'LAB', meta: 'GENERALI + ARMATE', onClick: () => openCardFxLab() },
               ...[
                 ['GENERALI', 'BRUCIATURA · POLVERE · …', FX_CATALOG.filter((fx) => !fx.army)],
-                ['ARMATE', 'UNA PER ARMATA', FX_CATALOG.filter((fx) => fx.army)],
+                ['ARMATE', 'SCONFITTE · INGRESSI', FX_CATALOG.filter((fx) => fx.army)],
               ].map(([label, meta, list]) => ({
                 label,
                 sub: `${list.length} EFFETTI`,
                 meta,
                 choices: list.map((fx) => ({
                   label: fx.label.toUpperCase(),
-                  sub: fx.kind === 'in' ? 'ENTRATA' : 'USCITA',
+                  sub: fx.role === 'defeat' ? 'SCONFITTA' : fx.role === 'entry' || fx.kind === 'in' ? 'INGRESSO' : 'USCITA',
                   meta: fx.army ? fx.army.toUpperCase() : 'GENERALE',
                   onClick: () => openCardFxLab(fx.id),
                 })),

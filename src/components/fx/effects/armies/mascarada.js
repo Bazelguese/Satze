@@ -61,6 +61,7 @@ const STAGE = [
 export const mascaradaEffect = {
   id: 'mascarada-finale',
   army: 'Mascarada',
+  role: 'defeat',
   label: 'Gran finale',
   kind: 'out',
   description: 'Occhio di bue, la carta gira e scoppia in coriandoli e lustrini.',

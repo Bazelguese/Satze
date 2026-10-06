@@ -1,6 +1,6 @@
-// Mounthborn · «Rovi»: viticci e rovi crescono dai bordi e inghiottono la carta
-// nell'ombra della foresta, poi la carta si sbriciola in foglie portate dal vento.
-// «Quando li vedi, è troppo tardi.»
+// Orathai · «Rovi» (sconfitta inflitta): radici e rovi crescono dai bordi e inghiottono la
+// carta nell'ombra della foresta, poi la carta si sbriciola in foglie portate dal vento.
+// Gli Orathai sono creature lignee: «Le sue radici cercano i caduti prima ancora che tocchino terra.»
 
 import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../../quadRenderer.js';
 import { SWEEP_DIRECTIONS, sweepOf, sweepAt, samplePoint } from './common.js';
@@ -49,15 +49,16 @@ void main() {
 }
 `;
 
-export const mounthbornEffect = {
-  id: 'mounthborn-rovi',
-  army: 'Mounthborn',
+export const orathaiRoviEffect = {
+  id: 'orathai-rovi',
+  army: 'Orathai',
+  role: 'defeat',
   label: 'Rovi',
   kind: 'out',
   description: 'Rovi crescono dai bordi e inghiottono la carta, che si sbriciola in foglie.',
   defaults: {
     durationMs: 2800,
-    color: '#c9e238',
+    color: '#5ad4bc',
     vineWidth: 0.06,
     density: 7,
     growTime: 0.55,

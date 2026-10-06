@@ -1,8 +1,8 @@
-// Corte Rossa · «Specchio infranto»: la carta diventa uno specchio cromato che riflette
+// Specchio infranto: la carta diventa uno specchio cromato che riflette
 // sé stessa (ciò che vedi, lo diventi), un riflesso le corre sopra, poi si incrina e va in
 // schegge che lampeggiano quando, ruotando, colgono la luce.
 
-import { cellPointToCanvas, createPiecesRenderer, voronoiCells } from '../../pieces.js';
+import { cellPointToCanvas, createPiecesRenderer, voronoiCells } from '../pieces.js';
 
 const FRAG = `
 precision highp float;
@@ -52,9 +52,8 @@ void main() {
 }
 `;
 
-export const corteRossaEffect = {
-  id: 'corte-specchio',
-  army: 'Corte Rossa',
+export const mirrorEffect = {
+  id: 'specchio',
   label: 'Specchio infranto',
   kind: 'out',
   description: 'La carta diventa uno specchio cromato di sé stessa, poi va in schegge.',

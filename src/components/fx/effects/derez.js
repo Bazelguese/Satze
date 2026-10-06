@@ -1,9 +1,9 @@
-// Khemet · «Derez»: glitch (strappi orizzontali, canali RGB sfasati), la carta si
+// Derez: glitch (strappi orizzontali, canali RGB sfasati), la carta si
 // scompone in pixel percorsi da circuiti luminosi, poi i blocchi si staccano e salgono
 // come un flusso di dati. «Quando si attivano, nulla li ferma.»
 
-import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../../quadRenderer.js';
-import { SWEEP_DIRECTIONS, sweepOf, sweepAt, cardHeightPx } from './common.js';
+import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../quadRenderer.js';
+import { SWEEP_DIRECTIONS, sweepOf, sweepAt, cardHeightPx } from './armies/common.js';
 
 const FRAG = `${QUAD_HEADER}
 uniform float uGlitch;
@@ -55,9 +55,8 @@ void main() {
 }
 `;
 
-export const khemetEffect = {
-  id: 'khemet-derez',
-  army: 'Khemet',
+export const derezEffect = {
+  id: 'derez',
   label: 'Derez',
   kind: 'out',
   description: 'Glitch, pixel e circuiti: la carta si smonta in un flusso di dati che sale.',
