@@ -7,10 +7,11 @@
 // `deck` = voce costruita da buildDeckEntry (DeckSelectCinematic).
 // ============================================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { CARD_IMAGES, AGENT_IMAGES } from '../../data/images.js';
 import { DECK_SUMMARY_BG_POSITION } from '../../data/deckSummaryCropConfig.js';
+import { GameCard } from '../cards/GameCard.jsx';
 import './deckCover.css';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -97,14 +98,29 @@ function FullArtCover({ deck, art, armies, isCenter }) {
 // ------------------------------------------------------------
 // B · Scatola 3D: custodia con fronte illustrato e dorso col nome.
 // ------------------------------------------------------------
-/** Carte che escono dalla scatola: le 3 di Lega più alta, escluso il leader in copertina. */
-function fanCards(deck) {
-  const leaderId = deck?.leaderAgent?.id;
-  return (deck?.deckCards || [])
-    .filter((c) => c.id !== leaderId && (CARD_IMAGES?.[c.id] || AGENT_IMAGES?.[c.id]))
-    .sort((a, b) => (b.league || 0) - (a.league || 0) || (b.power || 0) - (a.power || 0))
-    .slice(0, 3)
-    .map((c) => ({ id: c.id, name: c.name, src: CARD_IMAGES?.[c.id] || AGENT_IMAGES?.[c.id] }));
+/** Larghezza nativa della carta di gioco (CardReworkP4 / faccia alternativa). */
+const GAME_CARD_W = 230;
+/** Le carte del ventaglio occupano l'80% della larghezza della scatola (vedi deckCover.css). */
+const FAN_CARD_FRACTION = 0.8;
+
+/**
+ * Carte che escono dalla scatola: una a caso per ogni Lega presente nel mazzo,
+ * ordinate da sinistra (Lega più bassa) a destra. Nuova pesca a ogni montaggio.
+ */
+function pickFanCards(deck) {
+  const byLeague = new Map();
+  (deck?.deckCards || []).forEach((c) => {
+    const list = byLeague.get(c.league) || [];
+    list.push(c);
+    byLeague.set(c.league, list);
+  });
+  return [...byLeague.keys()]
+    .sort((a, b) => a - b)
+    .map((league) => {
+      const list = byLeague.get(league);
+      return list[Math.floor(Math.random() * list.length)];
+    })
+    .slice(0, 5);
 }
 
 /**
@@ -200,11 +216,13 @@ function BoxSpine({ deck, armies, spineArmy, side }) {
   );
 }
 
-/** Retro della scatola: il contenuto, come l'etichetta di una confezione. */
-function BoxBack({ deck, armies }) {
+/** Retro della scatola: dorso delle carte come sfondo, sopra il contenuto del mazzo. */
+function BoxBack({ deck, armies, backImage }) {
   const cards = (deck.deckCards || []).slice(0, 10);
   return (
     <div className="dcv-box-face dcv-box-back">
+      {backImage ? <img className="dcv-box-back-img" src={backImage} alt="" draggable={false} /> : null}
+      <div className="dcv-box-back-panel">
       <span className="dcv-eyebrow">CONTENUTO</span>
       <ol className="dcv-box-list">
         {cards.map((c) => (
@@ -218,13 +236,30 @@ function BoxBack({ deck, armies }) {
         <span>{armies.map((a) => a.army).join(' · ')}</span>
         <span>{deck.cards ?? cards.length} CARTE · LEGA {deck.totalLeague ?? 30}</span>
       </div>
+      </div>
     </div>
   );
 }
 
-function BoxCover({ deck, art, armies, isCenter, mirror, opening, spin }) {
+function BoxCover({ deck, art, armies, isCenter, mirror, opening, spin, backImage }) {
   const spineArmy = armies[0]?.accent || deck.accent;
-  const fan = opening ? fanCards(deck) : [];
+  // Pesca stabile per tutta la vita del componente (il VS rimonta a ogni ingresso).
+  const [fan] = useState(() => (opening ? pickFanCards(deck) : []));
+  const cubeRef = useRef(null);
+  // Le carte sono GameCard a 230px nativi: scala calcolata sulla larghezza reale della scatola.
+  useLayoutEffect(() => {
+    const cube = cubeRef.current;
+    if (!opening || !cube) return undefined;
+    const apply = () => cube.style.setProperty(
+      '--fan-scale',
+      String((cube.offsetWidth * FAN_CARD_FRACTION) / GAME_CARD_W)
+    );
+    apply();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(apply);
+    ro.observe(cube);
+    return () => ro.disconnect();
+  }, [opening]);
   // Nel VS la rotazione parte dopo l'ingresso (o dopo che la scatola si è richiusa).
   const spinRef = useBoxSpin(spin, { delayMs: opening ? 3100 : 1100, dir: mirror ? -1 : 1 });
   return (
@@ -233,7 +268,7 @@ function BoxCover({ deck, art, armies, isCenter, mirror, opening, spin }) {
       className={`dcv dcv-box${isCenter ? ' is-center' : ''}${mirror ? ' is-mirror' : ''}${opening ? ' is-opening' : ''}${spin ? ' is-spin' : ''}`}
     >
       <div className="dcv-box-stage">
-        <div className="dcv-box-cube">
+        <div className="dcv-box-cube" ref={cubeRef}>
           <div className="dcv-box-face dcv-box-front">
             <ArtImg art={art} className="dcv-box-art" />
             <div className="dcv-box-front-shade" />
@@ -246,15 +281,17 @@ function BoxCover({ deck, art, armies, isCenter, mirror, opening, spin }) {
           </div>
           <BoxSpine deck={deck} armies={armies} spineArmy={spineArmy} side="right" />
           <BoxSpine deck={deck} armies={armies} spineArmy={spineArmy} side="left" />
-          <BoxBack deck={deck} armies={armies} />
+          <BoxBack deck={deck} armies={armies} backImage={backImage} />
           <div className="dcv-box-face dcv-box-bottom" />
           {opening ? (
             <>
               <div className="dcv-box-face dcv-box-cavity" />
               <div className="dcv-box-fan">
                 {fan.map((c, i) => (
-                  <div key={c.id} className="dcv-box-card" style={{ '--i': i - (fan.length - 1) / 2 }}>
-                    <img src={c.src} alt={c.name} draggable={false} />
+                  <div key={c.id} className="dcv-box-card" style={{ '--i': i - (fan.length - 1) / 2, '--k': i }}>
+                    <div className="dcv-box-card-face">
+                      <GameCard agent={c} showBonus suppressAnimations />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -308,12 +345,13 @@ function TarotCover({ deck, art, armies, isCenter }) {
  * @param {boolean} [props.mirror] scatola ruotata dall'altro lato (lato avversario nel VS)
  * @param {boolean} [props.opening] scatola: all'ingresso si apre e mostra le carte (solo VS)
  * @param {boolean} [props.spin] scatola: rotazione lenta + trascinabile (solo VS)
+ * @param {string|null} [props.backImage] scatola: dorso carte sul retro esterno
  */
-export function DeckCover({ deck, variant, isCenter = true, mirror = false, opening = false, spin = false }) {
+export function DeckCover({ deck, variant, isCenter = true, mirror = false, opening = false, spin = false, backImage = null }) {
   if (!deck) return null;
   const art = coverArt(deck);
   const armies = deckArmies(deck);
-  const props = { deck, art, armies, isCenter, mirror, opening, spin };
+  const props = { deck, art, armies, isCenter, mirror, opening, spin, backImage };
   return (
     <div className="dcv-root" style={{ '--accent': deck.accent }}>
       {variant === 'box' ? <BoxCover {...props} />

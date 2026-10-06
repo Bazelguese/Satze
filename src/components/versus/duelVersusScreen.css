@@ -109,6 +109,7 @@
   z-index: 2;
 }
 .vsx-who-eyebrow {
+  text-shadow: 0 0 6px #000, 0 0 12px #000;
   font-family: 'Share Tech Mono', monospace;
   font-size: 13px;
   letter-spacing: 0.42em;
@@ -129,6 +130,7 @@
     0 0 28px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 .vsx-who-sub {
+  text-shadow: 0 0 6px #000, 0 0 14px #000, 0 2px 4px #000;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.16em;

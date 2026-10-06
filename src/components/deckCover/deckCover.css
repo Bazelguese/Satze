@@ -296,19 +296,30 @@
 .dcv-box-spine-glyphs { flex-direction: column; flex-shrink: 0; }
 .dcv-box-spine-glyphs .dcv-glyph { width: 10cqw; height: 10cqw; }
 
-/* retro: contenuto del mazzo */
+/* retro: dorso delle carte come sfondo, contenuto del mazzo su pannello */
 .dcv-box-back {
   inset: 0;
+  overflow: hidden;
+  background: #0a0a0e;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent);
+  transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
+}
+.dcv-box-back-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dcv-box-back-panel {
+  position: absolute;
+  inset: 7cqw 6cqw;
   display: flex;
   flex-direction: column;
   gap: 2.4cqw;
-  padding: 6cqw 6cqw 5cqw;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%),
-    #0a0a0e;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent);
-  transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
+  padding: 4cqw 4.5cqw;
+  background: rgba(5, 6, 8, 0.6);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .dcv-box-list {
   margin: 0;
@@ -391,23 +402,33 @@
   inset: 0;
   transform-style: preserve-3d;
 }
-/* carte del ventaglio in proporzione da carta normale (84% della larghezza → ~85% dell'altezza) */
+/* carte del ventaglio: GameCard vere (230×330 nativi) scalate all'80% della larghezza
+   della scatola; --fan-scale è calcolato in JS sulla larghezza reale del cubo.
+   Escono dritte per 3/4 della loro altezza, poi si aprono ruotando attorno a un perno
+   sul bordo della scatola (75.2% dell'altezza carta): la parte rimasta dentro resta
+   tra le pareti anche alla rotazione massima (±15° con 4 carte). */
 .dcv-box-card {
   position: absolute;
-  left: 8%;
+  left: 10%;
   top: 7.5%;
-  width: 84%;
-  aspect-ratio: 144 / 208;
-  transform-origin: 50% 100%;
-  overflow: hidden;
-  background: #0a0a0e;
-  border: 1.5px solid color-mix(in srgb, var(--accent) 75%, #fff);
-  border-radius: 1.4cqw;
-  box-shadow: 0 0 3cqw rgba(0, 0, 0, 0.7);
+  width: 80%;
+  aspect-ratio: 230 / 330;
+  transform-origin: 50% 75.2%;
+  /* piccolo scarto in profondità: niente z-fighting fra carte complanari */
+  translate: 0 0 calc(var(--k, 0) * 0.6px);
   opacity: 0;
+  filter: drop-shadow(0 0 2cqw rgba(0, 0, 0, 0.75));
   animation: dcv-card-out 3.4s cubic-bezier(0.25, 0.8, 0.3, 1) both;
 }
-.dcv-box-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dcv-box-card-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 230px;
+  transform: scale(var(--fan-scale, 1));
+  transform-origin: top left;
+  pointer-events: none;
+}
 @keyframes dcv-lid {
   0%, 29% { transform: rotateX(0deg); }
   40%, 79% { transform: rotateX(100deg); }
@@ -416,9 +437,11 @@
 @keyframes dcv-card-out {
   0%, 36% { opacity: 0; transform: translateY(0) rotate(0deg); }
   37% { opacity: 1; transform: translateY(0) rotate(0deg); }
-  51%, 69% { opacity: 1; transform: translateY(-66%) rotate(calc(var(--i) * 6deg)); }
-  81% { opacity: 1; transform: translateY(0) rotate(0deg); }
-  82%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  45% { opacity: 1; transform: translateY(-84.5%) rotate(0deg); }
+  53%, 66% { opacity: 1; transform: translateY(-84.5%) rotate(calc(var(--i) * 10deg)); }
+  70% { opacity: 1; transform: translateY(-84.5%) rotate(0deg); }
+  77% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  78%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
 }
 
 .dcv-box-floor {
