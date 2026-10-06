@@ -4,11 +4,12 @@ import { GameCard } from '../cards/GameCard';
 import { ARMY_SETS } from '../../data/cards';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
-import { FX_EFFECTS, FX_EFFECTS_BY_ID } from '../fx/effects/index.js';
+import { FX_ARMY_EFFECTS, FX_EFFECTS, FX_EFFECTS_BY_ID, FX_GENERIC_EFFECTS } from '../fx/effects/index.js';
 
 /**
  * Lab ?cardFxLab=1 (o ?cardBurnLab=1) — demo delle animazioni su carte reali:
- * bruciatura, disintegrazione, frattura di luce, vortice, materializzazione.
+ * effetti generici (bruciatura, disintegrazione, frattura, vortice, materializzazione)
+ * e un effetto caratteristico per ogni armata.
  * Il colore dell'effetto segue l'armata della carta (o un colore scelto a mano).
  */
 
@@ -43,7 +44,8 @@ export function CardFxLabPage({ onClose }) {
   const effect = FX_EFFECTS_BY_ID[effectId];
   const params = paramsById[effectId];
   const agent = React.useMemo(() => agentOf(army, cardIndex), [army, cardIndex]);
-  const armyColor = getArmyAccent(agent);
+  // un'armata senza carte giocabili (es. Concordia di Caelion) usa comunque il suo colore
+  const armyColor = effect.army && !ARMY_SETS[effect.army] ? getArmyAccent({ army: effect.army }) : getArmyAccent(agent);
   const color = useArmyColor ? armyColor : customColor;
   const effectParams = React.useMemo(() => ({ ...params, color }), [params, color]);
   const usesOrigin = Boolean(effect.usesOrigin || params.direction === 'point');
@@ -65,6 +67,12 @@ export function CardFxLabPage({ onClose }) {
 
   const selectEffect = (id) => {
     setEffectId(id);
+    // un effetto d'armata si prova su una carta di quell'armata
+    const fxArmy = FX_EFFECTS_BY_ID[id]?.army;
+    if (fxArmy && ARMY_SETS[fxArmy]) {
+      setArmy(fxArmy);
+      setCardIndex(0);
+    }
     setPlaying(false);
     setRowPlaying(false);
     setMode('anim');
@@ -94,20 +102,32 @@ export function CardFxLabPage({ onClose }) {
       subtitle="Effetti WebGL su carte reali · colore dell'armata"
       onClose={onClose}
     >
-      <div className="satze-tool-panel flex flex-wrap gap-2 p-3 mb-4">
-        {FX_EFFECTS.map((fx) => (
-          <button
-            key={fx.id}
-            type="button"
-            className={fx.id === effectId ? 'satze-tool-btn-primary text-sm' : 'satze-tool-btn-secondary text-sm'}
-            onClick={() => selectEffect(fx.id)}
-            title={fx.description}
-          >
-            {fx.label}
-            {fx.kind === 'in' ? ' ↘ entrata' : ''}
-          </button>
+      <div className="satze-tool-panel flex flex-col gap-2 p-3 mb-4">
+        {[
+          ['Generali', FX_GENERIC_EFFECTS],
+          ['Armate', FX_ARMY_EFFECTS],
+        ].map(([group, list]) => (
+          <div key={group} className="flex flex-wrap gap-2 items-center">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 w-16">{group}</span>
+            {list.map((fx) => (
+              <button
+                key={fx.id}
+                type="button"
+                className={fx.id === effectId ? 'satze-tool-btn-primary text-sm' : 'satze-tool-btn-secondary text-sm'}
+                onClick={() => selectEffect(fx.id)}
+                title={fx.army ? `${fx.army} — ${fx.description}` : fx.description}
+                style={fx.army ? { borderColor: getArmyAccent({ army: fx.army }) } : undefined}
+              >
+                {fx.label}
+                {fx.kind === 'in' ? ' ↘ entrata' : ''}
+              </button>
+            ))}
+          </div>
         ))}
-        <span className="text-xs text-slate-400 self-center ml-2">{effect.description}</span>
+        <span className="text-xs text-slate-400">
+          {effect.army ? <strong className="text-slate-200">{effect.army} · </strong> : null}
+          {effect.description}
+        </span>
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0, 1fr) 360px' }}>

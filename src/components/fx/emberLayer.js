@@ -58,6 +58,8 @@ export function createEmberLayer(gl, max = 700) {
       heat: opts.heat ?? Math.random(),
       sway: Math.random() * Math.PI * 2,
       rise: opts.rise ?? 0.05,
+      /** moltiplicatore di opacità (fumi, foschie) */
+      alpha: opts.alpha ?? 1,
       ...opts.extra,
     });
   }
@@ -92,7 +94,7 @@ export function createEmberLayer(gl, max = 700) {
       data[off] = e.x;
       data[off + 1] = e.y;
       data[off + 2] = e.size * dpr * (1 - k * 0.6);
-      data[off + 3] = Math.min(1, (1 - k) * 1.4) * (k < 0.08 ? k / 0.08 : 1);
+      data[off + 3] = Math.min(1, (1 - k) * 1.4) * (k < 0.08 ? k / 0.08 : 1) * e.alpha;
       data[off + 4] = e.heat * (1 - k);
       n += 1;
     }

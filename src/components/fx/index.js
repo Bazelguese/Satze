@@ -5,6 +5,9 @@ export { SWEEP_DIRECTIONS } from './fxNoise.js';
 export {
   FX_EFFECTS,
   FX_EFFECTS_BY_ID,
+  FX_GENERIC_EFFECTS,
+  FX_ARMY_EFFECTS,
+  armyEffectFor,
   burnEffect,
   dustEffect,
   shatterEffect,
