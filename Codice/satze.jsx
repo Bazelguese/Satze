@@ -1568,6 +1568,7 @@ export default function SatzeGame() {
           ...(p.playerName ? { playerName: p.playerName } : {}),
           ...(typeof p.deckName === 'string' && p.deckName.trim() ? { deckName: p.deckName.trim().slice(0, 60) } : {}),
           ...(Array.isArray(p.deckCardIds) && p.deckCardIds.length ? { deckCardIds: p.deckCardIds } : {}),
+          ...(Array.isArray(p.deckCardIds) && p.deckCardIds.includes(p.coverCardId) ? { coverCardId: p.coverCardId } : {}),
         });
         if (p.playerName) setOnlinePeerName(p.playerName);
       }
@@ -4776,6 +4777,7 @@ export default function SatzeGame() {
         playerName: multiplayerSession.playerName || 'Giocatore',
         ...(deck.name ? { deckName: deck.name } : {}),
         ...(deckCardIds.length ? { deckCardIds } : {}),
+        ...(deck.coverCardId != null && deckCardIds.includes(deck.coverCardId) ? { coverCardId: deck.coverCardId } : {}),
       };
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, relayPayload);
     };

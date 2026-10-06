@@ -944,7 +944,7 @@
 
 .dbl-row {
   display: grid;
-  grid-template-columns: 12px 30px 1fr auto 20px;
+  grid-template-columns: 12px 30px 1fr auto 18px 20px;
   align-items: center;
   gap: 6px;
   background: rgba(255, 255, 255, 0.02);
@@ -1012,6 +1012,21 @@
 
 .dbl-row-x:hover {
   color: #c2473f;
+}
+
+.dbl-row-cover {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  color: #5a5852;
+  cursor: pointer;
+}
+
+.dbl-row-cover:hover,
+.dbl-row-cover.on {
+  color: #fde047;
 }
 
 .dbl-advice {

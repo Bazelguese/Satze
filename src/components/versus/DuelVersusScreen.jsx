@@ -1,21 +1,41 @@
 // ============================================================
 // DuelVersusScreen.jsx — schermata VS d'ingresso al duello (prova)
 // ============================================================
-// Due lati (giocatore / avversario) con: chi gioca, la custodia dell'esercito
-// (stesso ticket della scelta mazzo) e le armate di cui è composto.
+// Due lati (giocatore / avversario) con: chi gioca, la copertina dell'esercito,
+// le armate di cui è composto e (opzionale) l'Eminenza in campo.
 // Canvas logico 1920×1080: va montata dentro GameViewport (o un parent 1920×1080).
 // Accesso di prova: ?vsLab=1 (VersusLabPage).
+//
+// layout:
+//   base   — solo copertina (nessuna Eminenza)
+//   side   — copertina + carta Eminenza affiancata verso il centro
+//   hero   — Eminenza grande, copertina piccola in primo piano
+//   shadow — arte dell'Eminenza come sfondo della metà + fascia con la sua statica
 // ============================================================
 
 import React, { useMemo } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
+import { getEminence } from '../../data/eminences.js';
+import { getEminenceArtUrl } from '../../data/eminenceArt.js';
+import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
+import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
+import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
 import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
 import {
   DeckTicket,
   DeckSelectStyles,
   buildDeckTicketEntry,
 } from '../menu/cosmic/DeckSelectCinematic.jsx';
+import { EminenceTarotCard } from '../eminenceLab/EminenceTarotCard.jsx';
+import '../eminenceLab/eminenceArtLab.css';
 import './duelVersusScreen.css';
+
+export const VERSUS_LAYOUTS = [
+  { key: 'base', label: 'Senza Eminenza', meta: 'Solo copertina' },
+  { key: 'side', label: 'Affiancata', meta: 'Copertina + Eminenza' },
+  { key: 'hero', label: 'Protagonista', meta: 'Eminenza grande' },
+  { key: 'shadow', label: 'Alle spalle', meta: 'Arte Eminenza sullo sfondo' },
+];
 
 /**
  * Etichette dei due lati.
@@ -35,6 +55,21 @@ export function buildVersusIdentity({ isOnline = false, difficulty = 'medium', s
       name: 'IA',
       sub: DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES.medium,
     },
+  };
+}
+
+/**
+ * Eminenza di un lato: id dallo stato partita se c'è, altrimenti stessa regola
+ * dell'avvio duello (resolveSideEminence sul mazzo da 10).
+ */
+function resolveVersusEminence(entry, format, eminenceId) {
+  if (format === EMINENCE_FORMAT.DISABLED) return { eminence: null, reason: 'Formato senza Eminenze' };
+  const res = resolveSideEminence(entry.deckCards || [], eminenceId || null, format);
+  const eminence = res.eminenceId ? getEminence(res.eminenceId) : null;
+  if (eminence) return { eminence, reason: null };
+  return {
+    eminence: null,
+    reason: res.reason === 'NO_ELIGIBLE_ARMY' ? 'Nessuna armata con 5+ carte' : 'Nessuna Eminenza',
   };
 }
 
@@ -62,7 +97,85 @@ function VersusArmies({ armies }) {
   );
 }
 
-function VersusSide({ side, identity, entry }) {
+function VersusCover({ entry, coverStyle, mirror }) {
+  return (
+    <div className="vsx-ticket" aria-label={`Esercito: ${entry.name}`}>
+      <div className="vsx-ticket-scale">
+        <DeckTicket
+          deck={entry}
+          number={1}
+          total={1}
+          offset={0}
+          isCenter
+          visible
+          coverStyle={coverStyle}
+          mirror={mirror}
+        />
+      </div>
+    </div>
+  );
+}
+
+function VersusEminenceCard({ eminence, reason }) {
+  if (!eminence) {
+    return (
+      <div className="vsx-em vsx-em--none">
+        <div className="vsx-em-scale vsx-em-empty">
+          <span className="vsx-em-empty-eye">EMINENZA</span>
+          <span className="vsx-em-empty-txt">{reason}</span>
+        </div>
+      </div>
+    );
+  }
+  const frame = getEminenceArtFrame(eminence.id);
+  return (
+    <div className="vsx-em" aria-label={`Eminenza: ${eminence.name}`}>
+      <div className="vsx-em-scale">
+        <EminenceTarotCard
+          name={eminence.name}
+          army={eminence.army}
+          staticText={eminence.static?.name || ''}
+          presence={eminence.initialPresence ?? 0}
+          artUrl={getEminenceArtUrl(eminence)}
+          accent={ARMY_COLORS[eminence.army]?.accent || '#c9a227'}
+          intensity={0.9}
+          tiltEnabled={false}
+          idleOrbit
+          artX={frame.artX}
+          artY={frame.artY}
+          artZoom={frame.zoom}
+          artFocusX={frame.focusX}
+          artFocusY={frame.focusY}
+        />
+      </div>
+    </div>
+  );
+}
+
+function VersusEminenceBanner({ eminence, reason }) {
+  return (
+    <div className={`vsx-em-banner${eminence ? '' : ' is-none'}`}>
+      <span className="vsx-em-banner-eye">EMINENZA</span>
+      {eminence ? (
+        <>
+          <span className="vsx-em-banner-name">{eminence.name}</span>
+          {eminence.static ? (
+            <span className="vsx-em-banner-static">
+              <b>{eminence.static.name}</b> — {eminence.static.text}
+            </span>
+          ) : null}
+        </>
+      ) : (
+        <span className="vsx-em-banner-static">{reason}</span>
+      )}
+    </div>
+  );
+}
+
+function VersusSide({ side, identity, entry, layout, coverStyle, em }) {
+  const mirror = side === 'e';
+  const showCard = layout === 'side' || layout === 'hero';
+  const cover = <VersusCover entry={entry} coverStyle={coverStyle} mirror={mirror} />;
   return (
     <div className={`vsx-side vsx-side--${side}`} style={{ '--accent': entry.accent }}>
       <header className="vsx-who">
@@ -71,23 +184,40 @@ function VersusSide({ side, identity, entry }) {
         {identity.sub ? <span className="vsx-who-sub">{identity.sub}</span> : null}
       </header>
 
-      <div className="vsx-ticket" aria-label={`Esercito: ${entry.name}`}>
-        <div className="vsx-ticket-scale">
-          <DeckTicket deck={entry} number={1} total={1} offset={0} isCenter visible />
+      {showCard ? (
+        <div className="vsx-stage">
+          <div className="vsx-stage-cover">{cover}</div>
+          <div className="vsx-stage-em">
+            <VersusEminenceCard eminence={em.eminence} reason={em.reason} />
+          </div>
         </div>
-      </div>
+      ) : (
+        cover
+      )}
+
+      {layout === 'shadow' ? <VersusEminenceBanner eminence={em.eminence} reason={em.reason} /> : null}
 
       <VersusArmies armies={entry.armies} />
     </div>
   );
 }
 
+function halfBackground(entry, em, layout) {
+  if (layout === 'shadow' && em.eminence) return getEminenceArtUrl(em.eminence);
+  return entry.bg || null;
+}
+
 /**
  * @param {object} props
  * @param {{ eyebrow: string, name: string, sub?: string|null }} props.playerIdentity
  * @param {{ eyebrow: string, name: string, sub?: string|null }} props.enemyIdentity
- * @param {{ army: string, deckKey?: string|null, cardIds?: number[]|null, name?: string|null }} props.playerDeck
- * @param {{ army: string, deckKey?: string|null, cardIds?: number[]|null, name?: string|null }} props.enemyDeck
+ * @param {{ army: string, deckKey?: string|null, cardIds?: number[]|null, name?: string|null, coverCardId?: number|null }} props.playerDeck
+ * @param {{ army: string, deckKey?: string|null, cardIds?: number[]|null, name?: string|null, coverCardId?: number|null }} props.enemyDeck
+ * @param {'base'|'side'|'hero'|'shadow'} [props.layout]
+ * @param {'ticket'|'fullart'|'box'|'tarot'} [props.coverStyle]
+ * @param {string} [props.eminenceFormat] EMINENCE_FORMAT.*
+ * @param {string|null} [props.playerEminenceId] da eminenceMatchState, se già deciso
+ * @param {string|null} [props.enemyEminenceId]
  * @param {number|null} [props.progress] 0–100; null nasconde la barra
  * @param {string} [props.statusLabel]
  */
@@ -96,39 +226,48 @@ export function DuelVersusScreen({
   enemyIdentity,
   playerDeck,
   enemyDeck,
+  layout = 'base',
+  coverStyle = 'ticket',
+  eminenceFormat = EMINENCE_FORMAT.REQUIRED,
+  playerEminenceId = null,
+  enemyEminenceId = null,
   progress = null,
   statusLabel = 'Preparazione scontro',
 }) {
-  const playerEntry = useMemo(
-    () => buildDeckTicketEntry(playerDeck || {}),
-    [playerDeck]
+  const playerEntry = useMemo(() => buildDeckTicketEntry(playerDeck || {}), [playerDeck]);
+  const enemyEntry = useMemo(() => buildDeckTicketEntry(enemyDeck || {}), [enemyDeck]);
+  const playerEm = useMemo(
+    () => resolveVersusEminence(playerEntry, eminenceFormat, playerEminenceId),
+    [playerEntry, eminenceFormat, playerEminenceId]
   );
-  const enemyEntry = useMemo(
-    () => buildDeckTicketEntry(enemyDeck || {}),
-    [enemyDeck]
+  const enemyEm = useMemo(
+    () => resolveVersusEminence(enemyEntry, eminenceFormat, enemyEminenceId),
+    [enemyEntry, eminenceFormat, enemyEminenceId]
   );
   const p = progress == null ? null : Math.min(100, Math.max(0, Number(progress) || 0));
+  const playerBg = halfBackground(playerEntry, playerEm, layout);
+  const enemyBg = halfBackground(enemyEntry, enemyEm, layout);
 
   return (
     <div
-      className="vsx"
+      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}`}
       style={{ '--pa': playerEntry.accent, '--ea': enemyEntry.accent }}
       role="presentation"
     >
       <DeckSelectStyles />
 
       <div className="vsx-half vsx-half--p">
-        <div className="vsx-half-bg" style={{ backgroundImage: playerEntry.bg ? `url('${playerEntry.bg}')` : 'none' }} />
+        <div className="vsx-half-bg" style={{ backgroundImage: playerBg ? `url('${playerBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
       </div>
       <div className="vsx-half vsx-half--e">
-        <div className="vsx-half-bg" style={{ backgroundImage: enemyEntry.bg ? `url('${enemyEntry.bg}')` : 'none' }} />
+        <div className="vsx-half-bg" style={{ backgroundImage: enemyBg ? `url('${enemyBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
       </div>
       <div className="vsx-seam" aria-hidden />
 
-      <VersusSide side="p" identity={playerIdentity} entry={playerEntry} />
-      <VersusSide side="e" identity={enemyIdentity} entry={enemyEntry} />
+      <VersusSide side="p" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} />
+      <VersusSide side="e" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} />
 
       <div className="vsx-vs" aria-label="contro">
         <div className="vsx-vs-ring" />

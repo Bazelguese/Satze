@@ -8,7 +8,9 @@ import { GameViewport } from '../GameViewport';
 import { ARMY_DECKS } from '../../data/cards.js';
 import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
 import { loadCustomDecks } from '../../utils/deckManager.js';
-import { DuelVersusScreen, buildVersusIdentity } from './DuelVersusScreen.jsx';
+import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
+import { DECK_COVER_STYLES, getDeckCoverStyle, setDeckCoverStyle } from '../../utils/deckCoverPreference.js';
+import { DuelVersusScreen, VERSUS_LAYOUTS, buildVersusIdentity } from './DuelVersusScreen.jsx';
 
 /** Durata simulata del caricamento duello (≈ preload + warm-up reali). */
 const FAKE_LOADING_MS = 4800;
@@ -31,6 +33,38 @@ function buildMixedSample(army) {
 function resolveLabDeck({ army, deckKey }) {
   if (deckKey === MIXED_SAMPLE_KEY) return buildMixedSample(army);
   return { army, deckKey, cardIds: null, name: null };
+}
+
+const LAB_LAYOUT_KEY = 'satze_vs_lab_layout';
+
+function loadLabLayout() {
+  try {
+    const v = localStorage.getItem(LAB_LAYOUT_KEY);
+    return VERSUS_LAYOUTS.some((l) => l.key === v) ? v : 'side';
+  } catch {
+    return 'side';
+  }
+}
+
+function ChipRow({ label, options, value, onChange }) {
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</span>
+      <div className="grid grid-cols-2 gap-1">
+        {options.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            title={opt.meta}
+            className={`border px-2 py-1 text-xs ${value === opt.key ? 'border-amber-300 bg-amber-300/15' : 'border-slate-600'}`}
+            onClick={() => onChange(opt.key)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function DeckPicker({ label, value, onChange, customDecks }) {
@@ -82,6 +116,9 @@ export function VersusLabPage({ onClose }) {
   const [peerName, setPeerName] = useState('Avversario');
   const [playerPick, setPlayerPick] = useState({ army: ARMY_NAMES[0], deckKey: 'A' });
   const [enemyPick, setEnemyPick] = useState({ army: ARMY_NAMES[2] || ARMY_NAMES[0], deckKey: MIXED_SAMPLE_KEY });
+  const [layout, setLayout] = useState(loadLabLayout);
+  const [coverStyle, setCoverStyle] = useState(getDeckCoverStyle);
+  const [eminenceFormat, setEminenceFormat] = useState(EMINENCE_FORMAT.REQUIRED);
   const [playKey, setPlayKey] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -106,6 +143,17 @@ export function VersusLabPage({ onClose }) {
   }, [playKey]);
 
   const replay = () => setPlayKey((k) => k + 1);
+  const pickLayout = (key) => {
+    setLayout(key);
+    try { localStorage.setItem(LAB_LAYOUT_KEY, key); } catch { /* solo sessione */ }
+    replay();
+  };
+  /** Lo stile copertina scelto qui vale anche nella scelta mazzo. */
+  const pickCoverStyle = (key) => {
+    setCoverStyle(key);
+    setDeckCoverStyle(key);
+    replay();
+  };
 
   return (
     <>
@@ -116,6 +164,9 @@ export function VersusLabPage({ onClose }) {
           enemyIdentity={identity.enemy}
           playerDeck={playerDeck}
           enemyDeck={enemyDeck}
+          layout={layout}
+          coverStyle={coverStyle}
+          eminenceFormat={eminenceFormat}
           progress={progress}
         />
       </GameViewport>
@@ -125,7 +176,7 @@ export function VersusLabPage({ onClose }) {
         style={{ fontFamily: "'Chakra Petch', sans-serif" }}
       >
         {panelOpen ? (
-          <div className="w-72 space-y-3 border border-slate-600 bg-slate-950/90 p-3 shadow-xl">
+          <div className="w-72 max-h-[calc(100vh-24px)] overflow-y-auto space-y-3 border border-slate-600 bg-slate-950/90 p-3 shadow-xl">
             <div className="flex items-center justify-between gap-2">
               <strong className="tracking-[0.18em] text-xs">VS LAB</strong>
               <div className="flex gap-1">
@@ -174,6 +225,23 @@ export function VersusLabPage({ onClose }) {
                 </label>
               </div>
             )}
+
+            <ChipRow label="Eminenze" options={VERSUS_LAYOUTS} value={layout} onChange={pickLayout} />
+            <ChipRow
+              label="Copertina (vale anche in scelta mazzo)"
+              options={DECK_COVER_STYLES}
+              value={coverStyle}
+              onChange={pickCoverStyle}
+            />
+            <ChipRow
+              label="Formato"
+              options={[
+                { key: EMINENCE_FORMAT.REQUIRED, label: 'Standard', meta: 'Eminenze e Campi' },
+                { key: EMINENCE_FORMAT.DISABLED, label: 'No Eminenza', meta: 'Campi attivi' },
+              ]}
+              value={eminenceFormat}
+              onChange={setEminenceFormat}
+            />
 
             <DeckPicker label="Il tuo esercito" value={playerPick} onChange={setPlayerPick} customDecks={customDecks} />
             <DeckPicker label="Esercito avversario" value={enemyPick} onChange={setEnemyPick} customDecks={customDecks} />
