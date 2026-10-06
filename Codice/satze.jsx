@@ -13,7 +13,7 @@ import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
 import { applyPlaceHandoff, prefersReducedMotion } from '../src/components/battle/placeHandoff.js';
 import { getArmyAccent } from '../src/theme/duelAccents.js';
-import { FX_CATALOG, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
+import { FX_CATALOG, FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { RuneTitle, setRuneDecodeProgress } from '../src/components/ui/RuneTitle.jsx';
@@ -4270,14 +4270,27 @@ export default function SatzeGame() {
       url.searchParams.set('cardFaceLab', '1');
       window.location.href = url.toString();
     };
-    /** Lab delle animazioni carta, facoltativamente già sull'effetto scelto. */
-    const openCardFxLab = (fxId = null) => {
+    /** Lab delle animazioni carta: vista per armata (su un'armata) o tutti gli effetti (su un effetto). */
+    const openCardFxLab = ({ fxId = null, army = null } = {}) => {
       const url = new URL(window.location.href);
       url.searchParams.set('cardFxLab', '1');
       if (fxId) url.searchParams.set(FX_LAB_PARAM, fxId);
       else url.searchParams.delete(FX_LAB_PARAM);
+      if (army) url.searchParams.set(FX_LAB_ARMY_PARAM, army);
+      else url.searchParams.delete(FX_LAB_ARMY_PARAM);
       window.location.href = url.toString();
     };
+    /** Per ogni armata: quale ingresso e quale sconfitta ha già (dal catalogo leggero). */
+    const cardFxArmyChoices = Object.keys(ARMY_COLORS).map((army) => {
+      const entry = FX_CATALOG.find((fx) => fx.army === army && fx.role === 'entry');
+      const defeat = FX_CATALOG.find((fx) => fx.army === army && fx.role === 'defeat');
+      return {
+        label: armyMenuLabel(army),
+        sub: entry ? 'INGRESSO + SCONFITTA' : 'INGRESSO DA FARE',
+        meta: `INGRESSO ${entry ? entry.label.toUpperCase() : '—'} · SCONFITTA ${defeat ? defeat.label.toUpperCase() : '—'}`,
+        onClick: () => openCardFxLab({ army }),
+      };
+    });
     const launchArenaContesa = (playerArmy) => {
       const url = new URL(window.location.href);
       url.searchParams.set('arenaContesa', '1');
@@ -4332,23 +4345,20 @@ export default function SatzeGame() {
           {
             label: 'ANIMAZIONI CARTA',
             sub: 'VFX',
-            meta: 'BRUCIATURA · ARMATE',
+            meta: 'INGRESSO · SCONFITTA · ARMATE',
             choices: [
-              { label: 'TUTTE', sub: 'LAB', meta: 'GENERALI + ARMATE', onClick: () => openCardFxLab() },
-              ...[
-                ['GENERALI', 'BRUCIATURA · POLVERE · …', FX_CATALOG.filter((fx) => !fx.army)],
-                ['ARMATE', 'SCONFITTE · INGRESSI', FX_CATALOG.filter((fx) => fx.army)],
-              ].map(([label, meta, list]) => ({
-                label,
-                sub: `${list.length} EFFETTI`,
-                meta,
-                choices: list.map((fx) => ({
+              { label: 'PER ARMATA', sub: `${cardFxArmyChoices.length} ARMATE`, meta: 'INGRESSO + SCONFITTA', choices: cardFxArmyChoices },
+              {
+                label: 'TUTTI GLI EFFETTI',
+                sub: `${FX_CATALOG.length} EFFETTI`,
+                meta: 'GENERALI + ARMATE',
+                choices: FX_CATALOG.map((fx) => ({
                   label: fx.label.toUpperCase(),
                   sub: fx.role === 'defeat' ? 'SCONFITTA' : fx.role === 'entry' || fx.kind === 'in' ? 'INGRESSO' : 'USCITA',
                   meta: fx.army ? fx.army.toUpperCase() : 'GENERALE',
-                  onClick: () => openCardFxLab(fx.id),
+                  onClick: () => openCardFxLab({ fxId: fx.id }),
                 })),
-              })),
+              },
             ],
           },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
