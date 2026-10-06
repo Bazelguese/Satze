@@ -1,0 +1,481 @@
+/* ============================================================
+   DeckCover — copertine dell'esercito (scoped .dcv-)
+   Il root riempie il box del genitore; testi in cqw.
+   ============================================================ */
+
+.dcv-root {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  color: #f5f3eb;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+}
+.dcv-root *,
+.dcv-root *::before,
+.dcv-root *::after { box-sizing: border-box; }
+
+.dcv { position: absolute; inset: 0; }
+.dcv-eyebrow {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.6cqw;
+  letter-spacing: 0.42em;
+  color: var(--accent);
+}
+.dcv-art-empty {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 30%, #0a0a0e) 0%, #050608 70%);
+}
+
+/* emblemi armata */
+.dcv-glyphs { display: flex; gap: 1.6cqw; }
+.dcv-glyph {
+  display: grid;
+  place-items: center;
+  width: 10cqw;
+  height: 10cqw;
+  background: color-mix(in srgb, var(--army) 20%, rgba(5, 6, 8, 0.85));
+  border: 1.5px solid var(--army);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.dcv-glyph img {
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px var(--army));
+}
+
+/* riflesso che attraversa la copertina (solo al centro) */
+.dcv-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.16) 47%, rgba(255, 255, 255, 0.04) 53%, transparent 62%);
+  background-size: 260% 100%;
+  animation: dcv-sheen 5.5s ease-in-out infinite;
+}
+@keyframes dcv-sheen {
+  0%, 55% { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+
+/* ============================================================
+   A · FULL-ART
+   ============================================================ */
+.dcv-fa-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #050608;
+  clip-path: polygon(0 0, calc(100% - 9cqw) 0, 100% 9cqw, 100% 100%, 9cqw 100%, 0 calc(100% - 9cqw));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.dcv-fullart.is-center .dcv-fa-frame {
+  box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 7px #050608, inset 0 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.dcv-fa-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: contrast(1.06) saturate(1.08);
+}
+.dcv-fullart.is-center .dcv-fa-art { animation: dcv-kenburns 16s ease-in-out infinite alternate; }
+@keyframes dcv-kenburns { from { transform: scale(1.02); } to { transform: scale(1.1) translateY(-1.5%); } }
+.dcv-fa-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 8, 0.55) 0%, transparent 18%, transparent 42%, rgba(5, 6, 8, 0.82) 70%, #050608 100%),
+    radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--accent) 28%, transparent) 0%, transparent 60%);
+}
+.dcv-fa-slash {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 14cqw;
+  height: 14cqw;
+  background: linear-gradient(225deg, transparent 50%, var(--accent) 50.5%, var(--accent) 66%, transparent 66.5%);
+  opacity: 0.9;
+}
+.dcv-fa-glyphs { position: absolute; top: 4.5cqw; left: 4.5cqw; z-index: 2; }
+.dcv-fa-count {
+  position: absolute;
+  top: 4cqw;
+  right: 11cqw;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.dcv-fa-count b {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 8cqw;
+  text-shadow: 0 0 2cqw color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.dcv-fa-count span {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.2cqw;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+}
+.dcv-fa-info {
+  position: absolute;
+  left: 7cqw;
+  right: 7cqw;
+  bottom: 7cqw;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4cqw;
+}
+.dcv-fa-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 9.2cqw;
+  line-height: 1.02;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 0.6cqw 4cqw rgba(0, 0, 0, 0.95), 0 0 5cqw color-mix(in srgb, var(--accent) 35%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dcv-fa-armies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 3.6cqw;
+  letter-spacing: 0.1em;
+}
+.dcv-fa-armies em { font-style: normal; }
+.dcv-fa-armies i { font-style: normal; color: rgba(245, 243, 235, 0.45); }
+.dcv-fa-leader {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.5cqw;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 235, 0.6);
+}
+
+/* ============================================================
+   B · SCATOLA 3D
+   cubo: fronte 66cqw × 80cqh, profondità 15cqw
+   ============================================================ */
+.dcv-box {
+  --bw: 62cqw;
+  --bh: 80cqh;
+  --bd: 20cqw;
+  --ry: -32deg;
+  --rx: -7deg;
+}
+.dcv-box.is-mirror { --ry: 32deg; }
+.dcv-box-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1600px;
+  perspective-origin: 50% 40%;
+}
+.dcv-box-cube {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: var(--bw);
+  height: var(--bh);
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) rotateX(var(--rx)) rotateY(var(--ry));
+}
+.dcv-box.is-center .dcv-box-cube { animation: dcv-box-sway 7s ease-in-out infinite alternate; }
+@keyframes dcv-box-sway {
+  from { transform: translate(-50%, -50%) rotateX(var(--rx)) rotateY(var(--ry)); }
+  to { transform: translate(-50%, -50%) rotateX(calc(var(--rx) + 2deg)) rotateY(calc(var(--ry) * 0.7)); }
+}
+.dcv-box-face {
+  position: absolute;
+  backface-visibility: hidden;
+}
+.dcv-box-front {
+  inset: 0;
+  overflow: hidden;
+  background: #0a0a0e;
+  transform: translateZ(calc(var(--bd) / 2));
+  box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 6px #050608, inset 0 0 0 7px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.dcv-box-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dcv-box-front-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 8, 0.45) 0%, transparent 22%, transparent 55%, rgba(5, 6, 8, 0.92) 82%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0%, transparent 25%);
+}
+.dcv-box-seal {
+  position: absolute;
+  top: 3.5cqw;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.dcv-box-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3cqw 4cqw 4cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2cqw;
+  text-align: center;
+  border-top: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  background: linear-gradient(180deg, rgba(5, 6, 8, 0.6), rgba(5, 6, 8, 0.95));
+}
+.dcv-box-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 6.4cqw;
+  line-height: 1.05;
+  text-transform: uppercase;
+  text-shadow: 0 0 3cqw color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.dcv-box-meta {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.3cqw;
+  letter-spacing: 0.28em;
+  color: var(--accent);
+}
+/* dorso sulla faccia che la rotazione porta verso chi guarda:
+   destra con --ry negativo, sinistra se specchiata */
+.dcv-box-spine {
+  top: 0;
+  left: calc(50% - var(--bd) / 2);
+  width: var(--bd);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4cqw 0;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.55)),
+    color-mix(in srgb, var(--spine) 55%, #0a0a0e);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spine) 80%, #fff);
+  transform: rotateY(90deg) translateZ(calc(var(--bw) / 2));
+}
+.dcv-box.is-mirror .dcv-box-spine { transform: rotateY(-90deg) translateZ(calc(var(--bw) / 2)); }
+.dcv-box-spine-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 4.4cqw;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 70%;
+  color: #f5f3eb;
+  text-shadow: 0 0 1.5cqw rgba(0, 0, 0, 0.9);
+}
+.dcv-box-spine-glyphs { flex-direction: column; }
+.dcv-box-spine-glyphs .dcv-glyph { width: 8.5cqw; height: 8.5cqw; }
+.dcv-box-top {
+  left: 0;
+  top: calc(50% - var(--bd) / 2);
+  width: 100%;
+  height: var(--bd);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 30%, #1a1a20), #0a0a0e);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent);
+  transform: rotateX(90deg) translateZ(calc(var(--bh) / 2));
+}
+/* ---------- apertura (solo VS): coperchio incernierato sul retro + carte a ventaglio ----------
+   Sequenza su 3.4s: coperchio 29–40% su, carte 37–51% fuori, 69–81% dentro, coperchio 79–90% giù. */
+.dcv-box.is-opening { --rx: 10deg; }
+.dcv-box.is-opening .dcv-box-cube { animation: none; }
+.dcv-box-cavity,
+.dcv-box-lid-hinge {
+  left: 0;
+  top: calc(50% - var(--bd) / 2);
+  width: 100%;
+  height: var(--bd);
+}
+.dcv-box-cavity {
+  background: radial-gradient(ellipse at center, #000 30%, color-mix(in srgb, var(--accent) 25%, #050608) 100%);
+  transform: rotateX(90deg) translateZ(calc(var(--bh) / 2 - 2px));
+}
+.dcv-box-lid-hinge {
+  position: absolute;
+  transform-style: preserve-3d;
+  transform: rotateX(90deg) translateZ(calc(var(--bh) / 2));
+}
+.dcv-box-lid {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 30%, #1a1a20), #0a0a0e);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 -3px 0 color-mix(in srgb, var(--accent) 85%, #fff);
+  animation: dcv-lid 3.4s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+.dcv-box-fan {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.dcv-box-card {
+  position: absolute;
+  left: 18%;
+  top: 8%;
+  width: 64%;
+  height: 78%;
+  transform-origin: 50% 100%;
+  overflow: hidden;
+  background: #0a0a0e;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 75%, #fff);
+  border-radius: 1.4cqw;
+  box-shadow: 0 0 3cqw rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  animation: dcv-card-out 3.4s cubic-bezier(0.25, 0.8, 0.3, 1) both;
+}
+.dcv-box-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes dcv-lid {
+  0%, 29% { transform: rotateX(0deg); }
+  40%, 79% { transform: rotateX(100deg); }
+  90%, 100% { transform: rotateX(0deg); }
+}
+@keyframes dcv-card-out {
+  0%, 36% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  37% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  51%, 69% { opacity: 1; transform: translateY(-64%) rotate(calc(var(--i) * 10deg)); }
+  81% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  82%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
+}
+
+.dcv-box-back {
+  inset: 0;
+  background: #0a0a0e;
+  transform: rotateY(180deg) translateZ(calc(var(--bd) / 2));
+}
+.dcv-box-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 3cqh;
+  width: 80cqw;
+  height: 6cqh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, transparent 70%);
+  filter: blur(4px);
+}
+
+/* ============================================================
+   C · TAROCCO
+   ============================================================ */
+.dcv-tr-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3cqw 5cqw 4cqw;
+  background:
+    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, #121019, #07060b);
+  border-radius: 2cqw;
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 80%, #fff),
+    inset 0 0 0 5px #07060b,
+    inset 0 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 2cqw 6cqw rgba(0, 0, 0, 0.7);
+}
+.dcv-tarot.is-center .dcv-tr-card {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 80%, #fff),
+    inset 0 0 0 5px #07060b,
+    inset 0 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 8cqw color-mix(in srgb, var(--accent) 40%, transparent),
+    0 2cqw 6cqw rgba(0, 0, 0, 0.7);
+}
+.dcv-tr-numeral {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 5.6cqw;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  line-height: 1.3;
+}
+.dcv-tr-window {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 50% 50% 1.2cqw 1.2cqw / 26% 26% 1.2cqw 1.2cqw;
+  box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px #07060b, 0 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.dcv-tr-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dcv-tr-window-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(7, 6, 11, 0.7) 100%);
+}
+.dcv-tr-plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4cqw;
+  width: 100%;
+  margin-top: 3.4cqw;
+  padding: 2cqw 0;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.dcv-tr-orn { color: var(--accent); font-size: 3.2cqw; }
+.dcv-tr-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 5.8cqw;
+  line-height: 1.08;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dcv-tr-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4cqw;
+  margin-top: 2.6cqw;
+  max-width: 100%;
+}
+.dcv-tr-foot .dcv-glyph { width: 7.5cqw; height: 7.5cqw; }
+.dcv-tr-leader {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.4cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 235, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dcv-root * { animation: none !important; }
+}

@@ -228,6 +228,8 @@ function DeckRow({
   accent,
   onRemove,
   index,
+  isCover,
+  onSetCover,
   isDragging,
   isDropTarget,
   onDragStart,
@@ -259,6 +261,18 @@ function DeckRow({
       <span className="dbl-row-st">
         <b style={{ color: '#fde047' }}>{card.pot}</b>/<b style={{ color: '#c084fc' }}>{card.dan}</b>
       </span>
+      <button
+        type="button"
+        className={`dbl-row-cover${isCover ? ' on' : ''}`}
+        onClick={onSetCover}
+        onMouseDown={(e) => e.stopPropagation()}
+        draggable={false}
+        aria-pressed={isCover}
+        aria-label={isCover ? 'copertina dell\'esercito' : 'usa come copertina'}
+        title={isCover ? 'Copertina dell\'esercito (clic per tornare automatica)' : 'Usa come copertina dell\'esercito'}
+      >
+        {isCover ? '★' : '☆'}
+      </button>
       <button
         type="button"
         className="dbl-row-x"
@@ -303,6 +317,8 @@ export function DeckBuilderLabPage({
   const [selectedArmyKeys, setSelectedArmyKeys] = useState([FACTIONS[0].key]);
   const [deckIds, setDeckIds] = useState([]);
   const [deckName, setDeckName] = useState('');
+  /** Carta copertina scelta dal giocatore; null = automatica (leader del mazzo). */
+  const [coverCardId, setCoverCardId] = useState(null);
   const [isDeckLoading, setIsDeckLoading] = useState(Boolean(existingDeckId));
   const [catalogVisible, setCatalogVisible] = useState(CATALOG_BATCH);
   const [query, setQuery] = useState('');
@@ -377,6 +393,7 @@ export function DeckBuilderLabPage({
 
     setDeckIds(loaded.cards);
     setDeckName(loaded.name || '');
+    setCoverCardId(loaded.coverCardId ?? null);
     if (armyKeys.length > 0) setSelectedArmyKeys(armyKeys);
     setIsDeckLoading(false);
   }, [existingDeckId]);
@@ -476,6 +493,7 @@ export function DeckBuilderLabPage({
       description: '',
       army: primaryArmy,
       cards: deckCards.map((c) => c.id),
+      ...(coverCardId != null && cardIds.includes(coverCardId) ? { coverCardId } : {}),
     };
     const deckId = existingDeckId || generateDeckId();
     if (!saveCustomDeck(deckId, deckData)) {
@@ -487,7 +505,7 @@ export function DeckBuilderLabPage({
       setFlash(false);
       onClose?.();
     }, 1400);
-  }, [analysis.legal, deckCards, deckName, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
+  }, [analysis.legal, deckCards, deckName, coverCardId, armyCountsInDeck, primaryFac.name, existingDeckId, onClose]);
 
   const filterState = useMemo(
     () => ({ query, legaFilter, trigFilter, archetypeFilter, focusFilter, scalingFilter, effectFilter }),
@@ -1067,6 +1085,8 @@ export function DeckBuilderLabPage({
                   card={c}
                   accent={accentForArmy(c.army)}
                   index={index}
+                  isCover={coverCardId === c.id}
+                  onSetCover={() => setCoverCardId((prev) => (prev === c.id ? null : c.id))}
                   isDragging={dragIndex === index}
                   isDropTarget={dropIndex === index && dragIndex !== null && dragIndex !== index}
                   onDragStart={handleRosterDragStart}

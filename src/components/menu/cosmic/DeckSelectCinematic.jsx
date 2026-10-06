@@ -28,6 +28,8 @@ import { formatAbilityHelper } from '../../../utils/cardUtils.js';
 import { getCardLabels, getCardClassificationById, getCardDisplayLabels } from '../../../data/cardArchetypes.js';
 import { DECK_LORE } from './deckLore.js';
 import { DeckConfirmTransition } from './DeckConfirmTransition.jsx';
+import { DeckCover } from '../../deckCover/DeckCover.jsx';
+import { getDeckCoverStyle } from '../../../utils/deckCoverPreference.js';
 import {
   getShuffleStyle,
   setShuffleStyle,
@@ -78,8 +80,13 @@ function resolveLeaderImage(agentId) {
   return CARD_IMAGES?.[agentId] || AGENT_IMAGES?.[agentId] || null;
 }
 
-function pickLeaderAgent(deckCards, loreLeader) {
+function pickLeaderAgent(deckCards, loreLeader, coverCardId = null) {
   if (!deckCards.length) return null;
+  // Carta copertina scelta dal giocatore (mazzi personalizzati), se è ancora nel mazzo.
+  if (coverCardId != null) {
+    const cover = deckCards.find((c) => c.id === coverCardId);
+    if (cover) return cover;
+  }
   const sorted = [...deckCards].sort((a, b) => b.league - a.league || b.power - a.power);
   if (loreLeader?.name) {
     const byName = sorted.find((c) =>
@@ -103,6 +110,7 @@ function buildDeckEntry({
   bg,
   bonus,
   customDeck = null,
+  coverCardId = null,
 }) {
   const deckCards = resolveDeckCards(
     customDeck || { cards: cardIds },
@@ -116,8 +124,8 @@ function buildDeckEntry({
   });
   const armyIcons = armies.map((a) => ARMY_ICONS[a] || null);
   const leaderLore = lore.leader || {};
-  const leaderAgent = pickLeaderAgent(deckCards, leaderLore);
-  const leaderImg = leaderLore.img || resolveLeaderImage(leaderAgent?.id);
+  const leaderAgent = pickLeaderAgent(deckCards, leaderLore, coverCardId ?? customDeck?.coverCardId ?? null);
+  const leaderImg = resolveLeaderImage(leaderAgent?.id) || leaderLore.img;
   const iconArmy = ARMY_ICONS[army] ? army : (leaderAgent?.army || army);
   const displayName = deckDef?.name || lore.name || rawKey;
 
@@ -286,6 +294,44 @@ export function buildCinematicDecksFromGameOptions(gameDeckOptions, {
   });
 }
 
+/**
+ * Voce ticket per un singolo esercito (schermata VS del duello).
+ * Precostruito (`army` + chiave), personalizzato locale (`custom_<id>`) oppure
+ * solo carte + nome (esercito dell'avversario online, che non è nel nostro storage).
+ */
+export function buildDeckTicketEntry({ army, deckKey = null, cardIds = null, name = null, coverCardId = null }) {
+  const customId = typeof deckKey === 'string' && deckKey.startsWith('custom_')
+    ? deckKey.replace('custom_', '')
+    : null;
+  const custom = customId ? loadCustomDecks()[customId] : null;
+  const ownCardIds = Array.isArray(cardIds) && cardIds.length ? cardIds : null;
+  const deckArmy = custom?.army || army;
+  const builtIn = !customId && typeof deckKey === 'string' ? ARMY_DECKS[deckArmy]?.[deckKey] : null;
+  const lore = builtIn ? (DECK_LORE[deckArmy]?.[deckKey] || {}) : {};
+  const displayName = cleanDeckDisplayName(
+    name || custom?.name || builtIn?.name || lore.name || 'Esercito'
+  );
+  const customDeck = ownCardIds
+    ? { cards: ownCardIds, army: deckArmy }
+    : custom || (builtIn ? null : { cards: [], army: deckArmy });
+
+  return buildDeckEntry({
+    deckKey: deckKey || `vs_${_slug(deckArmy || 'esercito')}`,
+    rawKey: builtIn ? deckKey : 'custom',
+    army: deckArmy,
+    cardIds: builtIn?.cards || [],
+    deckDef: { name: displayName, description: custom?.description || builtIn?.description || '' },
+    lore: { ...lore, name: displayName },
+    loreArmy: DECK_LORE[deckArmy] || {},
+    index: 0,
+    accent: (ARMY_COLORS[deckArmy] || {}).accent || '#94a3b8',
+    bg: ARMY_GIFS[deckArmy] || null,
+    bonus: ARMY_BONUSES[deckArmy] || '—',
+    customDeck,
+    coverCardId: coverCardId ?? custom?.coverCardId ?? null,
+  });
+}
+
 /** Payload per DeckPreviewCosmic (stesso schema del vecchio DeckSelectCosmic). */
 export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
   const deckCards = deck.deckCards || [];
@@ -372,6 +418,8 @@ export default function DeckSelectCinematic({
   const [pulse, setPulse] = useState(0);
   const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
   const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
+  /** Stile copertina (proposte in prova dal VS LAB; default = ticket attuale). */
+  const [coverStyle] = useState(() => getDeckCoverStyle());
   /** Anteprima attiva: shuffle | click | drop | effects */
   const [previewMode, setPreviewMode] = useState('shuffle');
   const rootRef = useRef(null);
@@ -600,6 +648,7 @@ export default function DeckSelectCinematic({
                 key={d.deckKey}
                 deck={d} number={i + 1} total={total}
                 offset={off} isCenter={isCenter} visible
+                coverStyle={coverStyle}
                 onClick={() => !isCenter && goTo(i)}
               />
             );
@@ -914,9 +963,20 @@ function DeckBossTags({ cardId }) {
 // ============================================================
 // TICKET CARD
 // ============================================================
-function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick }) {
+export function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick, coverStyle = 'ticket', mirror = false, coverOpening = false }) {
   const L = deck.leader;
   const agent = deck.leaderAgent;
+  if (coverStyle && coverStyle !== 'ticket') {
+    return (
+      <div
+        className={`dsk-tk dsk-tk--cover ${isCenter ? 'is-center' : ''} ${visible ? '' : 'is-hidden'}`}
+        style={{ '--off': offset, zIndex: 20 - Math.abs(offset) }}
+        onClick={onClick}
+      >
+        <DeckCover deck={deck} variant={coverStyle} isCenter={isCenter} mirror={mirror} opening={coverOpening} />
+      </div>
+    );
+  }
   return (
     <div
       className={`dsk-tk ${isCenter ? 'is-center' : ''} ${visible ? '' : 'is-hidden'}`}
@@ -1295,7 +1355,7 @@ function IntroSigillo({ accent, armies, armyIcons, armyIcon, armyName, label = '
 // ============================================================
 // STILI (scoped .dsk-)
 // ============================================================
-function DeckSelectStyles() {
+export function DeckSelectStyles() {
   return (
     <style>{`
       .dsk {

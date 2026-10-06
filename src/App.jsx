@@ -48,6 +48,9 @@ const CardFaceLabPage = lazy(() =>
 const CardFxLabPage = lazy(() =>
   import('./components/cardFxLab/CardFxLabPage').then((m) => ({ default: m.CardFxLabPage }))
 );
+const VersusLabPage = lazy(() =>
+  import('./components/versus/VersusLabPage').then((m) => ({ default: m.VersusLabPage }))
+);
 
 /** Boot: non restare bloccati su OneDrive/rete lenta — poi warm-up + failsafe. */
 const PRELOAD_TIMEOUT_MS = 12000;
@@ -222,6 +225,7 @@ function AppContent() {
   const showCardFaceLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardFaceLab') === '1';
   // ?cardBurnLab=1 resta valido: la pagina è diventata il lab di tutte le animazioni carta
   const showCardFxLab = devToolsAllowed && typeof window !== 'undefined' && (new URLSearchParams(window.location.search).get('cardFxLab') === '1' || new URLSearchParams(window.location.search).get('cardBurnLab') === '1');
+  const showVersusLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vsLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -308,6 +312,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeVersusLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('vsLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -336,6 +346,8 @@ function AppContent() {
         <CardFaceLabPage onClose={closeCardFaceLab} />
       ) : showCardFxLab ? (
         <CardFxLabPage onClose={closeCardFxLab} />
+      ) : showVersusLab ? (
+        <VersusLabPage onClose={closeVersusLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (

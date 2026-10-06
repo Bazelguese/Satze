@@ -1569,7 +1569,9 @@ export default function SatzeGame() {
           army: p.army,
           deckKey: p.deckKey,
           ...(p.playerName ? { playerName: p.playerName } : {}),
+          ...(typeof p.deckName === 'string' && p.deckName.trim() ? { deckName: p.deckName.trim().slice(0, 60) } : {}),
           ...(Array.isArray(p.deckCardIds) && p.deckCardIds.length ? { deckCardIds: p.deckCardIds } : {}),
+          ...(Array.isArray(p.deckCardIds) && p.deckCardIds.includes(p.coverCardId) ? { coverCardId: p.coverCardId } : {}),
         });
         if (p.playerName) setOnlinePeerName(p.playerName);
       }
@@ -4269,6 +4271,11 @@ export default function SatzeGame() {
       url.searchParams.set('cardFaceLab', '1');
       window.location.href = url.toString();
     };
+    const openVersusLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('vsLab', '1');
+      window.location.href = url.toString();
+    };
     const launchArenaContesa = (playerArmy) => {
       const url = new URL(window.location.href);
       url.searchParams.set('arenaContesa', '1');
@@ -4320,6 +4327,7 @@ export default function SatzeGame() {
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'DUEL LAYOUT LAB', sub: 'SKIN', meta: 'ALT ART · STY', onClick: openDuelLayoutLab },
           { label: 'CARD FACE LAB', sub: 'CARTA', meta: 'ELDRITCH', onClick: openCardFaceLab },
+          { label: 'VS LAB', sub: 'DUELLO', meta: 'INGRESSO · ESERCITI', onClick: openVersusLab },
           { label: 'OVERDRIVE LAB', sub: 'VFX', meta: 'ANTEPRIMA FC', onClick: openOverdriveLab },
           { label: 'PERFECT FC LAB', sub: 'VFX', meta: 'STAMP DUELLO', onClick: openPerfectFocusLab },
           { label: 'EMINENCE LAB', sub: 'DUELLO', meta: 'FORMA · CARTA', onClick: openEminenceArtLab },
@@ -4818,7 +4826,9 @@ export default function SatzeGame() {
         army: selectedArmy,
         deckKey: selectedDeckKey,
         playerName: multiplayerSession.playerName || 'Giocatore',
+        ...(deck.name ? { deckName: deck.name } : {}),
         ...(deckCardIds.length ? { deckCardIds } : {}),
+        ...(deck.coverCardId != null && deckCardIds.includes(deck.coverCardId) ? { coverCardId: deck.coverCardId } : {}),
       };
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, relayPayload);
     };
