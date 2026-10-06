@@ -29,3 +29,6 @@ export const FX_CATALOG = [
 
 /** Parametro URL con cui il lab apre direttamente un effetto (?cardFxLab=1&fx=<id>). */
 export const FX_LAB_PARAM = 'fx';
+
+/** Parametro URL con cui il lab apre la vista «Per armata» su un'armata (?cardFxLab=1&fxArmy=<armata>). */
+export const FX_LAB_ARMY_PARAM = 'fxArmy';

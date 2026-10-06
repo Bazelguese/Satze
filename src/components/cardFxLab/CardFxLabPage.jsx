@@ -5,13 +5,16 @@ import { ARMY_SETS } from '../../data/cards';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
 import { FX_ARMY_EFFECTS, FX_EFFECTS, FX_EFFECTS_BY_ID, FX_GENERIC_EFFECTS } from '../fx/effects/index.js';
-import { FX_LAB_PARAM } from '../fx/effects/catalog.js';
+import { FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../fx/effects/catalog.js';
+import { ArmyFxView } from './ArmyFxView.jsx';
+import { FxParamsPanel } from './FxParamsPanel.jsx';
 
 /**
- * Lab ?cardFxLab=1 (o ?cardBurnLab=1) — demo delle animazioni su carte reali:
- * effetti generici (bruciatura, disintegrazione, frattura, vortice, materializzazione)
- * e un effetto caratteristico per ogni armata.
- * Il colore dell'effetto segue l'armata della carta (o un colore scelto a mano).
+ * Lab ?cardFxLab=1 (o ?cardBurnLab=1) — demo delle animazioni su carte reali, in due viste:
+ * - «Per armata» (default): ingresso in campo e sconfitta inflitta di ogni armata, affiancati
+ *   (?fxArmy=<armata> apre direttamente un'armata);
+ * - «Tutti gli effetti»: ogni effetto, generici compresi (?fx=<id> apre direttamente un effetto).
+ * I parametri vivono qui, così restano passando da una vista all'altra.
  */
 
 const ARMY_NAMES = Object.keys(ARMY_SETS);
@@ -38,13 +41,58 @@ function initialArmy(fxId) {
   return army && ARMY_SETS[army] ? army : "Figli dell'Orizzonte";
 }
 
+/** Armata richiesta dal menu (?fxArmy=<armata>), se presente. */
+function requestedArmy() {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get(FX_LAB_ARMY_PARAM);
+}
+
 function initialParams() {
   return Object.fromEntries(FX_EFFECTS.map((fx) => [fx.id, { ...fx.defaults }]));
 }
 
 export function CardFxLabPage({ onClose }) {
-  const [effectId, setEffectId] = React.useState(() => requestedEffectId() || FX_EFFECTS[0].id);
+  // ?fx=<id> apre la vista con tutti gli effetti; altrimenti si parte dalla vista per armata
+  const [view, setView] = React.useState(() => (requestedEffectId() ? 'all' : 'army'));
   const [paramsById, setParamsById] = React.useState(initialParams);
+  const setParamsFor = React.useCallback(
+    (id, updater) => setParamsById((prev) => ({ ...prev, [id]: typeof updater === 'function' ? updater(prev[id]) : updater })),
+    [],
+  );
+
+  return (
+    <ToolPageShell
+      title="Animazioni carta"
+      subtitle="Ingresso e sconfitta di ogni armata · effetti WebGL su carte reali"
+      onClose={onClose}
+    >
+      <div className="flex gap-2 mb-4">
+        {[
+          ['army', 'Per armata (ingresso + sconfitta)'],
+          ['all', 'Tutti gli effetti'],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={view === key ? 'satze-tool-btn-primary text-sm' : 'satze-tool-btn-secondary text-sm'}
+            onClick={() => setView(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === 'army' ? (
+        <ArmyFxView paramsById={paramsById} setParamsFor={setParamsFor} initialArmy={requestedArmy()} />
+      ) : (
+        <AllFxView paramsById={paramsById} setParamsFor={setParamsFor} />
+      )}
+    </ToolPageShell>
+  );
+}
+
+/** Vista «Tutti gli effetti»: un effetto alla volta, con la fila di confronto fra armate. */
+function AllFxView({ paramsById, setParamsFor }) {
+  const [effectId, setEffectId] = React.useState(() => requestedEffectId() || FX_EFFECTS[0].id);
   const [army, setArmy] = React.useState(() => initialArmy(requestedEffectId()));
   const [cardIndex, setCardIndex] = React.useState(0);
   const [useArmyColor, setUseArmyColor] = React.useState(true);
@@ -78,8 +126,7 @@ export function CardFxLabPage({ onClose }) {
     requestAnimationFrame(() => requestAnimationFrame(() => setRowPlaying(true)));
   }, []);
 
-  const setParams = (updater) =>
-    setParamsById((prev) => ({ ...prev, [effectId]: typeof updater === 'function' ? updater(prev[effectId]) : updater }));
+  const setParams = (updater) => setParamsFor(effectId, updater);
   const setParam = (key, value) => setParams((prev) => ({ ...prev, [key]: value }));
 
   const selectEffect = (id) => {
@@ -109,18 +156,8 @@ export function CardFxLabPage({ onClose }) {
     replay();
   };
 
-  const exported = JSON.stringify(
-    { effect: effect.id, ...Object.fromEntries(Object.entries(params).filter(([k]) => k !== 'color')) },
-    null,
-    2,
-  );
-
   return (
-    <ToolPageShell
-      title="Animazioni carta"
-      subtitle="Effetti WebGL su carte reali · colore dell'armata"
-      onClose={onClose}
-    >
+    <>
       <div className="satze-tool-panel flex flex-col gap-2 p-3 mb-4">
         {[
           ['Generali', FX_GENERIC_EFFECTS],
@@ -321,73 +358,8 @@ export function CardFxLabPage({ onClose }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="satze-tool-panel p-4">
-            <div className="text-sm text-slate-200 mb-2">Preset · {effect.label}</div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(effect.presets).map(([k, preset]) => (
-                <button
-                  key={k}
-                  type="button"
-                  className="satze-tool-btn-secondary text-xs"
-                  onClick={() => {
-                    setParams((prev) => ({
-                      ...effect.defaults,
-                      ...preset.params,
-                      direction: preset.params.direction ?? prev.direction,
-                      originX: prev.originX,
-                      originY: prev.originY,
-                    }));
-                    replay();
-                  }}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="satze-tool-panel p-4 flex flex-col gap-2">
-            <div className="text-sm text-slate-200 mb-1">Parametri</div>
-            {effect.sliders.map(([key, label, min, max, step]) => (
-              <label key={key} className="text-xs text-slate-400 grid items-center gap-2" style={{ gridTemplateColumns: '130px 1fr 56px' }}>
-                <span>{label}</span>
-                <input type="range" min={min} max={max} step={step} value={params[key]} onChange={(e) => setParam(key, Number(e.target.value))} />
-                <span className="text-right text-slate-200 tabular-nums">
-                  {step >= 1 ? Math.round(params[key]) : Number(params[key]).toFixed(3)}
-                </span>
-              </label>
-            ))}
-            {(effect.colorParams || []).map(([key, label]) => (
-              <label key={key} className="text-xs text-slate-400 flex items-center gap-2 mt-1">
-                {label}
-                <input type="color" value={params[key]} onChange={(e) => setParam(key, e.target.value)} />
-              </label>
-            ))}
-            <button
-              type="button"
-              className="satze-tool-btn-secondary text-xs mt-2 self-start"
-              onClick={() => setParams((prev) => ({ ...effect.defaults, direction: prev.direction ?? effect.defaults.direction }))}
-            >
-              Ripristina default
-            </button>
-          </div>
-
-          <div className="satze-tool-panel p-4">
-            <div className="text-sm text-slate-200 mb-2">Parametri (JSON)</div>
-            <textarea
-              readOnly
-              value={exported}
-              className="w-full satze-tool-input text-[11px] font-mono"
-              style={{ height: 180 }}
-              onFocus={(e) => e.target.select()}
-            />
-            <p className="text-[11px] text-slate-500 mt-2">
-              Il colore non è nel JSON: in gioco arriva dall'armata della carta.
-            </p>
-          </div>
-        </div>
+        <FxParamsPanel effect={effect} params={params} setParams={setParams} onReplay={replay} />
       </div>
-    </ToolPageShell>
+    </>
   );
 }

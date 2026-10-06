@@ -310,6 +310,7 @@ function AppContent() {
     url.searchParams.delete('cardFxLab');
     url.searchParams.delete('cardBurnLab');
     url.searchParams.delete('fx');
+    url.searchParams.delete('fxArmy');
     window.location.href = url.toString();
   };
 
