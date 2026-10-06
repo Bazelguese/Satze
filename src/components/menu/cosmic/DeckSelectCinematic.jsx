@@ -286,6 +286,43 @@ export function buildCinematicDecksFromGameOptions(gameDeckOptions, {
   });
 }
 
+/**
+ * Voce ticket per un singolo esercito (schermata VS del duello).
+ * Precostruito (`army` + chiave), personalizzato locale (`custom_<id>`) oppure
+ * solo carte + nome (esercito dell'avversario online, che non è nel nostro storage).
+ */
+export function buildDeckTicketEntry({ army, deckKey = null, cardIds = null, name = null }) {
+  const customId = typeof deckKey === 'string' && deckKey.startsWith('custom_')
+    ? deckKey.replace('custom_', '')
+    : null;
+  const custom = customId ? loadCustomDecks()[customId] : null;
+  const ownCardIds = Array.isArray(cardIds) && cardIds.length ? cardIds : null;
+  const deckArmy = custom?.army || army;
+  const builtIn = !customId && typeof deckKey === 'string' ? ARMY_DECKS[deckArmy]?.[deckKey] : null;
+  const lore = builtIn ? (DECK_LORE[deckArmy]?.[deckKey] || {}) : {};
+  const displayName = cleanDeckDisplayName(
+    name || custom?.name || builtIn?.name || lore.name || 'Esercito'
+  );
+  const customDeck = ownCardIds
+    ? { cards: ownCardIds, army: deckArmy }
+    : custom || (builtIn ? null : { cards: [], army: deckArmy });
+
+  return buildDeckEntry({
+    deckKey: deckKey || `vs_${_slug(deckArmy || 'esercito')}`,
+    rawKey: builtIn ? deckKey : 'custom',
+    army: deckArmy,
+    cardIds: builtIn?.cards || [],
+    deckDef: { name: displayName, description: custom?.description || builtIn?.description || '' },
+    lore: { ...lore, name: displayName },
+    loreArmy: DECK_LORE[deckArmy] || {},
+    index: 0,
+    accent: (ARMY_COLORS[deckArmy] || {}).accent || '#94a3b8',
+    bg: ARMY_GIFS[deckArmy] || null,
+    bonus: ARMY_BONUSES[deckArmy] || '—',
+    customDeck,
+  });
+}
+
 /** Payload per DeckPreviewCosmic (stesso schema del vecchio DeckSelectCosmic). */
 export function buildDeckPreviewPayload(deck, { selectedArmy } = {}) {
   const deckCards = deck.deckCards || [];
@@ -914,7 +951,7 @@ function DeckBossTags({ cardId }) {
 // ============================================================
 // TICKET CARD
 // ============================================================
-function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick }) {
+export function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick }) {
   const L = deck.leader;
   const agent = deck.leaderAgent;
   return (
@@ -1295,7 +1332,7 @@ function IntroSigillo({ accent, armies, armyIcons, armyIcon, armyName, label = '
 // ============================================================
 // STILI (scoped .dsk-)
 // ============================================================
-function DeckSelectStyles() {
+export function DeckSelectStyles() {
   return (
     <style>{`
       .dsk {
