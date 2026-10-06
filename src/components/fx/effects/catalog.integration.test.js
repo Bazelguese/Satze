@@ -18,8 +18,10 @@ describe('catalogo degli effetti carta', () => {
     for (const fx of FX_CATALOG.filter((f) => f.role === 'entry')) expect(fx.kind).toBe('in');
   });
 
-  it('ogni armata giocabile ha la sua sconfitta', () => {
-    const withDefeat = new Set(FX_CATALOG.filter((fx) => fx.role === 'defeat').map((fx) => fx.army));
-    for (const army of Object.keys(ARMY_COLORS)) expect(withDefeat.has(army)).toBe(true);
+  it('ogni armata ha la sua sconfitta e almeno un ingresso', () => {
+    for (const role of ['defeat', 'entry']) {
+      const armies = new Set(FX_CATALOG.filter((fx) => fx.role === role).map((fx) => fx.army));
+      for (const army of Object.keys(ARMY_COLORS)) expect(armies.has(army), `${army} · ${role}`).toBe(true);
+    }
   });
 });

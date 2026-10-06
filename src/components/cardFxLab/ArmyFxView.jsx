@@ -4,7 +4,7 @@ import { ARMY_SETS } from '../../data/cards';
 import { ARMY_COLORS } from '../../data/armies.js';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
-import { armyDefeatFor, armyEntryFor, materializeEffect } from '../fx/effects/index.js';
+import { armyDefeatFor, armyEntriesFor, armyEntryFor, materializeEffect } from '../fx/effects/index.js';
 import { FxParamsPanel } from './FxParamsPanel.jsx';
 
 /**
@@ -58,10 +58,13 @@ export function ArmyFxView({ paramsById, setParamsFor, initialArmy }) {
   const [defeatOn, setDefeatOn] = React.useState(false);
   const [editing, setEditing] = React.useState('defeat');
   const [status, setStatus] = React.useState({ entry: 'Pronta', defeat: 'Pronta' });
+  /** Variante d'ingresso scelta per armata (alcune armate ne hanno più d'una da provare). */
+  const [entryChoice, setEntryChoice] = React.useState({});
   const sequenceRef = React.useRef(false);
 
   const accent = getArmyAccent({ army });
-  const entryFx = armyEntryFor(army);
+  const entryVariants = armyEntriesFor(army);
+  const entryFx = armyEntryFor(army, entryChoice[army]);
   const entryEffect = entryFx || materializeEffect;
   const defeatEffect = armyDefeatFor(army);
   const entryAgent = React.useMemo(() => entryAgentOf(army), [army]);
@@ -120,7 +123,8 @@ export function ArmyFxView({ paramsById, setParamsFor, initialArmy }) {
       <div className="satze-tool-panel p-3 mb-4 flex flex-wrap gap-2">
         {ALL_ARMIES.map((name) => {
           const c = getArmyAccent({ army: name });
-          const hasEntry = Boolean(armyEntryFor(name));
+          const entries = armyEntriesFor(name);
+          const hasEntry = entries.length > 0;
           return (
             <button
               key={name}
@@ -128,15 +132,15 @@ export function ArmyFxView({ paramsById, setParamsFor, initialArmy }) {
               onClick={() => selectArmy(name)}
               className={name === army ? 'satze-tool-btn-primary text-xs' : 'satze-tool-btn-secondary text-xs'}
               style={{ borderColor: c }}
-              title={`Ingresso: ${hasEntry ? armyEntryFor(name).label : 'da fare'} · Sconfitta: ${armyDefeatFor(name)?.label || 'da fare'}`}
+              title={`Ingresso: ${hasEntry ? entries.map((fx) => fx.label).join(' / ') : 'da fare'} · Sconfitta: ${armyDefeatFor(name)?.label || 'da fare'}`}
             >
               <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle" style={{ background: c, boxShadow: `0 0 6px ${c}` }} />
               {name}
-              <span className="ml-1.5 text-[10px] opacity-70">{hasEntry ? '●●' : '○●'}</span>
+              <span className="ml-1.5 text-[10px] opacity-70">{hasEntry ? '●●' : '○●'}{entries.length > 1 ? ` ×${entries.length}` : ''}</span>
             </button>
           );
         })}
-        <span className="text-[11px] text-slate-500 self-center ml-1">●● ingresso e sconfitta · ○● ingresso da fare</span>
+        <span className="text-[11px] text-slate-500 self-center ml-1">●● ingresso e sconfitta · ×2 / ×3 varianti d'ingresso da provare</span>
       </div>
 
       <div className="satze-tool-panel flex flex-wrap gap-3 items-center p-3 mb-4">
@@ -173,22 +177,43 @@ export function ArmyFxView({ paramsById, setParamsFor, initialArmy }) {
       <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 340px' }}>
         {/* ingresso */}
         <div className="flex flex-col gap-2 min-w-0">
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => setEditing('entry')}
-            className={`text-left satze-tool-panel px-4 py-3 ${editing === 'entry' ? 'ring-1 ring-slate-300/40' : ''}`}
+            className={`text-left satze-tool-panel px-4 py-3 cursor-pointer ${editing === 'entry' ? 'ring-1 ring-slate-300/40' : ''}`}
           >
             <div className="text-[11px] uppercase tracking-wider text-slate-500">Ingresso in campo</div>
             <div className="text-slate-100 text-base">
               {entryFx ? entryFx.label : 'Da fare'}
               {!entryFx ? <span className="text-xs text-amber-300/90 ml-2">anteprima provvisoria: Materializzazione</span> : null}
             </div>
+            {entryVariants.length > 1 ? (
+              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[11px] text-slate-500 self-center">Varianti da provare:</span>
+                {entryVariants.map((fx) => (
+                  <button
+                    key={fx.id}
+                    type="button"
+                    className={fx.id === entryFx?.id ? 'satze-tool-btn-primary text-xs' : 'satze-tool-btn-secondary text-xs'}
+                    onClick={() => {
+                      setEntryChoice((c) => ({ ...c, [army]: fx.id }));
+                      setEditing('entry');
+                      setEntryOn(false);
+                      setStatus((st) => ({ ...st, entry: 'Pronta' }));
+                    }}
+                  >
+                    {fx.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className="text-xs text-slate-400">
               {entryFx ? entryFx.description : `${army} non ha ancora il suo ingresso.`}
               {!ARMY_SETS[army] ? ' (Nessuna carta giocabile: anteprima su una carta di un\'altra armata.)' : ''}
             </div>
             <div className="text-[11px] text-slate-500 mt-1">Stato: {status.entry}</div>
-          </button>
+          </div>
           <Stage>
             {entryAgent ? (
               <ElementFx

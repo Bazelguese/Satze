@@ -32,6 +32,15 @@ import { calibriCorazzaEffect } from './armies/calibriCorazza.js';
 import { enclaveTesoroEffect } from './armies/enclaveTesoro.js';
 import { rattiPozzaEffect } from './armies/rattiPozza.js';
 import { pattoRicucituraEffect } from './armies/pattoRicucitura.js';
+import { orathaiVarcoEffect } from './armies/orathaiVarco.js';
+import { orathaiCortecciaEffect } from './armies/orathaiCorteccia.js';
+import { mounthbornSciameEffect } from './armies/mounthbornSciame.js';
+import { mounthbornBrulicareEffect } from './armies/mounthbornBrulicare.js';
+import { mounthbornBoccaEffect } from './armies/mounthbornBocca.js';
+import { khemetEvocazioneEffect } from './armies/khemetEvocazione.js';
+import { apexGeloEffect } from './armies/apexGelo.js';
+import { mascaradaEntrataEffect } from './armies/mascaradaEntrata.js';
+import { concordiaDiscesaEffect } from './armies/concordiaDiscesa.js';
 
 export { burnEffect, dustEffect, shatterEffect, vortexEffect, materializeEffect };
 
@@ -57,7 +66,12 @@ export const FX_ARMY_EFFECTS = [
   corteContrattoEffect,
   calibriCorazzaEffect,
   calibriEffect,
+  orathaiVarcoEffect,
+  orathaiCortecciaEffect,
   orathaiRoviEffect,
+  mounthbornSciameEffect,
+  mounthbornBrulicareEffect,
+  mounthbornBoccaEffect,
   mounthbornFameEffect,
   enclaveTesoroEffect,
   enclaveEffect,
@@ -65,9 +79,13 @@ export const FX_ARMY_EFFECTS = [
   rattiEffect,
   pattoRicucituraEffect,
   pattoEffect,
+  khemetEvocazioneEffect,
   khemetSigilloEffect,
+  apexGeloEffect,
   apexEffect,
+  mascaradaEntrataEffect,
   mascaradaEffect,
+  concordiaDiscesaEffect,
   concordiaEffect,
 ];
 

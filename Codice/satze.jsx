@@ -4282,12 +4282,12 @@ export default function SatzeGame() {
     };
     /** Per ogni armata: quale ingresso e quale sconfitta ha già (dal catalogo leggero). */
     const cardFxArmyChoices = Object.keys(ARMY_COLORS).map((army) => {
-      const entry = FX_CATALOG.find((fx) => fx.army === army && fx.role === 'entry');
+      const entries = FX_CATALOG.filter((fx) => fx.army === army && fx.role === 'entry');
       const defeat = FX_CATALOG.find((fx) => fx.army === army && fx.role === 'defeat');
       return {
         label: armyMenuLabel(army),
-        sub: entry ? 'INGRESSO + SCONFITTA' : 'INGRESSO DA FARE',
-        meta: `INGRESSO ${entry ? entry.label.toUpperCase() : '—'} · SCONFITTA ${defeat ? defeat.label.toUpperCase() : '—'}`,
+        sub: entries.length > 1 ? `${entries.length} INGRESSI + SCONFITTA` : entries.length ? 'INGRESSO + SCONFITTA' : 'INGRESSO DA FARE',
+        meta: `INGRESSO ${entries.length ? entries.map((fx) => fx.label.toUpperCase()).join(' / ') : '—'} · SCONFITTA ${defeat ? defeat.label.toUpperCase() : '—'}`,
         onClick: () => openCardFxLab({ army }),
       };
     });

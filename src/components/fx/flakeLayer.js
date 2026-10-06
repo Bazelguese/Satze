@@ -78,7 +78,8 @@ export function createFlakeLayer(gl, max = 1500) {
 
   /**
    * Nuova particella in uv del canvas. opts: vx, vy (uv/s), life (s), size (px CSS),
-   * color [r,g,b] 0-1, shape (0-4), spin (rad/s), gravity (uv/s²), drag, flutter.
+   * color [r,g,b] 0-1, shape (0-4), spin (rad/s), gravity (uv/s²), drag, flutter,
+   * extra (campi liberi per chi guida il moto).
    */
   function spawn(x, y, opts = {}) {
     if (flakes.length >= max) return;
@@ -99,6 +100,7 @@ export function createFlakeLayer(gl, max = 1500) {
       flutter: opts.flutter ?? 6 + Math.random() * 6,
       phase: Math.random() * Math.PI * 2,
       fadeIn: opts.fadeIn ?? 0.05,
+      ...opts.extra,
     });
   }
 
