@@ -259,6 +259,7 @@ function createPhoenixRenderer(canvas) {
 export const kethranEffect = {
   id: 'kethran-fenice',
   army: 'Kethran',
+  role: 'entry',
   label: 'Fenice',
   kind: 'in',
   description: 'Entrata: la carta rinasce dalla cenere, granello per granello, nel fuoco d\'oro.',

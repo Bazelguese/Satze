@@ -1,9 +1,9 @@
-// Orathai · «Eclissi»: un disco lunare scuro scivola sulla carta e la divora, lasciando una
+// Eclissi: un disco lunare scuro scivola sulla carta e la divora, lasciando una
 // corona d'argento sul bordo; al momento della totalità un lampo ad «anello di diamante»,
 // poi resta solo il buio. «Aspetta. Poi finisci.»
 
-import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../../quadRenderer.js';
-import { smoothstepJs } from './common.js';
+import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../quadRenderer.js';
+import { smoothstepJs } from './armies/common.js';
 
 const FRAG = `${QUAD_HEADER}
 uniform vec2 uDisc;
@@ -59,9 +59,8 @@ function discAt(params, aspect, t) {
   return { x: cx + Math.cos(ang) * dist, y: cy + Math.sin(ang) * dist, radius, ang };
 }
 
-export const orathaiEffect = {
-  id: 'orathai-eclissi',
-  army: 'Orathai',
+export const eclipseEffect = {
+  id: 'eclissi',
   label: 'Eclissi',
   kind: 'out',
   description: 'Un disco lunare scuro divora la carta lasciando una corona d\'argento.',

@@ -44,6 +44,7 @@ void main() {
 export const calibriEffect = {
   id: 'calibri-pressa',
   army: 'Calibri Pesanti',
+  role: 'defeat',
   label: 'Pressa',
   kind: 'out',
   description: 'La carta si divide in piastre d\'acciaio dalle giunture roventi che cadono pesanti.',

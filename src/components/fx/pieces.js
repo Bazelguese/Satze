@@ -233,6 +233,7 @@ uniform float uTumble;
 uniform float uRadial;
 uniform vec2 uBias;
 uniform float uSwell;
+uniform vec2 uJolt;
 varying vec2 vSrc;
 varying float vEdge;
 varying float vDist;
@@ -259,7 +260,7 @@ void main() {
   vec2 dir = dirOut * uRadial + uBias + (aRand.yz - 0.5) * 0.6;
   vec2 vel = dir * uForce * (0.6 + aRand.z * 0.8);
   vec2 move = vel * age + vec2(0.0, 0.5 * uGravity * age * age);
-  vec2 q = c + v + pre + move;
+  vec2 q = c + v + pre + move + uJolt;
   vec2 uv = vec2(q.x / uAspect, q.y);
   vec2 cv = uRect.xy + uv * uRect.zw;
   gl_Position = vec4(cv.x * 2.0 - 1.0, 1.0 - cv.y * 2.0, 0.0, 1.0);
@@ -274,12 +275,12 @@ void main() {
 }
 `;
 
-const MOTION_UNIFORMS = ['uRect', 'uAspect', 'uProgress', 'uCrackTime', 'uStagger', 'uOrigin', 'uForce', 'uGravity', 'uSpin', 'uTumble', 'uRadial', 'uBias', 'uSwell'];
+const MOTION_UNIFORMS = ['uRect', 'uAspect', 'uProgress', 'uCrackTime', 'uStagger', 'uOrigin', 'uForce', 'uGravity', 'uSpin', 'uTumble', 'uRadial', 'uBias', 'uSwell', 'uJolt'];
 
 /**
  * Renderer a pezzi.
  * spec: frag, uniforms (extra), mesh(params, aspect) → { cells, opts }, meshKey(params, aspect),
- *   motion(params) → { crackTime, stagger, force, gravity, spin, tumble, radial, bias:[x,y], swell, origin:[x,y] },
+ *   motion(params, state) → { crackTime, stagger, force, gravity, spin, tumble, radial, bias:[x,y], swell, jolt:[x,y], origin:[x,y] },
  *   bind(gl, u, state, env), particles(state, env), passes (opzionale: disegni extra prima dei pezzi).
  */
 export function createPiecesRenderer(canvas, spec) {
@@ -323,7 +324,7 @@ export function createPiecesRenderer(canvas, spec) {
       ensureMesh(params, aspect);
       const color = hexToRgb01(params.color);
       env.color = color;
-      const m = spec.motion(params);
+      const m = spec.motion(params, state);
       env.motion = m;
 
       gl.enable(gl.BLEND);
@@ -346,6 +347,8 @@ export function createPiecesRenderer(canvas, spec) {
       gl.uniform1f(u.uRadial, m.radial ?? 1);
       gl.uniform2f(u.uBias, (m.bias || [0, 0])[0], (m.bias || [0, 0])[1]);
       gl.uniform1f(u.uSwell, m.swell ?? 0.004);
+      // scossa di tutta la carta (coordinate quadrate), es. un colpo violento
+      gl.uniform2f(u.uJolt, (m.jolt || [0, 0])[0], (m.jolt || [0, 0])[1]);
       spec.bind?.(gl, u, state, env);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       const stride = PIECE_STRIDE * 4;

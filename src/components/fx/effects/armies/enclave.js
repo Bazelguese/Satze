@@ -74,6 +74,7 @@ void main() {
 export const enclaveEffect = {
   id: 'enclave-muta',
   army: "L'Enclave delle Scaglie",
+  role: 'defeat',
   label: 'Muta',
   kind: 'out',
   description: "Le scaglie della carta si girano mostrando l'oro e si staccano a ondata.",

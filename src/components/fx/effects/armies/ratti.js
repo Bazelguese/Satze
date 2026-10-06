@@ -62,6 +62,7 @@ function corroThreshold(t, params) {
 export const rattiEffect = {
   id: 'ratti-corrosione',
   army: 'Ratti della Megera',
+  role: 'defeat',
   label: 'Corrosione',
   kind: 'out',
   description: 'Acido tossico divora la carta con colature, bolle e fumi.',

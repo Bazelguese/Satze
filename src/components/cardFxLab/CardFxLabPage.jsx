@@ -59,7 +59,10 @@ export function CardFxLabPage({ onClose }) {
   const params = paramsById[effectId];
   const agent = React.useMemo(() => agentOf(army, cardIndex), [army, cardIndex]);
   // un'armata senza carte giocabili (es. Concordia di Caelion) usa comunque il suo colore
-  const armyColor = effect.army && !ARMY_SETS[effect.army] ? getArmyAccent({ army: effect.army }) : getArmyAccent(agent);
+  // sconfitta: la carta è quella battuta, il colore è dell'armata che vince.
+  // ingresso (o armata senza carte giocabili): colore dell'armata dell'effetto.
+  const isDefeat = effect.role === 'defeat';
+  const armyColor = effect.army && (isDefeat || !ARMY_SETS[effect.army]) ? getArmyAccent({ army: effect.army }) : getArmyAccent(agent);
   const color = useArmyColor ? armyColor : customColor;
   const effectParams = React.useMemo(() => ({ ...params, color }), [params, color]);
   const usesOrigin = Boolean(effect.usesOrigin || params.direction === 'point');
@@ -81,9 +84,11 @@ export function CardFxLabPage({ onClose }) {
 
   const selectEffect = (id) => {
     setEffectId(id);
-    // un effetto d'armata si prova su una carta di quell'armata
-    const fxArmy = FX_EFFECTS_BY_ID[id]?.army;
-    if (fxArmy && ARMY_SETS[fxArmy]) {
+    // l'ingresso si prova su una carta di quell'armata; la sconfitta su una carta battuta
+    // (resta quella scelta: l'armata dell'effetto è chi vince)
+    const fx = FX_EFFECTS_BY_ID[id];
+    const fxArmy = fx?.army;
+    if (fxArmy && fx.role === 'entry' && ARMY_SETS[fxArmy]) {
       setArmy(fxArmy);
       setCardIndex(0);
     }
@@ -133,13 +138,17 @@ export function CardFxLabPage({ onClose }) {
                 style={fx.army ? { borderColor: getArmyAccent({ army: fx.army }) } : undefined}
               >
                 {fx.label}
-                {fx.kind === 'in' ? ' ↘ entrata' : ''}
+                {fx.role === 'entry' || (!fx.army && fx.kind === 'in') ? ' ↘ ingresso' : ''}
               </button>
             ))}
           </div>
         ))}
         <span className="text-xs text-slate-400">
-          {effect.army ? <strong className="text-slate-200">{effect.army} · </strong> : null}
+          {effect.army ? (
+            <strong className="text-slate-200">
+              {effect.army} · {effect.role === 'defeat' ? 'sconfitta inflitta (la carta qui sotto è quella battuta)' : 'ingresso'} ·{' '}
+            </strong>
+          ) : null}
           {effect.description}
         </span>
       </div>
@@ -180,7 +189,7 @@ export function CardFxLabPage({ onClose }) {
             </label>
             <label className="flex items-center gap-2 text-xs text-slate-300">
               <input type="checkbox" checked={useArmyColor} onChange={(e) => setUseArmyColor(e.target.checked)} />
-              Colore dell'armata
+              {isDefeat ? `Colore di chi vince (${effect.army})` : "Colore dell'armata"}
               <span className="inline-block w-4 h-4 rounded" style={{ background: armyColor, boxShadow: `0 0 8px ${armyColor}` }} />
             </label>
             {!useArmyColor ? (
@@ -275,7 +284,9 @@ export function CardFxLabPage({ onClose }) {
 
           <div className="satze-tool-panel p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="text-sm text-slate-200">Confronto armate · {effect.label}</div>
+              <div className="text-sm text-slate-200">
+                {isDefeat ? `${effect.army} batte sei armate · ${effect.label}` : `Confronto armate · ${effect.label}`}
+              </div>
               <button type="button" className="satze-tool-btn-primary text-sm" onClick={replayRow}>
                 ▶ Avvia tutte
               </button>
@@ -296,7 +307,7 @@ export function CardFxLabPage({ onClose }) {
                       <ElementFx
                         effect={effect}
                         active={rowPlaying}
-                        params={{ ...params, color: getArmyAccent(a), seed: (params.seed ?? 0) + i * 13 }}
+                        params={{ ...params, color: isDefeat ? armyColor : getArmyAccent(a), seed: (params.seed ?? 0) + i * 13 }}
                         captureKey={`${a.id}`}
                         precapture
                       >

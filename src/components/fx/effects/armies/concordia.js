@@ -57,6 +57,7 @@ void main() {
 export const concordiaEffect = {
   id: 'concordia-consacrazione',
   army: 'Concordia di Caelion',
+  role: 'defeat',
   label: 'Consacrazione',
   kind: 'out',
   description: 'Raggi di sole e rintocchi di campana: la carta si scioglie in luce d\'oro.',

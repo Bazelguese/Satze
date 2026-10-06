@@ -46,6 +46,7 @@ void main() {
 export const pattoEffect = {
   id: 'patto-strappo',
   army: 'Patto degli Indocili',
+  role: 'defeat',
   label: 'Strappo',
   kind: 'out',
   description: 'La carta si strappa in pochi pezzi sfilacciati tirati in direzioni diverse.',

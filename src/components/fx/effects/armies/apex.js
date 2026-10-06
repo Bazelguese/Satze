@@ -49,6 +49,7 @@ function slashDir(angle) {
 export const apexEffect = {
   id: 'apex-artigliata',
   army: 'Apex',
+  role: 'defeat',
   label: 'Artigliata',
   kind: 'out',
   description: 'Tre artigli di luce gelida squarciano la carta, che cade a strisce.',

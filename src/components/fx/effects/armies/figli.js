@@ -51,6 +51,7 @@ void main() {
 export const figliEffect = {
   id: 'figli-domanda',
   army: "Figli dell'Orizzonte",
+  role: 'defeat',
   label: 'La Domanda',
   kind: 'out',
   description: "La carta si deforma attraverso la Nebula e si scioglie in stelle.",
