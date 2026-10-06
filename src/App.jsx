@@ -45,6 +45,9 @@ const DuelLayoutLabPage = lazy(() =>
 const CardFaceLabPage = lazy(() =>
   import('./components/cardFaceLab/CardFaceLabPage').then((m) => ({ default: m.CardFaceLabPage }))
 );
+const CardBurnLabPage = lazy(() =>
+  import('./components/cardBurnLab/CardBurnLabPage').then((m) => ({ default: m.CardBurnLabPage }))
+);
 
 /** Boot: non restare bloccati su OneDrive/rete lenta — poi warm-up + failsafe. */
 const PRELOAD_TIMEOUT_MS = 12000;
@@ -217,6 +220,7 @@ function AppContent() {
   const showEminenceSystemLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceSystemLab') === '1';
   const showDuelLayoutLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelLayoutLab') === '1';
   const showCardFaceLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardFaceLab') === '1';
+  const showCardBurnLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardBurnLab') === '1';
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -296,6 +300,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeCardBurnLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('cardBurnLab');
+    window.location.href = url.toString();
+  };
+
   return (
     <Suspense fallback={<LoadingScreen progress={100} />}>
       {showCropTool ? (
@@ -322,6 +332,8 @@ function AppContent() {
         <DuelLayoutLabPage onClose={closeDuelLayoutLab} />
       ) : showCardFaceLab ? (
         <CardFaceLabPage onClose={closeCardFaceLab} />
+      ) : showCardBurnLab ? (
+        <CardBurnLabPage onClose={closeCardBurnLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (
