@@ -14,17 +14,17 @@ import { mirrorEffect } from './mirror.js';
 import { derezEffect } from './derez.js';
 import { figliEffect } from './armies/figli.js';
 import { kethranEffect } from './armies/kethran.js';
-import { kethranMutilazioneEffect } from './armies/kethranMutilazione.js';
+import { kethranSchiantoEffect } from './armies/kethranSchianto.js';
 import { corteContrattoEffect } from './armies/corteContratto.js';
 import { calibriEffect } from './armies/calibri.js';
 import { orathaiRoviEffect } from './armies/orathaiRovi.js';
 import { mounthbornFameEffect } from './armies/mounthbornFame.js';
 import { enclaveEffect } from './armies/enclave.js';
 import { rattiEffect } from './armies/ratti.js';
-import { pattoEffect } from './armies/patto.js';
+import { pattoRafficaEffect } from './armies/pattoRaffica.js';
 import { khemetSigilloEffect } from './armies/khemetSigillo.js';
 import { apexEffect } from './armies/apex.js';
-import { mascaradaEffect } from './armies/mascarada.js';
+import { mascaradaSmascheratoEffect } from './armies/mascaradaSmascherato.js';
 import { concordiaEffect } from './armies/concordia.js';
 import { figliNebulaEffect } from './armies/figliNebula.js';
 import { corteFiammataEffect } from './armies/corteFiammata.js';
@@ -61,7 +61,7 @@ export const FX_ARMY_EFFECTS = [
   figliNebulaEffect,
   figliEffect,
   kethranEffect,
-  kethranMutilazioneEffect,
+  kethranSchiantoEffect,
   corteFiammataEffect,
   corteContrattoEffect,
   calibriCorazzaEffect,
@@ -78,13 +78,13 @@ export const FX_ARMY_EFFECTS = [
   rattiPozzaEffect,
   rattiEffect,
   pattoRicucituraEffect,
-  pattoEffect,
+  pattoRafficaEffect,
   khemetEvocazioneEffect,
   khemetSigilloEffect,
   apexGeloEffect,
   apexEffect,
   mascaradaEntrataEffect,
-  mascaradaEffect,
+  mascaradaSmascheratoEffect,
   concordiaDiscesaEffect,
   concordiaEffect,
 ];
