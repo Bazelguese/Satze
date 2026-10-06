@@ -111,9 +111,31 @@ export function clearCanvas(gl, canvas) {
   gl.clear(gl.COLOR_BUFFER_BIT);
 }
 
-/** Rilascia il contesto subito: i browser ne tengono pochi vivi alla volta. */
+/**
+ * Rilascia il contesto: i browser ne tengono pochi vivi alla volta. Va fatto quando il canvas
+ * non è più a schermo: un contesto perso su un canvas ancora visibile compare come un
+ * fotogramma bianco. Per questo il rilascio aspetta che React abbia tolto il canvas.
+ */
 export function loseContext(gl) {
-  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  const canvas = gl.canvas;
+  const ext = gl.getExtension('WEBGL_lose_context');
+  if (!ext) return;
+  if (canvas?.style) canvas.style.visibility = 'hidden';
+  setTimeout(() => ext.loseContext(), 300);
+}
+
+/**
+ * Opacità del disegno della carta (dissolvenza verso la carta vera a fine entrata).
+ * Vale per il primo disegno dopo la pulizia del canvas: lì la destinazione è vuota, quindi
+ * basta scalare la sorgente premoltiplicata. a = 1 ripristina la fusione normale.
+ */
+export function setCardAlpha(gl, a = 1) {
+  if (a >= 0.999) {
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    return;
+  }
+  gl.blendColor(0, 0, 0, Math.max(0, a));
+  gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 export function clamp01(x) {

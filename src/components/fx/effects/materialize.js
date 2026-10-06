@@ -12,6 +12,7 @@ import {
   getFxContext,
   hexToRgb01,
   loseContext,
+  setCardAlpha,
 } from '../glUtils.js';
 import {
   NOISE_GLSL,
@@ -186,7 +187,9 @@ function createMaterializeRenderer(canvas) {
         gl.uniform1f(u.uEdge, params.edgeStrength);
         gl.uniform1f(u.uScan, params.scanlines);
         setSweepUniforms(gl, u, sweep, aspect);
+        setCardAlpha(gl, state.cardAlpha ?? 1);
         quad.draw(a.aPos);
+        setCardAlpha(gl, 1);
 
         const n = spawnClock(params.sparkles * state.active, state.dt);
         for (let i = 0; i < n; i += 1) {

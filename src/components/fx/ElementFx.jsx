@@ -1,6 +1,14 @@
 import React from 'react';
 import { captureElementToCanvas } from './captureElement.js';
 
+/** Entrata: da questa quota il disegno sfuma verso la carta vera, già visibile sotto. */
+const IN_HANDOVER_START = 0.86;
+
+const smoothstepJs = (a, b, x) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 /**
  * Esegue un effetto WebGL su qualunque contenuto (bruciatura, polvere, frattura, vortice,
  * materializzazione…). L'effetto è una «definizione» (vedi fx/effects): parametri di
@@ -203,6 +211,7 @@ export function ElementFx({
     let start = null;
     let last = null;
     let completed = false;
+    let handedOver = false;
     let firstFrame = true;
     let disposed = false;
     callbacksRef.current.onStart?.();
@@ -224,6 +233,13 @@ export function ElementFx({
         linear = Math.min(1, (ts - start) / Math.max(1, p.durationMs));
         prog = fx.curve ? fx.curve(linear) : linear;
       }
+      // entrata: nell'ultimo tratto la carta vera è già sotto e il disegno sfuma verso di lei,
+      // così il passaggio non scatta (il disegno non è identico al pixel alla carta DOM)
+      const handover = fx.kind === 'in' && !isManual ? smoothstepJs(IN_HANDOVER_START, 1, linear) : 0;
+      if (handover > 0 && !handedOver) {
+        handedOver = true;
+        setContentMode('none');
+      }
       const activeAmt = isManual
         ? (prog > 0.001 && prog < 0.999 ? 1 : 0)
         : Math.min(1, linear / 0.04) * (1 - Math.max(0, (linear - 0.9) / 0.1));
@@ -238,6 +254,8 @@ export function ElementFx({
         rect,
         aspect,
         dpr: layout.dpr,
+        cardAlpha: completed && fx.kind === 'in' ? 0 : 1 - handover,
+        hideCard: completed && fx.kind === 'in',
       });
       if (firstFrame) {
         firstFrame = false;
@@ -260,6 +278,8 @@ export function ElementFx({
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
+      // nascosto prima di rilasciare il contesto: un canvas col contesto perso compare bianco
+      canvas.style.visibility = 'hidden';
       renderer.dispose();
     };
   }, [run]);
@@ -276,7 +296,8 @@ export function ElementFx({
   return (
     <div className={className} style={{ position: 'relative', display: 'inline-block', ...style }}>
       {/* opacity e non visibility: nella carta ci sono figli con visibility:visible esplicito */}
-      <div ref={contentRef} style={contentStyle}>{children}</div>
+      {/* contesto di impilamento proprio: i livelli della carta (z-index) non scavalcano il canvas */}
+      <div ref={contentRef} style={{ position: 'relative', zIndex: 0, isolation: 'isolate', ...contentStyle }}>{children}</div>
       {run ? (
         <canvas
           key={run.id}
@@ -288,6 +309,7 @@ export function ElementFx({
             top: -run.layout.top,
             width: run.layout.cssW,
             height: run.layout.cssH,
+            zIndex: 1,
             pointerEvents: 'none',
           }}
         />
