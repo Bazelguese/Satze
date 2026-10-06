@@ -13,7 +13,7 @@
 //   shadow — arte dell'Eminenza come sfondo della metà + fascia con la sua statica
 // ============================================================
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { getEminence } from '../../data/eminences.js';
 import { getEminenceArtUrl } from '../../data/eminenceArt.js';
@@ -21,6 +21,7 @@ import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
 import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
+import { pickDistinctCardBackPair } from '../../utils/cardBackPicker.js';
 import {
   DeckTicket,
   DeckSelectStyles,
@@ -117,7 +118,7 @@ function VersusArmies({ armies }) {
   );
 }
 
-function VersusCover({ entry, coverStyle, mirror, opening, spin }) {
+function VersusCover({ entry, coverStyle, mirror, opening, spin, backImage }) {
   return (
     <div className="vsx-ticket" aria-label={`Esercito: ${entry.name}`}>
       <div className="vsx-ticket-scale">
@@ -132,6 +133,7 @@ function VersusCover({ entry, coverStyle, mirror, opening, spin }) {
           mirror={mirror}
           coverOpening={opening}
           coverSpin={spin}
+          coverBackImage={backImage}
         />
       </div>
     </div>
@@ -194,11 +196,11 @@ function VersusEminenceBanner({ eminence, reason }) {
   );
 }
 
-function VersusSide({ side, identity, entry, layout, coverStyle, em, opening, spin }) {
+function VersusSide({ side, identity, entry, layout, coverStyle, em, opening, spin, backImage }) {
   // Slot destro: la scatola è specchiata così il dorso guarda il centro.
   const mirror = side === 'r';
   const showCard = layout === 'side' || layout === 'hero';
-  const cover = <VersusCover entry={entry} coverStyle={coverStyle} mirror={mirror} opening={opening} spin={spin} />;
+  const cover = <VersusCover entry={entry} coverStyle={coverStyle} mirror={mirror} opening={opening} spin={spin} backImage={backImage} />;
   return (
     <div className={`vsx-side vsx-side--${side}`} style={{ '--accent': entry.accent }}>
       <header className="vsx-who">
@@ -242,6 +244,8 @@ function halfBackground(entry, em, layout) {
  * @param {string|null} [props.playerEminenceId] da eminenceMatchState, se già deciso
  * @param {string|null} [props.enemyEminenceId]
  * @param {{ open?: boolean, spin?: boolean, awaken?: boolean, impact?: boolean, parallax?: boolean }} [props.fx]
+ * @param {string|null} [props.playerCardBack] dorso carte del giocatore (in partita quello del match)
+ * @param {string|null} [props.enemyCardBack] dorso carte dell'avversario
  * @param {number|null} [props.progress] 0–100; null nasconde la barra
  * @param {string} [props.statusLabel]
  */
@@ -256,10 +260,16 @@ export function DuelVersusScreen({
   playerEminenceId = null,
   enemyEminenceId = null,
   fx = {},
+  playerCardBack = null,
+  enemyCardBack = null,
   progress = null,
   statusLabel = 'Preparazione scontro',
 }) {
   const rootRef = useRef(null);
+  // Dorsi: quelli della partita se passati, altrimenti due dorsi casuali distinti (come in partita).
+  const [randomBacks] = useState(() => pickDistinctCardBackPair());
+  const playerBack = playerCardBack || randomBacks.playerCardBack;
+  const enemyBack = enemyCardBack || randomBacks.enemyCardBack;
   const opening = Boolean(fx.open) && coverStyle === 'box';
   const spin = Boolean(fx.spin) && coverStyle === 'box';
   // Parallasse: variabili CSS sul root, senza re-render a ogni movimento.
@@ -313,8 +323,8 @@ export function DuelVersusScreen({
       </div>
       <div className="vsx-seam" aria-hidden />
 
-      <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} />
-      <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} />
+      <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} backImage={enemyBack} />
+      <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} backImage={playerBack} />
 
       <div className="vsx-vs" aria-label="contro">
         <div className="vsx-vs-ring" />
