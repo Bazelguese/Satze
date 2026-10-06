@@ -67,7 +67,8 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
         }
       : agent;
 
-  const handleMouseDown = (e) => {
+  // pointerdown: mouse, touch e penna (il trascinamento parte solo se ci si sposta)
+  const handlePointerDown = (e) => {
     if (onDragStart && !disabled && !isUsed) onDragStart(e, agent);
   };
 
@@ -98,7 +99,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
   return (
     <div
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       data-drag={canDrag ? 'true' : undefined}
       data-hot={canHot ? 'true' : undefined}
       className={`inline-block select-none ${selected && !showEldritch ? 'rounded-[14px] ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : selected && showEldritch ? 'satze-eldritch-face-chrome is-selected' : ''} ${isDragging ? 'opacity-40 scale-95 transition-transform' : ''} ${disabled || isUsed ? 'opacity-90' : ''}`}
@@ -109,6 +110,7 @@ export const GameCard = React.memo(function GameCard({ agent, ...rest }) {
             : canDrag
               ? 'grab'
               : 'pointer',
+        ...(canDrag ? { touchAction: 'none' } : null),
       }}
     >
       <div

@@ -1,0 +1,71 @@
+/* ============================================================
+   SATZE — Interazione con le carte: trascinamento, slot, mano.
+   · Ombra della carta trascinata/in volo senza filter (niente re-raster per frame)
+   · Contorno lasciato in mano dalla carta trascinata
+   · Selezione e hover in mano nel colore dell'armata (--hand-acc)
+   · Slot dell'agente magnetico: bagliore di prossimità (--prox 0-1, scritto dal drag)
+   · Polvere all'impatto per le pose da drop
+   ============================================================ */
+
+/* ── carta trascinata / in volo ── */
+.satze-drag-ghost{position:fixed;left:0;top:0;width:230px;height:330px;pointer-events:none;
+  transform-origin:50% 50%;will-change:transform}
+.satze-drag-ghost-shadow{position:absolute;inset:6% 4% -2% 4%;border-radius:18px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 55%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.3) 45%, transparent 72%);
+  transform:translate3d(calc(var(--lift,.6) * 16px), calc(var(--lift,.6) * 30px + 6px), 0) scale(calc(1 + var(--lift,.6) * .06));
+  opacity:calc(.3 + var(--lift,.6) * .35)}
+
+/* ── mano: posto lasciato dalla carta trascinata ── */
+.satze-hand-drag-hole{opacity:.32;transform:scale(.96) !important;filter:saturate(.35);
+  outline:2px dashed color-mix(in srgb, var(--hand-acc, #facc15) 85%, #fff);outline-offset:3px;border-radius:14px}
+
+/* ── mano: selezione e hover nel colore dell'armata ── */
+.satze-hand-selected{border-color:var(--hand-acc, #facc15) !important;
+  box-shadow:0 0 0 4px color-mix(in srgb, var(--hand-acc, #facc15) 32%, transparent),
+             0 18px 44px color-mix(in srgb, var(--hand-acc, #facc15) 50%, transparent) !important}
+.satze-hand-hoverable:hover{border-color:color-mix(in srgb, var(--hand-acc, #facc15) 70%, #fff) !important;
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--hand-acc, #facc15) 40%, transparent),
+             0 22px 40px color-mix(in srgb, var(--hand-acc, #facc15) 38%, transparent) !important}
+
+/* ── slot dell'agente ── */
+.satze-agent-dropzone{position:relative;display:flex;align-items:center;justify-content:center;
+  --prox:0;transition:transform .18s ease-out}
+.satze-agent-dropzone__frame{position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  border:2px dashed color-mix(in srgb, var(--acc, #4fd1c5) calc(30% + var(--prox) * 60%), transparent);
+  background:color-mix(in srgb, var(--acc, #4fd1c5) calc(var(--prox) * 14%), transparent);
+  transition:border-color .12s linear, background-color .12s linear}
+.satze-agent-dropzone__glow{position:absolute;inset:-30px;border-radius:36px;pointer-events:none;opacity:calc(var(--prox) * .9);
+  background:radial-gradient(ellipse at center, color-mix(in srgb, var(--acc, #4fd1c5) 45%, transparent) 0%, transparent 70%)}
+.satze-agent-dropzone__silhouette{position:absolute;inset:10px;border-radius:12px;pointer-events:none;
+  border:1px solid color-mix(in srgb, var(--acc, #4fd1c5) 70%, #fff);
+  opacity:calc(var(--prox) * .55);transform:scale(calc(.86 + var(--prox) * .14))}
+.satze-agent-dropzone__label{position:relative;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-align:center;
+  padding:0 1rem;color:color-mix(in srgb, var(--acc, #4fd1c5) calc(35% + var(--prox) * 55%), #94a3b8);pointer-events:none}
+.satze-agent-dropzone.is-dragging .satze-agent-dropzone__frame{animation:dropzone-breathe 1.4s ease-in-out infinite}
+.satze-agent-dropzone.is-over{transform:scale(1.05)}
+.satze-agent-dropzone.is-over .satze-agent-dropzone__frame{border-style:solid;
+  box-shadow:0 0 24px color-mix(in srgb, var(--acc, #4fd1c5) 55%, transparent), inset 0 0 18px color-mix(in srgb, var(--acc, #4fd1c5) 35%, transparent)}
+.satze-agent-dropzone.is-over .satze-agent-dropzone__silhouette{opacity:.85}
+@keyframes dropzone-breathe{0%,100%{opacity:.75}50%{opacity:1}}
+
+/* ── polvere sul piano all'impatto (solo pose da drop) ── */
+.place-dust{position:absolute;left:50%;top:50%;width:380px;height:110px;margin:118px 0 0 -190px;pointer-events:none;opacity:0;
+  background:
+    radial-gradient(ellipse at 18% 60%, color-mix(in srgb, var(--acc, #a78bfa) 30%, rgba(150,140,130,.55)) 0%, transparent 42%),
+    radial-gradient(ellipse at 82% 60%, color-mix(in srgb, var(--acc, #a78bfa) 30%, rgba(150,140,130,.55)) 0%, transparent 42%),
+    radial-gradient(ellipse at 50% 75%, rgba(170,160,150,.45) 0%, transparent 55%)}
+@keyframes place-dust{
+  0%{opacity:0;transform:scale(.35,.5) translate3d(0,0,0)}
+  18%{opacity:.75}
+  100%{opacity:0;transform:scale(1.35,1.1) translate3d(0,-14px,0)}}
+.fx-slam .place-dust{animation:place-dust .7s ease-out .54s both}
+.fx-bounce .place-dust{animation:place-dust .7s ease-out .33s both}
+.fx-whirlwind .place-dust{animation:place-dust .6s ease-out .26s both}
+.fx-gate .place-dust{animation:place-dust .6s ease-out .66s both}
+.fx-guillotine .place-dust{animation:place-dust .5s ease-out .38s both}
+.fx-meteor .place-dust{animation:place-dust .8s ease-out .64s both}
+
+@media (prefers-reduced-motion: reduce){
+  .place-dust{animation:none !important}
+  .satze-agent-dropzone.is-dragging .satze-agent-dropzone__frame{animation:none}
+}

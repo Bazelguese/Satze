@@ -47,7 +47,8 @@ export const HandCard = React.memo(({
 
   if (!agent) return null;
 
-  const handleMouseDown = (e) => {
+  // pointerdown: mouse, touch e penna. Il trascinamento parte solo se ci si sposta (vedi useDragAndDrop)
+  const handlePointerDown = (e) => {
     if (onDragStart && !disabled && !isUsed) {
       onDragStart(e, agent);
     }
@@ -72,22 +73,22 @@ export const HandCard = React.memo(({
         ${isPrey ? 'satze-hand-prey-card' : ''}
         ${preyArriving ? 'is-prey-forging' : ''}
         ${disabled || isUsed ? (onPreviewClick || hasOutcome ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60') : onDragStart ? 'hover:scale-105 hover:-translate-y-4 cursor-grab active:cursor-grabbing active:scale-95' : 'hover:scale-105 hover:-translate-y-4 cursor-pointer active:scale-95'}
-        ${isDragging ? 'scale-90' : ''}
+        ${isDragging ? 'satze-hand-drag-hole' : ''}
       `
     : `
         group
         w-36 h-52 rounded-xl bg-gradient-to-br ${colors.bg}
         border-2 relative flex-shrink-0
         ${hasOutcome ? 'satze-hand-outcome-card transition-transform duration-300' : 'transition-all duration-300'}
-        ${selected ? 'border-yellow-400 shadow-2xl shadow-yellow-400/60 scale-105 -translate-y-2 z-20 ring-4 ring-yellow-400/30' : 'border-white/30 shadow-lg'}
+        ${selected ? 'satze-hand-selected scale-105 -translate-y-2 z-20' : 'border-white/30 shadow-lg'}
         ${highlighted ? 'satze-hand-focus ring-4 ring-amber-300/80 border-amber-200 shadow-2xl shadow-amber-300/45 animate-pulse' : ''}
         ${hasOutcome && isWinner ? 'satze-card-winner' : ''}
         ${hasOutcome && isLoser ? 'satze-card-loser satze-hand-outcome-loser' : ''}
         ${isFragment ? 'satze-hand-fragment-card' : ''}
         ${isPrey ? 'satze-hand-prey-card' : ''}
         ${preyArriving ? 'is-prey-forging' : ''}
-        ${disabled || isUsed ? (onPreviewClick || hasOutcome ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60') : onDragStart ? 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-grab active:cursor-grabbing active:scale-95' : 'hover:scale-110 hover:border-white/70 hover:-translate-y-4 hover:shadow-2xl hover:shadow-yellow-500/40 hover:ring-2 hover:ring-yellow-400/40 cursor-pointer active:scale-95'}
-        ${isDragging ? 'scale-90 shadow-2xl' : ''}
+        ${disabled || isUsed ? (onPreviewClick || hasOutcome ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60') : onDragStart ? 'satze-hand-hoverable hover:scale-110 hover:-translate-y-4 cursor-grab active:cursor-grabbing active:scale-95' : 'satze-hand-hoverable hover:scale-110 hover:-translate-y-4 cursor-pointer active:scale-95'}
+        ${isDragging ? 'satze-hand-drag-hole' : ''}
         flex flex-col overflow-hidden
       `;
 
@@ -105,15 +106,18 @@ export const HandCard = React.memo(({
   return (
     <div
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       data-drag={canDrag ? 'true' : undefined}
       data-hot={canHot ? 'true' : undefined}
+      data-hand-agent={agent.id}
       className={handShellClass}
-      style={
-        showEldritch
-          ? { userSelect: 'none', width: HAND_SHELL_W, height: HAND_ELD_SHELL_H }
-          : { userSelect: 'none' }
-      }
+      style={{
+        userSelect: 'none',
+        '--hand-acc': colors.accent,
+        // senza, sul touch il browser scorrerebbe invece di trascinare
+        ...(canDrag ? { touchAction: 'none' } : null),
+        ...(showEldritch ? { width: HAND_SHELL_W, height: HAND_ELD_SHELL_H } : null),
+      }}
     >
       {showEldritch ? (
         <div

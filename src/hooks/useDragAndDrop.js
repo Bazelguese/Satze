@@ -6,30 +6,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { setSatzeCursorProps } from '../components/cursor/satzeCursorState';
 
-/** Carta floating ufficiale (GameCard) */
-const FLOAT_HALF_W = 115;
-const FLOAT_HALF_H = 165;
+/** Carta floating ufficiale (GameCard) in px CSS non scalati */
+const CARD_W = 230;
+const CARD_H = 330;
+/** Spostamento (px schermo) oltre il quale una pressione diventa trascinamento: sotto resta un click. */
+const DRAG_THRESHOLD = 6;
+/** Crescita dalla misura in mano alla carta sollevata (ms) */
+const LIFT_MS = 170;
+/** Scala della carta sollevata rispetto a quella in campo */
+const LIFT_SCALE = 1.06;
 
-const EASE_OUT = (x) => 1 - Math.pow(1 - x, 3);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const EASE_OUT = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+const smoothstep = (a, b, x) => {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+/** Avvicina `v` a `target` con costante di tempo indipendente dai fps. */
+const approach = (v, target, rate, dt) => v + (target - v) * (1 - Math.exp(-rate * dt));
 
-function computeDragVisual(mouseX, mouseY, origin) {
-  const elapsed = performance.now() - origin.t0;
-  const att = Math.min(1, elapsed / 520);
-  const ease = EASE_OUT(att);
-  // attrazione lieve verso il cursore (la carta resta quasi al punto di presa)
-  const tira = 0.16 * ease;
-  const fl = Math.sin(elapsed / 380) * 3.2 * ease;
-  const cx = mouseX + origin.dcx * (1 - tira);
-  const cy = mouseY + origin.dcy * (1 - tira) + fl;
-  return {
-    left: cx - origin.halfW,
-    top: cy - origin.halfH,
-    cx,
-    cy,
-    rot: fl * 0.45 - 2,
-    w: origin.halfW * 2,
-    h: origin.halfH * 2,
-  };
+/** Scala della scena 1920×1080 sullo schermo (GameViewport la ridimensiona). */
+function sceneScaleOf(el) {
+  const scene = el?.closest?.('.satze-scene') || document.querySelector('.satze-scene');
+  if (!scene || !scene.offsetWidth) return 1;
+  return scene.getBoundingClientRect().width / scene.offsetWidth || 1;
+}
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
 }
 
 /**
@@ -41,6 +45,10 @@ function computeDragVisual(mouseX, mouseY, origin) {
  * @param {Array} options.playerUsedCards - Carte usate dal giocatore
  * @param {Function} options.onAgentSelect - Callback quando un agente viene selezionato
  * @param {Object} options.gameState - Stato del gioco da useGameState
+ * @param {{ current: any }} [options.handoffRef] - Riceve la posa della carta al rilascio
+ *   ({ via:'drop', cx, cy, rot, scale }) o l'ultima pressione su una carta ({ via:'press', agentId, rect }),
+ *   per far partire l'ingresso in campo da lì.
+ * @param {Function} [options.onReturnToHand] - Rilascio fuori dallo slot: ({ agent, from }) per il volo di ritorno
  * @returns {Object} Oggetto con funzioni e stati per drag and drop
  */
 export function useDragAndDrop({
@@ -51,6 +59,8 @@ export function useDragAndDrop({
   onAgentSelect,
   selectedAgent,
   gameState,
+  handoffRef,
+  onReturnToHand,
 }) {
   const {
     draggingCard,
@@ -62,112 +72,226 @@ export function useDragAndDrop({
   } = gameState;
 
   const dropZoneRef = useRef(null);
-  const dragOriginRef = useRef(null);
+  /** Pressione in corso: { agent, x0, y0, rect, pointerId, active, ... } */
+  const pressRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   /** Nodo della carta fantasma: aggiornato via DOM, non via state. */
   const dragGhostRef = useRef(null);
+  /** Ultima posa disegnata del fantasma (centro, rotazione, scala in px schermo). */
+  const poseRef = useRef(null);
+  const overRef = useRef(false);
   /** Posizione iniziale, usata solo per il primo paint del portal. */
   const [dragVisual, setDragVisual] = useState(null);
 
-  // Il flutter gira a 60fps: passare per setState farebbe riconciliare l'intero
-  // duello a ogni frame. Scriviamo direttamente sullo stile del nodo.
-  const refreshVisual = useCallback(() => {
-    const origin = dragOriginRef.current;
+  // valori sempre aggiornati per i listener globali
+  const latestRef = useRef({});
+  latestRef.current = { onAgentSelect, selectedAgent, handoffRef, onReturnToHand, setIsOverDropZone };
+
+  /** Calcola e scrive la posa del fantasma: crescita, inerzia, aggancio magnetico allo slot. */
+  const stepVisual = useCallback((now) => {
+    const press = pressRef.current;
+    if (!press?.active) return null;
+    const dt = Math.min(0.05, Math.max(0.001, (now - (press.lastT ?? now)) / 1000));
+    press.lastT = now;
+    const { x, y } = mouseRef.current;
+
+    // velocità levigata del cursore (px/s)
+    const vxRaw = (x - press.lastX) / dt;
+    const vyRaw = (y - press.lastY) / dt;
+    press.lastX = x;
+    press.lastY = y;
+    press.vx = approach(press.vx, vxRaw, 14, dt);
+    press.vy = approach(press.vy, vyRaw, 14, dt);
+
+    // slot: prossimità (bagliore) e aggancio magnetico
+    const zone = dropZoneRef.current;
+    let snapTarget = 0;
+    let zc = null;
+    if (zone) {
+      const r = zone.getBoundingClientRect();
+      zc = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      const d = Math.hypot(x - zc.x, y - zc.y);
+      const snapR = Math.max(r.width, r.height) * 0.75;
+      const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      const over = inside || d < snapR;
+      snapTarget = over ? 1 : 0;
+      const prox = 1 - smoothstep(snapR * 0.6, snapR * 3.4, d);
+      zone.style.setProperty('--prox', prox.toFixed(3));
+      if (over !== overRef.current) {
+        overRef.current = over;
+        latestRef.current.setIsOverDropZone(over);
+      }
+    }
+    press.snap = approach(press.snap, snapTarget, 16, dt);
+    const snap = EASE_OUT(press.snap);
+
+    // presa: dalla misura in mano alla carta sollevata
+    const lift = EASE_OUT((now - press.t0) / LIFT_MS);
+    const liftScale = press.sceneScale * LIFT_SCALE;
+    const freeScale = press.startScale + (liftScale - press.startScale) * lift;
+    // la carta resta al punto di presa e scivola piano verso il cursore
+    const pull = 0.18 * lift;
+    const freeCx = x + press.dcx * (1 - pull);
+    const freeCy = y + press.dcy * (1 - pull);
+
+    // inerzia: si inclina nel verso del moto, con un filo di molla
+    const leanTarget = clamp(press.vx * 0.016, -16, 16);
+    press.rot = approach(press.rot, leanTarget, 10, dt);
+    const tiltY = clamp(press.vx * 0.012, -18, 18) * (1 - snap);
+    const tiltX = clamp(-press.vy * 0.01, -14, 14) * (1 - snap);
+
+    const cx = zc ? freeCx + (zc.x - freeCx) * snap * 0.9 : freeCx;
+    const cy = zc ? freeCy + (zc.y - freeCy) * snap * 0.9 : freeCy;
+    const rot = press.rot * (1 - snap);
+    const scale = freeScale + (press.sceneScale - freeScale) * snap;
+    const pose = { cx, cy, rot, tiltX, tiltY, scale, lift };
+    poseRef.current = pose;
+
     const node = dragGhostRef.current;
-    if (!origin || !node) return;
-    const v = computeDragVisual(mouseRef.current.x, mouseRef.current.y, origin);
-    node.style.left = `${v.left}px`;
-    node.style.top = `${v.top}px`;
-    node.style.transform = `rotate(${v.rot}deg)`;
-    // Il cursore custom vive fuori da SatzeGame: aggiornarlo qui non costa un
-    // re-render del duello.
-    setSatzeCursorProps({ dragCard: { cx: v.cx, cy: v.cy } });
+    if (node) {
+      node.style.transform =
+        `translate3d(${(cx - CARD_W / 2).toFixed(1)}px, ${(cy - CARD_H / 2).toFixed(1)}px, 0) ` +
+        `perspective(900px) rotateZ(${rot.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) rotateX(${tiltX.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+      node.style.setProperty('--lift', (lift * (1 - snap * 0.7)).toFixed(3));
+    }
+    // Il cursore custom vive fuori da SatzeGame: aggiornarlo qui non costa un re-render del duello.
+    setSatzeCursorProps({ dragCard: { cx, cy } });
+    return pose;
   }, []);
 
+  const activate = useCallback((e) => {
+    const press = pressRef.current;
+    if (!press || press.active) return;
+    const { rect } = press;
+    const sceneScale = sceneScaleOf(dropZoneRef.current || press.el);
+    Object.assign(press, {
+      active: true,
+      t0: performance.now(),
+      lastT: performance.now(),
+      lastX: e.clientX,
+      lastY: e.clientY,
+      vx: 0,
+      vy: 0,
+      rot: -2,
+      snap: 0,
+      sceneScale,
+      // la carta parte dalla misura che ha in mano
+      startScale: rect.width / CARD_W,
+      dcx: rect.left + rect.width / 2 - press.x0,
+      dcy: rect.top + rect.height / 2 - press.y0,
+    });
+    mouseRef.current = { x: e.clientX, y: e.clientY };
+    setDraggingCard(press.agent);
+    setDragPosition({ x: e.clientX, y: e.clientY });
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setDragVisual({
+      transform: `translate3d(${cx - CARD_W / 2}px, ${cy - CARD_H / 2}px, 0) scale(${press.startScale})`,
+      cx,
+      cy,
+    });
+  }, [setDraggingCard, setDragPosition]);
+
+  const finish = useCallback((cancelled) => {
+    const press = pressRef.current;
+    pressRef.current = null;
+    if (!press) return;
+    window.removeEventListener('pointermove', press.onMove);
+    window.removeEventListener('pointerup', press.onUp);
+    window.removeEventListener('pointercancel', press.onCancel);
+    cancelAnimationFrame(press.raf);
+    if (!press.active) return; // era un click: ci pensa onClick
+
+    const { onAgentSelect: select, selectedAgent: selected, handoffRef: hRef, onReturnToHand: back } = latestRef.current;
+    const pose = poseRef.current;
+    const over = overRef.current && !cancelled;
+    if (over && select) {
+      if (hRef && pose) hRef.current = { via: 'drop', agentId: press.agent.id, ...pose, t: performance.now() };
+      select(press.agent, 'drop');
+    } else {
+      if (selected?.id === press.agent?.id && select) select(null);
+      if (back && pose && !prefersReducedMotion()) back({ agent: press.agent, from: pose });
+    }
+    const zone = dropZoneRef.current;
+    zone?.style.removeProperty('--prox');
+    poseRef.current = null;
+    overRef.current = false;
+    dragGhostRef.current = null;
+    setDragVisual(null);
+    setDraggingCard(null);
+    latestRef.current.setIsOverDropZone(false);
+    setSatzeCursorProps({ dragCard: null });
+  }, [setDraggingCard]);
+
   /**
-   * Gestisce l'inizio del drag
+   * Pressione su una carta (pointerdown: mouse, touch, penna).
+   * Il trascinamento parte solo oltre DRAG_THRESHOLD px: sotto resta un click.
    */
   const handleDragStart = useCallback((e, agent) => {
     if (gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent) || playerUsedCards.includes(agent.id)) {
       return;
     }
-    e.preventDefault();
+    if (e.button != null && e.button !== 0) return;
     const el = e.currentTarget || e.target?.closest?.('[data-drag]');
-    const r = el?.getBoundingClientRect?.();
-    if (!r) return;
+    const rect = el?.getBoundingClientRect?.();
+    if (!rect) return;
+    e.preventDefault?.();
+    if (pressRef.current) finish(true);
 
-    const cardCx = r.left + r.width / 2;
-    const cardCy = r.top + r.height / 2;
-    mouseRef.current = { x: e.clientX, y: e.clientY };
-    dragOriginRef.current = {
-      t0: performance.now(),
-      // offset del centro carta rispetto al cursore al momento della presa
-      dcx: cardCx - e.clientX,
-      dcy: cardCy - e.clientY,
-      halfW: FLOAT_HALF_W,
-      halfH: FLOAT_HALF_H,
+    if (handoffRef) {
+      handoffRef.current = { via: 'press', agentId: agent.id, rect, t: performance.now() };
+    }
+    const press = {
+      agent,
+      el,
+      rect,
+      x0: e.clientX,
+      y0: e.clientY,
+      pointerId: e.pointerId,
+      active: false,
+      raf: 0,
     };
-    setDraggingCard(agent);
-    setDragPosition({ x: e.clientX, y: e.clientY });
-    setDragVisual(computeDragVisual(e.clientX, e.clientY, dragOriginRef.current));
-  }, [gamePhase, isPlayerFirst, enemyAgent, playerUsedCards, setDraggingCard, setDragPosition]);
+    press.onMove = (ev) => {
+      if (press.pointerId != null && ev.pointerId != null && ev.pointerId !== press.pointerId) return;
+      mouseRef.current = { x: ev.clientX, y: ev.clientY };
+      if (!press.active) {
+        if (Math.hypot(ev.clientX - press.x0, ev.clientY - press.y0) < DRAG_THRESHOLD) return;
+        activate(ev);
+        const tick = (now) => {
+          if (pressRef.current !== press) return;
+          stepVisual(now);
+          press.raf = requestAnimationFrame(tick);
+        };
+        press.raf = requestAnimationFrame(tick);
+      }
+    };
+    press.onUp = (ev) => {
+      if (press.pointerId != null && ev.pointerId != null && ev.pointerId !== press.pointerId) return;
+      if (press.active) stepVisual(performance.now());
+      finish(false);
+    };
+    press.onCancel = () => finish(true);
+    pressRef.current = press;
+    window.addEventListener('pointermove', press.onMove);
+    window.addEventListener('pointerup', press.onUp);
+    window.addEventListener('pointercancel', press.onCancel);
+  }, [gamePhase, isPlayerFirst, enemyAgent, playerUsedCards, handoffRef, activate, stepVisual, finish]);
 
-  /**
-   * Gestisce il movimento durante il drag
-   */
-  // La posizione grezza del cursore non viene renderizzata da nessuno: tenerla in
-  // uno state globale costava un re-render dell'intero duello a ogni mousemove.
-  const handleDragMove = useCallback((e) => {
-    if (!draggingCard) return;
-    mouseRef.current = { x: e.clientX, y: e.clientY };
-    refreshVisual();
-
-    if (dropZoneRef.current) {
-      const rect = dropZoneRef.current.getBoundingClientRect();
-      const isOver = e.clientX >= rect.left && e.clientX <= rect.right &&
-                     e.clientY >= rect.top && e.clientY <= rect.bottom;
-      setIsOverDropZone((prev) => (prev === isOver ? prev : isOver));
-    }
-  }, [draggingCard, setIsOverDropZone, refreshVisual]);
-
-  /**
-   * Gestisce la fine del drag
-   * - Drop sulla zona: seleziona
-   * - Drop fuori con carta già selezionata trascinata: deseleziona
-   */
-  const handleDragEnd = useCallback(() => {
-    if (!draggingCard) return;
-
-    if (isOverDropZone && onAgentSelect) {
-      onAgentSelect(draggingCard, 'drop');
-    } else if (selectedAgent?.id === draggingCard?.id && onAgentSelect) {
-      onAgentSelect(null);
-    }
-
-    dragOriginRef.current = null;
-    dragGhostRef.current = null;
-    setDragVisual(null);
-    setDraggingCard(null);
-    setIsOverDropZone(false);
-  }, [draggingCard, isOverDropZone, selectedAgent, onAgentSelect, setDraggingCard, setIsOverDropZone]);
-
-  // Listener globali + rAF per flutter/attrazione anche a mouse fermo
+  // smontaggio o cambio fase a metà trascinamento: annulla senza selezionare
+  useEffect(() => () => {
+    if (pressRef.current) finish(true);
+  }, [finish]);
   useEffect(() => {
-    if (!draggingCard) return undefined;
-    window.addEventListener('mousemove', handleDragMove);
-    window.addEventListener('mouseup', handleDragEnd);
-    let raf = 0;
-    const tick = () => {
-      refreshVisual();
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      window.removeEventListener('mousemove', handleDragMove);
-      window.removeEventListener('mouseup', handleDragEnd);
-      cancelAnimationFrame(raf);
-    };
-  }, [draggingCard, handleDragMove, handleDragEnd, refreshVisual]);
+    if (gamePhase !== 'selectAgent' && pressRef.current) finish(true);
+  }, [gamePhase, finish]);
+
+  /** Compatibilità: il movimento ora è gestito dai listener pointer interni. */
+  const handleDragMove = useCallback((e) => {
+    pressRef.current?.onMove?.(e);
+  }, []);
+  const handleDragEnd = useCallback(() => {
+    finish(false);
+  }, [finish]);
 
   return {
     draggingCard,

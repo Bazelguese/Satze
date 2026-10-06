@@ -10,6 +10,9 @@ import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../sr
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
 import { CardBack } from '../src/components/cards/CardBack';
+import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
+import { applyPlaceHandoff, prefersReducedMotion } from '../src/components/battle/placeHandoff.js';
+import { getArmyAccent } from '../src/theme/duelAccents.js';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
 import { MiniBattlefield, BattlefieldBackground, BattlefieldPanel } from '../src/components/battle';
 import { RuneTitle, setRuneDecodeProgress } from '../src/components/ui/RuneTitle.jsx';
@@ -2621,6 +2624,34 @@ export default function SatzeGame() {
     prevEnemyAgentIdRef.current = id;
   }, [enemyAgent?.id, isPlayerFirst]);
 
+  /** Ultimo gesto sulla carta (pressione o rilascio): da lì parte l'ingresso in campo. */
+  const placeHandoffRef = useRef(null);
+  const cardFlights = useCardFlights();
+  const launchCardFlight = cardFlights.launch;
+
+  /** Rettangolo della carta in mano (per i voli di ritorno). */
+  const handCardRect = useCallback((agentId) => {
+    const el = document.querySelector(`[data-hand-agent="${agentId}"]`);
+    const r = el?.getBoundingClientRect();
+    return r && r.width ? r : null;
+  }, []);
+
+  /** La carta schierata torna in mano in volo (click di ritiro). */
+  const flyDeployedAgentBackToHand = useCallback((agent) => {
+    if (!agent || prefersReducedMotion()) return;
+    const slot = playerCardZoneRef.current?.getBoundingClientRect();
+    const hand = handCardRect(agent.id);
+    if (!slot?.width || !hand) return;
+    launchCardFlight({ agent, from: rectToFlightPoint(slot), to: rectToFlightPoint(hand), duration: 300, arc: 40 });
+  }, [handCardRect, launchCardFlight]);
+
+  /** Rilascio fuori dallo slot: la carta trascinata torna al suo posto in mano. */
+  const returnDraggedToHand = useCallback(({ agent, from }) => {
+    const hand = handCardRect(agent.id);
+    if (!hand) return;
+    launchCardFlight({ agent, from, to: rectToFlightPoint(hand), duration: 280, arc: 30 });
+  }, [handCardRect, launchCardFlight]);
+
   const handleAgentSelect = useCallback((agent, via = 'click') => {
     if (eminenceBlocksMatch) return;
     if (
@@ -2641,6 +2672,7 @@ export default function SatzeGame() {
     }
     if (selectedAgent?.id === agent.id) {
       playGame(GAME_SOUND.CARD_DESELECT);
+      flyDeployedAgentBackToHand(selectedAgent);
       setSelectedAgent(null);
       return;
     }
@@ -2649,7 +2681,7 @@ export default function SatzeGame() {
     setAgentPlaceFxStyle(prefs.style);
     playGame(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT);
     setSelectedAgent(agent);
-  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint]);
+  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
@@ -2659,9 +2691,28 @@ export default function SatzeGame() {
     onAgentSelect: handleAgentSelect,
     selectedAgent,
     gameState,
+    handoffRef: placeHandoffRef,
+    onReturnToHand: returnDraggedToHand,
   });
   
   const { handleDragStart, dropZoneRef, dragVisual, dragGhostRef } = dragAndDrop;
+
+  // Ingresso in campo raccordato al gesto: dal punto di rilascio (drop) o con il volo dalla mano (click)
+  useLayoutEffect(() => {
+    const handoff = placeHandoffRef.current;
+    const wrap = playerCardZoneRef.current;
+    if (!selectedAgent || !handoff || !wrap) return undefined;
+    if (handoff.agentId !== selectedAgent.id || handoff.via === 'used') return undefined;
+    placeHandoffRef.current = { ...handoff, via: 'used' };
+    return applyPlaceHandoff(wrap, handoff, agentPlaceFx, {
+      agentId: selectedAgent.id,
+      agent: selectedAgent,
+      sceneEl: wrap.closest('.satze-scene'),
+      launchFlight: launchCardFlight,
+    });
+    // solo l'id: un nuovo oggetto per lo stesso agente non deve interrompere il raccordo
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAgent?.id, agentPlaceFx, agentPlaceFxStyle, launchCardFlight]);
   
   // Ref per auto-scroll log - Gestito internamente da LogPanel
 
@@ -6052,7 +6103,7 @@ export default function SatzeGame() {
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
         )}
           {showDeployedEnemyAgent && (
-          <div className={`relative flex items-center justify-center flex-shrink-0${holdForConfirmedAgentPick ? ' pointer-events-auto' : ''}`} data-field-agent="enemy" style={{ transformStyle: 'flat' }}>
+          <div className={`relative flex items-center justify-center flex-shrink-0${holdForConfirmedAgentPick ? ' pointer-events-auto' : ''}`} data-field-agent="enemy" style={{ transformStyle: 'flat', '--acc-en': getArmyAccent(enemyAgent, enemyIdentityColor), '--acc': getArmyAccent(enemyAgent, enemyIdentityColor) }}>
             <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}-${enemyPlaceFxStyle || 'default'}`}>
               <div className={`place-fx fx-${enemyPlaceFx}${placeFxStyleClass(enemyPlaceFxStyle)}`}>
                 <div className="place-shadow" />
@@ -6064,6 +6115,7 @@ export default function SatzeGame() {
                 <div className="place-echo e3" />
                 <div className="place-edge l" />
                 <div className="place-edge r" />
+                <div className="place-dust" />
               </div>
               <div
                 className={`place-card play-${enemyPlaceFx} relative flex items-center justify-center`}
@@ -6160,7 +6212,7 @@ export default function SatzeGame() {
             ref={playerCardZoneRef}
             className="relative flex items-center justify-center pointer-events-auto flex-shrink-0"
             data-field-agent="player"
-            style={{ transformStyle: 'flat' }}
+            style={{ transformStyle: 'flat', '--acc': getArmyAccent(selectedAgent, playerIdentityColor) }}
           >
             <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}-${agentPlaceFxStyle || 'default'}`}>
               <div className={`place-fx fx-${agentPlaceFx}${placeFxStyleClass(agentPlaceFxStyle)}`}>
@@ -6173,6 +6225,7 @@ export default function SatzeGame() {
                 <div className="place-echo e3" />
                 <div className="place-edge l" />
                 <div className="place-edge r" />
+                <div className="place-dust" />
               </div>
               <div
                 className={`place-card play-${agentPlaceFx} relative flex items-center justify-center`}
@@ -6193,7 +6246,7 @@ export default function SatzeGame() {
                         onHover={handlePlayerPreviewClick}
                         onClick={holdForConfirmedAgentPick
                           ? () => tryPickEminenceCard(selectedAgent.id)
-                          : gamePhase === 'selectAgent' ? () => setSelectedAgent(null) : undefined}
+                          : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                         onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                         isDragging={draggingCard?.id === selectedAgent?.id}
                       />
@@ -6221,7 +6274,7 @@ export default function SatzeGame() {
                     onHover={handlePlayerPreviewClick}
                     onClick={holdForConfirmedAgentPick
                       ? () => tryPickEminenceCard(selectedAgent.id)
-                      : gamePhase === 'selectAgent' ? () => setSelectedAgent(null) : undefined}
+                      : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                     onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                     isDragging={draggingCard?.id === selectedAgent?.id}
                   />
@@ -6231,20 +6284,16 @@ export default function SatzeGame() {
           </div>
         )}
         {gamePhase === 'selectAgent' && !selectedAgent && (
-          <div 
+          <div
             ref={dropZoneRef}
-            className={`w-44 h-64 border-2 border-dashed rounded-xl flex items-center justify-center transition-all duration-200 pointer-events-auto cursor-copy ${
-              isOverDropZone 
-                ? 'border-green-400 bg-green-500/20 scale-105 ring-2 ring-green-400/50' 
-                : 'border-green-500/30 hover:border-green-500/50 hover:bg-green-500/10'
-            }`}
+            className={`satze-agent-dropzone w-44 h-64 rounded-xl pointer-events-auto cursor-copy${draggingCard ? ' is-dragging' : ''}${isOverDropZone ? ' is-over' : ''}`}
+            style={{ '--acc': draggingCard ? getArmyAccent(draggingCard, playerIdentityColor) : playerIdentityColor }}
           >
-            <div className={`text-center text-sm p-4 ${isOverDropZone ? 'text-green-300' : 'text-slate-500'}`}>
-              {isOverDropZone ? (
-                <>⬇️<br/>Rilascia!</>
-              ) : (
-                <>🎴<br/>Trascina<br/>un Agente</>
-              )}
+            <div className="satze-agent-dropzone__glow" aria-hidden />
+            <div className="satze-agent-dropzone__frame" aria-hidden />
+            <div className="satze-agent-dropzone__silhouette" aria-hidden />
+            <div className="satze-agent-dropzone__label">
+              {isOverDropZone ? 'Rilascia' : draggingCard ? 'Qui' : <>Trascina<br />un Agente</>}
             </div>
           </div>
         )}
@@ -6487,28 +6536,32 @@ export default function SatzeGame() {
         </div>
       )}
 
-      {/* Carta trascinata: resta al punto di presa, lieve attrazione verso il cursore */}
+      {/* Carta trascinata: cresce dalla mano, si inclina col moto, si aggancia allo slot.
+          Posizione via transform scritta dal hook (niente left/top né filter per frame). */}
       {draggingCard && dragVisual && createPortal(
         <div
           ref={dragGhostRef}
-          className="fixed pointer-events-none"
-          style={{
-            left: dragVisual.left,
-            top: dragVisual.top,
-            transform: `rotate(${dragVisual.rot}deg)`,
-            filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))',
-            zIndex: 99990,
-          }}
+          className="satze-drag-ghost"
+          style={{ transform: dragVisual.transform, zIndex: 99990 }}
         >
-          <GameCard
-            agent={draggingCard}
-            showBonus={playerArmyBonuses[draggingCard.army] && isBonusTriggerSatisfied(draggingCard.army, true, draggingCard)}
-            bonusBaseInactive={Boolean(ARMY_BONUSES[draggingCard.army]) && !playerArmyBonuses[draggingCard.army]}
-            effectiveAbility={resolveEffectiveAbility(draggingCard.ability, true, draggingCard)}
-          />
+          <div className="satze-drag-ghost-shadow" aria-hidden />
+          <div className="relative">
+            <GameCard
+              agent={draggingCard}
+              showBonus={playerArmyBonuses[draggingCard.army] && isBonusTriggerSatisfied(draggingCard.army, true, draggingCard)}
+              bonusBaseInactive={Boolean(ARMY_BONUSES[draggingCard.army]) && !playerArmyBonuses[draggingCard.army]}
+              effectiveAbility={resolveEffectiveAbility(draggingCard.ability, true, draggingCard)}
+            />
+          </div>
         </div>,
         document.body
       )}
+
+      <CardFlightLayer
+        flights={cardFlights.flights}
+        onDone={cardFlights.done}
+        renderCard={(agent) => <GameCard agent={agent} suppressAnimations />}
+      />
 
       {showGlossary && (
         <Glossary
