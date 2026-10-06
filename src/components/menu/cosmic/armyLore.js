@@ -29,9 +29,9 @@ export const ARMY_LORE = {
   "Kethran": {
     glyph: '☥',
     bonusLabel: 'RIMONTA',
-    motto: 'Dalla cenere, più forti.',
+    motto: 'Ci hanno spezzati. Non sapevano che i pezzi sanno combattere.',
     synopsis:
-      "Risorgono dalle ceneri delle proprie sconfitte. Ogni ferita è un'opportunità, ogni territorio perduto un motivo per colpire più duro. I Kethran non temono di restare indietro: è proprio lì, sul bordo del baratro, che la loro fede si fa potenza.\n\nLa rimonta non è un piano B — è la loro teologia di guerra. Accettano scambi asimmetrici, lasciano che il nemico si esponga, poi tornano con una forza che i round iniziali non lasciavano prevedere.\n\nSceglili se ami i comeback: partite che sembrano perse fino al momento in cui il campo si ribalta.",
+      "Furono costruttori ossessionati dall'altezza, finché Keth Vahar, la Spira Ascendente, non sprofondò intera nelle viscere del mondo. Nel buio i corpi si frantumarono e i frammenti impararono a ricomporsi: ora i Kethran sono collage viventi, più forti perché spezzati.\n\nPer loro cadere è ascendere, e ogni sconfitta è solo il preludio di una riconfigurazione. Accettano scambi asimmetrici, lasciano che il nemico si esponga, poi tornano con una forza che i round iniziali non lasciavano prevedere.\n\nSceglili se ami i comeback: partite che sembrano perse fino al momento in cui il campo si ribalta.",
     bonusWhen: 'Si attiva in Rimonta — quando sei in svantaggio territoriale.',
     bonusExplain:
       'Guadagni +2 Potenza sul duello corrente. Il picco arriva proprio quando sei dietro: trasforma i round di recupero in duelli a tuo favore.',
@@ -69,11 +69,11 @@ export const ARMY_LORE = {
       'Non inseguire KO rapidi. Stabilizza la vita, forza duelli dove il -2 DAN decide, e accumula vantaggio lento. Contro armate tossina/attrito lunghe serve chiudere prima che il tempo li avvantaggi.',
   },
   "Orathai": {
-    glyph: '🌙',
+    glyph: '🌳',
     bonusLabel: 'RESA DEI CONTI',
     motto: 'Aspetta. Poi finisci.',
     synopsis:
-      "Aspettano il momento giusto sotto la luce lunare. Non dissipano energia nei primi scambi: osservano, accumulano, e quando arriva la Resa dei Conti colpiscono con precisione chirurgica.\n\nQuando attaccano davvero, è già troppo tardi per reagire. Gli Orathai vivono di pazienza e di parità — cercano il confronto equilibrato per trasformarlo in un'esecuzione.\n\nSceglili se ami il late game, i duelli calcolati e il burst che arriva solo quando conta.",
+      "Creature lignee, alberi umanoidi delle montagne e delle foreste di Vaeth. Un tempo si chiamavano tra le valli con i fischi; poi la veggente Veleth insegnò loro le frequenze che feriscono. Ora cantano, e ogni canto ruba un po' di chi lo intona.\n\nNon sprecano la voce nei primi scambi: ascoltano, lasciano che il confronto si pareggi, e quando arriva la Resa dei Conti il loro canto trasforma la parità in un'esecuzione. Chi li affronta scopre che ogni colpo fa più male del previsto.\n\nSceglili se ami il late game, i duelli calcolati e il burst che arriva solo quando conta.",
     bonusWhen: 'Si attiva in Resa dei Conti — duello equilibrato / pari.',
     bonusExplain:
       'Guadagni +2 Danno sul duello corrente. Il bonus premia i confronti in cui le forze sono vicine: trasforma la parità in un colpo decisivo.',
@@ -87,7 +87,7 @@ export const ARMY_LORE = {
     bonusLabel: 'IMBOSCATA',
     motto: 'Quando li vedi, è troppo tardi.',
     synopsis:
-      "Si muovono nelle ombre della foresta. Passi silenziosi, agguati preparati: quando li vedi, è troppo tardi. I Mounthborn non annunciano l'assalto — lo consumano in un istante, mescolando potenza e ferocia nel momento in cui l'imboscata scatta.\n\nNon sono un muro né un controllo: sono una lama che appare dove non la aspetti. Costruiscono la condizione, poi la sfruttano senza pietà.\n\nSceglili se ami il gioco tattico, i setup e i duelli che si decidono in un colpo solo.",
+      "I Nati dalla Bocca: una colonia insettoide legata alla Regina dalla Fame. Un tempo cacciavano con moderazione; poi la Regina assaggiò la conoscenza di prede capaci di pensare, e la Fame che trasmette ai suoi figli non si è più placata.\n\nOgni caccia è un'imboscata. Restano immobili per ore, per giorni, finché la Regina trasmette «adesso»: allora pazienza e fame esplodono nella Frenesia, mescolando potenza e ferocia nel momento in cui l'imboscata scatta.\n\nSceglili se ami il gioco tattico, i setup e i duelli che si decidono in un colpo solo.",
     bonusWhen: 'Si attiva in Imboscata — condizione di agguato soddisfatta.',
     bonusExplain:
       'Guadagni +1 Potenza e +1 Danno sul duello corrente. Un doppio boost che ribalta scambi altrimenti pari o leggermente sfavorevoli.',
@@ -99,9 +99,9 @@ export const ARMY_LORE = {
   "L'Enclave delle Scaglie": {
     glyph: '🐉',
     bonusLabel: 'CONQUISTA',
-    motto: 'Ogni terra conquistata rinforza il trono.',
+    motto: 'Ogni corona rubata ci avvicina al cielo.',
     synopsis:
-      "Antichi guardiani del territorio. Ogni terra conquistata li rinforza, ogni vittoria deposita scaglie di potere sul loro trono. L'Enclave non corre: avanza, marca il suolo, e trasforma ogni conquista in risorse per la successiva.\n\nIl loro snowball è territoriale e economico. Vinci, guadagni Focus Coin, reinvesti, stringi. Più tardi arrivi nel match, più il vantaggio si fa pesante.\n\nSceglili se vuoi un piano chiaro: vincere scambi, accumulare FC, chiudere con superiorità di risorse.",
+      "Coboldi piccoli e ignorati, con un'ambizione più grande dei loro corpi: diventare Draghi. Non servirli, non adorarli — diventarli. La via è l'accumulo di oggetti che pesano: corone, spade, reliquie che vibrano di ciò che hanno significato per qualcuno.\n\nOgni vittoria è un saccheggio di significato. Vinci, guadagni Focus Coin, reinvesti, stringi: il peso rubato ai vinti ora canta per l'Enclave. Più tardi arrivi nel match, più l'accumulo si fa pesante.\n\nSceglili se vuoi un piano chiaro: vincere scambi, accumulare FC, chiudere con superiorità di risorse.",
     bonusWhen: 'Si attiva in Conquista — dopo aver vinto il duello.',
     bonusExplain:
       'Guadagni +2 Focus Coin. Ogni vittoria di duello finanzia il round successivo: più conquisti, più puoi spendere.',
@@ -146,7 +146,7 @@ export const ARMY_LORE = {
     bonusLabel: 'OVERDRIVE',
     motto: 'Quando si attivano, nulla li ferma.',
     synopsis:
-      "Tecnologia oltre il visibile. Circuiti, protocolli e un impulso che ignora le regole del campo. Quando i Khemet entrano in Overdrive, nulla li ferma: immuni, inarrestabili, una punta di lancia che spezza qualsiasi piano avversario nel momento cruciale.\n\nNon sono un esercito di resistenza passiva — sono un power spike. Conservano, caricano, poi attraversano il duello come se gli effetti nemici non esistessero.\n\nSceglili se ami i round decisivi, l'immunità e le chiusure brutali.",
+      "Warlock gotico-egizi: sigillatori, maestri runici, fattucchieri e arconti della non-morte. Non combattono con il numero ma con il rito, un controllo paziente che prepara il momento giusto. Quando i Khemet entrano in Overdrive, nulla li ferma: immuni, inarrestabili, una punta di lancia che spezza qualsiasi piano avversario nel momento cruciale.\n\nNon sono un esercito di resistenza passiva — sono un power spike. Conservano, caricano, poi attraversano il duello come se gli effetti nemici non esistessero.\n\nSceglili se ami i round decisivi, l'immunità e le chiusure brutali.",
     bonusWhen: 'Si attiva in Overdrive — fase di power spike.',
     bonusExplain:
       'Diventi Immune per quel duello: ignori effetti nemici rilevanti. È una finestra in cui puoi forzare scontri altrimenti impossibili.',
