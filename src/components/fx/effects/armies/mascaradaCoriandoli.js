@@ -11,6 +11,7 @@ import {
   getFxContext,
   hexToRgb01,
   loseContext,
+  setCardAlpha,
 } from '../../glUtils.js';
 import { NOISE_GLSL, SWEEP_GLSL, SWEEP_UNIFORMS, createSweepRangeCache, setSweepUniforms, sweepBaseAt } from '../../fxNoise.js';
 import { createEmberLayer, createSpawnClock } from '../../emberLayer.js';
@@ -186,6 +187,8 @@ function createConfettiRenderer(canvas) {
         const cssW = (rect[2] * canvas.width) / state.dpr;
         const cssH = (rect[3] * canvas.height) / state.dpr;
         build(params, aspect, range, sweep, cssW, cssH);
+        // tutti i granelli a posto prima del passaggio finale alla carta vera (ElementFx, 0.86)
+        const formed = Math.min(1, state.progress / 0.86);
         const life = Math.max(0.15, Math.min(0.9, params.life));
 
         gl.useProgram(card.prog);
@@ -193,16 +196,18 @@ function createConfettiRenderer(canvas) {
         gl.uniform1i(card.u.uTex, 0);
         gl.uniform4f(card.u.uRect, rect[0], rect[1], rect[2], rect[3]);
         gl.uniform2f(card.u.uGrid, grid.cols, grid.rows);
-        gl.uniform1f(card.u.uProgress, state.progress);
+        gl.uniform1f(card.u.uProgress, formed);
         gl.uniform1f(card.u.uLife, life);
         gl.uniform2f(card.u.uRange, range.min, range.max);
         gl.uniform1f(card.u.uTime, state.time);
         setSweepUniforms(gl, card.u, sweep, aspect);
+        setCardAlpha(gl, state.cardAlpha ?? 1);
         quad.draw(card.a.aPos);
+        setCardAlpha(gl, 1);
 
         gl.useProgram(grains.prog);
         gl.uniform4f(grains.u.uRect, rect[0], rect[1], rect[2], rect[3]);
-        gl.uniform1f(grains.u.uProgress, state.progress);
+        gl.uniform1f(grains.u.uProgress, formed);
         gl.uniform1f(grains.u.uLife, life);
         gl.uniform1f(grains.u.uSpread, params.spread);
         gl.uniform1f(grains.u.uGrainPx, params.grain * state.dpr);

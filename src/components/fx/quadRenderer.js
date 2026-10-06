@@ -11,6 +11,7 @@ import {
   getFxContext,
   hexToRgb01,
   loseContext,
+  setCardAlpha,
 } from './glUtils.js';
 import { NOISE_GLSL, SWEEP_GLSL, SWEEP_UNIFORMS, createSweepRangeCache, sweepDirection } from './fxNoise.js';
 import { createEmberLayer, createSpawnClock } from './emberLayer.js';
@@ -135,7 +136,9 @@ export function createQuadFxRenderer(canvas, spec) {
         }
         gl.uniform1f(u.uAspect, aspect);
         spec.bind?.(gl, u, state, env);
+        setCardAlpha(gl, state.cardAlpha ?? 1);
         quad.draw(a.aPos);
+        setCardAlpha(gl, 1);
       }
       spec.particles?.(state, env);
       embers.draw(color, state.dpr);

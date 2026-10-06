@@ -5,7 +5,7 @@
 //
 // Coordinate «quadrate»: x in [0, aspect], y in [0, 1] (unità = altezza della carta).
 
-import { clearCanvas, createProgram, createSourceTexture, getFxContext, hexToRgb01, loseContext } from './glUtils.js';
+import { clearCanvas, createProgram, createSourceTexture, getFxContext, hexToRgb01, loseContext, setCardAlpha } from './glUtils.js';
 import { createEmberLayer } from './emberLayer.js';
 import { createFlakeLayer } from './flakeLayer.js';
 
@@ -439,7 +439,11 @@ export function createPiecesRenderer(canvas, spec) {
       attr(a.aDelay, 1, 32);
       attr(a.aDist, 1, 36);
       attr(a.aExtra, 1, 40);
-      gl.drawArrays(gl.TRIANGLES, 0, env.mesh.count);
+      if (!state.hideCard) {
+        setCardAlpha(gl, state.cardAlpha ?? 1);
+        gl.drawArrays(gl.TRIANGLES, 0, env.mesh.count);
+        setCardAlpha(gl, 1);
+      }
       Object.values(a).forEach((loc) => { if (loc >= 0) gl.disableVertexAttribArray(loc); });
 
       spec.particles?.(state, env);

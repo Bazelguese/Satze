@@ -11,6 +11,7 @@ import {
   getFxContext,
   hexToRgb01,
   loseContext,
+  setCardAlpha,
 } from '../../glUtils.js';
 import { NOISE_GLSL, SWEEP_GLSL, SWEEP_UNIFORMS, createSweepRangeCache, setSweepUniforms, sweepBaseAt } from '../../fxNoise.js';
 import { createEmberLayer, createSpawnClock } from '../../emberLayer.js';
@@ -186,6 +187,8 @@ function createPhoenixRenderer(canvas) {
         const cssW = (rect[2] * canvas.width) / state.dpr;
         const cssH = (rect[3] * canvas.height) / state.dpr;
         build(params, aspect, range, sweep, cssW, cssH);
+        // tutti i granelli a posto prima del passaggio finale alla carta vera (ElementFx, 0.86)
+        const formed = Math.min(1, state.progress / 0.86);
         const life = Math.max(0.1, Math.min(0.9, params.life));
 
         gl.useProgram(card.prog);
@@ -193,7 +196,7 @@ function createPhoenixRenderer(canvas) {
         gl.uniform1i(card.u.uTex, 0);
         gl.uniform4f(card.u.uRect, rect[0], rect[1], rect[2], rect[3]);
         gl.uniform2f(card.u.uGrid, grid.cols, grid.rows);
-        gl.uniform1f(card.u.uProgress, state.progress);
+        gl.uniform1f(card.u.uProgress, formed);
         gl.uniform1f(card.u.uLife, life);
         gl.uniform2f(card.u.uRange, range.min, range.max);
         gl.uniform1f(card.u.uHeatBand, params.heatBand);
@@ -202,11 +205,13 @@ function createPhoenixRenderer(canvas) {
         gl.uniform1f(card.u.uTime, state.time);
         gl.uniform3f(card.u.uColor, color[0], color[1], color[2]);
         setSweepUniforms(gl, card.u, sweep, aspect);
+        setCardAlpha(gl, state.cardAlpha ?? 1);
         quad.draw(card.a.aPos);
+        setCardAlpha(gl, 1);
 
         gl.useProgram(grains.prog);
         gl.uniform4f(grains.u.uRect, rect[0], rect[1], rect[2], rect[3]);
-        gl.uniform1f(grains.u.uProgress, state.progress);
+        gl.uniform1f(grains.u.uProgress, formed);
         gl.uniform1f(grains.u.uLife, life);
         gl.uniform1f(grains.u.uSpread, params.heapSpread);
         gl.uniform1f(grains.u.uRise, params.rise);
@@ -227,7 +232,7 @@ function createPhoenixRenderer(canvas) {
         [a.aHome, a.aColor, a.aRand, a.aStart].forEach((l) => gl.disableVertexAttribArray(l));
 
         // faville dal fronte che si ricompone
-        const front = Math.max(0, Math.min(1, (state.progress - life) / Math.max(1 - life, 1e-3)));
+        const front = Math.max(0, Math.min(1, (formed - life) / Math.max(1 - life, 1e-3)));
         const n = clock(params.embers * state.active, state.dt);
         for (let i = 0; i < n; i += 1) {
           const x = Math.random();
