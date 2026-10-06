@@ -1,29 +1,30 @@
 import React from 'react';
 import { captureElementToCanvas } from './captureElement.js';
-import { createBurnRenderer } from './burnRenderer.js';
-import { burnProgressCurve, resolveBurnParams } from './burnParams.js';
 
 /**
- * Animazione a sé: brucia (dissolve con fiamma) qualunque contenuto.
+ * Esegue un effetto WebGL su qualunque contenuto (bruciatura, polvere, frattura, vortice,
+ * materializzazione…). L'effetto è una «definizione» (vedi fx/effects): parametri di
+ * default, curva del tempo, margini del canvas e renderer.
  *
- * Il contenuto resta DOM vivo finché il fuoco non parte; allora se ne fa una foto
- * (texture), lo si nasconde e un canvas WebGL sovrapposto lo consuma. Il canvas sta
- * dentro il wrapper, quindi eredita transform, rotazioni e movimenti del genitore.
+ * Il contenuto resta DOM vivo; al via se ne fa una foto (texture), lo si nasconde e un
+ * canvas sovrapposto disegna l'effetto. Il canvas sta dentro il wrapper, quindi eredita
+ * transform, rotazioni e movimenti del genitore.
  *
- * Uso:
- *   <BurnEffect burning={lost} params={{ flameColor: armyAccent }} onComplete={...}>
- *     <GameCard agent={agent} />
- *   </BurnEffect>
+ * - effect.kind 'out' (uscita): il contenuto sparisce col primo fotogramma e resta nascosto.
+ * - effect.kind 'in' (entrata): il contenuto è nascosto finché l'effetto non finisce.
  *
- * - `burning`: da false a true avvia la bruciatura da 0; tornando false il contenuto ricompare.
- * - `progress`: numero 0-1 per fermare il fuoco a una quota (anteprima/regia esterna);
- *   ha la precedenza su `burning`. null = non usato.
+ * Props:
+ * - `active`: da false a true avvia l'effetto da 0; tornando false il contenuto torna normale.
+ * - `progress`: numero 0-1 per fermare l'effetto a una quota (anteprima/regia esterna);
+ *   ha la precedenza su `active`. null = non usato.
+ * - `params`: parametri dell'effetto (uniti ai default della definizione).
  * - `captureKey`: cambia quando cambia l'aspetto del contenuto (scarta la foto in cache).
- * - `precapture`: fa la foto in anticipo, a riposo, così il fuoco parte senza attesa.
+ * - `precapture`: fa la foto in anticipo, a riposo, così l'effetto parte senza attesa.
  */
-export function BurnEffect({
+export function ElementFx({
+  effect,
   children,
-  burning = false,
+  active = false,
   progress = null,
   params,
   captureKey = null,
@@ -38,27 +39,31 @@ export function BurnEffect({
   const canvasRef = React.useRef(null);
   const snapshotRef = React.useRef({ key: undefined, canvas: null, promise: null });
   const runSeqRef = React.useRef(0);
-  const paramsRef = React.useRef(resolveBurnParams(params));
+  const resolveParams = React.useCallback((p) => resolveFxParams(effect, p), [effect]);
+  const paramsRef = React.useRef(resolveParams(params));
   const progressRef = React.useRef(progress);
   const callbacksRef = React.useRef({ onStart, onComplete });
+  const effectRef = React.useRef(effect);
   /** Giro in corso: { id, snap, layout } con il canvas montato, o null. */
   const [run, setRun] = React.useState(null);
-  /** none | hidden (bruciato o in fiamme) | fade (ripiego senza WebGL) */
+  /** none | hidden | fade (ripiego senza WebGL) */
   const [contentMode, setContentMode] = React.useState('none');
 
-  paramsRef.current = resolveBurnParams(params);
+  paramsRef.current = resolveParams(params);
   progressRef.current = progress;
   callbacksRef.current = { onStart, onComplete };
+  effectRef.current = effect;
 
+  const isIn = effect.kind === 'in';
   const manual = progress != null && Number.isFinite(Number(progress));
-  const wantFire = manual || burning;
+  const wantFx = manual || active;
 
   const getSnapshot = React.useCallback(() => {
     const snap = snapshotRef.current;
     if (snap.key === captureKey && snap.canvas) return Promise.resolve(snap.canvas);
     if (snap.key === captureKey && snap.promise) return snap.promise;
     const node = contentRef.current;
-    if (!node) return Promise.reject(new Error('burn: contenuto non montato'));
+    if (!node) return Promise.reject(new Error('fx: contenuto non montato'));
     const promise = captureElementToCanvas(node, { pixelRatio }).then((cv) => {
       if (snapshotRef.current.promise === promise) {
         snapshotRef.current = { key: captureKey, canvas: cv, promise: null };
@@ -76,10 +81,10 @@ export function BurnEffect({
 
   // foto in anticipo, a riposo
   React.useEffect(() => {
-    if (!precapture || wantFire) return undefined;
+    if (!precapture || wantFx) return undefined;
     let cancelled = false;
     const go = () => {
-      if (!cancelled) getSnapshot().catch((err) => console.warn('[burn] foto anticipata fallita', err));
+      if (!cancelled) getSnapshot().catch((err) => console.warn('[fx] foto anticipata fallita', err));
     };
     const id = typeof requestIdleCallback === 'function' ? requestIdleCallback(go, { timeout: 600 }) : setTimeout(go, 120);
     return () => {
@@ -87,12 +92,17 @@ export function BurnEffect({
       if (typeof cancelIdleCallback === 'function') cancelIdleCallback(id);
       else clearTimeout(id);
     };
-  }, [precapture, wantFire, getSnapshot]);
+  }, [precapture, wantFx, getSnapshot]);
+
+  // entrata: il contenuto sparisce prima del primo paint, non quando arriva la foto
+  React.useLayoutEffect(() => {
+    if (isIn && wantFx) setContentMode('hidden');
+  }, [isIn, wantFx, manual, effect]);
 
   // 1) acceso/spento: foto + misure, poi il canvas viene montato col nuovo giro
   React.useEffect(() => {
     const id = ++runSeqRef.current;
-    if (!wantFire) {
+    if (!wantFx) {
       setRun(null);
       setContentMode('none');
       return undefined;
@@ -105,29 +115,29 @@ export function BurnEffect({
       try {
         snap = await getSnapshot();
       } catch (err) {
-        console.warn('[burn] foto fallita, ripiego su dissolvenza', err);
+        console.warn('[fx] foto fallita, ripiego su dissolvenza', err);
       }
       if (cancelled || runSeqRef.current !== id) return;
       if (!snap) {
         callbacksRef.current.onStart?.();
-        setContentMode('fade');
+        setContentMode(effectRef.current.kind === 'in' ? 'none' : 'fade');
+        if (effectRef.current.kind === 'in') callbacksRef.current.onComplete?.();
         return;
       }
       const w = node.offsetWidth;
       const h = node.offsetHeight;
-      const padX = Math.round(w * 0.2);
-      const padTop = Math.round(h * 0.45);
-      const padBottom = Math.round(h * 0.15);
+      const pad = effectRef.current.padding(w, h, paramsRef.current);
       setRun({
         id,
         snap,
+        effect: effectRef.current,
         layout: {
           w,
           h,
-          padX,
-          padTop,
-          cssW: w + padX * 2,
-          cssH: h + padTop + padBottom,
+          left: Math.round(pad.left),
+          top: Math.round(pad.top),
+          cssW: Math.round(w + pad.left + pad.right),
+          cssH: Math.round(h + pad.top + pad.bottom),
           dpr: Math.min(2, window.devicePixelRatio || 1),
         },
       });
@@ -135,10 +145,10 @@ export function BurnEffect({
     return () => {
       cancelled = true;
     };
-    // `manual` cambia la modalità: riparte da capo; il valore di progress si legge dal ref
-  }, [wantFire, manual, getSnapshot]);
+    // `manual` ed `effect` cambiano la modalità: riparte da capo; progress si legge dal ref
+  }, [wantFx, manual, effect, getSnapshot]);
 
-  // ripiego senza foto/WebGL: dissolvenza della stessa durata
+  // ripiego senza foto/WebGL in uscita: dissolvenza della stessa durata
   React.useEffect(() => {
     if (contentMode !== 'fade' || manual) return undefined;
     const t = setTimeout(() => callbacksRef.current.onComplete?.(), paramsRef.current.durationMs);
@@ -150,30 +160,30 @@ export function BurnEffect({
     if (!run) return undefined;
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
-    const { layout, snap } = run;
+    const { layout, snap, effect: fx } = run;
     canvas.width = Math.round(layout.cssW * layout.dpr);
     canvas.height = Math.round(layout.cssH * layout.dpr);
     let renderer = null;
     try {
-      renderer = createBurnRenderer(canvas);
+      renderer = fx.createRenderer(canvas);
       renderer?.setSource(snap);
     } catch (err) {
-      console.warn('[burn] WebGL non disponibile, ripiego su dissolvenza', err);
+      console.warn('[fx] WebGL non disponibile, ripiego', err);
       renderer?.dispose();
       renderer = null;
     }
     if (!renderer) {
       callbacksRef.current.onStart?.();
-      setContentMode('fade');
+      if (fx.kind === 'in') {
+        setContentMode('none');
+        callbacksRef.current.onComplete?.();
+      } else {
+        setContentMode('fade');
+      }
       return undefined;
     }
 
-    const rect = [
-      layout.padX / layout.cssW,
-      layout.padTop / layout.cssH,
-      layout.w / layout.cssW,
-      layout.h / layout.cssH,
-    ];
+    const rect = [layout.left / layout.cssW, layout.top / layout.cssH, layout.w / layout.cssW, layout.h / layout.cssH];
     const aspect = layout.w / Math.max(1, layout.h);
     let raf = 0;
     let start = null;
@@ -198,33 +208,34 @@ export function BurnEffect({
         linear = prog;
       } else {
         linear = Math.min(1, (ts - start) / Math.max(1, p.durationMs));
-        prog = burnProgressCurve(linear);
+        prog = fx.curve ? fx.curve(linear) : linear;
       }
-      const active = isManual
+      const activeAmt = isManual
         ? (prog > 0.001 && prog < 0.999 ? 1 : 0)
         : Math.min(1, linear / 0.04) * (1 - Math.max(0, (linear - 0.9) / 0.1));
       renderer.draw({
         params: p,
         progress: prog,
-        active,
+        linear,
+        active: activeAmt,
+        done: completed,
         time: ts / 1000,
         dt,
         rect,
         aspect,
-        scale: 1 - (1 - p.shrink) * prog,
         dpr: layout.dpr,
       });
       if (firstFrame) {
         firstFrame = false;
-        setContentMode('hidden');
+        if (fx.kind !== 'in') setContentMode('hidden');
       }
       if (!isManual && linear >= 1 && !completed) {
         completed = true;
+        if (fx.kind === 'in') setContentMode('none');
         callbacksRef.current.onComplete?.();
       }
-      // dopo la fine restano solo le ultime faville: poi si libera il contesto WebGL
-      if (!isManual && completed && renderer.emberCount === 0) {
-        renderer.clear();
+      // dopo la fine restano solo le ultime particelle: poi si libera il contesto WebGL
+      if (!isManual && completed && !renderer.busy()) {
         setRun((cur) => (cur && cur.id === run.id ? null : cur));
         return;
       }
@@ -259,8 +270,8 @@ export function BurnEffect({
           aria-hidden
           style={{
             position: 'absolute',
-            left: -run.layout.padX,
-            top: -run.layout.padTop,
+            left: -run.layout.left,
+            top: -run.layout.top,
             width: run.layout.cssW,
             height: run.layout.cssH,
             pointerEvents: 'none',
@@ -269,4 +280,22 @@ export function BurnEffect({
       ) : null}
     </div>
   );
+}
+
+/** Unisce i parametri con i default dell'effetto scartando valori non numerici dove serve un numero. */
+export function resolveFxParams(effect, params) {
+  const defaults = effect.defaults;
+  const out = { ...defaults };
+  if (!params) return out;
+  for (const key of Object.keys(params)) {
+    const v = params[key];
+    if (v == null) continue;
+    if (typeof defaults[key] === 'number') {
+      const n = Number(v);
+      if (Number.isFinite(n)) out[key] = n;
+    } else {
+      out[key] = v;
+    }
+  }
+  return out;
 }

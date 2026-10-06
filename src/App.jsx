@@ -45,8 +45,8 @@ const DuelLayoutLabPage = lazy(() =>
 const CardFaceLabPage = lazy(() =>
   import('./components/cardFaceLab/CardFaceLabPage').then((m) => ({ default: m.CardFaceLabPage }))
 );
-const CardBurnLabPage = lazy(() =>
-  import('./components/cardBurnLab/CardBurnLabPage').then((m) => ({ default: m.CardBurnLabPage }))
+const CardFxLabPage = lazy(() =>
+  import('./components/cardFxLab/CardFxLabPage').then((m) => ({ default: m.CardFxLabPage }))
 );
 
 /** Boot: non restare bloccati su OneDrive/rete lenta — poi warm-up + failsafe. */
@@ -220,7 +220,8 @@ function AppContent() {
   const showEminenceSystemLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceSystemLab') === '1';
   const showDuelLayoutLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelLayoutLab') === '1';
   const showCardFaceLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardFaceLab') === '1';
-  const showCardBurnLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardBurnLab') === '1';
+  // ?cardBurnLab=1 resta valido: la pagina è diventata il lab di tutte le animazioni carta
+  const showCardFxLab = devToolsAllowed && typeof window !== 'undefined' && (new URLSearchParams(window.location.search).get('cardFxLab') === '1' || new URLSearchParams(window.location.search).get('cardBurnLab') === '1');
 
   const closeCropTool = () => {
     const url = new URL(window.location.href);
@@ -300,8 +301,9 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
-  const closeCardBurnLab = () => {
+  const closeCardFxLab = () => {
     const url = new URL(window.location.href);
+    url.searchParams.delete('cardFxLab');
     url.searchParams.delete('cardBurnLab');
     window.location.href = url.toString();
   };
@@ -332,8 +334,8 @@ function AppContent() {
         <DuelLayoutLabPage onClose={closeDuelLayoutLab} />
       ) : showCardFaceLab ? (
         <CardFaceLabPage onClose={closeCardFaceLab} />
-      ) : showCardBurnLab ? (
-        <CardBurnLabPage onClose={closeCardBurnLab} />
+      ) : showCardFxLab ? (
+        <CardFxLabPage onClose={closeCardFxLab} />
       ) : showCardPrototype ? (
         <CardPrototypePage onClose={closeCardPrototype} />
       ) : SHOW_CARD_TEST ? (
