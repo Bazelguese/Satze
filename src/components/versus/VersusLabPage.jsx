@@ -10,7 +10,7 @@ import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
 import { loadCustomDecks } from '../../utils/deckManager.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { DECK_COVER_STYLES, getDeckCoverStyle, setDeckCoverStyle } from '../../utils/deckCoverPreference.js';
-import { DuelVersusScreen, VERSUS_LAYOUTS, buildVersusIdentity } from './DuelVersusScreen.jsx';
+import { DuelVersusScreen, VERSUS_FX, VERSUS_LAYOUTS, buildVersusIdentity } from './DuelVersusScreen.jsx';
 
 /** Durata simulata del caricamento duello (≈ preload + warm-up reali). */
 const FAKE_LOADING_MS = 4800;
@@ -36,14 +36,59 @@ function resolveLabDeck({ army, deckKey }) {
 }
 
 const LAB_LAYOUT_KEY = 'satze_vs_lab_layout';
+/** Modello scelto per il VS: «Alle spalle» + «Scatola 3D». */
+const LAB_DEFAULT_COVER = 'box';
+
+/** Copertina del lab: la preferenza salvata se esiste, altrimenti il modello scelto. */
+function loadLabCover() {
+  try {
+    return localStorage.getItem('satze_deck_cover_style') ? getDeckCoverStyle() : LAB_DEFAULT_COVER;
+  } catch {
+    return LAB_DEFAULT_COVER;
+  }
+}
 
 function loadLabLayout() {
   try {
     const v = localStorage.getItem(LAB_LAYOUT_KEY);
-    return VERSUS_LAYOUTS.some((l) => l.key === v) ? v : 'side';
+    return VERSUS_LAYOUTS.some((l) => l.key === v) ? v : 'shadow';
   } catch {
-    return 'side';
+    return 'shadow';
   }
+}
+
+const LAB_FX_KEY = 'satze_vs_lab_fx';
+const ALL_FX_ON = Object.fromEntries(VERSUS_FX.map((f) => [f.key, true]));
+
+function loadLabFx() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAB_FX_KEY) || 'null');
+    return v && typeof v === 'object' ? { ...ALL_FX_ON, ...v } : ALL_FX_ON;
+  } catch {
+    return ALL_FX_ON;
+  }
+}
+
+function FxRow({ value, onToggle }) {
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Effetti (indipendenti)</span>
+      <div className="grid grid-cols-2 gap-1">
+        {VERSUS_FX.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            title={f.meta}
+            aria-pressed={Boolean(value[f.key])}
+            className={`border px-2 py-1 text-xs ${value[f.key] ? 'border-amber-300 bg-amber-300/15' : 'border-slate-600 text-slate-400'}`}
+            onClick={() => onToggle(f.key)}
+          >
+            {value[f.key] ? '● ' : '○ '}{f.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ChipRow({ label, options, value, onChange }) {
@@ -117,8 +162,9 @@ export function VersusLabPage({ onClose }) {
   const [playerPick, setPlayerPick] = useState({ army: ARMY_NAMES[0], deckKey: 'A' });
   const [enemyPick, setEnemyPick] = useState({ army: ARMY_NAMES[2] || ARMY_NAMES[0], deckKey: MIXED_SAMPLE_KEY });
   const [layout, setLayout] = useState(loadLabLayout);
-  const [coverStyle, setCoverStyle] = useState(getDeckCoverStyle);
+  const [coverStyle, setCoverStyle] = useState(loadLabCover);
   const [eminenceFormat, setEminenceFormat] = useState(EMINENCE_FORMAT.REQUIRED);
+  const [fx, setFx] = useState(loadLabFx);
   const [playKey, setPlayKey] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -148,6 +194,14 @@ export function VersusLabPage({ onClose }) {
     try { localStorage.setItem(LAB_LAYOUT_KEY, key); } catch { /* solo sessione */ }
     replay();
   };
+  const toggleFx = (key) => {
+    setFx((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(LAB_FX_KEY, JSON.stringify(next)); } catch { /* solo sessione */ }
+      return next;
+    });
+    replay();
+  };
   /** Lo stile copertina scelto qui vale anche nella scelta mazzo. */
   const pickCoverStyle = (key) => {
     setCoverStyle(key);
@@ -167,6 +221,7 @@ export function VersusLabPage({ onClose }) {
           layout={layout}
           coverStyle={coverStyle}
           eminenceFormat={eminenceFormat}
+          fx={fx}
           progress={progress}
         />
       </GameViewport>
@@ -233,6 +288,7 @@ export function VersusLabPage({ onClose }) {
               value={coverStyle}
               onChange={pickCoverStyle}
             />
+            <FxRow value={fx} onToggle={toggleFx} />
             <ChipRow
               label="Formato"
               options={[

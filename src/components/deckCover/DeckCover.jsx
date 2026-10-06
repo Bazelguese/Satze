@@ -97,10 +97,21 @@ function FullArtCover({ deck, art, armies, isCenter }) {
 // ------------------------------------------------------------
 // B · Scatola 3D: custodia con fronte illustrato e dorso col nome.
 // ------------------------------------------------------------
-function BoxCover({ deck, art, armies, isCenter, mirror }) {
+/** Carte che escono dalla scatola: le 3 di Lega più alta, escluso il leader in copertina. */
+function fanCards(deck) {
+  const leaderId = deck?.leaderAgent?.id;
+  return (deck?.deckCards || [])
+    .filter((c) => c.id !== leaderId && (CARD_IMAGES?.[c.id] || AGENT_IMAGES?.[c.id]))
+    .sort((a, b) => (b.league || 0) - (a.league || 0) || (b.power || 0) - (a.power || 0))
+    .slice(0, 3)
+    .map((c) => ({ id: c.id, name: c.name, src: CARD_IMAGES?.[c.id] || AGENT_IMAGES?.[c.id] }));
+}
+
+function BoxCover({ deck, art, armies, isCenter, mirror, opening }) {
   const spineArmy = armies[0]?.accent || deck.accent;
+  const fan = opening ? fanCards(deck) : [];
   return (
-    <div className={`dcv dcv-box${isCenter ? ' is-center' : ''}${mirror ? ' is-mirror' : ''}`}>
+    <div className={`dcv dcv-box${isCenter ? ' is-center' : ''}${mirror ? ' is-mirror' : ''}${opening ? ' is-opening' : ''}`}>
       <div className="dcv-box-stage">
         <div className="dcv-box-cube">
           <div className="dcv-box-face dcv-box-front">
@@ -120,7 +131,23 @@ function BoxCover({ deck, art, armies, isCenter, mirror }) {
             <span className="dcv-box-spine-name">{deck.name}</span>
             <ArmyGlyphs armies={armies} className="dcv-glyphs dcv-box-spine-glyphs" />
           </div>
-          <div className="dcv-box-face dcv-box-top" />
+          {opening ? (
+            <>
+              <div className="dcv-box-face dcv-box-cavity" />
+              <div className="dcv-box-fan">
+                {fan.map((c, i) => (
+                  <div key={c.id} className="dcv-box-card" style={{ '--i': i - (fan.length - 1) / 2 }}>
+                    <img src={c.src} alt={c.name} draggable={false} />
+                  </div>
+                ))}
+              </div>
+              <div className="dcv-box-lid-hinge">
+                <div className="dcv-box-lid" />
+              </div>
+            </>
+          ) : (
+            <div className="dcv-box-face dcv-box-top" />
+          )}
           <div className="dcv-box-face dcv-box-back" />
         </div>
         <div className="dcv-box-floor" />
@@ -163,12 +190,13 @@ function TarotCover({ deck, art, armies, isCenter }) {
  * @param {'fullart'|'box'|'tarot'} props.variant
  * @param {boolean} [props.isCenter] decorazioni e animazioni piene
  * @param {boolean} [props.mirror] scatola ruotata dall'altro lato (lato avversario nel VS)
+ * @param {boolean} [props.opening] scatola: all'ingresso si apre e mostra le carte (solo VS)
  */
-export function DeckCover({ deck, variant, isCenter = true, mirror = false }) {
+export function DeckCover({ deck, variant, isCenter = true, mirror = false, opening = false }) {
   if (!deck) return null;
   const art = coverArt(deck);
   const armies = deckArmies(deck);
-  const props = { deck, art, armies, isCenter, mirror };
+  const props = { deck, art, armies, isCenter, mirror, opening };
   return (
     <div className="dcv-root" style={{ '--accent': deck.accent }}>
       {variant === 'box' ? <BoxCover {...props} />

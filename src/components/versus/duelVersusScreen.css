@@ -104,6 +104,9 @@
   /* stessa altezza con o senza riga «sub»: i due ticket restano allineati */
   min-height: 104px;
   text-align: center;
+  /* sopra la copertina: le carte che escono dalla scatola passano dietro ai nomi */
+  position: relative;
+  z-index: 2;
 }
 .vsx-who-eyebrow {
   font-family: 'Share Tech Mono', monospace;
@@ -209,7 +212,7 @@
   align-items: center;
   justify-content: center;
   transform: translate(-50%, -50%);
-  animation: vsx-vs-slam 0.5s 0.75s cubic-bezier(0.3, 1.4, 0.4, 1) both;
+  animation: vsx-vs-slam 0.5s var(--vsx-vs-delay) cubic-bezier(0.3, 1.4, 0.4, 1) both;
 }
 .vsx-vs-ring {
   position: absolute;
@@ -240,7 +243,7 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 60%);
   opacity: 0;
-  animation: vsx-flash 0.7s 0.95s ease-out both;
+  animation: vsx-flash 0.7s calc(var(--vsx-vs-delay) + 0.2s) ease-out both;
   pointer-events: none;
 }
 .vsx-vs-v,
@@ -484,4 +487,87 @@
 @keyframes vsx-cover-drop-e {
   from { opacity: 0; transform: translateY(-60px) rotate(18deg) scale(1.2); }
   to { opacity: 1; transform: rotate(6deg); }
+}
+
+/* ============================================================
+   Effetti d'ingresso in prova (vsx-fx-*)
+   ============================================================ */
+.vsx { --vsx-vs-delay: 0.75s; --mx: 0; --my: 0; }
+
+/* Apertura scatola: il VS cala solo quando la scatola si è richiusa (≈3.05s). */
+.vsx-fx-open { --vsx-vs-delay: 3s; }
+
+/* Risveglio Eminenza: sfondo spento → acceso, con ondata di luce nel colore dell'armata. */
+.vsx-half-glow { position: absolute; inset: 0; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+.vsx-half--p .vsx-half-glow { background: radial-gradient(ellipse at 26% 45%, color-mix(in srgb, var(--pa) 75%, #fff) 0%, transparent 55%); }
+.vsx-half--e .vsx-half-glow { background: radial-gradient(ellipse at 74% 45%, color-mix(in srgb, var(--ea) 75%, #fff) 0%, transparent 55%); }
+.vsx-fx-awaken .vsx-half-bg {
+  animation:
+    vsx-drift 14s ease-in-out infinite alternate,
+    vsx-awaken 1.6s 0.55s cubic-bezier(0.3, 0.6, 0.3, 1) backwards;
+}
+.vsx-fx-awaken .vsx-half--e .vsx-half-bg { animation-direction: alternate-reverse, normal; }
+.vsx-fx-awaken .vsx-half-glow { animation: vsx-glow 2.2s 0.9s ease-out both; }
+@keyframes vsx-awaken { from { filter: brightness(0.05) saturate(0); } }
+@keyframes vsx-glow { 0% { opacity: 0; } 25% { opacity: 0.75; } 100% { opacity: 0.18; } }
+
+/* Impatto VS: scossa dello schermo e scintille dal centro. */
+.vsx-fx-impact { animation: vsx-shake 0.42s calc(var(--vsx-vs-delay) + 0.38s) linear both; }
+@keyframes vsx-shake {
+  0%, 100% { transform: none; }
+  15% { transform: translate(-9px, 5px) scale(1.012); }
+  30% { transform: translate(8px, -6px) scale(1.012); }
+  45% { transform: translate(-6px, -3px) scale(1.01); }
+  60% { transform: translate(5px, 4px) scale(1.008); }
+  80% { transform: translate(-2px, 1px) scale(1.004); }
+}
+.vsx-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 4; pointer-events: none; }
+.vsx-sparks span {
+  position: absolute;
+  left: -2px;
+  top: -12px;
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--pa) 50%, var(--ea)));
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transform: rotate(var(--a)) translateY(0);
+  animation: vsx-spark 0.65s calc(var(--vsx-vs-delay) + 0.36s) cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+@keyframes vsx-spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateY(-40px) scaleY(1.6); }
+  4% { opacity: 1; transform: rotate(var(--a)) translateY(-52px) scaleY(1.6); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scaleY(0.4); }
+}
+
+/* Particelle d'armata: braci che salgono, ritagliate dalla propria metà. */
+.vsx-embers { position: absolute; inset: 0; pointer-events: none; }
+.vsx-embers span {
+  position: absolute;
+  bottom: -12px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  opacity: 0;
+  animation: vsx-ember var(--t) var(--dl) linear infinite;
+}
+.vsx-half--p .vsx-embers span { background: color-mix(in srgb, var(--pa) 70%, #fff); box-shadow: 0 0 10px var(--pa); }
+.vsx-half--e .vsx-embers span { background: color-mix(in srgb, var(--ea) 70%, #fff); box-shadow: 0 0 10px var(--ea); }
+@keyframes vsx-ember {
+  0% { opacity: 0; transform: translate(0, 0); }
+  12% { opacity: 0.9; }
+  80% { opacity: 0.5; }
+  100% { opacity: 0; transform: translate(var(--dx), -1120px); }
+}
+
+/* Parallasse: proprietà `translate` separata, non tocca le animazioni su `transform`. */
+.vsx-fx-parallax .vsx-half-bg {
+  translate: calc(var(--mx) * -22px) calc(var(--my) * -14px);
+  transition: translate 0.35s ease-out;
+}
+.vsx-fx-parallax .vsx-side {
+  translate: calc(var(--mx) * 12px) calc(var(--my) * 8px);
+  transition: translate 0.35s ease-out;
 }

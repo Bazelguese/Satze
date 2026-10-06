@@ -963,7 +963,7 @@ function DeckBossTags({ cardId }) {
 // ============================================================
 // TICKET CARD
 // ============================================================
-export function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick, coverStyle = 'ticket', mirror = false }) {
+export function DeckTicket({ deck, number, total, offset, isCenter, visible, onClick, coverStyle = 'ticket', mirror = false, coverOpening = false }) {
   const L = deck.leader;
   const agent = deck.leaderAgent;
   if (coverStyle && coverStyle !== 'ticket') {
@@ -973,7 +973,7 @@ export function DeckTicket({ deck, number, total, offset, isCenter, visible, onC
         style={{ '--off': offset, zIndex: 20 - Math.abs(offset) }}
         onClick={onClick}
       >
-        <DeckCover deck={deck} variant={coverStyle} isCenter={isCenter} mirror={mirror} />
+        <DeckCover deck={deck} variant={coverStyle} isCenter={isCenter} mirror={mirror} opening={coverOpening} />
       </div>
     );
   }

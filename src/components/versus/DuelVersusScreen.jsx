@@ -13,7 +13,7 @@
 //   shadow — arte dell'Eminenza come sfondo della metà + fascia con la sua statica
 // ============================================================
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { getEminence } from '../../data/eminences.js';
 import { getEminenceArtUrl } from '../../data/eminenceArt.js';
@@ -36,6 +36,44 @@ export const VERSUS_LAYOUTS = [
   { key: 'hero', label: 'Protagonista', meta: 'Eminenza grande' },
   { key: 'shadow', label: 'Alle spalle', meta: 'Arte Eminenza sullo sfondo' },
 ];
+
+/** Effetti d'ingresso in prova (attivabili uno per uno dal VS LAB). */
+export const VERSUS_FX = [
+  { key: 'open', label: 'Apertura scatola', meta: 'Coperchio, carte a ventaglio, poi il VS' },
+  { key: 'awaken', label: 'Risveglio Eminenza', meta: 'Lo sfondo si accende con un\'ondata di luce' },
+  { key: 'impact', label: 'Impatto VS', meta: 'Scossa e scintille quando cala il VS' },
+  { key: 'embers', label: 'Particelle', meta: 'Braci nel colore di ogni armata' },
+  { key: 'parallax', label: 'Parallasse', meta: 'Sfondo e lati seguono il puntatore' },
+];
+
+/** Pseudo-casuale deterministico: le particelle restano uguali fra un render e l'altro. */
+function seeded(n) {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+const EMBERS = Array.from({ length: 16 }, (_, i) => ({
+  x: `${Math.round(seeded(i + 1) * 100)}%`,
+  s: `${3 + Math.round(seeded(i + 31) * 4)}px`,
+  t: `${6 + seeded(i + 61) * 6}s`,
+  dl: `${-seeded(i + 91) * 10}s`,
+  dx: `${Math.round((seeded(i + 121) - 0.5) * 140)}px`,
+}));
+
+const SPARKS = Array.from({ length: 14 }, (_, i) => ({
+  a: `${Math.round((360 / 14) * i + seeded(i + 7) * 18)}deg`,
+  d: `${170 + Math.round(seeded(i + 17) * 150)}px`,
+}));
+
+function Embers() {
+  return (
+    <div className="vsx-embers" aria-hidden>
+      {EMBERS.map((e, i) => (
+        <span key={i} style={{ '--x': e.x, '--s': e.s, '--t': e.t, '--dl': e.dl, '--dx': e.dx }} />
+      ))}
+    </div>
+  );
+}
 
 /**
  * Etichette dei due lati.
@@ -97,7 +135,7 @@ function VersusArmies({ armies }) {
   );
 }
 
-function VersusCover({ entry, coverStyle, mirror }) {
+function VersusCover({ entry, coverStyle, mirror, opening }) {
   return (
     <div className="vsx-ticket" aria-label={`Esercito: ${entry.name}`}>
       <div className="vsx-ticket-scale">
@@ -110,6 +148,7 @@ function VersusCover({ entry, coverStyle, mirror }) {
           visible
           coverStyle={coverStyle}
           mirror={mirror}
+          coverOpening={opening}
         />
       </div>
     </div>
@@ -172,10 +211,10 @@ function VersusEminenceBanner({ eminence, reason }) {
   );
 }
 
-function VersusSide({ side, identity, entry, layout, coverStyle, em }) {
+function VersusSide({ side, identity, entry, layout, coverStyle, em, opening }) {
   const mirror = side === 'e';
   const showCard = layout === 'side' || layout === 'hero';
-  const cover = <VersusCover entry={entry} coverStyle={coverStyle} mirror={mirror} />;
+  const cover = <VersusCover entry={entry} coverStyle={coverStyle} mirror={mirror} opening={opening} />;
   return (
     <div className={`vsx-side vsx-side--${side}`} style={{ '--accent': entry.accent }}>
       <header className="vsx-who">
@@ -218,6 +257,7 @@ function halfBackground(entry, em, layout) {
  * @param {string} [props.eminenceFormat] EMINENCE_FORMAT.*
  * @param {string|null} [props.playerEminenceId] da eminenceMatchState, se già deciso
  * @param {string|null} [props.enemyEminenceId]
+ * @param {{ open?: boolean, awaken?: boolean, impact?: boolean, embers?: boolean, parallax?: boolean }} [props.fx]
  * @param {number|null} [props.progress] 0–100; null nasconde la barra
  * @param {string} [props.statusLabel]
  */
@@ -231,9 +271,20 @@ export function DuelVersusScreen({
   eminenceFormat = EMINENCE_FORMAT.REQUIRED,
   playerEminenceId = null,
   enemyEminenceId = null,
+  fx = {},
   progress = null,
   statusLabel = 'Preparazione scontro',
 }) {
+  const rootRef = useRef(null);
+  const opening = Boolean(fx.open) && coverStyle === 'box';
+  // Parallasse: variabili CSS sul root, senza re-render a ogni movimento.
+  const onPointerMove = useCallback((e) => {
+    const el = rootRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
+    el.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+  }, []);
   const playerEntry = useMemo(() => buildDeckTicketEntry(playerDeck || {}), [playerDeck]);
   const enemyEntry = useMemo(() => buildDeckTicketEntry(enemyDeck || {}), [enemyDeck]);
   const playerEm = useMemo(
@@ -247,27 +298,39 @@ export function DuelVersusScreen({
   const p = progress == null ? null : Math.min(100, Math.max(0, Number(progress) || 0));
   const playerBg = halfBackground(playerEntry, playerEm, layout);
   const enemyBg = halfBackground(enemyEntry, enemyEm, layout);
+  const fxClass = [
+    opening && 'vsx-fx-open',
+    fx.awaken && 'vsx-fx-awaken',
+    fx.impact && 'vsx-fx-impact',
+    fx.parallax && 'vsx-fx-parallax',
+  ].filter(Boolean).map((c) => ` ${c}`).join('');
 
   return (
     <div
-      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}`}
+      ref={rootRef}
+      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}${fxClass}`}
       style={{ '--pa': playerEntry.accent, '--ea': enemyEntry.accent }}
       role="presentation"
+      onPointerMove={fx.parallax ? onPointerMove : undefined}
     >
       <DeckSelectStyles />
 
       <div className="vsx-half vsx-half--p">
         <div className="vsx-half-bg" style={{ backgroundImage: playerBg ? `url('${playerBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
+        <div className="vsx-half-glow" />
+        {fx.embers ? <Embers /> : null}
       </div>
       <div className="vsx-half vsx-half--e">
         <div className="vsx-half-bg" style={{ backgroundImage: enemyBg ? `url('${enemyBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
+        <div className="vsx-half-glow" />
+        {fx.embers ? <Embers /> : null}
       </div>
       <div className="vsx-seam" aria-hidden />
 
-      <VersusSide side="p" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} />
-      <VersusSide side="e" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} />
+      <VersusSide side="p" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} />
+      <VersusSide side="e" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} />
 
       <div className="vsx-vs" aria-label="contro">
         <div className="vsx-vs-ring" />
@@ -275,6 +338,12 @@ export function DuelVersusScreen({
         <span className="vsx-vs-v">V</span>
         <span className="vsx-vs-s">S</span>
       </div>
+
+      {fx.impact ? (
+        <div className="vsx-sparks" aria-hidden>
+          {SPARKS.map((sp, i) => <span key={i} style={{ '--a': sp.a, '--d': sp.d }} />)}
+        </div>
+      ) : null}
 
       {p != null ? (
         <div className="vsx-foot">
