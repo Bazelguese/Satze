@@ -19,6 +19,7 @@ import {
 import { getFocusCoinGlowColor } from '../../utils/focusCoinGlow';
 import { DUEL_ACCENTS, getArmyAccent } from '../../theme/duelAccents.js';
 import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
+import { ArmyDefeatFx } from '../fx/ArmyCardFx.jsx';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
 import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
@@ -1239,6 +1240,12 @@ function applyAfterImageDom(container, ghostEls, opts) {
   }
 }
 
+/**
+ * Quota dello scontro in cui lo sconfitto è nella posa di sconfitta (inclinato, spento):
+ * da qui parte la sconfitta inflitta dall'armata che vince (vedi duelClashMotion, kb fino a 0.9).
+ */
+export const CLASH_DEFEAT_START_T = 0.9;
+
 const ClashCardAgents = React.memo(function ClashCardAgents({
   battleResult,
   display,
@@ -1254,7 +1261,12 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
   enemyWrapRef,
   showPerfectPlayer = false,
   showPerfectEnemy = false,
+  defeatOn = false,
+  winner = null,
 }) {
+  // chi perde (in pareggio entrambe) fa la fine che gli infligge l'armata avversaria
+  const playerLoses = winner !== 'player';
+  const enemyLoses = winner !== 'enemy';
   return (
     <>
       <div
@@ -1271,39 +1283,41 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           overflow: 'visible',
         }}
       >
-        <GameCard
-          cardLayout={cardLayout}
-          agent={battleResult.playerAgent}
-          modifiedPower={modifiedStatOrNull(battleResult.playerAgent?.power, display.playerPower)}
-          modifiedDamage={modifiedStatOrNull(battleResult.playerAgent?.damage, display.playerDamage)}
-          showOperators={display.showOperators}
-          showBonus={display.showPlayerBonusActive}
-          bonusBaseInactive={duelBonusBaseInactive(
-            battleResult.playerAgent,
-            battleResult.playerArmyBonusActive ?? battleResult.playerHasBonus,
-            display.showPlayerBonusNotTriggered,
-            display.showPlayerBonusBlocked,
-            display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null
-          )}
-          abilityCurrentValue={playerAbilityCurrentValue}
-          abilityBlocked={display.showPlayerAbilityBlocked}
-          bonusBlocked={display.showPlayerBonusBlocked}
-          highlightAbility={display.highlightPlayerAbility}
-          highlightBonus={display.highlightPlayerBonus}
-          visualStepKind={display.visualStepKind}
-          visualStepIndex={display.visualStepIndex}
-          copiedAbility={display.showPlayerCopiedAbility ? battleResult.playerAbilityCopied : null}
-          copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
-          copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
-          copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
-          effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, true)}
-          effectiveAbility={fieldAbilityDisplay(battleResult, true)}
-          abilityNotTriggered={display.showPlayerAbilityNotTriggered}
-          bonusNotTriggered={display.showPlayerBonusNotTriggered}
-          suppressAnimations
-          footerSweep
-          overdrivePreview={playerOverdrive}
-        />
+        <ArmyDefeatFx agent={battleResult.playerAgent} winnerArmy={battleResult.enemyAgent?.army} active={defeatOn && playerLoses}>
+          <GameCard
+            cardLayout={cardLayout}
+            agent={battleResult.playerAgent}
+            modifiedPower={modifiedStatOrNull(battleResult.playerAgent?.power, display.playerPower)}
+            modifiedDamage={modifiedStatOrNull(battleResult.playerAgent?.damage, display.playerDamage)}
+            showOperators={display.showOperators}
+            showBonus={display.showPlayerBonusActive}
+            bonusBaseInactive={duelBonusBaseInactive(
+              battleResult.playerAgent,
+              battleResult.playerArmyBonusActive ?? battleResult.playerHasBonus,
+              display.showPlayerBonusNotTriggered,
+              display.showPlayerBonusBlocked,
+              display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null
+            )}
+            abilityCurrentValue={playerAbilityCurrentValue}
+            abilityBlocked={display.showPlayerAbilityBlocked}
+            bonusBlocked={display.showPlayerBonusBlocked}
+            highlightAbility={display.highlightPlayerAbility}
+            highlightBonus={display.highlightPlayerBonus}
+            visualStepKind={display.visualStepKind}
+            visualStepIndex={display.visualStepIndex}
+            copiedAbility={display.showPlayerCopiedAbility ? battleResult.playerAbilityCopied : null}
+            copiedAbilityNotTriggered={display.showPlayerCopiedAbilityNotTriggered}
+            copiedBonus={display.showPlayerCopiedBonus ? battleResult.playerBonusCopied : null}
+            copiedBonusNotTriggered={display.showPlayerCopiedBonusNotTriggered}
+            effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, true)}
+            effectiveAbility={fieldAbilityDisplay(battleResult, true)}
+            abilityNotTriggered={display.showPlayerAbilityNotTriggered}
+            bonusNotTriggered={display.showPlayerBonusNotTriggered}
+            suppressAnimations
+            footerSweep
+            overdrivePreview={playerOverdrive}
+          />
+        </ArmyDefeatFx>
         <PerfectFocusStamp active={showPerfectPlayer} side="player" compact holdMs={1500} />
       </div>
       <div
@@ -1320,39 +1334,41 @@ const ClashCardAgents = React.memo(function ClashCardAgents({
           overflow: 'visible',
         }}
       >
-        <GameCard
-          cardLayout={cardLayout}
-          agent={battleResult.enemyAgent}
-          modifiedPower={modifiedStatOrNull(battleResult.enemyAgent?.power, display.enemyPower)}
-          modifiedDamage={modifiedStatOrNull(battleResult.enemyAgent?.damage, display.enemyDamage)}
-          showOperators={display.showOperators}
-          showBonus={display.showEnemyBonusActive}
-          bonusBaseInactive={duelBonusBaseInactive(
-            battleResult.enemyAgent,
-            battleResult.enemyArmyBonusActive ?? battleResult.enemyHasBonus,
-            display.showEnemyBonusNotTriggered,
-            display.showEnemyBonusBlocked,
-            display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null
-          )}
-          abilityCurrentValue={enemyAbilityCurrentValue}
-          abilityBlocked={display.showEnemyAbilityBlocked}
-          bonusBlocked={display.showEnemyBonusBlocked}
-          highlightAbility={display.highlightEnemyAbility}
-          highlightBonus={display.highlightEnemyBonus}
-          visualStepKind={display.visualStepKind}
-          visualStepIndex={display.visualStepIndex}
-          copiedAbility={display.showEnemyCopiedAbility ? battleResult.enemyAbilityCopied : null}
-          copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
-          copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
-          copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
-          effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, false)}
-          effectiveAbility={fieldAbilityDisplay(battleResult, false)}
-          abilityNotTriggered={display.showEnemyAbilityNotTriggered}
-          bonusNotTriggered={display.showEnemyBonusNotTriggered}
-          suppressAnimations
-          footerSweep
-          overdrivePreview={enemyOverdrive}
-        />
+        <ArmyDefeatFx agent={battleResult.enemyAgent} winnerArmy={battleResult.playerAgent?.army} active={defeatOn && enemyLoses}>
+          <GameCard
+            cardLayout={cardLayout}
+            agent={battleResult.enemyAgent}
+            modifiedPower={modifiedStatOrNull(battleResult.enemyAgent?.power, display.enemyPower)}
+            modifiedDamage={modifiedStatOrNull(battleResult.enemyAgent?.damage, display.enemyDamage)}
+            showOperators={display.showOperators}
+            showBonus={display.showEnemyBonusActive}
+            bonusBaseInactive={duelBonusBaseInactive(
+              battleResult.enemyAgent,
+              battleResult.enemyArmyBonusActive ?? battleResult.enemyHasBonus,
+              display.showEnemyBonusNotTriggered,
+              display.showEnemyBonusBlocked,
+              display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null
+            )}
+            abilityCurrentValue={enemyAbilityCurrentValue}
+            abilityBlocked={display.showEnemyAbilityBlocked}
+            bonusBlocked={display.showEnemyBonusBlocked}
+            highlightAbility={display.highlightEnemyAbility}
+            highlightBonus={display.highlightEnemyBonus}
+            visualStepKind={display.visualStepKind}
+            visualStepIndex={display.visualStepIndex}
+            copiedAbility={display.showEnemyCopiedAbility ? battleResult.enemyAbilityCopied : null}
+            copiedAbilityNotTriggered={display.showEnemyCopiedAbilityNotTriggered}
+            copiedBonus={display.showEnemyCopiedBonus ? battleResult.enemyBonusCopied : null}
+            copiedBonusNotTriggered={display.showEnemyCopiedBonusNotTriggered}
+            effectiveArmyBonus={fieldArmyBonusDisplay(battleResult, false)}
+            effectiveAbility={fieldAbilityDisplay(battleResult, false)}
+            abilityNotTriggered={display.showEnemyAbilityNotTriggered}
+            bonusNotTriggered={display.showEnemyBonusNotTriggered}
+            suppressAnimations
+            footerSweep
+            overdrivePreview={enemyOverdrive}
+          />
+        </ArmyDefeatFx>
         <PerfectFocusStamp active={showPerfectEnemy} side="enemy" compact holdMs={1500} />
       </div>
     </>
@@ -1559,6 +1575,9 @@ export function DuelClashAuroraSequence({
   enemyOverdrive = false,
 }) {
   const { runId, active } = useSequenceRun(duelPhase);
+  /** Sconfitta d'armata sulla carta battuta: accesa una volta per scontro, alla posa di sconfitta. */
+  const [defeatOn, setDefeatOn] = React.useState(false);
+  const defeatArmedRef = React.useRef(false);
   const display = getDuelVisualDisplay(battleResult, duelPhase, duelEffectStep);
   const dyn = React.useMemo(() => computeDynamicClashVfx(battleResult), [battleResult]);
   const speed = Number.isFinite(dyn?.clashSpeed) && dyn.clashSpeed > 0 ? dyn.clashSpeed : 1;
@@ -1858,6 +1877,11 @@ export function DuelClashAuroraSequence({
       setPerfectShown(true);
     }
 
+    if (t >= CLASH_DEFEAT_START_T && !defeatArmedRef.current) {
+      defeatArmedRef.current = true;
+      setDefeatOn(true);
+    }
+
     if (t >= 1) {
       if (playerWrapRef.current) playerWrapRef.current.style.willChange = 'auto';
       if (enemyWrapRef.current) enemyWrapRef.current.style.willChange = 'auto';
@@ -1869,6 +1893,8 @@ export function DuelClashAuroraSequence({
   React.useEffect(() => {
     perfectArmedRef.current = false;
     setPerfectShown(false);
+    defeatArmedRef.current = false;
+    setDefeatOn(false);
   }, [runId]);
 
   // la camera dello scontro non deve restare applicata a sfondo e bande
@@ -2180,6 +2206,8 @@ export function DuelClashAuroraSequence({
         enemyOverdrive={enemyOverdrive}
         showPerfectPlayer={perfectShown && perfectFocusSide === 'player'}
         showPerfectEnemy={perfectShown && perfectFocusSide === 'enemy'}
+        defeatOn={defeatOn}
+        winner={winner}
       />
 
       {isN5 && (

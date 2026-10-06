@@ -5,11 +5,14 @@ export const PLACE_FX_STORAGE_KEY = 'satze_place_fx';
 export const DROP_PLACE_FX = ['slam', 'bounce', 'whirlwind', 'gate', 'guillotine', 'meteor'];
 export const CLICK_PLACE_FX = ['rise', 'flip', 'bloom', 'ascend', 'unfold', 'spiral'];
 export const PLACE_FX_STYLES = [null, 'runic', 'thunder', 'sigil', 'shock'];
+/** Ingresso d'armata (effetto WebGL dell'armata dell'agente): insieme alla posa, al suo posto, o spento. */
+export const ARMY_ENTRY_MODES = ['with', 'replace', 'off'];
 
 export const DEFAULT_PLACE_FX = {
   drop: 'slam',
   click: 'rise',
   style: null,
+  army: 'with',
 };
 
 export const DROP_PLACE_FX_OPTIONS = [
@@ -36,6 +39,12 @@ export const PLACE_FX_STYLE_OPTIONS = [
   { key: 'thunder', title: 'Tuono', sub: 'THUNDER', desc: 'Doppio lampo a scatti con scariche.' },
   { key: 'sigil', title: 'Sigillo', sub: 'SIGIL', desc: 'Sigillo quadrato che si apre e chiude.' },
   { key: 'shock', title: 'Onda', sub: 'SHOCK', desc: 'Un anello enorme sfocato.' },
+];
+
+export const ARMY_ENTRY_MODE_OPTIONS = [
+  { key: 'with', title: "Posa + armata", sub: 'INSIEME', desc: "La posa scelta e, sopra, l'ingresso dell'armata dell'agente." },
+  { key: 'replace', title: 'Solo armata', sub: 'ARMATA', desc: "Niente posa: l'agente compare con l'ingresso della sua armata." },
+  { key: 'off', title: 'Solo posa', sub: 'SPENTO', desc: "Solo la posa scelta, senza l'ingresso d'armata." },
 ];
 
 const DROP_SET = new Set(DROP_PLACE_FX);
@@ -73,7 +82,8 @@ function normalizePrefs(raw) {
   const click = isValidClickPlaceFx(raw?.click) ? raw.click : DEFAULT_PLACE_FX.click;
   const styleRaw = raw?.style === undefined ? DEFAULT_PLACE_FX.style : raw.style;
   const style = isValidPlaceFxStyle(styleRaw) ? styleRaw : DEFAULT_PLACE_FX.style;
-  return { drop, click, style };
+  const army = ARMY_ENTRY_MODES.includes(raw?.army) ? raw.army : DEFAULT_PLACE_FX.army;
+  return { drop, click, style, army };
 }
 
 export function getPlaceFxPreference() {
@@ -115,6 +125,10 @@ export function getClickPlaceFxMeta(key) {
 
 export function getPlaceFxStyleMeta(key) {
   return PLACE_FX_STYLE_OPTIONS.find((o) => String(o.key) === String(key)) ?? PLACE_FX_STYLE_OPTIONS[0];
+}
+
+export function getArmyEntryModeMeta(key) {
+  return ARMY_ENTRY_MODE_OPTIONS.find((o) => o.key === key) ?? ARMY_ENTRY_MODE_OPTIONS[0];
 }
 
 /** Resolve posa per via (click/drop) con fallback obbligatorio. */

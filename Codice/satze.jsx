@@ -11,7 +11,8 @@ import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
 import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
-import { applyPlaceHandoff, prefersReducedMotion } from '../src/components/battle/placeHandoff.js';
+import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS } from '../src/components/battle/placeHandoff.js';
+import { ArmyEntryFx } from '../src/components/fx/ArmyCardFx.jsx';
 import { getArmyAccent } from '../src/theme/duelAccents.js';
 import { FX_CATALOG, FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
@@ -2599,6 +2600,9 @@ export default function SatzeGame() {
   const [agentPlaceFxStyle, setAgentPlaceFxStyle] = useState(null);
   const [enemyPlaceFx, setEnemyPlaceFx] = useState('rise');
   const [enemyPlaceFxStyle, setEnemyPlaceFxStyle] = useState(null);
+  /** Ingresso d'armata (preferenze): 'with' insieme alla posa, 'replace' al posto della posa, 'off'. */
+  const [agentArmyEntry, setAgentArmyEntry] = useState({ mode: 'with', delayMs: 0 });
+  const [enemyArmyEntry, setEnemyArmyEntry] = useState('with');
   const prevEnemyAgentIdRef = useRef(null);
   /** Dorsi della partita (stessi dello shuffle): persistono dopo clear di shuffleDealSetup. */
   const [duelCardBacks, setDuelCardBacks] = useState({
@@ -2621,6 +2625,7 @@ export default function SatzeGame() {
       const prefs = getPlaceFxPreference();
       setEnemyPlaceFx(resolvePlaceFxForVia(isPlayerFirst ? 'click' : 'drop', prefs));
       setEnemyPlaceFxStyle(prefs.style);
+      setEnemyArmyEntry(prefs.army);
     }
     prevEnemyAgentIdRef.current = id;
   }, [enemyAgent?.id, isPlayerFirst]);
@@ -2680,6 +2685,8 @@ export default function SatzeGame() {
     const prefs = getPlaceFxPreference();
     setAgentPlaceFx(resolvePlaceFxForVia(via, prefs));
     setAgentPlaceFxStyle(prefs.style);
+    // dal click la carta vola dalla mano: l'ingresso d'armata parte all'arrivo
+    setAgentArmyEntry({ mode: prefs.army, delayMs: via === 'drop' ? 0 : CLICK_FLIGHT_MS });
     playGame(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT);
     setSelectedAgent(agent);
   }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
@@ -2698,6 +2705,10 @@ export default function SatzeGame() {
   
   const { handleDragStart, dropZoneRef, dragVisual, dragGhostRef } = dragAndDrop;
 
+  /** Posa effettiva: con «solo armata» niente posa, l'agente compare con l'ingresso d'armata. */
+  const agentPose = agentArmyEntry.mode === 'replace' ? 'none' : agentPlaceFx;
+  const enemyPose = enemyArmyEntry === 'replace' ? 'none' : enemyPlaceFx;
+
   // Ingresso in campo raccordato al gesto: dal punto di rilascio (drop) o con il volo dalla mano (click)
   useLayoutEffect(() => {
     const handoff = placeHandoffRef.current;
@@ -2705,7 +2716,7 @@ export default function SatzeGame() {
     if (!selectedAgent || !handoff || !wrap) return undefined;
     if (handoff.agentId !== selectedAgent.id || handoff.via === 'used') return undefined;
     placeHandoffRef.current = { ...handoff, via: 'used' };
-    return applyPlaceHandoff(wrap, handoff, agentPlaceFx, {
+    return applyPlaceHandoff(wrap, handoff, agentPose, {
       agentId: selectedAgent.id,
       agent: selectedAgent,
       sceneEl: wrap.closest('.satze-scene'),
@@ -2713,7 +2724,7 @@ export default function SatzeGame() {
     });
     // solo l'id: un nuovo oggetto per lo stesso agente non deve interrompere il raccordo
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAgent?.id, agentPlaceFx, agentPlaceFxStyle, launchCardFlight]);
+  }, [selectedAgent?.id, agentPose, agentPlaceFxStyle, launchCardFlight]);
   
   // Ref per auto-scroll log - Gestito internamente da LogPanel
 
@@ -6145,8 +6156,8 @@ export default function SatzeGame() {
         )}
           {showDeployedEnemyAgent && (
           <div className={`relative flex items-center justify-center flex-shrink-0${holdForConfirmedAgentPick ? ' pointer-events-auto' : ''}`} data-field-agent="enemy" style={{ transformStyle: 'flat', '--acc-en': getArmyAccent(enemyAgent, enemyIdentityColor), '--acc': getArmyAccent(enemyAgent, enemyIdentityColor) }}>
-            <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPlaceFx}-${enemyPlaceFxStyle || 'default'}`}>
-              <div className={`place-fx fx-${enemyPlaceFx}${placeFxStyleClass(enemyPlaceFxStyle)}`}>
+            <React.Fragment key={`enemy-place-${enemyAgent.id}-${enemyPose}-${enemyPlaceFxStyle || 'default'}`}>
+              <div className={`place-fx fx-${enemyPose}${placeFxStyleClass(enemyPlaceFxStyle)}`} style={enemyPose === 'none' ? { display: 'none' } : undefined}>
                 <div className="place-shadow" />
                 <div className="place-flash" />
                 <div className="place-ring" />
@@ -6159,23 +6170,25 @@ export default function SatzeGame() {
                 <div className="place-dust" />
               </div>
               <div
-                className={`place-card play-${enemyPlaceFx} relative flex items-center justify-center`}
-                style={needsTwoFaces(enemyPlaceFx) ? { width: 230, height: 330 } : undefined}
+                className={`place-card play-${enemyPose} relative flex items-center justify-center`}
+                style={needsTwoFaces(enemyPose) ? { width: 230, height: 330 } : undefined}
               >
-                {needsTwoFaces(enemyPlaceFx) ? (
+                {needsTwoFaces(enemyPose) ? (
                   <div className="place-flip-inner">
                     <div className="place-flip-face">
-                      <GameCard
-                        cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                        agent={displayEnemyAgent}
-                        showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
-                        bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
-                        effectiveArmyBonus={enemyEffectiveArmyBonus}
-                        effectiveAbility={resolveEffectiveAbility(displayEnemyAgent?.ability, false, displayEnemyAgent)}
-                        abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-                        onHover={handleEnemyPreviewClick}
-                        onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
-                      />
+                      <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0}>
+                        <GameCard
+                          cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                          agent={displayEnemyAgent}
+                          showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
+                          bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                          effectiveArmyBonus={enemyEffectiveArmyBonus}
+                          effectiveAbility={resolveEffectiveAbility(displayEnemyAgent?.ability, false, displayEnemyAgent)}
+                          abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                          onHover={handleEnemyPreviewClick}
+                          onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
+                        />
+                      </ArmyEntryFx>
                     </div>
                     <div className="place-flip-face back">
                       <CardBack
@@ -6188,17 +6201,19 @@ export default function SatzeGame() {
                     </div>
                   </div>
                 ) : (
-                  <GameCard
-                    cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                    agent={displayEnemyAgent}
-                    showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
-                    bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
-                    effectiveArmyBonus={enemyEffectiveArmyBonus}
-                    effectiveAbility={resolveEffectiveAbility(displayEnemyAgent?.ability, false, displayEnemyAgent)}
-                    abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
-                    onHover={handleEnemyPreviewClick}
-                    onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
-                  />
+                  <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0}>
+                    <GameCard
+                      cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                      agent={displayEnemyAgent}
+                      showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
+                      bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
+                      effectiveArmyBonus={enemyEffectiveArmyBonus}
+                      effectiveAbility={resolveEffectiveAbility(displayEnemyAgent?.ability, false, displayEnemyAgent)}
+                      abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                      onHover={handleEnemyPreviewClick}
+                      onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
+                    />
+                  </ArmyEntryFx>
                 )}
               </div>
             </React.Fragment>
@@ -6255,8 +6270,8 @@ export default function SatzeGame() {
             data-field-agent="player"
             style={{ transformStyle: 'flat', '--acc': getArmyAccent(selectedAgent, playerIdentityColor) }}
           >
-            <React.Fragment key={`place-${selectedAgent.id}-${agentPlaceFx}-${agentPlaceFxStyle || 'default'}`}>
-              <div className={`place-fx fx-${agentPlaceFx}${placeFxStyleClass(agentPlaceFxStyle)}`}>
+            <React.Fragment key={`place-${selectedAgent.id}-${agentPose}-${agentPlaceFxStyle || 'default'}`}>
+              <div className={`place-fx fx-${agentPose}${placeFxStyleClass(agentPlaceFxStyle)}`} style={agentPose === 'none' ? { display: 'none' } : undefined}>
                 <div className="place-shadow" />
                 <div className="place-flash" />
                 <div className="place-ring" />
@@ -6269,28 +6284,30 @@ export default function SatzeGame() {
                 <div className="place-dust" />
               </div>
               <div
-                className={`place-card play-${agentPlaceFx} relative flex items-center justify-center`}
-                style={needsTwoFaces(agentPlaceFx) ? { width: 230, height: 330 } : undefined}
+                className={`place-card play-${agentPose} relative flex items-center justify-center`}
+                style={needsTwoFaces(agentPose) ? { width: 230, height: 330 } : undefined}
               >
-                {needsTwoFaces(agentPlaceFx) ? (
+                {needsTwoFaces(agentPose) ? (
                   <div className="place-flip-inner">
                     <div className="place-flip-face">
-                      <GameCard
-                        cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                        agent={displaySelectedAgent}
-                        showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
-                        bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
-                        effectiveArmyBonus={playerEffectiveArmyBonus}
-                        effectiveAbility={resolveEffectiveAbility(displaySelectedAgent?.ability, true, displaySelectedAgent)}
-                        abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
-                        overdrivePreview={playerOverdrivePreview}
-                        onHover={handlePlayerPreviewClick}
-                        onClick={holdForConfirmedAgentPick
-                          ? () => tryPickEminenceCard(selectedAgent.id)
-                          : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
-                        onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
-                        isDragging={draggingCard?.id === selectedAgent?.id}
-                      />
+                      <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs}>
+                        <GameCard
+                          cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                          agent={displaySelectedAgent}
+                          showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
+                          bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                          effectiveArmyBonus={playerEffectiveArmyBonus}
+                          effectiveAbility={resolveEffectiveAbility(displaySelectedAgent?.ability, true, displaySelectedAgent)}
+                          abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+                          overdrivePreview={playerOverdrivePreview}
+                          onHover={handlePlayerPreviewClick}
+                          onClick={holdForConfirmedAgentPick
+                            ? () => tryPickEminenceCard(selectedAgent.id)
+                            : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                          onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
+                          isDragging={draggingCard?.id === selectedAgent?.id}
+                        />
+                      </ArmyEntryFx>
                     </div>
                     <div className="place-flip-face back">
                       <CardBack
@@ -6303,22 +6320,24 @@ export default function SatzeGame() {
                     </div>
                   </div>
                 ) : (
-                  <GameCard
-                    cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                    agent={displaySelectedAgent}
-                    showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
-                    bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
-                    effectiveArmyBonus={playerEffectiveArmyBonus}
-                    effectiveAbility={resolveEffectiveAbility(displaySelectedAgent?.ability, true, displaySelectedAgent)}
-                    abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
-                    overdrivePreview={playerOverdrivePreview}
-                    onHover={handlePlayerPreviewClick}
-                    onClick={holdForConfirmedAgentPick
-                      ? () => tryPickEminenceCard(selectedAgent.id)
-                      : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
-                    onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
-                    isDragging={draggingCard?.id === selectedAgent?.id}
-                  />
+                  <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs}>
+                    <GameCard
+                      cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+                      agent={displaySelectedAgent}
+                      showBonus={playerArmyBonuses[selectedAgent.army] && isBonusTriggerSatisfied(selectedAgent.army, true, selectedAgent)}
+                      bonusBaseInactive={Boolean(ARMY_BONUSES[selectedAgent.army]) && !playerArmyBonuses[selectedAgent.army]}
+                      effectiveArmyBonus={playerEffectiveArmyBonus}
+                      effectiveAbility={resolveEffectiveAbility(displaySelectedAgent?.ability, true, displaySelectedAgent)}
+                      abilityCurrentValue={getAbilityCurrentValue(selectedAgent, true)}
+                      overdrivePreview={playerOverdrivePreview}
+                      onHover={handlePlayerPreviewClick}
+                      onClick={holdForConfirmedAgentPick
+                        ? () => tryPickEminenceCard(selectedAgent.id)
+                        : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                      onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
+                      isDragging={draggingCard?.id === selectedAgent?.id}
+                    />
+                  </ArmyEntryFx>
                 )}
               </div>
             </React.Fragment>
