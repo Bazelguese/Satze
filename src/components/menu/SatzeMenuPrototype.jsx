@@ -506,6 +506,10 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
             style={{
               width: "100%",
               maxWidth: 420,
+              // elenchi lunghi: il pannello resta nello schermo e l'elenco scorre
+              maxHeight: "calc(100vh - 48px)",
+              display: "flex",
+              flexDirection: "column",
               background: "#0a0510",
               border: `2px solid ${choicePicker.accent}`,
               boxShadow: `0 0 40px ${choicePicker.accent}44, 0 16px 48px rgba(0,0,0,0.85)`,
@@ -538,7 +542,7 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
             >
               Scegli un’opzione
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", minHeight: 0, paddingRight: 4 }}>
               {choicePicker.options.map((opt, idx) => {
                 const line = [opt.sub, opt.meta].filter(Boolean).join(" · ");
                 return (

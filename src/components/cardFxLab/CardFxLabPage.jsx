@@ -5,6 +5,7 @@ import { ARMY_SETS } from '../../data/cards';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
 import { FX_ARMY_EFFECTS, FX_EFFECTS, FX_EFFECTS_BY_ID, FX_GENERIC_EFFECTS } from '../fx/effects/index.js';
+import { FX_LAB_PARAM } from '../fx/effects/catalog.js';
 
 /**
  * Lab ?cardFxLab=1 (o ?cardBurnLab=1) — demo delle animazioni su carte reali:
@@ -24,14 +25,27 @@ function agentOf(army, index = 0) {
   return card ? { ...card, army } : null;
 }
 
+/** Effetto richiesto dal menu (?fx=<id>), se valido. */
+function requestedEffectId() {
+  if (typeof window === 'undefined') return null;
+  const id = new URLSearchParams(window.location.search).get(FX_LAB_PARAM);
+  return id && FX_EFFECTS_BY_ID[id] ? id : null;
+}
+
+/** Armata iniziale: quella dell'effetto richiesto, se ha carte giocabili. */
+function initialArmy(fxId) {
+  const army = fxId ? FX_EFFECTS_BY_ID[fxId]?.army : null;
+  return army && ARMY_SETS[army] ? army : "Figli dell'Orizzonte";
+}
+
 function initialParams() {
   return Object.fromEntries(FX_EFFECTS.map((fx) => [fx.id, { ...fx.defaults }]));
 }
 
 export function CardFxLabPage({ onClose }) {
-  const [effectId, setEffectId] = React.useState(FX_EFFECTS[0].id);
+  const [effectId, setEffectId] = React.useState(() => requestedEffectId() || FX_EFFECTS[0].id);
   const [paramsById, setParamsById] = React.useState(initialParams);
-  const [army, setArmy] = React.useState("Figli dell'Orizzonte");
+  const [army, setArmy] = React.useState(() => initialArmy(requestedEffectId()));
   const [cardIndex, setCardIndex] = React.useState(0);
   const [useArmyColor, setUseArmyColor] = React.useState(true);
   const [customColor, setCustomColor] = React.useState('#8fdcff');

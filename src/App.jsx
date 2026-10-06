@@ -305,6 +305,7 @@ function AppContent() {
     const url = new URL(window.location.href);
     url.searchParams.delete('cardFxLab');
     url.searchParams.delete('cardBurnLab');
+    url.searchParams.delete('fx');
     window.location.href = url.toString();
   };
 
