@@ -26,6 +26,21 @@ import { khemetSigilloEffect } from './armies/khemetSigillo.js';
 import { apexEffect } from './armies/apex.js';
 import { mascaradaEffect } from './armies/mascarada.js';
 import { concordiaEffect } from './armies/concordia.js';
+import { figliNebulaEffect } from './armies/figliNebula.js';
+import { corteFiammataEffect } from './armies/corteFiammata.js';
+import { calibriCorazzaEffect } from './armies/calibriCorazza.js';
+import { enclaveTesoroEffect } from './armies/enclaveTesoro.js';
+import { rattiPozzaEffect } from './armies/rattiPozza.js';
+import { pattoRicucituraEffect } from './armies/pattoRicucitura.js';
+import { orathaiVarcoEffect } from './armies/orathaiVarco.js';
+import { orathaiCortecciaEffect } from './armies/orathaiCorteccia.js';
+import { mounthbornSciameEffect } from './armies/mounthbornSciame.js';
+import { mounthbornBrulicareEffect } from './armies/mounthbornBrulicare.js';
+import { mounthbornBoccaEffect } from './armies/mounthbornBocca.js';
+import { khemetEvocazioneEffect } from './armies/khemetEvocazione.js';
+import { apexGeloEffect } from './armies/apexGelo.js';
+import { mascaradaEntrataEffect } from './armies/mascaradaEntrata.js';
+import { concordiaDiscesaEffect } from './armies/concordiaDiscesa.js';
 
 export { burnEffect, dustEffect, shatterEffect, vortexEffect, materializeEffect };
 
@@ -43,19 +58,34 @@ export const FX_GENERIC_EFFECTS = [
 
 /** Effetti d'armata (campo `army` e `role`), in ordine di selezione armata. */
 export const FX_ARMY_EFFECTS = [
+  figliNebulaEffect,
   figliEffect,
   kethranEffect,
   kethranMutilazioneEffect,
+  corteFiammataEffect,
   corteContrattoEffect,
+  calibriCorazzaEffect,
   calibriEffect,
+  orathaiVarcoEffect,
+  orathaiCortecciaEffect,
   orathaiRoviEffect,
+  mounthbornSciameEffect,
+  mounthbornBrulicareEffect,
+  mounthbornBoccaEffect,
   mounthbornFameEffect,
+  enclaveTesoroEffect,
   enclaveEffect,
+  rattiPozzaEffect,
   rattiEffect,
+  pattoRicucituraEffect,
   pattoEffect,
+  khemetEvocazioneEffect,
   khemetSigilloEffect,
+  apexGeloEffect,
   apexEffect,
+  mascaradaEntrataEffect,
   mascaradaEffect,
+  concordiaDiscesaEffect,
   concordiaEffect,
 ];
 
@@ -68,7 +98,13 @@ export function armyDefeatFor(army) {
   return FX_ARMY_EFFECTS.find((fx) => fx.army === army && fx.role === 'defeat') || null;
 }
 
-/** Ingresso in campo dell'armata, o null se non c'è ancora. */
-export function armyEntryFor(army) {
-  return FX_ARMY_EFFECTS.find((fx) => fx.army === army && fx.role === 'entry') || null;
+/** Ingressi in campo dell'armata (alcune armate hanno più varianti da provare). */
+export function armyEntriesFor(army) {
+  return FX_ARMY_EFFECTS.filter((fx) => fx.army === army && fx.role === 'entry');
+}
+
+/** Ingresso in campo dell'armata: la variante `id` se è sua, altrimenti la prima; null se non c'è. */
+export function armyEntryFor(army, id = null) {
+  const list = armyEntriesFor(army);
+  return (id && list.find((fx) => fx.id === id)) || list[0] || null;
 }

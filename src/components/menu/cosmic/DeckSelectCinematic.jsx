@@ -43,6 +43,8 @@ import {
   DROP_PLACE_FX_OPTIONS,
   CLICK_PLACE_FX_OPTIONS,
   PLACE_FX_STYLE_OPTIONS,
+  ARMY_ENTRY_MODE_OPTIONS,
+  getArmyEntryModeMeta,
   getDropPlaceFxMeta,
   getClickPlaceFxMeta,
   getPlaceFxStyleMeta,
@@ -731,6 +733,15 @@ export default function DeckSelectCinematic({
                 }}
                 prevLabel="Stile effetti precedente"
                 nextLabel="Stile effetti successivo"
+              />
+              <PrefRow
+                label="ARMATA"
+                meta={getArmyEntryModeMeta(placeFx.army)}
+                rowKey={String(placeFx.army)}
+                onPrev={() => cycleOption(ARMY_ENTRY_MODE_OPTIONS, placeFx.army, -1, (key) => patchPlaceFx({ army: key }))}
+                onNext={() => cycleOption(ARMY_ENTRY_MODE_OPTIONS, placeFx.army, 1, (key) => patchPlaceFx({ army: key }))}
+                prevLabel="Ingresso d'armata: opzione precedente"
+                nextLabel="Ingresso d'armata: opzione successiva"
               />
             </div>
           </aside>

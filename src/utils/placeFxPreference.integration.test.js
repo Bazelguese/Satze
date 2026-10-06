@@ -30,17 +30,18 @@ describe('placeFxPreference', () => {
 
   it('default e persistenza', () => {
     expect(getPlaceFxPreference()).toEqual(DEFAULT_PLACE_FX);
-    setPlaceFxPreference({ drop: 'meteor', click: 'flip', style: 'thunder' });
+    setPlaceFxPreference({ drop: 'meteor', click: 'flip', style: 'thunder', army: 'replace' });
     expect(getPlaceFxPreference()).toEqual({
       drop: 'meteor',
       click: 'flip',
       style: 'thunder',
+      army: 'replace',
     });
     expect(localStorage.getItem(PLACE_FX_STORAGE_KEY)).toBeTruthy();
   });
 
   it('ignora valori non validi', () => {
-    setPlaceFxPreference({ drop: 'nope', click: 'also-nope', style: 'void' });
+    setPlaceFxPreference({ drop: 'nope', click: 'also-nope', style: 'void', army: 'boh' });
     expect(getPlaceFxPreference()).toEqual(DEFAULT_PLACE_FX);
   });
 

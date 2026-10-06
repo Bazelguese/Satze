@@ -20,6 +20,8 @@ import { captureElementToCanvas } from './captureElement.js';
  * - `params`: parametri dell'effetto (uniti ai default della definizione).
  * - `captureKey`: cambia quando cambia l'aspetto del contenuto (scarta la foto in cache).
  * - `precapture`: fa la foto in anticipo, a riposo, così l'effetto parte senza attesa.
+ * - `snapshotTimeoutMs`: se la foto tarda oltre questo tempo l'effetto si salta (entrata: il
+ *   contenuto compare subito). Utile in gioco, dove una carta nascosta troppo a lungo stona.
  */
 export function ElementFx({
   effect,
@@ -30,6 +32,7 @@ export function ElementFx({
   captureKey = null,
   precapture = false,
   pixelRatio,
+  snapshotTimeoutMs = 0,
   onStart,
   onComplete,
   className = '',
@@ -112,12 +115,23 @@ export function ElementFx({
       const node = contentRef.current;
       if (!node) return;
       let snap = null;
+      let late = false;
       try {
-        snap = await getSnapshot();
+        const pending = getSnapshot();
+        snap = snapshotTimeoutMs > 0 && !manual
+          ? await Promise.race([pending, new Promise((r) => setTimeout(() => { late = true; r(null); }, snapshotTimeoutMs))])
+          : await pending;
       } catch (err) {
         console.warn('[fx] foto fallita, ripiego su dissolvenza', err);
       }
       if (cancelled || runSeqRef.current !== id) return;
+      if (late && !snap) {
+        // foto troppo lenta: niente effetto (in entrata il contenuto compare così com'è)
+        callbacksRef.current.onStart?.();
+        setContentMode(effectRef.current.kind === 'in' ? 'none' : 'fade');
+        if (effectRef.current.kind === 'in') callbacksRef.current.onComplete?.();
+        return;
+      }
       if (!snap) {
         callbacksRef.current.onStart?.();
         setContentMode(effectRef.current.kind === 'in' ? 'none' : 'fade');
@@ -146,7 +160,7 @@ export function ElementFx({
       cancelled = true;
     };
     // `manual` ed `effect` cambiano la modalità: riparte da capo; progress si legge dal ref
-  }, [wantFx, manual, effect, getSnapshot]);
+  }, [wantFx, manual, effect, getSnapshot, snapshotTimeoutMs]);
 
   // ripiego senza foto/WebGL in uscita: dissolvenza della stessa durata
   React.useEffect(() => {
