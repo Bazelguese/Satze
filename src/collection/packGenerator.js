@@ -3,27 +3,48 @@
 // Funzioni pure: il generatore casuale `rng` (() => [0,1)) è sempre passato
 // da fuori, così le estrazioni sono riproducibili nei test e, in futuro,
 // eseguibili sul server.
+//
+// `skinCatalog` (Map id → 'eldritch' | 'arcana') elenca le carte che hanno
+// una faccia alternativa: lo costruisce chi chiama dai dati delle facce.
 // ============================================
 
 import { ARMY_SETS } from '../data/cards.js';
 import { shuffleArraySeeded } from '../utils/seededRandom.js';
 import {
   PACK_SIZE,
+  PACK_TYPES,
   COMMON_SLOT_WEIGHTS,
   RARE_SLOT_WEIGHTS,
+  SKIN_ODDS,
   STARTER_PACK_COUNT,
   DECK_SIZE,
   DECK_TOTAL_LEAGUE,
 } from './collectionConfig.js';
 
-/** Carte (con `army`) di un'armata, o dell'intero catalogo se `army` è nullo. */
-export function cardPool(army = null) {
+/**
+ * Carte (con `army`) del catalogo, filtrate per armata e/o Potere.
+ * @param {{ army?: string|null, trigger?: string|null }|string|null} filter
+ */
+export function cardPool(filter = null) {
+  const { army = null, trigger = null } = typeof filter === 'string' ? { army: filter } : (filter || {});
   const armies = army ? [army] : Object.keys(ARMY_SETS);
   return armies.flatMap((a) => {
     const set = ARMY_SETS[a];
     if (!set) throw new Error(`Armata sconosciuta: ${a}`);
-    return set.map((card) => ({ ...card, army: card.army || a }));
+    return set
+      .filter((card) => !trigger || card.ability?.trigger === trigger)
+      .map((card) => ({ ...card, army: card.army || a }));
   });
+}
+
+/** Poteri (trigger) presenti nel catalogo, con il numero di carte. */
+export function availableTriggers() {
+  const counts = new Map();
+  for (const card of cardPool()) {
+    const t = card.ability?.trigger;
+    if (t) counts.set(t, (counts.get(t) || 0) + 1);
+  }
+  return [...counts.entries()].map(([trigger, count]) => ({ trigger, count })).sort((a, b) => b.count - a.count);
 }
 
 /** Estrae una Lega secondo i pesi. */
@@ -56,21 +77,43 @@ function pickCard(pool, league, taken, rng) {
   return null;
 }
 
+/** Skin con cui esce una carta: faccia alternativa se esiste, poi foil. */
+export function rollSkin(card, rng, skinCatalog = new Map()) {
+  const alt = skinCatalog.get(card.id);
+  if (alt && rng() < SKIN_ODDS.alt) return alt;
+  if (rng() < SKIN_ODDS.foil) return 'foil';
+  return 'standard';
+}
+
 /**
- * Genera una bustina: PACK_SIZE carte distinte, l'ultima dallo slot raro.
- * @param {{ army?: string|null }} opts - armata per la bustina d'armata, null per la mista
+ * Genera una bustina: carte distinte, gli ultimi slot dalla tabella rara.
+ * @param {string} type - chiave di PACK_TYPES
+ * @param {{ army?: string, trigger?: string }} params
  * @param {() => number} rng
+ * @param {Map<number,string>} [skinCatalog]
+ * @returns {Array<Object>} carte con `skin`
  */
-export function generatePack({ army = null } = {}, rng) {
-  const pool = cardPool(army);
+export function generatePack(type, params = {}, rng, skinCatalog = new Map()) {
+  const def = PACK_TYPES[type];
+  if (!def) throw new Error(`Tipo di bustina sconosciuto: ${type}`);
+  const size = def.size ?? PACK_SIZE;
+  const rareSlots = def.rareSlots ?? 1;
+  const common = def.commonWeights ?? COMMON_SLOT_WEIGHTS;
+  const rare = def.rareWeights ?? RARE_SLOT_WEIGHTS;
+  const pool = cardPool({
+    army: def.param === 'army' ? params.army : null,
+    trigger: def.param === 'trigger' ? params.trigger : null,
+  });
+  if (!pool.length) throw new Error('Nessuna carta disponibile per questa bustina');
+
   const taken = new Set();
   const cards = [];
-  for (let slot = 0; slot < PACK_SIZE; slot++) {
-    const weights = slot === PACK_SIZE - 1 ? RARE_SLOT_WEIGHTS : COMMON_SLOT_WEIGHTS;
+  for (let slot = 0; slot < size; slot++) {
+    const weights = slot >= size - rareSlots ? rare : common;
     const card = pickCard(pool, rollLeague(weights, rng), taken, rng);
     if (!card) break;
     taken.add(card.id);
-    cards.push(card);
+    cards.push({ ...card, skin: rollSkin(card, rng, skinCatalog) });
   }
   return cards;
 }
@@ -100,6 +143,7 @@ export function findValidDeck(pool, rng) {
 /**
  * Bustine iniziali dell'armata scelta: tutte carte distinte e, insieme,
  * contengono almeno un mazzo valido (DECK_SIZE carte, Lega DECK_TOTAL_LEAGUE).
+ * Le carte iniziali escono sempre con la faccia standard.
  * @returns {Array<Array<Object>>} STARTER_PACK_COUNT bustine
  */
 export function generateStarterPacks(army, rng) {
@@ -117,7 +161,7 @@ export function generateStarterPacks(army, rng) {
     extras.push(card);
   }
 
-  const all = shuffleArraySeeded([...core, ...extras], rng);
+  const all = shuffleArraySeeded([...core, ...extras], rng).map((c) => ({ ...c, skin: 'standard' }));
   const packs = [];
   for (let i = 0; i < STARTER_PACK_COUNT; i++) {
     packs.push(all.slice(i * PACK_SIZE, (i + 1) * PACK_SIZE).sort((a, b) => a.league - b.league));
