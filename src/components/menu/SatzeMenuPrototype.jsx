@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { MENU_ACCENTS,
-  BRAND_LOGO_SRC,
-  BRAND_LOGO_WIDTH,
-  BRAND_LOGO_HEIGHT,
   injectSatzeUiFonts,
 } from "../../theme/hudOratorioPalette";
+import AnimatedSatzeLogo from "../brand/AnimatedSatzeLogo";
 import { CosmicMenuOverlay } from "./CosmicMenuOverlay";
 import { MenuAgentRain } from "./MenuAgentRain";
 import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
@@ -390,43 +388,12 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
           pointerEvents: "none",
         }}
       >
-        <div
-          style={{
-            animation: "satze-v5-float-y 5s ease-in-out infinite",
-            filter:
-              "drop-shadow(0 0 36px rgba(192,38,211,0.55)) drop-shadow(0 12px 28px rgba(0,0,0,0.75))",
-          }}
-        >
-          <div className="satze-brand-logo-wrap">
-            <div className="satze-brand-logo-inner-static">
-              <div className="satze-brand-logo-glare-host">
-                <img
-                  src={BRAND_LOGO_SRC}
-                  alt="SATZE"
-                  width={BRAND_LOGO_WIDTH}
-                  height={BRAND_LOGO_HEIGHT}
-                  decoding="async"
-                  className="satze-brand-logo"
-                  style={{
-                    width: "min(720px, 58vw)",
-                    height: "auto",
-                    display: "block",
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                />
-                <div
-                  className="satze-brand-logo-glare-layer"
-                  aria-hidden
-                  style={{
-                    WebkitMaskImage: `url(${BRAND_LOGO_SRC})`,
-                    maskImage: `url(${BRAND_LOGO_SRC})`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <AnimatedSatzeLogo
+          reducedMotion={vfxProfile.quality === "low"}
+          paused={Boolean(choicePicker)}
+          strength={vfxProfile.quality === "medium" ? 0.7 : 1}
+          style={{ width: "min(720px, 58vw)", pointerEvents: "none" }}
+        />
         <div
           style={{
             fontFamily: "'Share Tech Mono', monospace",
@@ -705,3 +672,4 @@ export default function SatzeMenuPrototype({ menuItems, marqueeText }) {
     </div>
   );
 }
+
