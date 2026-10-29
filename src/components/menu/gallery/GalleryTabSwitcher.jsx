@@ -1,6 +1,16 @@
 /**
- * Tab Agenti / Alternative / Eminenze / Campi — controllo segmentato (barra mode galleria).
+ * Tab Agenti / Alternative / Eminenze / Campi — schegge inclinate stile Persona
+ * con i tasti Q / E ai lati (gestiti da GalleryPersonaShell).
  */
+export const GALLERY_TAB_ORDER = ['agents', 'alternative', 'eminences', 'battlefields'];
+
+const TAB_LABEL = {
+  agents: 'AGENTI',
+  alternative: 'ALTERNATIVE',
+  eminences: 'EMINENZE',
+  battlefields: 'CAMPI',
+};
+
 export function GalleryTabSwitcher({
   activeTab,
   onTabChange,
@@ -9,16 +19,20 @@ export function GalleryTabSwitcher({
   fieldCount,
   eminenceCount,
 }) {
-  const tabs = [
-    { id: 'agents', label: 'AGENTI', count: agentCount },
-    { id: 'alternative', label: 'ALTERNATIVE', count: alternativeCount },
-    { id: 'eminences', label: 'EMINENZE', count: eminenceCount },
-    { id: 'battlefields', label: 'CAMPI', count: fieldCount },
-  ].filter((tab) => tab.count != null);
+  const counts = {
+    agents: agentCount,
+    alternative: alternativeCount,
+    eminences: eminenceCount,
+    battlefields: fieldCount,
+  };
+  const tabs = GALLERY_TAB_ORDER
+    .filter((id) => counts[id] != null)
+    .map((id) => ({ id, label: TAB_LABEL[id], count: counts[id] }));
 
   return (
     <div className="gallery-mode-switch" role="tablist" aria-label="Sezione galleria">
-      {tabs.map((tab) => {
+      <kbd className="gms-key">Q</kbd>
+      {tabs.map((tab, i) => {
         const active = activeTab === tab.id;
         return (
           <button
@@ -26,51 +40,55 @@ export function GalleryTabSwitcher({
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => { if (!active) onTabChange(tab.id); }}
             className={`gallery-mode-switch-btn ${active ? 'on' : ''}`}
+            style={{ '--tilt': `${[-2, 1.5, -1, 2][i % 4]}deg` }}
           >
-            <span className="lbl">{tab.label}</span>
-            <span className="cnt">{tab.count}</span>
+            <span className="in">
+              <span className="lbl">{tab.label}</span>
+              <span className="cnt">{tab.count}</span>
+            </span>
           </button>
         );
       })}
+      <kbd className="gms-key">E</kbd>
       <style>{`
         .gallery-mode-switch {
-          display: inline-flex; align-items: stretch;
-          gap: 0; padding: 3px;
-          background: rgba(3,4,6,0.92);
-          border: 1.5px solid rgba(245,243,236,0.2);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+          justify-self: center; display: inline-flex; align-items: center; gap: 4px;
+        }
+        .gallery-mode-switch .gms-key {
+          display: inline-grid; place-items: center; width: 28px; height: 26px;
+          background: #f5f3eb; color: #050507;
+          font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 14px;
+          clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+          margin: 0 8px;
         }
         .gallery-mode-switch-btn {
-          display: inline-flex; flex-direction: row; align-items: baseline; justify-content: center;
-          gap: 7px; min-width: 88px; padding: 7px 10px;
-          background: transparent; border: none; cursor: pointer;
-          font-family: 'Share Tech Mono', monospace;
-          color: rgba(245,243,236,0.48);
-          transition: background 0.18s, color 0.18s, box-shadow 0.18s;
-          clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+          border: 0; padding: 0; background: transparent; cursor: pointer;
+          transform: skewX(-16deg) rotate(var(--tilt));
+          transition: transform .18s cubic-bezier(.3,1.6,.5,1);
         }
-        .gallery-mode-switch-btn + .gallery-mode-switch-btn {
-          border-left: 1px solid rgba(255,255,255,0.1);
+        .gallery-mode-switch-btn .in {
+          display: inline-flex; align-items: baseline; gap: 8px;
+          padding: 9px 20px 8px;
+          background: #050507; color: rgba(245,243,235,0.62);
+          font-family: 'Chakra Petch', sans-serif;
+          transition: background .15s, color .15s, box-shadow .15s;
         }
-        .gallery-mode-switch-btn .lbl {
-          font-family: 'Cinzel', serif; font-weight: 700;
-          font-size: 11px; letter-spacing: 0.18em;
-        }
-        .gallery-mode-switch-btn .cnt {
-          font-size: 9px; letter-spacing: 0.12em; opacity: 0.75;
-        }
-        .gallery-mode-switch-btn:hover:not(.on) {
-          background: rgba(255,255,255,0.05);
-          color: rgba(245,243,236,0.88);
-        }
+        .gallery-mode-switch-btn .in > * { transform: skewX(16deg); display: inline-block; }
+        .gallery-mode-switch-btn .lbl { font-weight: 700; font-size: 19px; letter-spacing: 0.04em; font-style: italic; }
+        .gallery-mode-switch-btn .cnt { font-family: 'Share Tech Mono', monospace; font-size: 12px; opacity: 0.7; }
+        .gallery-mode-switch-btn:hover:not(.on) { transform: skewX(-16deg) rotate(var(--tilt)) translateY(-3px); }
+        .gallery-mode-switch-btn:hover:not(.on) .in { color: #f5f3eb; }
         .gallery-mode-switch-btn.on {
-          background: rgba(245,243,236,0.12);
-          color: #f5f3eb;
-          box-shadow: inset 0 0 0 1px rgba(245,243,236,0.28), 0 0 16px rgba(245,243,236,0.06);
+          transform: skewX(-16deg) rotate(calc(var(--tilt) * -1.5)) scale(1.16);
+          z-index: 2; margin: 0 12px;
         }
-        .gallery-mode-switch-btn.on .lbl { text-shadow: 0 0 14px rgba(245,243,236,0.3); }
+        .gallery-mode-switch-btn.on .in {
+          background: #f5f3eb; color: #050507;
+          box-shadow: 6px 6px 0 var(--accent, #c026d3);
+        }
+        .gallery-mode-switch-btn.on .cnt { opacity: 0.75; }
       `}</style>
     </div>
   );

@@ -1,7 +1,7 @@
-// Galleria Eminenze — griglia consultabile con cornice Arena (EminenceTarotCard).
+// Galleria Eminenze — Compendium stile Persona: elenco delle Eminenze a sinistra,
+// carta Arena (EminenceTarotCard) con ingresso reale + ritratto e abilità a destra.
 
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ARMY_COLORS } from '../../../data/armies.js';
+import React, { useLayoutEffect, useMemo, useState } from 'react';
 import { EMINENCES, EMINENCE_IDS_BY_ARMY_ORDER } from '../../../data/eminences.js';
 import { getEminenceArtUrl } from '../../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../../data/eminenceArtFrames.js';
@@ -11,32 +11,26 @@ import {
   useEminenzaEntry,
 } from '../../../lib/eminenzaEntry.js';
 import { EminenceTarotCard } from '../../eminenceLab/EminenceTarotCard.jsx';
-import GalleryTabSwitcher from './GalleryTabSwitcher.jsx';
+import {
+  GalleryPersonaShell,
+  PersonaList,
+  PersonaNamePlate,
+  PersonaStatBurst,
+  armyAccent,
+  armyBgUrl,
+  armyGlyph,
+  armyMotto,
+  wrapIndex,
+} from './GalleryPersonaShell.jsx';
 import '../../eminenceLab/eminenceArtLab.css';
 
-const TILE_WIDTH = 168;
 const CARD_NATIVE_W = 340;
 const CARD_NATIVE_H = 588;
-const TILE_SCALE = TILE_WIDTH / CARD_NATIVE_W;
-const TILE_PAD_X = 22;
-const TILE_PAD_Y = 18;
-const GRID_COLUMNS = 4;
-const GRID_GAP_X = 28;
-const GRID_GAP_Y = 36;
-const GRID_COL_WIDTH = TILE_WIDTH + TILE_PAD_X * 2;
-const LIGHTBOX_SCALE = 0.92;
-const LIGHTBOX_CARD_W = Math.round(CARD_NATIVE_W * LIGHTBOX_SCALE);
-const LIGHTBOX_CARD_H = Math.round(CARD_NATIVE_H * LIGHTBOX_SCALE);
+const STAGE_SCALE = 0.84;
+const STAGE_CARD_W = Math.round(CARD_NATIVE_W * STAGE_SCALE);
+const STAGE_CARD_H = Math.round(CARD_NATIVE_H * STAGE_SCALE);
 
 const ALL_EMINENCES = EMINENCE_IDS_BY_ARMY_ORDER.map((id) => EMINENCES[id]);
-
-function armyList(items) {
-  const seen = [];
-  items.forEach((e) => {
-    if (!seen.includes(e.army)) seen.push(e.army);
-  });
-  return seen;
-}
 
 function formatDelta(delta) {
   if (delta > 0) return `+${delta}`;
@@ -53,151 +47,63 @@ export default function EminenceGallery({
   fieldCount,
   eminenceCount = ALL_EMINENCES.length,
 }) {
-  const ARMIES = useMemo(() => armyList(ALL_EMINENCES), []);
-  const [filter, setFilter] = useState("Figli dell'Orizzonte");
-  const [active, setActive] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const total = ALL_EMINENCES.length;
+  const eminence = ALL_EMINENCES[activeIndex] || null;
+  const accent = armyAccent(eminence?.army, '#f5f3eb');
 
-  const shown = useMemo(
-    () => ALL_EMINENCES.filter((e) => e.army === filter),
-    [filter],
-  );
-  const headAccent = (ARMY_COLORS[filter] || {}).accent || '#f5f3eb';
+  const listItems = useMemo(() => ALL_EMINENCES.map((e, i) => ({
+    key: e.id,
+    number: String(i + 1).padStart(2, '0'),
+    title: e.name,
+    sub: e.army,
+    meta: `P${e.initialPresence ?? 0}`,
+    accent: armyAccent(e.army),
+    glyph: armyGlyph(e.army),
+  })), []);
 
-  useEffect(() => {
-    if (!active) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setActive(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [active]);
+  const prev = () => setActiveIndex((i) => wrapIndex(i, -1, total));
+  const next = () => setActiveIndex((i) => wrapIndex(i, 1, total));
 
   return (
-    <div className="egl" style={{ '--accent': headAccent }}>
-      <div className="egl-bg">
-        <div className="egl-bg-glow" />
-        <div className="egl-stars" />
-        <div className="egl-diag" />
-      </div>
-
-      <div className="egl-shell">
-        <header className="egl-mode-bar">
-          <button type="button" className="egl-back" onClick={onBack}>
-            <span className="ar">←</span>
-            <span className="lbl">MENU</span>
-          </button>
-          {onGalleryTabChange && (
-            <GalleryTabSwitcher
-              activeTab={galleryTab}
-              onTabChange={onGalleryTabChange}
-              agentCount={agentCount}
-              alternativeCount={alternativeCount}
-              fieldCount={fieldCount}
-              eminenceCount={eminenceCount}
-            />
-          )}
-          <div className="egl-counter">
-            <div className="ft-lbl">MOSTRATE</div>
-            <div className="ft-name">
-              {String(shown.length).padStart(2, '0')}
-              <span className="sep">/</span>
-              {totalCards}
-            </div>
-          </div>
-        </header>
-
-        <div className="egl-head">
-          <div className="egl-eyebrow">ARCHIVIO DI GUERRA</div>
-          <h1 className="egl-title">GALLERIA DELLE EMINENZE</h1>
-        </div>
-
-        <div className="egl-filters">
-          {ARMIES.map((a) => (
-            <button
-              key={a}
-              type="button"
-              className={`egl-chip ${filter === a ? 'on' : ''}`}
-              style={{ '--c': (ARMY_COLORS[a] || {}).accent || '#94a3b8' }}
-              onClick={() => setFilter(a)}
-            >
-              <span className="dot" />
-              <span>{a}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="egl-grid" aria-hidden={active ? true : undefined}>
-          {!active && shown.map((eminence) => (
-            <EminenceTile
-              key={eminence.id}
-              eminence={eminence}
-              accent={(ARMY_COLORS[eminence.army] || {}).accent || '#94a3b8'}
-              onClick={() => setActive(eminence)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {active && <Lightbox eminence={active} onClose={() => setActive(null)} />}
-
-      <div className="egl-scanlines" />
+    <>
+      <GalleryPersonaShell
+        accent={accent}
+        section="EMINENZE"
+        eyebrow="ARCHIVIO DI GUERRA"
+        title={eminence?.army}
+        motto={armyMotto(eminence?.army)}
+        watermark="EMINENZE"
+        bgImage={armyBgUrl(eminence?.army)}
+        counterLabel={`${totalCards} EMINENZE`}
+        counterCurrent={activeIndex + 1}
+        counterTotal={total}
+        onBack={onBack}
+        galleryTab={galleryTab}
+        onGalleryTabChange={onGalleryTabChange}
+        agentCount={agentCount}
+        alternativeCount={alternativeCount}
+        fieldCount={fieldCount}
+        eminenceCount={eminenceCount}
+        onPrev={prev}
+        onNext={next}
+        onRailPrev={prev}
+        onRailNext={next}
+        hints={[
+          { keys: ['↑', '↓'], label: 'EMINENZA' },
+          { keys: ['Q', 'E'], label: 'SEZIONE' },
+          { keys: ['ESC'], label: 'MENU' },
+        ]}
+        list={<PersonaList items={listItems} activeIndex={activeIndex} onSelect={setActiveIndex} />}
+        stage={eminence && <EminenceStage key={eminence.id} eminence={eminence} />}
+      />
       <EminenceGalleryStyles />
-    </div>
+    </>
   );
 }
 
-function EminenceTile({ eminence, accent, onClick }) {
-  const artUrl = getEminenceArtUrl(eminence);
-  const frame = getEminenceArtFrame(eminence.id);
-  const staticText = eminence.static?.name || eminence.static?.text || '';
-
-  return (
-    <button
-      type="button"
-      className="egl-tile"
-      style={{ '--accent': accent }}
-      onClick={onClick}
-      aria-label={eminence.name}
-    >
-      <div
-        className="egl-tile-scale"
-        style={{
-          width: TILE_WIDTH,
-          height: Math.round(CARD_NATIVE_H * TILE_SCALE),
-        }}
-      >
-        <div
-          className="egl-tile-card"
-          style={{
-            width: CARD_NATIVE_W,
-            height: CARD_NATIVE_H,
-            transform: `scale(${TILE_SCALE})`,
-          }}
-        >
-          <EminenceTarotCard
-            name={eminence.name}
-            army={eminence.army}
-            staticText={staticText}
-            presence={eminence.initialPresence ?? 0}
-            artUrl={artUrl}
-            accent={accent}
-            life="flat"
-            intensity={0.85}
-            tiltEnabled={false}
-            artX={frame.artX}
-            artY={frame.artY}
-            artZoom={frame.zoom}
-            artFocusX={frame.focusX}
-            artFocusY={frame.focusY}
-          />
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function Lightbox({ eminence, onClose }) {
-  const accent = (ARMY_COLORS[eminence.army] || {}).accent || '#94a3b8';
+function EminenceStage({ eminence }) {
+  const accent = armyAccent(eminence.army);
   const artUrl = getEminenceArtUrl(eminence);
   const frame = getEminenceArtFrame(eminence.id);
   const staticText = eminence.static?.text || eminence.static?.name || '';
@@ -220,37 +126,53 @@ function Lightbox({ eminence, onClose }) {
   const holdHidden = !entryRevealed && !cardArmClass;
 
   return (
-    <div className="egl-lb" onClick={onClose}>
-      <div className="egl-lb-inner" style={{ '--accent': accent }} onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="egl-lb-close" onClick={onClose} aria-label="Chiudi">
-          ✕
-        </button>
+    <div className="egp-stage" style={{ '--accent': accent }}>
+      <div className="egp-portrait" aria-hidden="true">
+        <img src={artUrl} alt="" decoding="async" />
+        <div className="egp-portrait-tone" />
+      </div>
 
-        <div className="egl-lb-card-wrap">
-          <div
-            className="egl-lb-card-scale"
-            style={{ width: LIGHTBOX_CARD_W, height: LIGHTBOX_CARD_H }}
-          >
+      <div className="egp-head gp-anim-swipe">
+        <PersonaNamePlate
+          number="EMINENZA"
+          name={eminence.name}
+          sub={eminence.army}
+        />
+      </div>
+
+      <div className="egp-badges gp-anim-swipe d1">
+        <PersonaStatBurst label="PRESENZA" value={eminence.initialPresence ?? 0} tone="accent" />
+        <div className="egp-flags">
+          {eminence.implemented ? (
+            <span className="egp-flag egp-flag--ok">Giocabile</span>
+          ) : (
+            <span className="egp-flag egp-flag--mute">Effetti in corso</span>
+          )}
+          {eminence.nameProvisional && <span className="egp-flag egp-flag--warn">Nome provvisorio</span>}
+          {eminence.initialPresenceProvisional && <span className="egp-flag egp-flag--warn">Presenza provvisoria</span>}
+        </div>
+      </div>
+
+      <div className="egp-card-slot">
+        <div className="egp-card-tilt">
+          <div className="egp-card-back" aria-hidden="true" />
+          <div style={{ width: STAGE_CARD_W, height: STAGE_CARD_H, position: 'relative' }}>
             <div
-              className="egl-lb-card-native"
               style={{
+                position: 'relative',
                 width: CARD_NATIVE_W,
                 height: CARD_NATIVE_H,
-                transform: `scale(${LIGHTBOX_SCALE})`,
+                transform: `scale(${STAGE_SCALE})`,
                 transformOrigin: 'top left',
               }}
             >
               <div
-                className="em-card-shell egl-lb-entry-shell"
-                style={{
-                  position: 'relative',
-                  width: CARD_NATIVE_W,
-                  height: CARD_NATIVE_H,
-                }}
+                className="em-card-shell egp-entry-shell"
+                style={{ position: 'relative', width: CARD_NATIVE_W, height: CARD_NATIVE_H }}
               >
                 <div
                   ref={cardRef}
-                  className={['em-card', 'egl-lb-em-card', cardArmClass].filter(Boolean).join(' ')}
+                  className={['em-card', 'egp-em-card', cardArmClass].filter(Boolean).join(' ')}
                   style={{
                     position: 'relative',
                     zIndex: 1,
@@ -264,7 +186,6 @@ function Lightbox({ eminence, onClose }) {
                   }}
                 >
                   <EminenceTarotCard
-                    className="egl-lb-tarot"
                     name={eminence.name}
                     army={eminence.army}
                     staticText={eminence.static?.name || ''}
@@ -292,52 +213,27 @@ function Lightbox({ eminence, onClose }) {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="egl-lb-details">
-          <div className="egl-lb-meta">
-            <span className="egl-lb-badge">Eminenza</span>
-            {eminence.nameProvisional ? (
-              <span className="egl-lb-badge egl-lb-badge--warn">Nome provvisorio</span>
-            ) : null}
-            {!eminence.implemented ? (
-              <span className="egl-lb-badge egl-lb-badge--mute">Dati galleria · effetti in corso</span>
-            ) : (
-              <span className="egl-lb-badge egl-lb-badge--ok">Giocabile</span>
-            )}
-            <span className="egl-lb-presence">
-              Presenza iniziale <strong>{eminence.initialPresence ?? 0}</strong>
-              {eminence.initialPresenceProvisional ? ' (provvisoria)' : ''}
-            </span>
+      <div className="egp-info">
+        <div className="gp-panel gp-panel--light gp-anim-swipe d1">
+          <div className="gp-panel-label">
+            STATICO{eminence.static?.name ? ` · ${eminence.static.name.toUpperCase()}` : ''}
           </div>
-
-          {staticText ? (
-            <p className="egl-lb-static">
-              <span className="egl-lb-label">
-                Statico{eminence.static?.name ? ` — ${eminence.static.name}` : ''}:{' '}
-              </span>
-              {staticText}
-            </p>
-          ) : (
-            <p className="egl-lb-static egl-lb-static--empty">Nessuno statico.</p>
-          )}
-
-          <ul className="egl-lb-abilities">
-            {eminence.abilities.map((ability) => (
-              <li key={ability.id}>
-                <span className="egl-lb-cost">{formatDelta(ability.presenceDelta)}</span>
-                <div>
-                  <div className="egl-lb-ability-name">
-                    {ability.name || ability.id}
-                    {ability.nameProvisional ? ' · nome provvisorio' : ''}
-                  </div>
-                  <p className="egl-lb-ability-text">{ability.text}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <p className="egp-static">{staticText || 'Nessuno statico.'}</p>
         </div>
-
-        <p className="egl-lb-hint">Clicca fuori o premi Esc per chiudere</p>
+        {eminence.abilities.map((ability, i) => (
+          <div key={ability.id} className={`gp-panel egp-ability gp-anim-swipe d${Math.min(3, i + 2)}`}>
+            <span className={`egp-cost ${ability.presenceDelta < 0 ? 'neg' : ''}`}>{formatDelta(ability.presenceDelta)}</span>
+            <div>
+              <div className="egp-ability-name">
+                {ability.name || ability.id}
+                {ability.nameProvisional ? <span className="egp-prov"> · nome provvisorio</span> : null}
+              </div>
+              <p className="egp-ability-text">{ability.text}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -346,226 +242,80 @@ function Lightbox({ eminence, onClose }) {
 function EminenceGalleryStyles() {
   return (
     <style>{`
-      .egl {
+      .egp-stage { position: absolute; inset: 0; }
+
+      .egp-portrait {
+        position: absolute; top: 0; bottom: 0; left: 250px; right: -40px; overflow: hidden;
+        clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%);
+        animation: gp-portrait-in .5s cubic-bezier(.2,1,.3,1) both;
+      }
+      .egp-portrait img {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; object-position: 50% 25%;
+      }
+      .egp-portrait::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, #000) 1.3px, transparent 1.8px) 0 0 / 8px 8px;
+        -webkit-mask-image: linear-gradient(160deg, transparent 45%, #000 85%);
+        mask-image: linear-gradient(160deg, transparent 45%, #000 85%);
+        opacity: 0.7;
+      }
+      .egp-portrait-tone {
         position: absolute; inset: 0;
-        background: #050608; color: #f5f3eb;
-        font-family: 'Chakra Petch', sans-serif;
-        overflow: hidden; isolation: isolate; z-index: 2;
-        display: flex; flex-direction: column;
-      }
-      .egl * { box-sizing: border-box; }
-      .egl-shell {
-        position: relative; z-index: 4;
-        display: flex; flex-direction: column;
-        flex: 1; min-height: 0; overflow: hidden;
-      }
-      .egl-bg { position: absolute; inset: 0; z-index: 0; }
-      .egl-bg-glow {
-        position: absolute; inset: 0;
-        background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 10%, #16161a) 0%, #0b0b0c 62%);
-        transition: background .5s;
-      }
-      .egl-stars {
-        position: absolute; inset: 0; opacity: 0.4;
-        background-image:
-          radial-gradient(1px 1px at 18% 22%, #fff 0%, transparent 100%),
-          radial-gradient(1px 1px at 64% 14%, rgba(255,255,255,0.6), transparent 100%),
-          radial-gradient(1.5px 1.5px at 88% 38%, #fff 0%, transparent 100%),
-          radial-gradient(1px 1px at 12% 78%, rgba(255,255,255,0.5), transparent 100%),
-          radial-gradient(1.5px 1.5px at 38% 92%, rgba(255,255,255,0.7), transparent 100%);
-      }
-      .egl-diag {
-        position: absolute; inset: 0; opacity: 0.035;
-        background-image: repeating-linear-gradient(115deg, var(--accent) 0 1px, transparent 1px 22px);
-        pointer-events: none;
-      }
-      .egl-scanlines {
-        position: absolute; inset: 0; z-index: 3; pointer-events: none;
-        background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.035) 2px 3px);
-        opacity: 0.35;
+        background:
+          linear-gradient(to right, rgba(5,5,7,0.85) 0%, rgba(5,5,7,0.1) 40%, transparent 60%),
+          linear-gradient(to top, rgba(5,5,7,0.96) 0%, rgba(5,5,7,0.55) 45%, transparent 70%);
       }
 
-      .egl-mode-bar {
-        flex: none; z-index: 12;
-        padding: 14px 48px 0;
-        display: grid; grid-template-columns: 180px 1fr 180px; align-items: center; gap: 16px;
+      .egp-head { position: absolute; top: 4px; right: 0; z-index: 5; max-width: 820px; display: flex; justify-content: flex-end; }
+
+      .egp-badges {
+        position: absolute; top: 150px; left: 400px; z-index: 7;
+        display: flex; align-items: center; gap: 14px; transform: rotate(-6deg);
       }
-      .egl-mode-bar .gallery-mode-switch { justify-self: center; }
-      .egl-head {
-        flex: none; z-index: 10;
-        text-align: center; padding: 8px 48px 4px; pointer-events: none;
+      .egp-badges .gp-burst { width: 128px; height: 128px; }
+      .egp-flags { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+      .egp-flag {
+        font-weight: 700; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+        padding: 3px 12px; transform: skewX(-14deg); background: #050507; color: #f5f3eb;
       }
-      .egl-back {
-        display: inline-flex; align-items: center; gap: 10px; justify-self: start;
-        background: rgba(5,6,8,0.65); border: 1.5px solid rgba(245,243,236,0.3);
-        color: #f5f3eb; font-family: 'Share Tech Mono', monospace;
-        font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
-        padding: 11px 18px; cursor: pointer; transition: all .2s;
+      .egp-flag--ok { background: var(--accent); color: #050507; }
+      .egp-flag--warn { background: #fbbf24; color: #050507; }
+      .egp-flag--mute { background: #2a2a32; color: #cbd5e1; }
+
+      .egp-card-slot { position: absolute; left: 10px; top: 60px; z-index: 6; }
+      .egp-card-tilt { position: relative; transform: rotate(-4deg); }
+      /* Ombra piena a parte: un filter sul contenitore spegne i blend della carta Arena. */
+      .egp-card-back {
+        position: absolute; inset: 0; transform: translate(14px, 14px);
+        background: #050507; border-radius: 0 0 12px 12px;
+        box-shadow: 0 0 50px color-mix(in srgb, var(--accent) 40%, transparent);
+      }
+      .egp-entry-shell { overflow: visible; }
+      .egp-em-card { background: transparent; perspective: 900px; transform-style: preserve-3d; }
+      .egp-em-card .eminence-tarot {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        --et-w: ${CARD_NATIVE_W}px; --et-h: ${CARD_NATIVE_H}px;
+      }
+
+      .egp-info {
+        position: absolute; left: 400px; right: 0; bottom: 0; z-index: 5;
+        display: flex; flex-direction: column; gap: 10px;
+        max-height: 480px; overflow-y: auto; scrollbar-width: none;
+      }
+      .egp-info::-webkit-scrollbar { display: none; }
+      .egp-static { margin: 0; font-weight: 600; font-size: 18px; line-height: 1.35; }
+      .egp-ability { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: start; padding: 12px 22px 12px 14px; }
+      .egp-cost {
+        display: grid; place-items: center; height: 48px;
+        background: var(--accent); color: #050507;
+        font-weight: 700; font-style: italic; font-size: 26px;
         clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
       }
-      .egl-back:hover { border-color: var(--accent); color: var(--accent); }
-      .egl-back .ar { font-size: 15px; }
-      .egl-eyebrow { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 0.38em; color: var(--accent); }
-      .egl-title {
-        font-family: 'Cinzel', serif; font-weight: 700; font-size: 28px; letter-spacing: 0.2em;
-        margin: 6px 0 0; text-shadow: 0 4px 24px rgba(0,0,0,0.9);
-      }
-      .egl-counter { text-align: right; justify-self: end; }
-      .egl-counter .ft-lbl { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 0.28em; color: #94a3b8; }
-      .egl-counter .ft-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 18px; letter-spacing: 0.08em; color: var(--accent); margin-top: 2px; }
-      .egl-counter .ft-name .sep { color: rgba(255,255,255,0.3); margin: 0 4px; font-weight: 400; }
-
-      .egl-filters {
-        flex: none; z-index: 9;
-        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-        padding: 10px 60px 12px;
-      }
-      .egl-chip {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.14);
-        color: rgba(255,255,255,0.75); font-family: 'Share Tech Mono', monospace;
-        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-        padding: 8px 14px; cursor: pointer; transition: all .18s;
-      }
-      .egl-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex: none; }
-      .egl-chip:hover { border-color: var(--c); color: #f5f3eb; }
-      .egl-chip.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 30%, transparent); }
-
-      .egl-grid {
-        position: relative; flex: 1; min-height: 0; z-index: 4;
-        display: grid;
-        grid-template-columns: repeat(${GRID_COLUMNS}, ${GRID_COL_WIDTH}px);
-        grid-auto-rows: auto;
-        column-gap: ${GRID_GAP_X}px;
-        row-gap: ${GRID_GAP_Y}px;
-        justify-content: center; align-content: start;
-        overflow-y: auto; overflow-x: hidden;
-        padding: 20px 40px 40px;
-        scrollbar-gutter: stable;
-      }
-
-      .egl-tile {
-        background: none; border: none;
-        padding: ${TILE_PAD_Y}px ${TILE_PAD_X}px;
-        cursor: pointer; display: flex; flex-direction: column; align-items: center;
-        position: relative; z-index: 1;
-        overflow: visible;
-        -webkit-tap-highlight-color: transparent;
-        content-visibility: auto;
-        contain-intrinsic-size: auto ${Math.round(CARD_NATIVE_H * TILE_SCALE) + TILE_PAD_Y * 2}px;
-      }
-      .egl-tile:hover, .egl-tile:focus-visible { z-index: 5; }
-      .egl-tile-scale { position: relative; overflow: visible; }
-      .egl-tile-card {
-        position: absolute; top: 0; left: 0;
-        transform-origin: top left;
-        pointer-events: none;
-      }
-      .egl-tile-card .eminence-tarot { pointer-events: auto; }
-
-      .egl-lb {
-        position: absolute; inset: 0; z-index: 100;
-        background: rgba(3,4,6,0.94);
-        display: flex; align-items: flex-start; justify-content: center;
-        animation: egl-lb-in .2s ease;
-        overflow-y: auto; padding: 40px 32px 56px;
-      }
-      @keyframes egl-lb-in { from { opacity: 0; } }
-      .egl-lb-inner {
-        position: relative;
-        width: min(92vw, 980px);
-        margin: auto 0;
-        display: flex; flex-direction: column; align-items: stretch;
-        gap: 36px;
-      }
-      .egl-lb-close {
-        position: absolute; top: 0; right: 0; z-index: 2;
-        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.3);
-        color: #f5f3eb; font-family: 'Share Tech Mono', monospace; font-size: 14px;
-        width: 40px; height: 40px; cursor: pointer; transition: all .2s;
-      }
-      .egl-lb-close:hover { border-color: var(--accent); color: var(--accent); }
-      .egl-lb-card-wrap {
-        display: flex; justify-content: center;
-        padding-top: 12px;
-      }
-      .egl-lb-card-scale { position: relative; flex: none; overflow: visible; }
-      .egl-lb-card-native { position: relative; overflow: visible; }
-      .egl-lb-entry-shell { overflow: visible; }
-      .egl-lb-em-card {
-        background: transparent;
-        perspective: 900px;
-        transform-style: preserve-3d;
-      }
-      .egl-lb-em-card .eminence-tarot.egl-lb-tarot,
-      .egl-lb-em-card .eminence-tarot {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        --et-w: ${CARD_NATIVE_W}px;
-        --et-h: ${CARD_NATIVE_H}px;
-      }
-      .egl-lb-details {
-        max-width: 760px; width: 100%; margin: 0 auto;
-        padding: 28px 28px 32px;
-        background: rgba(0,0,0,0.78);
-        border: 1px solid rgba(255,255,255,0.12);
-        display: flex; flex-direction: column; gap: 22px;
-      }
-      .egl-lb-meta {
-        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      }
-      .egl-lb-badge {
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-        padding: 5px 9px;
-        border: 1px solid rgba(255,255,255,0.18);
-        color: rgba(245,243,236,0.85);
-      }
-      .egl-lb-badge--warn { border-color: rgba(251,191,36,0.45); color: #fbbf24; }
-      .egl-lb-badge--mute { border-color: rgba(148,163,184,0.35); color: #94a3b8; }
-      .egl-lb-badge--ok { border-color: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--accent); }
-      .egl-lb-presence {
-        margin-left: auto;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 11px; letter-spacing: 0.08em; color: #cbd5e1;
-      }
-      .egl-lb-presence strong { color: var(--accent); font-size: 14px; }
-      .egl-lb-static {
-        margin: 0; color: #f8fafc; font-size: 15px; line-height: 1.55;
-      }
-      .egl-lb-static--empty { color: #94a3b8; font-style: italic; }
-      .egl-lb-label { color: #fbbf24; font-weight: 800; letter-spacing: 0.04em; }
-      .egl-lb-abilities {
-        list-style: none; margin: 0; padding: 0;
-        display: flex; flex-direction: column; gap: 14px;
-      }
-      .egl-lb-abilities li {
-        display: grid; grid-template-columns: 52px 1fr; gap: 14px;
-        padding-top: 14px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-      }
-      .egl-lb-cost {
-        font-family: 'Cinzel', serif; font-weight: 700; font-size: 18px;
-        color: var(--accent); text-align: center; padding-top: 2px;
-      }
-      .egl-lb-ability-name {
-        font-family: 'Cinzel', serif; font-weight: 700; font-size: 14px;
-        letter-spacing: 0.06em; color: #f5f3eb; margin-bottom: 4px;
-      }
-      .egl-lb-ability-text {
-        margin: 0; color: #cbd5e1; font-size: 14px; line-height: 1.55;
-      }
-      .egl-lb-hint {
-        margin: 0; text-align: center;
-        font-family: 'Share Tech Mono', monospace; font-size: 10px;
-        letter-spacing: 0.12em; color: rgba(148,163,184,0.85); text-transform: uppercase;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .egl *, .egl *::after, .egl *::before { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
-      }
+      .egp-cost.neg { background: #f5f3eb; }
+      .egp-ability-name { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; color: #f5f3eb; }
+      .egp-prov { font-weight: 500; font-size: 12px; color: #fbbf24; text-transform: none; letter-spacing: 0.04em; }
+      .egp-ability-text { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: rgba(245,243,235,0.85); }
     `}</style>
   );
 }
