@@ -28,6 +28,11 @@ import {
 import { CardReworkP4 } from '../cards/CardReworkP4';
 import { TagBadge } from '../cards/CardTagBadges';
 import { Glossary } from '../Glossary';
+import { getCardSprite } from '../../utils/cardUtils';
+import { getAgentThumbUrl, getCardImageUrl } from '../../data/images';
+import { ARMY_GIFS } from '../../data/armies';
+import { ARMY_LORE } from '../menu/cosmic/armyLore';
+import { resolvePublicAssetUrl } from '../../utils/preloadAssets';
 import './deckBuilderLab.css';
 
 function accentForArmy(armyName) {
@@ -124,10 +129,34 @@ function CardTagsToggle({ card }) {
 
 const CARD_P4_W = 230;
 
-function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
+function cardThumbUrl(card) {
+  const sprite = getCardSprite(card);
+  const thumb = sprite?.agentId != null ? getAgentThumbUrl(sprite.agentId) : null;
+  return thumb || getCardImageUrl(sprite?.type, sprite?.agentId);
+}
+
+/** Icona armata con ripiego sul glifo se il file manca. */
+function ArmyIcon({ faction, className }) {
+  const [broken, setBroken] = useState(false);
+  if (!faction?.icon || broken) {
+    return <span className={`${className} dbl-glyph`} aria-hidden="true">{ARMY_LORE[faction?.name]?.glyph || '◈'}</span>;
+  }
+  return (
+    <img
+      src={faction.icon}
+      alt=""
+      className={className}
+      draggable={false}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function CatalogCard({ card, slot, disabled, onClick, onHover, onLeave }) {
   const accent = accentForArmy(card.army);
   const shellRef = useRef(null);
   const [scale, setScale] = useState(1);
+  const inDeck = slot > 0;
 
   useEffect(() => {
     const node = shellRef.current;
@@ -156,7 +185,10 @@ function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
         className="dbl-cc-card-btn"
         disabled={disabled}
         onClick={onClick}
+        aria-pressed={inDeck}
+        aria-label={inDeck ? `${card.name}: togli dall'esercito` : `${card.name}: arruola`}
       >
+        <span className="dbl-cc-back" aria-hidden="true" />
         <div className="dbl-cc-card" ref={shellRef}>
           <div
             className="dbl-cc-p4-scaler"
@@ -164,8 +196,13 @@ function CatalogCard({ card, inDeck, disabled, onClick, onHover, onLeave }) {
           >
             <CardReworkP4 agent={card} suppressAnimations />
           </div>
-          {inDeck && <span className="dbl-cc-check">✓</span>}
         </div>
+        {inDeck && (
+          <span className="dbl-cc-check" aria-hidden="true">
+            <span className="burst" />
+            <span className="n">{slot}</span>
+          </span>
+        )}
       </button>
       <CardTagsToggle card={card} />
     </div>
@@ -177,47 +214,37 @@ function DetailPopover({ data }) {
   const { card, rect } = data;
   const accent = accentForArmy(card.army);
   const cardTags = displayTagsForCard(card);
-  const W = 260;
-  const right = rect.right + 12 + W < window.innerWidth;
-  const left = right ? rect.right + 12 : rect.left - 12 - W;
-  const top = Math.min(Math.max(12, rect.top), window.innerHeight - 340);
+  const W = 300;
+  const right = rect.right + 14 + W < window.innerWidth;
+  const left = right ? rect.right + 14 : rect.left - 14 - W;
+  const top = Math.min(Math.max(12, rect.top), window.innerHeight - 360);
+  const lc = LEAGUE_COLORS[card.league] || accent;
 
   return createPortal(
-    <div className="dbl-detail" style={{ left, top, width: W, '--c': accent }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span
-          style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            padding: '2px 7px',
-            border: `1px solid ${LEAGUE_COLORS[card.league]}`,
-            color: LEAGUE_COLORS[card.league],
-          }}
-        >
-          LEGA {card.league}
+    <div className="dbl-detail" style={{ left, top, width: W, '--c': accent, '--lc': lc }}>
+      <div className="dbl-detail-top">
+        <span className="dbl-detail-lg">LEGA {card.league}</span>
+        <span className="dbl-detail-stats">
+          <b className="pot">{card.pot}</b><i>POT</i>
+          <b className="dan">{card.dan}</b><i>DAN</i>
         </span>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, fontFamily: "'Share Tech Mono', monospace", fontSize: 12 }}>
-          <b style={{ color: '#fde047', fontSize: 17 }}>{card.pot}</b>
-          <i style={{ fontStyle: 'normal', fontSize: 8, color: '#6d6b64' }}>POT</i>
-          <b style={{ color: '#c084fc', fontSize: 17 }}>{card.dan}</b>
-          <i style={{ fontStyle: 'normal', fontSize: 8, color: '#6d6b64' }}>DAN</i>
-        </div>
       </div>
-      <div style={{ fontFamily: "'Cinzel', serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{card.name}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <div className="dbl-detail-name"><span>{card.name}</span></div>
+      <div className="dbl-detail-army">{card.army}</div>
+      <div className="dbl-detail-power">
         <TriggerBadge trigger={card.trigger} />
-        <span style={{ fontSize: 11.5, color: '#b9b6ad', lineHeight: 1.35 }}>{card.powerDesc || card.abilityText || '—'}</span>
+        <span>{card.powerDesc || card.abilityText || '—'}</span>
       </div>
-      <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 9, letterSpacing: '0.28em', color: '#6d6b64', marginBottom: 6 }}>
-        ARCHETIPO · FOCUS
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {cardTags.map(({ tag, showAsRole, variant, kind }) => (
-          <Tag key={`${kind}-${tag}`} t={tag} showAsRole={showAsRole} variant={variant} kind={kind} />
-        ))}
-      </div>
+      {cardTags.length > 0 && (
+        <>
+          <div className="dbl-detail-h">ARCHETIPO · FOCUS</div>
+          <div className="dbl-detail-tags">
+            {cardTags.map(({ tag, showAsRole, variant, kind }) => (
+              <Tag key={`${kind}-${tag}`} t={tag} showAsRole={showAsRole} variant={variant} kind={kind} />
+            ))}
+          </div>
+        </>
+      )}
     </div>,
     document.body
   );
@@ -238,28 +265,28 @@ function DeckRow({
   onDragEnd,
 }) {
   const lc = LEAGUE_COLORS[card.league] || accent;
+  const thumb = cardThumbUrl(card);
 
   return (
     <div
-      className={`dbl-row${isDragging ? ' dragging' : ''}${isDropTarget ? ' drop-target' : ''}`}
-      style={{ '--c': accent }}
+      className={`dbl-row${isDragging ? ' dragging' : ''}${isDropTarget ? ' drop-target' : ''}${isCover ? ' cover' : ''}`}
+      style={{ '--c': accent, '--lc': lc }}
       draggable
       onDragStart={(e) => onDragStart(e, index)}
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
     >
-      <span className="dbl-row-grip" aria-hidden="true">
-        ⋮⋮
+      <span className="dbl-row-num" title="Trascina per riordinare">{String(index + 1).padStart(2, '0')}</span>
+      <span className="dbl-row-thumb" aria-hidden="true">
+        {thumb ? <img src={thumb} alt="" draggable={false} loading="lazy" decoding="async" /> : null}
       </span>
-      <span className="dbl-row-lg" style={{ color: lc, borderColor: `${lc}80` }}>
-        L{card.league}
-      </span>
+      <span className="dbl-row-lg">L{card.league}</span>
       <span className="dbl-row-nm" title={card.name}>
         {card.name}
       </span>
       <span className="dbl-row-st">
-        <b style={{ color: '#fde047' }}>{card.pot}</b>/<b style={{ color: '#c084fc' }}>{card.dan}</b>
+        <b className="pot">{card.pot}</b>/<b className="dan">{card.dan}</b>
       </span>
       <button
         type="button"
@@ -732,110 +759,115 @@ export function DeckBuilderLabPage({
     return () => window.removeEventListener('keydown', onKey);
   }, [analysis.legal, schiera]);
 
-  const ringLen = 2 * Math.PI * 26;
-
   if (isDeckLoading) {
     return (
       <div className="dbl-root dbl-loading" style={{ '--accent': accent }}>
-        <div className="dbl-cosmic" />
-        <p className="dbl-loading-txt">Caricamento esercito…</p>
+        <p className="dbl-loading-txt"><span>Caricamento esercito…</span></p>
       </div>
     );
   }
 
+  const leagueOver = analysis.totalLeague > MAX_LEAGUE;
+  const leagueColor =
+    leagueOver || (analysis.count === DECK_SIZE && analysis.totalLeague < MAX_LEAGUE)
+      ? '#f8504f'
+      : analysis.totalLeague === MAX_LEAGUE && analysis.count === DECK_SIZE
+        ? '#4ade80'
+        : analysis.totalLeague >= 25
+          ? '#fbbf24'
+          : accent;
+  const bgPath = ARMY_GIFS[primaryFac.name];
+  const bgUrl = bgPath ? resolvePublicAssetUrl(bgPath) || bgPath : null;
+  const slotById = new Map(deckIds.map((id, i) => [id, i + 1]));
+  const renderCatalogCard = (c) => (
+    <CatalogCard
+      key={c.id}
+      card={c}
+      slot={slotById.get(c.id) || 0}
+      disabled={!canAdd(c)}
+      onClick={() => toggle(c)}
+      onHover={(card, el) => setDetail({ card, rect: el.getBoundingClientRect() })}
+      onLeave={() => setDetail(null)}
+    />
+  );
+  const bonusArmies = selectedArmyKeys
+    .map((key) => FACTIONS.find((f) => f.key === key))
+    .filter(Boolean);
+
   return (
     <div className="dbl-root" style={{ '--accent': accent }}>
-      <div className="dbl-cosmic" />
-      <div className="dbl-vignette" />
+      <div className="dbl-bg" aria-hidden="true">
+        {bgUrl && <div className="dbl-bg-art" key={bgUrl} style={{ backgroundImage: `url("${bgUrl}")` }} />}
+        <div className="dbl-bg-tone" />
+        <div className="dbl-bg-halftone" />
+        <div className="dbl-bg-stripes" />
+      </div>
 
       <header className="dbl-head">
         <button type="button" className="dbl-back" onClick={onClose}>
           <span className="ar">←</span>
-          <span>Indietro</span>
+          <span>INDIETRO</span>
         </button>
-        <div className="dbl-head-mid">
-          <div className="dbl-eyebrow" style={{ color: accent }}>
-            FASE II · ARRUOLAMENTO
+        <div className="dbl-titleblock">
+          <div className="dbl-eyebrow">
+            <span className="dbl-eyebrow-tag">FASE II</span>
+            <span>ARRUOLAMENTO · {DECK_SIZE} CARTE · {MAX_LEAGUE} LEGA</span>
           </div>
           <h1 className="dbl-title">COSTRUZIONE ESERCITO</h1>
-          <div className="dbl-subtitle">
-            {DECK_SIZE} CARTE · {MAX_LEAGUE} LEGA
-          </div>
         </div>
         <div className="dbl-head-r">
+          <div className="dbl-fac-name">
+            {showHeaderArmyIcon ? <ArmyIcon faction={headerArmies[0]} className="dbl-head-ic" /> : null}
+            <span>{catalogLabel}</span>
+          </div>
           <button
             type="button"
             className="dbl-glossary-btn"
             onClick={() => setShowGlossary(true)}
           >
-            GLOSSARIO
+            <span>GLOSSARIO</span>
           </button>
-          {showHeaderArmyIcon ? (
-            <div className="dbl-head-icons">
-              <img src={headerArmies[0].icon} alt="" className="dbl-head-ic" draggable={false} />
-            </div>
-          ) : null}
-          <span className="dbl-fac-name">{catalogLabel}</span>
         </div>
       </header>
 
-      <div className="dbl-body">
-        <aside className="dbl-rail">
-          <div className="dbl-rail-h">ARMATA · MULTI</div>
-          <p className="dbl-rail-hint">Clicca per aggiungere o rimuovere dal catalogo</p>
-          <button
-            type="button"
-            className={`dbl-rail-all${allArmiesSelected ? ' on' : ''}`}
-            style={{ '--c': accent }}
-            onClick={toggleAllArmies}
-          >
-            TUTTE
-          </button>
-          <div className="dbl-rail-list">
-            {FACTIONS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                className={`dbl-fac${selectedArmyKeys.includes(f.key) ? ' on' : ''}`}
-                style={{ '--c': f.accent }}
-                onClick={() => toggleArmy(f.key)}
-              >
-                {f.icon ? <img src={f.icon} alt="" className="dbl-fac-ic" draggable={false} /> : null}
-                <span className="dbl-fac-lbl">{f.name}</span>
-                <span className="dbl-fac-dot" />
-              </button>
-            ))}
-          </div>
-          {selectedArmyKeys.length === 1 && (
-            <div className="dbl-bonus" style={{ borderColor: accent }}>
-              <div className="dbl-bonus-h" style={{ color: accent }}>
-                BONUS · {primaryFac.bonusLabel}
-                <span className={`dbl-bonus-state${activeBonuses.includes(primaryFac.name) ? ' on' : ''}`}>
-                  {activeBonuses.includes(primaryFac.name) ? 'ATTIVO' : '2+ CARTE'}
-                </span>
-              </div>
-              <div className="dbl-bonus-v">{primaryFac.bonus}</div>
-            </div>
-          )}
-          {selectedArmyKeys.length > 1 && (
-            <div className="dbl-bonus dbl-bonus-multi" style={{ borderColor: accent }}>
-              <div className="dbl-bonus-h" style={{ color: accent }}>BONUS · SET SELEZIONATI</div>
-              {selectedArmyKeys.map((key) => {
-                const f = FACTIONS.find((x) => x.key === key);
-                if (!f) return null;
-                return (
-                  <div key={key} className="dbl-bonus-row">
-                    <span className="dbl-bonus-row-name" style={{ color: f.accent }}>{f.name}</span>
-                    <span className="dbl-bonus-v">{f.bonus}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </aside>
+      <nav className="dbl-rail" aria-label="Armate nel catalogo">
+        <span className="dbl-rail-h">ARMATE</span>
+        <button
+          type="button"
+          className={`dbl-flag dbl-flag--all${allArmiesSelected ? ' on' : ''}`}
+          style={{ '--c': '#f5f3eb' }}
+          onClick={toggleAllArmies}
+          aria-pressed={allArmiesSelected}
+          title="Seleziona o deseleziona tutte le armate"
+        >
+          <span className="in"><span>TUTTE</span></span>
+        </button>
+        {FACTIONS.map((f) => {
+          const on = selectedArmyKeys.includes(f.key);
+          const inDeck = armyCountsInDeck[f.name] || 0;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              className={`dbl-flag${on ? ' on' : ''}`}
+              style={{ '--c': f.accent }}
+              onClick={() => toggleArmy(f.key)}
+              aria-pressed={on}
+              title={`${f.name}: ${on ? 'togli dal' : 'aggiungi al'} catalogo`}
+            >
+              <span className="in">
+                <ArmyIcon faction={f} className="dbl-flag-ic" />
+                <span className="nm">{f.name}</span>
+                {inDeck > 0 && <span className="ct">{inDeck}</span>}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
-        <main className="dbl-pool">
-          <div className="dbl-toolbar">
+      <main className="dbl-pool">
+        <div className="dbl-toolbar">
+          <div className="dbl-toolbar-row">
             <div className="dbl-search">
               <span className="dbl-search-ic">⌕</span>
               <input
@@ -844,7 +876,7 @@ export function DeckBuilderLabPage({
                 placeholder="Cerca nome, archetipo, focus, effetto…"
               />
             </div>
-            <div className="dbl-filtgroup">
+            <div className="dbl-filtgroup" role="group" aria-label="Filtro Lega">
               <label>LEGA</label>
               {[null, 2, 3, 4, 5].map((l) => (
                 <button
@@ -852,79 +884,101 @@ export function DeckBuilderLabPage({
                   type="button"
                   className={`dbl-lg${legaFilter === l ? ' on' : ''}`}
                   onClick={() => setLegaFilter(l)}
-                  style={
-                    l && legaFilter === l
-                      ? { color: LEAGUE_COLORS[l], borderColor: LEAGUE_COLORS[l] }
-                      : undefined
-                  }
+                  style={l ? { '--lc': LEAGUE_COLORS[l] } : undefined}
+                  aria-pressed={legaFilter === l}
                 >
-                  {l ?? '∗'}
-                  <span className="dbl-filt-n">({l ? legaCounts[l] || 0 : legaFilterBase.length})</span>
+                  <span>
+                    {l ?? 'TUTTE'}
+                    <span className="dbl-filt-n">{l ? legaCounts[l] || 0 : legaFilterBase.length}</span>
+                  </span>
                 </button>
               ))}
             </div>
-            <select
-              className="dbl-sel"
-              value={trigFilter}
-              onChange={(e) => setTrigFilter(e.target.value)}
-              title="Filtro trigger"
-            >
-              <option value="">TRIGGER · tutti ({trigFilterBase.length})</option>
-              {allTriggers.map((t) => (
-                <option key={t} value={t}>
-                  {t} ({trigCounts[t] || 0})
-                </option>
-              ))}
-            </select>
-            <select
-              className="dbl-sel"
-              value={effectFilter}
-              onChange={(e) => setEffectFilter(e.target.value)}
-              title="Filtro effetto"
-            >
-              <option value="">EFFETTO · tutti ({effectFilterBase.length})</option>
-              {allEffects.map((eff) => (
-                <option key={eff} value={eff}>
-                  {EFFECT_NAMES[eff] || eff} ({effectCounts[eff] || 0})
-                </option>
-              ))}
-            </select>
-            <select
-              className="dbl-sel"
-              value={archetypeFilter}
-              onChange={(e) => setArchetypeFilter(e.target.value)}
-              title="Filtro archetipo"
-            >
-              <option value="">ARCHETIPO · tutti ({archetypeFilterBase.length})</option>
-              {allArchetypes.map((t) => (
-                <option key={t} value={t}>
-                  {t} ({archetypeCounts[t] || 0})
-                </option>
-              ))}
-            </select>
-            <select
-              className="dbl-sel"
-              value={focusFilter}
-              onChange={(e) => setFocusFilter(e.target.value)}
-              title="Filtro rapporto col Focus"
-            >
-              <option value="">FOCUS · tutti ({focusFilterBase.length})</option>
-              {allFocus.map((t) => (
-                <option key={t} value={t}>
-                  {t} ({focusCounts[t] || 0})
-                </option>
-              ))}
-            </select>
-            <select
-              className="dbl-sel"
-              value={scalingFilter}
-              onChange={(e) => setScalingFilter(e.target.value)}
-              title="Filtro Scalante"
-            >
-              <option value="">SCALANTE · tutti ({scalingFilterBase.length})</option>
-              <option value="yes">Solo Scalanti ({scalingYesCount})</option>
-              <option value="no">Senza Scalante ({scalingFilterBase.length - scalingYesCount})</option>
-            </select>
+            <div className="dbl-sort">
+              <label>ORDINA</label>
+              <div className="dbl-sel-wrap">
+                <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                  <option value="lega">Lega</option>
+                  <option value="armata">Armata</option>
+                  <option value="pot">POT ↓</option>
+                  <option value="dan">DAN ↓</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="dbl-toolbar-row">
+            <div className={`dbl-sel-wrap${trigFilter ? ' on' : ''}`}>
+              <select
+                className="dbl-sel"
+                value={trigFilter}
+                onChange={(e) => setTrigFilter(e.target.value)}
+                title="Filtro trigger"
+              >
+                <option value="">TRIGGER · tutti ({trigFilterBase.length})</option>
+                {allTriggers.map((t) => (
+                  <option key={t} value={t}>
+                    {t} ({trigCounts[t] || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={`dbl-sel-wrap${effectFilter ? ' on' : ''}`}>
+              <select
+                className="dbl-sel"
+                value={effectFilter}
+                onChange={(e) => setEffectFilter(e.target.value)}
+                title="Filtro effetto"
+              >
+                <option value="">EFFETTO · tutti ({effectFilterBase.length})</option>
+                {allEffects.map((eff) => (
+                  <option key={eff} value={eff}>
+                    {EFFECT_NAMES[eff] || eff} ({effectCounts[eff] || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={`dbl-sel-wrap${archetypeFilter ? ' on' : ''}`}>
+              <select
+                className="dbl-sel"
+                value={archetypeFilter}
+                onChange={(e) => setArchetypeFilter(e.target.value)}
+                title="Filtro archetipo"
+              >
+                <option value="">ARCHETIPO · tutti ({archetypeFilterBase.length})</option>
+                {allArchetypes.map((t) => (
+                  <option key={t} value={t}>
+                    {t} ({archetypeCounts[t] || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={`dbl-sel-wrap${focusFilter ? ' on' : ''}`}>
+              <select
+                className="dbl-sel"
+                value={focusFilter}
+                onChange={(e) => setFocusFilter(e.target.value)}
+                title="Filtro rapporto col Focus"
+              >
+                <option value="">FOCUS · tutti ({focusFilterBase.length})</option>
+                {allFocus.map((t) => (
+                  <option key={t} value={t}>
+                    {t} ({focusCounts[t] || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={`dbl-sel-wrap${scalingFilter ? ' on' : ''}`}>
+              <select
+                className="dbl-sel"
+                value={scalingFilter}
+                onChange={(e) => setScalingFilter(e.target.value)}
+                title="Filtro Scalante"
+              >
+                <option value="">SCALANTE · tutti ({scalingFilterBase.length})</option>
+                <option value="yes">Solo Scalanti ({scalingYesCount})</option>
+                <option value="no">Senza Scalante ({scalingFilterBase.length - scalingYesCount})</option>
+              </select>
+            </div>
             <button
               type="button"
               className="dbl-clear-filt"
@@ -932,222 +986,178 @@ export function DeckBuilderLabPage({
               disabled={!hasActiveFilters}
               title="Rimuovi tutti i filtri"
             >
-              AZZERA FILTRI
+              <span>AZZERA FILTRI</span>
             </button>
-            <div className="dbl-sort">
-              <label>ORDINA</label>
-              <select value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="lega">Lega</option>
-                <option value="armata">Armata</option>
-                <option value="pot">POT ↓</option>
-                <option value="dan">DAN ↓</option>
-              </select>
-            </div>
           </div>
+        </div>
 
-          <div className="dbl-grid">
-            {selectedArmyKeys.length === 0 ? (
-              <div className="dbl-empty">
-                Seleziona almeno un&apos;armata dal pannello a sinistra
-              </div>
-            ) : visibleShownByArmy ? (
-              visibleShownByArmy.map(({ army, faction, cards }) => (
-                <section key={army} className="dbl-grid-group" style={{ '--c': faction?.accent || accent }}>
-                  <div className="dbl-grid-group-h">
-                    {faction?.icon ? (
-                      <img src={faction.icon} alt="" className="dbl-grid-group-ic" draggable={false} />
-                    ) : null}
+        {bonusArmies.length > 0 && (
+          <div className="dbl-bonusbar">
+            {bonusArmies.map((f) => {
+              const on = activeBonuses.includes(f.name);
+              return (
+                <div key={f.key} className={`dbl-bonus${on ? ' on' : ''}`} style={{ '--c': f.accent }}>
+                  <span className="dbl-bonus-h">
+                    {bonusArmies.length > 1 ? f.name : `BONUS · ${f.bonusLabel}`}
+                  </span>
+                  <span className="dbl-bonus-v">{f.bonus}</span>
+                  <span className={`dbl-bonus-state${on ? ' on' : ''}`}>{on ? 'ATTIVO' : '2+ CARTE'}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="dbl-grid">
+          {selectedArmyKeys.length === 0 ? (
+            <div className="dbl-empty">
+              Seleziona almeno un&apos;armata dalla barra in alto
+            </div>
+          ) : visibleShownByArmy ? (
+            visibleShownByArmy.map(({ army, faction, cards }) => (
+              <section key={army} className="dbl-grid-group" style={{ '--c': faction?.accent || accent }}>
+                <div className="dbl-grid-group-h">
+                  <span className="in">
+                    {faction ? <ArmyIcon faction={faction} className="dbl-grid-group-ic" /> : null}
                     <span>{army}</span>
-                    <span className="dbl-grid-group-n">({cards.length})</span>
-                  </div>
-                  <div className="dbl-grid-group-inner">
-                    {cards.map((c) => (
-                      <CatalogCard
-                        key={c.id}
-                        card={c}
-                        inDeck={deckIds.includes(c.id)}
-                        disabled={!canAdd(c)}
-                        onClick={() => toggle(c)}
-                        onHover={(card, el) => setDetail({ card, rect: el.getBoundingClientRect() })}
-                        onLeave={() => setDetail(null)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))
-            ) : (
-              visibleShown.map((c) => (
-                <CatalogCard
-                  key={c.id}
-                  card={c}
-                  inDeck={deckIds.includes(c.id)}
-                  disabled={!canAdd(c)}
-                  onClick={() => toggle(c)}
-                  onHover={(card, el) => setDetail({ card, rect: el.getBoundingClientRect() })}
-                  onLeave={() => setDetail(null)}
-                />
-              ))
-            )}
-            {selectedArmyKeys.length > 0 && shown.length === 0 && (
-              <div className="dbl-empty">
-                Nessuna carta con questi filtri. Attiva altre armate a sinistra o usa TUTTE, poi riprova.
-              </div>
-            )}
-          </div>
-          <div className="dbl-pool-foot">
-            <span>
-              {shown.length} {shown.length === 1 ? 'carta' : 'carte'} · {catalogLabel}
-            </span>
-            <span>
-              Clicca per arruolare · tag <b style={{ color: '#ef4444' }}>rossi</b> = Ruolo
-            </span>
-          </div>
-        </main>
-
-        <aside className="dbl-deck">
-          <div className="dbl-deck-name">
-            <input
-              value={deckName}
-              onChange={(e) => setDeckName(e.target.value)}
-              placeholder="Nome esercito"
-              spellCheck={false}
-            />
-          </div>
-
-          <div className="dbl-budget">
-            <div className="dbl-budget-bar">
-              <div className="dbl-budget-h">
-                <span>LEGA TOTALE</span>
-                <em
-                  style={{
-                    color:
-                      analysis.totalLeague > MAX_LEAGUE ||
-                      (analysis.count === DECK_SIZE && analysis.totalLeague < MAX_LEAGUE)
-                        ? '#c2473f'
-                        : analysis.totalLeague === MAX_LEAGUE && analysis.count === DECK_SIZE
-                          ? '#4a9e78'
-                          : analysis.totalLeague >= 25
-                            ? '#c9a23e'
-                            : accent,
-                  }}
-                >
-                  {analysis.totalLeague} / {MAX_LEAGUE}
-                </em>
-              </div>
-              <div className="dbl-budget-t">
-                <div
-                  className="dbl-budget-f"
-                  style={{
-                    width: `${Math.min(100, (analysis.totalLeague / MAX_LEAGUE) * 100)}%`,
-                    background:
-                      analysis.totalLeague >= 25
-                        ? 'linear-gradient(90deg,#4a9e78,#c9a23e)'
-                        : `linear-gradient(90deg,#4a9e78,${accent})`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="dbl-count">
-              <svg viewBox="0 0 60 60" className="dbl-count-ring">
-                <circle cx="30" cy="30" r="26" className="dbl-ring-bg" />
-                <circle
-                  cx="30"
-                  cy="30"
-                  r="26"
-                  className="dbl-ring-fg"
-                  style={{
-                    stroke: accent,
-                    strokeDasharray: ringLen,
-                    strokeDashoffset: ringLen * (1 - analysis.count / DECK_SIZE),
-                  }}
-                />
-              </svg>
-              <div className="dbl-count-txt">
-                <b>{analysis.count}</b>
-                <i>/{DECK_SIZE}</i>
-              </div>
-            </div>
-          </div>
-
-          <div className="dbl-slots">
-            <div className="dbl-deck-roster-h">
-              <span>ESERCITO</span>
-              <span>
-                {analysis.count}/{DECK_SIZE}
-              </span>
-            </div>
-            {deckCards.length === 0 ? (
-              <p className="dbl-deck-empty">Nessuna carta selezionata.</p>
-            ) : (
-              deckCards.map((c, index) => (
-                <DeckRow
-                  key={c.id}
-                  card={c}
-                  accent={accentForArmy(c.army)}
-                  index={index}
-                  isCover={coverCardId === c.id}
-                  onSetCover={() => setCoverCardId((prev) => (prev === c.id ? null : c.id))}
-                  isDragging={dragIndex === index}
-                  isDropTarget={dropIndex === index && dragIndex !== null && dragIndex !== index}
-                  onDragStart={handleRosterDragStart}
-                  onDragOver={handleRosterDragOver}
-                  onDrop={handleRosterDrop}
-                  onDragEnd={handleRosterDragEnd}
-                  onRemove={() => setDeck(deckIds.filter((i) => i !== c.id))}
-                />
-              ))
-            )}
-          </div>
-
-          {activeBonuses.length > 0 && (
-            <div className="dbl-deck-bonuses">
-              <div className="dbl-an-h">BONUS ATTIVI</div>
-              {activeBonuses.map((army) => {
-                const f = FACTIONS.find((x) => x.name === army);
-                return (
-                  <div key={army} className="dbl-deck-bonus-row" style={{ borderColor: `${f?.accent || accent}55` }}>
-                    <span style={{ color: f?.accent || accent, fontWeight: 700, fontSize: 12 }}>{army}</span>
-                    <span className="dbl-bonus-v">{f?.bonus}</span>
-                    <span className="dbl-bonus-count">{armyCountsInDeck[army]}×</span>
-                  </div>
-                );
-              })}
+                    <span className="dbl-grid-group-n">{cards.length}</span>
+                  </span>
+                </div>
+                <div className="dbl-grid-group-inner">
+                  {cards.map(renderCatalogCard)}
+                </div>
+              </section>
+            ))
+          ) : (
+            visibleShown.map(renderCatalogCard)
+          )}
+          {selectedArmyKeys.length > 0 && shown.length === 0 && (
+            <div className="dbl-empty">
+              Nessuna carta con questi filtri. Attiva altre armate in alto o usa TUTTE, poi riprova.
             </div>
           )}
+        </div>
+        <div className="dbl-pool-foot">
+          <span>
+            <b>{shown.length}</b> {shown.length === 1 ? 'carta' : 'carte'} · {catalogLabel}
+          </span>
+          <span>
+            Clicca per arruolare · tag <b className="role">gialli</b> = Ruolo
+          </span>
+        </div>
+      </main>
 
-          <div className="dbl-advice">
-            {analysis.msgs.map((m, i) => (
-              <div key={i} className={`dbl-msg ${m.t}`}>
-                <span>{m.t === 'ok' ? '✓' : m.t === 'warn' ? '!' : 'i'}</span>
-                {m.x}
-              </div>
-            ))}
+      <aside className="dbl-deck">
+        <div className="dbl-deck-tag">IL TUO ESERCITO</div>
+        <div className="dbl-deck-name">
+          <input
+            value={deckName}
+            onChange={(e) => setDeckName(e.target.value)}
+            placeholder="Nome esercito"
+            spellCheck={false}
+            aria-label="Nome esercito"
+          />
+        </div>
+
+        <div className="dbl-budget">
+          <div className="dbl-budget-num" style={{ '--n': leagueColor }}>
+            <span className="lbl">LEGA</span>
+            <span className="val"><b>{analysis.totalLeague}</b><i>/{MAX_LEAGUE}</i></span>
           </div>
-
-          <div className="dbl-actions dbl-actions-single">
-            <button type="button" className="dbl-act ghost" onClick={clear} disabled={analysis.count === 0}>
-              Svuota esercito
-            </button>
+          <div className="dbl-budget-num dbl-budget-num--count" style={{ '--n': analysis.count === DECK_SIZE ? '#4ade80' : '#f5f3eb' }}>
+            <span className="lbl">CARTE</span>
+            <span className="val"><b>{analysis.count}</b><i>/{DECK_SIZE}</i></span>
           </div>
+        </div>
+        <div
+          className="dbl-ticks"
+          style={{ '--n': leagueColor }}
+          role="meter"
+          aria-label="Lega usata"
+          aria-valuemin={0}
+          aria-valuemax={MAX_LEAGUE}
+          aria-valuenow={analysis.totalLeague}
+        >
+          {Array.from({ length: MAX_LEAGUE }, (_, i) => (
+            <span key={i} className={i < analysis.totalLeague ? 'on' : ''} />
+          ))}
+          {leagueOver && <span className="over">+{analysis.totalLeague - MAX_LEAGUE}</span>}
+        </div>
 
+        <div className="dbl-slots">
+          {deckCards.map((c, index) => (
+            <DeckRow
+              key={c.id}
+              card={c}
+              accent={accentForArmy(c.army)}
+              index={index}
+              isCover={coverCardId === c.id}
+              onSetCover={() => setCoverCardId((prev) => (prev === c.id ? null : c.id))}
+              isDragging={dragIndex === index}
+              isDropTarget={dropIndex === index && dragIndex !== null && dragIndex !== index}
+              onDragStart={handleRosterDragStart}
+              onDragOver={handleRosterDragOver}
+              onDrop={handleRosterDrop}
+              onDragEnd={handleRosterDragEnd}
+              onRemove={() => setDeck(deckIds.filter((i) => i !== c.id))}
+            />
+          ))}
+          {Array.from({ length: Math.max(0, DECK_SIZE - deckCards.length) }, (_, i) => (
+            <div key={`empty-${i}`} className="dbl-row dbl-row--empty" aria-hidden="true">
+              <span className="dbl-row-num">{String(deckCards.length + i + 1).padStart(2, '0')}</span>
+              <span className="dbl-row-nm">{i === 0 ? 'Scegli una carta dal catalogo' : '—'}</span>
+            </div>
+          ))}
+        </div>
+
+        {activeBonuses.length > 0 && (
+          <div className="dbl-deck-bonuses">
+            <div className="dbl-an-h">BONUS ATTIVI</div>
+            {activeBonuses.map((army) => {
+              const f = FACTIONS.find((x) => x.name === army);
+              return (
+                <div key={army} className="dbl-deck-bonus-row" style={{ '--c': f?.accent || accent }}>
+                  <span className="dbl-deck-bonus-name">{army}</span>
+                  <span className="dbl-bonus-v">{f?.bonus}</span>
+                  <span className="dbl-bonus-count">{armyCountsInDeck[army]}×</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="dbl-advice">
+          {analysis.msgs.map((m, i) => (
+            <div key={i} className={`dbl-msg ${m.t}`}>
+              <span>{m.t === 'ok' ? '✓' : m.t === 'warn' ? '!' : 'i'}</span>
+              {m.x}
+            </div>
+          ))}
+        </div>
+
+        <div className="dbl-deck-foot">
+          <button type="button" className="dbl-act ghost" onClick={clear} disabled={analysis.count === 0}>
+            <span>Svuota</span>
+          </button>
           <button
             type="button"
             className={`dbl-schiera${analysis.legal ? ' ready' : ''}`}
-            style={{ borderColor: accent, color: analysis.legal ? accent : undefined }}
             onClick={schiera}
             disabled={!analysis.legal}
           >
-            <span>SALVA ESERCITO</span>
-            <span>↵</span>
+            <span className="in">
+              <span>SALVA ESERCITO</span>
+              <kbd>↵</kbd>
+            </span>
           </button>
-          {saveError && (
-            <div className="dbl-msg warn" style={{ marginTop: 8 }}>
-              <span>!</span>
-              {saveError}
-            </div>
-          )}
-        </aside>
-      </div>
+        </div>
+        {saveError && (
+          <div className="dbl-msg warn">
+            <span>!</span>
+            {saveError}
+          </div>
+        )}
+      </aside>
 
       <DetailPopover data={detail} />
 
@@ -1157,12 +1167,10 @@ export function DeckBuilderLabPage({
 
       {flash && (
         <div className="dbl-flash" style={{ '--accent': accent }}>
-          <div className="dbl-flash-bg" />
+          <div className="dbl-flash-blades" aria-hidden="true"><span /><span /><span /></div>
           <div className="dbl-flash-txt">
-            <div className="e" style={{ color: accent }}>
-              ESERCITO SALVATO
-            </div>
-            <div className="n">{deckName}</div>
+            <div className="e">ESERCITO SALVATO</div>
+            <div className="n"><span>{deckName.trim() || 'Esercito personalizzato'}</span></div>
             <div className="s">
               {catalogLabel} · {analysis.count} carte · {analysis.totalLeague} Lega
             </div>
