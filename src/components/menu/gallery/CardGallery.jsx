@@ -251,7 +251,14 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
 
       <div className="cgp-card-slot">
         <div className="cgp-card-slam">
-          <div className="cgp-card-back" aria-hidden="true" />
+          {/* Stessa misura della carta: il contenitore include il padding hit del tilt. */}
+          <div
+            className="cgp-card-back"
+            aria-hidden="true"
+            style={displayEldritch || !heavyOk
+              ? { left: 0, top: 0, width: STAGE_CARD_W, height: displayEldritch ? STAGE_ELD_H : STAGE_CARD_H }
+              : { left: STAGE_HIT_PAD, top: STAGE_HIT_PAD, width: STAGE_CARD_W, height: STAGE_CARD_H }}
+          />
           {!heavyOk ? (
             <div className="cgp-card-ph" style={{ width: STAGE_CARD_W, height: STAGE_CARD_H }} />
           ) : displayEldritch ? (
@@ -382,7 +389,7 @@ function CardGalleryStyles() {
       }
       /* Ombra piena a parte: un filter sul contenitore appiattisce tilt 3D e blend delle facce alt. */
       .cgp-card-back {
-        position: absolute; inset: 0; transform: translate(14px, 14px);
+        position: absolute; transform: translate(14px, 14px);
         background: #050507; border-radius: 0 0 14px 14px;
         box-shadow: 0 0 50px color-mix(in srgb, var(--accent) 40%, transparent);
       }
