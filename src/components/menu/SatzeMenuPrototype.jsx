@@ -438,8 +438,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const rows = choicePicker ? pickerRows : items;
   const active = choicePicker ? pickerIndex : mainActive;
   const activeAccent = rows[active]?.accent ?? MENU_ACCENTS.magenta;
-  const anchorX = dial.side === "right" ? dial.cx + dial.r : dial.cx - dial.r;
-  const sideAnchor = dial.side === "right" ? { left: anchorX + 40 } : { right: 1920 - anchorX + 40 };
 
   return (
     <div
@@ -475,7 +473,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       >
         <DialRing layout={dial} spin={spin} accent={activeAccent} />
         {choicePicker && (
-          <div className="smd-head" style={sideAnchor}>
+          <div className="smd-head">
             {choicePicker.trail.length ? <div className="smd-trail">{choicePicker.trail.join(" › ")}</div> : null}
             <div className="smd-title">{choicePicker.title}</div>
           </div>
@@ -497,7 +495,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
           }}
         />
         {choicePicker && (
-          <button type="button" className="smd-back" style={sideAnchor} onClick={backFromPicker}>
+          <button type="button" className="smd-back" onClick={backFromPicker}>
             <span className="key">ESC</span>
             <span className="lbl">{choicePickerStack.length > 1 ? "INDIETRO" : "ANNULLA"}</span>
           </button>
@@ -640,8 +638,7 @@ function SatzeMenuStyles() {
 
       .smd-dial--compact .smd-item { font-size: 54px; }
 
-      .smd-head { position: absolute; top: 96px; pointer-events: none; animation: smd-head-in .4s cubic-bezier(.2,1.2,.4,1) both; }
-      .smp--left .smd-head { text-align: right; }
+      .smd-head { position: absolute; top: 70px; left: 70px; pointer-events: none; animation: smd-head-in .4s cubic-bezier(.2,1.2,.4,1) both; }
       @keyframes smd-head-in { from { opacity: 0; transform: translateY(-20px); } }
       .smd-trail { font-family: 'Share Tech Mono', monospace; font-size: 15px; letter-spacing: 0.24em; color: rgba(245,243,235,0.65); margin-bottom: 6px; }
       .smd-title {
@@ -650,7 +647,7 @@ function SatzeMenuStyles() {
         box-shadow: 6px 6px 0 ${T};
       }
       .smd-back {
-        position: absolute; bottom: 92px; pointer-events: auto;
+        position: absolute; bottom: 86px; left: 70px; pointer-events: auto;
         display: inline-flex; align-items: center; gap: 12px;
         background: ${T}; color: ${V}; border: 0; cursor: pointer;
         padding: 8px 22px 8px 12px; transform: skewX(-14deg);
