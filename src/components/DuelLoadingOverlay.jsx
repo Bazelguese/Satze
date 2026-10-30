@@ -37,7 +37,9 @@ const WARMUP_MS = 3800;
 const VS_MIN_MS = 5200;
 const VS_LEAVE_MS = 450;
 /** Ingresso a tappe: la ruota gira almeno così (il tuo lato si sistema intanto). */
-const ROULETTE_MIN_MS = 2600;
+const ROULETTE_MIN_MS = 3200;
+/** Ingresso a tappe: il caricamento pesante aspetta la fine del volo della scatola (al massimo questo). */
+const INTRO_FLIGHT_MAX_MS = 3200;
 /** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
 const VS_LAYOUT = 'shadow';
 const VS_COVER = 'box';
@@ -230,6 +232,13 @@ export function DuelLoadingOverlay({
   const introOn = Boolean(versus) && versusIntro;
   const [vsStage, setVsStage] = useState(introOn ? 'spin' : 'reveal');
   const [vsHandoff] = useState(() => (introOn ? peekVersusHandoff() : null));
+  // il caricamento aspetta la fine del volo della scatola
+  const flightRef = useRef(null);
+  if (!flightRef.current) {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    flightRef.current = { promise, done: () => resolve() };
+  }
   useEffect(() => { clearVersusHandoff(); }, []);
   const spinStartRef = useRef(0);
 
@@ -369,6 +378,14 @@ export function DuelLoadingOverlay({
 
     const run = async () => {
       setProgress(3);
+      // con l'ingresso a tappe la scatola vola e il rullo si accende: niente lavoro pesante intanto
+      if (introOn && vsHandoff) {
+        await Promise.race([
+          flightRef.current.promise,
+          new Promise((r) => window.setTimeout(r, INTRO_FLIGHT_MAX_MS)),
+        ]);
+        if (cancelled) return;
+      }
 
       await preloadBattlefieldImages(fields, (_l, _t, percent) => {
         if (cancelled) return;
@@ -679,7 +696,7 @@ export function DuelLoadingOverlay({
             enemyCardBack={enemyCardBack}
             fx={VS_FX}
             progress={progress}
-            intro={introOn ? { stage: vsStage, handoff: vsHandoff } : null}
+            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done } : null}
           />
         </VersusViewport>
       ) : null}

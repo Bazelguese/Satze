@@ -255,14 +255,6 @@ export function DuelVersusScreen({
   const rootRef = useRef(null);
   const introHeld = Boolean(intro) && intro.stage !== 'reveal';
   const [handoff] = useState(() => intro?.handoff || null);
-  // aspetto del sorteggio (prove): localStorage satze_vs_roulette = ruota | rullo | griglia
-  const [rouletteVariant] = useState(() => {
-    try {
-      return window.localStorage?.getItem('satze_vs_roulette') || 'ruota';
-    } catch {
-      return 'ruota';
-    }
-  });
   // Dorsi: quelli della partita se passati, altrimenti due dorsi casuali distinti (come in partita).
   const [randomBacks] = useState(() => pickDistinctCardBackPair());
   const playerBack = playerCardBack || randomBacks.playerCardBack;
@@ -292,21 +284,77 @@ export function DuelVersusScreen({
   const playerBg = halfBackground(playerEntry, playerEm, layout);
   const enemyBg = halfBackground(enemyEntry, enemyEm, layout);
   // La scatola vola dal punto in cui era nella scelta esercito al suo posto nel VS.
+  // Il volo parte solo quando i fotogrammi scorrono regolari: se il montaggio del VS
+  // blocca il disegno, la scatola resta ferma dov'era invece di saltare a metà volo.
+  const onFlightDoneRef = useRef(intro?.onFlightDone);
+  onFlightDoneRef.current = intro?.onFlightDone;
   useLayoutEffect(() => {
+    const done = () => onFlightDoneRef.current?.();
     const root = rootRef.current;
     const wrap = root?.querySelector('.vsx-side--r .vsx-ticket');
     const tk = wrap?.querySelector('.dsk-tk');
-    if (!handoff?.rect || !wrap || !tk || typeof wrap.animate !== 'function') return;
+    const cube = wrap?.querySelector('.dcv-box-cube');
+    if (!handoff?.rect || !wrap || !tk || typeof wrap.animate !== 'function') {
+      done();
+      return undefined;
+    }
     const fin = tk.getBoundingClientRect();
     const k = root.getBoundingClientRect().width / 1920 || 1;
     const o = handoff.rect;
     const dx = (o.left + o.width / 2 - (fin.left + fin.width / 2)) / k;
     const dy = (o.top + o.height / 2 - (fin.top + fin.height / 2)) / k;
     const sc = fin.width ? o.width / fin.width : 1;
-    wrap.animate(
-      [{ transform: `translate(${dx}px, ${dy}px) scale(${sc})` }, { transform: 'none' }],
-      { duration: 900, delay: 180, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'backwards' }
+    const FLIGHT_MS = 1150;
+    // volo ad arco: si stacca, sale girandosi verso il centro e scende al suo posto
+    const fly = wrap.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, easing: 'cubic-bezier(.5,0,.6,1)' },
+        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 140}px) scale(${(sc + 1) / 2 + 0.08}) rotate(-4deg)`, offset: 0.45, easing: 'cubic-bezier(.3,0,.2,1)' },
+        { transform: 'translate(0, 8px) scale(1.02)', offset: 0.88 },
+        { transform: 'none' },
+      ],
+      { duration: FLIGHT_MS, fill: 'both' }
     );
+    // e intanto si gira dalla posa della scelta esercito a quella del VS (dorso verso il centro)
+    const endPose = cube ? getComputedStyle(cube).transform : null;
+    const turn = cube && endPose && endPose !== 'none'
+      ? cube.animate(
+          [
+            { transform: 'translate(-50%, -50%) rotateX(-7deg) rotateY(-32deg)' },
+            { transform: endPose },
+          ],
+          { duration: FLIGHT_MS, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'backwards' }
+        )
+      : null;
+    fly.pause();
+    turn?.pause();
+    let raf = 0;
+    let prev = 0;
+    let calm = 0;
+    let started = false;
+    const t0 = performance.now();
+    const wait = (now) => {
+      calm = prev && now - prev < 40 ? calm + 1 : 0;
+      prev = now;
+      // tre fotogrammi regolari di fila (o al massimo 1,5 s di attesa): si parte
+      if (calm >= 3 || now - t0 > 1500) {
+        started = true;
+        fly.play();
+        turn?.play();
+        fly.finished.then(() => { fly.cancel(); done(); }, () => {});
+        return;
+      }
+      raf = requestAnimationFrame(wait);
+    };
+    raf = requestAnimationFrame(wait);
+    return () => {
+      // (StrictMode rimonta: niente animazioni ferme lasciate sulla scatola)
+      cancelAnimationFrame(raf);
+      if (!started) {
+        fly.cancel();
+        turn?.cancel();
+      }
+    };
   }, [handoff]);
 
   const armyRing = useMemo(() => {
@@ -339,7 +387,6 @@ export function DuelVersusScreen({
       {/* il sorteggio sta sotto la metà nemica: quando parte il VS la lastra ci passa sopra */}
       {intro ? (
         <VersusRoulette
-          variant={rouletteVariant}
           armies={armyRing}
           target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
           stopping={intro.stage !== 'spin'}
