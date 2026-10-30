@@ -99,7 +99,7 @@ function describeSlot(sum) {
       kind: 'empty',
       title: 'VUOTO',
       detail: sum.legacy ? 'Salvataggio del vecchio modello: una nuova campagna lo sostituisce.' : 'Nessuna campagna in questo slot.',
-      action: 'NUOVA CAMPAGNA',
+      action: 'Nuova campagna',
     };
   }
   let title;
@@ -119,7 +119,7 @@ function describeSlot(sum) {
     : sum.outcome === 'won'
       ? { won: true, text: sum.controlled ? 'CAMPAGNA COMPLETATA' : 'ATTO I COMPLETATO' }
       : { won: false, text: 'TEMPO SCADUTO' };
-  return { kind: 'run', title, detail, outcome, saved: fmtTime(sum.savedAt), action: 'CONTINUA' };
+  return { kind: 'run', title, detail, outcome, saved: fmtTime(sum.savedAt), action: 'Continua' };
 }
 
 function SlotsScreen({ summaries, pendingDelete, onAskDelete, onConfirmDelete, onCancelDelete, onNew, onContinue, onEditor, onBack }) {
@@ -382,7 +382,7 @@ function SlotsStyles() {
 
       .csl-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
       .csl-btn {
-        border: 0; cursor: pointer; height: 54px; padding: 0 28px;
+        border: 0; cursor: pointer; height: 54px; padding: 0 28px; text-transform: uppercase;
         background: var(--void); color: var(--ink); font: 700 18px/1 'Chakra Petch', sans-serif; letter-spacing: 0.1em;
         transform: skewX(-14deg); box-shadow: inset 0 0 0 2px var(--ink);
         transition: background .15s, color .15s, box-shadow .15s, transform .15s;
