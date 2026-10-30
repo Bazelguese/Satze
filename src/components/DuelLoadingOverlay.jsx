@@ -22,6 +22,7 @@ import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
 import { EminenzaZone } from './eminence/EminenzaZone';
 import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
 import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
+import { suspendSounds } from '../audio/soundBus.js';
 import { DuelVersusScreen } from './versus/DuelVersusScreen';
 import { ROULETTE_STOP_MS } from './versus/VersusRoulette.jsx';
 import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
@@ -270,6 +271,9 @@ export function DuelLoadingOverlay({
   useEffect(() => {
     if (vsStage === 'stop' && reelLanded && loadDone) setVsStage('reveal');
   }, [vsStage, reelLanded, loadDone]);
+
+  // il palco di riscaldamento (scontro finto, quasi invisibile) non deve suonare
+  useEffect(() => (warmupReady ? suspendSounds() : undefined), [warmupReady]);
 
   // Fine: senza VS come prima; con VS dopo la durata minima e la dissolvenza d'uscita.
   useEffect(() => {

@@ -1416,6 +1416,16 @@ export default function SatzeGame() {
   const duelOverdriveOn = (side) => Boolean(
     duelStamp && overdriveAt[side] != null && duelPhase >= 2 && focusLaunch.landed[side] >= overdriveAt[side]
   );
+  // Overdrive: una volta per lato, quando atterra la moneta che lo fa scattare (non se si salta il duello)
+  const playerOverdriveOn = duelOverdriveOn('player');
+  const enemyOverdriveOn = duelOverdriveOn('enemy');
+  const overdriveHeardRef = useRef({ player: false, enemy: false });
+  useEffect(() => {
+    const was = overdriveHeardRef.current;
+    const fresh = (playerOverdriveOn && !was.player) || (enemyOverdriveOn && !was.enemy);
+    if (fresh && duelPhase === 2) playGame(GAME_SOUND.DUEL_OVERDRIVE);
+    overdriveHeardRef.current = { player: playerOverdriveOn, enemy: enemyOverdriveOn };
+  }, [playerOverdriveOn, enemyOverdriveOn, duelPhase]);
   // Portale: esito del duello al centro quando partono i proiettili (e a Continua);
   // nella Chiusura (fase 5) resta il nome della sottofase
   const portalDuelEsito = useMemo(() => {

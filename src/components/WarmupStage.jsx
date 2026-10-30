@@ -15,6 +15,7 @@ import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { CardReworkP4, CardBack } from './cards';
 import { MenuAgentRain } from './menu/MenuAgentRain';
 import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
+import { suspendSounds } from '../audio/soundBus.js';
 import { EminenceTarotCard } from './eminenceLab/EminenceTarotCard';
 import ArmySelectCinematic from './menu/cosmic/ArmySelectCinematic';
 import { DeckConfirmTransition } from './menu/cosmic/DeckConfirmTransition';
@@ -61,6 +62,9 @@ export function WarmupStage({ onComplete, onProgress }) {
   const onProgressRef = useRef(onProgress);
   onCompleteRef.current = onComplete;
   onProgressRef.current = onProgress;
+
+  // gli scontri finti del riscaldamento non devono suonare
+  useEffect(() => suspendSounds(), []);
 
   const [revealIdx, setRevealIdx] = useState(0);
   const [slamKey, setSlamKey] = useState(0);

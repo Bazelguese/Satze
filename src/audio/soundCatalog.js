@@ -24,6 +24,12 @@ export const GAME_SOUND = {
   DUEL_CLASH: 'game.duel.clash',
   DUEL_COIN: 'game.duel.coin',
   DUEL_PERFECT: 'game.duel.perfect',
+  DUEL_EFFECT: 'game.duel.effect',
+  DUEL_BLOCKED: 'game.duel.blocked',
+  DUEL_OVERDRIVE: 'game.duel.overdrive',
+  DUEL_DEFEAT: 'game.duel.defeat',
+  DUEL_HP_HIT: 'game.duel.hp-hit',
+  FIELD_SEAL: 'game.field.seal',
   DUEL_WIN: 'game.duel.win',
   DUEL_LOSE: 'game.duel.lose',
   DUEL_DRAW: 'game.duel.draw',
@@ -66,6 +72,16 @@ const MATCH = {
   confirm: 'audio/sfx/match/confirm.mp3',
   coin: 'audio/sfx/match/coin.mp3',
   clash: 'audio/sfx/match/clash.mp3',
+  perfect: 'audio/sfx/match/perfect.mp3',
+  win: 'audio/sfx/match/win.mp3',
+  lose: 'audio/sfx/match/lose.mp3',
+  draw: 'audio/sfx/match/draw.mp3',
+  effect: 'audio/sfx/match/effect.mp3',
+  blocked: 'audio/sfx/match/blocked.mp3',
+  overdrive: 'audio/sfx/match/overdrive.mp3',
+  defeat: 'audio/sfx/match/defeat.mp3',
+  hpHit: 'audio/sfx/match/hp-hit.mp3',
+  seal: 'audio/sfx/match/seal.mp3',
 };
 
 /**
@@ -75,6 +91,8 @@ const MATCH = {
  */
 export const SOUND_HIT_MS = {
   [GAME_SOUND.DUEL_CLASH]: 850,
+  [GAME_SOUND.DUEL_EFFECT]: 150,
+  [GAME_SOUND.FIELD_SEAL]: 100,
 };
 
 /** @type {Record<string, string>} */
@@ -98,9 +116,16 @@ export const SOUND_CATALOG = {
   [GAME_SOUND.DUEL_FOCUS]: FALLBACK.tick,
   [GAME_SOUND.DUEL_CLASH]: MATCH.clash,
   [GAME_SOUND.DUEL_COIN]: MATCH.coin,
-  [GAME_SOUND.DUEL_WIN]: FALLBACK.win,
-  [GAME_SOUND.DUEL_LOSE]: FALLBACK.lose,
-  [GAME_SOUND.DUEL_DRAW]: FALLBACK.soft,
+  [GAME_SOUND.DUEL_PERFECT]: MATCH.perfect,
+  [GAME_SOUND.DUEL_WIN]: MATCH.win,
+  [GAME_SOUND.DUEL_LOSE]: MATCH.lose,
+  [GAME_SOUND.DUEL_DRAW]: MATCH.draw,
+  [GAME_SOUND.DUEL_EFFECT]: MATCH.effect,
+  [GAME_SOUND.DUEL_BLOCKED]: MATCH.blocked,
+  [GAME_SOUND.DUEL_OVERDRIVE]: MATCH.overdrive,
+  [GAME_SOUND.DUEL_DEFEAT]: MATCH.defeat,
+  [GAME_SOUND.DUEL_HP_HIT]: MATCH.hpHit,
+  [GAME_SOUND.FIELD_SEAL]: MATCH.seal,
   [GAME_SOUND.ROUND_NEXT]: FALLBACK.soft,
   [GAME_SOUND.ARMY_CONFIRM]: FALLBACK.confirm,
   [GAME_SOUND.DECK_CONFIRM]: FALLBACK.confirm,
