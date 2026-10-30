@@ -1,5 +1,5 @@
 export { Tutorial } from './Tutorial';
-export { TutorialSelector } from './TutorialSelector';
+export { TutorialSelector, TUTORIAL_ACCENT } from './TutorialSelector';
 export { GuidedTutorialOverlay } from './GuidedTutorialOverlay';
 export {
   TUTORIAL_STEPS,

@@ -129,6 +129,7 @@ import {
 import {
   Tutorial,
   TutorialSelector,
+  TUTORIAL_ACCENT,
   GuidedTutorialOverlay,
   TUTORIAL_STEPS,
   TUTORIAL_STEPS_BY_MODE,
@@ -4353,7 +4354,7 @@ export default function SatzeGame() {
       { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
-      { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', onClick: openTutorialSelector },
+      { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', accent: TUTORIAL_ACCENT, onClick: openTutorialSelector },
       { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · EMINENZE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
       {
         label: 'STRUMENTI DEV',
