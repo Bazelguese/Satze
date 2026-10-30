@@ -596,7 +596,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
         style={{ left: WHEEL_CX + WEDGE_RI + WEDGE_POP + 8, top: WHEEL_CY }}
         aria-hidden="true"
       >
-        <Burst value={String(idx + 1).padStart(2, '0')} label="ARMATA" />
+        <Burst value={String(idx + 1).padStart(2, '0')} />
       </div>
 
       {cards.length > 0 && (
@@ -622,7 +622,6 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
             >
               <div className="asx-rw-card" style={{ '--delay': `${0.12 + Math.abs(i - mid) * 0.06}s` }}>
                 <ShowcaseCard card={c} width={CARD_W} />
-                <span className="asx-rw-lg">L{c.league}</span>
               </div>
             </div>
           ))}
@@ -632,39 +631,49 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
       <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
         <div className="asx-ruota-wipe" aria-hidden="true" />
 
-        <div className="asx-pz-head">
-          <div className="asx-pz-bignum" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</div>
-          <div className="asx-pz-title">
-            <span className="asx-chip">ARMATA {army.glyph}</span>
+        <header className="asx-bd-head">
+          <div className="asx-sk">
+            <span className="asx-chip">ARMATA {String(idx + 1).padStart(2, '0')} · {army.glyph}</span>
             <h2 className={army.name.length > 18 ? 'long' : ''}>{army.name}</h2>
             {army.motto && <div className="asx-motto">“{army.motto}”</div>}
           </div>
           {!army.isMixed && (
-            <div className="asx-pz-stats">
+            <div className="asx-bd-stats asx-sk">
               <Burst value={army.cards} label="CARTE" />
               <Burst value={army.decks} label="ESERCITI" dark />
             </div>
           )}
-        </div>
+        </header>
 
-        <div className="asx-pz-bonus">
-          <BonusPlate army={army} />
-        </div>
+        <Band tone="paper" tag="BONUS" sub={army.bonusLabel} d={0.06}>
+          {army.bonusWhen && <p className="asx-bd-when">{army.bonusWhen}</p>}
+          {army.bonusExplain && <p className="asx-bd-main">{army.bonusExplain}</p>}
+          {army.bonusHighlight && <p className="asx-bd-when"><b>DIVERSO DALLE ALTRE ·</b> {army.bonusHighlight}</p>}
+          {army.bonus && <span className="asx-bonus-val">{army.bonus}</span>}
+        </Band>
+        {army.style && (
+          <Band tone="ink" tag="STILE" sub="CONSIGLIATO" d={0.1}>
+            <p>{army.style}</p>
+          </Band>
+        )}
+        {army.tips && (
+          <Band tone="accent" tag="NOTE" sub="TATTICHE" d={0.14}>
+            <p>{army.tips}</p>
+          </Band>
+        )}
+        {army.synopsis && (
+          <Band tone="ink" tag="STORIA" sub="IN BREVE" d={0.18}>
+            <p className="asx-bd-story">{army.synopsis}</p>
+          </Band>
+        )}
 
-        <div className="asx-pz-cols">
-          <PosterBlock n="01" label="STILE CONSIGLIATO" text={army.style} />
-          <PosterBlock n="02" label="NOTE TATTICHE" text={army.tips} low />
-        </div>
-
-        <div className="asx-pz-bottom">
-          {army.synopsis && (
-            <figure className="asx-pz-quote">
-              <span className="q" aria-hidden="true">“</span>
-              <figcaption className="asx-chip asx-chip--ink">IN BREVE</figcaption>
-              <p>{army.synopsis}</p>
-            </figure>
-          )}
-          <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
+        <div className="asx-bd-go" style={{ '--d': '0.22s' }}>
+          <button type="button" className="asx-bd-dossier" onClick={onDossier}>
+            <span className="asx-sk"><kbd>S</kbd> DOSSIER</span>
+          </button>
+          <button type="button" className="asx-bd-confirm" onClick={onConfirm}>
+            <span className="asx-sk">SCHIERA <kbd>↵</kbd></span>
+          </button>
         </div>
       </div>
 
@@ -693,17 +702,20 @@ function ZoomCard({ card }) {
   return <CardReworkP4Scaled agent={card} width={ZOOM_W} showBonus preferThumb={thumb} />;
 }
 
-/** Blocco di testo "da rivista": numero grande, etichetta, testo libero. */
-function PosterBlock({ n, label, text, low = false }) {
-  if (!text) return null;
+/** Banda inclinata della scheda: etichetta a sinistra, contenuto a destra. */
+function Band({ tone, tag, sub, d = 0, children }) {
   return (
-    <div className={`asx-pz-block${low ? ' low' : ''}`}>
-      <span className="n" aria-hidden="true">{n}</span>
-      <div className="body">
-        <span className="asx-chip">{label}</span>
-        <p>{text}</p>
+    <section className={`asx-bd asx-bd--${tone}`} style={{ '--d': `${d}s` }}>
+      <div className="asx-bd-tag">
+        <div className="asx-sk">
+          <b>{tag}</b>
+          {sub && <small>{sub}</small>}
+        </div>
       </div>
-    </div>
+      <div className="asx-bd-body">
+        <div className="asx-sk">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -711,10 +723,10 @@ const BURST_CLIP = 'polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%,
 
 function Burst({ value, label, dark = false }) {
   return (
-    <div className={`asx-burst${dark ? ' dark' : ''}`}>
+    <div className={`asx-burst${dark ? ' dark' : ''}${label ? '' : ' solo'}`}>
       <span className="shape" aria-hidden="true" />
       <span className="val">{value}</span>
-      <span className="lbl">{label}</span>
+      {label && <span className="lbl">{label}</span>}
     </div>
   );
 }
@@ -1086,11 +1098,6 @@ function ArmySelectStyles() {
       .asx-rw-card .asx-sc { filter: none; box-shadow: 6px 6px 0 rgba(5,5,7,0.85); }
       .asx-rw-card-slot:hover .asx-rw-card { transform: translateX(18px); }
       .asx-rw-card-slot:hover .asx-sc { box-shadow: 0 0 0 4px var(--ink), 8px 8px 0 4px var(--accent); }
-      .asx-rw-lg {
-        position: absolute; top: 12px; right: -14px; z-index: 2;
-        background: var(--ink); color: var(--void); font-weight: 700; font-style: italic; font-size: 15px;
-        padding: 1px 9px; transform: skewX(-14deg); box-shadow: 3px 3px 0 var(--accent);
-      }
       @keyframes asx-rw-deal {
         from { transform: translateX(-240px) scale(0.35); opacity: 0; }
         60% { opacity: 1; }
@@ -1103,69 +1110,83 @@ function ArmySelectStyles() {
       }
       @keyframes asx-rw-zoom { from { opacity: 0; transform: translateX(-30px) rotate(-6deg) scale(.85); } }
 
-      /* scheda "da rivista": i blocchi scendono seguendo il taglio diagonale */
+      /* scheda a bande: tutto il blocco è inclinato come il divisorio, il testo è raddrizzato */
       .asx-ruota-sheet {
-        position: absolute; left: 800px; right: 54px; top: 118px; bottom: 30px; z-index: 12;
-        display: flex; flex-direction: column; justify-content: space-between; gap: 18px; overflow: hidden;
+        position: absolute; left: 926px; right: 30px; top: 116px; bottom: 30px; z-index: 12;
+        display: flex; flex-direction: column; justify-content: space-between; gap: 12px; overflow: hidden;
+        transform: skewX(-8deg); transform-origin: top left;
       }
+      .asx-sk { transform: skewX(8deg); transform-origin: left center; }
       .asx-ruota-wipe {
         position: absolute; top: -20%; bottom: -20%; left: -30%; width: 22%; z-index: 30; pointer-events: none;
-        background: var(--accent); transform: skewX(-18deg) translateX(-100%);
+        background: var(--accent); transform: translateX(-100%);
         animation: asx-wipe .55s cubic-bezier(.7,0,.3,1) forwards;
       }
-      @keyframes asx-wipe { to { transform: skewX(-18deg) translateX(700%); } }
+      @keyframes asx-wipe { to { transform: translateX(700%); } }
 
-      .asx-pz-head { position: relative; padding: 0 250px 0 150px; min-height: 230px; }
-      .asx-pz-bignum {
-        position: absolute; left: 96px; top: -14px; z-index: 0; pointer-events: none;
-        font-weight: 700; font-style: italic; font-size: 290px; line-height: 0.8; letter-spacing: -0.05em;
-        color: transparent; -webkit-text-stroke: 3px var(--accent); opacity: 0.6; transform: rotate(-6deg);
-        animation: asx-swipe .35s cubic-bezier(.2,1,.3,1) both;
+      .asx-bd-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; padding: 0 8px 4px 4px; animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) both; }
+      .asx-bd-head .asx-sk { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
+      .asx-bd-head h2 {
+        margin: 0; font-weight: 700; font-style: italic; font-size: 82px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
+        text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void);
       }
-      .asx-pz-title {
-        position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
-        padding: 64px 0 0 70px; animation: asx-swipe .35s .04s cubic-bezier(.2,1,.3,1) both;
+      .asx-bd-head h2.long { font-size: 60px; }
+      .asx-bd-head .asx-motto { margin-left: 18px; }
+      .asx-bd-head .asx-bd-stats { flex-direction: row; align-items: flex-end; gap: 2px; padding-bottom: 6px; }
+
+      .asx-bd {
+        display: grid; grid-template-columns: 196px 1fr; flex: none;
+        animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) var(--d) both;
       }
-      .asx-pz-title h2 {
-        margin: 0; font-weight: 700; font-style: italic; font-size: 86px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
-        text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void); transform: rotate(-3deg); transform-origin: left;
+      @keyframes asx-bd-in { from { opacity: 0; transform: translateX(90px); } }
+      .asx-bd-tag { display: flex; align-items: center; padding: 12px 16px 12px 24px; }
+      .asx-bd-tag b { display: block; font-weight: 700; font-style: italic; font-size: 40px; line-height: 0.9; letter-spacing: -0.01em; }
+      .asx-bd-tag small { display: block; margin-top: 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.24em; }
+      .asx-bd-body { display: flex; align-items: center; padding: 14px 30px 15px 26px; min-width: 0; }
+      .asx-bd-body .asx-sk { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+      .asx-bd-body p { margin: 0; font-size: 18px; line-height: 1.45; }
+      .asx-bd-when { font-style: italic; font-weight: 600; font-size: 15px !important; opacity: 0.75; }
+      .asx-bd-main { font-weight: 600; font-size: 20px !important; line-height: 1.35 !important; }
+      .asx-bd-story {
+        font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       }
-      .asx-pz-title h2.long { font-size: 62px; }
-      .asx-pz-title .asx-motto { margin-left: 40px; }
-      .asx-pz-stats { position: absolute; right: 6px; top: 0; display: flex; gap: 2px; transform: rotate(-8deg); animation: asx-swipe .35s .08s cubic-bezier(.2,1,.3,1) both; }
+
+      /* toni: bianco, nero, colore d'armata — l'etichetta inverte sempre la banda */
+      .asx-bd--paper { background: var(--ink); color: var(--void); box-shadow: 9px 9px 0 var(--accent); margin-right: 14px; }
+      .asx-bd--paper .asx-bd-tag { background: var(--void); color: var(--ink); }
+      .asx-bd--paper .asx-bd-tag small { color: var(--accent); }
+      .asx-bd--ink { background: rgba(14,13,20,0.96); color: rgba(245,243,235,0.92); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); margin-right: 70px; }
+      .asx-bd--ink .asx-bd-tag { background: var(--accent); color: var(--void); }
+      .asx-bd--accent { background: var(--accent); color: var(--void); margin-right: 30px; }
+      .asx-bd--accent .asx-bd-tag { background: var(--ink); color: var(--void); }
+      .asx-bd--accent .asx-bd-tag small { color: var(--accent); }
+      .asx-bd--accent .asx-bd-body p { font-weight: 600; }
+      .asx-bd--ink + .asx-bd--accent + .asx-bd--ink { margin-right: 120px; }
+
+      .asx-bd-go {
+        display: grid; grid-template-columns: 196px 1fr; flex: none; height: 108px; margin-right: 40px;
+        animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) var(--d) both;
+      }
+      .asx-bd-go button { border: 0; padding: 0; font-family: inherit; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s, color .15s; }
+      .asx-bd-go kbd { display: inline-grid; place-items: center; font-family: 'Share Tech Mono', monospace; font-style: normal; }
+      .asx-bd-dossier { background: var(--void); color: var(--ink); box-shadow: inset 0 0 0 3px var(--ink); font-weight: 700; font-size: 18px; letter-spacing: 0.14em; }
+      .asx-bd-dossier kbd { background: var(--ink); color: var(--void); min-width: 26px; height: 24px; margin-right: 6px; font-size: 14px; }
+      .asx-bd-dossier:hover { background: var(--ink); color: var(--void); }
+      .asx-bd-dossier:hover kbd { background: var(--void); color: var(--ink); }
+      .asx-bd-confirm {
+        background: var(--accent); color: var(--void); box-shadow: 10px 10px 0 var(--ink);
+        font-weight: 700; font-style: italic; font-size: 72px; letter-spacing: -0.01em; text-align: left; padding-left: 40px !important;
+      }
+      .asx-bd-confirm .asx-sk { display: flex; align-items: center; gap: 22px; }
+      .asx-bd-confirm kbd { background: var(--void); color: var(--ink); font-size: 26px; min-width: 50px; height: 42px; }
+      .asx-bd-confirm:hover, .asx-bd-confirm:focus-visible { transform: translate(-5px, -5px); box-shadow: 16px 16px 0 var(--ink); outline: none; }
 
       .asx-burst { position: relative; width: 112px; height: 112px; display: grid; place-items: center; }
       .asx-burst .shape { position: absolute; inset: 0; background: var(--ink); clip-path: ${BURST_CLIP}; filter: drop-shadow(5px 5px 0 var(--accent)); animation: asx-spin 22s linear infinite; }
       .asx-burst.dark .shape { background: var(--accent); filter: drop-shadow(5px 5px 0 var(--void)); }
       .asx-burst .val { position: relative; font-weight: 700; font-style: italic; font-size: 44px; line-height: 1; color: var(--void); transform: translateY(-10px) rotate(-6deg); }
+      .asx-burst.solo .val { font-size: 50px; transform: rotate(-6deg); }
       .asx-burst .lbl { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
-
-      .asx-pz-bonus { padding: 0 40px 0 110px; transform: rotate(-1.2deg); }
-      .asx-pz-bonus .asx-bonus { padding: 18px 28px 20px; }
-      .asx-pz-bonus .asx-bonus-explain { font-size: 21px; }
-
-      .asx-pz-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; padding-left: 64px; align-items: start; }
-      .asx-pz-block { display: flex; gap: 14px; min-width: 0; animation: asx-swipe .35s .12s cubic-bezier(.2,1,.3,1) both; }
-      .asx-pz-block.low { margin-top: 54px; animation-delay: .16s; }
-      .asx-pz-block .n {
-        flex: none; font-weight: 700; font-style: italic; font-size: 92px; line-height: 0.8; color: var(--accent);
-        text-shadow: 4px 4px 0 var(--void); transform: rotate(-8deg);
-      }
-      .asx-pz-block .body { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; min-width: 0; }
-      .asx-pz-block p { margin: 0; font-size: 18px; line-height: 1.5; color: rgba(245,243,235,0.92); }
-
-      .asx-pz-bottom { display: flex; align-items: flex-end; gap: 36px; padding-left: 14px; }
-      .asx-pz-quote { position: relative; flex: 1; min-width: 0; margin: 0; padding: 0 0 6px 104px; animation: asx-swipe .35s .2s cubic-bezier(.2,1,.3,1) both; }
-      .asx-pz-quote .q {
-        position: absolute; left: 0; top: -22px; font-weight: 700; font-style: italic; font-size: 170px; line-height: 1;
-        color: var(--accent); text-shadow: 6px 6px 0 var(--void);
-      }
-      .asx-pz-quote .asx-chip--ink { margin: 0 0 10px; }
-      .asx-pz-quote p {
-        margin: 0; font-style: italic; font-size: 19px; line-height: 1.5; color: rgba(245,243,235,0.9);
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-      }
-      .asx-pz-bottom .asx-actions { width: 410px; flex: none; }
 
       /* ---------- 3 MANO ---------- */
       .asx-mano-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
