@@ -64,19 +64,38 @@ function rnd(seed) {
   return x - Math.floor(x);
 }
 
-/** Schizzo di vernice: macchia irregolare con punte e colature (viewBox 300×180). */
-function splashPath(seed) {
+/**
+ * Schizzo di vernice nuovo per ogni seme (viewBox 300×180): bordo morbido
+ * con un numero variabile di punte lunghe in direzioni casuali, gocce
+ * sparse attorno, inclinazione e verso diversi.
+ */
+function makeSplash(seed) {
+  const n = 26 + Math.floor(rnd(seed) * 10);
+  const spikes = new Set();
+  const spikeCount = 3 + Math.floor(rnd(seed + 1) * 4);
+  for (let k = 0; k < spikeCount; k += 1) spikes.add(Math.floor(rnd(seed + 10 + k) * n));
   const pts = [];
-  const n = 22;
   for (let i = 0; i < n; i += 1) {
     const a = (i / n) * Math.PI * 2;
-    const spike = i % 4 === 1 ? 1.25 + rnd(seed + i) * 0.35 : 0.72 + rnd(seed + i * 3) * 0.24;
-    pts.push([150 + Math.cos(a) * 128 * spike, 90 + Math.sin(a) * 58 * spike]);
+    const r = spikes.has(i) ? 1.25 + rnd(seed + 40 + i) * 0.55 : 0.68 + rnd(seed + 80 + i) * 0.3;
+    pts.push([150 + Math.cos(a) * 118 * r, 90 + Math.sin(a) * 56 * r]);
   }
-  return `M ${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L ")} Z`;
+  // curve morbide tra i punti medi: bordo da vernice, non da poligono
+  const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const f = (v) => v.toFixed(1);
+  let d = `M ${mid(pts[n - 1], pts[0]).map(f).join(" ")}`;
+  for (let i = 0; i < n; i += 1) {
+    const m = mid(pts[i], pts[(i + 1) % n]);
+    d += ` Q ${f(pts[i][0])} ${f(pts[i][1])} ${f(m[0])} ${f(m[1])}`;
+  }
+  const dropCount = 3 + Math.floor(rnd(seed + 3) * 5);
+  const drops = Array.from({ length: dropCount }, (_, k) => {
+    const a = rnd(seed + 200 + k) * Math.PI * 2;
+    const dist = 1.15 + rnd(seed + 300 + k) * 0.5;
+    return { cx: 150 + Math.cos(a) * 130 * dist, cy: 90 + Math.sin(a) * 66 * dist, r: 2.5 + rnd(seed + 400 + k) * 8 };
+  });
+  return { d, drops, rot: -14 + rnd(seed + 5) * 22, flip: rnd(seed + 6) > 0.5 ? -1 : 1 };
 }
-
-const SPLASH = splashPath(11);
 
 const STAR_CLIP =
   "polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%, 96% 74%, 74% 76%, 70% 98%, 52% 84%, 34% 100%, 28% 78%, 4% 80%, 16% 60%, 0% 42%, 20% 32%, 14% 10%, 36% 18%)";
@@ -110,6 +129,8 @@ function BarMenu({ rows, active, buttonRefs, onHover, onPick }) {
   const current = rows[active];
   const sub = current ? sublineOf(current) : "";
   const headSize = current ? Math.min(132, Math.floor(1560 / (current.label.length * 0.8))) : 132;
+  // forma nuova a ogni cambio di voce (anche tornando sulla stessa)
+  const splash = useMemo(() => makeSplash(Math.floor(Math.random() * 100000)), [active]);
   return (
     <nav className={`mb ${rows.length > 7 ? "mb--dense" : ""}`} aria-label="Menu principale">
       <div className="mb-slash" aria-hidden="true" />
@@ -142,11 +163,17 @@ function BarMenu({ rows, active, buttonRefs, onHover, onPick }) {
                 onClick={() => onPick(i)}
               >
                 {on && (
-                  <svg className="mb-splash" key={`s-${active}`} viewBox="0 0 300 180" aria-hidden="true">
-                    <path d={SPLASH} />
-                    <circle cx="28" cy="40" r="7" />
-                    <circle cx="278" cy="132" r="9" />
-                    <circle cx="262" cy="30" r="4" />
+                  <svg
+                    className="mb-splash"
+                    key={splash.d}
+                    viewBox="0 0 300 180"
+                    aria-hidden="true"
+                    style={{ "--sr": `${splash.rot.toFixed(1)}deg`, "--sf": splash.flip }}
+                  >
+                    <path d={splash.d} />
+                    {splash.drops.map((dr, k) => (
+                      <circle key={k} cx={dr.cx.toFixed(1)} cy={dr.cy.toFixed(1)} r={dr.r.toFixed(1)} />
+                    ))}
                   </svg>
                 )}
                 <span className="mb-plate" aria-hidden="true" />
@@ -671,12 +698,12 @@ function SatzeMenuStyles() {
       .mb-item.on .mb-label { color: ${V}; text-shadow: none; opacity: 1; transform: translateY(-20px) rotate(-2deg); }
       .mb-splash {
         position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 200px); height: 200px;
-        transform: translate(-50%, -64%) rotate(-6deg); overflow: visible; filter: url(#smp-splash);
+        transform: translate(-50%, -64%) rotate(var(--sr)) scaleX(var(--sf)); overflow: visible; filter: url(#smp-splash);
         animation: mb-splat .38s cubic-bezier(.2,1.6,.4,1) both;
       }
       .mb-splash path, .mb-splash circle { fill: var(--c); }
       @keyframes mb-splat {
-        from { opacity: 0; transform: translate(-50%, -64%) rotate(-30deg) scale(0.2); }
+        from { opacity: 0; transform: translate(-50%, -64%) rotate(calc(var(--sr) - 30deg)) scale(0.2); }
         60% { opacity: 1; }
       }
       .mb-more {
