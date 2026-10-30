@@ -556,8 +556,9 @@ export default function DeckSelectCinematic({
 
   if (!deck) {
     return (
-      <div className="dsk dsk-empty">
+      <div className="dsk dsk--p dsk-empty">
         <DeckSelectStyles/>
+        <DeckSelectPersonaSkin/>
         <div className="dsk-empty-msg">
           {isManager ? 'Nessun esercito personalizzato' : 'Nessun esercito disponibile'}
         </div>
@@ -587,7 +588,7 @@ export default function DeckSelectCinematic({
   const compactPager = total > 12;
 
   return (
-    <div ref={rootRef} className={`dsk phase-${phase}`} style={{ '--accent': accent }}>
+    <div ref={rootRef} className={`dsk dsk--p phase-${phase}`} style={{ '--accent': accent }}>
       {/* BG */}
       <div className="dsk-bg-layer">
         <div className="dsk-bg" key={`bg-${deck.army}-${pulse}`} style={{ backgroundImage: deck.bg ? `url('${deck.bg}')` : 'none' }}>
@@ -607,6 +608,8 @@ export default function DeckSelectCinematic({
         <div className="dsk-stars"/>
         <div className="dsk-halftone"/>
         <div className="dsk-diag"/>
+        <div className="dsk-p-stripes"/>
+        <div className="dsk-p-edge"/>
       </div>
 
       {/* Watermark */}
@@ -803,9 +806,173 @@ export default function DeckSelectCinematic({
 
       <div className="dsk-scanlines"/>
       <DeckSelectStyles/>
+      <DeckSelectPersonaSkin/>
     </div>
   );
 }
+// ============================================================
+// PELLE PERSONA — solo questa schermata (classe .dsk--p sulla radice).
+// DeckSelectStyles resta invariato: lo usa anche la schermata VS.
+// ============================================================
+function DeckSelectPersonaSkin() {
+  return (
+    <style>{`
+      .dsk.dsk--p { --p-ink: #f5f3eb; --p-void: #050507; font-family: 'Chakra Petch', sans-serif; }
+      .dsk--p kbd {
+        display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 5px;
+        background: var(--p-ink); color: var(--p-void); border: 0;
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0;
+        clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+      }
+
+      /* Fondo: lastra d'accento in diagonale + righe */
+      .dsk--p .dsk-p-edge {
+        position: absolute; top: -20%; bottom: -20%; left: 7%; width: 16px; z-index: 0;
+        background: var(--accent); transform: skewX(-14deg);
+        box-shadow: 22px 0 0 -10px var(--p-void), 30px 0 0 -12px var(--accent);
+        opacity: 0.85; pointer-events: none;
+        transition: background .35s, box-shadow .35s;
+      }
+      .dsk--p .dsk-p-stripes {
+        position: absolute; inset: 0; opacity: 0.05; pointer-events: none;
+        background-image: repeating-linear-gradient(-77deg, #fff 0 2px, transparent 2px 46px);
+      }
+      .dsk--p .dsk-watermark {
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        letter-spacing: -0.03em; transform: rotate(-6deg) skewX(-10deg);
+        -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 22%, transparent);
+      }
+
+      /* Testata */
+      .dsk--p .dsk-top { grid-template-columns: 260px 1fr 260px; padding-top: 18px; }
+      .dsk--p .dsk-back {
+        justify-self: start; clip-path: none; border: 0;
+        background: var(--p-void); color: var(--p-ink);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 20px; letter-spacing: 0.08em;
+        padding: 10px 24px 10px 18px;
+        transform: skewX(-14deg) rotate(-2deg);
+        box-shadow: 5px 5px 0 var(--accent);
+        transition: transform .15s, box-shadow .15s;
+      }
+      .dsk--p .dsk-back > * { display: inline-block; transform: skewX(14deg); }
+      .dsk--p .dsk-back:hover { color: var(--p-ink); transform: skewX(-14deg) rotate(-2deg) translate(-3px,-3px); box-shadow: 9px 9px 0 var(--accent); }
+      .dsk--p .dsk-title-block { transform: rotate(-2deg); }
+      .dsk--p .dsk-eyebrow {
+        display: inline-block; background: var(--accent); color: var(--p-void);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.26em;
+        padding: 2px 12px; transform: skewX(-14deg);
+      }
+      .dsk--p .dsk-title {
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 50px; line-height: 1; letter-spacing: -0.01em; text-transform: uppercase;
+        margin: 4px 0 6px;
+        text-shadow: 4px 4px 0 var(--accent), 8px 8px 0 var(--p-void);
+      }
+      .dsk--p .dsk-sub {
+        display: inline-block; background: rgba(5,5,7,0.82); color: rgba(245,243,235,0.8);
+        font-size: 11px; letter-spacing: 0.16em; padding: 4px 12px;
+      }
+      .dsk--p .dsk-faction { justify-self: end; transform: rotate(-3deg); }
+      .dsk--p .dsk-faction .ft-lbl {
+        display: inline-block; background: var(--p-ink); color: var(--p-void);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.26em;
+        padding: 2px 10px; transform: skewX(-14deg);
+      }
+      .dsk--p .dsk-faction .ft-name {
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 22px; line-height: 1.05; letter-spacing: 0.01em; margin-top: 4px;
+        text-shadow: 3px 3px 0 var(--p-void);
+      }
+
+      /* Frecce sopra il ticket */
+      .dsk--p .dsk-nav {
+        clip-path: none; border: 0; background: var(--p-void); color: var(--p-ink);
+        font-family: 'Chakra Petch', sans-serif; font-size: 30px;
+        box-shadow: 4px 4px 0 var(--accent);
+      }
+      .dsk--p .dsk-nav.left { transform: translateX(-100%) skewX(-14deg); }
+      .dsk--p .dsk-nav.right { transform: skewX(-14deg); }
+      .dsk--p .dsk-nav:hover { background: var(--accent); color: var(--p-void); box-shadow: 4px 4px 0 var(--p-ink); }
+
+      /* Barra in basso */
+      .dsk--p .dsk-ctabar { grid-template-columns: 250px 1fr auto; gap: 18px; }
+      .dsk--p .dsk-pager {
+        clip-path: none; border: 0; background: var(--p-void);
+        transform: skewX(-12deg); box-shadow: 5px 5px 0 var(--accent);
+        padding: 12px 20px;
+      }
+      .dsk--p .dsk-pager > * { transform: skewX(12deg); }
+      .dsk--p .dsk-pager .eye { font-family: 'Chakra Petch', sans-serif; font-size: 12px; letter-spacing: 0.22em; color: var(--p-ink); }
+      .dsk--p .dsk-pager .dot { transform: skewX(-20deg); height: 7px; background: rgba(245,243,235,0.2); }
+      .dsk--p .dsk-pager .dot.on { background: var(--p-ink); box-shadow: none; }
+      .dsk--p .dsk-pager.compact .num { font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 700; font-size: 32px; }
+      .dsk--p .dsk-ctabar-info {
+        clip-path: none; border: 0; box-shadow: 8px 8px 0 var(--accent);
+        background: var(--p-ink); color: var(--p-void);
+        transform: skewX(-12deg) rotate(-1deg);
+        padding: 12px 26px;
+      }
+      .dsk--p .dsk-ctabar-info > * { transform: skewX(12deg); }
+      .dsk--p .dsk-ctabar-info .lbl {
+        align-self: flex-start; background: var(--p-void); color: var(--p-ink);
+        font-family: 'Chakra Petch', sans-serif; font-size: 11px; letter-spacing: 0.26em; padding: 1px 9px;
+      }
+      .dsk--p .dsk-ctabar-deck .name {
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 30px; letter-spacing: 0; color: var(--p-void); margin-top: 2px;
+      }
+      .dsk--p .dsk-preview {
+        clip-path: none; border: 0; background: var(--p-void); color: var(--p-ink);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.14em;
+        padding: 15px 20px; transform: skewX(-14deg);
+        box-shadow: inset 0 0 0 2px var(--p-ink);
+      }
+      .dsk--p .dsk-preview > * { display: inline-block; transform: skewX(14deg); }
+      .dsk--p .dsk-preview:hover { background: var(--p-ink); color: var(--p-void); box-shadow: 5px 5px 0 var(--accent); }
+      .dsk--p .dsk-schiera {
+        clip-path: none; transform: skewX(-14deg);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 40px; letter-spacing: 0.02em; padding: 14px 30px;
+        box-shadow: 7px 7px 0 var(--p-ink);
+      }
+      .dsk--p .dsk-schiera > * { transform: skewX(14deg); }
+      .dsk--p .dsk-schiera:hover { transform: skewX(-14deg) translate(-3px,-3px) rotate(-1deg); box-shadow: 11px 11px 0 var(--p-ink); }
+      .dsk--p .dsk-schiera .key {
+        border: 0; background: var(--p-void); color: var(--p-ink);
+        font-family: 'Chakra Petch', sans-serif; font-style: normal; font-size: 14px;
+      }
+
+      /* Preferenze duello */
+      .dsk--p .dsk-prefpanel { clip-path: none; border: 0; border-left: 5px solid var(--accent); background: rgba(5,5,7,0.92); box-shadow: 8px 8px 0 rgba(0,0,0,0.7); }
+      .dsk--p .dsk-prefpanel-head .eye {
+        background: var(--accent); color: var(--p-void);
+        font-family: 'Chakra Petch', sans-serif; font-size: 12px; letter-spacing: 0.22em; padding: 1px 10px;
+        transform: skewX(-14deg);
+      }
+      .dsk--p .dsk-pref-lbl { font-family: 'Chakra Petch', sans-serif; font-size: 12px; letter-spacing: 0.14em; color: var(--p-ink); }
+      .dsk--p .dsk-shuffle-nav {
+        border: 0; background: var(--p-ink); color: var(--p-void);
+        font-family: 'Chakra Petch', sans-serif; font-size: 18px; transform: skewX(-14deg);
+      }
+      .dsk--p .dsk-shuffle-nav:hover { background: var(--accent); color: var(--p-void); box-shadow: none; }
+      .dsk--p .dsk-shuffle-slide .name { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic; font-size: 16px; letter-spacing: 0.02em; }
+      .dsk--p .dsk-fxpreview-tabs button {
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; letter-spacing: 0.1em;
+        transform: skewX(-14deg);
+      }
+      .dsk--p .dsk-fxpreview-tabs button.on { background: var(--p-ink); color: var(--p-void); }
+
+      /* Lista vuota */
+      .dsk--p.dsk-empty .dsk-empty-msg {
+        background: var(--p-ink); color: var(--p-void);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic; text-transform: uppercase;
+        padding: 10px 26px; transform: rotate(-2deg); box-shadow: 6px 6px 0 var(--accent, #a78bfa);
+      }
+    `}</style>
+  );
+}
+
 
 // ============================================================
 // PORTRAIT + ICONE ARMATA
