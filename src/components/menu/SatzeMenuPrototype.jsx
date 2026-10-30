@@ -6,7 +6,8 @@ import { isMenuFollowUpPicker } from "../../utils/devDialogueDuelMenu";
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from "../../settings/displaySettings";
 import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/vfxQualityProfile";
 import { useUiScale } from "../../hooks/useUiScale";
-import { playUiClick } from "../../audio/soundBus";
+import { playSound, playUiClick } from "../../audio/soundBus";
+import { UI_SOUND } from "../../audio/soundCatalog";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -44,48 +45,127 @@ function firstEnabled(rows) {
   return i < 0 ? 0 : i;
 }
 
-const ZIGZAG = [0, 16, 6, 22, 4, 18, 10];
+/** Pseudo-casuale deterministico: stesse lettere "ritagliate" a ogni render. */
+function rnd(seed) {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function hashString(s) {
+  let h = 7;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** Sagoma frastagliata a freccia (tre varianti: alternandole la sagoma "vibra"). */
+function jaggedClip(seed) {
+  const top = [];
+  const bottom = [];
+  const n = 10;
+  for (let i = 0; i <= n; i += 1) {
+    const x = (i / n) * 90;
+    top.push(`${(x + (rnd(seed + i) - 0.5) * 3).toFixed(1)}% ${((i % 2 ? 0 : 12) + rnd(seed + i * 3) * 10).toFixed(1)}%`);
+    bottom.unshift(`${(x + (rnd(seed + i * 5) - 0.5) * 3).toFixed(1)}% ${(100 - (i % 2 ? 12 : 0) - rnd(seed + i * 7) * 10).toFixed(1)}%`);
+  }
+  const tip = `100% ${(44 + rnd(seed + 99) * 12).toFixed(1)}%`;
+  const notch = `${(3 + rnd(seed + 77) * 5).toFixed(1)}% 50%`;
+  return `polygon(${[...top, tip, ...bottom, notch].join(", ")})`;
+}
+
+const SPLASH = [jaggedClip(3), jaggedClip(41), jaggedClip(87)];
+const LETTER_KINDS = ["paper", "ink", "accent", "paper", "ink", "plain"];
 
 /**
- * Voce a piastra inclinata (menu e pannello di scelta).
- * Attiva = piastra crema, testo nero, ombra d'accento sfalsata e cursore.
+ * Scritta "a ritaglio": ogni lettera ha misura, inclinazione e (se `cut`) un
+ * riquadro diverso, come lettere ritagliate da giornali.
  */
-function MenuPlate({ row, index, active, compact = false, buttonRef, onActivate, onHover }) {
+function CutoutLabel({ text, cut }) {
+  const seed = hashString(text);
+  return (
+    <span className={`rn ${cut ? "rn--cut" : ""}`}>
+      <span className="rn-sr">{text}</span>
+      {[...text].map((ch, i) => {
+        if (ch === " ") return <span key={i} className="rn-sp" aria-hidden="true" />;
+        const a = rnd(seed + i * 7.1);
+        const b = rnd(seed + i * 3.7 + 11);
+        const c = rnd(seed + i * 5.3 + 29);
+        const kind = LETTER_KINDS[Math.floor(a * LETTER_KINDS.length)];
+        return (
+          <span
+            key={i}
+            aria-hidden="true"
+            className={`rn-ch rn-${kind} ${b > 0.64 ? "rn-serif" : ""}`}
+            style={{
+              "--s": (0.84 + b * 0.32).toFixed(3),
+              "--r": `${((c - 0.5) * 16).toFixed(1)}deg`,
+              "--y": `${((a - 0.5) * 12).toFixed(1)}%`,
+              "--i": i,
+            }}
+          >
+            {ch}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+const SHIFT = [0, 36, 12, 44, 20, 40, 6, 30, 16, 34];
+const TILT = [-2, 1.5, -1.5, 2, -2.5, 1, -1.5, 2, -1, 1.5];
+
+/**
+ * Voce del menu (e del pannello di scelta). Non scelta: scritta crema
+ * inclinata. Scelta: si ingrandisce, lettere a ritaglio che saltano dentro
+ * una alla volta e sagoma frastagliata che vibra dietro, con stella-cursore.
+ */
+function MenuEntry({ row, index, active, compact = false, buttonRef, onActivate, onHover }) {
   const subline = [row.sub, row.meta].filter(Boolean).join(" · ");
+  // Ingrandimento della voce scelta: le scritte lunghe crescono meno, così restano nello schermo.
+  const room = compact ? 560 / (row.label.length * 23) : 600 / (row.label.length * 35);
+  const onScale = Math.max(0.95, Math.min(compact ? 1.18 : 1.26, room));
   return (
     <button
       ref={buttonRef}
       type="button"
       disabled={row.disabled}
-      className={`smp-row ${active ? "on" : ""} ${compact ? "smp-row--compact" : ""}`}
-      style={{ "--c": row.accent, "--zz": `${ZIGZAG[index % ZIGZAG.length]}px`, "--d": `${0.18 + index * 0.045}s` }}
+      aria-label={[row.label, row.sub, row.meta].filter(Boolean).join(" · ")}
+      className={`smp-entry ${active ? "on" : ""} ${compact ? "smp-entry--compact" : ""}`}
+      style={{
+        "--c": row.accent,
+        "--x": `${SHIFT[index % SHIFT.length]}px`,
+        "--t": `${TILT[index % TILT.length]}deg`,
+        "--d": `${0.2 + index * 0.05}s`,
+        "--on": onScale.toFixed(3),
+      }}
       onMouseEnter={onHover}
       onFocus={onHover}
       onClick={onActivate}
     >
-      <span className="smp-row-shadow" aria-hidden="true" />
-      <span className="smp-row-plate">
-        <span className="smp-row-cursor" aria-hidden="true" />
-        <span className="smp-row-num">{String(index + 1).padStart(2, "0")}</span>
-        <span className="smp-row-text">
-          <span className="smp-row-title">{row.label}</span>
-          {subline ? <span className="smp-row-sub">{subline}</span> : null}
-        </span>
-        {row.hasChoices ? (
-          <span className="smp-row-more">{row.choiceCount}</span>
-        ) : (
-          <span className="smp-row-arrow" aria-hidden="true">›</span>
+      <span className="smp-entry-body">
+        {active && (
+          <span className="smp-splash" aria-hidden="true">
+            <span className="sp sp-back" />
+            <span className="sp sp-mid" />
+            <span className="sp sp-front" />
+          </span>
         )}
+        {active && <span className="smp-entry-star" aria-hidden="true" />}
+        {/* Stessi nodi da scelta a non scelta: rimontarli farebbe perdere il clic in corso. */}
+        <span className="smp-entry-label">
+          <CutoutLabel text={row.label} cut={active} />
+        </span>
+        {row.hasChoices && <span className="smp-entry-more" aria-hidden="true">+</span>}
       </span>
+      {active && subline ? <span className="smp-entry-sub">{subline}</span> : null}
     </button>
   );
 }
 
 /**
- * Menu principale — stile Persona come Galleria, costruzione esercito e
- * caricamento: lastra nera in diagonale con bordo magenta, retino, logo
- * animato inclinato con motto su targa, voci a piastra con cursore e ombra
- * d'accento, barra comandi in basso e lame d'ingresso.
+ * Menu principale — stile Persona 5 sulla palette di Satze: lastra nera in
+ * diagonale con bordo magenta, retino, logo animato, voci grandi "a
+ * ritaglio" con sagoma frastagliata che vibra sulla voce scelta, eco gigante
+ * della voce sullo sfondo, lampo diagonale a ogni cambio e lame d'ingresso.
  *
  * Tastiera: ↑/↓ voce, Invio/Spazio sceglie, Esc chiude il pannello di scelta.
  * `inputLocked` sospende la tastiera quando sopra il menu c'è un altro overlay.
@@ -126,7 +206,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   }, []);
 
   const accentCycle = useMemo(
-    () => [MENU_ACCENTS.pink, MENU_ACCENTS.magenta, "#a78bfa", "#22d3ee", "#94a3b8", "#f472b6"],
+    () => [MENU_ACCENTS.pink, MENU_ACCENTS.magenta, "#a78bfa", "#d946ef", "#8b5cf6", "#f472b6"],
     [],
   );
 
@@ -142,7 +222,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         accent: item.accent ?? accentCycle[i % accentCycle.length],
         disabled: item.disabled,
         hasChoices: Boolean(options?.length),
-        choiceCount: options?.length ?? 0,
         options,
         leafOnClick: item.onClick,
       };
@@ -155,7 +234,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         ...opt,
         accent: choicePicker.accent,
         hasChoices: Boolean(opt.choices?.length),
-        choiceCount: opt.choices?.length ?? 0,
       })),
     [choicePicker],
   );
@@ -170,6 +248,17 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const closeTopPicker = () => {
     setChoicePickerStack((s) => s.slice(0, -1));
     setPickerIndex(0);
+  };
+
+  const selectMain = (i) => {
+    if (i === mainActive) return;
+    playSound(UI_SOUND.NAVIGATE);
+    setActiveIndex(i);
+  };
+  const selectPicker = (i) => {
+    if (i === pickerIndex) return;
+    playSound(UI_SOUND.NAVIGATE);
+    setPickerIndex(i);
   };
 
   const activateMain = (i) => {
@@ -243,6 +332,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     pickerIndex,
     items,
     mainActive,
+    selectMain,
+    selectPicker,
     activateMain,
     activatePicker,
     backFromPicker,
@@ -254,14 +345,15 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       if (k.inputLocked || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || isTypingTarget(e.target)) return;
       const rows = k.choicePicker ? k.pickerRows : k.items;
       const current = k.choicePicker ? k.pickerIndex : k.mainActive;
-      const setIndex = k.choicePicker ? setPickerIndex : setActiveIndex;
       switch (e.key) {
         case "ArrowUp":
         case "ArrowDown": {
           if (!rows.length) return;
           e.preventDefault();
           keyNavRef.current = true;
-          setIndex(stepEnabled(rows, current, e.key === "ArrowUp" ? -1 : 1));
+          const next = stepEnabled(rows, current, e.key === "ArrowUp" ? -1 : 1);
+          if (k.choicePicker) k.selectPicker(next);
+          else k.selectMain(next);
           break;
         }
         case "Enter":
@@ -302,7 +394,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         { keys: ["INVIO"], label: "SCEGLI" },
       ];
 
-  const activeAccent = items[mainActive]?.accent ?? MENU_ACCENTS.magenta;
+  const activeItem = items[mainActive];
+  const activeAccent = activeItem?.accent ?? MENU_ACCENTS.magenta;
 
   return (
     <div
@@ -322,31 +415,30 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         <div className="smp-bg-slab" />
         <div className="smp-bg-slab-edge" />
         <div className="smp-bg-halftone" />
-        <div className="smp-bg-stripes" />
       </div>
 
       <div className="smp-watermark" aria-hidden="true">SATZE</div>
+
+      {activeItem && (
+        <div className="smp-echo" key={`echo-${activeItem.id}`} aria-hidden="true">
+          {activeItem.label}
+        </div>
+      )}
+      <div className="smp-flash" key={`flash-${mainActive}`} aria-hidden="true" />
 
       <div className="smp-brand">
         <AnimatedSatzeLogo
           reducedMotion={vfxProfile.quality === "low"}
           paused={Boolean(choicePicker) || inputLocked}
           strength={vfxProfile.quality === "medium" ? 0.7 : 1}
-          style={{ width: 720, maxWidth: "100%", pointerEvents: "none" }}
+          style={{ width: 760, maxWidth: "100%", pointerEvents: "none" }}
         />
-        <div className="smp-tagline">
-          <span>LA GRANDE GUERRA</span>
-        </div>
       </div>
 
       <div className="smp-menu">
-        <div className="smp-head">
-          <span className="smp-head-sec">MENÙ</span>
-          <span className="smp-head-txt">PRINCIPALE</span>
-        </div>
         <div className="smp-list" role="menu">
           {items.map((item, i) => (
-            <MenuPlate
+            <MenuEntry
               key={item.id}
               row={item}
               index={i}
@@ -354,7 +446,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
               buttonRef={(el) => {
                 rowRefs.current[i] = el;
               }}
-              onHover={() => !item.disabled && !choicePicker && setActiveIndex(i)}
+              onHover={() => !item.disabled && !choicePicker && selectMain(i)}
               onActivate={() => {
                 setActiveIndex(i);
                 activateMain(i);
@@ -396,17 +488,12 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
                   {choicePicker.trail.length ? <span className="trail">{choicePicker.trail.join(" › ")}</span> : null}
                 </div>
                 <h2 id="satze-choice-picker-title" className="smp-picker-title">
-                  <span>{choicePicker.title}</span>
+                  <CutoutLabel text={choicePicker.title} cut />
                 </h2>
-                <div className="smp-picker-count">
-                  <span className="cur">{String(pickerIndex + 1).padStart(2, "0")}</span>
-                  <span className="sep">/</span>
-                  <span className="tot">{String(pickerRows.length).padStart(2, "0")}</span>
-                </div>
               </div>
               <div className="smp-picker-list" ref={pickerListRef}>
                 {pickerRows.map((opt, idx) => (
-                  <MenuPlate
+                  <MenuEntry
                     key={`${opt.label}-${idx}`}
                     row={opt}
                     index={idx}
@@ -415,7 +502,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
                     buttonRef={(el) => {
                       pickerRowRefs.current[idx] = el;
                     }}
-                    onHover={() => !opt.disabled && setPickerIndex(idx)}
+                    onHover={() => !opt.disabled && selectPicker(idx)}
                     onActivate={() => {
                       setPickerIndex(idx);
                       activatePicker(idx);
@@ -472,7 +559,7 @@ function SatzeMenuStyles() {
       }
       .smp-bg-tone {
         position: absolute; inset: 0; z-index: 2;
-        background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--active) 16%, transparent) 70%, transparent 100%);
+        background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--active) 18%, transparent) 70%, transparent 100%);
         transition: background .35s;
       }
       .smp-bg-slab {
@@ -485,22 +572,19 @@ function SatzeMenuStyles() {
       @keyframes smp-slab-in { from { transform: skewX(-13deg) translateX(110%); } }
       .smp-bg-slab-edge {
         position: absolute; top: -20%; bottom: -20%; left: calc(62% - 11px); width: 22px; z-index: 3;
-        background: var(--accent);
+        background: var(--active);
         transform: skewX(-13deg);
         box-shadow: -26px 0 0 -14px ${V}, -34px 0 0 -16px ${T};
+        transition: background .3s;
         animation: smp-edge-in .55s .05s cubic-bezier(.2,.9,.2,1) both;
       }
       @keyframes smp-edge-in { from { transform: skewX(-13deg) translateY(110%); } }
       .smp-bg-halftone {
         position: absolute; inset: 0; z-index: 2; opacity: var(--halftone);
-        background-image: radial-gradient(circle, var(--accent) 1.4px, transparent 1.8px);
+        background-image: radial-gradient(circle, var(--active) 1.4px, transparent 1.8px);
         background-size: 11px 11px;
         -webkit-mask-image: linear-gradient(200deg, transparent 50%, #000 85%);
         mask-image: linear-gradient(200deg, transparent 50%, #000 85%);
-      }
-      .smp-bg-stripes {
-        position: absolute; inset: 0; z-index: 4; opacity: 0.06;
-        background-image: repeating-linear-gradient(-77deg, #fff 0 2px, transparent 2px 46px);
       }
 
       .smp-watermark {
@@ -511,112 +595,145 @@ function SatzeMenuStyles() {
         pointer-events: none; user-select: none; white-space: nowrap;
       }
 
+      /* Eco gigante della voce scelta, dietro la colonna */
+      .smp-echo {
+        position: absolute; right: -60px; top: 70px; z-index: 4;
+        font-weight: 700; font-style: italic; text-transform: uppercase;
+        font-size: 210px; line-height: 0.85; letter-spacing: -0.03em; white-space: nowrap;
+        color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--active) 45%, transparent);
+        transform: rotate(-78deg) translateX(-40%); transform-origin: right top;
+        pointer-events: none; user-select: none; opacity: 0.55;
+        animation: smp-echo-in .45s cubic-bezier(.2,1,.3,1) both;
+      }
+      @keyframes smp-echo-in { from { opacity: 0; transform: rotate(-78deg) translateX(-30%); } }
+
+      /* Lampo diagonale a ogni cambio voce */
+      .smp-flash {
+        position: absolute; top: -30%; bottom: -30%; left: 50%; width: 180px; z-index: 6; pointer-events: none;
+        background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--active) 55%, transparent), ${T}66, transparent);
+        transform: skewX(-18deg) translateX(-200%); opacity: 0;
+        animation: smp-flash .42s cubic-bezier(.4,0,.2,1);
+      }
+      @keyframes smp-flash {
+        0% { opacity: 0.9; transform: skewX(-18deg) translateX(-160%); }
+        100% { opacity: 0; transform: skewX(-18deg) translateX(520%); }
+      }
+
       /* ---------- Logo ---------- */
       .smp-brand {
-        position: absolute; left: 600px; top: 430px; z-index: 10; width: 820px;
+        position: absolute; left: 600px; top: 470px; z-index: 10; width: 860px;
         display: flex; flex-direction: column; align-items: center;
         transform: translate(-50%, -50%) rotate(-3deg);
         pointer-events: none;
       }
-      .smp-tagline {
-        margin-top: 6px; background: ${T}; color: ${V};
-        font-weight: 700; font-size: 16px; letter-spacing: 0.4em;
-        padding: 5px 20px 5px 24px; transform: skewX(-14deg);
-        box-shadow: 6px 6px 0 var(--accent);
-        animation: smp-swipe-in .45s .25s cubic-bezier(.2,1,.3,1) both;
-      }
-      .smp-tagline > span { display: inline-block; transform: skewX(14deg); }
 
       /* ---------- Colonna voci ---------- */
       .smp-menu {
-        position: absolute; top: 110px; right: 60px; bottom: 70px; width: 680px; z-index: 12;
+        position: absolute; top: 90px; right: 40px; bottom: 70px; width: 800px; z-index: 12;
         display: flex; flex-direction: column;
       }
-      .smp-head {
-        display: flex; align-items: center; gap: 12px; margin: 0 0 14px 60px;
-        transform: rotate(-3deg); transform-origin: left center;
-        animation: smp-swipe-in .4s .1s cubic-bezier(.2,1,.3,1) both;
-      }
-      .smp-head-sec {
-        background: var(--accent); color: ${V}; font-weight: 700; font-size: 15px; letter-spacing: 0.26em;
-        padding: 4px 14px; transform: skewX(-14deg);
-      }
-      .smp-head-txt {
-        font-weight: 700; font-style: italic; font-size: 40px; line-height: 1; letter-spacing: 0.02em;
-        text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 ${V};
-      }
       .smp-list {
-        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-        padding: 6px 10px 20px 60px; scrollbar-width: none;
+        flex: 1; min-height: 0; overflow: visible;
+        padding: 10px 10px 20px 90px;
+        display: flex; flex-direction: column; justify-content: center;
       }
-      .smp-list::-webkit-scrollbar { display: none; }
 
-      /* ---------- Voce a piastra ---------- */
-      .smp-row {
-        position: relative; display: block; width: calc(100% - 40px); height: 68px; margin: 0 0 8px;
-        padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit;
+      /* ---------- Voce ---------- */
+      .smp-entry {
+        position: relative; display: block; flex: none; width: 100%; height: 84px;
+        padding: 0 0 0 var(--x); border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit;
         outline: none;
-        transform: translateX(var(--zz));
-        transition: transform .2s cubic-bezier(.3,1.5,.5,1);
-        animation: smp-row-in .42s var(--d) cubic-bezier(.2,1,.3,1) backwards;
+        animation: smp-entry-in .45s var(--d) cubic-bezier(.2,1.2,.3,1) backwards;
       }
-      @keyframes smp-row-in { from { opacity: 0; transform: translateX(calc(var(--zz) + 120px)) skewX(-10deg); } }
-      .smp-row:disabled { cursor: not-allowed; opacity: 0.4; }
-      .smp-row-plate, .smp-row-shadow {
-        position: absolute; inset: 0;
-        clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+      @keyframes smp-entry-in { from { opacity: 0; transform: translateX(160px) skewX(-14deg); } }
+      .smp-entry:disabled { cursor: not-allowed; opacity: 0.35; }
+      .smp-entry-body {
+        position: relative; display: inline-flex; align-items: center; gap: 14px; height: 100%;
+        transform: rotate(var(--t)); transform-origin: left center;
+        transition: transform .22s cubic-bezier(.3,1.6,.5,1);
       }
-      .smp-row-shadow { background: var(--c); opacity: 0; transition: transform .2s, opacity .15s; }
-      .smp-row-plate {
-        display: flex; align-items: center; gap: 16px; padding: 0 34px 0 28px;
-        background: rgba(14,14,18,0.94); transition: background .15s, color .15s;
+      .smp-entry-label { position: relative; z-index: 2; display: inline-flex; }
+      .smp-entry:not(.on):not(:disabled):hover .smp-entry-body { transform: rotate(var(--t)) translateX(-10px); }
+      .smp-entry.on { z-index: 3; }
+      .smp-entry.on .smp-entry-body { transform: rotate(calc(var(--t) * 1.6)) translateX(-24px) scale(var(--on)); }
+
+      /* Lettere a ritaglio */
+      .rn { display: inline-flex; align-items: center; white-space: nowrap; font-size: 46px; }
+      .rn-sp { display: inline-block; width: 0.34em; }
+      .rn-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .rn-ch {
+        display: inline-block; position: relative;
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic; text-transform: uppercase;
+        font-size: 1em; line-height: 1; color: ${T};
+        transform: translateY(calc(var(--y) * .2)) scale(calc(1 + (var(--s) - 1) * .25));
+        text-shadow: 3px 3px 0 ${V}, -1px -1px 0 ${V};
       }
-      .smp-row-plate::before {
-        content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 5px;
-        background: var(--c); transform: skewX(-15deg);
+      .rn--cut .rn-serif { font-family: 'Cinzel', Georgia, serif; font-style: normal; font-weight: 900; }
+      .rn--cut .rn-ch {
+        padding: 2px 4px 0; margin: 0 1px; text-shadow: none;
+        transform: translateY(var(--y)) rotate(var(--r)) scale(var(--s));
+        animation: rn-pop .34s calc(var(--i) * 26ms) cubic-bezier(.2,1.7,.4,1) both;
       }
-      .smp-row-cursor {
-        position: absolute; left: -40px; top: 50%; width: 32px; height: 34px; margin-top: -17px;
-        background: var(--c); clip-path: polygon(0 0, 100% 50%, 0 100%, 30% 50%);
-        opacity: 0; transform: translateX(-12px); transition: opacity .15s, transform .2s;
+      .rn--cut .rn-paper { background: ${T}; color: ${V}; }
+      .rn--cut .rn-ink { background: ${V}; color: ${T}; box-shadow: 0 0 0 2px ${T}; }
+      .rn--cut .rn-accent { background: var(--c, var(--accent)); color: ${V}; }
+      .rn--cut .rn-plain { color: ${T}; text-shadow: 3px 3px 0 ${V}; padding: 0 1px; }
+      @keyframes rn-pop {
+        from { opacity: 0; transform: translateY(-60%) rotate(-50deg) scale(0.2); }
+        70% { opacity: 1; }
       }
-      .smp-row-num {
-        flex: none; width: 34px; font-family: 'Share Tech Mono', monospace; font-size: 15px;
-        color: var(--c); letter-spacing: 0.04em;
+
+      /* Sagoma frastagliata che vibra */
+      .smp-splash {
+        position: absolute; z-index: 1; left: -46px; right: -70px; top: 2px; bottom: 2px;
+        animation: smp-splash-in .24s cubic-bezier(.2,1.4,.4,1) both;
+        transform-origin: left center;
       }
-      .smp-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.05; }
-      .smp-row-title {
-        font-weight: 700; font-style: italic; font-size: 30px; text-transform: uppercase; letter-spacing: 0.02em;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      @keyframes smp-splash-in { from { transform: scaleX(0.1) skewX(-30deg); opacity: 0; } }
+      .smp-splash .sp { position: absolute; inset: 0; animation: smp-jit .45s step-end infinite; }
+      .smp-splash .sp-back { background: ${T}; transform: translate(10px, 8px) scale(1.06); animation-delay: -.15s; }
+      .smp-splash .sp-mid { background: var(--c); transform: translate(-4px, -3px) scale(1.02); animation-delay: -.3s; }
+      .smp-splash .sp-front { background: ${V}; transform: scale(0.9, 0.78); }
+      @keyframes smp-jit {
+        0% { clip-path: ${SPLASH[0]}; }
+        33% { clip-path: ${SPLASH[1]}; }
+        66% { clip-path: ${SPLASH[2]}; }
       }
-      .smp-row-sub {
-        margin-top: 3px; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.16em;
-        opacity: 0.6; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+      /* Stella-cursore */
+      .smp-entry-star {
+        position: absolute; z-index: 3; left: -62px; top: 50%; width: 52px; height: 52px; margin-top: -26px;
+        background: var(--c); clip-path: ${STAR_CLIP};
+        filter: drop-shadow(3px 3px 0 ${T});
+        animation: smp-star-in .3s cubic-bezier(.2,1.6,.4,1) both, smp-spin 3s linear infinite .3s;
       }
-      .smp-row-arrow { flex: none; font-weight: 700; font-size: 34px; color: var(--c); transition: transform .2s; }
-      .smp-row-more {
-        flex: none; display: grid; place-items: center; width: 44px; height: 44px;
-        background: var(--c); color: ${V}; font-weight: 700; font-style: italic; font-size: 18px;
-        clip-path: ${STAR_CLIP};
-      }
-      .smp-row:not(:disabled):hover { transform: translateX(calc(var(--zz) - 8px)); }
-      .smp-row:not(:disabled):hover .smp-row-plate { background: rgba(32,32,40,0.97); }
-      .smp-row.on { transform: translateX(calc(var(--zz) - 30px)) rotate(-1.5deg) scale(1.05); z-index: 2; }
-      .smp-row.on .smp-row-shadow { opacity: 1; transform: translate(10px, 8px); }
-      .smp-row.on .smp-row-plate { background: ${T}; color: ${V}; }
-      .smp-row.on .smp-row-plate::before { background: ${V}; }
-      .smp-row.on .smp-row-num { color: ${V}; font-weight: 700; }
-      .smp-row.on .smp-row-sub { opacity: 0.75; }
-      .smp-row.on .smp-row-arrow { color: ${V}; transform: translateX(6px); }
-      .smp-row.on .smp-row-more { background: ${V}; color: var(--c); animation: smp-spin 6s linear infinite; }
-      .smp-row.on .smp-row-cursor { opacity: 1; transform: translateX(0); animation: smp-cursor .9s ease-in-out infinite; }
-      @keyframes smp-cursor { 50% { transform: translateX(7px); } }
+      @keyframes smp-star-in { from { transform: scale(0) rotate(-120deg); } }
       @keyframes smp-spin { to { transform: rotate(360deg); } }
 
-      .smp-row--compact { height: 56px; margin-bottom: 6px; }
-      .smp-row--compact .smp-row-title { font-size: 22px; }
-      .smp-row--compact .smp-row-sub { font-size: 11px; }
-      .smp-row--compact .smp-row-more { width: 38px; height: 38px; font-size: 15px; }
+      .smp-entry-more {
+        position: relative; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px;
+        background: var(--c); color: ${V}; font-weight: 700; font-size: 26px; line-height: 1;
+        clip-path: ${STAR_CLIP};
+      }
+      .smp-entry.on .smp-entry-more { background: ${T}; animation: smp-spin 4s linear infinite; }
+
+      .smp-entry-sub {
+        position: absolute; z-index: 4; left: calc(var(--x) + 60px); bottom: -16px;
+        background: ${T}; color: ${V}; font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 0.2em;
+        padding: 4px 12px; white-space: nowrap; transform: skewX(-14deg) rotate(-2deg);
+        box-shadow: 4px 4px 0 var(--c);
+        animation: smp-sub-in .3s .12s cubic-bezier(.2,1.2,.4,1) both;
+      }
+      @keyframes smp-sub-in { from { opacity: 0; transform: skewX(-14deg) rotate(-2deg) translateX(40px); } }
+
+      /* Voci del pannello di scelta: più piccole */
+      .smp-entry--compact { height: 64px; }
+      .smp-entry--compact .rn { font-size: 30px; }
+      .smp-entry--compact.on .smp-entry-body { transform: rotate(calc(var(--t) * 1.2)) translateX(-6px) scale(var(--on)); }
+      .smp-entry--compact .smp-entry-star { left: -44px; width: 36px; height: 36px; margin-top: -18px; }
+      .smp-entry--compact .smp-splash { left: -30px; right: -50px; }
+      .smp-entry--compact .smp-entry-more { width: 26px; height: 26px; font-size: 20px; }
+      .smp-entry--compact .smp-entry-sub { font-size: 11px; bottom: -12px; left: calc(var(--x) + 40px); }
 
       /* ---------- Barra comandi ---------- */
       .smp-hints {
@@ -637,15 +754,15 @@ function SatzeMenuStyles() {
         position: absolute; inset: 0; z-index: 100;
         display: flex; align-items: center; justify-content: center; padding: 60px 24px 80px;
         background:
-          repeating-linear-gradient(-77deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 46px),
-          rgba(5,5,7,0.84);
+          radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px,
+          rgba(5,5,7,0.86);
         animation: smp-fade .2s ease-out both;
       }
       @keyframes smp-fade { from { opacity: 0; } }
       .smp-picker {
-        position: relative; width: 760px; max-height: 100%;
+        position: relative; width: 820px; max-height: 100%;
         display: flex; flex-direction: column;
-        filter: drop-shadow(12px 12px 0 var(--accent));
+        filter: drop-shadow(14px 14px 0 var(--accent));
         transform: rotate(-1.5deg);
         animation: smp-picker-in .32s cubic-bezier(.2,1.2,.4,1) both;
       }
@@ -658,11 +775,8 @@ function SatzeMenuStyles() {
         background: #050507; border-left: 8px solid var(--accent);
         clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
       }
-      .smp-picker-head {
-        display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 20px;
-        margin-bottom: 16px;
-      }
-      .smp-picker-eyebrow { grid-column: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .smp-picker-head { margin-bottom: 14px; }
+      .smp-picker-eyebrow { display: flex; align-items: center; gap: 10px; min-width: 0; }
       .smp-picker-eyebrow .sec {
         background: var(--accent); color: ${V}; font-weight: 700; font-size: 13px; letter-spacing: 0.24em;
         padding: 3px 12px; transform: skewX(-14deg);
@@ -671,22 +785,11 @@ function SatzeMenuStyles() {
         font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em;
         color: rgba(245,243,235,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
-      .smp-picker-title {
-        grid-column: 1; margin: 6px 0 0; font-weight: 700; font-style: italic; text-transform: uppercase;
-        font-size: 44px; line-height: 0.95; color: ${T};
-        text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 ${V};
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .smp-picker-count {
-        grid-column: 2; grid-row: 1 / span 2; align-self: end;
-        font-weight: 700; font-style: italic; line-height: 0.9; transform: rotate(-3deg);
-      }
-      .smp-picker-count .cur { font-size: 46px; color: var(--accent); text-shadow: 3px 3px 0 ${V}; }
-      .smp-picker-count .sep { font-size: 28px; margin: 0 3px; }
-      .smp-picker-count .tot { font-size: 24px; }
+      .smp-picker-title { margin: 10px 0 0 6px; transform: rotate(-2deg); transform-origin: left center; }
+      .smp-picker-title .rn { font-size: 40px; }
       .smp-picker-list {
         flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-        padding: 8px 6px 12px 46px; scrollbar-width: none;
+        padding: 10px 6px 18px 80px; scrollbar-width: none;
       }
       .smp-picker-list::-webkit-scrollbar { display: none; }
       .smp-picker-back {
@@ -715,11 +818,10 @@ function SatzeMenuStyles() {
       .smp-intro > span:nth-child(3) { left: 68%; background: ${T}; animation-delay: .1s; }
       @keyframes smp-blade { to { transform: skewX(-18deg) translateX(260%); } }
 
-      @keyframes smp-swipe-in { from { opacity: 0; transform: translateX(60px) skewX(-14deg); } }
-
       @media (prefers-reduced-motion: reduce) {
         .smp *, .smp *::before, .smp *::after { animation-duration: 0.001s !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }
-        .smp-intro { display: none; }
+        .smp-splash .sp { animation: none !important; clip-path: ${SPLASH[0]}; }
+        .smp-intro, .smp-flash { display: none; }
       }
     `}</style>
   );

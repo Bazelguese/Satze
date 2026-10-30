@@ -1,30 +1,32 @@
 // ============================================
-// GLOSSARIO - stile Persona (popup)
+// GLOSSARIO - grimorio (ispirazione Metaphor: ReFantazio)
 // ============================================
-// Pannello nero inclinato con bordo e ombra d'accento, titolo strappato,
-// ricerca a piastra, categorie a bandiere skew (filtro), voci a piastra con
-// cursore: la voce aperta diventa crema con ombra del colore di categoria.
+// Un libro aperto: a sinistra l'indice con la ricerca, a destra la pagina
+// del termine scelto. I capitoli (categorie) sono segnalibri colorati che
+// spuntano dal bordo alto. All'apertura la copertina si gira sul dorso; a
+// ogni cambio termine la pagina gira (avanti o indietro).
 //
 // Tastiera (in cattura: i tasti usati qui non arrivano alla schermata sotto):
-//   ↑/↓  voce            ←/→  categoria (nella ricerca solo se vuota)
-//   Invio apre/chiude il dettaglio   Esc svuota la ricerca, poi chiude
+//   ↑/↓  termine          ←/→  capitolo (nella ricerca solo se vuota)
+//   Esc  svuota la ricerca, poi chiude          Invio non fa nulla qui
 // ============================================
 
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GLOSSARY_TERMS, GLOSSARY_CATEGORIES } from '../data/glossary';
 import { MENU_ACCENTS } from '../theme/hudOratorioPalette';
-import { playUiClick } from '../audio/soundBus';
+import { playSound, playUiClick } from '../audio/soundBus';
+import { UI_SOUND } from '../audio/soundCatalog';
 
 const CATEGORY_ORDER = ['concetti', 'vittoria', 'trigger', 'effetti', 'archetipi'];
 
 const CATEGORY_COLORS = {
-  amber: '#fbbf24',
-  cyan: '#22d3ee',
-  purple: '#a78bfa',
-  emerald: '#34d399',
-  green: '#4ade80',
-  rose: '#fb7185',
+  amber: '#e0a526',
+  cyan: '#1fb5cf',
+  purple: '#8b6cf0',
+  emerald: '#2fb886',
+  green: '#3fbf6a',
+  rose: '#e8566e',
 };
 
 /** Glifi al posto delle emoji dei dati (niente emoji nella UI principale). */
@@ -54,7 +56,12 @@ function matchesSearch(term, query) {
 }
 
 function categoryColor(cat) {
+  if (cat === ALL) return '#c9b8e8';
   return CATEGORY_COLORS[GLOSSARY_CATEGORIES[cat]?.color] || CATEGORY_COLORS.amber;
+}
+
+function categoryLabel(cat) {
+  return cat === ALL ? 'Indice' : GLOSSARY_CATEGORIES[cat]?.label;
 }
 
 export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'duel' }) {
@@ -62,12 +69,13 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(ALL);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [expandedKey, setExpandedKey] = useState(null);
+  /** Ultimo giro di pagina: { n, dir } (null all'apertura, niente giro). */
+  const [turn, setTurn] = useState(null);
   const [originRect, setOriginRect] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const listRef = useRef(null);
   const rowRefs = useRef([]);
-  /** Scorre la lista solo per tastiera o apertura dettaglio, non al passaggio del mouse. */
+  /** Scorre l'indice solo per tastiera, non al clic. */
   const scrollToActiveRef = useRef(false);
 
   useEffect(() => {
@@ -123,10 +131,10 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
     return c;
   }, [searchedTerms]);
 
-  // Se la ricerca svuota la categoria scelta si mostrano tutte (il termine può stare altrove).
+  // Se la ricerca svuota il capitolo scelto si mostrano tutti (il termine può stare altrove).
   const shownCategory = counts[category] ? category : ALL;
 
-  /** Voci visibili, già nell'ordine delle categorie (indice = cursore). */
+  /** Voci visibili, già nell'ordine dei capitoli (indice = cursore). */
   const rows = useMemo(() => {
     const cats = shownCategory === ALL ? CATEGORY_ORDER : [shownCategory];
     const out = [];
@@ -149,32 +157,34 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
     const wanted = scrollToActiveRef.current;
     scrollToActiveRef.current = false;
     if (!list || !row || !wanted) return;
-    const pad = 36;
+    const pad = 40;
     if (row.offsetTop - pad < list.scrollTop) list.scrollTo({ top: Math.max(0, row.offsetTop - pad) });
     else if (row.offsetTop + row.offsetHeight + pad > list.scrollTop + list.clientHeight) {
       list.scrollTo({ top: row.offsetTop + row.offsetHeight + pad - list.clientHeight });
     }
-  }, [activeIndex, expandedKey, rows]);
+  }, [activeIndex, rows]);
 
-  const railItems = [ALL, ...CATEGORY_ORDER];
+  const turnPage = (dir) => {
+    playSound(UI_SOUND.NAVIGATE);
+    setTurn((t) => ({ n: (t?.n ?? 0) + 1, dir }));
+  };
 
-  const toggleRow = (i) => {
-    const row = rows[i];
-    if (!row?.detail) return;
-    playUiClick();
-    scrollToActiveRef.current = true;
+  const goTo = (i) => {
+    if (i === activeIndex || i < 0 || i >= rows.length) return;
+    turnPage(i > activeIndex ? 'fwd' : 'back');
     setActiveIndex(i);
-    setExpandedKey((k) => (k === row.key ? null : row.key));
   };
 
   const selectCategory = (cat) => {
     if (cat === shownCategory) return;
     playUiClick();
+    const order = [ALL, ...CATEGORY_ORDER];
+    turnPage(order.indexOf(cat) > order.indexOf(shownCategory) ? 'fwd' : 'back');
     setCategory(cat);
   };
 
   const keyRef = useRef({});
-  keyRef.current = { rows, activeIndex, category: shownCategory, search, onClose, toggleRow, selectCategory };
+  keyRef.current = { rows, counts, activeIndex, category: shownCategory, search, onClose, goTo, selectCategory };
 
   useEffect(() => {
     const onKey = (e) => {
@@ -189,25 +199,23 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
         case 'ArrowUp':
         case 'ArrowDown': {
           handled();
-          if (!k.rows.length) return;
-          const dir = e.key === 'ArrowUp' ? -1 : 1;
           scrollToActiveRef.current = true;
-          setActiveIndex((i) => Math.min(k.rows.length - 1, Math.max(0, i + dir)));
+          k.goTo(k.activeIndex + (e.key === 'ArrowUp' ? -1 : 1));
           break;
         }
         case 'ArrowLeft':
         case 'ArrowRight': {
           if (inInput && k.search) return;
           handled();
-          const order = [ALL, ...CATEGORY_ORDER];
+          const order = [ALL, ...CATEGORY_ORDER].filter((c) => c === ALL || c === k.category || k.counts[c]);
           const i = order.indexOf(k.category);
           const dir = e.key === 'ArrowLeft' ? -1 : 1;
           k.selectCategory(order[(i + dir + order.length) % order.length]);
           break;
         }
         case 'Enter': {
+          // Inghiottito: sotto (es. costruzione esercito) Invio salverebbe.
           handled();
-          k.toggleRow(k.activeIndex);
           break;
         }
         case 'Escape': {
@@ -225,144 +233,190 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 
   if (!originRect) return null;
 
+  const active = rows[activeIndex] ?? null;
+  const prev = rows[activeIndex - 1] ?? null;
+  const next = rows[activeIndex + 1] ?? null;
+  const tabs = [ALL, ...CATEGORY_ORDER];
   let lastCat = null;
 
   const content = (
-    <div
-      className="sgl satze-glossary-backdrop"
-      onClick={onClose}
-      style={{ zIndex, '--accent': accent }}
-    >
+    <div className="sgl satze-glossary-backdrop" onClick={onClose} style={{ zIndex, '--accent': accent }}>
       <div
-        className="sgl-panel"
+        className="sgb"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="sgl-title"
+        aria-labelledby="sgb-title"
         style={{
           transform: expanded
-            ? 'translate(50vw, 50vh) translate(-50%, -50%) rotate(-1deg) scale(1)'
-            : `translate(${originRect.left}px, ${originRect.top}px) scale(0.12) skewX(-12deg)`,
+            ? 'translate(50vw, 50vh) translate(-50%, -50%) rotate(-0.6deg) scale(1)'
+            : `translate(${originRect.left}px, ${originRect.top}px) scale(0.12)`,
           opacity: expanded ? 1 : 0,
         }}
       >
-        <div className="sgl-in">
-          <header className="sgl-head">
-            <div className="sgl-title-wrap">
-              <div className="sgl-eyebrow">
-                <span className="sec">ARCHIVIO</span>
-                <span className="txt">REGOLE · TERMINI · EFFETTI</span>
-              </div>
-              <h2 id="sgl-title" className="sgl-title">GLOSSARIO</h2>
-            </div>
-            <div className="sgl-counter">
-              <span className="cur">{String(rows.length ? activeIndex + 1 : 0).padStart(2, '0')}</span>
-              <span className="sep">/</span>
-              <span className="tot">{String(rows.length).padStart(2, '0')}</span>
-            </div>
-            <button type="button" className="sgl-close" onClick={onClose} aria-label="Chiudi glossario">
-              <span className="key">ESC</span>
-              <span className="lbl">CHIUDI</span>
-            </button>
-          </header>
+        {/* Segnalibri dei capitoli */}
+        <div className="sgb-tabs" role="tablist" aria-label="Capitoli">
+          {tabs.map((cat) => {
+            const on = cat === shownCategory;
+            return (
+              <button
+                key={cat}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                className={`sgb-tab ${on ? 'on' : ''}`}
+                style={{ '--c': categoryColor(cat) }}
+                disabled={!counts[cat] && !on}
+                onClick={() => selectCategory(cat)}
+              >
+                <span className="gy" aria-hidden="true">{cat === ALL ? '❖' : CATEGORY_GLYPHS[cat]}</span>
+                <span className="nm">{categoryLabel(cat)}</span>
+              </button>
+            );
+          })}
+        </div>
 
-          <div className="sgl-search">
-            <span className="sgl-search-lbl">CERCA</span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="POT, Campione, Vorace..."
-              aria-label="Cerca nel glossario"
-              autoFocus
-            />
-            {search && (
-              <span className="sgl-search-count">
-                {searchedTerms.length} {searchedTerms.length === 1 ? 'RISULTATO' : 'RISULTATI'}
-              </span>
-            )}
-          </div>
+        <button type="button" className="sgb-close" onClick={onClose} aria-label="Chiudi glossario">
+          <span className="key">ESC</span>
+          <span className="lbl">CHIUDI</span>
+        </button>
 
-          <div className="sgl-rail" role="tablist">
-            {railItems.map((cat) => {
-              const on = cat === shownCategory;
-              const meta = GLOSSARY_CATEGORIES[cat];
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  className={`sgl-flag ${on ? 'on' : ''}`}
-                  style={{ '--c': cat === ALL ? '#f5f3eb' : categoryColor(cat) }}
-                  disabled={!counts[cat] && !on}
-                  onClick={() => selectCategory(cat)}
-                >
-                  <span className="sgl-flag-in">
-                    {cat !== ALL && <span className="gy">{CATEGORY_GLYPHS[cat]}</span>}
-                    <span className="nm">{cat === ALL ? 'Tutti' : meta.label}</span>
-                    <span className="ct">{counts[cat]}</span>
+        <div className="sgb-cover">
+          <span className="sgb-corner tl" aria-hidden="true" />
+          <span className="sgb-corner tr" aria-hidden="true" />
+          <span className="sgb-corner bl" aria-hidden="true" />
+          <span className="sgb-corner br" aria-hidden="true" />
+
+          <div className="sgb-spread">
+            {/* Pagina sinistra: titolo, ricerca, indice */}
+            <section className="sgb-page sgb-left">
+              <header className="sgb-head">
+                <div className="sgb-kicker">Archivio delle regole</div>
+                <h2 id="sgb-title" className="sgb-title">Glossario</h2>
+                <div className="sgb-rule" aria-hidden="true"><span>✦</span></div>
+              </header>
+
+              <label className="sgb-search">
+                <span className="sgb-search-lbl">Cerca</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="POT, Campione, Vorace…"
+                  aria-label="Cerca nel glossario"
+                  autoFocus
+                />
+                {search && (
+                  <span className="sgb-search-count">
+                    {searchedTerms.length} {searchedTerms.length === 1 ? 'voce' : 'voci'}
                   </span>
-                </button>
-              );
-            })}
-          </div>
+                )}
+              </label>
 
-          <div className="sgl-list" ref={listRef}>
-            {rows.length === 0 ? (
-              <div className="sgl-empty">
-                <p className="t">NESSUN TERMINE TROVATO</p>
-                <p className="s">Prova con altre parole (es. POT, trigger, VA)</p>
+              <div className="sgb-chapter">
+                <span className="sw" style={{ '--c': categoryColor(shownCategory) }} />
+                {categoryLabel(shownCategory)}
               </div>
-            ) : (
-              rows.map((t, i) => {
-                const showGroup = shownCategory === ALL && t.category !== lastCat;
-                lastCat = t.category;
-                const isOpen = expandedKey === t.key;
-                const isActive = i === activeIndex;
-                return (
-                  <div key={t.key} className="sgl-item" style={{ '--c': t.color }}>
-                    {showGroup && (
-                      <div className="sgl-group">
-                        <span className="gy">{CATEGORY_GLYPHS[t.category]}</span>
-                        {GLOSSARY_CATEGORIES[t.category].label}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      ref={(el) => {
-                        rowRefs.current[i] = el;
-                      }}
-                      className={`sgl-row ${isActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''} ${t.detail ? '' : 'no-detail'}`}
-                      aria-expanded={t.detail ? isOpen : undefined}
-                      onMouseEnter={() => setActiveIndex(i)}
-                      onClick={() => toggleRow(i)}
-                    >
-                      <span className="sgl-row-shadow" aria-hidden="true" />
-                      <span className="sgl-row-plate">
-                        <span className="sgl-row-cursor" aria-hidden="true" />
-                        <span className="sgl-row-text">
-                          <span className="sgl-row-term">
-                            {t.term}
-                            {t.abbr && <span className="abbr">{t.abbr}</span>}
-                          </span>
-                          <span className="sgl-row-desc">{t.desc}</span>
-                        </span>
-                        {t.detail && <span className="sgl-row-toggle" aria-hidden="true">{isOpen ? '−' : '+'}</span>}
-                      </span>
-                    </button>
-                    {isOpen && <div className="sgl-detail">{t.detail}</div>}
+
+              <div className="sgb-index" ref={listRef}>
+                {rows.length === 0 ? (
+                  <div className="sgb-empty">
+                    <p className="t">Nessuna voce trovata</p>
+                    <p className="s">Prova con altre parole (es. POT, trigger, VA)</p>
                   </div>
-                );
-              })
-            )}
+                ) : (
+                  rows.map((t, i) => {
+                    const showGroup = shownCategory === ALL && t.category !== lastCat;
+                    lastCat = t.category;
+                    const on = i === activeIndex;
+                    return (
+                      <div key={t.key} className="sgb-index-item" style={{ '--c': t.color }}>
+                        {showGroup && (
+                          <div className="sgb-group">
+                            <span className="gy">{CATEGORY_GLYPHS[t.category]}</span>
+                            {GLOSSARY_CATEGORIES[t.category].label}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          ref={(el) => {
+                            rowRefs.current[i] = el;
+                          }}
+                          className={`sgb-entry ${on ? 'on' : ''}`}
+                          aria-current={on ? 'true' : undefined}
+                          onClick={() => goTo(i)}
+                        >
+                          <span className="mk" aria-hidden="true">✦</span>
+                          <span className="tm">{t.term}</span>
+                          <span className="dots" aria-hidden="true" />
+                          {t.abbr && <span className="ab">{t.abbr}</span>}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <div className="sgb-spine" aria-hidden="true" />
+
+            {/* Pagina destra: il termine */}
+            <section className="sgb-page sgb-right" aria-live="polite">
+              {active ? (
+                <article
+                  className={`sgb-leaf ${turn ? `turn-${turn.dir}` : ''}`}
+                  key={`${active.key}-${turn?.n ?? 0}`}
+                  data-glyph={CATEGORY_GLYPHS[active.category]}
+                  style={{ '--c': active.color }}
+                >
+                  <div className="sgb-leaf-chapter">
+                    <span className="gy">{CATEGORY_GLYPHS[active.category]}</span>
+                    {GLOSSARY_CATEGORIES[active.category].label}
+                  </div>
+                  <div className="sgb-leaf-head">
+                    <h3 className="sgb-term">{active.term}</h3>
+                    {active.abbr && (
+                      <span className="sgb-seal" aria-label={`Sigla ${active.abbr}`}>
+                        <span>{active.abbr}</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="sgb-lead">{active.desc}</p>
+                  <div className="sgb-rule sgb-rule--leaf" aria-hidden="true"><span>❖</span></div>
+                  {active.detail && (
+                    <p className="sgb-body">
+                      <span className="sgb-initial">{active.detail.charAt(0)}</span>
+                      {active.detail.slice(1)}
+                    </p>
+                  )}
+                  <nav className="sgb-turns">
+                    <button type="button" className="prev" disabled={!prev} onClick={() => goTo(activeIndex - 1)}>
+                      {prev ? <>‹ {prev.term}</> : null}
+                    </button>
+                    <button type="button" className="next" disabled={!next} onClick={() => goTo(activeIndex + 1)}>
+                      {next ? <>{next.term} ›</> : null}
+                    </button>
+                  </nav>
+                </article>
+              ) : (
+                <div className="sgb-blank">Pagina bianca</div>
+              )}
+              {turn && <span className={`sgb-sheet sheet-${turn.dir}`} key={`sheet-${turn.n}`} aria-hidden="true" />}
+            </section>
           </div>
 
-          <footer className="sgl-hints">
-            <span className="sgl-hint"><kbd>↑</kbd><kbd>↓</kbd><span className="lbl">TERMINE</span></span>
-            <span className="sgl-hint"><kbd>←</kbd><kbd>→</kbd><span className="lbl">CATEGORIA</span></span>
-            <span className="sgl-hint"><kbd>INVIO</kbd><span className="lbl">DETTAGLIO</span></span>
-            <span className="sgl-hint"><kbd>ESC</kbd><span className="lbl">CHIUDI</span></span>
+          {/* Copertina che si apre all'avvio */}
+          <div className="sgb-opening" aria-hidden="true">
+            <span className="sgb-opening-face">
+              <span className="sgb-opening-sigil">✦</span>
+              <span className="sgb-opening-title">Glossario</span>
+            </span>
+          </div>
+
+          <footer className="sgb-hints">
+            <span className="h"><kbd>↑</kbd><kbd>↓</kbd><span className="lbl">VOCE</span></span>
+            <span className="h"><kbd>←</kbd><kbd>→</kbd><span className="lbl">CAPITOLO</span></span>
+            <span className="h"><kbd>ESC</kbd><span className="lbl">CHIUDI</span></span>
           </footer>
         </div>
       </div>
@@ -374,213 +428,318 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 }
 
 function GlossaryStyles() {
-  const V = '#050507';
   const T = MENU_ACCENTS.text;
   return (
     <style>{`
       .sgl {
+        --leather: #1c1029; --leather-2: #2a1840; --tool: #c9b8e8;
+        --paper: #f1e9d8; --paper-2: #e4d8bf; --ink: #22172e; --ink-soft: rgba(34,23,46,0.72);
         position: fixed; inset: 0;
         background:
-          repeating-linear-gradient(-77deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 46px),
-          radial-gradient(circle, color-mix(in srgb, var(--accent) 40%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px,
-          rgba(5,5,7,0.86);
+          radial-gradient(circle, color-mix(in srgb, var(--accent) 34%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px,
+          radial-gradient(ellipse at 50% 50%, rgba(20,8,32,0.6), rgba(5,5,7,0.94) 70%);
         font-family: 'Chakra Petch', system-ui, sans-serif; color: ${T};
       }
       .sgl * { box-sizing: border-box; }
       .sgl kbd {
-        display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 5px;
-        background: ${T}; color: ${V}; border: 0;
+        display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 5px;
+        background: var(--tool); color: var(--leather); border: 0;
         font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 11px; line-height: 1;
         clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
       }
 
-      .sgl-panel {
+      /* ---------- Libro ---------- */
+      .sgb {
         position: fixed; left: 0; top: 0;
-        width: min(780px, 92vw); height: min(86vh, 920px);
+        width: min(1220px, 95vw); height: min(80vh, 760px);
         transform-origin: 0 0;
+        transition: transform .55s cubic-bezier(.2,1.1,.35,1), opacity .2s ease-out;
         display: flex; flex-direction: column;
-        filter: drop-shadow(12px 12px 0 var(--accent));
-        transition: transform .5s cubic-bezier(.2,1.15,.4,1), opacity .2s ease-out;
       }
-      .sgl-in {
-        flex: 1; min-height: 0; display: flex; flex-direction: column;
-        background: ${V}; border-left: 8px solid var(--accent);
-        clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
-        padding: 22px 34px 0 30px;
+      .sgb-cover {
+        position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column;
+        padding: 18px 18px 0;
+        background:
+          radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.06), transparent 60%),
+          repeating-linear-gradient(35deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 5px),
+          linear-gradient(160deg, var(--leather-2), var(--leather) 60%);
+        border-radius: 10px 10px 12px 12px;
+        box-shadow:
+          inset 0 0 0 2px color-mix(in srgb, var(--tool) 45%, transparent),
+          inset 0 0 0 7px var(--leather),
+          inset 0 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent),
+          0 30px 80px rgba(0,0,0,0.75), 14px 14px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+        perspective: 2200px;
+      }
+      .sgb-corner {
+        position: absolute; width: 46px; height: 46px; z-index: 3; pointer-events: none;
+        border: 2px solid var(--tool);
+        clip-path: polygon(0 0, 100% 0, 100% 22%, 22% 22%, 22% 100%, 0 100%);
+        background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, transparent), transparent 60%);
+      }
+      .sgb-corner.tl { left: 6px; top: 6px; }
+      .sgb-corner.tr { right: 6px; top: 6px; transform: scaleX(-1); }
+      .sgb-corner.bl { left: 6px; bottom: 6px; transform: scaleY(-1); }
+      .sgb-corner.br { right: 6px; bottom: 6px; transform: scale(-1); }
+
+      .sgb-spread {
+        position: relative; flex: 1; min-height: 0;
+        display: grid; grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1.25fr);
+        transform-style: preserve-3d;
+      }
+      .sgb-page {
+        position: relative; min-width: 0; min-height: 0; color: var(--ink);
+        background:
+          radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(120,90,50,0.16) 100%),
+          linear-gradient(var(--paper), var(--paper-2));
+        box-shadow: 0 2px 0 #cbbd9f, 0 4px 0 #b9aa89, 0 6px 0 #a39373;
+      }
+      .sgb-left {
+        display: flex; flex-direction: column; padding: 26px 26px 18px 34px; border-radius: 6px 0 0 6px;
+        background:
+          linear-gradient(90deg, transparent 82%, rgba(60,40,20,0.22) 100%),
+          radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(120,90,50,0.16) 100%),
+          linear-gradient(var(--paper), var(--paper-2));
+      }
+      .sgb-right {
+        padding: 30px 40px 18px 34px; border-radius: 0 6px 6px 0; overflow: hidden;
+        background:
+          linear-gradient(270deg, transparent 85%, rgba(60,40,20,0.24) 100%),
+          radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(120,90,50,0.16) 100%),
+          linear-gradient(var(--paper), var(--paper-2));
+      }
+      .sgb-spine {
+        background: linear-gradient(90deg, rgba(60,40,20,0.35), #2a1840 30%, #120a1c 50%, #2a1840 70%, rgba(60,40,20,0.35));
+        box-shadow: inset 0 0 0 1px rgba(201,184,232,0.18);
       }
 
-      /* ---------- Testata ---------- */
-      .sgl-head { display: flex; align-items: flex-start; gap: 18px; flex: none; }
-      .sgl-title-wrap { flex: 1; min-width: 0; transform: rotate(-3deg); transform-origin: left top; }
-      .sgl-eyebrow { display: flex; align-items: center; gap: 10px; }
-      .sgl-eyebrow .sec {
-        background: var(--accent); color: ${V}; font-weight: 700; font-size: 12px; letter-spacing: 0.24em;
-        padding: 3px 11px; transform: skewX(-14deg);
+      /* ---------- Segnalibri ---------- */
+      .sgb-tabs {
+        position: relative; z-index: 0; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px;
+        padding: 0 190px 0 40px; margin-bottom: -6px;
       }
-      .sgl-eyebrow .txt {
-        font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.26em; color: rgba(245,243,235,0.65);
-        white-space: nowrap;
+      .sgb-tab {
+        display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer;
+        height: 34px; padding: 0 12px 6px; align-self: flex-end;
+        background: color-mix(in srgb, var(--c) 72%, #1c1029); color: #120a1c;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; letter-spacing: 0.06em;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 6px), 0 100%);
+        transition: height .2s cubic-bezier(.3,1.6,.5,1), background .2s, transform .2s;
+        transform-origin: bottom center;
       }
-      .sgl-title {
-        margin: 4px 0 0; font-weight: 700; font-style: italic; text-transform: uppercase;
-        font-size: 50px; line-height: 0.95; letter-spacing: -0.01em; color: ${T};
-        text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 ${V};
-      }
-      .sgl-counter { flex: none; margin-top: 18px; font-weight: 700; font-style: italic; line-height: 0.9; transform: rotate(-3deg); }
-      .sgl-counter .cur { font-size: 40px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
-      .sgl-counter .sep { font-size: 24px; margin: 0 3px; }
-      .sgl-counter .tot { font-size: 20px; }
-      .sgl-close {
-        flex: none; display: inline-flex; align-items: center; gap: 10px; margin-top: 4px;
-        background: ${T}; color: ${V}; border: 0; cursor: pointer;
-        padding: 7px 18px 7px 10px; transform: skewX(-14deg) rotate(-2deg);
-        box-shadow: 5px 5px 0 var(--accent);
+      .sgb-tab .gy { font-family: 'Chakra Petch', sans-serif; font-size: 13px; }
+      .sgb-tab:disabled { cursor: default; opacity: 0.35; }
+      .sgb-tab:not(:disabled):not(.on):hover { height: 40px; background: var(--c); }
+      .sgb-tab.on { height: 50px; background: var(--c); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18); }
+      .sgb-tab:focus-visible { outline: 2px solid ${T}; outline-offset: 2px; }
+
+      .sgb-close {
+        position: absolute; z-index: 5; top: -2px; right: 18px; transform: translateY(-50%) rotate(2deg);
+        display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
+        padding: 6px 14px 6px 8px; background: ${T}; color: #120a1c;
+        box-shadow: 4px 4px 0 var(--accent);
         transition: transform .15s, box-shadow .15s;
       }
-      .sgl-close > * { transform: skewX(14deg); }
-      .sgl-close:hover, .sgl-close:focus-visible {
-        outline: none; transform: skewX(-14deg) rotate(-2deg) translate(-3px,-3px); box-shadow: 8px 8px 0 var(--accent);
-      }
-      .sgl-close .key { background: ${V}; color: ${T}; font-weight: 700; font-size: 11px; padding: 3px 6px; letter-spacing: 0.06em; }
-      .sgl-close .lbl { font-weight: 700; font-style: italic; font-size: 16px; letter-spacing: 0.1em; }
+      .sgb-close:hover, .sgb-close:focus-visible { outline: none; transform: translateY(-50%) rotate(2deg) translate(-2px,-2px); box-shadow: 7px 7px 0 var(--accent); }
+      .sgb-close .key { background: #120a1c; color: ${T}; font-weight: 700; font-size: 11px; padding: 2px 6px; }
+      .sgb-close .lbl { font-weight: 700; font-style: italic; font-size: 14px; letter-spacing: 0.1em; }
 
-      /* ---------- Ricerca ---------- */
-      .sgl-search {
-        flex: none; position: relative; display: flex; align-items: center; margin: 22px 8px 0 4px; height: 44px;
-        background: #121216; border-left: 5px solid var(--accent);
-        clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
-        transition: background .15s;
+      /* ---------- Pagina sinistra ---------- */
+      .sgb-head { text-align: center; flex: none; }
+      .sgb-kicker { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--ink-soft); }
+      .sgb-title {
+        margin: 4px 0 0; font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 42px; line-height: 1;
+        letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink);
+        text-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 45%, transparent);
       }
-      .sgl-search:focus-within { background: #1c1c22; }
-      .sgl-search-lbl {
-        flex: none; margin-left: 14px; background: var(--accent); color: ${V};
-        font-weight: 700; font-size: 12px; letter-spacing: 0.24em; padding: 3px 10px; transform: skewX(-14deg);
+      .sgb-rule {
+        display: flex; align-items: center; gap: 10px; margin: 10px auto 0; width: 70%;
+        color: var(--accent); font-size: 14px;
       }
-      .sgl-search input {
-        flex: 1; min-width: 0; height: 100%; padding: 0 14px; border: 0; outline: none; background: transparent;
-        color: ${T}; font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.03em;
+      .sgb-rule::before, .sgb-rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--ink-soft), transparent); }
+
+      .sgb-search {
+        flex: none; display: flex; align-items: center; gap: 10px; margin: 16px 4px 0;
+        border-bottom: 2px solid var(--ink); padding: 4px 2px;
       }
-      .sgl-search input::placeholder { color: rgba(245,243,235,0.35); font-style: italic; font-weight: 500; }
-      .sgl-search-count {
-        flex: none; margin-right: 22px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.2em;
-        color: var(--accent);
+      .sgb-search-lbl { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 13px; letter-spacing: 0.12em; color: var(--accent); }
+      .sgb-search input {
+        flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink);
+        font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 17px;
+      }
+      .sgb-search input::placeholder { color: rgba(34,23,46,0.4); }
+      .sgb-search:focus-within { border-bottom-color: var(--accent); }
+      .sgb-search-count { flex: none; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--ink-soft); }
+
+      .sgb-chapter {
+        flex: none; display: flex; align-items: center; gap: 8px; margin: 16px 4px 6px;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .sgb-chapter .sw { width: 12px; height: 12px; background: var(--c); transform: rotate(45deg); box-shadow: 1px 1px 0 var(--ink); }
+
+      .sgb-index {
+        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 6px 16px 2px;
+        scrollbar-width: thin; scrollbar-color: rgba(34,23,46,0.35) transparent;
+      }
+      .sgb-group {
+        display: flex; align-items: center; gap: 8px; margin: 14px 0 4px;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: color-mix(in srgb, var(--c) 70%, var(--ink));
+      }
+      .sgb-index-item:first-child .sgb-group { margin-top: 2px; }
+      .sgb-entry {
+        position: relative; display: flex; align-items: baseline; gap: 8px; width: 100%;
+        border: 0; background: transparent; cursor: pointer; text-align: left; color: var(--ink);
+        padding: 5px 8px 5px 22px; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 15px;
+        transition: background .15s, color .15s, padding .2s;
+      }
+      .sgb-entry .mk { position: absolute; left: 4px; color: var(--c); opacity: 0; transform: scale(0.4) rotate(-90deg); transition: opacity .15s, transform .25s cubic-bezier(.3,1.6,.5,1); }
+      .sgb-entry .tm { flex: none; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .sgb-entry .dots { flex: 1; min-width: 12px; border-bottom: 2px dotted rgba(34,23,46,0.28); transform: translateY(-4px); }
+      .sgb-entry .ab { flex: none; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: var(--ink-soft); }
+      .sgb-entry:hover { background: rgba(34,23,46,0.06); }
+      .sgb-entry:hover .mk { opacity: 0.6; transform: none; }
+      .sgb-entry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+      .sgb-entry.on {
+        padding-left: 28px; padding-right: 22px; color: ${T}; background: var(--ink);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+      }
+      .sgb-entry.on .mk { opacity: 1; transform: none; left: 8px; animation: sgb-spin 4s linear infinite; }
+      .sgb-entry.on .dots { border-bottom-color: color-mix(in srgb, var(--c) 60%, transparent); }
+      .sgb-entry.on .ab { color: var(--c); }
+      @keyframes sgb-spin { to { transform: rotate(360deg); } }
+      .sgb-empty { padding: 40px 10px; text-align: center; }
+      .sgb-empty .t { margin: 0 0 6px; font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 18px; }
+      .sgb-empty .s { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+      /* ---------- Pagina destra ---------- */
+      .sgb-leaf { position: relative; isolation: isolate; height: 100%; display: flex; flex-direction: column; transform-origin: left center; }
+      .sgb-leaf::after {
+        content: attr(data-glyph); position: absolute; right: -10px; bottom: 30px; z-index: -1; pointer-events: none;
+        font-size: 260px; line-height: 1; color: color-mix(in srgb, var(--c) 16%, transparent);
+        transform: rotate(-12deg);
+      }
+      .sgb-leaf.turn-fwd { animation: sgb-in-fwd .5s .12s cubic-bezier(.2,.9,.3,1) both; }
+      .sgb-leaf.turn-back { animation: sgb-in-back .5s .12s cubic-bezier(.2,.9,.3,1) both; }
+      @keyframes sgb-in-fwd { from { opacity: 0; transform: translateX(26px); } }
+      @keyframes sgb-in-back { from { opacity: 0; transform: translateX(-26px); } }
+      .sgb-leaf-chapter {
+        display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+        color: #120a1c; background: var(--c); padding: 4px 12px;
+        clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+      }
+      .sgb-leaf-head { display: flex; align-items: center; gap: 18px; margin-top: 14px; }
+      .sgb-term {
+        flex: 1; min-width: 0; margin: 0; font-family: 'Cinzel', Georgia, serif; font-weight: 900;
+        font-size: clamp(30px, 3.4vw, 48px); line-height: 1.02; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink);
+        text-wrap: balance;
+      }
+      .sgb-seal {
+        flex: none; position: relative; width: 78px; height: 78px; display: grid; place-items: center;
+        transform: rotate(-12deg);
+        animation: sgb-seal-in .45s .35s cubic-bezier(.2,1.7,.4,1) both;
+      }
+      .sgb-seal::before {
+        content: ''; position: absolute; inset: 0; background: var(--accent);
+        clip-path: polygon(50% 0%, 61% 10%, 76% 5%, 81% 19%, 95% 24%, 92% 39%, 100% 50%, 92% 61%, 95% 76%, 81% 81%, 76% 95%, 61% 90%, 50% 100%, 39% 90%, 24% 95%, 19% 81%, 5% 76%, 8% 61%, 0% 50%, 8% 39%, 5% 24%, 19% 19%, 24% 5%, 39% 10%);
+        filter: drop-shadow(2px 3px 0 rgba(34,23,46,0.45));
+      }
+      .sgb-seal::after { content: ''; position: absolute; inset: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.45); }
+      .sgb-seal span { position: relative; font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 19px; color: #fff; letter-spacing: 0.02em; }
+      @keyframes sgb-seal-in { from { opacity: 0; transform: rotate(-60deg) scale(2.2); } }
+      .sgb-lead {
+        margin: 16px 0 0; max-width: 60ch; font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+        font-size: 19px; line-height: 1.45; color: var(--ink);
+      }
+      .sgb-rule--leaf { width: 100%; margin: 18px 0 14px; }
+      .sgb-body {
+        flex: 1; min-height: 0; overflow-y: auto; margin: 0; max-width: 62ch; padding-right: 6px;
+        font-size: 16px; line-height: 1.65; color: var(--ink);
+        scrollbar-width: thin; scrollbar-color: rgba(34,23,46,0.35) transparent;
+      }
+      .sgb-initial {
+        float: left; margin: 2px 10px 0 0; padding: 6px 10px 2px; line-height: 0.9;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 46px;
+        color: var(--paper); background: var(--ink); box-shadow: 3px 3px 0 var(--c);
+      }
+      .sgb-turns {
+        flex: none; display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 10px;
+        border-top: 1px solid rgba(34,23,46,0.2);
+      }
+      .sgb-turns button {
+        border: 0; background: transparent; cursor: pointer; padding: 4px 2px; min-height: 26px;
+        font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--ink-soft); max-width: 48%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .sgb-turns button:hover:not(:disabled), .sgb-turns button:focus-visible { color: var(--accent); outline: none; }
+      .sgb-turns button:disabled { cursor: default; }
+      .sgb-turns .next { margin-left: auto; text-align: right; }
+      .sgb-blank { height: 100%; display: grid; place-items: center; font-family: 'Cinzel', Georgia, serif; color: var(--ink-soft); letter-spacing: 0.2em; text-transform: uppercase; }
+
+      /* Foglio che gira sopra la pagina destra */
+      .sgb-sheet {
+        position: absolute; inset: 0; z-index: 4; pointer-events: none;
+        background: linear-gradient(90deg, var(--paper-2), var(--paper) 40%, #fffaf0 70%, var(--paper-2));
+        box-shadow: -10px 0 30px rgba(0,0,0,0.25);
+        backface-visibility: hidden;
+      }
+      .sgb-sheet.sheet-fwd { transform-origin: left center; animation: sgb-sheet-fwd .55s cubic-bezier(.45,.05,.3,1) forwards; }
+      .sgb-sheet.sheet-back { transform-origin: left center; animation: sgb-sheet-back .55s cubic-bezier(.45,.05,.3,1) forwards; }
+      @keyframes sgb-sheet-fwd {
+        0% { transform: rotateY(0deg); opacity: 1; }
+        100% { transform: rotateY(-100deg); opacity: 0.2; }
+      }
+      @keyframes sgb-sheet-back {
+        0% { transform: rotateY(-100deg); opacity: 0.2; }
+        100% { transform: rotateY(0deg); opacity: 0; }
       }
 
-      /* ---------- Categorie ---------- */
-      .sgl-rail { flex: none; display: flex; flex-wrap: wrap; gap: 6px 4px; margin: 14px 0 4px; padding-left: 4px; }
-      .sgl-flag {
-        flex: none; border: 0; padding: 0; cursor: pointer; background: transparent;
-        transform: skewX(-14deg); transition: transform .18s cubic-bezier(.3,1.6,.5,1);
+      /* ---------- Copertina che si apre ---------- */
+      .sgb-opening {
+        position: absolute; z-index: 6; top: 18px; bottom: 44px; right: 18px; width: calc((100% - 36px - 26px) * 1.25 / 2.25 + 13px);
+        transform-origin: left center; transform-style: preserve-3d; pointer-events: none;
+        animation: sgb-open .9s .35s cubic-bezier(.55,.05,.25,1) forwards;
       }
-      .sgl-flag:disabled { cursor: default; opacity: 0.35; }
-      .sgl-flag-in {
-        display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px;
-        background: #121216; color: rgba(245,243,235,0.72);
-        border-left: 4px solid var(--c);
-        font-weight: 600; font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
-        transition: background .15s, color .15s;
+      .sgb-opening-face {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+        background: linear-gradient(160deg, var(--leather-2), var(--leather) 70%);
+        box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--tool) 50%, transparent), inset 0 0 0 10px var(--leather), inset 0 0 0 11px var(--accent);
+        border-radius: 0 8px 8px 0;
+        backface-visibility: hidden;
       }
-      .sgl-flag-in > * { transform: skewX(14deg); }
-      .sgl-flag .gy { color: var(--c); font-size: 13px; line-height: 1; }
-      .sgl-flag .ct { font-family: 'Share Tech Mono', monospace; font-size: 11px; opacity: 0.6; }
-      .sgl-flag:not(:disabled):hover { transform: skewX(-14deg) translateY(-2px); }
-      .sgl-flag:not(:disabled):hover .sgl-flag-in { background: #1c1c22; color: ${T}; }
-      .sgl-flag.on { transform: skewX(-14deg) rotate(-2deg) scale(1.08); margin: 0 6px; z-index: 1; }
-      .sgl-flag.on .sgl-flag-in { background: var(--c); color: ${V}; font-weight: 700; border-left-color: ${T}; box-shadow: 3px 3px 0 ${T}; }
-      .sgl-flag.on .gy, .sgl-flag.on .ct { color: ${V}; opacity: 1; }
+      .sgb-opening-sigil { font-size: 64px; color: var(--accent); text-shadow: 0 0 18px var(--accent); }
+      .sgb-opening-title { font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 34px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--tool); }
+      @keyframes sgb-open { to { transform: rotateY(-180deg); } }
+      /* L'indice compare quando la copertina gli passa sopra */
+      .sgb-left > * { animation: sgb-left-in .35s .78s ease-out both; }
+      @keyframes sgb-left-in { from { opacity: 0; } }
 
-      /* ---------- Lista ---------- */
-      .sgl-list {
-        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-        padding: 10px 26px 30px 40px; margin-left: -10px;
-        scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 60%, transparent) transparent;
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 30px), transparent 100%);
-        mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 30px), transparent 100%);
+      /* ---------- Comandi ---------- */
+      .sgb-hints {
+        flex: none; display: flex; align-items: center; justify-content: center; gap: 22px; height: 44px; color: var(--tool);
       }
-      .sgl-empty { padding: 60px 0; text-align: center; }
-      .sgl-empty .t { margin: 0 0 8px; font-weight: 700; font-style: italic; font-size: 22px; letter-spacing: 0.06em; }
-      .sgl-empty .s { margin: 0; font-size: 14px; color: rgba(245,243,235,0.6); }
+      .sgb-hints .h { display: inline-flex; align-items: center; gap: 4px; }
+      .sgb-hints .lbl { margin-left: 5px; font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; letter-spacing: 0.16em; }
 
-      .sgl-group {
-        display: inline-flex; align-items: center; gap: 8px; margin: 16px 0 10px -6px;
-        background: var(--c); color: ${V}; font-weight: 700; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
-        padding: 4px 14px 4px 12px; transform: skewX(-14deg) rotate(-1.5deg);
-        box-shadow: 4px 4px 0 ${T};
+      /* Schermi stretti: pagine una sopra l'altra */
+      @media (max-width: 820px) {
+        .sgb { height: min(88vh, 900px); }
+        .sgb-tabs { padding: 0 8px; }
+        .sgb-spread { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 0.9fr) 10px minmax(0, 1.1fr); }
+        .sgb-spine { background: linear-gradient(#2a1840, #120a1c); }
+        .sgb-left { padding: 16px 16px 10px; border-radius: 6px 6px 0 0; }
+        .sgb-right { padding: 18px 16px 10px; border-radius: 0 0 6px 6px; overflow-y: auto; }
+        .sgb-leaf { height: auto; min-height: 100%; }
+        .sgb-body { flex: none; overflow: visible; }
+        .sgb-kicker { display: none; }
+        .sgb-title { font-size: 30px; }
+        .sgb-opening { display: none; }
       }
-      .sgl-item:first-child .sgl-group { margin-top: 4px; }
-
-      .sgl-row {
-        position: relative; display: block; width: 100%; margin: 0 0 6px;
-        padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit;
-        outline: none; transition: transform .18s cubic-bezier(.3,1.5,.5,1);
-      }
-      .sgl-row.no-detail { cursor: default; }
-      .sgl-row-shadow, .sgl-row-plate { clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
-      .sgl-row-shadow { position: absolute; inset: 0; background: var(--c); opacity: 0; transition: transform .2s, opacity .15s; }
-      .sgl-row-plate {
-        position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 9px 22px 10px 22px;
-        background: rgba(18,18,22,0.96); transition: background .15s, color .15s;
-      }
-      .sgl-row-plate::before {
-        content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 4px;
-        background: var(--c); transform: skewX(-12deg);
-      }
-      .sgl-row-cursor {
-        position: absolute; left: -30px; top: 50%; width: 22px; height: 24px; margin-top: -12px;
-        background: var(--c); clip-path: polygon(0 0, 100% 50%, 0 100%, 30% 50%);
-        opacity: 0; transform: translateX(-8px); transition: opacity .15s, transform .2s;
-      }
-      .sgl-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-      .sgl-row-term {
-        font-weight: 700; font-style: italic; font-size: 17px; text-transform: uppercase; letter-spacing: 0.03em;
-        color: var(--c); line-height: 1.1;
-      }
-      .sgl-row-term .abbr {
-        display: inline-block; margin-left: 10px; padding: 1px 8px; vertical-align: 2px;
-        background: var(--c); color: ${V}; font-style: normal; font-size: 11px; letter-spacing: 0.14em;
-        transform: skewX(-14deg);
-      }
-      .sgl-row-desc { font-size: 14px; line-height: 1.35; color: rgba(245,243,235,0.82); }
-      .sgl-row-toggle {
-        flex: none; align-self: center; width: 26px; height: 26px; display: grid; place-items: center;
-        font-weight: 700; font-size: 20px; line-height: 1; color: var(--c);
-        border: 2px solid var(--c); transform: skewX(-14deg);
-      }
-
-      .sgl-row.is-active { transform: translateX(10px); }
-      .sgl-row.is-active .sgl-row-plate { background: rgba(32,32,40,0.98); }
-      .sgl-row.is-active .sgl-row-cursor { opacity: 1; transform: translateX(0); animation: sgl-cursor .9s ease-in-out infinite; }
-      @keyframes sgl-cursor { 50% { transform: translateX(5px); } }
-
-      .sgl-row.is-open { transform: translateX(10px) rotate(-0.8deg); z-index: 1; }
-      .sgl-row.is-open .sgl-row-shadow { opacity: 1; transform: translate(7px, 6px); }
-      .sgl-row.is-open .sgl-row-plate { background: ${T}; color: ${V}; }
-      .sgl-row.is-open .sgl-row-plate::before { background: ${V}; }
-      .sgl-row.is-open .sgl-row-term { color: ${V}; }
-      .sgl-row.is-open .sgl-row-term .abbr { background: ${V}; color: ${T}; }
-      .sgl-row.is-open .sgl-row-desc { color: rgba(5,5,7,0.82); }
-      .sgl-row.is-open .sgl-row-toggle { color: ${V}; border-color: ${V}; background: var(--c); }
-
-      .sgl-detail {
-        margin: 6px 6px 14px 26px; padding: 10px 16px 12px;
-        border-left: 4px solid var(--c);
-        background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 85%);
-        font-size: 14px; line-height: 1.5; color: rgba(245,243,235,0.86);
-        animation: sgl-detail-in .28s cubic-bezier(.2,1,.3,1) both;
-      }
-      @keyframes sgl-detail-in { from { opacity: 0; transform: translateX(30px) skewX(-8deg); } }
-
-      /* ---------- Barra comandi ---------- */
-      .sgl-hints {
-        flex: none; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 20px;
-        min-height: 46px; padding: 8px 24px 10px 0;
-        border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-      }
-      .sgl-hint { display: inline-flex; align-items: center; gap: 4px; }
-      .sgl-hint .lbl { margin-left: 5px; font-weight: 700; font-style: italic; font-size: 12px; letter-spacing: 0.14em; }
 
       @media (prefers-reduced-motion: reduce) {
         .sgl *, .sgl *::before, .sgl *::after { animation-duration: 0.001s !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }
+        .sgb-opening, .sgb-sheet { display: none; }
       }
     `}</style>
   );
