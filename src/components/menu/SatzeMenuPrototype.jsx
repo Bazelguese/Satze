@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useId, useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { MENU_ACCENTS } from "../../theme/hudOratorioPalette";
 import AnimatedSatzeLogo from "../brand/AnimatedSatzeLogo";
 import { MenuAgentRain } from "./MenuAgentRain";
@@ -98,11 +98,6 @@ function makeSplash(seed) {
   return { d, drops, rot: -5 + rnd(seed + 5) * 8, flip: rnd(seed + 6) > 0.5 ? -1 : 1 };
 }
 
-/** Macchia nuova a ogni cambio di voce (anche tornando sulla stessa). */
-function useSplash(active) {
-  return useMemo(() => makeSplash(Math.floor(Math.random() * 100000)), [active]);
-}
-
 /** Macchia di colore dietro la voce scelta; posizione e misura dalla classe. */
 function Splash({ splash, className = "" }) {
   return (
@@ -120,6 +115,119 @@ function Splash({ splash, className = "" }) {
       ))}
     </svg>
   );
+}
+
+/** Pennellata orizzontale (viewBox 400×100): bordi ondulati, capi sfrangiati, strisce di pennello secco. */
+function makeStroke(seed) {
+  const f = (v) => v.toFixed(1);
+  const top = [];
+  const bottom = [];
+  for (let x = 24; x <= 376; x += 22) {
+    top.push(`${f(x)} ${f(14 + rnd(seed + x) * 10)}`);
+    bottom.unshift(`${f(x)} ${f(86 - rnd(seed + x * 3) * 10)}`);
+  }
+  // capi sfrangiati: setole di lunghezza diversa
+  const right = [];
+  const left = [];
+  for (let k = 0; k <= 6; k += 1) {
+    const y = 18 + k * 11;
+    right.push(`${f(372 + rnd(seed + 50 + k) * 28)} ${f(y)}`);
+    left.unshift(`${f(rnd(seed + 70 + k) * 30)} ${f(y)}`);
+  }
+  const d = `M ${[...top, ...right, ...bottom, ...left].join(" L ")} Z`;
+  const streaks = Array.from({ length: 3 + Math.floor(rnd(seed + 1) * 3) }, (_, k) => {
+    const y = 26 + rnd(seed + 90 + k) * 48;
+    const x1 = 20 + rnd(seed + 110 + k) * 160;
+    const x2 = x1 + 80 + rnd(seed + 130 + k) * 180;
+    return { x1, x2: Math.min(396, x2), y, w: 1.5 + rnd(seed + 150 + k) * 3 };
+  });
+  return { d, streaks, rot: -4 + rnd(seed + 5) * 5 };
+}
+
+/** Bordo strappato (clip-path): denti irregolari sopra e sotto. */
+function makeTorn(seed) {
+  const top = [];
+  const bottom = [];
+  for (let k = 0; k <= 25; k += 1) {
+    const x = k * 4;
+    top.push(`${x}% ${(rnd(seed + k) * 14).toFixed(1)}%`);
+    bottom.unshift(`${x}% ${(100 - rnd(seed + 40 + k) * 14).toFixed(1)}%`);
+  }
+  return { clip: `polygon(${[...top, ...bottom].join(", ")})`, rot: -3 + rnd(seed + 5) * 4 };
+}
+
+/** Tre artigliate (viewBox 400×140): tratti affusolati in diagonale. */
+function makeClaws(seed) {
+  const f = (v) => v.toFixed(1);
+  const lean = 0.45 + rnd(seed) * 0.35;
+  const paths = [0, 1, 2].map((k) => {
+    const x0 = 40 + k * 70 + rnd(seed + 10 + k) * 30;
+    const x1 = x0 + 220 + rnd(seed + 20 + k) * 60;
+    const y0 = 128 - rnd(seed + 30 + k) * 12;
+    const y1 = y0 - (x1 - x0) * lean;
+    const mx = (x0 + x1) / 2;
+    const my = (y0 + y1) / 2;
+    const w = 14 + rnd(seed + 40 + k) * 10;
+    // normale al tratto per lo spessore al centro
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    const nx = (-(y1 - y0) / len) * w;
+    const ny = ((x1 - x0) / len) * w;
+    return `M ${f(x0)} ${f(y0)} Q ${f(mx + nx)} ${f(my + ny)} ${f(x1)} ${f(y1)} Q ${f(mx - nx * 0.4)} ${f(my - ny * 0.4)} ${f(x0)} ${f(y0)} Z`;
+  });
+  return { paths, flip: rnd(seed + 6) > 0.5 ? -1 : 1 };
+}
+
+/** Evidenziatori della voce scelta da confrontare. */
+export const MENU_HIGHLIGHTS = {
+  macchia: "Macchia",
+  pennellata: "Pennellata",
+  lama: "Lama",
+  carta: "Carta strappata",
+  graffi: "Graffi",
+};
+
+/** Segno dietro la voce scelta; `seed` cambia a ogni cambio di voce. */
+function Highlight({ type, seed }) {
+  const maskId = useId().replace(/:/g, "");
+  const shape = useMemo(() => {
+    if (type === "pennellata") return makeStroke(seed);
+    if (type === "carta") return makeTorn(seed);
+    if (type === "graffi") return makeClaws(seed);
+    if (type === "lama") return { rot: -3 + rnd(seed) * 3 };
+    return makeSplash(seed);
+  }, [type, seed]);
+
+  if (type === "pennellata") {
+    return (
+      <svg className="hl hl-stroke" key={seed} viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true" style={{ "--sr": `${shape.rot.toFixed(1)}deg` }}>
+        <defs>
+          <mask id={maskId}>
+            <path d={shape.d} fill="#fff" />
+            {shape.streaks.map((st, k) => (
+              <line key={k} x1={st.x1} x2={st.x2} y1={st.y} y2={st.y + 2} stroke="#000" strokeWidth={st.w} strokeLinecap="round" />
+            ))}
+          </mask>
+        </defs>
+        <rect width="400" height="100" mask={`url(#${maskId})`} />
+      </svg>
+    );
+  }
+  if (type === "carta") {
+    return <span className="hl hl-paper" key={seed} aria-hidden="true" style={{ clipPath: shape.clip, "--sr": `${shape.rot.toFixed(1)}deg` }} />;
+  }
+  if (type === "lama") {
+    return <span className="hl hl-blade" key={seed} aria-hidden="true" style={{ "--sr": `${shape.rot.toFixed(1)}deg` }} />;
+  }
+  if (type === "graffi") {
+    return (
+      <svg className="hl hl-claws" key={seed} viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" style={{ "--sf": shape.flip }}>
+        {shape.paths.map((d, k) => (
+          <path key={k} d={d} style={{ animationDelay: `${k * 60}ms` }} />
+        ))}
+      </svg>
+    );
+  }
+  return <Splash splash={shape} className="mi-splash" />;
 }
 
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
@@ -164,10 +272,11 @@ function BrushFilters() {
  * grandi e inclinate; la scelta è enorme su una macchia, le vicine medie,
  * le altre piccole. Logo a sinistra.
  */
-function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
-  const splash = useSplash(active);
+function StackMenu({ rows, active, highlight, buttonRefs, onHover, onPick }) {
+  // seme nuovo a ogni cambio di voce (anche tornando sulla stessa)
+  const seed = useMemo(() => Math.floor(Math.random() * 100000), [active]);
   return (
-    <nav className="mi" aria-label="Menu principale">
+    <nav className={`mi mi--${highlight}`} aria-label="Menu principale">
       <div className="mi-col">
         {rows.map((row, i) => {
           const d = Math.abs(i - active);
@@ -186,7 +295,7 @@ function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
                 "--d": `${0.15 + i * 0.05}s`,
               }}
             >
-              {on && <Splash splash={splash} className="mi-splash" />}
+              {on && <Highlight type={highlight} seed={seed} />}
               <span className="mi-label">
                 {row.label}
                 {row.hasChoices && <span className="mi-more" aria-hidden="true">+</span>}
@@ -272,9 +381,9 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  *   disabled?: boolean,
  *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
- * }>, buildLabel?: string, inputLocked?: boolean }} props
+ * }>, buildLabel?: string, inputLocked?: boolean, highlight?: keyof typeof MENU_HIGHLIGHTS }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false }) {
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, highlight = "macchia" }) {
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -537,6 +646,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       </div>
 
       <StackMenu
+        highlight={MENU_HIGHLIGHTS[highlight] ? highlight : "macchia"}
         rows={items}
         active={mainActive}
         buttonRefs={rowRefs}
@@ -625,7 +735,7 @@ function SatzeMenuStyles() {
       .smp-brand {
         position: absolute; left: 560px; top: 500px; width: 1040px; z-index: 10;
         display: flex; flex-direction: column; align-items: center;
-        transform: translate(-50%, -50%) rotate(-3deg); pointer-events: none;
+        transform: translate(-50%, -50%); pointer-events: none;
       }
 
       /* macchia comune: misura e posto dalle variabili della classe */
@@ -662,6 +772,43 @@ function SatzeMenuStyles() {
       .mi-item:not(.on):hover .mi-label { color: var(--c); }
       .mi-item.on .mi-label { text-shadow: 6px 6px 0 #000, 10px 10px 0 color-mix(in srgb, var(--c) 60%, #000); }
       .mi-splash { --sw: calc(100% + 0.9em); --sh: 150%; --sy: -52%; font-size: var(--fs); }
+      /* evidenziatori alternativi */
+      .hl {
+        position: absolute; z-index: 0; left: 50%; top: 50%; pointer-events: none; display: block;
+        transform: translate(-50%, -50%) rotate(var(--sr, 0deg)) scaleX(var(--sf, 1));
+      }
+      .hl-stroke {
+        width: calc(100% + 1.1em); height: 118%; font-size: var(--fs); overflow: visible; filter: url(#smp-splash);
+        transform-origin: right center; animation: hl-wipe .32s cubic-bezier(.2,1,.3,1) both;
+      }
+      .hl-stroke rect { fill: var(--c); }
+      @keyframes hl-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(-20% -10% -20% -10%); } }
+      .hl-paper {
+        width: calc(100% + 0.7em); height: 104%; font-size: var(--fs); background: ${T};
+        animation: hl-slap .28s cubic-bezier(.2,1.5,.4,1) both;
+      }
+      @keyframes hl-slap { from { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--sr) - 12deg)) scale(1.3); } }
+      .mi--carta .mi-item.on .mi-label { color: ${V}; text-shadow: 3px 3px 0 var(--c); }
+      .mi--carta .mi-item.on::before {
+        content: ''; position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 0.7em); height: 104%;
+        transform: translate(calc(-50% + 9px), calc(-50% + 8px)) rotate(-2deg); background: var(--c); font-size: var(--fs);
+      }
+      .hl-blade {
+        width: calc(100% + 0.9em); height: 96%; font-size: var(--fs); background: ${T};
+        clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+        transform-origin: right center; animation: hl-blade-in .26s cubic-bezier(.2,1.4,.4,1) both;
+      }
+      @keyframes hl-blade-in { from { transform: translate(-50%, -50%) rotate(var(--sr)) scaleX(0); } }
+      .mi--lama .mi-item.on .mi-label { color: ${V}; text-shadow: none; }
+      .mi--lama .mi-item.on::before {
+        content: ''; position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 0.9em); height: 96%; font-size: var(--fs);
+        background: var(--c); clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+        transform: translate(calc(-50% + 12px), calc(-50% + 10px)) rotate(-3deg);
+        animation: hl-blade-in .3s .05s cubic-bezier(.2,1.4,.4,1) both;
+      }
+      .hl-claws { width: calc(100% + 0.6em); height: 210%; font-size: var(--fs); overflow: visible; }
+      .hl-claws path { fill: var(--c); animation: hl-claw .22s cubic-bezier(.3,1.2,.4,1) both; transform-box: fill-box; transform-origin: left bottom; }
+      @keyframes hl-claw { from { transform: scale(0); opacity: 0; } }
       .mi-more { display: grid; place-items: center; width: 0.5em; height: 0.5em; min-width: 22px; min-height: 22px; font-size: 0.4em; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
 
       /* ========== Pannello sotto-scelte ========== */
