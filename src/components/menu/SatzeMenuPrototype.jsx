@@ -530,7 +530,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         )}
         <div className="smp-bg-halftone" />
         <MenuAgentRain />
-        <div className="smp-wm">SATZE</div>
         {items[mainActive] && (
           <div className="smp-echo" key={`echo-${mainActive}`}>
             {items[mainActive].label}
@@ -635,23 +634,10 @@ function SatzeMenuStyles() {
         animation: smp-pulse 6s ease-in-out infinite;
       }
       @keyframes smp-pulse { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
-      /* scritte di sfondo a contorno: SATZE dietro il logo, la voce scelta dietro la colonna */
-      .smp-wm, .smp-echo {
+      /* nome della voce scelta a contorno, dietro la colonna */
+      .smp-echo {
         position: absolute; z-index: 3; font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase;
         line-height: 0.8; white-space: nowrap; color: transparent; pointer-events: none; user-select: none;
-      }
-      .smp-wm {
-        left: -70px; top: -40px; font-size: 340px; letter-spacing: -0.04em;
-        color: rgba(192,38,211,0.07); -webkit-text-stroke: 2px rgba(192,38,211,0.2);
-        transform: skewX(-8deg) rotate(-2deg);
-        animation: smp-wm-drift 26s ease-in-out infinite alternate;
-      }
-      /* deriva lenta solo in orizzontale */
-      @keyframes smp-wm-drift {
-        from { transform: translateX(-40px) skewX(-8deg) rotate(-2deg); }
-        to { transform: translateX(90px) skewX(-8deg) rotate(-2deg); }
-      }
-      .smp-echo {
         right: -60px; bottom: 210px; font-size: 230px; letter-spacing: -0.03em;
         -webkit-text-stroke: 2px color-mix(in srgb, var(--active) 34%, transparent);
         transform: rotate(-7deg); transform-origin: right bottom;
