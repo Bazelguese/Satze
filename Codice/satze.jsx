@@ -143,7 +143,7 @@ import { getCampaignRunSummary, abandonFirstActAttempt, loadCampaignRun, saveCam
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
-import { useTransitionedSetGamePhase } from '../src/components/cosmic/ScreenTransition';
+import { useTransitionedSetGamePhase, useCurtain } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings, resolveDuelLayoutBreathClass } from '../src/settings/displaySettings';
 import { isSatzeCursorDuelPhase, setSatzeCursorProps } from '../src/components/cursor/satzeCursorState';
@@ -867,6 +867,8 @@ export default function SatzeGame() {
   const campaignOutcomeError = useCampaignGameOutcome({ gamePhase, campaignLevel, gameResult, campaignSaveSlot, playerHP, enemyHP, campaignDuelMod });
 
   const setGamePhaseAnimated = useTransitionedSetGamePhase(setGamePhaseRaw, gamePhase);
+  /** Cortina attorno a cambi dentro il flusso Partita locale (anteprima, ritorno alla Fase I). */
+  const runCurtain = useCurtain();
   const setGamePhaseFromMainMenu = useCallback((nextPhase) => {
     if (typeof nextPhase !== 'string') {
       setGamePhaseRaw(nextPhase);
@@ -4767,32 +4769,39 @@ export default function SatzeGame() {
             goAfterDeckSelection(resolvedKey);
           }}
           onBack={() => {
-            setShowDifficultyPopup(false);
-            setSelectedArmy(null);
-            setSelectedDeckKey(null);
-            setGamePhase('selectArmy');
+            runCurtain(
+              { accent: colors.accent, label: 'SCEGLI LA TUA ARMATA', kicker: 'FASE I · SCHIERAMENTO', dir: 'back' },
+              () => {
+                setShowDifficultyPopup(false);
+                setSelectedArmy(null);
+                setSelectedDeckKey(null);
+                setGamePhase('selectArmy');
+              }
+            );
           }}
           onPreviewDeck={(deck) => {
             const payload = buildDeckPreviewPayload(deck, { selectedArmy });
-            setPreviewDeckData({
-              ...payload,
-              _opt: payload._opt || {
-                onSelect: () => {
-                  let resolvedKey = deck.deckKey;
-                  if (deck.deckKey.includes('::')) {
-                    const [armySlug, key] = deck.deckKey.split('::');
-                    const army = resolveArmyFromDeckSlug(armySlug);
-                    if (army) setSelectedArmy(army);
-                    resolvedKey = key;
-                    setSelectedDeckKey(key);
-                  } else {
-                    setSelectedDeckKey(deck.deckKey);
-                  }
-                  goAfterDeckSelection(resolvedKey);
+            runCurtain({ accent: payload.accentColor, label: payload.name, kicker: 'ANTEPRIMA ESERCITO' }, () => {
+              setPreviewDeckData({
+                ...payload,
+                _opt: payload._opt || {
+                  onSelect: () => {
+                    let resolvedKey = deck.deckKey;
+                    if (deck.deckKey.includes('::')) {
+                      const [armySlug, key] = deck.deckKey.split('::');
+                      const army = resolveArmyFromDeckSlug(armySlug);
+                      if (army) setSelectedArmy(army);
+                      resolvedKey = key;
+                      setSelectedDeckKey(key);
+                    } else {
+                      setSelectedDeckKey(deck.deckKey);
+                    }
+                    goAfterDeckSelection(resolvedKey);
+                  },
                 },
-              },
+              });
+              setGamePhase('previewDeck');
             });
-            setGamePhase('previewDeck');
           }}
         />
         </>
@@ -4839,8 +4848,13 @@ export default function SatzeGame() {
         <DeckPreviewCosmic
           deck={previewDeckData}
           onBack={() => {
-            setPreviewDeckData(null);
-            setGamePhase('selectDeck');
+            runCurtain(
+              { accent: previewDeckData.accentColor, label: "SCEGLI L'ESERCITO", kicker: 'FASE II · ARRUOLAMENTO', dir: 'back' },
+              () => {
+                setPreviewDeckData(null);
+                setGamePhase('selectDeck');
+              }
+            );
           }}
           onEdit={previewIsCustom ? (d) => {
             if (d?.id && d.id.startsWith('custom_')) {

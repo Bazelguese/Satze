@@ -18,6 +18,7 @@ import { playUiClick } from '../../../audio/soundBus.js';
 import { ARMY_COLORS, ARMY_GIFS } from '../../../data/armies.js';
 import { ARMY_LORE } from '../cosmic/armyLore.js';
 import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
+import { useArrivedByCurtain } from '../../cosmic/ScreenTransition';
 
 export function armyAccent(army, fallback = '#94a3b8') {
   return (ARMY_COLORS[army] || {}).accent || fallback;
@@ -76,6 +77,8 @@ export function GalleryPersonaShell({
   onRailNext,
   onReplay,
 }) {
+  // arrivando dal menù la cortina fa già da ingresso: niente lame doppie
+  const arrivedByCurtain = useArrivedByCurtain();
   const tabCounts = {
     agents: agentCount,
     alternative: alternativeCount,
@@ -185,9 +188,11 @@ export function GalleryPersonaShell({
         </footer>
       )}
 
-      <div className="gp-intro" aria-hidden="true">
-        <span /><span /><span />
-      </div>
+      {!arrivedByCurtain && (
+        <div className="gp-intro" aria-hidden="true">
+          <span /><span /><span />
+        </div>
+      )}
 
       <GalleryPersonaStyles />
     </div>

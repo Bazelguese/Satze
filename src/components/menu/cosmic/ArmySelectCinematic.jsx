@@ -34,6 +34,7 @@ import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
 import { getCardSprite } from '../../../utils';
 import { AGENT_IMAGES } from '../../../data/images';
 import { armSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
+import { armTransitionFrom } from '../../cosmic/ScreenTransition';
 
 const SHOWCASE_SIZE = 5;
 /** Durata della chiusura a lastra prima di passare alla scelta esercito. */
@@ -174,6 +175,13 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     }, EXIT_MS);
   }, [army.color, army.isMixed, army.name, onSelect]);
 
+  /** Indietro: la cortina prende il colore dell'armata in vista. */
+  const goBack = useCallback(() => {
+    if (!onBack) return;
+    armTransitionFrom({ accent: army.color });
+    onBack();
+  }, [army.color, onBack]);
+
   const toggleDossier = useCallback(() => {
     if (stateRef.current.phase !== 'idle') return;
     playUiClick();
@@ -192,12 +200,12 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       else if (k === 's') toggleDossier();
       else if (k === 'Escape') {
         if (stateRef.current.dossier) setDossier(false);
-        else if (onBack) onBack();
+        else goBack();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, confirmArmy, toggleDossier, onBack]);
+  }, [go, confirmArmy, toggleDossier, goBack]);
 
   // Rotella / trackpad: scorre tra le armate (non dentro il dossier)
   useEffect(() => {
@@ -233,7 +241,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
         <div className="asx-bg-stripes" />
       </div>
 
-      <button type="button" className="asx-back" onClick={() => { playUiClick(); onBack?.(); }}>
+      <button type="button" className="asx-back" onClick={() => { playUiClick(); goBack(); }}>
         <span className="key">ESC</span><span className="lbl">MENU</span>
       </button>
 

@@ -60,6 +60,7 @@ import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDea
 import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
 import { peekSlabHandoff, clearSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
+import { useArrivedByCurtain } from '../../cosmic/ScreenTransition';
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -417,8 +418,10 @@ export default function DeckSelectCinematic({
   }, [armyName, gameDeckOptions, selectedArmy, isMixedMode, campaignDeckIds]);
   const total = DECKS.length;
   const [idx, setIdx] = useState(0);
-  // intro -> idle -> confirming (arrivando dalla scelta armata a lastra chiusa si salta l'intro)
-  const [phase, setPhase] = useState(() => (peekSlabHandoff() ? 'idle' : 'intro'));
+  // intro -> idle -> confirming: l'intro si salta arrivando dalla lastra della
+  // scelta armata o da sotto la cortina (es. ritorno dall'anteprima)
+  const arrivedByCurtain = useArrivedByCurtain();
+  const [phase, setPhase] = useState(() => (peekSlabHandoff() || arrivedByCurtain ? 'idle' : 'intro'));
   const [pulse, setPulse] = useState(0);
   const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
   const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());

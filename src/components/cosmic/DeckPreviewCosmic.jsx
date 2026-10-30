@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import { CardReworkP4 } from '../cards/CardReworkP4';
 import { CardPointerTilt, CardPointerTiltStyles } from '../cards/CardPointerTilt.jsx';
@@ -223,6 +223,17 @@ function DeckPreviewCosmic({
     }),
     []
   );
+
+  // Esc torna indietro come il bottone INDIETRO
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      onBack();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onBack]);
 
   const D = deck || fallbackDeck;
   const cards = Array.isArray(D.cards) ? D.cards.slice(0, 10) : [];

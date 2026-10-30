@@ -50,10 +50,14 @@ const PHASE_KICKERS = {
 
 const DEFAULT_ACCENT = '#c026d3';
 
-/** Il menù principale segna la voce scelta: la cortina prende il suo colore. */
+/**
+ * Da chiamare subito prima del cambio di schermata: colore della cortina (la
+ * voce di menù o l'armata in uso) ed eventualmente nome, riga sopra e verso
+ * diversi da quelli della schermata d'arrivo.
+ */
 let pendingFrom = null;
-export function armTransitionFrom({ accent }) {
-  pendingFrom = { accent, at: Date.now() };
+export function armTransitionFrom({ accent, label, kicker, dir }) {
+  pendingFrom = { accent, label, kicker, dir, at: Date.now() };
 }
 function takeTransitionFrom() {
   const p = pendingFrom;
@@ -123,15 +127,34 @@ export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
       }
       const from = takeTransitionFrom();
       requestPhaseChange({
-        label: PHASE_LABELS[nextPhase] || '',
-        kicker: PHASE_KICKERS[nextPhase] || '',
+        label: from?.label ?? (PHASE_LABELS[nextPhase] || ''),
+        kicker: from?.kicker ?? (PHASE_KICKERS[nextPhase] || ''),
         variant: DUEL_WORLD_PHASES.has(nextPhase) ? 'duel' : 'cosmic',
-        dir: nextPhase === 'menu' ? 'back' : 'fwd',
+        dir: from?.dir ?? (nextPhase === 'menu' ? 'back' : 'fwd'),
         accent: from?.accent ?? DEFAULT_ACCENT,
         onSwap: () => setGamePhase(nextPhase),
       });
     },
     [requestPhaseChange, setGamePhase, currentPhase]
+  );
+}
+
+/**
+ * Cortina attorno a un cambio qualunque (anche dentro una schermata, es.
+ * l'anteprima di un esercito): `onSwap` gira a schermo coperto.
+ * opts = { label, kicker, accent, dir }.
+ */
+export function useCurtain() {
+  const requestPhaseChange = useCosmicTransition()?.requestPhaseChange;
+  return useCallback(
+    (opts, onSwap) => {
+      if (!requestPhaseChange) {
+        onSwap();
+        return;
+      }
+      requestPhaseChange({ ...opts, accent: opts.accent ?? DEFAULT_ACCENT, variant: 'cosmic', onSwap });
+    },
+    [requestPhaseChange]
   );
 }
 
