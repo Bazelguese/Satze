@@ -18,6 +18,8 @@ export const CURSOR_TRAIL_LENGTH_PRESETS = /** @type {const} */ ([5, 10, 16]);
 export const CURSOR_TRAIL_DURATION_PRESETS = /** @type {const} */ ([200, 400, 700]);
 /** Respiro layout duello 2.5D: off / soft (mov-1) / strong (mov-2). */
 export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', 'strong']);
+/** Durata in ms della cortina tra le schermate del menù. */
+export const SCREEN_TRANSITION_MS_PRESETS = /** @type {const} */ ([1450, 1800, 2150]);
 /** Cap FPS (0 = illimitato / VSync monitor). */
 export const FPS_CAP_PRESETS = /** @type {const} */ ([0, 30, 60, 120]);
 
@@ -44,6 +46,7 @@ export const RESOLUTION_PRESETS = [
  *   cursorTrailLength: typeof CURSOR_TRAIL_LENGTH_PRESETS[number],
  *   cursorTrailDuration: typeof CURSOR_TRAIL_DURATION_PRESETS[number],
  *   eminenceFoil: boolean,
+ *   screenTransitionMs: typeof SCREEN_TRANSITION_MS_PRESETS[number],
  * }} DisplaySettings */
 
 /** @type {DisplaySettings} */
@@ -62,6 +65,8 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   cursorTrailDuration: 400,
   /** Lamina foil sulle Eminenze del giocatore in partita. */
   eminenceFoil: false,
+  /** Cortina tra menù e schermate: la più lenta è la predefinita. */
+  screenTransitionMs: 2150,
 };
 
 function readStorage() {
@@ -96,6 +101,10 @@ function isCursorTrailLength(v) {
 
 function isCursorTrailDuration(v) {
   return CURSOR_TRAIL_DURATION_PRESETS.includes(Number(v));
+}
+
+function isScreenTransitionMs(v) {
+  return SCREEN_TRANSITION_MS_PRESETS.includes(Number(v));
 }
 
 function isResolutionPreset(v) {
@@ -135,6 +144,10 @@ export function normalizeDisplaySettings(raw) {
   }
   if (isCursorTrailDuration(o.cursorTrailDuration)) {
     base.cursorTrailDuration = /** @type {typeof CURSOR_TRAIL_DURATION_PRESETS[number]} */ (Number(o.cursorTrailDuration));
+  }
+
+  if (isScreenTransitionMs(o.screenTransitionMs)) {
+    base.screenTransitionMs = /** @type {typeof SCREEN_TRANSITION_MS_PRESETS[number]} */ (Number(o.screenTransitionMs));
   }
 
   if (

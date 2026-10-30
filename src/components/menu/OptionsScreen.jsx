@@ -20,6 +20,7 @@ import {
   VFX_QUALITY_LEVELS,
   DUEL_LAYOUT_BREATH_LEVELS,
   FPS_CAP_PRESETS,
+  SCREEN_TRANSITION_MS_PRESETS,
   applyElectronDisplay,
   getDisplaySettings,
   hasElectronDisplayApi,
@@ -71,6 +72,12 @@ const FPS_CAP_LABELS = {
   120: '120',
 };
 
+const TRANSITION_LABELS = {
+  1450: '1,45 s',
+  1800: '1,8 s',
+  2150: '2,15 s',
+};
+
 const ON_OFF = [
   { value: false, label: 'Off' },
   { value: true, label: 'On' },
@@ -78,7 +85,7 @@ const ON_OFF = [
 
 const CATEGORIES = [
   { id: 'screen', label: 'SCHERMO', sub: 'Modalità · risoluzione · FPS', accent: '#38bdf8', glyph: '▣' },
-  { id: 'graphics', label: 'GRAFICA', sub: 'Effetti · animazioni · foil', accent: '#ec4899', glyph: '✦' },
+  { id: 'graphics', label: 'GRAFICA', sub: 'Effetti · transizioni · foil', accent: '#ec4899', glyph: '✦' },
   { id: 'interface', label: 'INTERFACCIA', sub: 'Scala · cursore · scia', accent: '#fbbf24', glyph: '◈' },
   { id: 'audio', label: 'AUDIO', sub: 'Effetti sonori · volume', accent: '#a78bfa', glyph: '♪' },
 ];
@@ -274,6 +281,15 @@ export function OptionsScreen({ onClose }) {
         options: DUEL_LAYOUT_BREATH_LEVELS.map((l) => ({ value: l, label: BREATH_LABELS[l] })),
         onPick: (l) => persistPresentation({ duelLayoutBreath: l }),
         disabled: settings.reduceMotion,
+      },
+      {
+        key: 'screenTransitionMs',
+        label: 'Durata transizioni',
+        hint: 'Quanto dura la cortina tra il menù e le altre schermate.',
+        type: 'choice',
+        value: settings.screenTransitionMs,
+        options: SCREEN_TRANSITION_MS_PRESETS.map((n) => ({ value: n, label: TRANSITION_LABELS[n] })),
+        onPick: (n) => persistPresentation({ screenTransitionMs: n }),
       },
       {
         key: 'eminenceFoil',

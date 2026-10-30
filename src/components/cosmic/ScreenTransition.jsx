@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
+import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from '../../settings/displaySettings.js';
 import './cosmic-transitions.css';
 import { PersonaTransitionOverlay, ptrTiming } from './PersonaTransition.jsx';
 
@@ -49,13 +50,10 @@ const PHASE_KICKERS = {
 
 const DEFAULT_ACCENT = '#c026d3';
 
-/**
- * Il menù principale segna da quale voce parte il passaggio (colore e punto
- * dello schermo), così la cortina parte dalla voce scelta.
- */
+/** Il menù principale segna la voce scelta: la cortina prende il suo colore. */
 let pendingFrom = null;
-export function armTransitionFrom({ accent, x, y }) {
-  pendingFrom = { accent, origin: Number.isFinite(x) ? { x, y } : null, at: Date.now() };
+export function armTransitionFrom({ accent }) {
+  pendingFrom = { accent, at: Date.now() };
 }
 function takeTransitionFrom() {
   const p = pendingFrom;
@@ -130,7 +128,6 @@ export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
         variant: DUEL_WORLD_PHASES.has(nextPhase) ? 'duel' : 'cosmic',
         dir: nextPhase === 'menu' ? 'back' : 'fwd',
         accent: from?.accent ?? DEFAULT_ACCENT,
-        origin: from?.origin ?? null,
         onSwap: () => setGamePhase(nextPhase),
       });
     },
@@ -138,11 +135,20 @@ export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
   );
 }
 
-/** Cortina scelta e suo rallentamento (1 = 0,9 s in tutto). */
-const DEFAULT_LOOK = 'onda';
-const DEFAULT_TEMPO = 1.6;
+/** Rallentamento della cortina dalla durata scelta in Opzioni (1 = 0,9 s). */
+function tempoFromSettings() {
+  return getDisplaySettings().screenTransitionMs / ptrTiming(1).end;
+}
 
-export function CosmicTransitionProvider({ children, look = DEFAULT_LOOK, tempo = DEFAULT_TEMPO }) {
+/** `tempo` forza il rallentamento (anteprime); altrimenti vale l'opzione del giocatore. */
+export function CosmicTransitionProvider({ children, tempo: tempoOverride }) {
+  const [settingsTempo, setSettingsTempo] = useState(tempoFromSettings);
+  useEffect(() => {
+    const on = () => setSettingsTempo(tempoFromSettings());
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+    return () => window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, on);
+  }, []);
+  const tempo = tempoOverride ?? settingsTempo;
   const [transition, setTransition] = useState(null);
   const [sceneSwapped, setSceneSwapped] = useState(false);
   /** Cortina Persona che si sta aprendo: la nuova schermata può animarsi. */
@@ -166,7 +172,7 @@ export function CosmicTransitionProvider({ children, look = DEFAULT_LOOK, tempo 
   }, []);
 
   const requestPhaseChange = useCallback(
-    ({ label, kicker = '', variant = 'cosmic', dir = 'fwd', accent = DEFAULT_ACCENT, origin = null, onSwap }) => {
+    ({ label, kicker = '', variant = 'cosmic', dir = 'fwd', accent = DEFAULT_ACCENT, onSwap }) => {
       if (busyRef.current) return;
 
       clearTimers();
@@ -177,7 +183,7 @@ export function CosmicTransitionProvider({ children, look = DEFAULT_LOOK, tempo 
       runIdRef.current += 1;
       const runId = runIdRef.current;
       const persona = variant === 'cosmic';
-      setTransition({ label, kicker, variant, dir, accent, origin, look, tempo, persona, lite: vfxLite, runId, exiting: false });
+      setTransition({ label, kicker, variant, dir, accent, tempo, persona, lite: vfxLite, runId, exiting: false });
       const pt = ptrTiming(tempo);
       const swapMs = persona ? pt.cover : SWAP_MS;
       const heavyMs = persona ? pt.cover + 40 : HEAVY_MS;
@@ -220,7 +226,7 @@ export function CosmicTransitionProvider({ children, look = DEFAULT_LOOK, tempo 
         }, totalMs)
       );
     },
-    [clearTimers, vfxLite, look, tempo]
+    [clearTimers, vfxLite, tempo]
   );
 
   useEffect(

@@ -359,9 +359,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       openPicker({ accent: item.accent, title: item.label, trail: [], options: item.options });
       return;
     }
-    // la cortina verso la schermata parte dalla voce scelta, col suo colore
-    const r = rowRefs.current[i]?.getBoundingClientRect();
-    armTransitionFrom({ accent: item.accent, x: r ? r.left + r.width / 2 : NaN, y: r ? r.top + r.height / 2 : NaN });
+    // la cortina verso la schermata prende il colore della voce scelta
+    armTransitionFrom({ accent: item.accent });
     item.leafOnClick?.();
   };
 
