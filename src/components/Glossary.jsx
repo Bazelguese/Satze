@@ -1,17 +1,16 @@
 // ============================================
-// GLOSSARIO - libro 2.5D che si sfoglia
+// GLOSSARIO - stile Persona (popup)
 // ============================================
-// Un libro inclinato nello spazio: a sinistra titolo, ricerca e indice, a
-// destra la pagina del termine. Cambiando termine un foglio vero gira sul
-// dorso (davanti la pagina vecchia, dietro l'indice); saltando lontano o
-// cambiando capitolo ne girano tre di fila. All'apertura la copertina si
-// solleva e si gira. Stessa palette e caratteri delle altre schermate
-// (nero, crema, accento; corsivo pieno); i titoli si decifrano dalle rune
-// delle carte e i segnalibri dei capitoli portano una runa.
+// Pannello nero inclinato con bordo e ombra d'accento, titolo che si
+// decifra dalle rune delle carte, ricerca a piastra, capitoli a bandiere
+// skew con la loro runa, voci a piastra con cursore: la voce aperta diventa
+// crema con ombra del colore del capitolo, sigla in una stella e dettaglio
+// su piastra scura. Sul fondo retino, lama d'accento e la runa del capitolo
+// in filigrana; all'apertura tre lame attraversano il pannello.
 //
 // Tastiera (in cattura: i tasti usati qui non arrivano alla schermata sotto):
-//   ↑/↓  termine          ←/→  capitolo (nella ricerca solo se vuota)
-//   Esc  svuota la ricerca, poi chiude          Invio non fa nulla qui
+//   ↑/↓  voce            ←/→  capitolo (nella ricerca solo se vuota)
+//   Invio apre/chiude il dettaglio   Esc svuota la ricerca, poi chiude
 // ============================================
 
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
@@ -26,20 +25,16 @@ const CATEGORY_ORDER = ['concetti', 'vittoria', 'trigger', 'effetti', 'archetipi
 const ALL = 'tutti';
 
 const CATEGORY_COLORS = {
-  amber: '#e0a526',
-  cyan: '#1fb5cf',
-  purple: '#8b6cf0',
-  emerald: '#2fb886',
-  green: '#3fbf6a',
-  rose: '#e8566e',
+  amber: '#fbbf24',
+  cyan: '#22d3ee',
+  purple: '#a78bfa',
+  emerald: '#34d399',
+  green: '#4ade80',
+  rose: '#fb7185',
 };
 
-/** Una runa delle carte per capitolo (segnalibri e intestazioni). */
+/** Una runa delle carte per capitolo (bandiere, intestazioni, filigrana). */
 const CATEGORY_RUNE = { [ALL]: 8, concetti: 0, vittoria: 1, trigger: 2, effetti: 3, archetipi: 5 };
-
-/** Durata di un giro di pagina (ms) e distanza tra fogli che girano insieme. */
-const TURN_MS = 720;
-const TURN_STAGGER_MS = 95;
 
 function normalize(str) {
   return (str || '')
@@ -61,82 +56,12 @@ function categoryColor(cat) {
   return CATEGORY_COLORS[GLOSSARY_CATEGORIES[cat]?.color] || CATEGORY_COLORS.amber;
 }
 
-function categoryLabel(cat) {
-  return cat === ALL ? 'Tutti' : GLOSSARY_CATEGORIES[cat]?.label;
-}
-
-function rowsFor(terms, cat) {
-  const cats = cat === ALL ? CATEGORY_ORDER : [cat];
-  const out = [];
-  cats.forEach((c) => {
-    terms
-      .filter((t) => t.category === c)
-      .forEach((t, i) => out.push({ ...t, key: `${c}-${t.term}-${i}`, color: categoryColor(c) }));
-  });
-  return out;
-}
-
-function prefersReducedMotion() {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
-
-function isNarrow() {
-  return typeof window !== 'undefined' && window.matchMedia?.('(max-width: 820px)').matches;
-}
-
 function Rune({ index, className = '' }) {
   return (
-    <svg className={`gb-rune ${className}`} viewBox="-4 -4 8 8" aria-hidden="true">
+    <svg className={`sgl-rune ${className}`} viewBox="-4 -4 8 8" aria-hidden="true">
       <path d={CARD_RUNES[index % CARD_RUNES.length]} />
     </svg>
   );
-}
-
-/** Pagina del termine: viva sulla pagina destra, statica sulle facce dei fogli che girano. */
-function TermPage({ row, live = false, prev, next, onPrev, onNext }) {
-  if (!row) {
-    return (
-      <div className="gb-empty">
-        <p className="t">Nessuna voce trovata</p>
-        <p className="s">Prova con altre parole (es. POT, trigger, VA)</p>
-      </div>
-    );
-  }
-  return (
-    <article className="gb-term" style={{ '--c': row.color }}>
-      <div className="gb-term-top">
-        <span className="gb-term-chapter">
-          <Rune index={CATEGORY_RUNE[row.category]} />
-          <span>{GLOSSARY_CATEGORIES[row.category].label}</span>
-        </span>
-        {row.abbr && (
-          <span className="gb-burst">
-            <span>{row.abbr}</span>
-          </span>
-        )}
-      </div>
-      <h3 className="gb-term-title">
-        {live ? <RuneTitle key={row.key} text={row.term} global={false} delay={TURN_MS * 0.35} stepMs={38} /> : row.term}
-      </h3>
-      <p className="gb-term-desc">{row.desc}</p>
-      {row.detail && <p className="gb-term-body">{row.detail}</p>}
-      {live && (
-        <nav className="gb-turns">
-          <button type="button" disabled={!prev} onClick={onPrev}>
-            {prev ? <>‹ {prev.term}</> : null}
-          </button>
-          <button type="button" className="next" disabled={!next} onClick={onNext}>
-            {next ? <>{next.term} ›</> : null}
-          </button>
-        </nav>
-      )}
-    </article>
-  );
-}
-
-/** Faccia senza testo di un foglio intermedio: solo righe sbiadite. */
-function BlankPage() {
-  return <div className="gb-blank" />;
 }
 
 export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'duel' }) {
@@ -144,17 +69,12 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(ALL);
   const [activeIndex, setActiveIndex] = useState(0);
-  /** Termine mostrato sulla pagina destra (in ritardo durante i giri all'indietro). */
-  const [shownKey, setShownKey] = useState(null);
-  /** Fogli che stanno girando. */
-  const [leaves, setLeaves] = useState([]);
+  const [expandedKey, setExpandedKey] = useState(null);
   const [originRect, setOriginRect] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const listRef = useRef(null);
   const rowRefs = useRef([]);
-  const leafId = useRef(0);
-  const shownTimer = useRef(0);
-  /** Scorre l'indice solo per tastiera, non al clic. */
+  /** Scorre la lista solo per tastiera o apertura dettaglio, non al passaggio del mouse. */
   const scrollToActiveRef = useRef(false);
 
   useEffect(() => {
@@ -191,7 +111,6 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
       window.scrollTo(0, scrollY);
-      window.clearTimeout(shownTimer.current);
     };
   }, []);
 
@@ -213,15 +132,23 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 
   // Se la ricerca svuota il capitolo scelto si mostrano tutti (il termine può stare altrove).
   const shownCategory = counts[category] ? category : ALL;
-  const rows = useMemo(() => rowsFor(searchedTerms, shownCategory), [searchedTerms, shownCategory]);
 
-  // La ricerca riparte dalla prima voce, senza girare pagine.
+  /** Voci visibili, già nell'ordine dei capitoli (indice = cursore). */
+  const rows = useMemo(() => {
+    const cats = shownCategory === ALL ? CATEGORY_ORDER : [shownCategory];
+    const out = [];
+    cats.forEach((cat) => {
+      searchedTerms
+        .filter((t) => t.category === cat)
+        .forEach((t, i) => out.push({ ...t, key: `${cat}-${t.term}-${i}`, color: categoryColor(cat) }));
+    });
+    return out;
+  }, [searchedTerms, shownCategory]);
+
   useEffect(() => {
     setActiveIndex(0);
-    window.clearTimeout(shownTimer.current);
-    setShownKey(null);
     listRef.current?.scrollTo({ top: 0 });
-  }, [search]);
+  }, [search, shownCategory]);
 
   useLayoutEffect(() => {
     const list = listRef.current;
@@ -229,73 +156,38 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
     const wanted = scrollToActiveRef.current;
     scrollToActiveRef.current = false;
     if (!list || !row || !wanted) return;
-    const pad = 40;
+    const pad = 36;
     if (row.offsetTop - pad < list.scrollTop) list.scrollTo({ top: Math.max(0, row.offsetTop - pad) });
     else if (row.offsetTop + row.offsetHeight + pad > list.scrollTop + list.clientHeight) {
       list.scrollTo({ top: row.offsetTop + row.offsetHeight + pad - list.clientHeight });
     }
-  }, [activeIndex, rows]);
+  }, [activeIndex, expandedKey, rows]);
 
-  const active = rows[activeIndex] ?? null;
-  const shown = (shownKey && rows.find((r) => r.key === shownKey)) || active;
+  const railItems = [ALL, ...CATEGORY_ORDER];
 
-  /**
-   * Gira uno o più fogli. Avanti: il foglio porta via la pagina vecchia e
-   * atterra a sinistra mostrando l'indice; sotto c'è già la nuova. Indietro:
-   * un foglio parte da sinistra e atterra a destra con la nuova pagina; la
-   * vecchia resta visibile finché non viene coperta.
-   */
-  const turnPages = (dir, fromRow, toRow, sheets) => {
-    playSound(UI_SOUND.NAVIGATE);
-    window.clearTimeout(shownTimer.current);
-    if (prefersReducedMotion() || isNarrow()) {
-      setShownKey(toRow?.key ?? null);
-      return;
-    }
-    const n = Math.max(1, Math.min(3, sheets));
-    const batch = Array.from({ length: n }, (_, k) => {
-      leafId.current += 1;
-      const first = k === 0;
-      const last = k === n - 1;
-      return {
-        id: leafId.current,
-        dir,
-        delay: k * TURN_STAGGER_MS,
-        front: dir === 'fwd' ? (first ? { row: fromRow } : null) : last ? { row: toRow } : null,
-        back: dir === 'fwd' ? (last ? 'index' : null) : first ? 'index' : null,
-      };
-    });
-    setLeaves((l) => [...l, ...batch]);
-    if (dir === 'fwd') {
-      setShownKey(toRow?.key ?? null);
-    } else {
-      setShownKey(fromRow?.key ?? null);
-      shownTimer.current = window.setTimeout(
-        () => setShownKey(toRow?.key ?? null),
-        TURN_MS * 0.82 + (n - 1) * TURN_STAGGER_MS,
-      );
-    }
+  const toggleRow = (i) => {
+    const row = rows[i];
+    if (!row?.detail) return;
+    playUiClick();
+    scrollToActiveRef.current = true;
+    setActiveIndex(i);
+    setExpandedKey((k) => (k === row.key ? null : row.key));
   };
 
-  const goTo = (i) => {
+  const moveTo = (i) => {
     if (i === activeIndex || i < 0 || i >= rows.length) return;
-    turnPages(i > activeIndex ? 'fwd' : 'back', shown, rows[i], Math.abs(i - activeIndex));
+    playSound(UI_SOUND.NAVIGATE);
     setActiveIndex(i);
   };
 
   const selectCategory = (cat) => {
     if (cat === shownCategory) return;
     playUiClick();
-    const order = [ALL, ...CATEGORY_ORDER];
-    const nextRows = rowsFor(searchedTerms, cat);
-    turnPages(order.indexOf(cat) > order.indexOf(shownCategory) ? 'fwd' : 'back', shown, nextRows[0], 3);
     setCategory(cat);
-    setActiveIndex(0);
-    listRef.current?.scrollTo({ top: 0 });
   };
 
   const keyRef = useRef({});
-  keyRef.current = { rows, counts, activeIndex, category: shownCategory, search, onClose, goTo, selectCategory };
+  keyRef.current = { rows, counts, activeIndex, category: shownCategory, search, onClose, toggleRow, moveTo, selectCategory };
 
   useEffect(() => {
     const onKey = (e) => {
@@ -311,7 +203,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
         case 'ArrowDown': {
           handled();
           scrollToActiveRef.current = true;
-          k.goTo(k.activeIndex + (e.key === 'ArrowUp' ? -1 : 1));
+          k.moveTo(k.activeIndex + (e.key === 'ArrowUp' ? -1 : 1));
           break;
         }
         case 'ArrowLeft':
@@ -325,8 +217,8 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
           break;
         }
         case 'Enter': {
-          // Inghiottito: sotto (es. costruzione esercito) Invio salverebbe.
           handled();
+          k.toggleRow(k.activeIndex);
           break;
         }
         case 'Escape': {
@@ -344,22 +236,55 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 
   if (!originRect) return null;
 
-  const progress = rows.length > 1 ? activeIndex / (rows.length - 1) : 0;
-  const tabs = [ALL, ...CATEGORY_ORDER];
-  const prev = rows[activeIndex - 1] ?? null;
-  const next = rows[activeIndex + 1] ?? null;
+  let lastCat = null;
+  const chapterColor = categoryColor(shownCategory);
 
-  /** Pagina sinistra; `live` = quella vera (ricerca e voci cliccabili), altrimenti copia sul retro dei fogli. */
-  const renderIndex = (live) => {
-    let lastCat = null;
-    return (
-      <div className="gb-index-page">
-        <h2 className="gb-title" id={live ? 'gb-title' : undefined}>
-          {live ? <RuneTitle text="Glossario" global={false} delay={900} stepMs={60} /> : 'Glossario'}
-        </h2>
-        {live ? (
-          <label className="gb-search">
-            <span className="gb-search-lbl">CERCA</span>
+  const content = (
+    <div className="sgl satze-glossary-backdrop" onClick={onClose} style={{ zIndex, '--accent': accent }}>
+      <div
+        className="sgl-panel"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sgl-title"
+        style={{
+          transform: expanded
+            ? 'translate(50vw, 50vh) translate(-50%, -50%) rotate(-1deg) scale(1)'
+            : `translate(${originRect.left}px, ${originRect.top}px) scale(0.12) skewX(-12deg)`,
+          opacity: expanded ? 1 : 0,
+          '--chapter': chapterColor,
+        }}
+      >
+        <div className="sgl-in">
+          <div className="sgl-deco" aria-hidden="true">
+            <span className="sgl-deco-blade" />
+            <span className="sgl-deco-halftone" />
+            <Rune key={shownCategory} index={CATEGORY_RUNE[shownCategory]} className="sgl-deco-rune" />
+          </div>
+
+          <header className="sgl-head">
+            <div className="sgl-title-wrap">
+              <div className="sgl-eyebrow">
+                <span className="sec">ARCHIVIO</span>
+                <span className="txt">REGOLE DI GUERRA</span>
+              </div>
+              <h2 id="sgl-title" className="sgl-title">
+                <RuneTitle text="Glossario" global={false} delay={420} stepMs={55} />
+              </h2>
+            </div>
+            <div className="sgl-counter" aria-hidden="true">
+              <span className="cur">{String(rows.length ? activeIndex + 1 : 0).padStart(2, '0')}</span>
+              <span className="sep">/</span>
+              <span className="tot">{String(rows.length).padStart(2, '0')}</span>
+            </div>
+            <button type="button" className="sgl-close" onClick={onClose} aria-label="Chiudi glossario">
+              <span className="key">ESC</span>
+              <span className="lbl">CHIUDI</span>
+            </button>
+          </header>
+
+          <label className="sgl-search">
+            <span className="sgl-search-lbl">CERCA</span>
             <input
               type="text"
               value={search}
@@ -369,163 +294,112 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               autoFocus
             />
             {search && (
-              <span className="gb-search-count">
-                {searchedTerms.length} {searchedTerms.length === 1 ? 'VOCE' : 'VOCI'}
+              <span className="sgl-search-count">
+                {searchedTerms.length} {searchedTerms.length === 1 ? 'RISULTATO' : 'RISULTATI'}
               </span>
             )}
           </label>
-        ) : (
-          <div className="gb-search">
-            <span className="gb-search-lbl">CERCA</span>
-          </div>
-        )}
-        <div className="gb-index" ref={live ? listRef : undefined}>
-          {rows.length === 0 && live ? <p className="gb-index-empty">Nessuna voce</p> : null}
-          {rows.map((t, i) => {
-            const showGroup = shownCategory === ALL && t.category !== lastCat;
-            lastCat = t.category;
-            const on = i === activeIndex;
-            return (
-              <div key={t.key} className="gb-index-item" style={{ '--c': t.color }}>
-                {showGroup && (
-                  <div className="gb-group">
-                    <Rune index={CATEGORY_RUNE[t.category]} />
-                    {GLOSSARY_CATEGORIES[t.category].label}
-                  </div>
-                )}
-                {live ? (
-                  <button
-                    type="button"
-                    ref={(el) => {
-                      rowRefs.current[i] = el;
-                    }}
-                    className={`gb-entry ${on ? 'on' : ''}`}
-                    aria-current={on ? 'true' : undefined}
-                    onClick={() => goTo(i)}
-                  >
-                    <span className="tm">{t.term}</span>
-                    {t.abbr && <span className="ab">{t.abbr}</span>}
-                  </button>
-                ) : (
-                  <div className={`gb-entry ${on ? 'on' : ''}`}>
-                    <span className="tm">{t.term}</span>
-                    {t.abbr && <span className="ab">{t.abbr}</span>}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
 
-  const renderFace = (face) => {
-    if (face === 'index') return renderIndex(false);
-    if (face?.row) return <TermPage row={face.row} />;
-    return <BlankPage />;
-  };
-
-  const content = (
-    <div className="sgl satze-glossary-backdrop" onClick={onClose} style={{ zIndex, '--accent': accent }}>
-      <div
-        className="gb"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="gb-title"
-        style={{
-          transform: expanded
-            ? 'translate(50vw, 50vh) translate(-50%, -50%) scale(1)'
-            : `translate(${originRect.left}px, ${originRect.top}px) scale(0.12)`,
-          opacity: expanded ? 1 : 0,
-        }}
-      >
-        <button type="button" className="gb-close" onClick={onClose} aria-label="Chiudi glossario">
-          <span className="key">ESC</span>
-          <span className="lbl">CHIUDI</span>
-        </button>
-
-        <div className="gb-stage">
-          <div className="gb-book" style={{ '--lt': `${3 + progress * 12}px`, '--rt': `${3 + (1 - progress) * 12}px` }}>
-            <div className="gb-board" aria-hidden="true" />
-
-            {/* Segnalibri dei capitoli, infilati tra le pagine */}
-            <div className="gb-tabs" role="tablist" aria-label="Capitoli">
-              {tabs.map((cat) => {
-                const on = cat === shownCategory;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    role="tab"
-                    aria-selected={on}
-                    className={`gb-tab ${on ? 'on' : ''}`}
-                    style={{ '--c': categoryColor(cat) }}
-                    disabled={!counts[cat] && !on}
-                    onClick={() => selectCategory(cat)}
-                  >
+          <div className="sgl-rail" role="tablist" aria-label="Capitoli">
+            {railItems.map((cat) => {
+              const on = cat === shownCategory;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  className={`sgl-flag ${on ? 'on' : ''}`}
+                  style={{ '--c': categoryColor(cat) }}
+                  disabled={!counts[cat] && !on}
+                  onClick={() => selectCategory(cat)}
+                >
+                  <span className="sgl-flag-in">
                     <Rune index={CATEGORY_RUNE[cat]} />
-                    <span className="nm">{categoryLabel(cat)}</span>
-                  </button>
+                    <span className="nm">{cat === ALL ? 'Tutti' : GLOSSARY_CATEGORIES[cat].label}</span>
+                    <span className="ct">{counts[cat]}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="sgl-list" ref={listRef} key={`${shownCategory}|${search}`}>
+            {rows.length === 0 ? (
+              <div className="sgl-empty">
+                <p className="t">NESSUN TERMINE TROVATO</p>
+                <p className="s">Prova con altre parole (es. POT, trigger, VA)</p>
+              </div>
+            ) : (
+              rows.map((t, i) => {
+                const showGroup = shownCategory === ALL && t.category !== lastCat;
+                lastCat = t.category;
+                const isOpen = expandedKey === t.key;
+                const isActive = i === activeIndex;
+                return (
+                  <div key={t.key} className="sgl-item" style={{ '--c': t.color, '--i': Math.min(i, 14) }}>
+                    {showGroup && (
+                      <div className="sgl-group">
+                        <Rune index={CATEGORY_RUNE[t.category]} />
+                        {GLOSSARY_CATEGORIES[t.category].label}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      ref={(el) => {
+                        rowRefs.current[i] = el;
+                      }}
+                      className={`sgl-row ${isActive ? 'is-active' : ''} ${isOpen ? 'is-open' : ''} ${t.detail ? '' : 'no-detail'}`}
+                      aria-expanded={t.detail ? isOpen : undefined}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      onClick={() => toggleRow(i)}
+                    >
+                      <span className="sgl-row-shadow" aria-hidden="true" />
+                      <span className="sgl-row-plate">
+                        <span className="sgl-row-cursor" aria-hidden="true" />
+                        <span className="sgl-row-text">
+                          <span className="sgl-row-term">
+                            {t.term}
+                            {t.abbr && <span className="abbr">{t.abbr}</span>}
+                          </span>
+                          <span className="sgl-row-desc">{t.desc}</span>
+                        </span>
+                        {t.detail && <span className="sgl-row-toggle" aria-hidden="true" />}
+                      </span>
+                      {isOpen && t.abbr && (
+                        <span className="sgl-burst" aria-hidden="true">
+                          <span>{t.abbr}</span>
+                        </span>
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="sgl-detail">
+                        <span className="sgl-detail-lbl">
+                          <Rune index={CATEGORY_RUNE[t.category]} />
+                          DETTAGLIO
+                        </span>
+                        <p>{t.detail}</p>
+                      </div>
+                    )}
+                  </div>
                 );
-              })}
-            </div>
+              })
+            )}
+          </div>
 
-            <div className="gb-stack gb-stack--l" aria-hidden="true" />
-            <div className="gb-stack gb-stack--r" aria-hidden="true" />
+          <footer className="sgl-hints">
+            <span className="sgl-hint"><kbd>↑</kbd><kbd>↓</kbd><span className="lbl">VOCE</span></span>
+            <span className="sgl-hint"><kbd>←</kbd><kbd>→</kbd><span className="lbl">CAPITOLO</span></span>
+            <span className="sgl-hint"><kbd>INVIO</kbd><span className="lbl">DETTAGLIO</span></span>
+            <span className="sgl-hint"><kbd>ESC</kbd><span className="lbl">CHIUDI</span></span>
+          </footer>
 
-            <section className="gb-page gb-left">{renderIndex(true)}</section>
-            <section className="gb-page gb-right" aria-live="polite">
-              <TermPage
-                row={shown}
-                live
-                prev={prev}
-                next={next}
-                onPrev={() => goTo(activeIndex - 1)}
-                onNext={() => goTo(activeIndex + 1)}
-              />
-            </section>
-
-            {leaves.map((leaf) => (
-              <div
-                key={leaf.id}
-                className={`gb-leaf gb-leaf--${leaf.dir}`}
-                style={{ animationDelay: `${leaf.delay}ms`, animationDuration: `${TURN_MS}ms` }}
-                onAnimationEnd={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  setLeaves((l) => l.filter((x) => x.id !== leaf.id));
-                }}
-                aria-hidden="true"
-              >
-                <div className="gb-face gb-face--front gb-page">
-                  {renderFace(leaf.front)}
-                  <span className="gb-shade" style={{ animationDelay: `${leaf.delay}ms`, animationDuration: `${TURN_MS}ms` }} />
-                </div>
-                <div className="gb-face gb-face--back gb-page">
-                  {renderFace(leaf.back)}
-                  <span className="gb-shade" style={{ animationDelay: `${leaf.delay}ms`, animationDuration: `${TURN_MS}ms` }} />
-                </div>
-              </div>
-            ))}
-
-            <div className="gb-gutter" aria-hidden="true" />
-
-            {/* Copertina che si solleva e si gira all'apertura */}
-            <div className="gb-cover" aria-hidden="true">
-              <div className="gb-cover-face">
-                <Rune index={8} className="gb-cover-rune" />
-                <span className="gb-cover-title">Glossario</span>
-              </div>
-            </div>
+          <div className="sgl-intro" aria-hidden="true">
+            <span />
+            <span />
+            <span />
           </div>
         </div>
-
-        <footer className="gb-hints">
-          <span className="h"><kbd>↑</kbd><kbd>↓</kbd><span className="lbl">VOCE</span></span>
-          <span className="h"><kbd>←</kbd><kbd>→</kbd><span className="lbl">CAPITOLO</span></span>
-          <span className="h"><kbd>ESC</kbd><span className="lbl">CHIUDI</span></span>
-        </footer>
       </div>
       <GlossaryStyles />
     </div>
@@ -533,10 +407,6 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
 
   return createPortal(content, document.body);
 }
-
-/** Grana della carta: rumore SVG in data URI (nessun file in più). */
-const PAPER_GRAIN =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .28  0 0 0 0 .2  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
 
 const STAR_CLIP =
   'polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%, 96% 74%, 74% 76%, 70% 98%, 52% 84%, 34% 100%, 28% 78%, 4% 80%, 16% 60%, 0% 42%, 20% 32%, 14% 10%, 36% 18%)';
@@ -547,278 +417,279 @@ function GlossaryStyles() {
   return (
     <style>{`
       .sgl {
-        --paper: #f3eee2; --paper-2: #e7dfcc; --ink: ${V}; --ink-soft: rgba(5,5,7,0.62);
         position: fixed; inset: 0;
         background:
-          radial-gradient(circle, color-mix(in srgb, var(--accent) 34%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px,
-          rgba(5,5,7,0.88);
+          radial-gradient(circle, color-mix(in srgb, var(--accent) 38%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px,
+          radial-gradient(ellipse at 50% 50%, rgba(5,5,7,0.55), rgba(5,5,7,0.94) 75%);
         font-family: 'Chakra Petch', system-ui, sans-serif; color: ${T};
       }
       .sgl * { box-sizing: border-box; }
       .sgl kbd {
-        display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 6px;
+        display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 5px;
         background: ${T}; color: ${V}; border: 0;
-        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px; line-height: 1;
-        clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 11px; line-height: 1;
+        clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
       }
-      .gb-rune { width: 1em; height: 1em; flex: none; overflow: visible; }
-      .gb-rune path { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-      .sgl .rune-title-glyph path { stroke: var(--accent); filter: none; }
+      .sgl-rune { width: 1em; height: 1em; flex: none; overflow: visible; }
+      .sgl-rune path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+      .sgl .rune-title-glyph path { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
 
-      /* ---------- Contenitore ---------- */
-      .gb {
+      .sgl-panel {
         position: fixed; left: 0; top: 0;
-        width: min(1240px, 94vw); height: min(84vh, 800px);
-        display: flex; flex-direction: column;
+        width: min(820px, 92vw); height: min(86vh, 920px);
         transform-origin: 0 0;
-        transition: transform .55s cubic-bezier(.2,1.1,.35,1), opacity .2s ease-out;
+        display: flex; flex-direction: column;
+        filter: drop-shadow(14px 14px 0 var(--accent));
+        transition: transform .5s cubic-bezier(.2,1.15,.4,1), opacity .2s ease-out;
       }
-      .gb-close {
-        position: absolute; z-index: 30; top: 0; right: 10px;
-        display: inline-flex; align-items: center; gap: 10px; border: 0; cursor: pointer;
-        padding: 8px 20px 8px 10px; background: ${T}; color: ${V};
-        transform: skewX(-14deg) rotate(-2deg); box-shadow: 5px 5px 0 var(--accent);
-        transition: transform .15s, box-shadow .15s;
-      }
-      .gb-close > * { transform: skewX(14deg); }
-      .gb-close:hover, .gb-close:focus-visible { outline: none; transform: skewX(-14deg) rotate(-2deg) translate(-3px,-3px); box-shadow: 8px 8px 0 var(--accent); }
-      .gb-close .key { background: ${V}; color: ${T}; font-weight: 700; font-size: 12px; padding: 3px 7px; }
-      .gb-close .lbl { font-weight: 700; font-style: italic; font-size: 18px; letter-spacing: 0.1em; }
-
-      .gb-stage { flex: 1; min-height: 0; perspective: 3400px; perspective-origin: 50% 30%; padding: 64px 22px 10px; }
-      .gb-book {
-        position: relative; width: 100%; height: 100%;
-        display: grid; grid-template-columns: 1fr 1fr;
-        /* Libro inclinato nello spazio; dentro si disegna in ordine di documento
-           (niente preserve-3d: Chrome spezzava i piani e copriva l'indice).
-           I fogli e la copertina girano in prospettiva sul piano del libro. */
-        perspective: 2600px;
-        transform: rotateX(14deg) rotateZ(-1.2deg);
-        animation: gb-settle 1.2s cubic-bezier(.2,.9,.25,1) both;
-      }
-      @keyframes gb-settle { from { transform: rotateX(32deg) rotateZ(-4deg) translateZ(-80px); } }
-
-      /* Piatti della copertina sotto le pagine */
-      .gb-board {
-        position: absolute; inset: -16px -18px -22px; border-radius: 8px;
-        background:
-          linear-gradient(90deg, transparent 48.6%, rgba(255,255,255,0.05) 50%, transparent 51.4%),
-          radial-gradient(ellipse at 30% 20%, #1c1c24, ${V} 70%);
-        box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent), 0 40px 60px rgba(0,0,0,0.7), 0 10px 0 #0d0d12;
+      .sgl-in {
+        position: relative; isolation: isolate; overflow: hidden;
+        flex: 1; min-height: 0; display: flex; flex-direction: column;
+        background: ${V}; border-left: 8px solid var(--accent);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+        padding: 22px 38px 0 30px;
       }
 
-      /* Spessore delle pagine (cresce a sinistra man mano che si va avanti) */
-      .gb-stack { position: absolute; top: 0; bottom: 0; width: 50%;
-        background: repeating-linear-gradient(0deg, #e6dfcd 0 2px, #c9bfa7 2px 3px); border-radius: 3px; }
-      .gb-stack--l { left: 0; transform: translate(calc(var(--lt) * -1), calc(var(--lt) * 0.8)); transition: transform .4s; }
-      .gb-stack--r { right: 0; transform: translate(var(--rt), calc(var(--rt) * 0.8)); transition: transform .4s; }
-
-      /* ---------- Pagine ---------- */
-      .gb-page {
-        position: relative; min-width: 0; min-height: 0; overflow: hidden; color: var(--ink);
-        background: ${PAPER_GRAIN}, linear-gradient(var(--paper), var(--paper-2));
+      /* ---------- Fondo del pannello ---------- */
+      .sgl-deco { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+      .sgl-deco-blade {
+        position: absolute; top: -6%; right: 90px; width: 26px; height: 24%;
+        background: var(--chapter); transform: skewX(-24deg);
+        box-shadow: 24px 0 0 -10px ${V}, 34px 0 0 -12px ${T};
+        opacity: 0.9; transition: background .35s;
+        -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent);
+        mask-image: linear-gradient(to bottom, #000 40%, transparent);
       }
-      .gb-left { border-radius: 4px 0 0 4px; padding: 34px 30px 22px 38px; background: linear-gradient(90deg, transparent 86%, rgba(40,28,10,0.2)), ${PAPER_GRAIN}, linear-gradient(var(--paper), var(--paper-2)); }
-      .gb-right { border-radius: 0 4px 4px 0; padding: 34px 44px 22px 36px; background: linear-gradient(270deg, transparent 88%, rgba(40,28,10,0.2)), ${PAPER_GRAIN}, linear-gradient(var(--paper), var(--paper-2)); }
-      .gb-right::after {
-        content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 42%; pointer-events: none;
-        background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent) 1.5px, transparent 1.9px);
-        background-size: 10px 10px;
+      .sgl-deco-halftone {
+        position: absolute; right: 0; bottom: 0; width: 70%; height: 55%;
+        background-image: radial-gradient(circle, var(--chapter) 1.4px, transparent 1.8px);
+        background-size: 11px 11px; opacity: 0.22;
         -webkit-mask-image: radial-gradient(ellipse at 100% 100%, #000, transparent 70%);
         mask-image: radial-gradient(ellipse at 100% 100%, #000, transparent 70%);
-        opacity: 0.55;
       }
-      .gb-gutter {
-        position: absolute; top: 0; bottom: 0; left: calc(50% - 30px); width: 60px; pointer-events: none; transform: translateZ(1px);
-        background: linear-gradient(90deg, transparent, rgba(30,20,8,0.28) 45%, rgba(30,20,8,0.4) 50%, rgba(30,20,8,0.28) 55%, transparent);
+      .sgl-deco-rune {
+        position: absolute; right: -60px; bottom: -40px; font-size: 420px; color: var(--chapter);
+        opacity: 0.09; transform: rotate(-14deg);
+        animation: sgl-rune-in .5s cubic-bezier(.2,1,.3,1) both;
       }
+      .sgl-deco-rune path { stroke-width: 2.5; }
+      @keyframes sgl-rune-in { from { opacity: 0; transform: rotate(-40deg) scale(0.7); } }
 
-      /* ---------- Indice ---------- */
-      .gb-index-page { height: 100%; display: flex; flex-direction: column; }
-      .gb-left > .gb-index-page > * { animation: gb-fade .4s .95s ease-out both; }
-      @keyframes gb-fade { from { opacity: 0; } }
-      .gb-title {
-        flex: none; margin: 0; font-weight: 700; font-style: italic; text-transform: uppercase;
-        font-size: 54px; line-height: 0.95; letter-spacing: -0.01em; color: var(--ink);
-        text-shadow: 4px 4px 0 var(--accent);
-        transform: rotate(-3deg); transform-origin: left center;
+      /* ---------- Testata ---------- */
+      .sgl-head { display: flex; align-items: flex-start; gap: 18px; flex: none; }
+      .sgl-title-wrap { flex: 1; min-width: 0; transform: rotate(-3deg); transform-origin: left top; }
+      .sgl-eyebrow { display: flex; align-items: center; gap: 10px; }
+      .sgl-eyebrow .sec {
+        background: var(--accent); color: ${V}; font-weight: 700; font-size: 12px; letter-spacing: 0.24em;
+        padding: 3px 11px; transform: skewX(-14deg);
       }
-      .gb-search {
-        flex: none; display: flex; align-items: center; gap: 12px; margin: 22px 0 0; height: 40px;
-        background: ${V}; color: ${T}; padding: 0 14px 0 6px;
-        clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+      .sgl-eyebrow .txt { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.3em; color: rgba(245,243,235,0.6); white-space: nowrap; }
+      .sgl-title {
+        margin: 4px 0 0; font-weight: 700; font-style: italic; text-transform: uppercase;
+        font-size: 58px; line-height: 0.95; letter-spacing: -0.01em; color: ${T};
+        text-shadow: 5px 5px 0 var(--accent), 9px 9px 0 #000;
       }
-      .gb-search-lbl { flex: none; background: var(--accent); color: ${V}; font-weight: 700; font-size: 12px; letter-spacing: 0.22em; padding: 3px 10px; transform: skewX(-14deg); margin-left: 8px; }
-      .gb-search input {
-        flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: ${T};
-        font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 600;
+      .sgl-counter { flex: none; margin-top: 20px; font-weight: 700; font-style: italic; line-height: 0.9; transform: rotate(-3deg); }
+      .sgl-counter .cur { font-size: 44px; color: var(--chapter); text-shadow: 3px 3px 0 #000; transition: color .3s; }
+      .sgl-counter .sep { font-size: 26px; margin: 0 3px; }
+      .sgl-counter .tot { font-size: 22px; }
+      .sgl-close {
+        flex: none; display: inline-flex; align-items: center; gap: 10px; margin-top: 4px;
+        background: ${T}; color: ${V}; border: 0; cursor: pointer;
+        padding: 7px 18px 7px 10px; transform: skewX(-14deg) rotate(-2deg);
+        box-shadow: 5px 5px 0 var(--accent);
+        transition: transform .15s, box-shadow .15s;
       }
-      .gb-search input::placeholder { color: rgba(245,243,235,0.4); font-style: italic; font-weight: 500; }
-      .gb-search-count { flex: none; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: var(--accent); }
-      .gb-index { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin-top: 12px; padding: 4px 18px 16px 4px;
-        scrollbar-width: thin; scrollbar-color: rgba(5,5,7,0.3) transparent; }
-      .gb-index-empty { margin: 30px 0; text-align: center; font-style: italic; color: var(--ink-soft); }
-      .gb-group {
-        display: flex; align-items: center; gap: 8px; margin: 16px 0 6px;
-        font-weight: 700; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
-        color: color-mix(in srgb, var(--c) 65%, var(--ink));
+      .sgl-close > * { transform: skewX(14deg); }
+      .sgl-close:hover, .sgl-close:focus-visible {
+        outline: none; transform: skewX(-14deg) rotate(-2deg) translate(-3px,-3px); box-shadow: 8px 8px 0 var(--accent);
       }
-      .gb-group .gb-rune { font-size: 14px; }
-      .gb-index-item:first-child .gb-group { margin-top: 2px; }
-      .gb-entry {
-        position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%;
-        border: 0; background: transparent; cursor: pointer; text-align: left; color: var(--ink);
-        padding: 5px 12px; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 16px;
-        transition: transform .18s cubic-bezier(.3,1.6,.5,1), background .12s;
-      }
-      .gb-entry .tm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .gb-entry .ab { flex: none; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: var(--ink-soft); }
-      .gb-entry:hover { transform: translateX(6px); }
-      .gb-entry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-      .gb-entry.on {
-        color: ${T}; background: ${V}; font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: 0.02em;
-        transform: translateX(10px) rotate(-1deg);
-        clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
-      }
-      .gb-entry.on .ab { color: var(--c); }
+      .sgl-close .key { background: ${V}; color: ${T}; font-weight: 700; font-size: 11px; padding: 3px 6px; letter-spacing: 0.06em; }
+      .sgl-close .lbl { font-weight: 700; font-style: italic; font-size: 16px; letter-spacing: 0.1em; }
 
-      /* ---------- Pagina del termine ---------- */
-      .gb-term { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
-      .gb-term-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-height: 40px; }
-      .gb-term-chapter {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: ${V}; color: var(--c); font-weight: 700; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
-        padding: 5px 14px; transform: skewX(-14deg);
+      /* ---------- Ricerca ---------- */
+      .sgl-search {
+        flex: none; position: relative; display: flex; align-items: center; margin: 24px 10px 0 2px; height: 46px;
+        background: ${T}; color: ${V};
+        clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+        transform: rotate(-0.6deg);
       }
-      .gb-term-chapter > * { transform: skewX(14deg); }
-      .gb-term-chapter .gb-rune { font-size: 15px; }
-      .gb-burst { position: relative; flex: none; width: 96px; height: 96px; display: grid; place-items: center; margin: -10px -12px -40px 0; }
-      .gb-burst::before { content: ''; position: absolute; inset: 0; background: ${V}; clip-path: ${STAR_CLIP}; filter: drop-shadow(5px 5px 0 var(--accent)); animation: gb-burst-spin 22s linear infinite; }
-      .gb-burst span { position: relative; font-weight: 700; font-style: italic; font-size: 24px; color: ${T}; transform: rotate(-8deg); }
-      @keyframes gb-burst-spin { to { transform: rotate(360deg); } }
-      .gb-term-title {
-        margin: 18px 96px 0 0; font-weight: 700; font-style: italic; text-transform: uppercase;
-        font-size: clamp(34px, 3.6vw, 58px); line-height: 0.95; letter-spacing: -0.01em; color: var(--ink);
-        text-shadow: 4px 4px 0 var(--c);
-        text-wrap: balance;
+      .sgl-search-lbl {
+        flex: none; margin-left: 16px; background: ${V}; color: ${T};
+        font-weight: 700; font-size: 12px; letter-spacing: 0.24em; padding: 4px 11px; transform: skewX(-14deg);
       }
-      .gb-term-desc {
-        margin: 22px 0 0; max-width: 46ch; font-weight: 600; font-size: 20px; line-height: 1.35; color: var(--ink);
-        padding-left: 14px; border-left: 5px solid var(--c);
+      .sgl-search input {
+        flex: 1; min-width: 0; height: 100%; padding: 0 14px; border: 0; outline: none; background: transparent;
+        color: ${V}; font-family: 'Chakra Petch', sans-serif; font-size: 17px; font-weight: 700; font-style: italic; letter-spacing: 0.02em;
       }
-      .gb-term-body {
-        flex: 1; min-height: 0; overflow-y: auto; margin: 18px 0 0; max-width: 58ch; padding-right: 6px;
-        font-size: 16px; line-height: 1.62; color: rgba(5,5,7,0.86);
-        scrollbar-width: thin; scrollbar-color: rgba(5,5,7,0.3) transparent;
+      .sgl-search input::placeholder { color: rgba(5,5,7,0.4); font-weight: 600; }
+      .sgl-search::after {
+        content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 4px; background: var(--accent);
+        transform: scaleX(0); transform-origin: left; transition: transform .3s cubic-bezier(.2,1,.3,1);
       }
-      .gb-turns { flex: none; display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 10px; border-top: 2px solid ${V}; }
-      .gb-turns button {
-        border: 0; background: transparent; cursor: pointer; padding: 4px 2px; min-height: 26px; max-width: 48%;
-        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
-        color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .gb-turns button:hover:not(:disabled), .gb-turns button:focus-visible { color: var(--ink); outline: none; text-shadow: 2px 2px 0 var(--accent); }
-      .gb-turns button:disabled { cursor: default; }
-      .gb-turns .next { margin-left: auto; text-align: right; }
-      .gb-empty { height: 100%; display: grid; place-content: center; text-align: center; }
-      .gb-empty .t { margin: 0 0 6px; font-weight: 700; font-style: italic; font-size: 24px; text-transform: uppercase; }
-      .gb-empty .s { margin: 0; font-size: 14px; color: var(--ink-soft); }
-      .gb-blank {
-        position: absolute; inset: 60px 40px 50px 36px;
-        background: repeating-linear-gradient(180deg, transparent 0 22px, rgba(5,5,7,0.08) 22px 30px);
-        -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent);
-        mask-image: linear-gradient(90deg, #000 70%, transparent);
-      }
+      .sgl-search:focus-within::after { transform: scaleX(1); }
+      .sgl-search-count { flex: none; margin-right: 24px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.2em; }
 
-      /* ---------- Fogli che girano ---------- */
-      .gb-leaf {
-        position: absolute; top: 0; bottom: 0; left: 50%; width: 50%; z-index: 5;
-        transform-origin: left center; transform-style: preserve-3d; pointer-events: none;
-        animation-timing-function: cubic-bezier(.45,.05,.25,1); animation-fill-mode: both;
+      /* ---------- Capitoli ---------- */
+      .sgl-rail { flex: none; display: flex; flex-wrap: wrap; gap: 6px 4px; margin: 16px 0 4px; padding-left: 4px; }
+      .sgl-flag {
+        flex: none; border: 0; padding: 0; cursor: pointer; background: transparent;
+        transform: skewX(-14deg); transition: transform .18s cubic-bezier(.3,1.6,.5,1);
       }
-      .gb-leaf--fwd { animation-name: gb-turn-fwd; }
-      .gb-leaf--back { animation-name: gb-turn-back; }
-      @keyframes gb-turn-fwd {
-        0% { transform: translateZ(2px) rotateY(0deg) skewY(0deg); }
-        50% { transform: translateZ(18px) rotateY(-90deg) skewY(-2deg); }
-        100% { transform: translateZ(2px) rotateY(-180deg) skewY(0deg); }
+      .sgl-flag:disabled { cursor: default; opacity: 0.3; }
+      .sgl-flag-in {
+        display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px;
+        background: #121216; color: rgba(245,243,235,0.72);
+        border-left: 4px solid var(--c);
+        font-weight: 600; font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+        transition: background .15s, color .15s;
       }
-      @keyframes gb-turn-back {
-        0% { transform: translateZ(2px) rotateY(-180deg) skewY(0deg); }
-        50% { transform: translateZ(18px) rotateY(-90deg) skewY(2deg); }
-        100% { transform: translateZ(2px) rotateY(0deg) skewY(0deg); }
-      }
-      .gb-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-      .gb-face--front { border-radius: 0 4px 4px 0; padding: 34px 44px 22px 36px; }
-      .gb-face--back { border-radius: 4px 0 0 4px; padding: 34px 30px 22px 38px; transform: rotateY(180deg); }
-      .gb-shade { position: absolute; inset: 0; pointer-events: none; z-index: 3; animation-name: gb-shade; animation-fill-mode: both; animation-timing-function: linear; }
-      .gb-face--front .gb-shade { background: linear-gradient(90deg, rgba(0,0,0,0.25), transparent 40%); }
-      .gb-face--back .gb-shade { background: linear-gradient(270deg, rgba(0,0,0,0.25), transparent 40%); }
-      @keyframes gb-shade { 0%, 100% { opacity: 0; } 45%, 55% { opacity: 1; } }
+      .sgl-flag-in > * { transform: skewX(14deg); }
+      .sgl-flag .sgl-rune { color: var(--c); font-size: 13px; }
+      .sgl-flag .ct { font-family: 'Share Tech Mono', monospace; font-size: 11px; opacity: 0.6; }
+      .sgl-flag:not(:disabled):hover { transform: skewX(-14deg) translateY(-2px); }
+      .sgl-flag:not(:disabled):hover .sgl-flag-in { background: #1c1c22; color: ${T}; }
+      .sgl-flag:focus-visible { outline: 2px solid ${T}; outline-offset: 2px; }
+      .sgl-flag.on { transform: skewX(-14deg) rotate(-2deg) scale(1.08); margin: 0 6px; z-index: 1; }
+      .sgl-flag.on .sgl-flag-in { background: var(--c); color: ${V}; font-weight: 700; border-left-color: ${T}; box-shadow: 3px 3px 0 ${T}; }
+      .sgl-flag.on .sgl-rune, .sgl-flag.on .ct { color: ${V}; opacity: 1; }
 
-      /* ---------- Segnalibri ---------- */
-      .gb-tabs {
-        position: absolute; left: 40px; right: 240px; top: -40px; height: 46px; z-index: 0;
-        display: flex; align-items: flex-end; gap: 5px;
+      /* ---------- Lista ---------- */
+      .sgl-list {
+        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+        padding: 12px 26px 30px 40px; margin-left: -10px;
+        scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 60%, transparent) transparent;
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 30px), transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 30px), transparent 100%);
       }
-      .gb-tab {
-        display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px 4px; border: 0; cursor: pointer;
-        background: color-mix(in srgb, var(--c) 55%, ${V}); color: ${V};
-        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 5px), 0 100%);
-        transition: height .2s cubic-bezier(.3,1.6,.5,1), background .2s;
-      }
-      .gb-tab .gb-rune { font-size: 14px; }
-      .gb-tab .nm { white-space: nowrap; }
-      .gb-tab:disabled { cursor: default; opacity: 0.35; }
-      .gb-tab:not(:disabled):not(.on):hover { height: 38px; background: var(--c); }
-      .gb-tab.on { height: 46px; background: var(--c); }
-      .gb-tab:focus-visible { outline: 2px solid ${T}; outline-offset: 2px; }
+      .sgl-item { animation: sgl-item-in .36s calc(var(--i) * 26ms) cubic-bezier(.2,1.2,.4,1) backwards; }
+      @keyframes sgl-item-in { from { opacity: 0; transform: translateX(70px) skewX(-10deg); } }
+      .sgl-empty { padding: 60px 0; text-align: center; }
+      .sgl-empty .t { margin: 0 0 8px; font-weight: 700; font-style: italic; font-size: 24px; letter-spacing: 0.04em; }
+      .sgl-empty .s { margin: 0; font-size: 14px; color: rgba(245,243,235,0.6); }
 
-      /* ---------- Copertina ---------- */
-      .gb-cover {
-        position: absolute; top: -8px; bottom: -10px; left: 50%; right: -10px; z-index: 10;
-        transform-origin: left center; transform-style: preserve-3d; pointer-events: none;
-        animation: gb-open 1.1s .3s cubic-bezier(.55,.05,.2,1) both;
+      .sgl-group {
+        display: inline-flex; align-items: center; gap: 8px; margin: 18px 0 10px -6px;
+        background: var(--c); color: ${V}; font-weight: 700; font-style: italic; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase;
+        padding: 4px 14px 4px 12px; transform: skewX(-14deg) rotate(-1.5deg);
+        box-shadow: 4px 4px 0 ${T};
       }
-      .gb-cover-face {
-        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-        border-radius: 0 8px 8px 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-        background: radial-gradient(ellipse at 40% 30%, #1d1d26, ${V} 70%);
-        box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 10px ${V}, inset 0 0 0 11px color-mix(in srgb, var(--accent) 40%, transparent);
-      }
-      .gb-cover-rune { font-size: 120px; color: var(--accent); filter: drop-shadow(0 0 14px var(--accent)); }
-      .gb-cover-title { font-weight: 700; font-style: italic; font-size: 44px; text-transform: uppercase; color: ${T}; text-shadow: 4px 4px 0 var(--accent); }
-      @keyframes gb-open {
-        0% { transform: translateZ(3px) rotateY(0deg); }
-        25% { transform: translateZ(24px) rotateY(-8deg); }
-        100% { transform: translateZ(3px) rotateY(-180deg); }
-      }
+      .sgl-group > .sgl-rune { font-size: 13px; }
+      .sgl-item:first-child .sgl-group { margin-top: 4px; }
 
-      /* ---------- Comandi ---------- */
-      .gb-hints { position: relative; z-index: 2; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 22px; height: 40px; padding-right: 20px; }
-      .gb-hints .h { display: inline-flex; align-items: center; gap: 4px; }
-      .gb-hints .lbl { margin-left: 6px; font-weight: 700; font-style: italic; font-size: 13px; letter-spacing: 0.14em; }
-
-      /* Schermi stretti: niente 3D, pagine una sopra l'altra */
-      @media (max-width: 820px) {
-        .gb { height: min(90vh, 940px); }
-        .gb-stage { perspective: none; padding: 58px 10px 6px; }
-        .gb-book { transform: none; animation: none; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 0.9fr) minmax(0, 1.1fr); }
-        .gb-tabs { position: static; flex-wrap: wrap; height: auto; padding: 0; margin-bottom: 4px; transform: none; }
-        .gb-tab.on { height: 34px; }
-        .gb-stack, .gb-gutter, .gb-cover, .gb-leaf { display: none; }
-        .gb-left { padding: 18px 16px 10px; border-radius: 4px 4px 0 0; }
-        .gb-right { padding: 18px 16px 10px; border-radius: 0 0 4px 4px; overflow-y: auto; }
-        .gb-title { font-size: 36px; }
-        .gb-term { height: auto; min-height: 100%; }
-        .gb-term-body { flex: none; overflow: visible; }
-        .gb-left > .gb-index-page > * { animation: none; }
+      .sgl-row {
+        position: relative; display: block; width: 100%; margin: 0 0 6px;
+        padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit;
+        outline: none; transition: transform .18s cubic-bezier(.3,1.5,.5,1);
       }
+      .sgl-row.no-detail { cursor: default; }
+      .sgl-row-shadow, .sgl-row-plate { clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+      .sgl-row-shadow { position: absolute; inset: 0; background: var(--c); opacity: 0; transition: transform .2s, opacity .15s; }
+      .sgl-row-plate {
+        position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 22px 11px 22px;
+        background: rgba(18,18,22,0.96); transition: background .15s, color .15s;
+      }
+      .sgl-row-plate::before {
+        content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 4px;
+        background: var(--c); transform: skewX(-12deg);
+      }
+      .sgl-row-cursor {
+        position: absolute; left: -30px; top: 50%; width: 22px; height: 24px; margin-top: -12px;
+        background: var(--c); clip-path: polygon(0 0, 100% 50%, 0 100%, 30% 50%);
+        opacity: 0; transform: translateX(-8px); transition: opacity .15s, transform .2s;
+      }
+      .sgl-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+      .sgl-row-term {
+        font-weight: 700; font-style: italic; font-size: 18px; text-transform: uppercase; letter-spacing: 0.02em;
+        color: var(--c); line-height: 1.1;
+      }
+      .sgl-row-term .abbr {
+        display: inline-block; margin-left: 10px; padding: 1px 8px; vertical-align: 2px;
+        background: var(--c); color: ${V}; font-style: normal; font-size: 11px; letter-spacing: 0.14em;
+        transform: skewX(-14deg);
+      }
+      .sgl-row-desc { font-size: 14px; line-height: 1.35; color: rgba(245,243,235,0.82); }
+      .sgl-row-toggle {
+        position: relative; flex: none; width: 24px; height: 24px; border: 2px solid var(--c); transform: skewX(-14deg);
+        transition: background .15s, transform .25s cubic-bezier(.3,1.6,.5,1);
+      }
+      .sgl-row-toggle::before, .sgl-row-toggle::after {
+        content: ''; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; margin: -1px 0 0 -6px; background: var(--c);
+        transition: transform .25s;
+      }
+      .sgl-row-toggle::after { transform: rotate(90deg); }
+
+      .sgl-row.is-active { transform: translateX(10px); }
+      .sgl-row.is-active .sgl-row-plate { background: rgba(32,32,40,0.98); }
+      .sgl-row.is-active .sgl-row-cursor { opacity: 1; transform: translateX(0); animation: sgl-cursor .9s ease-in-out infinite; }
+      @keyframes sgl-cursor { 50% { transform: translateX(5px); } }
+
+      .sgl-row.is-open { transform: translateX(10px) rotate(-1deg) scale(1.02); z-index: 1; }
+      .sgl-row.is-open .sgl-row-shadow { opacity: 1; transform: translate(8px, 7px); }
+      .sgl-row.is-open .sgl-row-plate { background: ${T}; color: ${V}; padding-right: 96px; }
+      .sgl-row.is-open .sgl-row-plate::before { background: ${V}; }
+      .sgl-row.is-open .sgl-row-term { color: ${V}; font-size: 22px; }
+      .sgl-row.is-open .sgl-row-term .abbr { display: none; }
+      .sgl-row.is-open .sgl-row-desc { color: rgba(5,5,7,0.82); font-weight: 600; }
+      .sgl-row.is-open .sgl-row-toggle { background: ${V}; border-color: ${V}; transform: skewX(-14deg) rotate(180deg); }
+      .sgl-row.is-open .sgl-row-toggle::before, .sgl-row.is-open .sgl-row-toggle::after { background: var(--c); }
+      .sgl-row.is-open .sgl-row-toggle::after { transform: rotate(0deg); }
+
+      .sgl-burst {
+        position: absolute; right: 2px; top: 50%; width: 74px; height: 74px; margin-top: -37px; display: grid; place-items: center;
+        animation: sgl-burst-in .35s cubic-bezier(.2,1.7,.4,1) both;
+      }
+      .sgl-burst::before {
+        content: ''; position: absolute; inset: 0; background: ${V}; clip-path: ${STAR_CLIP};
+        filter: drop-shadow(4px 4px 0 var(--c)); animation: sgl-spin 18s linear infinite;
+      }
+      .sgl-burst span { position: relative; font-weight: 700; font-style: italic; font-size: 18px; color: ${T}; transform: rotate(-8deg); }
+      @keyframes sgl-burst-in { from { transform: scale(0) rotate(-90deg); } }
+      @keyframes sgl-spin { to { transform: rotate(360deg); } }
+
+      .sgl-detail {
+        position: relative; overflow: hidden; margin: 8px 6px 16px 22px; padding: 12px 18px 14px 20px;
+        background: #121216; border-left: 5px solid var(--c);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+        animation: sgl-detail-in .3s cubic-bezier(.2,1,.3,1) both;
+      }
+      .sgl-detail::after {
+        content: ''; position: absolute; right: 0; bottom: 0; width: 40%; height: 100%; pointer-events: none;
+        background-image: radial-gradient(circle, var(--c) 1.2px, transparent 1.6px); background-size: 9px 9px; opacity: 0.25;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000);
+        mask-image: linear-gradient(90deg, transparent, #000);
+      }
+      .sgl-detail-lbl {
+        display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px;
+        background: var(--c); color: ${V}; font-weight: 700; font-size: 11px; letter-spacing: 0.24em; padding: 2px 9px; transform: skewX(-14deg);
+      }
+      .sgl-detail p { position: relative; margin: 0; font-size: 15px; line-height: 1.55; color: rgba(245,243,235,0.9); }
+      @keyframes sgl-detail-in { from { opacity: 0; transform: translateX(40px) skewX(-8deg); } }
+
+      /* ---------- Barra comandi ---------- */
+      .sgl-hints {
+        flex: none; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 20px;
+        min-height: 46px; padding: 8px 28px 10px 0;
+        border-top: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      }
+      .sgl-hint { display: inline-flex; align-items: center; gap: 4px; }
+      .sgl-hint .lbl { margin-left: 5px; font-weight: 700; font-style: italic; font-size: 12px; letter-spacing: 0.14em; }
+
+      /* ---------- Ingresso: tre lame sul pannello ---------- */
+      .sgl-intro { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+      .sgl-intro > span {
+        position: absolute; top: -30%; bottom: -30%; width: 46%;
+        transform: skewX(-18deg);
+        animation: sgl-blade .58s .12s cubic-bezier(.7,0,.3,1) both;
+      }
+      .sgl-intro > span:nth-child(1) { left: -8%; background: var(--accent); }
+      .sgl-intro > span:nth-child(2) { left: 30%; background: ${V}; animation-delay: .17s; }
+      .sgl-intro > span:nth-child(3) { left: 68%; background: ${T}; animation-delay: .22s; }
+      @keyframes sgl-blade { to { transform: skewX(-18deg) translateX(260%); } }
 
       @media (prefers-reduced-motion: reduce) {
         .sgl *, .sgl *::before, .sgl *::after { animation-duration: 0.001s !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }
-        .gb-cover, .gb-leaf { display: none; }
+        .sgl-intro { display: none; }
       }
     `}</style>
   );

@@ -55,36 +55,32 @@ function ringDelta(from, to, n) {
 }
 
 /**
- * Due impianti del quadrante (canvas 1920×1080):
- * - ghiera: ruota che esce dal bordo destro, voci a sinistra dell'arco;
- * - portale: ruota attorno al logo, voci a destra dell'arco.
+ * Quadrante (canvas 1920×1080): ruota che esce dal bordo destro, voci sul
+ * lato sinistro dell'arco. `room` = larghezza massima della voce scelta.
  */
-export const MENU_DIAL_LAYOUTS = {
-  ghiera: { cx: 2150, cy: 540, r: 760, side: "left", step: 13, logo: { x: 470, y: 500, w: 640 }, room: 600 },
-  portale: { cx: 640, cy: 540, r: 470, side: "right", step: 15, logo: { x: 640, y: 540, w: 700 }, room: 740 },
-};
+const DIAL = { cx: 2090, cy: 540, r: 530, step: 12, logo: { x: 640, y: 520, w: 760 }, room: 430 };
 
 const RUNE_COUNT = 56;
 const TICK_COUNT = 144;
 
 /** Anello di rune e tacche che gira con le voci; il puntatore resta fermo sulla voce scelta. */
-function DialRing({ layout, spin, accent }) {
-  const { cx, cy, r, side, step } = layout;
-  const rot = (side === "right" ? -1 : 1) * spin * step;
+function DialRing({ spin, accent }) {
+  const { cx, cy, r, step } = DIAL;
+  const rot = spin * step;
   // le voci stanno appena fuori dall'arco: tacche e rune dentro la ruota
-  const runeR = r - 56;
-  const tickR = r - 16;
-  const pointer = side === "right" ? { x: cx + tickR - 2, y: cy, a: 0 } : { x: cx - tickR + 2, y: cy, a: 180 };
+  const runeR = r - 44;
+  const tickR = r - 14;
+  const pointer = { x: cx - tickR + 2, y: cy };
   return (
     <svg className="smd-ring" viewBox="0 0 1920 1080" aria-hidden="true">
-      {side === "left" && <circle className="smd-disc" cx={cx} cy={cy} r={r + 8} />}
+      <circle className="smd-disc" cx={cx} cy={cy} r={r + 6} />
       <circle className="smd-ring-line" cx={cx} cy={cy} r={tickR + 8} />
       <circle className="smd-ring-line smd-ring-line--thin" cx={cx} cy={cy} r={runeR - 26} />
       <g className="smd-ring-spin" style={{ transform: `rotate(${rot}deg)`, transformOrigin: `${cx}px ${cy}px` }}>
         {Array.from({ length: TICK_COUNT }, (_, i) => {
           const a = (i / TICK_COUNT) * Math.PI * 2;
           const long = i % 6 === 0;
-          const r1 = tickR - (long ? 12 : 5);
+          const r1 = tickR - (long ? 10 : 4);
           return (
             <line
               key={`t${i}`}
@@ -105,13 +101,13 @@ function DialRing({ layout, spin, accent }) {
               key={`r${i}`}
               className="smd-rune"
               d={CARD_RUNES[(i * 5) % CARD_RUNES.length]}
-              transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90}) scale(2.6)`}
+              transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90}) scale(2)`}
             />
           );
         })}
       </g>
-      <g transform={`translate(${pointer.x} ${pointer.y}) rotate(${pointer.a})`}>
-        <path className="smd-pointer" d="M 0 0 L 26 -15 L 20 0 L 26 15 Z" style={{ fill: accent }} />
+      <g transform={`translate(${pointer.x} ${pointer.y}) rotate(180)`}>
+        <path className="smd-pointer" d="M 0 0 L 20 -12 L 15 0 L 20 12 Z" style={{ fill: accent }} />
       </g>
     </svg>
   );
@@ -126,10 +122,10 @@ const STAR_CLIP =
  * allontanandosi. Il giro è infinito: chi esce da un lato rientra dall'altro
  * (senza animazione, fuori vista).
  */
-function MenuDial({ rows, active, layout, compact = false, buttonRefs, onPick }) {
-  const { cx, cy, r, side, step, room } = layout;
+function MenuDial({ rows, active, compact = false, buttonRefs, onPick }) {
+  const { cx, cy, r, step, room } = DIAL;
   const n = rows.length;
-  const range = Math.min(compact ? 5 : 4, Math.floor((n - 1) / 2) || 1);
+  const range = Math.min(compact ? 4 : 3, Math.floor((n - 1) / 2) || 1);
   const prevRef = useRef({});
   const current = {};
 
@@ -139,12 +135,12 @@ function MenuDial({ rows, active, layout, compact = false, buttonRefs, onPick })
     const prev = prevRef.current[i];
     const jump = prev != null && Math.abs(d - prev) > 2;
     const a = (d * step * Math.PI) / 180;
-    const x = side === "right" ? cx + r * Math.cos(a) : cx - r * Math.cos(a);
+    const x = cx - r * Math.cos(a);
     const y = cy + r * Math.sin(a);
-    const rot = side === "right" ? d * step : -d * step;
+    const rot = -d * step;
     const far = Math.abs(d);
     const on = d === 0;
-    const fit = Math.min(1, room / (row.label.length * (compact ? 30 : 39)));
+    const fit = Math.min(1, room / (row.label.length * (compact ? 22 : 27)));
     const scale = on ? fit : Math.max(0.36, (compact ? 0.66 : 0.6) - 0.07 * (far - 1)) * Math.max(fit, 0.8);
     const hidden = far > range;
     const subline = [row.sub, row.meta].filter(Boolean).join(" · ");
@@ -185,7 +181,7 @@ function MenuDial({ rows, active, layout, compact = false, buttonRefs, onPick })
     prevRef.current = current;
   });
 
-  return <div className={`smd-dial smd-dial--${side} ${compact ? "smd-dial--compact" : ""}`}>{arms}</div>;
+  return <div className={`smd-dial ${compact ? "smd-dial--compact" : ""}`}>{arms}</div>;
 }
 
 /**
@@ -210,9 +206,9 @@ function MenuDial({ rows, active, layout, compact = false, buttonRefs, onPick })
  *   disabled?: boolean,
  *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
- * }>, buildLabel?: string, inputLocked?: boolean, layout?: keyof typeof MENU_DIAL_LAYOUTS }} props
+ * }>, buildLabel?: string, inputLocked?: boolean }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, layout = "ghiera" }) {
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false }) {
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -224,7 +220,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const rootRef = useRef(null);
   const rowRefs = useRef([]);
   const pickerRowRefs = useRef([]);
-  const dial = MENU_DIAL_LAYOUTS[layout] ?? MENU_DIAL_LAYOUTS.ghiera;
+  const dial = DIAL;
 
   const choicePicker = choicePickerStack[choicePickerStack.length - 1] ?? null;
 
@@ -442,7 +438,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   return (
     <div
       ref={rootRef}
-      className={`satze-menu-v5-root smp smp--${dial.side}`}
+      className="satze-menu-v5-root smp"
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -471,7 +467,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         key={choicePicker ? `p-${choicePickerStack.length}-${choicePicker.title}` : "main"}
         style={{ "--hub-x": `${dial.cx}px`, "--hub-y": `${dial.cy}px` }}
       >
-        <DialRing layout={dial} spin={spin} accent={activeAccent} />
+        <DialRing spin={spin} accent={activeAccent} />
         {choicePicker && (
           <div className="smd-head">
             {choicePicker.trail.length ? <div className="smd-trail">{choicePicker.trail.join(" › ")}</div> : null}
@@ -481,7 +477,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         <MenuDial
           rows={rows}
           active={active}
-          layout={dial}
           compact={Boolean(choicePicker)}
           buttonRefs={choicePicker ? pickerRowRefs : rowRefs}
           onPick={(i) => {
@@ -574,11 +569,9 @@ function SatzeMenuStyles() {
         animation: smd-in .7s cubic-bezier(.2,.9,.25,1) both;
       }
       @keyframes smd-in { from { opacity: 0; transform: rotate(-24deg); } }
-      .smp--right .smd { animation-name: smd-in-r; }
-      @keyframes smd-in-r { from { opacity: 0; transform: rotate(24deg); } }
 
       .smd-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-      .smd-disc { fill: ${V}; stroke: var(--active); stroke-width: 10; transition: stroke .3s; filter: drop-shadow(0 0 60px rgba(0,0,0,0.9)); }
+      .smd-disc { fill: ${V}; stroke: var(--active); stroke-width: 7; transition: stroke .3s; filter: drop-shadow(0 0 60px rgba(0,0,0,0.9)); }
       .smd-ring-line { fill: none; stroke: color-mix(in srgb, ${T} 55%, transparent); stroke-width: 2; }
       .smd-ring-line--thin { stroke: color-mix(in srgb, var(--active) 45%, transparent); stroke-width: 1.5; transition: stroke .3s; }
       .smd-ring-spin { transition: transform .5s cubic-bezier(.2,.9,.25,1); }
@@ -601,42 +594,38 @@ function SatzeMenuStyles() {
         display: inline-flex; align-items: center; gap: 14px; white-space: nowrap;
         border: 0; padding: 6px 18px; background: transparent; color: ${T}; cursor: pointer; outline: none;
         font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic; text-transform: uppercase;
-        font-size: 68px; line-height: 1; letter-spacing: 0.01em;
+        font-size: 46px; line-height: 1; letter-spacing: 0.01em;
         transition: transform .5s cubic-bezier(.2,.9,.25,1), color .2s;
       }
-      .smd-dial--left .smd-item { right: 46px; transform: translateY(-50%) scale(var(--s)); transform-origin: right center; flex-direction: row-reverse; }
-      .smd-dial--right .smd-item { left: 46px; transform: translateY(-50%) scale(var(--s)); transform-origin: left center; }
+      .smd-item { right: 34px; transform: translateY(-50%) scale(var(--s)); transform-origin: right center; flex-direction: row-reverse; }
       .smd-item:disabled { cursor: not-allowed; opacity: 0.4; }
-      .smd-label { position: relative; z-index: 1; text-shadow: 4px 4px 0 ${V}; }
+      .smd-label { position: relative; z-index: 1; text-shadow: 3px 3px 0 ${V}; }
       .smd-arm:not(.on) .smd-item:not(:disabled):hover { color: var(--c); }
       .smd-arm.on .smd-label { color: ${V}; text-shadow: none; }
       .smd-plate {
-        position: absolute; inset: -4px -26px -4px -26px; z-index: 0;
-        background: ${T}; clip-path: polygon(22px 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
-        filter: drop-shadow(10px 8px 0 var(--c));
+        position: absolute; inset: -3px -18px -3px -18px; z-index: 0;
+        background: ${T}; clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+        filter: drop-shadow(7px 6px 0 var(--c));
+        transform-origin: right center;
         animation: smd-plate-in .32s cubic-bezier(.2,1.3,.4,1) both;
       }
-      .smd-dial--left .smd-plate { transform-origin: right center; }
-      .smd-dial--right .smd-plate { transform-origin: left center; }
       @keyframes smd-plate-in { from { transform: scaleX(0); } }
       .smd-more {
-        position: relative; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; flex: none;
-        background: var(--c); color: ${V}; font-style: normal; font-size: 32px; clip-path: ${STAR_CLIP};
+        position: relative; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+        background: var(--c); color: ${V}; font-style: normal; font-size: 24px; clip-path: ${STAR_CLIP};
       }
       .smd-arm.on .smd-more { background: ${V}; color: var(--c); animation: smd-spin 4s linear infinite; }
       @keyframes smd-spin { to { transform: rotate(360deg); } }
       .smd-sub {
-        position: absolute; z-index: 2; top: calc(100% + 6px);
+        position: absolute; z-index: 2; top: calc(100% + 4px); right: 8px;
         background: var(--c); color: ${V}; font-family: 'Share Tech Mono', monospace; font-style: normal; font-weight: 400;
-        font-size: 17px; letter-spacing: 0.22em; padding: 5px 14px; white-space: nowrap;
+        font-size: 13px; letter-spacing: 0.2em; padding: 4px 12px; white-space: nowrap;
         clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
         animation: smd-sub-in .3s .12s cubic-bezier(.2,1.2,.4,1) both;
       }
-      .smd-dial--left .smd-sub { right: 10px; }
-      .smd-dial--right .smd-sub { left: 10px; }
       @keyframes smd-sub-in { from { opacity: 0; transform: translateY(-10px); } }
 
-      .smd-dial--compact .smd-item { font-size: 54px; }
+      .smd-dial--compact .smd-item { font-size: 38px; }
 
       .smd-head { position: absolute; top: 70px; left: 70px; pointer-events: none; animation: smd-head-in .4s cubic-bezier(.2,1.2,.4,1) both; }
       @keyframes smd-head-in { from { opacity: 0; transform: translateY(-20px); } }
