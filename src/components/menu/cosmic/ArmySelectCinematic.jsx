@@ -501,7 +501,8 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const half = (step - WEDGE_GAP) / 2;
   const sector = sectorPath(WEDGE_RI, WEDGE_RO, half);
   const paper = sectorPath(WEDGE_RI - 12, WEDGE_RO + 14, half + 1.2);
-  const cards = army.showcase || [];
+  // Eserciti personalizzati: nessuna carta di punta (il pool misto non rappresenta un'armata).
+  const cards = army.isMixed ? [] : army.showcase || [];
   const mid = (cards.length - 1) / 2;
   const artX = WEDGE_RI * Math.cos(rad(half));
   const artH = 2 * WEDGE_RO * Math.sin(rad(half));
@@ -699,8 +700,11 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
       aria-hidden={out || undefined}
     >
         <header className="asx-bd-head">
+          <div className="asx-bd-num asx-sk" aria-hidden="true">
+            <small>ARMATA</small>
+            <b>{String(idx + 1).padStart(2, '0')}</b>
+          </div>
           <div className="asx-sk">
-            <span className="asx-chip">ARMATA {String(idx + 1).padStart(2, '0')} · {army.glyph}</span>
             <h2 className={army.name.length > 18 ? 'long' : ''}>{army.name}</h2>
             {army.motto && <div className="asx-motto">“{army.motto}”</div>}
           </div>
@@ -1085,8 +1089,17 @@ function ArmySelectStyles() {
       }
 
       /* ---------- 2 RUOTA ---------- */
-      .asx--ruota .asx-title { left: 940px; top: 24px; transform: rotate(-2deg); text-align: left; }
-      .asx--ruota .asx-title h1 { font-size: 42px; }
+      /* in RUOTA il titolo della pagina è solo una riga-percorso: il titolo grande è il nome dell'armata */
+      .asx--ruota .asx-title { left: 948px; top: 34px; transform: none; text-align: left; display: flex; align-items: center; gap: 12px; }
+      .asx--ruota .asx-title::after {
+        content: ''; position: absolute; left: 0; top: calc(100% + 10px); width: 540px; height: 2px;
+        background: linear-gradient(90deg, var(--accent), transparent);
+      }
+      .asx--ruota .asx-eyebrow span { font-size: 11px; padding: 1px 10px; }
+      .asx--ruota .asx-title h1 {
+        margin: 0; font-size: 15px; font-style: normal; letter-spacing: 0.28em; text-shadow: none; color: rgba(245,243,235,0.75);
+      }
+      .asx--ruota .asx-title h1::before { content: '›'; margin-right: 12px; color: var(--accent); font-weight: 700; }
       .asx-ruota-slab {
         position: absolute; top: -10%; bottom: -10%; left: 920px; right: -120px; z-index: 4;
         background: linear-gradient(100deg, rgba(5,5,7,0.94) 0%, rgba(5,5,7,0.86) 100%);
@@ -1188,14 +1201,20 @@ function ArmySelectStyles() {
       .asx-ruota-sheet.is-out > * { animation: asx-bd-out .2s cubic-bezier(.4,0,1,1) calc(var(--d, 0s) * .4) both !important; }
       @keyframes asx-bd-out { to { opacity: 0; transform: translateY(calc(var(--dir) * -38px)); } }
 
-      .asx-bd-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; padding: 0 8px 4px 4px; animation: asx-bd-in .5s var(--ease) .16s both; }
+      .asx-bd-head { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 16px; padding: 0 8px 4px 22px; animation: asx-bd-in .5s var(--ease) .16s both; }
       .asx-bd-head .asx-sk { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
       .asx-bd-head h2 {
-        margin: 0; font-weight: 700; font-style: italic; font-size: 82px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
+        margin: 0; font-weight: 700; font-style: italic; font-size: 72px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
         text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void);
       }
-      .asx-bd-head h2.long { font-size: 60px; }
+      .asx-bd-head h2.long { font-size: 54px; }
       .asx-bd-head .asx-motto { margin-left: 18px; }
+      .asx-bd-head .asx-bd-num { flex-direction: column; align-items: flex-start; gap: 0; padding-right: 6px; }
+      .asx-bd-num small { font-weight: 700; font-size: 11px; letter-spacing: 0.3em; color: var(--accent); }
+      .asx-bd-num b {
+        font-weight: 700; font-style: italic; font-size: 118px; line-height: 0.8; letter-spacing: -0.04em;
+        color: transparent; -webkit-text-stroke: 3px var(--accent);
+      }
       .asx-bd-head .asx-bd-stats { flex-direction: row; align-items: flex-end; gap: 2px; padding-bottom: 6px; }
 
       .asx-bd {
