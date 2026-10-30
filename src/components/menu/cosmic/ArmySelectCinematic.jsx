@@ -20,7 +20,7 @@
 // routing, NON dentro CosmicScreenLayout o altri wrapper.
 // ============================================================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import {
   ARMY_COLORS,
   ARMY_BONUSES,
@@ -30,7 +30,7 @@ import {
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
-import { CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
+import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
 import { getCardSprite } from '../../../utils';
 import { AGENT_IMAGES } from '../../../data/images';
@@ -454,6 +454,20 @@ const ZOOM_W = 330;      // carta ingrandita al passaggio del mouse
 const ZOOM_LEFT = 790;
 
 const rad = (deg) => (deg * Math.PI) / 180;
+const CARD_H = Math.round((CARD_W * 330) / 230);
+
+/**
+ * Carta di punta sull'arco: posizione sull'arco ma carta dritta e su pixel
+ * interi (una carta ruotata viene ricampionata e sembra sfocata).
+ */
+function cardSlotStyle(offset) {
+  const a = rad(offset * CARDS_STEP);
+  return {
+    left: Math.round(CARDS_R * Math.cos(a) - CARD_W / 2),
+    top: Math.round(CARDS_R * Math.sin(a) - CARD_H / 2),
+    zIndex: 10 - Math.abs(Math.round(offset)),
+  };
+}
 const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
 
 /** Settore di corona circolare centrato sull'angolo 0, ampio 2*half gradi. */
@@ -491,7 +505,26 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const zoomCard = hover != null ? cards[hover] : null;
   const zoomH = Math.round((ZOOM_W * 330) / 230);
   const zoomY = hover != null ? WHEEL_CY + CARDS_R * Math.sin(rad((hover - mid) * CARDS_STEP)) : 0;
-  const zoomTop = Math.min(Math.max(zoomY - zoomH / 2, 24), 1080 - zoomH - 24);
+  const zoomTop = Math.round(Math.min(Math.max(zoomY - zoomH / 2, 24), 1080 - zoomH - 24));
+
+  // Direzione del giro (+1 avanti, -1 indietro): la scheda scorre nello stesso verso della ruota.
+  const spinRef = useRef(spin);
+  const dirRef = useRef(1);
+  if (spin !== spinRef.current) {
+    dirRef.current = spin > spinRef.current ? 1 : -1;
+    spinRef.current = spin;
+  }
+  // La scheda uscente resta a schermo il tempo della sua animazione.
+  const shownRef = useRef({ army, idx });
+  const [leaving, setLeaving] = useState(null);
+  useLayoutEffect(() => {
+    const prev = shownRef.current;
+    if (prev.army.id === army.id) return undefined;
+    shownRef.current = { army, idx };
+    setLeaving({ ...prev, dir: dirRef.current, n: Date.now() });
+    const t = setTimeout(() => setLeaving(null), 320);
+    return () => clearTimeout(t);
+  }, [army, idx]);
 
   return (
     <>
@@ -616,7 +649,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
             <div
               key={c.id}
               className="asx-rw-card-slot"
-              style={{ transform: `rotate(${(i - mid) * CARDS_STEP}deg) translateX(${CARDS_R}px)`, zIndex: 10 - Math.abs(Math.round(i - mid)) }}
+              style={cardSlotStyle(i - mid)}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover((h) => (h === i ? null : h))}
             >
@@ -628,9 +661,34 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
         </div>
       )}
 
-      <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
-        <div className="asx-ruota-wipe" aria-hidden="true" />
+      {leaving && (
+        <RuotaSheet
+          key={`out-${leaving.army.id}-${leaving.n}`}
+          army={leaving.army}
+          idx={leaving.idx}
+          dir={leaving.dir}
+          out
+        />
+      )}
+      <RuotaSheet key={`sheet-${army.id}`} army={army} idx={idx} dir={dirRef.current} onConfirm={onConfirm} onDossier={onDossier} />
 
+      {zoomCard && (
+        <div className="asx-rw-zoom" style={{ left: ZOOM_LEFT, top: zoomTop }} key={`zoom-${zoomCard.id}`} aria-hidden="true">
+          <ZoomCard card={zoomCard} />
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Scheda a bande di un'armata. `out` = scheda che sta uscendo durante il cambio. */
+function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
+  return (
+    <div
+      className={`asx-ruota-sheet${out ? ' is-out' : ''}`}
+      style={{ '--dir': dir, '--accent': army.color }}
+      aria-hidden={out || undefined}
+    >
         <header className="asx-bd-head">
           <div className="asx-sk">
             <span className="asx-chip">ARMATA {String(idx + 1).padStart(2, '0')} · {army.glyph}</span>
@@ -675,14 +733,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
             <span className="asx-sk">SCHIERA <kbd>↵</kbd></span>
           </button>
         </div>
-      </div>
-
-      {zoomCard && (
-        <div className="asx-rw-zoom" style={{ left: ZOOM_LEFT, top: zoomTop }} key={`zoom-${zoomCard.id}`} aria-hidden="true">
-          <ZoomCard card={zoomCard} />
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -699,7 +750,12 @@ function ZoomCard({ card }) {
     img.src = url;
     return () => { alive = false; };
   }, [card]);
-  return <CardReworkP4Scaled agent={card} width={ZOOM_W} showBonus preferThumb={thumb} />;
+  // `zoom` (non transform) ridisegna la carta alla taglia vera: testo e arte restano nitidi.
+  return (
+    <div style={{ zoom: ZOOM_W / 230 }}>
+      <CardReworkP4 agent={card} showBonus preferThumb={thumb} suppressAnimations />
+    </div>
+  );
 }
 
 /** Banda inclinata della scheda: etichetta a sinistra, contenuto a destra. */
@@ -1088,27 +1144,25 @@ function ArmySelectStyles() {
       }
 
       .asx-rw-cards { z-index: 9; }
-      .asx-rw-card-slot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      .asx-rw-card-slot { position: absolute; width: ${CARD_W}px; height: ${CARD_H}px; }
       .asx-rw-card-slot:hover { z-index: 30 !important; }
       .asx-rw-card {
-        position: absolute; left: ${-CARD_W / 2}px; top: ${-Math.round((CARD_W * 330) / 230) / 2}px;
         transition: transform .22s cubic-bezier(.3,1.5,.5,1);
         animation: asx-rw-deal .5s cubic-bezier(.2,1.2,.4,1) var(--delay) backwards;
       }
       .asx-rw-card .asx-sc { filter: none; box-shadow: 6px 6px 0 rgba(5,5,7,0.85); }
-      .asx-rw-card-slot:hover .asx-rw-card { transform: translateX(18px); }
-      .asx-rw-card-slot:hover .asx-sc { box-shadow: 0 0 0 4px var(--ink), 8px 8px 0 4px var(--accent); }
+      .asx-rw-card-slot:hover .asx-rw-card { transform: translateX(14px); }
+      .asx-rw-card-slot:hover .asx-sc { box-shadow: 6px 6px 0 var(--accent); }
       @keyframes asx-rw-deal {
         from { transform: translateX(-240px) scale(0.35); opacity: 0; }
         60% { opacity: 1; }
       }
       .asx-rw-zoom {
         position: absolute; z-index: 60; pointer-events: none;
-        box-shadow: 0 0 0 5px var(--ink), 14px 14px 0 5px var(--accent), 0 30px 80px rgba(0,0,0,0.75);
-        transform: rotate(-2deg); transform-origin: left center;
-        animation: asx-rw-zoom .18s cubic-bezier(.2,1.3,.4,1) both;
+        box-shadow: 12px 12px 0 var(--accent), 0 30px 80px rgba(0,0,0,0.75);
+        animation: asx-rw-zoom .2s cubic-bezier(.22,1,.36,1) both;
       }
-      @keyframes asx-rw-zoom { from { opacity: 0; transform: translateX(-30px) rotate(-6deg) scale(.85); } }
+      @keyframes asx-rw-zoom { from { opacity: 0; transform: translateX(-24px); } }
 
       /* scheda a bande: tutto il blocco è inclinato come il divisorio, il testo è raddrizzato */
       .asx-ruota-sheet {
@@ -1117,14 +1171,13 @@ function ArmySelectStyles() {
         transform: skewX(-8deg); transform-origin: top left;
       }
       .asx-sk { transform: skewX(8deg); transform-origin: left center; }
-      .asx-ruota-wipe {
-        position: absolute; top: -20%; bottom: -20%; left: -30%; width: 22%; z-index: 30; pointer-events: none;
-        background: var(--accent); transform: translateX(-100%);
-        animation: asx-wipe .55s cubic-bezier(.7,0,.3,1) forwards;
-      }
-      @keyframes asx-wipe { to { transform: translateX(700%); } }
+      /* cambio armata: la scheda vecchia scorre via e sfuma, la nuova entra a cascata nello stesso verso della ruota */
+      .asx-ruota-sheet.is-out { z-index: 11; pointer-events: none; }
+      .asx-ruota-sheet > * { --ease: cubic-bezier(.22,1,.36,1); }
+      .asx-ruota-sheet.is-out > * { animation: asx-bd-out .2s cubic-bezier(.4,0,1,1) calc(var(--d, 0s) * .4) both !important; }
+      @keyframes asx-bd-out { to { opacity: 0; transform: translateY(calc(var(--dir) * -38px)); } }
 
-      .asx-bd-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; padding: 0 8px 4px 4px; animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) both; }
+      .asx-bd-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; padding: 0 8px 4px 4px; animation: asx-bd-in .5s var(--ease) .16s both; }
       .asx-bd-head .asx-sk { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
       .asx-bd-head h2 {
         margin: 0; font-weight: 700; font-style: italic; font-size: 82px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
@@ -1136,9 +1189,9 @@ function ArmySelectStyles() {
 
       .asx-bd {
         display: grid; grid-template-columns: 196px 1fr; flex: none;
-        animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) var(--d) both;
+        animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      @keyframes asx-bd-in { from { opacity: 0; transform: translateX(90px); } }
+      @keyframes asx-bd-in { from { opacity: 0; transform: translateY(calc(var(--dir) * 44px)); } }
       .asx-bd-tag { display: flex; align-items: center; padding: 12px 16px 12px 24px; }
       .asx-bd-tag b { display: block; font-weight: 700; font-style: italic; font-size: 40px; line-height: 0.9; letter-spacing: -0.01em; }
       .asx-bd-tag small { display: block; margin-top: 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.24em; }
@@ -1165,7 +1218,7 @@ function ArmySelectStyles() {
 
       .asx-bd-go {
         display: grid; grid-template-columns: 196px 1fr; flex: none; height: 108px; margin-right: 40px;
-        animation: asx-bd-in .4s cubic-bezier(.2,1,.3,1) var(--d) both;
+        animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
       .asx-bd-go button { border: 0; padding: 0; font-family: inherit; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s, color .15s; }
       .asx-bd-go kbd { display: inline-grid; place-items: center; font-family: 'Share Tech Mono', monospace; font-style: normal; }
