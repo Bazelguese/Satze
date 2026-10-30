@@ -11,7 +11,7 @@ import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
 import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
-import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS } from '../src/components/battle/placeHandoff.js';
+import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS, DROP_IMPACT_MS } from '../src/components/battle/placeHandoff.js';
 import { ArmyEntryFx } from '../src/components/fx/ArmyCardFx.jsx';
 import { getArmyAccent } from '../src/theme/duelAccents.js';
 import { FX_CATALOG, FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
@@ -99,7 +99,7 @@ import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence
 import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
-import { GAME_SOUND, playGame } from '../src/audio/gameSounds.js';
+import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
 import { formatAIReasoningLogText } from '../src/game/ai/aiDebug.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
@@ -206,6 +206,8 @@ import { computeLegalMaxFocus } from '../src/game/legalFocusSpend.js';
 
 /** Quanto dura lo smontaggio della scelta esercito prima del VS. */
 const DECK_LAUNCH_MS = 750;
+/** Al click la carta vola nello slot e poi si apre verso la camera (place-rise ~60-80%): lì si posa. */
+const CLICK_LAND_MS = CLICK_FLIGHT_MS + 500;
 
 // ============================================
 // SATZE - Componente principale del gioco
@@ -2699,11 +2701,14 @@ export default function SatzeGame() {
       return;
     }
     const prefs = getPlaceFxPreference();
-    setAgentPlaceFx(resolvePlaceFxForVia(via, prefs));
+    const placeFx = resolvePlaceFxForVia(via, prefs);
+    setAgentPlaceFx(placeFx);
     setAgentPlaceFxStyle(prefs.style);
     // dal click la carta vola dalla mano: l'ingresso d'armata parte all'arrivo
     setAgentArmyEntry({ mode: prefs.army, delayMs: via === 'drop' ? 0 : CLICK_FLIGHT_MS });
-    playGame(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT);
+    // il suono cade quando la carta tocca il campo, non al click
+    const landMs = prefersReducedMotion() ? 0 : via === 'drop' ? (DROP_IMPACT_MS[placeFx] ?? 0) : CLICK_LAND_MS;
+    playGameAt(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT, landMs);
     setSelectedAgent(agent);
   }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
 

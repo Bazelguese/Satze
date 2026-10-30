@@ -34,20 +34,21 @@ export function useMatchAudio({ gamePhase, duelPhase = 0, battleResult = null })
     }
   }, [gamePhase]);
 
+  // colpo programmato (es. contatto dello scontro): si annulla se la fase cambia prima (Salta)
+  const pendingRef = useRef(() => {});
+
   useEffect(() => {
     if (gamePhase !== 'result') {
+      pendingRef.current();
+      pendingRef.current = () => {};
       prevDuelRef.current = duelPhase;
       return;
     }
     if (prevDuelRef.current === duelPhase) return;
-    // Evita doppio deploy se result arriva già con phase 0 dallo stesso tick di transition
-    const prev = prevDuelRef.current;
     prevDuelRef.current = duelPhase;
-    if (prev == null || prev < 0) {
-      // Prima beat della sequenza
-      playDuelPhaseBeat(duelPhase, battleResult);
-      return;
-    }
-    playDuelPhaseBeat(duelPhase, battleResult);
+    pendingRef.current();
+    pendingRef.current = playDuelPhaseBeat(duelPhase, battleResult);
   }, [gamePhase, duelPhase, battleResult]);
+
+  useEffect(() => () => pendingRef.current(), []);
 }

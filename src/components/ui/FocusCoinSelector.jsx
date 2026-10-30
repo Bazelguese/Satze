@@ -8,7 +8,7 @@ import { Icon } from './Icon';
 import { ARMY_COLORS } from '../../data';
 import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 import { computeLegalMaxFocus } from '../../game/legalFocusSpend';
-import { GAME_SOUND, playGame } from '../../audio/gameSounds';
+import { playFocusCoin } from '../../audio/gameSounds';
 
 // Fallback per armate con nomi alternativi (es. Nati dalla Bocca -> Mounthborn)
 const ARMY_COLOR_FALLBACK = { 'Nati dalla Bocca': 'Mounthborn' };
@@ -31,7 +31,7 @@ export const FocusCoinSelector = ({ value, onChange, max, reserved = 0, agent = 
   const commitValue = useCallback((newVal) => {
     if (newVal !== lastTickRef.current) {
       lastTickRef.current = newVal;
-      playGame(GAME_SOUND.FC_TICK);
+      playFocusCoin(newVal);
     }
     onChange(newVal);
   }, [onChange]);

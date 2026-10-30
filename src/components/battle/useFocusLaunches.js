@@ -4,6 +4,7 @@
  * FOCUS_SLAM_MS dopo la partenza: lì conta (scheda VA, contatore, Overdrive).
  */
 import { useEffect, useRef, useState } from 'react';
+import { playFocusCoin } from '../../audio/gameSounds.js';
 
 export const FOCUS_RISE_MS = 240;
 export const FOCUS_SLAM_MS = 380;
@@ -35,7 +36,10 @@ export function useFocusLaunches({ duelKey, duelPhase, playerCoins = 0, enemyCoi
       for (let i = 0; i < missing; i += 1) list.push(missing === 1 ? now : now - FOCUS_SLAM_MS - 1000);
       prevRef.current[side] = cur;
       if (missing === 1) {
-        timersRef.current.push(setTimeout(() => setLanded((l) => ({ ...l, [side]: Math.max(l[side], cur) })), FOCUS_SLAM_MS));
+        timersRef.current.push(setTimeout(() => {
+          setLanded((l) => ({ ...l, [side]: Math.max(l[side], cur) }));
+          playFocusCoin(cur);
+        }, FOCUS_SLAM_MS));
       } else if (missing > 1 || cur < prev) setLanded((l) => ({ ...l, [side]: cur }));
     });
   }, [duelKey, playerCoins, enemyCoins]);
