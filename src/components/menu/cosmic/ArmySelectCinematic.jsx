@@ -160,6 +160,8 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const [phase, setPhase] = useState('idle'); // idle -> confirming
   const [layout, setLayout] = useState(readLayout);
   const [dossier, setDossier] = useState(false);
+  /** Passi cumulativi della ruota (senza wrap): gira sempre dal lato più corto. */
+  const [spin, setSpin] = useState(1);
   const rootRef = useRef(null);
   const wheelLockRef = useRef(0);
   const stateRef = useRef({});
@@ -172,6 +174,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     const next = (i + total) % total;
     if (next === stateRef.current.idx) return;
     playUiClick();
+    setSpin((sp) => sp + wrapOffset(next, stateRef.current.idx, total));
     setIdx(next);
   }, [total]);
 
@@ -246,7 +249,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     return () => el.removeEventListener('wheel', onWheel);
   }, [go]);
 
-  const shared = { armies: ARMIES, idx, army, goTo, onConfirm: confirmArmy, onDossier: toggleDossier };
+  const shared = { armies: ARMIES, idx, army, spin, goTo, onConfirm: confirmArmy, onDossier: toggleDossier };
 
   return (
     <div ref={rootRef} className={`asx asx--${layout}`} style={{ '--accent': army.color }}>
@@ -433,50 +436,156 @@ function LayoutPalco({ armies, idx, army, goTo, onConfirm, onDossier }) {
 // LAYOUT 2 — RUOTA: carosello ad arco a sinistra, scheda a destra
 // ============================================================
 
-function LayoutRuota({ armies, idx, army, goTo, onConfirm, onDossier }) {
+const WHEEL_R = 760;
+const DIAL_R = 545;
+
+function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const total = armies.length;
+  const step = 360 / total;
   const cards = army.showcase || [];
+  const mid = (cards.length - 1) / 2;
   return (
     <>
-      <div className="asx-ruota-wheel">
-        <div className="asx-ruota-hub" aria-hidden="true" />
-        {armies.map((a, i) => {
-          const off = wrapOffset(i, idx, total);
-          if (Math.abs(off) > 3) return null;
-          return (
-            <div
-              key={a.id}
-              className="asx-ruota-slot"
-              style={{ '--off': off, '--abs': Math.abs(off), zIndex: off === 0 ? 20 : 10 - Math.abs(off) }}
-            >
-              <ArmyCard army={a} number={i + 1} selected={off === 0} onClick={() => goTo(i)} />
-            </div>
-          );
-        })}
+      <div className="asx-ruota-slab" aria-hidden="true" />
+
+      <div className="asx-ruota-dial-text" aria-hidden="true">
+        <svg viewBox="-700 -700 1400 1400" width="1400" height="1400">
+          <defs>
+            <path id="asx-ruota-text-path" d="M 0,-640 a 640,640 0 1,1 0,1280 a 640,640 0 1,1 0,-1280" />
+          </defs>
+          <text>
+            <textPath href="#asx-ruota-text-path">
+              {'FASE I · SCHIERAMENTO · SCEGLI LA TUA ARMATA · '.repeat(4)}
+            </textPath>
+          </text>
+        </svg>
       </div>
 
-      <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
-        <NamePlate army={army} number={idx + 1} />
-        <BonusPlate army={army} />
-        <div className="asx-ruota-cols">
-          <TextPanel label="STILE CONSIGLIATO" text={army.style} />
-          <TextPanel label="NOTE TATTICHE" text={army.tips} />
-        </div>
-        <div className="asx-ruota-bottom">
-          <div className="asx-ruota-cards">
-            <div className="asx-chip">CARTE DI PUNTA</div>
-            <div className="row">
-              {cards.map((c, i) => (
-                <div key={c.id} className="asx-ruota-card" style={{ '--i': i, '--delay': `${i * 0.05}s` }}>
-                  <ShowcaseCard card={c} width={112} />
-                </div>
-              ))}
+      <div className="asx-wheel" style={{ '--spin': spin, '--step': `${step}deg` }}>
+        <svg className="asx-wheel-rings" viewBox="-1000 -1000 2000 2000" width="2000" height="2000" aria-hidden="true">
+          <circle r="470" className="ring-hub" />
+          <circle r="500" className="ring-thin" />
+          <circle r="600" className="ring-dash" />
+          <circle r="980" className="ring-thin" />
+          {Array.from({ length: total * 4 }, (_, i) => {
+            const a = (i * step) / 4;
+            const major = i % 4 === 0;
+            return (
+              <line
+                key={i}
+                x1={major ? 600 : 610}
+                x2={major ? 650 : 630}
+                y1="0"
+                y2="0"
+                className={major ? 'tick-major' : 'tick'}
+                transform={`rotate(${a})`}
+              />
+            );
+          })}
+        </svg>
+
+        {armies.map((a, i) => (
+          <div
+            key={`n-${a.id}`}
+            className={`asx-wheel-num${i === idx ? ' on' : ''}`}
+            style={{ '--a': `${i * step}deg`, '--c': a.color }}
+          >
+            <span>{String(i + 1).padStart(2, '0')}</span>
+          </div>
+        ))}
+
+        {armies.map((a, i) => (
+          <div
+            key={a.id}
+            className={`asx-wheel-slot${i === idx ? ' on' : ''}`}
+            style={{ '--a': `${i * step}deg` }}
+          >
+            <div className="asx-wheel-card">
+              <ArmyCard army={a} number={i + 1} selected={i === idx} onClick={() => goTo(i)} />
             </div>
           </div>
+        ))}
+      </div>
+
+      <div className="asx-ruota-pointer" aria-hidden="true"><span /><span /><span /></div>
+
+      <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
+        <div className="asx-ruota-wipe" aria-hidden="true" />
+
+        <div className="asx-ruota-head">
+          <div className="asx-ruota-bignum" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</div>
+          <div className="asx-ruota-title">
+            <div className="asx-ruota-kicker">
+              <span className="asx-chip">ARMATA {army.glyph}</span>
+              <span className="asx-chip asx-chip--dark">BONUS · {army.bonusLabel}</span>
+            </div>
+            <h2 className={army.name.length > 18 ? 'long' : ''}>{army.name}</h2>
+            {army.motto && <div className="asx-motto">“{army.motto}”</div>}
+          </div>
+          {!army.isMixed && (
+            <div className="asx-ruota-stats">
+              <Burst value={army.cards} label="CARTE" />
+              <Burst value={army.decks} label="ESERCITI" dark />
+            </div>
+          )}
+        </div>
+
+        <div className="asx-ruota-bonus">
+          <span className="asx-ruota-bonus-mark" aria-hidden="true">✦</span>
+          <BonusPlate army={army} />
+        </div>
+
+        <div className="asx-ruota-cols">
+          <NumberedPanel n="01" label="STILE CONSIGLIATO" text={army.style} />
+          <NumberedPanel n="02" label="NOTE TATTICHE" text={army.tips} />
+        </div>
+
+        <div className="asx-ruota-bottom">
+          {cards.length > 0 && (
+            <div className="asx-ruota-cards">
+              <div className="asx-chip asx-chip--ink">CARTE DI PUNTA</div>
+              <div className="row">
+                {cards.map((c, i) => (
+                  <div
+                    key={c.id}
+                    className="asx-ruota-card"
+                    style={{ '--d': i - mid, '--delay': `${0.15 + i * 0.05}s`, zIndex: 10 - Math.abs(Math.round(i - mid)) }}
+                  >
+                    <ShowcaseCard card={c} width={150} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
         </div>
       </div>
     </>
+  );
+}
+
+const BURST_CLIP = 'polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%, 96% 74%, 74% 76%, 70% 98%, 52% 84%, 34% 100%, 28% 78%, 4% 80%, 16% 60%, 0% 42%, 20% 32%, 14% 10%, 36% 18%)';
+
+function Burst({ value, label, dark = false }) {
+  return (
+    <div className={`asx-burst${dark ? ' dark' : ''}`}>
+      <span className="shape" aria-hidden="true" />
+      <span className="val">{value}</span>
+      <span className="lbl">{label}</span>
+    </div>
+  );
+}
+
+function NumberedPanel({ n, label, text }) {
+  if (!text) return null;
+  return (
+    <div className="asx-npanel">
+      <div className="asx-npanel-head">
+        <span className="n">{n}</span>
+        <span className="asx-chip">{label}</span>
+      </div>
+      <p>{text}</p>
+    </div>
   );
 }
 
@@ -768,40 +877,142 @@ function ArmySelectStyles() {
       }
 
       /* ---------- 2 RUOTA ---------- */
-      .asx-ruota-wheel { position: absolute; left: 0; top: 0; bottom: 0; width: 720px; z-index: 5; }
-      .asx-ruota-hub {
-        position: absolute; left: -1320px; top: calc(50% - 880px); width: 1760px; height: 1760px; border-radius: 50%;
-        border: 3px dashed color-mix(in srgb, var(--accent) 55%, transparent);
-        box-shadow: inset 0 0 0 26px rgba(5,5,7,0.55), inset 0 0 0 30px color-mix(in srgb, var(--accent) 35%, transparent);
-        animation: asx-spin 90s linear infinite;
+      .asx--ruota .asx-title { left: 250px; top: 22px; transform: rotate(-3deg); text-align: left; }
+      .asx--ruota .asx-title h1 { font-size: 42px; }
+      .asx-ruota-slab {
+        position: absolute; top: -10%; bottom: -10%; left: 800px; right: -120px; z-index: 4;
+        background: linear-gradient(100deg, rgba(5,5,7,0.94) 0%, rgba(5,5,7,0.86) 100%);
+        transform: skewX(-8deg); transform-origin: top left;
+        box-shadow: -14px 0 0 0 var(--accent), -26px 0 0 0 rgba(5,5,7,0.9), -34px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+        transition: box-shadow .3s;
+      }
+      .asx-ruota-dial-text {
+        position: absolute; left: -990px; top: calc(560px - 700px); width: 1400px; height: 1400px; z-index: 2; pointer-events: none;
+        animation: asx-spin 120s linear infinite;
+      }
+      .asx-ruota-dial-text text {
+        fill: color-mix(in srgb, var(--accent) 60%, transparent); font-family: 'Chakra Petch', sans-serif;
+        font-weight: 700; font-style: italic; font-size: 30px; letter-spacing: 10px;
       }
       @keyframes asx-spin { to { transform: rotate(360deg); } }
-      .asx-ruota-slot {
-        position: absolute; left: 230px; top: calc(50% - 210px); width: 300px; height: 420px;
-        transform-origin: -730px 50%;
-        transform: rotate(calc(var(--off) * 25deg)) scale(calc(1 - var(--abs) * 0.16));
-        opacity: calc(1 - var(--abs) * 0.25);
-        transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s;
+
+      .asx-wheel {
+        position: absolute; left: -290px; top: 560px; width: 0; height: 0; z-index: 6;
+        transform: rotate(calc(var(--spin) * var(--step) * -1));
+        transition: transform .6s cubic-bezier(.2,.8,.2,1);
       }
+      .asx-wheel-rings { position: absolute; left: -1000px; top: -1000px; pointer-events: none; overflow: visible; }
+      .asx-wheel-rings .ring-hub { fill: rgba(5,5,7,0.82); stroke: var(--accent); stroke-width: 6; }
+      .asx-wheel-rings .ring-thin { fill: none; stroke: rgba(245,243,235,0.28); stroke-width: 2; }
+      .asx-wheel-rings .ring-dash { fill: none; stroke: color-mix(in srgb, var(--accent) 70%, transparent); stroke-width: 3; stroke-dasharray: 4 12; }
+      .asx-wheel-rings .tick { stroke: rgba(245,243,235,0.35); stroke-width: 2; }
+      .asx-wheel-rings .tick-major { stroke: var(--accent); stroke-width: 5; }
+
+      .asx-wheel-num {
+        position: absolute; left: 0; top: 0;
+        transform: rotate(var(--a)) translateX(${DIAL_R}px) rotate(calc(var(--a) * -1 + var(--spin) * var(--step)));
+        transition: transform .6s cubic-bezier(.2,.8,.2,1);
+      }
+      .asx-wheel-num span {
+        display: grid; place-items: center; width: 54px; height: 34px; margin: -17px 0 0 -27px;
+        background: var(--void); color: var(--c); border-left: 4px solid var(--c);
+        font-family: 'Share Tech Mono', monospace; font-size: 16px; transform: skewX(-14deg);
+        transition: background .2s, color .2s, transform .2s;
+      }
+      .asx-wheel-num.on span { background: var(--ink); color: var(--void); border-left-color: var(--accent); transform: skewX(-14deg) scale(1.45); box-shadow: 4px 4px 0 var(--accent); font-weight: 700; }
+
+      .asx-wheel-slot {
+        position: absolute; left: 0; top: 0;
+        transform: rotate(var(--a)) translateX(${WHEEL_R}px) rotate(calc(var(--a) * -1 + var(--spin) * var(--step)));
+        transition: transform .6s cubic-bezier(.2,.8,.2,1);
+      }
+      .asx-wheel-card {
+        width: 300px; height: 420px; margin: -210px 0 0 -150px;
+        transform: scale(0.6); opacity: 0.55; filter: saturate(0.45) brightness(0.75);
+        transition: transform .45s cubic-bezier(.3,1.4,.5,1), opacity .3s, filter .3s;
+      }
+      .asx-wheel-slot.on { z-index: 5; }
+      .asx-wheel-slot.on .asx-wheel-card { transform: translateX(70px) scale(1.06); opacity: 1; filter: none; }
+      .asx-wheel-slot:not(.on) .asx-wheel-card:hover { opacity: 0.9; filter: none; }
+
+      .asx-ruota-pointer {
+        position: absolute; left: 718px; top: 530px; z-index: 7; display: flex; gap: 2px; pointer-events: none;
+      }
+      .asx-ruota-pointer span {
+        width: 26px; height: 60px; background: var(--accent);
+        clip-path: polygon(0 0, 55% 0, 100% 50%, 55% 100%, 0 100%, 45% 50%);
+        animation: asx-chev 1.1s ease-in-out infinite;
+      }
+      .asx-ruota-pointer span:nth-child(2) { animation-delay: .12s; opacity: .7; }
+      .asx-ruota-pointer span:nth-child(3) { animation-delay: .24s; opacity: .45; }
+      @keyframes asx-chev { 50% { transform: translateX(8px); } }
+
       .asx-ruota-sheet {
-        position: absolute; left: 760px; right: 50px; top: 140px; bottom: 34px; z-index: 12;
-        display: flex; flex-direction: column; gap: 18px;
+        position: absolute; left: 840px; right: 54px; top: 132px; bottom: 34px; z-index: 12;
+        display: flex; flex-direction: column; gap: 20px; overflow: hidden;
       }
-      .asx-ruota-cols, .asx-mano-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      .asx-ruota-sheet .asx-bonus-explain, .asx-mano-sheet .asx-bonus-explain { font-size: 21px; }
-      .asx-ruota-sheet .asx-panel p, .asx-mano-sheet .asx-panel p { font-size: 17px; }
-      .asx-ruota-sheet .asx-name h2 { font-size: 76px; }
-      .asx-ruota-sheet .asx-name h2.long { font-size: 58px; }
-      .asx-ruota-bottom { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; }
-      .asx-ruota-cards { display: flex; flex-direction: column; gap: 10px; }
-      .asx-ruota-cards .row { display: flex; padding-left: 6px; }
+      .asx-ruota-wipe {
+        position: absolute; top: -20%; bottom: -20%; left: -30%; width: 22%; z-index: 30; pointer-events: none;
+        background: var(--accent); transform: skewX(-18deg) translateX(-100%);
+        animation: asx-wipe .55s cubic-bezier(.7,0,.3,1) forwards;
+      }
+      @keyframes asx-wipe { to { transform: skewX(-18deg) translateX(700%); } }
+
+      .asx-ruota-head { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 20px; }
+      .asx-ruota-bignum {
+        font-weight: 700; font-style: italic; font-size: 190px; line-height: 0.78; letter-spacing: -0.04em;
+        color: transparent; -webkit-text-stroke: 3px var(--accent); transform: rotate(-6deg);
+        animation: asx-swipe .35s cubic-bezier(.2,1,.3,1) both;
+      }
+      .asx-ruota-title { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; animation: asx-swipe .35s .04s cubic-bezier(.2,1,.3,1) both; }
+      .asx-ruota-kicker { display: flex; gap: 8px; }
+      .asx-ruota-title h2 {
+        margin: 0; font-weight: 700; font-style: italic; font-size: 74px; line-height: 0.95; letter-spacing: -0.015em; text-transform: uppercase;
+        text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void); transform: rotate(-2deg); transform-origin: left;
+      }
+      .asx-ruota-title h2.long { font-size: 54px; }
+      .asx-ruota-stats { display: flex; gap: 4px; transform: rotate(-6deg); animation: asx-swipe .35s .08s cubic-bezier(.2,1,.3,1) both; }
+      .asx-burst { position: relative; width: 112px; height: 112px; display: grid; place-items: center; }
+      .asx-burst .shape { position: absolute; inset: 0; background: var(--ink); clip-path: ${BURST_CLIP}; filter: drop-shadow(5px 5px 0 var(--accent)); animation: asx-spin 22s linear infinite; }
+      .asx-burst.dark .shape { background: var(--accent); filter: drop-shadow(5px 5px 0 var(--void)); }
+      .asx-burst .val { position: relative; font-weight: 700; font-style: italic; font-size: 44px; line-height: 1; color: var(--void); transform: translateY(-6px) rotate(-6deg); }
+      .asx-burst .lbl { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
+
+      .asx-ruota-bonus { position: relative; padding-left: 64px; }
+      .asx-ruota-bonus-mark {
+        position: absolute; left: 0; top: 50%; transform: translateY(-50%) rotate(-12deg);
+        font-size: 74px; line-height: 1; color: var(--accent); text-shadow: 4px 4px 0 var(--void);
+      }
+      .asx-ruota-bonus .asx-bonus { padding: 18px 26px 20px; }
+      .asx-ruota-bonus .asx-bonus-explain { font-size: 21px; }
+
+      .asx-ruota-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .asx-npanel {
+        position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 22px 18px; min-width: 0;
+        background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, #0b0b10), #0b0b10 70%);
+        clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+        animation: asx-swipe .35s .12s cubic-bezier(.2,1,.3,1) both;
+      }
+      .asx-npanel + .asx-npanel { animation-delay: .16s; }
+      .asx-npanel-head { display: flex; align-items: center; gap: 12px; }
+      .asx-npanel-head .n { font-weight: 700; font-style: italic; font-size: 34px; line-height: 1; color: var(--accent); }
+      .asx-npanel p { margin: 0; font-size: 17px; line-height: 1.5; color: rgba(245,243,235,0.9); }
+
+      .asx-ruota-bottom { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+      .asx-ruota-cards { display: flex; flex-direction: column; gap: 4px; }
+      .asx-ruota-cards .asx-chip--ink { margin: 0 0 6px 4px; }
+      .asx-ruota-cards .row { display: flex; padding: 10px 0 0 10px; }
       .asx-ruota-card {
-        margin-right: -20px; transform: rotate(calc((var(--i) - 2) * 3deg)) translateY(calc((var(--i) - 2) * (var(--i) - 2) * 3px));
+        position: relative; margin-right: -34px;
+        transform: rotate(calc(var(--d) * 5deg)) translateY(calc(var(--d) * var(--d) * 4px));
+        transition: transform .2s cubic-bezier(.3,1.5,.5,1);
         animation: asx-deal .45s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
       }
-      .asx-ruota-bottom .asx-actions { width: 400px; }
+      .asx-ruota-card:hover { transform: translateY(-26px) scale(1.08); z-index: 20 !important; }
+      .asx-ruota-bottom .asx-actions { width: 420px; flex: none; }
 
       /* ---------- 3 MANO ---------- */
+      .asx-mano-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
       .asx-mano-hero { position: absolute; left: 50px; top: 130px; width: 660px; height: 620px; z-index: 10; display: flex; flex-direction: column; align-items: flex-start; }
       .asx-mano-burst { position: relative; width: 660px; height: 400px; flex: none; }
       .asx-mano-burst-slot {
