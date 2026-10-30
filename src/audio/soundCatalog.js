@@ -66,6 +66,10 @@ const MATCH = {
   confirm: 'audio/sfx/match/confirm.mp3',
   coin: 'audio/sfx/match/coin.mp3',
   clash: 'audio/sfx/match/clash.mp3',
+  perfect: 'audio/sfx/match/perfect.mp3',
+  win: 'audio/sfx/match/win.mp3',
+  lose: 'audio/sfx/match/lose.mp3',
+  draw: 'audio/sfx/match/draw.mp3',
 };
 
 /**
@@ -98,9 +102,10 @@ export const SOUND_CATALOG = {
   [GAME_SOUND.DUEL_FOCUS]: FALLBACK.tick,
   [GAME_SOUND.DUEL_CLASH]: MATCH.clash,
   [GAME_SOUND.DUEL_COIN]: MATCH.coin,
-  [GAME_SOUND.DUEL_WIN]: FALLBACK.win,
-  [GAME_SOUND.DUEL_LOSE]: FALLBACK.lose,
-  [GAME_SOUND.DUEL_DRAW]: FALLBACK.soft,
+  [GAME_SOUND.DUEL_PERFECT]: MATCH.perfect,
+  [GAME_SOUND.DUEL_WIN]: MATCH.win,
+  [GAME_SOUND.DUEL_LOSE]: MATCH.lose,
+  [GAME_SOUND.DUEL_DRAW]: MATCH.draw,
   [GAME_SOUND.ROUND_NEXT]: FALLBACK.soft,
   [GAME_SOUND.ARMY_CONFIRM]: FALLBACK.confirm,
   [GAME_SOUND.DECK_CONFIRM]: FALLBACK.confirm,

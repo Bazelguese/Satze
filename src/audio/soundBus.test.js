@@ -23,6 +23,9 @@ test('catalog: id cinematici e fallback', () => {
   assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH), /audio\/sfx\/match\/clash\.mp3$/);
   assert.match(resolveSoundSrc(GAME_SOUND.FC_TICK), /audio\/sfx\/match\/coin\.mp3$/);
   assert.match(resolveSoundSrc(GAME_SOUND.DUEL_COIN), /audio\/sfx\/match\/coin\.mp3$/);
+  for (const [id, file] of [[GAME_SOUND.DUEL_PERFECT, 'perfect'], [GAME_SOUND.DUEL_WIN, 'win'], [GAME_SOUND.DUEL_LOSE, 'lose'], [GAME_SOUND.DUEL_DRAW, 'draw']]) {
+    assert.match(resolveSoundSrc(id), new RegExp(`audio/sfx/match/${file}\\.mp3$`));
+  }
   assert.match(resolveSoundSrc('cinematic.HP_TICK.impact'), /audio\/sfx\/impact\.wav$/);
   assert.equal(resolveSoundSrc('nope'), null);
 });
