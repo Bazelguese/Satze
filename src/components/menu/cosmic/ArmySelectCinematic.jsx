@@ -1,16 +1,15 @@
 // ============================================================
 // ArmySelectCinematic.jsx — Schermata "Scegli la tua armata"
 // ============================================================
-// Stile Persona, costruita attorno a un carosello di carte-armata, con le
-// 5 carte di punta di ogni armata (potenziale più alto, miste per Lega).
+// Stile Persona, costruita attorno a una RUOTA: le armate sono gli spicchi,
+// lo spicchio scelto si ferma a destra nel riquadro, accanto le 5 carte di
+// punta sull'arco (una per Lega + la migliore restante) e a destra la scheda
+// a bande inclinate (bonus, stile, note, storia, SCHIERA).
 // La storia lunga sta nel pannello DOSSIER (tasto S).
 // I testi per ogni armata (synopsis / motto / bonusExplain /
 // style / tips) si modificano in `armyLore.js`.
-//
-// PROPOSTA IN PROVA: tre layout (1 PALCO carosello orizzontale, 2 RUOTA
-// carosello ad arco verticale, 3 MANO armate come mano di carte), scelti col
-// selettore in alto a destra o coi tasti 1/2/3 · V. Tenere quello scelto e
-// togliere gli altri.
+// Alla conferma la lastra inclinata chiude lo schermo e la Scelta esercito
+// riparte da lì (vedi `slabHandoff.jsx`).
 //
 // Props:
 //   onSelect(armyName: string | null)  // null = "Eserciti Personalizzati"
@@ -30,35 +29,15 @@ import {
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
-import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
+import { CardReworkP4 } from '../../cards/CardReworkP4.jsx';
 import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
 import { getCardSprite } from '../../../utils';
 import { AGENT_IMAGES } from '../../../data/images';
 import { armSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 
 const SHOWCASE_SIZE = 5;
-const LAYOUTS = ['palco', 'ruota', 'mano'];
-const LAYOUT_LABEL = { palco: 'PALCO', ruota: 'RUOTA', mano: 'MANO' };
-const LAYOUT_KEY = 'satze_army_select_layout';
 /** Durata della chiusura a lastra prima di passare alla scelta esercito. */
 const EXIT_MS = 700;
-
-function readLayout() {
-  try {
-    const v = localStorage.getItem(LAYOUT_KEY);
-    return LAYOUTS.includes(v) ? v : 'palco';
-  } catch {
-    return 'palco';
-  }
-}
-
-function saveLayout(v) {
-  try {
-    localStorage.setItem(LAYOUT_KEY, v);
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Offset con wrap-around: l'armata selezionata è 0, le vicine ±1, ±2… */
 function wrapOffset(i, idx, total) {
@@ -116,9 +95,7 @@ function buildArmies() {
     style: MIXED_ARMIES_LORE.style || '',
     tips: MIXED_ARMIES_LORE.tips || '',
     isMixed: true,
-    showcase: pickShowcaseCards(
-      Object.entries(ARMY_SETS).flatMap(([army, cards]) => cards.map((c) => ({ ...c, army }))),
-    ),
+    showcase: [], // nessuna carta di punta: il pool misto non rappresenta un'armata
   });
 
   for (const armyName of Object.keys(ARMY_SETS)) {
@@ -164,7 +141,6 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const total = ARMIES.length;
   const [idx, setIdx] = useState(1);
   const [phase, setPhase] = useState('idle'); // idle -> confirming
-  const [layout, setLayout] = useState(readLayout);
   const [dossier, setDossier] = useState(false);
   /** Passi cumulativi della ruota (senza wrap): gira sempre dal lato più corto. */
   const [spin, setSpin] = useState(1);
@@ -185,11 +161,6 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   }, [total]);
 
   const go = useCallback((delta) => goTo(stateRef.current.idx + delta), [goTo]);
-
-  const pickLayout = useCallback((v) => {
-    setLayout(v);
-    saveLayout(v);
-  }, []);
 
   const confirmArmy = useCallback(() => {
     if (stateRef.current.phase !== 'idle') return;
@@ -222,17 +193,11 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       else if (k === 'Escape') {
         if (stateRef.current.dossier) setDossier(false);
         else if (onBack) onBack();
-      } else if (k === 'v') {
-        setLayout((cur) => {
-          const next = LAYOUTS[(LAYOUTS.indexOf(cur) + 1) % LAYOUTS.length];
-          saveLayout(next);
-          return next;
-        });
-      } else if (k === '1' || k === '2' || k === '3') pickLayout(LAYOUTS[Number(k) - 1]);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, confirmArmy, toggleDossier, pickLayout, onBack]);
+  }, [go, confirmArmy, toggleDossier, onBack]);
 
   // Rotella / trackpad: scorre tra le armate (non dentro il dossier)
   useEffect(() => {
@@ -258,7 +223,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   return (
     <div
       ref={rootRef}
-      className={`asx asx--${layout}${phase === 'confirming' ? ' is-leaving' : ''}`}
+      className={`asx asx--ruota${phase === 'confirming' ? ' is-leaving' : ''}`}
       style={{ '--accent': army.color }}
     >
       <div className="asx-bg" aria-hidden="true">
@@ -278,36 +243,19 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       </header>
 
       <div className="asx-topright">
-        <div className="asx-layouts" role="radiogroup" aria-label="Layout in prova">
-          <span className="lbl">LAYOUT <kbd>V</kbd></span>
-          {LAYOUTS.map((v, i) => (
-            <button
-              key={v}
-              type="button"
-              role="radio"
-              aria-checked={layout === v}
-              className={layout === v ? 'on' : ''}
-              onClick={() => { playUiClick(); pickLayout(v); }}
-            >
-              <span><b>{i + 1}</b> {LAYOUT_LABEL[v]}</span>
-            </button>
-          ))}
-        </div>
         <div className="asx-hints">
-          <span><kbd>{layout === 'ruota' ? '↑' : '←'}</kbd><kbd>{layout === 'ruota' ? '↓' : '→'}</kbd>ARMATA</span>
+          <span><kbd>↑</kbd><kbd>↓</kbd>ARMATA</span>
           <span><kbd>S</kbd>DOSSIER</span>
           <span><kbd>↵</kbd>SCHIERA</span>
         </div>
       </div>
 
-      {layout === 'palco' && <LayoutPalco {...shared} />}
-      {layout === 'ruota' && <LayoutRuota {...shared} />}
-      {layout === 'mano' && <LayoutMano {...shared} />}
+      <LayoutRuota {...shared} />
 
       {dossier && <Dossier army={army} onClose={() => setDossier(false)} />}
       {phase === 'confirming' && (
         <>
-          <div className="asx-exit-slab" style={{ '--from': layout === 'ruota' ? '920px' : '2100px' }} aria-hidden="true" />
+          <div className="asx-exit-slab" aria-hidden="true" />
           <SlabHandoffTitle name={army.name} color={army.color} mode="in" />
         </>
       )}
@@ -318,135 +266,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
 }
 
 // ============================================================
-// PEZZI COMUNI
-// ============================================================
-
-/** Carta-armata del carosello: sfondo d'armata, emblema, targa nome. */
-function ArmyCard({ army, number, selected = false, compact = false, onClick }) {
-  return (
-    <button
-      type="button"
-      className={`asx-acard${selected ? ' on' : ''}${compact ? ' compact' : ''}`}
-      style={{ '--c': army.color }}
-      onClick={onClick}
-      tabIndex={selected ? 0 : -1}
-      aria-label={army.name}
-    >
-      <span className="asx-acard-bg" style={army.bg ? { backgroundImage: `url('${army.bg}')` } : undefined} />
-      <span className="asx-acard-tone" />
-      <span className="asx-acard-num">{String(number).padStart(2, '0')}</span>
-      <span className="asx-acard-emblem">
-        {army.portrait
-          ? <img src={army.portrait} alt="" draggable={false} />
-          : <span className="glyph">{army.glyph}</span>}
-      </span>
-      <span className="asx-acard-name"><span>{army.name}</span></span>
-    </button>
-  );
-}
-
-function ShowcaseCard({ card, width }) {
-  return (
-    <div className="asx-sc" style={{ width, height: Math.round((width * 330) / 230) }}>
-      <CardReworkP4Scaled agent={card} width={width} preferThumb showBonus />
-    </div>
-  );
-}
-
-function BonusPlate({ army, compact = false }) {
-  return (
-    <div className={`asx-bonus${compact ? ' compact' : ''}`}>
-      <div className="asx-chip asx-chip--dark">BONUS · {army.bonusLabel}</div>
-      {army.bonusHighlight && (
-        <div className="asx-bonus-hl"><b>DIVERSO DALLE ALTRE</b> {army.bonusHighlight}</div>
-      )}
-      {army.bonusWhen && <p className="asx-bonus-when">{army.bonusWhen}</p>}
-      {army.bonusExplain && <p className="asx-bonus-explain">{army.bonusExplain}</p>}
-      {army.bonus && <div className="asx-bonus-val">{army.bonus}</div>}
-    </div>
-  );
-}
-
-function NamePlate({ army, number }) {
-  return (
-    <div className="asx-name">
-      <div className="asx-name-top">
-        <span className="asx-chip">{String(number).padStart(2, '0')} · {army.glyph}</span>
-        {!army.isMixed && <span className="asx-name-meta">{army.cards} carte · {army.decks} eserciti</span>}
-      </div>
-      <h2 className={army.name.length > 18 ? 'long' : ''}>{army.name}</h2>
-      {army.motto && <div className="asx-motto">“{army.motto}”</div>}
-    </div>
-  );
-}
-
-function ConfirmButton({ onConfirm, onDossier }) {
-  return (
-    <div className="asx-actions">
-      <button type="button" className="asx-dossier-btn" onClick={onDossier}>
-        <span><kbd>S</kbd> DOSSIER</span>
-      </button>
-      <button type="button" className="asx-confirm" onClick={onConfirm}>
-        <span className="in"><span>SCHIERA</span><kbd>↵</kbd></span>
-      </button>
-    </div>
-  );
-}
-
-function TextPanel({ label, text }) {
-  if (!text) return null;
-  return (
-    <div className="asx-panel">
-      <div className="asx-chip">{label}</div>
-      <p>{text}</p>
-    </div>
-  );
-}
-
-// ============================================================
-// LAYOUT 1 — PALCO: carosello orizzontale, carte a corona
-// ============================================================
-
-function LayoutPalco({ armies, idx, army, goTo, onConfirm, onDossier }) {
-  const total = armies.length;
-  const cards = army.showcase || [];
-  const mid = (cards.length - 1) / 2;
-  return (
-    <>
-      <div className="asx-palco-stage">
-        <div className="asx-palco-crown" key={`crown-${army.id}`} aria-hidden="true">
-          {cards.map((c, i) => (
-            <div key={c.id} className="asx-palco-crown-slot" style={{ '--d': i - mid, '--delay': `${i * 0.05}s` }}>
-              <ShowcaseCard card={c} width={160} />
-            </div>
-          ))}
-        </div>
-        {armies.map((a, i) => {
-          const off = wrapOffset(i, idx, total);
-          if (Math.abs(off) > 3) return null;
-          return (
-            <div
-              key={a.id}
-              className="asx-palco-slot"
-              style={{ '--off': off, '--abs': Math.abs(off), zIndex: off === 0 ? 20 : 10 - Math.abs(off) }}
-            >
-              <ArmyCard army={a} number={i + 1} selected={off === 0} onClick={() => goTo(i)} />
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="asx-palco-strip" key={`strip-${army.id}`}>
-        <NamePlate army={army} number={idx + 1} />
-        <BonusPlate army={army} />
-        <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
-      </div>
-    </>
-  );
-}
-
-// ============================================================
-// LAYOUT 2 — RUOTA: carosello ad arco a sinistra, scheda a destra
+// RUOTA: armate a spicchi a sinistra, carte sull'arco, scheda a destra
 // ============================================================
 
 // Geometria della ruota (px, centro fuori schermo a sinistra).
@@ -501,8 +321,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const half = (step - WEDGE_GAP) / 2;
   const sector = sectorPath(WEDGE_RI, WEDGE_RO, half);
   const paper = sectorPath(WEDGE_RI - 12, WEDGE_RO + 14, half + 1.2);
-  // Eserciti personalizzati: nessuna carta di punta (il pool misto non rappresenta un'armata).
-  const cards = army.isMixed ? [] : army.showcase || [];
+  const cards = army.showcase;
   const mid = (cards.length - 1) / 2;
   const artX = WEDGE_RI * Math.cos(rad(half));
   const artH = 2 * WEDGE_RO * Math.sin(rad(half));
@@ -815,59 +634,6 @@ function Burst({ value, label, dark = false }) {
 }
 
 // ============================================================
-// LAYOUT 3 — MANO: armate come mano di carte in basso
-// ============================================================
-
-function LayoutMano({ armies, idx, army, goTo, onConfirm, onDossier }) {
-  const total = armies.length;
-  const cards = army.showcase || [];
-  const mid = (cards.length - 1) / 2;
-  return (
-    <>
-      <div className="asx-mano-hero" key={`hero-${army.id}`}>
-        <div className="asx-mano-burst" aria-hidden="true">
-          {cards.map((c, i) => (
-            <div key={c.id} className="asx-mano-burst-slot" style={{ '--d': i - mid, '--delay': `${i * 0.05}s` }}>
-              <ShowcaseCard card={c} width={150} />
-            </div>
-          ))}
-          <div className="asx-mano-emblem">
-            {army.portrait
-              ? <img src={army.portrait} alt="" draggable={false} />
-              : <span>{army.glyph}</span>}
-          </div>
-        </div>
-        <NamePlate army={army} number={idx + 1} />
-      </div>
-
-      <div className="asx-mano-sheet" key={`msheet-${army.id}`}>
-        <BonusPlate army={army} />
-        <div className="asx-mano-cols">
-          <TextPanel label="STILE CONSIGLIATO" text={army.style} />
-          <TextPanel label="NOTE TATTICHE" text={army.tips} />
-        </div>
-        <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
-      </div>
-
-      <div className="asx-mano-hand">
-        {armies.map((a, i) => {
-          const off = wrapOffset(i, idx, total);
-          return (
-            <div
-              key={a.id}
-              className={`asx-mano-slot${off === 0 ? ' on' : ''}`}
-              style={{ '--off': off, '--abs': Math.abs(off), zIndex: off === 0 ? 30 : 20 - Math.abs(off) }}
-            >
-              <ArmyCard army={a} number={i + 1} selected={off === 0} compact onClick={() => goTo(i)} />
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-// ============================================================
 // DOSSIER + CONFERMA
 // ============================================================
 
@@ -916,7 +682,6 @@ function ArmySelectStyles() {
         font-weight: 700; font-size: 12px; letter-spacing: 0.22em; padding: 2px 11px; transform: skewX(-14deg);
         transition: background .3s;
       }
-      .asx-chip--dark { background: var(--void); color: var(--ink); }
       .asx-chip--ink { background: var(--ink); color: var(--void); margin: 14px 0 8px; }
 
       /* Fondo */
@@ -962,134 +727,24 @@ function ArmySelectStyles() {
         text-shadow: 5px 5px 0 var(--accent), 9px 9px 0 var(--void);
       }
       .asx-topright { position: absolute; top: 24px; right: 40px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-      .asx-layouts {
-        display: flex; align-items: center; gap: 6px; background: var(--void); padding: 7px 12px;
-        box-shadow: 5px 5px 0 var(--accent); transform: skewX(-10deg);
-      }
-      .asx-layouts > * { transform: skewX(10deg); }
-      .asx-layouts .lbl { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; font-weight: 700; font-size: 12px; letter-spacing: 0.2em; }
-      .asx-layouts button {
-        border: 0; cursor: pointer; padding: 5px 10px; background: #1c1c23; color: var(--dim);
-        font-family: inherit; font-size: 12px; letter-spacing: 0.08em;
-      }
-      .asx-layouts button b { font-size: 15px; font-style: italic; margin-right: 2px; }
-      .asx-layouts button.on { background: var(--accent); color: var(--void); font-weight: 700; }
       .asx-hints { display: flex; gap: 14px; font-weight: 700; font-style: italic; font-size: 13px; letter-spacing: 0.12em; text-shadow: 2px 2px 0 var(--void); }
       .asx-hints span { display: inline-flex; align-items: center; gap: 3px; }
       .asx-hints kbd { margin-right: 2px; }
 
       /* Carta-armata */
-      .asx-acard {
-        position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; cursor: pointer;
-        background: #0b0b10; overflow: hidden; color: inherit; font-family: inherit;
-        box-shadow: 0 0 0 3px rgba(245,243,235,0.16), 8px 8px 0 rgba(0,0,0,0.6);
-        transition: box-shadow .2s, transform .3s cubic-bezier(.3,1.5,.5,1);
-      }
-      .asx-acard-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.55) saturate(1.15); }
-      .asx-acard-bg:not([style]) { background: repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 14px), radial-gradient(circle, color-mix(in srgb, var(--c) 30%, transparent), transparent 70%); filter: none; }
-      .asx-acard-tone { position: absolute; inset: 0; background: linear-gradient(to top, rgba(5,5,7,0.95) 0%, rgba(5,5,7,0.2) 45%, transparent 70%); }
-      .asx-acard-num {
-        position: absolute; top: 10px; left: 10px; z-index: 2; background: var(--void); color: var(--c);
-        font-family: 'Share Tech Mono', monospace; font-size: 14px; padding: 2px 8px; transform: skewX(-14deg);
-      }
-      .asx-acard-emblem { position: absolute; left: 10%; right: 10%; top: 12%; bottom: 30%; display: grid; place-items: center; z-index: 1; }
-      .asx-acard-emblem img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.85)); }
-      .asx-acard-emblem .glyph { font-size: 130px; line-height: 1; color: var(--c); text-shadow: 0 0 30px var(--c); }
-      .asx-acard-name { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 2; display: flex; justify-content: center; }
-      .asx-acard-name span {
-        background: var(--void); color: var(--ink); border-left: 5px solid var(--c);
-        font-weight: 700; font-style: italic; font-size: 21px; line-height: 1.05; text-transform: uppercase; text-align: center;
-        padding: 5px 12px; transform: skewX(-10deg);
-      }
-      .asx-acard:hover:not(.on) { box-shadow: 0 0 0 3px var(--c), 8px 8px 0 rgba(0,0,0,0.6); }
-      .asx-acard.on { transform: rotate(-3deg); box-shadow: 0 0 0 5px var(--ink), 16px 16px 0 5px var(--c), 0 30px 80px rgba(0,0,0,0.7); }
-      .asx-acard.on .asx-acard-name span { background: var(--ink); color: var(--void); box-shadow: 5px 5px 0 var(--c); border-left-color: var(--void); }
-      .asx-acard.compact .asx-acard-num { font-size: 11px; top: 7px; left: 7px; }
-      .asx-acard.compact .asx-acard-emblem { top: 10%; bottom: 32%; }
-      .asx-acard.compact .asx-acard-emblem .glyph { font-size: 70px; }
-      .asx-acard.compact .asx-acard-name { left: 6px; right: 6px; bottom: 10px; }
-      .asx-acard.compact .asx-acard-name span { font-size: 13px; padding: 3px 7px; border-left-width: 3px; }
 
       .asx-sc { position: relative; filter: drop-shadow(6px 6px 0 rgba(0,0,0,0.7)); }
 
       /* Pezzi della scheda */
-      .asx-name { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; animation: asx-swipe .35s cubic-bezier(.2,1,.3,1) both; }
-      @keyframes asx-swipe { from { opacity: 0; transform: translateX(50px) skewX(-8deg); } }
-      .asx-name-top { display: flex; align-items: center; gap: 12px; }
-      .asx-name-meta { font-weight: 600; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-      .asx-name h2 {
-        margin: 0; font-weight: 700; font-style: italic; font-size: 64px; line-height: 0.95; letter-spacing: -0.01em; text-transform: uppercase;
-        text-shadow: 5px 5px 0 var(--accent), 9px 9px 0 var(--void); transform: rotate(-2deg); transform-origin: left;
-      }
-      .asx-name h2.long { font-size: 48px; }
+      
       .asx-motto {
         background: var(--ink); color: var(--void); font-weight: 600; font-style: italic; font-size: 17px;
         padding: 5px 14px; transform: skewX(-12deg) rotate(1deg); box-shadow: 4px 4px 0 var(--accent);
       }
-      .asx-bonus {
-        position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 22px 18px;
-        background: var(--ink); color: var(--void); box-shadow: 9px 9px 0 var(--accent);
-        clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
-        animation: asx-swipe .35s .05s cubic-bezier(.2,1,.3,1) both;
-      }
-      .asx-bonus p { margin: 0; }
-      .asx-bonus-when { font-style: italic; font-weight: 600; font-size: 15px; opacity: 0.7; }
-      .asx-bonus-explain { font-weight: 600; font-size: 18px; line-height: 1.35; }
-      .asx-bonus.compact .asx-bonus-explain { font-size: 16px; }
       .asx-bonus-val { align-self: flex-start; margin-top: 4px; background: var(--void); color: var(--ink); font-weight: 700; font-size: 14px; padding: 2px 10px; transform: skewX(-12deg); }
-      .asx-bonus-hl { background: color-mix(in srgb, var(--accent) 28%, var(--ink)); padding: 6px 10px; font-size: 14px; line-height: 1.35; }
-      .asx-bonus-hl b { display: block; font-size: 11px; letter-spacing: 0.18em; }
-      .asx-panel {
-        display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; min-width: 0;
-        background: rgba(5,5,7,0.9); border-left: 5px solid var(--accent);
-        animation: asx-swipe .35s .1s cubic-bezier(.2,1,.3,1) both;
-      }
-      .asx-panel p { margin: 0; font-size: 15px; line-height: 1.5; color: rgba(245,243,235,0.88); }
-      .asx-actions { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
-      .asx-dossier-btn {
-        align-self: flex-end; border: 0; cursor: pointer; padding: 8px 18px; background: var(--void); color: var(--ink);
-        font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: 0.14em; transform: skewX(-14deg);
-        box-shadow: inset 0 0 0 2px var(--ink); transition: background .15s, color .15s;
-      }
-      .asx-dossier-btn > span { display: inline-flex; align-items: center; gap: 8px; transform: skewX(14deg); }
-      .asx-dossier-btn:hover { background: var(--ink); color: var(--void); }
-      .asx-dossier-btn:hover kbd { background: var(--void); color: var(--ink); }
-      .asx-confirm { border: 0; padding: 0; cursor: pointer; background: transparent; font-family: inherit; }
-      .asx-confirm .in {
-        display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 96px; padding: 0 26px 0 34px;
-        background: var(--accent); color: var(--void); font-weight: 700; font-style: italic; font-size: 56px;
-        transform: skewX(-14deg) rotate(-2deg); box-shadow: 9px 9px 0 var(--ink);
-        transition: transform .15s, box-shadow .15s, background .3s; animation: asx-ready 1.6s ease-in-out infinite;
-      }
-      .asx-confirm .in > * { transform: skewX(14deg); }
-      .asx-confirm .in kbd { background: var(--void); color: var(--ink); font-size: 20px; min-width: 40px; height: 34px; }
-      .asx-confirm:hover .in, .asx-confirm:focus-visible .in { transform: skewX(-14deg) rotate(-3deg) translate(-4px,-4px); box-shadow: 13px 13px 0 var(--ink); }
-      @keyframes asx-ready { 50% { box-shadow: 9px 9px 0 var(--ink), 0 0 40px color-mix(in srgb, var(--accent) 70%, transparent); } }
 
-      @keyframes asx-deal { from { opacity: 0; transform: translateY(60px) rotate(0deg) scale(0.85); } }
-
-      /* ---------- 1 PALCO ---------- */
-      .asx-palco-stage { position: absolute; left: 0; right: 0; top: 170px; height: 600px; z-index: 5; perspective: 1700px; }
-      .asx-palco-slot {
-        position: absolute; left: 50%; top: 50%; width: 350px; height: 490px; margin: -245px 0 0 -175px;
-        transform: translateX(calc(var(--off) * 330px)) translateZ(calc(var(--abs) * -230px)) rotateY(calc(var(--off) * -22deg)) scale(calc(1 - var(--abs) * 0.08));
-        opacity: calc(1 - var(--abs) * 0.24);
-        transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s;
-      }
-      .asx-palco-crown { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 15; pointer-events: none; }
-      .asx-palco-crown-slot {
-        position: absolute; left: -80px; top: -270px; width: 160px;
-        transform-origin: 50% 150%; transform: rotate(calc(var(--d) * 22deg)) translateY(-40px);
-        animation: asx-crown .5s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
-      }
-      @keyframes asx-crown { from { opacity: 0; transform: rotate(0deg) translateY(60px); } }
-      .asx-palco-strip {
-        position: absolute; left: 50px; right: 50px; bottom: 34px; z-index: 12;
-        display: grid; grid-template-columns: 620px 1fr 400px; gap: 34px; align-items: end;
-      }
-
-      /* ---------- 2 RUOTA ---------- */
-      /* in RUOTA il titolo della pagina è solo una riga-percorso: il titolo grande è il nome dell'armata */
+      /* ---------- RUOTA ---------- */
+      /* il titolo della pagina è solo una riga-percorso: il titolo grande è il nome dell'armata */
       .asx--ruota .asx-title { left: 948px; top: 34px; transform: none; text-align: left; display: flex; align-items: center; gap: 12px; }
       .asx--ruota .asx-title::after {
         content: ''; position: absolute; left: 0; top: calc(100% + 10px); width: 540px; height: 2px;
@@ -1271,41 +926,6 @@ function ArmySelectStyles() {
       .asx-burst.solo .val { font-size: 50px; transform: rotate(-6deg); }
       .asx-burst .lbl { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
 
-      /* ---------- 3 MANO ---------- */
-      .asx-mano-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      .asx-mano-hero { position: absolute; left: 50px; top: 130px; width: 660px; height: 620px; z-index: 10; display: flex; flex-direction: column; align-items: flex-start; }
-      .asx-mano-burst { position: relative; width: 660px; height: 400px; flex: none; }
-      .asx-mano-burst-slot {
-        position: absolute; left: calc(50% - 70px); top: 120px; width: 140px;
-        transform-origin: 50% 85%; transform: rotate(calc(var(--d) * 30deg)) translateY(-70px);
-        animation: asx-crown .5s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
-      }
-      .asx-mano-emblem {
-        position: absolute; left: calc(50% - 110px); top: 150px; width: 220px; height: 220px; border-radius: 50%; z-index: 5;
-        display: grid; place-items: center; background: var(--void);
-        box-shadow: 0 0 0 6px var(--ink), 10px 10px 0 6px var(--accent);
-        animation: asx-pop .45s cubic-bezier(.3,1.6,.5,1) both;
-      }
-      @keyframes asx-pop { from { transform: scale(0.4) rotate(-30deg); opacity: 0; } }
-      .asx-mano-emblem img { width: 170px; height: 170px; object-fit: contain; }
-      .asx-mano-emblem span { font-size: 110px; line-height: 1; color: var(--accent); }
-      .asx-mano-hero .asx-name { margin-top: 8px; }
-      .asx-mano-sheet {
-        position: absolute; left: 760px; right: 50px; top: 150px; height: 600px; z-index: 12;
-        display: flex; flex-direction: column; gap: 18px;
-      }
-      .asx-mano-sheet .asx-actions { margin-top: auto; flex-direction: row; align-items: center; justify-content: flex-end; gap: 22px; }
-      .asx-mano-sheet .asx-confirm { width: 400px; }
-      .asx-mano-hand { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; z-index: 20; pointer-events: none; }
-      .asx-mano-slot {
-        position: absolute; left: 50%; bottom: -70px; width: 170px; height: 240px; pointer-events: auto;
-        transform-origin: 50% 100%;
-        transform: translateX(calc(-50% + var(--off) * 128px)) translateY(calc(var(--abs) * var(--abs) * 5px)) rotate(calc(var(--off) * 4deg));
-        transition: transform .4s cubic-bezier(.2,1.2,.4,1);
-      }
-      .asx-mano-slot:hover:not(.on) { transform: translateX(calc(-50% + var(--off) * 128px)) translateY(calc(var(--abs) * var(--abs) * 5px - 26px)) rotate(calc(var(--off) * 4deg)); }
-      .asx-mano-slot.on { transform: translateX(-50%) translateY(-78px) scale(1.25); }
-
       /* ---------- Dossier ---------- */
       .asx-dossier-wrap { position: absolute; inset: 0; z-index: 150; background: rgba(5,5,7,0.55); animation: asx-fade .2s ease both; }
       .asx-dossier {
@@ -1341,7 +961,7 @@ function ArmySelectStyles() {
       .asx.is-leaving .asx-rw-cards, .asx.is-leaving .asx-rw-over { opacity: 0; transition: opacity .2s ease; }
       .asx.is-leaving .asx-rw-zoom { display: none; }
       .asx-exit-slab {
-        position: absolute; top: -10%; bottom: -10%; left: var(--from); right: -400px; z-index: 11; pointer-events: none;
+        position: absolute; top: -10%; bottom: -10%; left: 920px; right: -400px; z-index: 11; pointer-events: none;
         background: ${HANDOFF_BG}; transform: skewX(-8deg); transform-origin: top left;
         box-shadow: -14px 0 0 0 var(--accent), -26px 0 0 0 #050507, -34px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
         animation: asx-exit-sweep .6s cubic-bezier(.7,0,.25,1) .06s forwards;
