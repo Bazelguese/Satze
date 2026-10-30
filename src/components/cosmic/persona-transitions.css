@@ -1,6 +1,6 @@
-/* Cortina Persona tra le schermate — orologio comune:
+/* Cortina Persona tra le schermate — orologio comune a tempo 1:
    copre in 0.3s, piena fino a 0.52s, si ritira entro 0.9s.
-   --acc = colore della voce scelta, --d = 1 avanti / -1 indietro. */
+   --k = rallentamento, --acc = colore della voce scelta, --d = 1 avanti / -1 indietro. */
 
 .ptr {
   position: absolute;
@@ -9,9 +9,12 @@
   pointer-events: none;
   --void: #09080d;
   --cream: #f5f3eb;
+  --k: 1;
 }
 
-/* ---------- titolo comune ---------- */
+.ptr-dots { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ---------- titolo e nome a contorno ---------- */
 .ptr-title {
   position: absolute;
   left: 50%;
@@ -27,8 +30,8 @@
   text-align: center;
   white-space: nowrap;
   animation:
-    ptr-title-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both,
-    ptr-title-out 0.22s cubic-bezier(0.7, 0, 0.25, 1) 0.44s forwards;
+    ptr-title-in calc(0.26s * var(--k)) cubic-bezier(0.22, 1, 0.36, 1) calc(0.12s * var(--k)) both,
+    ptr-title-out calc(0.22s * var(--k)) cubic-bezier(0.7, 0, 0.25, 1) calc(0.44s * var(--k)) forwards;
 }
 .ptr-title .k {
   background: var(--acc);
@@ -56,36 +59,8 @@
   to { opacity: 0; transform: translate(calc(-50% - 700px * var(--d)), -50%) rotate(-3deg); }
 }
 
-/* ---------- A · Lastra ---------- */
-.ptrA-slab {
-  position: absolute;
-  top: -30%;
-  bottom: -30%;
-  left: -20%;
-  width: 140%;
-  background:
-    radial-gradient(circle, color-mix(in srgb, var(--acc) 26%, transparent) 1.6px, transparent 2.1px) 0 0 / 14px 14px,
-    var(--void);
-  transform: skewX(-14deg) translateX(calc(130% * var(--d)));
-  will-change: transform;
-  animation:
-    ptrA-in 0.28s cubic-bezier(0.65, 0, 0.25, 1) both,
-    ptrA-out 0.36s cubic-bezier(0.6, 0, 0.3, 1) 0.52s forwards;
-}
-/* fasce di colore sui due bordi: entrano e escono con la lastra */
-.ptrA-slab::before,
-.ptrA-slab::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 110px;
-  background: var(--acc);
-}
-.ptrA-slab::before { right: 100%; background: linear-gradient(90deg, var(--cream) 0 12px, transparent 12px 22px, var(--acc) 22px); }
-.ptrA-slab::after { left: 100%; background: linear-gradient(270deg, var(--cream) 0 12px, transparent 12px 22px, var(--acc) 22px); }
-/* il nome a contorno, enorme, sulla lastra (come l'eco del menù) */
-.ptrA-echo {
+/* il nome a contorno, enorme, dietro il titolo (come l'eco del menù) */
+.ptr-echo {
   position: absolute;
   left: 50%;
   bottom: 120px;
@@ -97,145 +72,68 @@
   -webkit-text-stroke: 2px color-mix(in srgb, var(--acc) 55%, transparent);
   transform: translateX(-50%) rotate(-7deg);
   animation:
-    ptrA-echo-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both,
-    ptr-title-out 0.22s cubic-bezier(0.7, 0, 0.25, 1) 0.44s forwards;
+    ptr-echo-in calc(0.5s * var(--k)) cubic-bezier(0.22, 1, 0.36, 1) calc(0.1s * var(--k)) both,
+    ptr-title-out calc(0.22s * var(--k)) cubic-bezier(0.7, 0, 0.25, 1) calc(0.44s * var(--k)) forwards;
 }
-@keyframes ptrA-echo-in {
+@keyframes ptr-echo-in {
   from { opacity: 0; transform: translateX(calc(-50% + 260px * var(--d))) rotate(-7deg); }
 }
-@keyframes ptrA-in {
+
+/* ---------- lastra inclinata ---------- */
+.ptr-slab {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -20%;
+  width: 140%;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--acc) 26%, transparent) 1.6px, transparent 2.1px) 0 0 / 14px 14px,
+    var(--void);
+  transform: skewX(-14deg) translateX(calc(130% * var(--d)));
+  will-change: transform;
+  animation:
+    ptr-slab-in calc(0.28s * var(--k)) cubic-bezier(0.65, 0, 0.25, 1) both,
+    ptr-slab-out calc(0.36s * var(--k)) cubic-bezier(0.6, 0, 0.3, 1) calc(0.52s * var(--k)) forwards;
+}
+/* fasce di colore sui due bordi: entrano e escono con la lastra */
+.ptr-slab::before,
+.ptr-slab::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 110px;
+}
+.ptr-slab::before { right: 100%; background: linear-gradient(90deg, var(--cream) 0 12px, transparent 12px 22px, var(--acc) 22px); }
+.ptr-slab::after { left: 100%; background: linear-gradient(270deg, var(--cream) 0 12px, transparent 12px 22px, var(--acc) 22px); }
+@keyframes ptr-slab-in {
   from { transform: skewX(-14deg) translateX(calc(130% * var(--d))); }
   to { transform: skewX(-14deg) translateX(0); }
 }
-@keyframes ptrA-out {
+@keyframes ptr-slab-out {
   from { transform: skewX(-14deg) translateX(0); }
   to { transform: skewX(-14deg) translateX(calc(-130% * var(--d))); }
 }
 
-/* ---------- B · Macchia ---------- */
-.ptrB-blob {
-  position: absolute;
-  width: 300px;
-  height: 180px;
-  margin: -90px 0 0 -150px;
-  transform: rotate(var(--r)) scale(0);
-  will-change: transform;
-}
-.ptrB-blob svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ptrB-acc path { fill: var(--acc); }
-.ptrB-void path { fill: var(--void); }
-.ptrB-grow {
+/* Onda + lastra: prima l'onda di punti, poi la lastra ci passa sopra */
+.ptr--onda .ptr-slab {
   animation:
-    ptrB-grow 0.3s cubic-bezier(0.55, 0, 0.35, 1) both,
-    ptrB-hide 0.01s 0.5s forwards;
+    ptr-slab-in calc(0.2s * var(--k)) cubic-bezier(0.65, 0, 0.25, 1) calc(0.1s * var(--k)) both,
+    ptr-slab-out calc(0.3s * var(--k)) cubic-bezier(0.6, 0, 0.3, 1) calc(0.5s * var(--k)) forwards;
 }
-.ptrB-grow.ptrB-void { animation-delay: 0.05s, 0.5s; animation-duration: 0.26s, 0.01s; }
-/* la cortina "di ritorno" aspetta nascosta, già piena, e compare allo scambio */
-.ptrB-shrink {
-  visibility: hidden;
-  transform: rotate(var(--r)) scale(26);
-  animation: ptrB-shrink 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.56s forwards;
-}
-.ptrB-shrink.ptrB-void { animation-delay: 0.5s; animation-duration: 0.26s; }
-@keyframes ptrB-grow {
-  from { transform: rotate(var(--r)) scale(0.45); }
-  to { transform: rotate(var(--r)) scale(34); }
-}
-@keyframes ptrB-hide { to { visibility: hidden; } }
-@keyframes ptrB-shrink {
-  from { visibility: visible; transform: rotate(var(--r)) scale(26); }
-  to { visibility: visible; transform: rotate(calc(var(--r) + 25deg)) scale(0); }
-}
-.ptrB-title b {
-  color: transparent;
-  -webkit-text-stroke: 3px var(--cream);
-  text-shadow: 6px 6px 0 var(--acc);
-  font-size: 128px;
-}
-.ptrB-title b.long { font-size: 92px; }
 
-/* ---------- C · Ritaglio ---------- */
-.ptrC-strips {
-  position: absolute;
-  left: -25%;
-  top: -40%;
-  width: 150%;
-  height: 180%;
-  display: flex;
-  flex-direction: column;
-  transform: rotate(-12deg);
+/* nelle due cortine col retino il nome entra quando lo schermo è già coperto */
+.ptr--onda .ptr-title,
+.ptr--lastraRetino .ptr-title {
+  animation-delay: calc(0.2s * var(--k)), calc(0.44s * var(--k));
 }
-.ptrC-strips span {
-  display: block;
-  min-height: 0;
-  transform: translateX(calc(110% * var(--s)));
-  will-change: transform;
-  animation:
-    ptrC-in 0.18s cubic-bezier(0.6, 0, 0.2, 1) calc(var(--i) * 22ms) both,
-    ptrC-out 0.26s cubic-bezier(0.6, 0, 0.4, 1) calc(520ms + (5 - var(--i)) * 24ms) forwards;
+.ptr--onda .ptr-echo,
+.ptr--lastraRetino .ptr-echo {
+  animation-delay: calc(0.18s * var(--k)), calc(0.44s * var(--k));
 }
-@keyframes ptrC-in {
-  from { transform: translateX(calc(110% * var(--s) * var(--d))); }
-  to { transform: translateX(0); }
-}
-@keyframes ptrC-out {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-110% * var(--s) * var(--d))); }
-}
-.ptrC-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 22px;
-  transform: translate(-50%, -50%) rotate(-4deg);
-  white-space: nowrap;
-}
-.ptrC-title .k {
-  background: var(--cream);
-  color: #050507;
-  font: 700 18px/1 'Chakra Petch', sans-serif;
-  letter-spacing: 0.3em;
-  padding: 6px 18px;
-  transform: skewX(-14deg);
-  box-shadow: 5px 5px 0 var(--acc);
-  animation: ptrC-pop 0.16s cubic-bezier(0.2, 1.4, 0.4, 1) 0.16s both, ptrC-fade 0.16s 0.48s forwards;
-}
-.ptrC-title .w { display: flex; align-items: center; gap: 5px; }
-.ptrC-title i {
-  display: block;
-  font: italic 700 92px/1 'Chakra Petch', sans-serif;
-  text-transform: uppercase;
-  padding: 2px 12px 8px;
-  transform: translateY(var(--dy)) rotate(var(--rot));
-  animation:
-    ptrC-pop 0.16s cubic-bezier(0.2, 1.4, 0.4, 1) calc(170ms + var(--i) * 16ms) both,
-    ptrC-scatter 0.18s cubic-bezier(0.5, 0, 0.9, 0.5) calc(490ms + var(--i) * 6ms) forwards;
-}
-.ptrC-title i.big { font-size: 116px; }
-.ptrC-title i.serif { font-family: 'Cinzel', serif; font-style: normal; font-weight: 900; }
-.ptrC-title .long i { font-size: 68px; }
-.ptrC-title .long i.big { font-size: 86px; }
-.ptrC-title .l-cream { background: var(--cream); color: #050507; box-shadow: 5px 5px 0 #050507; }
-.ptrC-title .l-void { background: #050507; color: var(--cream); box-shadow: 0 0 0 3px var(--cream); }
-.ptrC-title .l-acc { background: var(--acc); color: #050507; box-shadow: 5px 5px 0 #050507; }
-.ptrC-title .l-outline { color: transparent; -webkit-text-stroke: 3px var(--cream); }
-.ptrC-title .l-gap { width: 24px; padding: 0; }
-@keyframes ptrC-pop {
-  from { opacity: 0; transform: translateY(var(--dy, 0)) rotate(var(--rot, 0)) scale(1.9); }
-}
-@keyframes ptrC-scatter {
-  to { opacity: 0; transform: translate(calc(-240px * var(--d)), calc(var(--dy) * 5)) rotate(calc(var(--rot) * 5)); }
-}
-@keyframes ptrC-fade { to { opacity: 0; } }
-
-/* ---------- D · Retino ---------- */
-.ptrD-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   .ptr *,
-  .ptr *::before { animation-duration: 1ms !important; }
+  .ptr *::before { animation-duration: 1ms !important; animation-delay: 0s !important; }
+  .ptr-dots { display: none; }
 }

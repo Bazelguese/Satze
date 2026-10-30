@@ -1,31 +1,33 @@
 // ============================================================
 // PersonaTransition.jsx — cortina tra le schermate del menù, in stile Persona
 // ============================================================
-// Quattro "aspetti" della stessa cortina, tutti sullo stesso orologio:
-//   0 → COVER_MS     la cortina copre lo schermo (lo scambio avviene sotto)
-//   COVER → REVEAL   cortina piena con il nome della schermata
-//   REVEAL_MS → END  la cortina si ritira e lascia vedere la nuova schermata
+// Lastra inclinata e retino, da soli o insieme, sullo stesso orologio
+// (in millisecondi a tempo 1, tutti moltiplicati per `tempo`):
+//   0 → COVER       la cortina copre lo schermo (lo scambio avviene sotto)
+//   COVER → REVEAL  cortina piena con il nome della schermata
+//   REVEAL → END    la cortina si ritira e lascia vedere la nuova schermata
 // Il colore viene dalla voce di menù scelta; `dir` = 'back' rovescia il verso.
 // ============================================================
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './persona-transitions.css';
 
-export const TRANSITION_LOOKS = ['lastra', 'macchia', 'ritaglio', 'retino'];
+export const TRANSITION_LOOKS = ['onda', 'lastraRetino', 'lastra', 'retino'];
 
-export const PTR_COVER_MS = 300;
-export const PTR_REVEAL_MS = 520;
-export const PTR_END_MS = 900;
+const COVER = 300;
+const REVEAL = 520;
+const END = 900;
+
+/** Tempi della cortina, in ms, per un dato rallentamento (1 = il più svelto). */
+export function ptrTiming(tempo = 1) {
+  return { cover: COVER * tempo, reveal: REVEAL * tempo, end: END * tempo };
+}
 
 const W = 1920;
 const H = 1080;
 const VOID = '#09080d';
-const CREAM = '#f5f3eb';
-
-function rnd(seed) {
-  const x = Math.sin(seed * 9301 + 49297) * 233280;
-  return x - Math.floor(x);
-}
+/** Inclinazione della lastra (skewX -14deg): le righe "/" del fronte. */
+const SLANT = Math.tan((14 * Math.PI) / 180);
 
 /** Da coordinate dello schermo a quelle del canvas 1920×1080 (il gioco è scalato). */
 function toCanvas(origin, box) {
@@ -35,192 +37,163 @@ function toCanvas(origin, box) {
   return { x: ((origin.x - r.left) * W) / r.width, y: ((origin.y - r.top) * H) / r.height };
 }
 
-function Title({ label, kicker, className = '' }) {
+const clamp01 = (v) => (v <= 0 ? 0 : v >= 1 ? 1 : v);
+const easeOut = (t) => 1 - (1 - clamp01(t)) ** 2;
+const easeInOut = (t) => {
+  const x = clamp01(t);
+  return x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+};
+
+function Title({ label, kicker }) {
   if (!label) return null;
   return (
-    <div className={`ptr-title ${className}`} aria-hidden="true">
-      {kicker ? <span className="k">{kicker}</span> : null}
-      <b className={label.length > 16 ? 'long' : ''}>{label}</b>
-    </div>
-  );
-}
-
-// ---------- A · Lastra: la lastra inclinata della scelta armata ----------
-function LookLastra({ label, kicker }) {
-  return (
     <>
-      <div className="ptrA-slab" />
-      {label ? <div className="ptrA-echo" aria-hidden="true">{label}</div> : null}
-      <Title label={label} kicker={kicker} className="ptrA-title" />
-    </>
-  );
-}
-
-// ---------- B · Macchia: la macchia del menù invade lo schermo ----------
-function makeSplash(seed) {
-  const n = 30 + Math.floor(rnd(seed) * 8);
-  const pts = [];
-  for (let i = 0; i < n; i += 1) {
-    const a = (i / n) * Math.PI * 2;
-    const spike = rnd(seed + 10 + i) > 0.86;
-    const r = spike ? 1.06 + rnd(seed + 40 + i) * 0.2 : 0.86 + rnd(seed + 80 + i) * 0.14;
-    pts.push([150 + Math.cos(a) * 146 * r, 90 + Math.sin(a) * 80 * r]);
-  }
-  const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
-  const f = (v) => v.toFixed(1);
-  let d = `M ${mid(pts[n - 1], pts[0]).map(f).join(' ')}`;
-  for (let i = 0; i < n; i += 1) {
-    const m = mid(pts[i], pts[(i + 1) % n]);
-    d += ` Q ${f(pts[i][0])} ${f(pts[i][1])} ${f(m[0])} ${f(m[1])}`;
-  }
-  return d;
-}
-
-function Blob({ d, x, y, rot, className }) {
-  return (
-    <div className={`ptrB-blob ${className}`} style={{ left: x, top: y, '--r': `${rot}deg` }}>
-      <svg viewBox="0 0 300 180" preserveAspectRatio="none">
-        <path d={d} />
-      </svg>
-    </div>
-  );
-}
-
-function LookMacchia({ label, kicker, origin, dir, seed }) {
-  const shapes = useMemo(() => [makeSplash(seed), makeSplash(seed + 7), makeSplash(seed + 13), makeSplash(seed + 21)], [seed]);
-  const from = origin ?? (dir === 'back' ? { x: 360, y: 540 } : { x: 1500, y: 560 });
-  // la macchia si ritira verso l'angolo opposto a quello da cui è partita
-  const to = { x: from.x > W / 2 ? 260 : 1660, y: from.y > H / 2 ? 180 : 900 };
-  const rot = -6 + rnd(seed + 3) * 10;
-  return (
-    <>
-      <Blob d={shapes[0]} x={from.x} y={from.y} rot={rot} className="ptrB-grow ptrB-acc" />
-      <Blob d={shapes[1]} x={from.x} y={from.y} rot={rot + 8} className="ptrB-grow ptrB-void" />
-      <Blob d={shapes[2]} x={to.x} y={to.y} rot={rot} className="ptrB-shrink ptrB-acc" />
-      <Blob d={shapes[3]} x={to.x} y={to.y} rot={rot - 6} className="ptrB-shrink ptrB-void" />
-      <Title label={label} kicker={kicker} className="ptrB-title" />
-    </>
-  );
-}
-
-// ---------- C · Ritaglio: strisce tagliate e lettere da biglietto ----------
-const STRIPS = [
-  { c: VOID, h: 20 },
-  { c: 'var(--acc)', h: 7 },
-  { c: VOID, h: 31 },
-  { c: CREAM, h: 3 },
-  { c: VOID, h: 27 },
-  { c: 'var(--acc)', h: 12 },
-];
-const LETTER_STYLES = ['l-cream', 'l-void', 'l-acc', 'l-cream', 'l-outline', 'l-void'];
-
-function LookRitaglio({ label, kicker, seed }) {
-  const letters = useMemo(
-    () =>
-      [...(label || '')].map((ch, i) => ({
-        ch,
-        cls: ch === ' ' ? 'l-gap' : LETTER_STYLES[Math.floor(rnd(seed + i * 3) * LETTER_STYLES.length)],
-        rot: (rnd(seed + i * 5) - 0.5) * 14,
-        dy: (rnd(seed + i * 7) - 0.5) * 18,
-        big: rnd(seed + i * 11) > 0.72,
-        serif: rnd(seed + i * 13) > 0.6,
-      })),
-    [label, seed]
-  );
-  return (
-    <>
-      <div className="ptrC-strips">
-        {STRIPS.map((s, i) => (
-          <span key={i} style={{ background: s.c, flexGrow: s.h, '--i': i, '--s': i % 2 ? 1 : -1 }} />
-        ))}
+      <div className="ptr-echo" aria-hidden="true">{label}</div>
+      <div className="ptr-title" aria-hidden="true">
+        {kicker ? <span className="k">{kicker}</span> : null}
+        <b className={label.length > 16 ? 'long' : ''}>{label}</b>
       </div>
-      {label ? (
-        <div className="ptrC-title" aria-hidden="true">
-          {kicker ? <span className="k">{kicker}</span> : null}
-          <div className={`w ${letters.length > 16 ? 'long' : ''}`}>
-            {letters.map((l, i) => (
-              <i
-                key={i}
-                className={`${l.cls}${l.big ? ' big' : ''}${l.serif ? ' serif' : ''}`}
-                style={{ '--rot': `${l.rot.toFixed(1)}deg`, '--dy': `${l.dy.toFixed(0)}px`, '--i': i }}
-              >
-                {l.ch}
-              </i>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-// ---------- D · Retino: un'onda di punti che riempie e svuota ----------
-function LookRetino({ label, kicker, origin, dir, accent, lite }) {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    const cv = canvasRef.current;
-    const ctx = cv?.getContext('2d');
-    if (!ctx) return undefined;
-    const step = lite ? 36 : 26;
-    const rMax = step * 0.74;
-    const from = origin ?? (dir === 'back' ? { x: 0, y: H } : { x: W, y: 0 });
-    const far = Math.max(
-      Math.hypot(from.x, from.y),
-      Math.hypot(W - from.x, from.y),
-      Math.hypot(from.x, H - from.y),
-      Math.hypot(W - from.x, H - from.y)
-    );
-    const dots = [];
-    for (let y = step / 2; y < H + step; y += step) {
-      const odd = Math.round(y / step) % 2;
-      for (let x = odd ? step : step / 2; x < W + step; x += step) {
-        dots.push([x, y, Math.hypot(x - from.x, y - from.y) / far]);
-      }
-    }
-    const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 1 - (1 - t) * (1 - t));
-    // fronte d'onda: ogni punto cresce in GROW ms, il ritardo dipende dalla distanza
-    const SPREAD_IN = 170;
-    const GROW = 120;
-    const SPREAD_OUT = 210;
-    const SHRINK = 150;
-    const start = performance.now();
-    let raf = 0;
-    const draw = (now) => {
-      const t = now - start;
-      ctx.clearRect(0, 0, W, H);
-      const layer = (color, lag) => {
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        for (let i = 0; i < dots.length; i += 1) {
-          const [x, y, d] = dots[i];
-          let k;
-          if (t < PTR_REVEAL_MS) k = ease((t - lag - d * SPREAD_IN) / GROW);
-          else k = 1 - ease((t - PTR_REVEAL_MS - (lag ? 0 : 50) - d * SPREAD_OUT) / SHRINK);
-          if (k <= 0.02) continue;
-          const r = rMax * k;
-          ctx.moveTo(x + r, y);
-          ctx.arc(x, y, r, 0, Math.PI * 2);
-        }
-        ctx.fill();
-      };
-      layer(accent, 0);
-      layer(VOID, 45);
-      if (t < PTR_END_MS) raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [origin, dir, accent, lite]);
-  return (
-    <>
-      <canvas ref={canvasRef} className="ptrD-canvas" width={W} height={H} />
-      <Title label={label} kicker={kicker} className="ptrD-title" />
     </>
   );
 }
 
 /**
+ * Campo di punti di retino disegnato su canvas. `size(x, y, t)` restituisce,
+ * per ogni strato, quanto è cresciuto il punto (0 → 1) al tempo t in ms.
+ */
+function DotField({ layers, stepPx, fill, tempo }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return undefined;
+    const rMax = stepPx * fill;
+    const dots = [];
+    for (let y = stepPx / 2, row = 0; y < H + stepPx; y += stepPx, row += 1) {
+      for (let x = row % 2 ? stepPx : stepPx / 2; x < W + stepPx; x += stepPx) dots.push([x, y]);
+    }
+    const start = performance.now();
+    let raf = 0;
+    const draw = (now) => {
+      // l'orologio dei punti è quello a tempo 1: così le formule restano leggibili
+      const t = (now - start) / tempo;
+      ctx.clearRect(0, 0, W, H);
+      for (const layer of layers) {
+        ctx.fillStyle = layer.color;
+        ctx.beginPath();
+        for (let i = 0; i < dots.length; i += 1) {
+          const [x, y] = dots[i];
+          const k = layer.size(x, y, t);
+          if (k <= 0.02) continue;
+          const r = rMax * Math.min(1, k);
+          ctx.moveTo(x + r, y);
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+      if (t < END) raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [layers, stepPx, fill, tempo]);
+  return <canvas ref={canvasRef} className="ptr-dots" width={W} height={H} />;
+}
+
+/**
+ * Onda radiale dalla voce scelta: cresce entro la copertura, si svuota da
+ * `outAt` (ms) con la stessa onda; finisce comunque entro END.
+ */
+function radialLayers({ origin, dir, accent, withVoid, outAt }) {
+  const from = origin ?? (dir === 'back' ? { x: 0, y: H } : { x: W, y: 0 });
+  const far = Math.max(
+    Math.hypot(from.x, from.y),
+    Math.hypot(W - from.x, from.y),
+    Math.hypot(from.x, H - from.y),
+    Math.hypot(W - from.x, H - from.y)
+  );
+  const outSpan = END - outAt - 50;
+  const make = (inLag, outLag) => (x, y, t) => {
+    const d = Math.hypot(x - from.x, y - from.y) / far;
+    if (t < outAt + outLag) return easeOut((t - inLag - d * 170) / 120);
+    return 1 - easeOut((t - outAt - outLag - d * outSpan * 0.6) / (outSpan * 0.4));
+  };
+  const layers = [{ color: accent, size: make(0, withVoid ? 50 : 0) }];
+  if (withVoid) layers.push({ color: VOID, size: make(45, 0) });
+  return layers;
+}
+
+/** Fronte inclinato come la lastra: i bordi sono fatti di punti che crescono. */
+function slantLayers({ dir, accent }) {
+  const BAND = 380;
+  const GAP = 150;
+  const uMin = -SLANT * (H / 2);
+  const uMax = W + SLANT * (H / 2);
+  // coordinata lungo il verso di marcia (avanti: da destra a sinistra)
+  const along = dir === 'back' ? (x, y) => x + SLANT * (y - H / 2) : (x, y) => W - (x + SLANT * (y - H / 2));
+  const lo = W - uMax;
+  const hi = W - uMin;
+  const make = (lag) => (x, y, t) => {
+    const u = along(x, y);
+    if (t < REVEAL) {
+      // il fronte avanza: dietro di lui i punti sono pieni
+      const front = lo - BAND - GAP + (hi - lo + 2 * BAND + 2 * GAP) * easeInOut(t / COVER);
+      return (front - lag - u) / BAND;
+    }
+    const back = lo - BAND - GAP + (hi - lo + 2 * BAND + 2 * GAP) * easeInOut((t - REVEAL) / (END - REVEAL - 40));
+    return 1 - (back + lag - u) / BAND;
+  };
+  return [
+    { color: accent, size: make(0) },
+    { color: VOID, size: make(GAP) },
+  ];
+}
+
+function LookLastra({ label, kicker }) {
+  return (
+    <>
+      <div className="ptr-slab" />
+      <Title label={label} kicker={kicker} />
+    </>
+  );
+}
+
+function LookRetino({ label, kicker, origin, dir, accent, lite, tempo }) {
+  const [layers] = useState(() => radialLayers({ origin, dir, accent, withVoid: true, outAt: REVEAL }));
+  return (
+    <>
+      <DotField layers={layers} stepPx={lite ? 36 : 26} fill={0.74} tempo={tempo} />
+      <Title label={label} kicker={kicker} />
+    </>
+  );
+}
+
+/** Onda di retino dalla voce, la lastra arriva sopra; all'uscita la lastra se ne va e i punti si svuotano. */
+function LookOnda({ label, kicker, origin, dir, accent, lite, tempo }) {
+  const [layers] = useState(() => radialLayers({ origin, dir, accent, withVoid: false, outAt: REVEAL + 120 }));
+  return (
+    <>
+      <DotField layers={layers} stepPx={lite ? 34 : 24} fill={0.36} tempo={tempo} />
+      <div className="ptr-slab" />
+      <Title label={label} kicker={kicker} />
+    </>
+  );
+}
+
+/** La lastra stessa, con i bordi che sfumano in punti di retino. */
+function LookLastraRetino({ label, kicker, dir, accent, lite, tempo }) {
+  const [layers] = useState(() => slantLayers({ dir, accent }));
+  return (
+    <>
+      <DotField layers={layers} stepPx={lite ? 34 : 24} fill={0.74} tempo={tempo} />
+      <Title label={label} kicker={kicker} />
+    </>
+  );
+}
+
+const LOOKS = { onda: LookOnda, lastraRetino: LookLastraRetino, lastra: LookLastra, retino: LookRetino };
+
+/**
  * Cortina disegnata sopra la scena. `run` arriva dal provider:
- * { look, label, kicker, accent, dir, origin, lite, runId }.
+ * { look, tempo, label, kicker, accent, dir, origin, lite, runId }.
  */
 export function PersonaTransitionOverlay({ run }) {
   const boxRef = useRef(null);
@@ -231,29 +204,26 @@ export function PersonaTransitionOverlay({ run }) {
     setOrigin(toCanvas(run.origin, boxRef.current));
   }, [run.origin]);
 
-  const common = {
-    label: run.label,
-    kicker: run.kicker,
-    dir: run.dir,
-    seed: (run.runId * 37) % 1000,
-    accent: run.accent,
-    lite: run.lite,
-  };
-
-  let body = null;
-  if (origin === undefined) body = null;
-  else if (run.look === 'macchia') body = <LookMacchia {...common} origin={origin} />;
-  else if (run.look === 'ritaglio') body = <LookRitaglio {...common} />;
-  else if (run.look === 'retino') body = <LookRetino {...common} origin={origin} />;
-  else body = <LookLastra {...common} />;
+  const Look = LOOKS[run.look] ?? LookOnda;
+  const tempo = run.tempo ?? 1;
 
   return (
     <div
       ref={boxRef}
       className={`ptr ptr--${run.look} ptr--${run.dir === 'back' ? 'back' : 'fwd'}${run.lite ? ' ptr--lite' : ''}`}
-      style={{ '--acc': run.accent, '--d': run.dir === 'back' ? -1 : 1 }}
+      style={{ '--acc': run.accent, '--d': run.dir === 'back' ? -1 : 1, '--k': tempo }}
     >
-      {body}
+      {origin !== undefined ? (
+        <Look
+          label={run.label}
+          kicker={run.kicker}
+          dir={run.dir}
+          accent={run.accent}
+          lite={run.lite}
+          tempo={tempo}
+          origin={origin}
+        />
+      ) : null}
     </div>
   );
 }

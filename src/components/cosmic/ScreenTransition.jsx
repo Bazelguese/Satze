@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 import './cosmic-transitions.css';
-import { PersonaTransitionOverlay, PTR_COVER_MS, PTR_REVEAL_MS, PTR_END_MS } from './PersonaTransition.jsx';
+import { PersonaTransitionOverlay, ptrTiming } from './PersonaTransition.jsx';
 
 const PHASE_LABELS = {
   menu: 'MENU PRINCIPALE',
@@ -138,7 +138,11 @@ export function useTransitionedSetGamePhase(setGamePhase, currentPhase) {
   );
 }
 
-export function CosmicTransitionProvider({ children, look = 'lastra' }) {
+/** Cortina scelta e suo rallentamento (1 = 0,9 s in tutto). */
+const DEFAULT_LOOK = 'onda';
+const DEFAULT_TEMPO = 1.6;
+
+export function CosmicTransitionProvider({ children, look = DEFAULT_LOOK, tempo = DEFAULT_TEMPO }) {
   const [transition, setTransition] = useState(null);
   const [sceneSwapped, setSceneSwapped] = useState(false);
   /** Cortina Persona che si sta aprendo: la nuova schermata può animarsi. */
@@ -173,10 +177,11 @@ export function CosmicTransitionProvider({ children, look = 'lastra' }) {
       runIdRef.current += 1;
       const runId = runIdRef.current;
       const persona = variant === 'cosmic';
-      setTransition({ label, kicker, variant, dir, accent, origin, look, persona, lite: vfxLite, runId, exiting: false });
-      const swapMs = persona ? PTR_COVER_MS : SWAP_MS;
-      const heavyMs = persona ? PTR_COVER_MS + 40 : HEAVY_MS;
-      const totalMs = persona ? PTR_END_MS + 20 : TOTAL_MS;
+      setTransition({ label, kicker, variant, dir, accent, origin, look, tempo, persona, lite: vfxLite, runId, exiting: false });
+      const pt = ptrTiming(tempo);
+      const swapMs = persona ? pt.cover : SWAP_MS;
+      const heavyMs = persona ? pt.cover + 40 : HEAVY_MS;
+      const totalMs = persona ? pt.end + 20 : TOTAL_MS;
 
       timersRef.current.push(
         setTimeout(() => {
@@ -196,7 +201,7 @@ export function CosmicTransitionProvider({ children, look = 'lastra' }) {
       );
 
       if (persona) {
-        timersRef.current.push(setTimeout(() => setCurtainOpening(true), PTR_REVEAL_MS));
+        timersRef.current.push(setTimeout(() => setCurtainOpening(true), pt.reveal));
       } else {
         timersRef.current.push(
           setTimeout(() => {
@@ -215,7 +220,7 @@ export function CosmicTransitionProvider({ children, look = 'lastra' }) {
         }, totalMs)
       );
     },
-    [clearTimers, vfxLite, look]
+    [clearTimers, vfxLite, look, tempo]
   );
 
   useEffect(
