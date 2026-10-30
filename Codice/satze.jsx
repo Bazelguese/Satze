@@ -4432,7 +4432,8 @@ export default function SatzeGame() {
         {!showDeckManager && (
           <SatzeMenuPrototype
             menuItems={menuItemsResolved}
-            marqueeText={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
+            buildLabel={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
+            inputLocked={isTutorialSelectorOpen || tutorial.isActive}
           />
         )}
 
