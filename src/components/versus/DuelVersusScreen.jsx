@@ -20,7 +20,7 @@ import { getEminenceArtUrl } from '../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { EMINENCE_ARMY_ORDER } from '../../data/eminences.js';
-import { VersusRoulette } from './VersusRoulette.jsx';
+import { VersusRoulette, buildRouletteItems } from './VersusRoulette.jsx';
 import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
 import { pickDistinctCardBackPair } from '../../utils/cardBackPicker.js';
 import { buildVersusIdentity } from './versusMatchData.js';
@@ -284,28 +284,87 @@ export function DuelVersusScreen({
   const playerBg = halfBackground(playerEntry, playerEm, layout);
   const enemyBg = halfBackground(enemyEntry, enemyEm, layout);
   // La scatola vola dal punto in cui era nella scelta esercito al suo posto nel VS.
+  // Il volo parte solo quando i fotogrammi scorrono regolari: se il montaggio del VS
+  // blocca il disegno, la scatola resta ferma dov'era invece di saltare a metà volo.
+  const onFlightDoneRef = useRef(intro?.onFlightDone);
+  onFlightDoneRef.current = intro?.onFlightDone;
   useLayoutEffect(() => {
+    const done = () => onFlightDoneRef.current?.();
     const root = rootRef.current;
     const wrap = root?.querySelector('.vsx-side--r .vsx-ticket');
     const tk = wrap?.querySelector('.dsk-tk');
-    if (!handoff?.rect || !wrap || !tk || typeof wrap.animate !== 'function') return;
+    const cube = wrap?.querySelector('.dcv-box-cube');
+    if (!handoff?.rect || !wrap || !tk || typeof wrap.animate !== 'function') {
+      done();
+      return undefined;
+    }
     const fin = tk.getBoundingClientRect();
     const k = root.getBoundingClientRect().width / 1920 || 1;
     const o = handoff.rect;
     const dx = (o.left + o.width / 2 - (fin.left + fin.width / 2)) / k;
     const dy = (o.top + o.height / 2 - (fin.top + fin.height / 2)) / k;
     const sc = fin.width ? o.width / fin.width : 1;
-    wrap.animate(
-      [{ transform: `translate(${dx}px, ${dy}px) scale(${sc})` }, { transform: 'none' }],
-      { duration: 900, delay: 180, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'backwards' }
+    const FLIGHT_MS = 1150;
+    // volo ad arco: si stacca, sale girandosi verso il centro e scende al suo posto
+    const fly = wrap.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, easing: 'cubic-bezier(.5,0,.6,1)' },
+        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 140}px) scale(${(sc + 1) / 2 + 0.08}) rotate(-4deg)`, offset: 0.45, easing: 'cubic-bezier(.3,0,.2,1)' },
+        { transform: 'translate(0, 8px) scale(1.02)', offset: 0.88 },
+        { transform: 'none' },
+      ],
+      { duration: FLIGHT_MS, fill: 'both' }
     );
+    // e intanto si gira dalla posa della scelta esercito a quella del VS (dorso verso il centro)
+    const endPose = cube ? getComputedStyle(cube).transform : null;
+    const turn = cube && endPose && endPose !== 'none'
+      ? cube.animate(
+          [
+            { transform: 'translate(-50%, -50%) rotateX(-7deg) rotateY(-32deg)' },
+            { transform: endPose },
+          ],
+          { duration: FLIGHT_MS, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'backwards' }
+        )
+      : null;
+    fly.pause();
+    turn?.pause();
+    let raf = 0;
+    let prev = 0;
+    let calm = 0;
+    let started = false;
+    const t0 = performance.now();
+    const wait = (now) => {
+      calm = prev && now - prev < 40 ? calm + 1 : 0;
+      prev = now;
+      // tre fotogrammi regolari di fila (o al massimo 1,5 s di attesa): si parte
+      if (calm >= 3 || now - t0 > 1500) {
+        started = true;
+        fly.play();
+        turn?.play();
+        fly.finished.then(() => { fly.cancel(); done(); }, () => {});
+        return;
+      }
+      raf = requestAnimationFrame(wait);
+    };
+    raf = requestAnimationFrame(wait);
+    return () => {
+      // (StrictMode rimonta: niente animazioni ferme lasciate sulla scatola)
+      cancelAnimationFrame(raf);
+      if (!started) {
+        fly.cancel();
+        turn?.cancel();
+      }
+    };
   }, [handoff]);
 
-  const armyRing = useMemo(() => {
-    const list = EMINENCE_ARMY_ORDER.filter((a) => ARMY_COLORS[a]);
-    const target = enemyEntry.armies?.[0] || enemyDeck?.army;
-    return target && !list.includes(target) ? [...list, target] : list;
-  }, [enemyEntry, enemyDeck]);
+  // voci del sorteggio: le armate, o gli eserciti dell'armata nemica se l'ha scelta il giocatore
+  const deckArmy = intro?.deckArmy || null;
+  const reel = useMemo(() => {
+    const armies = EMINENCE_ARMY_ORDER.filter((a) => ARMY_COLORS[a]);
+    const enemyArmy = enemyEntry.armies?.[0] || enemyDeck?.army || null;
+    if (enemyArmy && !armies.includes(enemyArmy)) armies.push(enemyArmy);
+    return buildRouletteItems({ armies, enemyArmy, enemyDeckKey: enemyDeck?.deckKey || null, deckArmy });
+  }, [enemyEntry, enemyDeck, deckArmy]);
 
   const fxClass = [
     intro && 'vsx-has-intro',
@@ -328,6 +387,16 @@ export function DuelVersusScreen({
       <DeckSelectStyles />
 
       {/* Slot: avversario sempre a sinistra, chi guarda sempre a destra (anche online, ognuno dal suo client). */}
+      {/* il sorteggio sta sotto la metà nemica: quando parte il VS la lastra ci passa sopra */}
+      {intro ? (
+        <VersusRoulette
+          items={reel.items}
+          targetKey={reel.targetKey}
+          mode={reel.mode}
+          stopping={intro.stage !== 'spin'}
+          leaving={intro.stage === 'reveal'}
+        />
+      ) : null}
       <div className="vsx-half vsx-half--l">
         <div className="vsx-half-bg" style={{ backgroundImage: enemyBg ? `url('${enemyBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
@@ -339,15 +408,6 @@ export function DuelVersusScreen({
         <div className="vsx-half-glow" />
       </div>
       <div className="vsx-seam" aria-hidden />
-
-      {intro ? (
-        <VersusRoulette
-          armies={armyRing}
-          target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
-          stopping={intro.stage !== 'spin'}
-          leaving={intro.stage === 'reveal'}
-        />
-      ) : null}
 
       <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} backImage={enemyBack} />
       <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} backImage={playerBack} />
