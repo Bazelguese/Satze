@@ -137,7 +137,7 @@ function getStatModDelta(ability, mode) {
   }
 }
 
-function evaluateCardBalance(card) {
+export function evaluateCardBalance(card) {
   const basePot = Number(card.power ?? card.pot ?? 0);
   const baseDan = Number(card.damage ?? card.dan ?? 0);
   const league = Number(card.league ?? card.lega ?? 1) || 1;
