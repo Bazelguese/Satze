@@ -153,8 +153,24 @@ export function bindAudioUnlock() {
 }
 
 /**
+ * Come playSound, ma dopo `delayMs` (per allineare il suono a un momento dell'animazione).
  * @param {string} soundId
- * @param {{ force?: boolean }} [opts]
+ * @param {number} delayMs
+ * @param {{ force?: boolean, rate?: number }} [opts]
+ * @returns {() => void} annulla il suono se non è ancora partito
+ */
+export function scheduleSound(soundId, delayMs, opts = {}) {
+  if (!(delayMs > 0) || typeof window === 'undefined') {
+    playSound(soundId, opts);
+    return () => {};
+  }
+  const t = window.setTimeout(() => playSound(soundId, opts), delayMs);
+  return () => window.clearTimeout(t);
+}
+
+/**
+ * @param {string} soundId
+ * @param {{ force?: boolean, rate?: number }} [opts] rate: velocità/intonazione (1 = originale)
  * @returns {boolean} true se ha tentato la riproduzione
  */
 export function playSound(soundId, opts = {}) {
@@ -181,6 +197,12 @@ export function playSound(soundId, opts = {}) {
     el.pause();
     el.muted = false;
     el.volume = Math.min(1, Math.max(0, volume));
+    // il pool riusa gli elementi: la velocità va sempre reimpostata
+    const rate = Number.isFinite(opts.rate) && opts.rate > 0 ? opts.rate : 1;
+    el.preservesPitch = false;
+    // cambiare src riporta playbackRate a defaultPlaybackRate: si impostano entrambi
+    el.defaultPlaybackRate = rate;
+    el.playbackRate = rate;
     // Confronta path logico: el.src del browser è sempre assoluto.
     const current = el.getAttribute('src') || '';
     if (current !== src) {

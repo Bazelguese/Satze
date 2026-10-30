@@ -3,10 +3,13 @@
  * Ingresso → hold → uscita (resta montato durante l'exit).
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { playPerfect } from '../../audio/gameSounds.js';
 
 const ENTER_MS = 720;
 const EXIT_MS = 520;
 const DEFAULT_HOLD_MS = 1700;
+/** La scritta si posa al 42% dell'ingresso (satzePerfectStampIn): lì parte il suono. */
+const LAND_MS = 300;
 
 /** Bianco ghiaccio + accento magenta (stesso per player/IA). */
 const PERFECT_ACCENT = '#ff3b6b';
@@ -59,6 +62,10 @@ export function PerfectFocusStamp({
     }
 
     setPhaseSafe('in');
+    const toLand = setTimeout(() => {
+      if (runIdRef.current !== runId) return;
+      playPerfect();
+    }, LAND_MS);
     const toHold = setTimeout(() => {
       if (runIdRef.current !== runId) return;
       setPhaseSafe('hold');
@@ -71,7 +78,7 @@ export function PerfectFocusStamp({
       if (runIdRef.current !== runId) return;
       setPhaseSafe('idle');
     }, ENTER_MS + holdMs + EXIT_MS);
-    timersRef.current.push(toHold, toOut, toIdle);
+    timersRef.current.push(toLand, toHold, toOut, toIdle);
     return undefined;
   }, [active, holdMs]);
 

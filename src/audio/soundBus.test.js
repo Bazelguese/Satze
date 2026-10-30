@@ -15,13 +15,14 @@ import {
   shouldPlayCinematicBeat,
   __resetSoundBusForTests,
 } from './soundBus.js';
-import { playDuelPhaseBeat, playPhaseTransition } from './gameSounds.js';
+import { clashContactMs, duelPhaseCues, playDuelPhaseBeat, playPhaseTransition } from './gameSounds.js';
 
 test('catalog: id cinematici e fallback', () => {
   assert.equal(cinematicSoundId('LINK_AGENT', 'launch'), 'cinematic.LINK_AGENT.launch');
   assert.match(resolveSoundSrc(UI_SOUND.CLICK), /audio\/sfx\/ui-click\.wav$/);
-  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH), /audio\/sfx\/clash\.wav$/);
-  assert.match(resolveSoundSrc(GAME_SOUND.FC_TICK), /audio\/sfx\/fc-tick\.wav$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH), /audio\/sfx\/match\/clash\.mp3$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.FC_TICK), /audio\/sfx\/match\/coin\.mp3$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_COIN), /audio\/sfx\/match\/coin\.mp3$/);
   assert.match(resolveSoundSrc('cinematic.HP_TICK.impact'), /audio\/sfx\/impact\.wav$/);
   assert.equal(resolveSoundSrc('nope'), null);
 });
@@ -45,6 +46,23 @@ test('gameSounds: mapping fasi duello', () => {
   assert.equal(typeof playPhaseTransition, 'function');
   // In node non c'è Audio: devono solo non lanciare
   assert.equal(playPhaseTransition('selectArmy', 'menu'), false);
-  assert.equal(playDuelPhaseBeat(4, { winner: 'player' }), false);
-  assert.equal(playDuelPhaseBeat(5, { winner: 'player' }), false);
+  assert.equal(typeof playDuelPhaseBeat(4, { winner: 'player' }), 'function');
+  assert.equal(typeof playDuelPhaseBeat(5, { winner: 'player' }), 'function');
+});
+
+test('gameSounds: la conferma resta sola, niente suoni di fase prima dello scontro', () => {
+  assert.equal(playPhaseTransition('battle', 'selectAgent'), false);
+  for (const phase of [0, 1, 2, 3, 5, 6]) assert.deepEqual(duelPhaseCues(phase, { winner: 'player' }), []);
+});
+
+test('gameSounds: scontro sul contatto delle carte, esito subito dopo (anche senza fase 5)', () => {
+  const [clash, outcome] = duelPhaseCues(4, { winner: 'player' });
+  assert.equal(clash.id, GAME_SOUND.DUEL_CLASH);
+  assert.equal(clash.atMs, clashContactMs({ winner: 'player' }));
+  // fase 4 dura almeno 2,6 s: il contatto arriva oltre metà
+  assert.ok(clash.atMs >= 1300, `contatto a ${clash.atMs} ms`);
+  assert.equal(outcome.id, GAME_SOUND.DUEL_WIN);
+  assert.ok(outcome.atMs > clash.atMs);
+  assert.equal(duelPhaseCues(4, { winner: 'enemy' })[1].id, GAME_SOUND.DUEL_LOSE);
+  assert.equal(duelPhaseCues(4, { winner: 'draw' })[1].id, GAME_SOUND.DUEL_DRAW);
 });
