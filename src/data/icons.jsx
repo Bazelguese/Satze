@@ -111,7 +111,7 @@ export const ARMY_ICONS = {
   'Ratti della Megera': iconPublic('ratti-nobg.webp'),
   'Patto degli Indocili': `${iconPublic('patto-indocili-icon.webp')}?v=2`,
   'Khemet': iconPublic('Khetan-nobg.webp'),
-  'Apex': iconPublic('Apex-nobg.png'),
+  'Apex': iconPublic('apex-nobg.png'),
   'Mascarada': `${iconPublic('Mascarada-nobg.png')}?v=2`,
   'Concordia di Caelion': iconPublic('concordia-nobg.webp'),
 };

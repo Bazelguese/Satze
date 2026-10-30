@@ -75,6 +75,8 @@ export function GalleryPersonaShell({
   onRailPrev,
   onRailNext,
   onReplay,
+  onConfirm,
+  backLabel = 'MENU',
 }) {
   const tabCounts = {
     agents: agentCount,
@@ -86,7 +88,7 @@ export function GalleryPersonaShell({
 
   // Ref sempre aggiornato: un solo listener per tutta la vita del guscio.
   const handlersRef = useRef({});
-  handlersRef.current = { onPrev, onNext, onRailPrev, onRailNext, onReplay, onBack, onGalleryTabChange, galleryTab, tabs };
+  handlersRef.current = { onPrev, onNext, onRailPrev, onRailNext, onReplay, onConfirm, onBack, onGalleryTabChange, galleryTab, tabs };
 
   useEffect(() => {
     const onKey = (e) => {
@@ -103,6 +105,7 @@ export function GalleryPersonaShell({
         case 'ArrowLeft': step(h.onRailPrev); break;
         case 'ArrowRight': step(h.onRailNext); break;
         case 'r': case 'R': step(h.onReplay); break;
+        case 'Enter': step(h.onConfirm); break;
         case 'Escape': step(h.onBack); break;
         case 'q': case 'Q': case 'e': case 'E': {
           if (!h.onGalleryTabChange || h.tabs.length < 2) return;
@@ -135,7 +138,7 @@ export function GalleryPersonaShell({
       <header className="gp-top">
         <button type="button" className="gp-back" onClick={onBack}>
           <span className="gp-back-key">ESC</span>
-          <span className="gp-back-lbl">MENU</span>
+          <span className="gp-back-lbl">{backLabel}</span>
         </button>
         {onGalleryTabChange && (
           <GalleryTabSwitcher
@@ -288,6 +291,8 @@ export function PersonaList({ items, activeIndex, onSelect, emptyLabel = 'Nessun
               <span className="gp-row-num">{it.number}</span>
               {it.thumb ? (
                 <span className="gp-row-thumb"><img src={it.thumb} alt="" loading="lazy" decoding="async" /></span>
+              ) : it.icon ? (
+                <span className="gp-row-icon"><img src={it.icon} alt="" loading="lazy" decoding="async" /></span>
               ) : it.glyph ? (
                 <span className="gp-row-glyph">{it.glyph}</span>
               ) : null}
@@ -540,6 +545,8 @@ function GalleryPersonaStyles() {
         clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%);
       }
       .gp-row-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block; }
+      .gp-row-icon { flex: none; width: 40px; height: 40px; display: grid; place-items: center; }
+      .gp-row-icon img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 0 4px rgba(0,0,0,0.8)); }
       .gp-row-glyph { flex: none; width: 30px; text-align: center; font-size: 20px; color: var(--c); }
       .gp-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
       .gp-row-title {
