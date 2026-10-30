@@ -34,11 +34,14 @@ import { CardReworkP4, CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
 import { getCardSprite } from '../../../utils';
 import { AGENT_IMAGES } from '../../../data/images';
+import { armSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 
 const SHOWCASE_SIZE = 5;
 const LAYOUTS = ['palco', 'ruota', 'mano'];
 const LAYOUT_LABEL = { palco: 'PALCO', ruota: 'RUOTA', mano: 'MANO' };
 const LAYOUT_KEY = 'satze_army_select_layout';
+/** Durata della chiusura a lastra prima di passare alla scelta esercito. */
+const EXIT_MS = 700;
 
 function readLayout() {
   try {
@@ -193,14 +196,12 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     playGame(GAME_SOUND.ARMY_CONFIRM);
     setDossier(false);
     setPhase('confirming');
+    // La lastra inclinata copre lo schermo (EXIT_MS); la scelta esercito riparte da lì.
     setTimeout(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          onSelect && onSelect(army.isMixed ? null : army.name);
-        });
-      });
-    }, 1660);
-  }, [army.isMixed, army.name, onSelect]);
+      armSlabHandoff(army.color, army.name);
+      onSelect && onSelect(army.isMixed ? null : army.name);
+    }, EXIT_MS);
+  }, [army.color, army.isMixed, army.name, onSelect]);
 
   const toggleDossier = useCallback(() => {
     if (stateRef.current.phase !== 'idle') return;
@@ -255,7 +256,11 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   const shared = { armies: ARMIES, idx, army, spin, goTo, onConfirm: confirmArmy, onDossier: toggleDossier };
 
   return (
-    <div ref={rootRef} className={`asx asx--${layout}`} style={{ '--accent': army.color }}>
+    <div
+      ref={rootRef}
+      className={`asx asx--${layout}${phase === 'confirming' ? ' is-leaving' : ''}`}
+      style={{ '--accent': army.color }}
+    >
       <div className="asx-bg" aria-hidden="true">
         {army.bg && <div className="asx-bg-art" key={army.id} style={{ backgroundImage: `url('${army.bg}')` }} />}
         <div className="asx-bg-tone" />
@@ -300,7 +305,12 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
       {layout === 'mano' && <LayoutMano {...shared} />}
 
       {dossier && <Dossier army={army} onClose={() => setDossier(false)} />}
-      {phase === 'confirming' && <ConfirmTransition army={army} />}
+      {phase === 'confirming' && (
+        <>
+          <div className="asx-exit-slab" style={{ '--from': layout === 'ruota' ? '920px' : '2100px' }} aria-hidden="true" />
+          <SlabHandoffTitle name={army.name} color={army.color} mode="in" />
+        </>
+      )}
 
       <ArmySelectStyles />
     </div>
@@ -456,16 +466,15 @@ const ZOOM_LEFT = 790;
 const rad = (deg) => (deg * Math.PI) / 180;
 const CARD_H = Math.round((CARD_W * 330) / 230);
 
-/**
- * Carta di punta sull'arco: posizione sull'arco ma carta dritta e su pixel
- * interi (una carta ruotata viene ricampionata e sembra sfocata).
- */
+/** Carta di punta sull'arco: centro su pixel interi, inclinata come il raggio. */
 function cardSlotStyle(offset) {
-  const a = rad(offset * CARDS_STEP);
+  const deg = offset * CARDS_STEP;
+  const a = rad(deg);
   return {
     left: Math.round(CARDS_R * Math.cos(a) - CARD_W / 2),
     top: Math.round(CARDS_R * Math.sin(a) - CARD_H / 2),
     zIndex: 10 - Math.abs(Math.round(offset)),
+    '--tilt': `${deg}deg`,
   };
 }
 const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
@@ -654,7 +663,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
               onMouseLeave={() => setHover((h) => (h === i ? null : h))}
             >
               <div className="asx-rw-card" style={{ '--delay': `${0.12 + Math.abs(i - mid) * 0.06}s` }}>
-                <ShowcaseCard card={c} width={CARD_W} />
+                <ArcCard card={c} />
               </div>
             </div>
           ))}
@@ -733,6 +742,20 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
             <span className="asx-sk">SCHIERA <kbd>↵</kbd></span>
           </button>
         </div>
+    </div>
+  );
+}
+
+/**
+ * Carta piccola dell'arco. Ridotta con `zoom` e non con transform: la carta
+ * viene impaginata alla taglia vera, così inclinata resta più nitida.
+ */
+function ArcCard({ card }) {
+  return (
+    <div className="asx-sc" style={{ width: CARD_W, height: CARD_H }}>
+      <div style={{ zoom: CARD_W / 230 }}>
+        <CardReworkP4 agent={card} showBonus preferThumb suppressAnimations />
+      </div>
     </div>
   );
 }
@@ -861,19 +884,6 @@ function Dossier({ army, onClose }) {
           {army.tips && (<><div className="asx-chip asx-chip--ink">NOTE TATTICHE</div><p>{army.tips}</p></>)}
         </div>
       </aside>
-    </div>
-  );
-}
-
-function ConfirmTransition({ army }) {
-  return (
-    <div className="asx-confirming">
-      <div className="asx-confirming-blades" aria-hidden="true"><span /><span /><span /></div>
-      <div className="asx-confirming-text">
-        <div className="eye">SIGILLO IMPRESSO</div>
-        <div className="nm">{army.name}</div>
-        <div className="next">Apertura → Scelta dell&apos;esercito</div>
-      </div>
     </div>
   );
 }
@@ -1144,7 +1154,8 @@ function ArmySelectStyles() {
       }
 
       .asx-rw-cards { z-index: 9; }
-      .asx-rw-card-slot { position: absolute; width: ${CARD_W}px; height: ${CARD_H}px; }
+      .asx-rw-card-slot { position: absolute; width: ${CARD_W}px; height: ${CARD_H}px; transform: rotate(var(--tilt)); transition: transform .25s cubic-bezier(.22,1,.36,1); }
+      .asx-rw-card-slot:hover { transform: rotate(0deg); }
       .asx-rw-card-slot:hover { z-index: 30 !important; }
       .asx-rw-card {
         transition: transform .22s cubic-bezier(.3,1.5,.5,1);
@@ -1303,25 +1314,20 @@ function ArmySelectStyles() {
       .asx-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 8px; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
       .asx-scroll p { margin: 0 0 12px; font-size: 17px; line-height: 1.6; color: rgba(245,243,235,0.88); }
 
-      /* ---------- Conferma ---------- */
-      .asx-confirming { position: absolute; inset: 0; z-index: 200; display: grid; place-items: center; background: rgba(5,5,7,0.9); animation: asx-fade .2s ease both; }
-      .asx-confirming-blades { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-      .asx-confirming-blades > span {
-        position: absolute; top: -30%; bottom: -30%; width: 38%;
-        transform: skewX(-18deg) translateX(-260%); animation: asx-blade .75s cubic-bezier(.7,0,.3,1) forwards;
+      /* ---------- Conferma: la lastra inclinata chiude lo schermo verso sinistra ---------- */
+      .asx.is-leaving { pointer-events: none; }
+      .asx.is-leaving .asx-back, .asx.is-leaving .asx-title, .asx.is-leaving .asx-topright { opacity: 0; transition: opacity .2s ease; }
+      .asx.is-leaving .asx-ruota-sheet > * { animation: asx-leave .3s cubic-bezier(.5,0,.9,.4) calc(var(--d, 0s) * .5) both !important; }
+      @keyframes asx-leave { to { opacity: 0; transform: translateX(-90px); } }
+      .asx.is-leaving .asx-rw-cards, .asx.is-leaving .asx-rw-over { opacity: 0; transition: opacity .2s ease; }
+      .asx.is-leaving .asx-rw-zoom { display: none; }
+      .asx-exit-slab {
+        position: absolute; top: -10%; bottom: -10%; left: var(--from); right: -400px; z-index: 11; pointer-events: none;
+        background: ${HANDOFF_BG}; transform: skewX(-8deg); transform-origin: top left;
+        box-shadow: -14px 0 0 0 var(--accent), -26px 0 0 0 #050507, -34px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+        animation: asx-exit-sweep .6s cubic-bezier(.7,0,.25,1) .06s forwards;
       }
-      .asx-confirming-blades > span:nth-child(1) { left: 0; background: var(--accent); }
-      .asx-confirming-blades > span:nth-child(2) { left: 34%; background: var(--ink); animation-delay: .06s; }
-      .asx-confirming-blades > span:nth-child(3) { left: 68%; background: var(--accent); animation-delay: .12s; }
-      @keyframes asx-blade { 60% { transform: skewX(-18deg) translateX(0); } 100% { transform: skewX(-18deg) translateX(280%); } }
-      .asx-confirming-text { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; transform: rotate(-3deg); animation: asx-ctxt 1.4s ease both; }
-      @keyframes asx-ctxt { 0%, 30% { opacity: 0; transform: rotate(-3deg) scale(1.3); } 45% { opacity: 1; transform: rotate(-3deg) scale(1); } }
-      .asx-confirming-text .eye { background: var(--accent); color: var(--void); font-weight: 700; font-size: 20px; letter-spacing: 0.4em; padding: 4px 20px; transform: skewX(-14deg); }
-      .asx-confirming-text .nm {
-        background: var(--ink); color: var(--void); font-weight: 700; font-style: italic; font-size: 76px; line-height: 1;
-        text-transform: uppercase; padding: 12px 40px; box-shadow: 12px 12px 0 var(--accent);
-      }
-      .asx-confirming-text .next { font-family: 'Share Tech Mono', monospace; font-size: 15px; letter-spacing: 0.24em; text-transform: uppercase; }
+      @keyframes asx-exit-sweep { to { left: -560px; } }
 
       @media (prefers-reduced-motion: reduce) {
         .asx *, .asx *::before, .asx *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }

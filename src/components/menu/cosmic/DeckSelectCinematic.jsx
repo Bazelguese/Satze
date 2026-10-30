@@ -59,6 +59,7 @@ import { CardShuffleDealStage } from '../../shuffle/CardShuffleDealStage.jsx';
 import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDealLayout.js';
 import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
+import { peekSlabHandoff, clearSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -416,7 +417,8 @@ export default function DeckSelectCinematic({
   }, [armyName, gameDeckOptions, selectedArmy, isMixedMode, campaignDeckIds]);
   const total = DECKS.length;
   const [idx, setIdx] = useState(0);
-  const [phase, setPhase] = useState('intro'); // intro -> idle -> confirming
+  // intro -> idle -> confirming (arrivando dalla scelta armata a lastra chiusa si salta l'intro)
+  const [phase, setPhase] = useState(() => (peekSlabHandoff() ? 'idle' : 'intro'));
   const [pulse, setPulse] = useState(0);
   const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
   const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
@@ -429,6 +431,17 @@ export default function DeckSelectCinematic({
   const phaseRef = useRef(phase);
   const idxRef = useRef(idx);
   const goRef = useRef(null);
+  // Arrivo dalla scelta armata: si parte con la sua lastra a schermo pieno e la si fa scorrere via.
+  const handoffRef = useRef(undefined);
+  if (handoffRef.current === undefined) handoffRef.current = peekSlabHandoff();
+  const handoff = handoffRef.current;
+  useEffect(() => { clearSlabHandoff(); }, []);
+  const handoffEl = handoff ? (
+    <>
+      <div className="dsk-handoff" style={{ '--hc': handoff.color }} aria-hidden="true" />
+      <SlabHandoffTitle name={handoff.name} color={handoff.color} mode="out" />
+    </>
+  ) : null;
 
   const deck = DECKS[idx] || DECKS[0];
   const accent = deck ? deck.accent : '#a78bfa';
@@ -439,7 +452,7 @@ export default function DeckSelectCinematic({
   const computeOff = (i) => i - idx;
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase('idle'), 1500);
+    const t = setTimeout(() => setPhase((p) => (p === 'intro' ? 'idle' : p)), 1500);
     return () => clearTimeout(t);
   }, []);
 
@@ -557,6 +570,7 @@ export default function DeckSelectCinematic({
   if (!deck) {
     return (
       <div className="dsk dsk--p dsk-empty">
+        {handoffEl}
         <DeckSelectStyles/>
         <DeckSelectPersonaSkin/>
         <div className="dsk-empty-msg">
@@ -589,6 +603,7 @@ export default function DeckSelectCinematic({
 
   return (
     <div ref={rootRef} className={`dsk dsk--p phase-${phase}`} style={{ '--accent': accent }}>
+      {handoffEl}
       {/* BG */}
       <div className="dsk-bg-layer">
         <div className="dsk-bg" key={`bg-${deck.army}-${pulse}`} style={{ backgroundImage: deck.bg ? `url('${deck.bg}')` : 'none' }}>
@@ -1553,6 +1568,13 @@ export function DeckSelectStyles() {
         animation-play-state: paused !important;
       }
       .dsk * { box-sizing: border-box; }
+      .dsk-handoff {
+        position: absolute; top: -10%; bottom: -10%; left: -560px; right: -400px; z-index: 9999; pointer-events: none;
+        background: ${HANDOFF_BG}; transform: skewX(-8deg); transform-origin: top left;
+        box-shadow: 14px 0 0 0 var(--hc), 26px 0 0 0 #050507, 34px 0 0 0 color-mix(in srgb, var(--hc) 55%, transparent);
+        animation: dsk-handoff-out .65s cubic-bezier(.7,0,.25,1) .08s forwards;
+      }
+      @keyframes dsk-handoff-out { to { transform: skewX(-8deg) translateX(-2900px); } }
       .dsk.phase-intro { cursor: wait; }
       .dsk kbd {
         display: inline-block; padding: 1px 6px;
