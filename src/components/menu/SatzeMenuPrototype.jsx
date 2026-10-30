@@ -117,54 +117,15 @@ function Splash({ splash, className = "" }) {
   );
 }
 
-/** Cornici da confrontare: cosa dà contesto alle parole impilate. */
+/**
+ * Cornici da confrontare: cosa dà appoggio alle parole inclinate senza
+ * dividere lo schermo (la pioggia di carte resta sempre visibile).
+ */
 export const MENU_FRAMES = {
-  lastra: "Lastra diagonale",
-  dritto: "Testo dritto su filo di rune",
-  fascia: "Fascia che taglia lo schermo",
+  velo: "Velo scuro",
+  righe: "Righe",
+  angoli: "Angoli",
 };
-
-/** Filo verticale di rune a cui si appendono le voci (cornice "dritto"). */
-function RuneThread() {
-  const runes = Array.from({ length: 15 }, (_, i) => i);
-  return (
-    <svg className="mfr-thread" viewBox="0 0 40 660" aria-hidden="true">
-      <line x1="20" y1="0" x2="20" y2="660" />
-      {runes.map((i) => (
-        <g key={i} transform={`translate(20 ${30 + i * 43}) scale(2.4)`}>
-          <rect x="-4.2" y="-4.2" width="8.4" height="8.4" />
-          <path d={CARD_RUNES[(i * 5) % CARD_RUNES.length]} />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/** Decorazione di fondo della cornice: sta sotto il logo, sopra lo sfondo. */
-function MenuFrame({ frame }) {
-  if (frame === "dritto") {
-    return (
-      <div className="mfr mfr--dritto" aria-hidden="true">
-        <RuneThread />
-        <span className="mfr-tag">MENÙ</span>
-      </div>
-    );
-  }
-  if (frame === "fascia") {
-    return (
-      <div className="mfr mfr--fascia" aria-hidden="true">
-        <span className="mfr-band" />
-      </div>
-    );
-  }
-  return (
-    <div className="mfr mfr--lastra" aria-hidden="true">
-      <span className="mfr-slab" />
-      <span className="mfr-slab-edge" />
-      <span className="mfr-slab-dots" />
-    </div>
-  );
-}
 
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
 function fitSize(label, maxW, cap) {
@@ -194,10 +155,6 @@ function BrushFilters() {
   return (
     <svg className="smp-defs" width="0" height="0" aria-hidden="true">
       <defs>
-        <filter id="smp-brush" x="-10%" y="-10%" width="120%" height="120%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="3" seed="7" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
         <filter id="smp-splash" x="-20%" y="-30%" width="140%" height="160%">
           <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G" />
@@ -323,8 +280,8 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  * }>, buildLabel?: string, inputLocked?: boolean, frame?: keyof typeof MENU_FRAMES }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, frame = "lastra" }) {
-  const frameKey = MENU_FRAMES[frame] ? frame : "lastra";
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, frame = "velo" }) {
+  const frameKey = MENU_FRAMES[frame] ? frame : "velo";
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -577,7 +534,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         <div className="smp-bg-halftone" />
       </div>
 
-      <MenuFrame frame={frameKey} />
+      {frameKey === "velo" && <div className="mfr-veil" aria-hidden="true" />}
 
       <div className="smp-brand">
         <AnimatedSatzeLogo
@@ -692,49 +649,32 @@ function SatzeMenuStyles() {
         60% { opacity: 1; }
       }
       /* ========== Cornici ========== */
-      .mfr { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
-      /* lastra nera inclinata come la colonna, bordo d'accento e retino */
-      .mfr-slab, .mfr-slab-edge, .mfr-slab-dots {
-        position: absolute; top: -30%; bottom: -30%; transform: rotate(-7deg); transform-origin: center;
+      /* velo: ombra trasparente inclinata solo dietro la colonna */
+      .mfr-veil {
+        position: absolute; z-index: 5; right: -6%; top: 50px; width: 62%; height: 940px; pointer-events: none;
+        background: radial-gradient(ellipse 50% 46% at 62% 50%, rgba(5,5,7,0.9) 0%, rgba(5,5,7,0.68) 50%, transparent 100%);
+        transform: rotate(-7deg);
+        animation: mfr-veil-in .6s ease-out both;
       }
-      .mfr-slab { right: -14%; width: 63%; background: ${V}; box-shadow: 0 0 90px rgba(0,0,0,0.85); animation: mfr-slab-in .6s cubic-bezier(.2,.9,.2,1) both; }
-      .mfr-slab-edge {
-        right: calc(-14% + 63% - 11px); width: 22px; background: var(--active);
-        box-shadow: -24px 0 0 -12px ${V}, -32px 0 0 -14px ${T};
-        transition: background .3s; animation: mfr-slab-in .6s .05s cubic-bezier(.2,.9,.2,1) both;
+      @keyframes mfr-veil-in { from { opacity: 0; } }
+      /* righe: ogni parola poggia su un filo che esce dal bordo destro */
+      .smp--righe .mi-item::after {
+        content: ''; position: absolute; z-index: 0; left: -60px; right: -460px; bottom: 0.1em;
+        height: 2px; font-size: var(--fs); background: linear-gradient(90deg, transparent, rgba(245,243,235,0.5) 18%);
+        transition: background .2s, height .2s;
       }
-      .mfr-slab-dots {
-        right: -14%; width: 63%; opacity: 0.22;
-        background-image: radial-gradient(circle, var(--active) 1.4px, transparent 1.8px); background-size: 11px 11px;
-        -webkit-mask-image: linear-gradient(180deg, transparent 40%, #000 95%);
-        mask-image: linear-gradient(180deg, transparent 40%, #000 95%);
+      .smp--righe .mi-item.on::after { height: 4px; background: linear-gradient(90deg, transparent, var(--c) 12%); }
+      /* angoli: due angolari inquadrano la colonna */
+      .smp--angoli .mi-col::before, .smp--angoli .mi-col::after {
+        content: ''; position: absolute; width: 150px; height: 110px; pointer-events: none;
+        animation: mfr-corner-in .5s .2s cubic-bezier(.2,1.3,.4,1) both;
       }
-      @keyframes mfr-slab-in { from { transform: rotate(-7deg) translateX(110%); } }
-      /* filo verticale di rune a destra, voci dritte */
-      .mfr-thread { position: absolute; right: 70px; top: 190px; width: 40px; height: 660px; overflow: visible; animation: mfr-thread-in .6s cubic-bezier(.2,1,.3,1) both; }
-      .mfr-thread line { stroke: ${T}; stroke-width: 2; opacity: 0.55; }
-      .mfr-thread rect { fill: ${V}; stroke: var(--active); stroke-width: 0.5; vector-effect: non-scaling-stroke; transform: rotate(45deg); transition: stroke .3s; }
-      .mfr-thread path { fill: none; stroke: var(--active); stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke .3s; }
-      @keyframes mfr-thread-in { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(-5% -50% -5% -50%); } }
-      .mfr-tag {
-        position: absolute; right: 52px; top: 120px; background: ${T}; color: ${V};
-        font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 22px; letter-spacing: 0.3em; padding: 6px 8px 6px 14px;
-        box-shadow: 5px 5px 0 var(--active); transition: box-shadow .3s;
+      .smp--angoli .mi-col::before { left: -70px; top: -46px; border-top: 4px solid ${T}; border-left: 4px solid ${T}; }
+      .smp--angoli .mi-col::after {
+        right: -54px; bottom: -40px; border-bottom: 4px solid var(--active); border-right: 4px solid var(--active);
+        transition: border-color .3s;
       }
-      /* fascia nera dipinta che attraversa lo schermo dietro la colonna */
-      .mfr-band {
-        position: absolute; left: -10%; right: -10%; top: 540px; height: 700px; margin-top: -350px;
-        background: ${V}; transform: rotate(-7deg); filter: url(#smp-brush);
-        box-shadow: 0 -10px 0 -2px var(--active), 0 10px 0 -2px var(--active), 0 0 80px rgba(0,0,0,0.8);
-        -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 100%);
-        mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 100%);
-        transition: box-shadow .3s; animation: mfr-band-in .6s cubic-bezier(.2,1,.3,1) both;
-      }
-      @keyframes mfr-band-in { from { transform: rotate(-7deg) translateX(100%); } }
-
-      /* voci dritte, allineate al filo */
-      .smp--dritto .mi-col { right: 150px; transform: translateY(-50%); }
-      .smp--dritto .mi-item { padding-right: 0; }
+      @keyframes mfr-corner-in { from { opacity: 0; transform: scale(1.4); } }
 
       /* ========== Parole impilate ========== */
       .mi { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
