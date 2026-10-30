@@ -436,78 +436,200 @@ function LayoutPalco({ armies, idx, army, goTo, onConfirm, onDossier }) {
 // LAYOUT 2 — RUOTA: carosello ad arco a sinistra, scheda a destra
 // ============================================================
 
-const WHEEL_R = 760;
-const DIAL_R = 545;
+// Geometria della ruota (px, centro fuori schermo a sinistra).
+const WHEEL_CX = -220;
+const WHEEL_CY = 540;
+const HUB_R = 360;       // mozzo scuro
+const WEDGE_RI = 410;    // spicchi: raggio interno
+const WEDGE_RO = 700;    // spicchi: raggio esterno
+const WEDGE_GAP = 2;     // gradi di vuoto tra uno spicchio e l'altro
+const WEDGE_POP = 34;    // quanto sporge lo spicchio scelto
+const CARDS_R = 842;     // arco delle carte di punta
+const CARDS_STEP = 14.5;  // gradi tra una carta e l'altra
+const CARD_W = 150;
+
+const rad = (deg) => (deg * Math.PI) / 180;
+const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
+
+/** Settore di corona circolare centrato sull'angolo 0, ampio 2*half gradi. */
+function sectorPath(ri, ro, half) {
+  const [ox1, oy1] = polar(ro, -half);
+  const [ox2, oy2] = polar(ro, half);
+  const [ix2, iy2] = polar(ri, half);
+  const [ix1, iy1] = polar(ri, -half);
+  return `M ${ix1} ${iy1} L ${ox1} ${oy1} A ${ro} ${ro} 0 0 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${ri} ${ri} 0 0 0 ${ix1} ${iy1} Z`;
+}
+
+/** Arco (senso orario) da -half a +half: serve a textPath e ai bordi. */
+function arcPath(r, from, to) {
+  const [x1, y1] = polar(r, from);
+  const [x2, y2] = polar(r, to);
+  return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`;
+}
 
 function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const total = armies.length;
   const step = 360 / total;
+  const half = (step - WEDGE_GAP) / 2;
+  const sector = sectorPath(WEDGE_RI, WEDGE_RO, half);
   const cards = army.showcase || [];
   const mid = (cards.length - 1) / 2;
+  const cardsHalf = mid * CARDS_STEP + 8;
+  const artX = WEDGE_RI * Math.cos(rad(half));
+  const artH = 2 * WEDGE_RO * Math.sin(rad(half));
+  const box = WEDGE_RO + 300;
+  const vb = `${-box} ${-box} ${box * 2} ${box * 2}`;
+  const center = { left: WHEEL_CX, top: WHEEL_CY };
+
   return (
     <>
       <div className="asx-ruota-slab" aria-hidden="true" />
 
-      <div className="asx-ruota-dial-text" aria-hidden="true">
-        <svg viewBox="-700 -700 1400 1400" width="1400" height="1400">
+      {/* Ombra piena dello spicchio scelto: fissa a ore 3, sotto la ruota */}
+      <div className="asx-rw-layer asx-rw-under" style={center} aria-hidden="true">
+        <svg viewBox={vb} width={box * 2} height={box * 2}>
+          <path d={sector} className="asx-rw-shadow" />
+        </svg>
+      </div>
+
+      {/* La ruota che gira: mozzo, tacche, spicchi */}
+      <div className="asx-wheel" style={{ ...center, '--spin': spin, '--step': `${step}deg` }}>
+        <svg viewBox={vb} width={box * 2} height={box * 2}>
           <defs>
-            <path id="asx-ruota-text-path" d="M 0,-640 a 640,640 0 1,1 0,1280 a 640,640 0 1,1 0,-1280" />
+            <clipPath id="asx-rw-clip"><path d={sector} /></clipPath>
+            <linearGradient id="asx-rw-shade" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stopColor="#050507" stopOpacity="0.92" />
+              <stop offset="0.45" stopColor="#050507" stopOpacity="0.35" />
+              <stop offset="1" stopColor="#050507" stopOpacity="0.1" />
+            </linearGradient>
+            <pattern id="asx-rw-stripes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="14" height="14" fill="#0d0b16" />
+              <rect width="6" height="14" fill="rgba(167,139,250,0.22)" />
+            </pattern>
+          </defs>
+
+          <circle r={HUB_R} className="asx-rw-hub" />
+          <circle r={HUB_R - 26} className="asx-rw-hub-line" />
+          {Array.from({ length: total * 4 }, (_, i) => {
+            const major = i % 4 === 0;
+            return (
+              <line
+                key={i}
+                x1={major ? HUB_R + 8 : HUB_R + 16}
+                x2={WEDGE_RI - 10}
+                y1="0"
+                y2="0"
+                className={major ? 'asx-rw-tick major' : 'asx-rw-tick'}
+                transform={`rotate(${(i * step) / 4 + step / 2})`}
+              />
+            );
+          })}
+          <circle r={WEDGE_RO + 46} className="asx-rw-outer" />
+
+          {armies.map((a, i) => {
+            const on = i === idx;
+            const long = a.name.length > 18;
+            return (
+              <g
+                key={a.id}
+                className={`asx-rw-wedge${on ? ' on' : ''}`}
+                style={{ transform: `rotate(${i * step}deg)`, '--c': a.color }}
+                onClick={() => goTo(i)}
+                role="button"
+                aria-label={a.name}
+              >
+                <g className="asx-rw-pop">
+                  <g clipPath="url(#asx-rw-clip)">
+                    {a.bg ? (
+                      <image
+                        href={a.bg}
+                        x={artX}
+                        y={-artH / 2}
+                        width={WEDGE_RO - artX}
+                        height={artH}
+                        preserveAspectRatio="xMidYMid slice"
+                      />
+                    ) : (
+                      <path d={sector} fill="url(#asx-rw-stripes)" />
+                    )}
+                    <path d={sector} fill="url(#asx-rw-shade)" />
+                    <path d={arcPath(WEDGE_RO - 4, -half - 1, half + 1)} className="asx-rw-rim" />
+                  </g>
+                  {a.portrait ? (
+                    <image
+                      href={a.portrait}
+                      x={560 - 82}
+                      y={-82}
+                      width="164"
+                      height="164"
+                      className="asx-rw-emblem"
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  ) : (
+                    <text x="560" y="0" className="asx-rw-glyph">{a.glyph}</text>
+                  )}
+                  <text x={WEDGE_RI + 22} y="0" className="asx-rw-num">{String(i + 1).padStart(2, '0')}</text>
+                  <path id={`asx-rw-name-${i}`} d={arcPath(WEDGE_RO - 30, -half, half)} fill="none" />
+                  <text className={`asx-rw-name${long ? ' long' : ''}`}>
+                    <textPath href={`#asx-rw-name-${i}`} startOffset="50%">{a.name}</textPath>
+                  </text>
+                  <path d={sector} className="asx-rw-dim" />
+                </g>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="asx-ruota-dial-text" style={center} aria-hidden="true">
+        <svg viewBox="-340 -340 680 680" width="680" height="680">
+          <defs>
+            <path id="asx-ruota-text-path" d="M 0,-292 a 292,292 0 1,1 0,584 a 292,292 0 1,1 0,-584" />
           </defs>
           <text>
             <textPath href="#asx-ruota-text-path">
-              {'FASE I · SCHIERAMENTO · SCEGLI LA TUA ARMATA · '.repeat(4)}
+              {'FASE I · SCHIERAMENTO · SCEGLI LA TUA ARMATA · '.repeat(2)}
             </textPath>
           </text>
         </svg>
       </div>
 
-      <div className="asx-wheel" style={{ '--spin': spin, '--step': `${step}deg` }}>
-        <svg className="asx-wheel-rings" viewBox="-1000 -1000 2000 2000" width="2000" height="2000" aria-hidden="true">
-          <circle r="470" className="ring-hub" />
-          <circle r="500" className="ring-thin" />
-          <circle r="600" className="ring-dash" />
-          <circle r="980" className="ring-thin" />
-          {Array.from({ length: total * 4 }, (_, i) => {
-            const a = (i * step) / 4;
-            const major = i % 4 === 0;
-            return (
-              <line
-                key={i}
-                x1={major ? 600 : 610}
-                x2={major ? 650 : 630}
-                y1="0"
-                y2="0"
-                className={major ? 'tick-major' : 'tick'}
-                transform={`rotate(${a})`}
-              />
-            );
-          })}
+      {/* Mirino fisso a ore 3: cornice dello spicchio scelto + arco delle carte */}
+      <div className="asx-rw-layer asx-rw-over" style={center} aria-hidden="true">
+        <svg viewBox={vb} width={box * 2} height={box * 2}>
+          <g className="asx-rw-frame">
+            <path d={sector} />
+          </g>
+          <path d={`M ${HUB_R - 4} -16 L ${HUB_R + 26} 0 L ${HUB_R - 4} 16 Z`} className="asx-rw-notch" />
+          {cards.length > 0 && (
+            <>
+              <path d={arcPath(CARDS_R + CARD_W / 2 + 26, -cardsHalf, cardsHalf)} className="asx-rw-cards-arc" />
+              <path id="asx-rw-cards-label" d={arcPath(CARDS_R + CARD_W / 2 + 40, -cardsHalf, cardsHalf)} fill="none" />
+              <text className="asx-rw-cards-label">
+                <textPath href="#asx-rw-cards-label" startOffset="2%">
+                  CARTE DI PUNTA · POTENZIALE PIÙ ALTO
+                </textPath>
+              </text>
+            </>
+          )}
         </svg>
-
-        {armies.map((a, i) => (
-          <div
-            key={`n-${a.id}`}
-            className={`asx-wheel-num${i === idx ? ' on' : ''}`}
-            style={{ '--a': `${i * step}deg`, '--c': a.color }}
-          >
-            <span>{String(i + 1).padStart(2, '0')}</span>
-          </div>
-        ))}
-
-        {armies.map((a, i) => (
-          <div
-            key={a.id}
-            className={`asx-wheel-slot${i === idx ? ' on' : ''}`}
-            style={{ '--a': `${i * step}deg` }}
-          >
-            <div className="asx-wheel-card">
-              <ArmyCard army={a} number={i + 1} selected={i === idx} onClick={() => goTo(i)} />
-            </div>
-          </div>
-        ))}
       </div>
 
-      <div className="asx-ruota-pointer" aria-hidden="true"><span /><span /><span /></div>
+      {cards.length > 0 && (
+        <div className="asx-rw-cards" style={center} key={`cards-${army.id}`}>
+          {cards.map((c, i) => (
+            <div
+              key={c.id}
+              className="asx-rw-card-slot"
+              style={{ transform: `rotate(${(i - mid) * CARDS_STEP}deg) translateX(${CARDS_R}px)`, zIndex: 10 - Math.abs(Math.round(i - mid)) }}
+            >
+              <div className="asx-rw-card" style={{ '--delay': `${0.12 + Math.abs(i - mid) * 0.06}s` }}>
+                <ShowcaseCard card={c} width={CARD_W} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
         <div className="asx-ruota-wipe" aria-hidden="true" />
@@ -541,22 +663,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
         </div>
 
         <div className="asx-ruota-bottom">
-          {cards.length > 0 && (
-            <div className="asx-ruota-cards">
-              <div className="asx-chip asx-chip--ink">CARTE DI PUNTA</div>
-              <div className="row">
-                {cards.map((c, i) => (
-                  <div
-                    key={c.id}
-                    className="asx-ruota-card"
-                    style={{ '--d': i - mid, '--delay': `${0.15 + i * 0.05}s`, zIndex: 10 - Math.abs(Math.round(i - mid)) }}
-                  >
-                    <ShowcaseCard card={c} width={150} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <NumberedPanel n="03" label="IN BREVE" text={army.synopsis} className="asx-npanel--clamp" />
           <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
         </div>
       </div>
@@ -576,10 +683,10 @@ function Burst({ value, label, dark = false }) {
   );
 }
 
-function NumberedPanel({ n, label, text }) {
+function NumberedPanel({ n, label, text, className = '' }) {
   if (!text) return null;
   return (
-    <div className="asx-npanel">
+    <div className={`asx-npanel ${className}`}>
       <div className="asx-npanel-head">
         <span className="n">{n}</span>
         <span className="asx-chip">{label}</span>
@@ -877,7 +984,7 @@ function ArmySelectStyles() {
       }
 
       /* ---------- 2 RUOTA ---------- */
-      .asx--ruota .asx-title { left: 250px; top: 22px; transform: rotate(-3deg); text-align: left; }
+      .asx--ruota .asx-title { left: 880px; top: 24px; transform: rotate(-2deg); text-align: left; }
       .asx--ruota .asx-title h1 { font-size: 42px; }
       .asx-ruota-slab {
         position: absolute; top: -10%; bottom: -10%; left: 800px; right: -120px; z-index: 4;
@@ -886,70 +993,86 @@ function ArmySelectStyles() {
         box-shadow: -14px 0 0 0 var(--accent), -26px 0 0 0 rgba(5,5,7,0.9), -34px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
         transition: box-shadow .3s;
       }
-      .asx-ruota-dial-text {
-        position: absolute; left: -990px; top: calc(560px - 700px); width: 1400px; height: 1400px; z-index: 2; pointer-events: none;
-        animation: asx-spin 120s linear infinite;
+
+      .asx-rw-layer, .asx-wheel, .asx-rw-cards, .asx-ruota-dial-text { position: absolute; width: 0; height: 0; }
+      .asx-rw-layer svg, .asx-wheel svg, .asx-ruota-dial-text svg {
+        position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); overflow: visible;
       }
+      .asx-rw-layer { pointer-events: none; }
+      .asx-rw-under { z-index: 5; }
+      .asx-wheel {
+        z-index: 6;
+        transform: rotate(calc(var(--spin) * var(--step) * -1));
+        transition: transform .65s cubic-bezier(.2,.8,.2,1);
+      }
+      .asx-wheel svg { pointer-events: none; }
+      .asx-ruota-dial-text { z-index: 7; pointer-events: none; animation: asx-spin 120s linear infinite; }
       .asx-ruota-dial-text text {
-        fill: color-mix(in srgb, var(--accent) 60%, transparent); font-family: 'Chakra Petch', sans-serif;
-        font-weight: 700; font-style: italic; font-size: 30px; letter-spacing: 10px;
+        fill: color-mix(in srgb, var(--accent) 55%, transparent); font-family: 'Chakra Petch', sans-serif;
+        font-weight: 700; font-style: italic; font-size: 26px; letter-spacing: 8px;
       }
       @keyframes asx-spin { to { transform: rotate(360deg); } }
+      .asx-rw-over { z-index: 8; }
 
-      .asx-wheel {
-        position: absolute; left: -290px; top: 560px; width: 0; height: 0; z-index: 6;
-        transform: rotate(calc(var(--spin) * var(--step) * -1));
-        transition: transform .6s cubic-bezier(.2,.8,.2,1);
-      }
-      .asx-wheel-rings { position: absolute; left: -1000px; top: -1000px; pointer-events: none; overflow: visible; }
-      .asx-wheel-rings .ring-hub { fill: rgba(5,5,7,0.82); stroke: var(--accent); stroke-width: 6; }
-      .asx-wheel-rings .ring-thin { fill: none; stroke: rgba(245,243,235,0.28); stroke-width: 2; }
-      .asx-wheel-rings .ring-dash { fill: none; stroke: color-mix(in srgb, var(--accent) 70%, transparent); stroke-width: 3; stroke-dasharray: 4 12; }
-      .asx-wheel-rings .tick { stroke: rgba(245,243,235,0.35); stroke-width: 2; }
-      .asx-wheel-rings .tick-major { stroke: var(--accent); stroke-width: 5; }
+      .asx-rw-hub { fill: rgba(5,5,7,0.9); stroke: var(--accent); stroke-width: 8; transition: stroke .3s; }
+      .asx-rw-hub-line { fill: none; stroke: rgba(245,243,235,0.18); stroke-width: 2; stroke-dasharray: 3 9; }
+      .asx-rw-tick { stroke: rgba(245,243,235,0.22); stroke-width: 2; }
+      .asx-rw-tick.major { stroke: color-mix(in srgb, var(--accent) 80%, transparent); stroke-width: 4; }
+      .asx-rw-outer { fill: none; stroke: rgba(245,243,235,0.16); stroke-width: 2; stroke-dasharray: 2 10; }
 
-      .asx-wheel-num {
-        position: absolute; left: 0; top: 0;
-        transform: rotate(var(--a)) translateX(${DIAL_R}px) rotate(calc(var(--a) * -1 + var(--spin) * var(--step)));
-        transition: transform .6s cubic-bezier(.2,.8,.2,1);
+      .asx-rw-wedge { cursor: pointer; pointer-events: auto; }
+      .asx-rw-pop { transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
+      .asx-rw-wedge.on .asx-rw-pop { transform: translateX(${WEDGE_POP}px); }
+      .asx-rw-rim { fill: none; stroke: var(--c); stroke-width: 10; }
+      .asx-rw-emblem { filter: drop-shadow(0 8px 10px rgba(0,0,0,0.85)); transition: transform .45s cubic-bezier(.3,1.5,.5,1); transform-box: fill-box; transform-origin: center; transform: scale(0.82); }
+      .asx-rw-wedge.on .asx-rw-emblem { transform: scale(1.05); }
+      .asx-rw-glyph { fill: var(--c); font-size: 120px; text-anchor: middle; dominant-baseline: central; }
+      .asx-rw-num {
+        fill: var(--ink); font-family: 'Share Tech Mono', monospace; font-size: 22px; dominant-baseline: central;
+        paint-order: stroke; stroke: var(--void); stroke-width: 5px;
       }
-      .asx-wheel-num span {
-        display: grid; place-items: center; width: 54px; height: 34px; margin: -17px 0 0 -27px;
-        background: var(--void); color: var(--c); border-left: 4px solid var(--c);
-        font-family: 'Share Tech Mono', monospace; font-size: 16px; transform: skewX(-14deg);
-        transition: background .2s, color .2s, transform .2s;
+      .asx-rw-wedge.on .asx-rw-num { fill: var(--accent); font-size: 30px; font-weight: 700; }
+      .asx-rw-name {
+        fill: var(--ink); font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 17px; letter-spacing: 2px; text-transform: uppercase; text-anchor: middle; dominant-baseline: central;
+        paint-order: stroke; stroke: var(--void); stroke-width: 5px;
       }
-      .asx-wheel-num.on span { background: var(--ink); color: var(--void); border-left-color: var(--accent); transform: skewX(-14deg) scale(1.45); box-shadow: 4px 4px 0 var(--accent); font-weight: 700; }
+      .asx-rw-name.long { font-size: 13px; letter-spacing: 1px; }
+      .asx-rw-dim { fill: #050507; opacity: 0.55; transition: opacity .3s; pointer-events: none; }
+      .asx-rw-wedge:hover .asx-rw-dim { opacity: 0.25; }
+      .asx-rw-wedge.on .asx-rw-dim { opacity: 0; }
 
-      .asx-wheel-slot {
-        position: absolute; left: 0; top: 0;
-        transform: rotate(var(--a)) translateX(${WHEEL_R}px) rotate(calc(var(--a) * -1 + var(--spin) * var(--step)));
-        transition: transform .6s cubic-bezier(.2,.8,.2,1);
+      .asx-rw-shadow {
+        fill: var(--accent); transform: translate(${WEDGE_POP + 16}px, 12px);
+        transition: fill .3s;
       }
-      .asx-wheel-card {
-        width: 300px; height: 420px; margin: -210px 0 0 -150px;
-        transform: scale(0.6); opacity: 0.55; filter: saturate(0.45) brightness(0.75);
-        transition: transform .45s cubic-bezier(.3,1.4,.5,1), opacity .3s, filter .3s;
+      .asx-rw-frame { transform: translateX(${WEDGE_POP}px); }
+      .asx-rw-frame path { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linejoin: miter; }
+      .asx-rw-notch { fill: var(--accent); stroke: var(--void); stroke-width: 3; }
+      .asx-rw-cards-arc { fill: none; stroke: var(--accent); stroke-width: 4; stroke-dasharray: 26 8; }
+      .asx-rw-cards-label {
+        fill: var(--ink); font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 15px; letter-spacing: 5px;
       }
-      .asx-wheel-slot.on { z-index: 5; }
-      .asx-wheel-slot.on .asx-wheel-card { transform: translateX(70px) scale(1.06); opacity: 1; filter: none; }
-      .asx-wheel-slot:not(.on) .asx-wheel-card:hover { opacity: 0.9; filter: none; }
 
-      .asx-ruota-pointer {
-        position: absolute; left: 718px; top: 530px; z-index: 7; display: flex; gap: 2px; pointer-events: none;
+      .asx-rw-cards { z-index: 9; }
+      .asx-rw-card-slot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      .asx-rw-card-slot:hover { z-index: 30 !important; }
+      .asx-rw-card {
+        position: absolute; left: ${-CARD_W / 2}px; top: ${-Math.round((CARD_W * 330) / 230) / 2}px;
+        filter: drop-shadow(6px 6px 0 rgba(5,5,7,0.9));
+        transition: transform .22s cubic-bezier(.3,1.5,.5,1);
+        animation: asx-rw-deal .5s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
       }
-      .asx-ruota-pointer span {
-        width: 26px; height: 60px; background: var(--accent);
-        clip-path: polygon(0 0, 55% 0, 100% 50%, 55% 100%, 0 100%, 45% 50%);
-        animation: asx-chev 1.1s ease-in-out infinite;
+      .asx-rw-card:hover { transform: translateX(34px) scale(1.14); }
+      @keyframes asx-rw-deal {
+        from { transform: translateX(-240px) scale(0.35); opacity: 0; }
+        60% { opacity: 1; }
       }
-      .asx-ruota-pointer span:nth-child(2) { animation-delay: .12s; opacity: .7; }
-      .asx-ruota-pointer span:nth-child(3) { animation-delay: .24s; opacity: .45; }
-      @keyframes asx-chev { 50% { transform: translateX(8px); } }
 
       .asx-ruota-sheet {
         position: absolute; left: 840px; right: 54px; top: 132px; bottom: 34px; z-index: 12;
-        display: flex; flex-direction: column; gap: 20px; overflow: hidden;
+        display: flex; flex-direction: column; justify-content: space-between; gap: 20px; overflow: hidden;
       }
       .asx-ruota-wipe {
         position: absolute; top: -20%; bottom: -20%; left: -30%; width: 22%; z-index: 30; pointer-events: none;
@@ -998,17 +1121,9 @@ function ArmySelectStyles() {
       .asx-npanel-head .n { font-weight: 700; font-style: italic; font-size: 34px; line-height: 1; color: var(--accent); }
       .asx-npanel p { margin: 0; font-size: 17px; line-height: 1.5; color: rgba(245,243,235,0.9); }
 
-      .asx-ruota-bottom { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-      .asx-ruota-cards { display: flex; flex-direction: column; gap: 4px; }
-      .asx-ruota-cards .asx-chip--ink { margin: 0 0 6px 4px; }
-      .asx-ruota-cards .row { display: flex; padding: 10px 0 0 10px; }
-      .asx-ruota-card {
-        position: relative; margin-right: -34px;
-        transform: rotate(calc(var(--d) * 5deg)) translateY(calc(var(--d) * var(--d) * 4px));
-        transition: transform .2s cubic-bezier(.3,1.5,.5,1);
-        animation: asx-deal .45s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
-      }
-      .asx-ruota-card:hover { transform: translateY(-26px) scale(1.08); z-index: 20 !important; }
+      .asx-ruota-bottom { display: flex; align-items: flex-end; justify-content: flex-end; gap: 28px; }
+      .asx-ruota-bottom .asx-npanel { flex: 1; animation-delay: .2s; }
+      .asx-npanel--clamp p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       .asx-ruota-bottom .asx-actions { width: 420px; flex: none; }
 
       /* ---------- 3 MANO ---------- */
