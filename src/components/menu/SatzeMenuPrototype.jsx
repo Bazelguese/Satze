@@ -9,6 +9,7 @@ import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/v
 import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
+import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -279,6 +280,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const uiScale = useUiScale();
   const rootRef = useRef(null);
   const rowRefs = useRef([]);
+  // tornando da un'altra schermata la cortina ha già fatto da ingresso
+  const arrivedByCurtain = useArrivedByCurtain();
   const pickerRowRefs = useRef([]);
   const pickerListRef = useRef(null);
   /** Scorre il pannello solo dopo un passo da tastiera, non al passaggio del mouse. */
@@ -356,6 +359,9 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       openPicker({ accent: item.accent, title: item.label, trail: [], options: item.options });
       return;
     }
+    // la cortina verso la schermata parte dalla voce scelta, col suo colore
+    const r = rowRefs.current[i]?.getBoundingClientRect();
+    armTransitionFrom({ accent: item.accent, x: r ? r.left + r.width / 2 : NaN, y: r ? r.top + r.height / 2 : NaN });
     item.leafOnClick?.();
   };
 
@@ -544,6 +550,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
           reducedMotion={vfxProfile.quality === "low"}
           paused={inputLocked || Boolean(choicePicker)}
           strength={vfxProfile.quality === "medium" ? 0.7 : 1}
+          formed={arrivedByCurtain}
           style={{ width: 940, maxWidth: "100%", pointerEvents: "none" }}
         />
       </div>
@@ -591,11 +598,13 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         </span>
       </footer>
 
-      <div className="smp-intro" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
+      {!arrivedByCurtain && (
+        <div className="smp-intro" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
 
       <SatzeMenuStyles />
     </div>

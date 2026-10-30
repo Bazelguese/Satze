@@ -12,6 +12,8 @@ export default function AnimatedSatzeLogo({
   strength = 1,
   speed = 1,
   glow = 1,
+  /** Logo già composto, senza l'animazione di formazione (es. ritorno al menù). */
+  formed = false,
   onFlash,
   className,
   style,
@@ -38,6 +40,7 @@ export default function AnimatedSatzeLogo({
       strength={strength}
       speed={speed}
       glow={glow}
+      formation={formed ? 1 : undefined}
     />
   );
 }

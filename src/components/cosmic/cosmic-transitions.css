@@ -46,6 +46,13 @@
   visibility: hidden;
   pointer-events: none;
 }
+.cosmic-scene--covering {
+  pointer-events: none;
+}
+.cosmic-scene--held,
+.cosmic-scene--held * {
+  animation-play-state: paused !important;
+}
 .cosmic-scene--under-curtain {
   visibility: visible;
   opacity: 1;
