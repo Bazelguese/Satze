@@ -32,6 +32,8 @@ import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
 import { CardReworkP4Scaled } from '../../cards/CardReworkP4.jsx';
 import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
+import { getCardSprite } from '../../../utils';
+import { AGENT_IMAGES } from '../../../data/images';
 
 const SHOWCASE_SIZE = 5;
 const LAYOUTS = ['palco', 'ruota', 'mano'];
@@ -63,7 +65,8 @@ function wrapOffset(i, idx, total) {
 
 /**
  * Pool misto: per ogni Lega la carta col potenziale più alto, poi le migliori
- * in assoluto fino a SHOWCASE_SIZE. Ordinate per potenziale decrescente.
+ * in assoluto fino a SHOWCASE_SIZE. Ordinate per Lega (dalla più alta), a pari
+ * Lega per potenziale.
  */
 function pickShowcaseCards(cards) {
   const scored = cards
@@ -82,7 +85,7 @@ function pickShowcaseCards(cards) {
   }
   return picked
     .slice(0, SHOWCASE_SIZE)
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => (b.card.league ?? 0) - (a.card.league ?? 0) || b.value - a.value)
     .map((s) => s.card);
 }
 // ------------------------------------------------------------
@@ -447,6 +450,8 @@ const WEDGE_POP = 34;    // quanto sporge lo spicchio scelto
 const CARDS_R = 842;     // arco delle carte di punta
 const CARDS_STEP = 14.5; // gradi tra una carta e l'altra
 const CARD_W = 150;
+const ZOOM_W = 330;      // carta ingrandita al passaggio del mouse
+const ZOOM_LEFT = 790;
 
 const rad = (deg) => (deg * Math.PI) / 180;
 const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
@@ -481,6 +486,12 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const vb = `${-box} ${-box} ${box * 2} ${box * 2}`;
   const center = { left: WHEEL_CX, top: WHEEL_CY };
   const labelR = CARDS_R + CARD_W / 2 + 34;
+  const [hover, setHover] = useState(null);
+  useEffect(() => setHover(null), [army.id]);
+  const zoomCard = hover != null ? cards[hover] : null;
+  const zoomH = Math.round((ZOOM_W * 330) / 230);
+  const zoomY = hover != null ? WHEEL_CY + CARDS_R * Math.sin(rad((hover - mid) * CARDS_STEP)) : 0;
+  const zoomTop = Math.min(Math.max(zoomY - zoomH / 2, 24), 1080 - zoomH - 24);
 
   return (
     <>
@@ -606,9 +617,12 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
               key={c.id}
               className="asx-rw-card-slot"
               style={{ transform: `rotate(${(i - mid) * CARDS_STEP}deg) translateX(${CARDS_R}px)`, zIndex: 10 - Math.abs(Math.round(i - mid)) }}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
             >
               <div className="asx-rw-card" style={{ '--delay': `${0.12 + Math.abs(i - mid) * 0.06}s` }}>
                 <ShowcaseCard card={c} width={CARD_W} />
+                <span className="asx-rw-lg">L{c.league}</span>
               </div>
             </div>
           ))}
@@ -618,40 +632,78 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
       <div className="asx-ruota-sheet" key={`sheet-${army.id}`}>
         <div className="asx-ruota-wipe" aria-hidden="true" />
 
-        <div className="asx-ruota-head">
-          <div className="asx-ruota-bignum" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</div>
-          <div className="asx-ruota-title">
-            <div className="asx-ruota-kicker">
-              <span className="asx-chip">ARMATA {army.glyph}</span>
-              <span className="asx-chip asx-chip--dark">BONUS · {army.bonusLabel}</span>
-            </div>
+        <div className="asx-pz-head">
+          <div className="asx-pz-bignum" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</div>
+          <div className="asx-pz-title">
+            <span className="asx-chip">ARMATA {army.glyph}</span>
             <h2 className={army.name.length > 18 ? 'long' : ''}>{army.name}</h2>
             {army.motto && <div className="asx-motto">“{army.motto}”</div>}
           </div>
           {!army.isMixed && (
-            <div className="asx-ruota-stats">
+            <div className="asx-pz-stats">
               <Burst value={army.cards} label="CARTE" />
               <Burst value={army.decks} label="ESERCITI" dark />
             </div>
           )}
         </div>
 
-        <div className="asx-ruota-bonus">
-          <span className="asx-ruota-bonus-mark" aria-hidden="true">✦</span>
+        <div className="asx-pz-bonus">
           <BonusPlate army={army} />
         </div>
 
-        <div className="asx-ruota-cols">
-          <NumberedPanel n="01" label="STILE CONSIGLIATO" text={army.style} />
-          <NumberedPanel n="02" label="NOTE TATTICHE" text={army.tips} />
+        <div className="asx-pz-cols">
+          <PosterBlock n="01" label="STILE CONSIGLIATO" text={army.style} />
+          <PosterBlock n="02" label="NOTE TATTICHE" text={army.tips} low />
         </div>
 
-        <div className="asx-ruota-bottom">
-          <NumberedPanel n="03" label="IN BREVE" text={army.synopsis} className="asx-npanel--clamp" />
+        <div className="asx-pz-bottom">
+          {army.synopsis && (
+            <figure className="asx-pz-quote">
+              <span className="q" aria-hidden="true">“</span>
+              <figcaption className="asx-chip asx-chip--ink">IN BREVE</figcaption>
+              <p>{army.synopsis}</p>
+            </figure>
+          )}
           <ConfirmButton onConfirm={onConfirm} onDossier={onDossier} />
         </div>
       </div>
+
+      {zoomCard && (
+        <div className="asx-rw-zoom" style={{ left: ZOOM_LEFT, top: zoomTop }} key={`zoom-${zoomCard.id}`} aria-hidden="true">
+          <ZoomCard card={zoomCard} />
+        </div>
+      )}
     </>
+  );
+}
+
+/** Carta ingrandita: arte piena, e se manca ripiega sulla miniatura. */
+function ZoomCard({ card }) {
+  const [thumb, setThumb] = useState(false);
+  useEffect(() => {
+    const sprite = getCardSprite(card);
+    const url = sprite.type === 'specific' ? AGENT_IMAGES[sprite.agentId] : null;
+    if (!url) return undefined;
+    let alive = true;
+    const img = new Image();
+    img.onerror = () => { if (alive) setThumb(true); };
+    img.src = url;
+    return () => { alive = false; };
+  }, [card]);
+  return <CardReworkP4Scaled agent={card} width={ZOOM_W} showBonus preferThumb={thumb} />;
+}
+
+/** Blocco di testo "da rivista": numero grande, etichetta, testo libero. */
+function PosterBlock({ n, label, text, low = false }) {
+  if (!text) return null;
+  return (
+    <div className={`asx-pz-block${low ? ' low' : ''}`}>
+      <span className="n" aria-hidden="true">{n}</span>
+      <div className="body">
+        <span className="asx-chip">{label}</span>
+        <p>{text}</p>
+      </div>
+    </div>
   );
 }
 
@@ -663,19 +715,6 @@ function Burst({ value, label, dark = false }) {
       <span className="shape" aria-hidden="true" />
       <span className="val">{value}</span>
       <span className="lbl">{label}</span>
-    </div>
-  );
-}
-
-function NumberedPanel({ n, label, text, className = '' }) {
-  if (!text) return null;
-  return (
-    <div className={`asx-npanel ${className}`}>
-      <div className="asx-npanel-head">
-        <span className="n">{n}</span>
-        <span className="asx-chip">{label}</span>
-      </div>
-      <p>{text}</p>
     </div>
   );
 }
@@ -968,10 +1007,10 @@ function ArmySelectStyles() {
       }
 
       /* ---------- 2 RUOTA ---------- */
-      .asx--ruota .asx-title { left: 880px; top: 24px; transform: rotate(-2deg); text-align: left; }
+      .asx--ruota .asx-title { left: 940px; top: 24px; transform: rotate(-2deg); text-align: left; }
       .asx--ruota .asx-title h1 { font-size: 42px; }
       .asx-ruota-slab {
-        position: absolute; top: -10%; bottom: -10%; left: 800px; right: -120px; z-index: 4;
+        position: absolute; top: -10%; bottom: -10%; left: 920px; right: -120px; z-index: 4;
         background: linear-gradient(100deg, rgba(5,5,7,0.94) 0%, rgba(5,5,7,0.86) 100%);
         transform: skewX(-8deg); transform-origin: top left;
         box-shadow: -14px 0 0 0 var(--accent), -26px 0 0 0 rgba(5,5,7,0.9), -34px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
@@ -1041,19 +1080,33 @@ function ArmySelectStyles() {
       .asx-rw-card-slot:hover { z-index: 30 !important; }
       .asx-rw-card {
         position: absolute; left: ${-CARD_W / 2}px; top: ${-Math.round((CARD_W * 330) / 230) / 2}px;
-        filter: drop-shadow(6px 6px 0 rgba(5,5,7,0.9));
         transition: transform .22s cubic-bezier(.3,1.5,.5,1);
-        animation: asx-rw-deal .5s cubic-bezier(.2,1.2,.4,1) var(--delay) both;
+        animation: asx-rw-deal .5s cubic-bezier(.2,1.2,.4,1) var(--delay) backwards;
       }
-      .asx-rw-card:hover { transform: translateX(34px) scale(1.14); }
+      .asx-rw-card .asx-sc { filter: none; box-shadow: 6px 6px 0 rgba(5,5,7,0.85); }
+      .asx-rw-card-slot:hover .asx-rw-card { transform: translateX(18px); }
+      .asx-rw-card-slot:hover .asx-sc { box-shadow: 0 0 0 4px var(--ink), 8px 8px 0 4px var(--accent); }
+      .asx-rw-lg {
+        position: absolute; top: 12px; right: -14px; z-index: 2;
+        background: var(--ink); color: var(--void); font-weight: 700; font-style: italic; font-size: 15px;
+        padding: 1px 9px; transform: skewX(-14deg); box-shadow: 3px 3px 0 var(--accent);
+      }
       @keyframes asx-rw-deal {
         from { transform: translateX(-240px) scale(0.35); opacity: 0; }
         60% { opacity: 1; }
       }
+      .asx-rw-zoom {
+        position: absolute; z-index: 60; pointer-events: none;
+        box-shadow: 0 0 0 5px var(--ink), 14px 14px 0 5px var(--accent), 0 30px 80px rgba(0,0,0,0.75);
+        transform: rotate(-2deg); transform-origin: left center;
+        animation: asx-rw-zoom .18s cubic-bezier(.2,1.3,.4,1) both;
+      }
+      @keyframes asx-rw-zoom { from { opacity: 0; transform: translateX(-30px) rotate(-6deg) scale(.85); } }
 
+      /* scheda "da rivista": i blocchi scendono seguendo il taglio diagonale */
       .asx-ruota-sheet {
-        position: absolute; left: 840px; right: 54px; top: 132px; bottom: 34px; z-index: 12;
-        display: flex; flex-direction: column; justify-content: space-between; gap: 20px; overflow: hidden;
+        position: absolute; left: 800px; right: 54px; top: 118px; bottom: 30px; z-index: 12;
+        display: flex; flex-direction: column; justify-content: space-between; gap: 18px; overflow: hidden;
       }
       .asx-ruota-wipe {
         position: absolute; top: -20%; bottom: -20%; left: -30%; width: 22%; z-index: 30; pointer-events: none;
@@ -1062,50 +1115,57 @@ function ArmySelectStyles() {
       }
       @keyframes asx-wipe { to { transform: skewX(-18deg) translateX(700%); } }
 
-      .asx-ruota-head { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 20px; }
-      .asx-ruota-bignum {
-        font-weight: 700; font-style: italic; font-size: 190px; line-height: 0.78; letter-spacing: -0.04em;
-        color: transparent; -webkit-text-stroke: 3px var(--accent); transform: rotate(-6deg);
+      .asx-pz-head { position: relative; padding: 0 250px 0 150px; min-height: 230px; }
+      .asx-pz-bignum {
+        position: absolute; left: 96px; top: -14px; z-index: 0; pointer-events: none;
+        font-weight: 700; font-style: italic; font-size: 290px; line-height: 0.8; letter-spacing: -0.05em;
+        color: transparent; -webkit-text-stroke: 3px var(--accent); opacity: 0.6; transform: rotate(-6deg);
         animation: asx-swipe .35s cubic-bezier(.2,1,.3,1) both;
       }
-      .asx-ruota-title { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; animation: asx-swipe .35s .04s cubic-bezier(.2,1,.3,1) both; }
-      .asx-ruota-kicker { display: flex; gap: 8px; }
-      .asx-ruota-title h2 {
-        margin: 0; font-weight: 700; font-style: italic; font-size: 74px; line-height: 0.95; letter-spacing: -0.015em; text-transform: uppercase;
-        text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void); transform: rotate(-2deg); transform-origin: left;
+      .asx-pz-title {
+        position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+        padding: 64px 0 0 70px; animation: asx-swipe .35s .04s cubic-bezier(.2,1,.3,1) both;
       }
-      .asx-ruota-title h2.long { font-size: 54px; }
-      .asx-ruota-stats { display: flex; gap: 4px; transform: rotate(-6deg); animation: asx-swipe .35s .08s cubic-bezier(.2,1,.3,1) both; }
+      .asx-pz-title h2 {
+        margin: 0; font-weight: 700; font-style: italic; font-size: 86px; line-height: 0.92; letter-spacing: -0.015em; text-transform: uppercase;
+        text-shadow: 5px 5px 0 var(--accent), 10px 10px 0 var(--void); transform: rotate(-3deg); transform-origin: left;
+      }
+      .asx-pz-title h2.long { font-size: 62px; }
+      .asx-pz-title .asx-motto { margin-left: 40px; }
+      .asx-pz-stats { position: absolute; right: 6px; top: 0; display: flex; gap: 2px; transform: rotate(-8deg); animation: asx-swipe .35s .08s cubic-bezier(.2,1,.3,1) both; }
+
       .asx-burst { position: relative; width: 112px; height: 112px; display: grid; place-items: center; }
       .asx-burst .shape { position: absolute; inset: 0; background: var(--ink); clip-path: ${BURST_CLIP}; filter: drop-shadow(5px 5px 0 var(--accent)); animation: asx-spin 22s linear infinite; }
       .asx-burst.dark .shape { background: var(--accent); filter: drop-shadow(5px 5px 0 var(--void)); }
-      .asx-burst .val { position: relative; font-weight: 700; font-style: italic; font-size: 44px; line-height: 1; color: var(--void); transform: translateY(-6px) rotate(-6deg); }
-      .asx-burst .lbl { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
+      .asx-burst .val { position: relative; font-weight: 700; font-style: italic; font-size: 44px; line-height: 1; color: var(--void); transform: translateY(-10px) rotate(-6deg); }
+      .asx-burst .lbl { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
 
-      .asx-ruota-bonus { position: relative; padding-left: 64px; }
-      .asx-ruota-bonus-mark {
-        position: absolute; left: 0; top: 50%; transform: translateY(-50%) rotate(-12deg);
-        font-size: 74px; line-height: 1; color: var(--accent); text-shadow: 4px 4px 0 var(--void);
+      .asx-pz-bonus { padding: 0 40px 0 110px; transform: rotate(-1.2deg); }
+      .asx-pz-bonus .asx-bonus { padding: 18px 28px 20px; }
+      .asx-pz-bonus .asx-bonus-explain { font-size: 21px; }
+
+      .asx-pz-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; padding-left: 64px; align-items: start; }
+      .asx-pz-block { display: flex; gap: 14px; min-width: 0; animation: asx-swipe .35s .12s cubic-bezier(.2,1,.3,1) both; }
+      .asx-pz-block.low { margin-top: 54px; animation-delay: .16s; }
+      .asx-pz-block .n {
+        flex: none; font-weight: 700; font-style: italic; font-size: 92px; line-height: 0.8; color: var(--accent);
+        text-shadow: 4px 4px 0 var(--void); transform: rotate(-8deg);
       }
-      .asx-ruota-bonus .asx-bonus { padding: 18px 26px 20px; }
-      .asx-ruota-bonus .asx-bonus-explain { font-size: 21px; }
+      .asx-pz-block .body { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; min-width: 0; }
+      .asx-pz-block p { margin: 0; font-size: 18px; line-height: 1.5; color: rgba(245,243,235,0.92); }
 
-      .asx-ruota-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-      .asx-npanel {
-        position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 22px 18px; min-width: 0;
-        background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, #0b0b10), #0b0b10 70%);
-        clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
-        animation: asx-swipe .35s .12s cubic-bezier(.2,1,.3,1) both;
+      .asx-pz-bottom { display: flex; align-items: flex-end; gap: 36px; padding-left: 14px; }
+      .asx-pz-quote { position: relative; flex: 1; min-width: 0; margin: 0; padding: 0 0 6px 104px; animation: asx-swipe .35s .2s cubic-bezier(.2,1,.3,1) both; }
+      .asx-pz-quote .q {
+        position: absolute; left: 0; top: -22px; font-weight: 700; font-style: italic; font-size: 170px; line-height: 1;
+        color: var(--accent); text-shadow: 6px 6px 0 var(--void);
       }
-      .asx-npanel + .asx-npanel { animation-delay: .16s; }
-      .asx-npanel-head { display: flex; align-items: center; gap: 12px; }
-      .asx-npanel-head .n { font-weight: 700; font-style: italic; font-size: 34px; line-height: 1; color: var(--accent); }
-      .asx-npanel p { margin: 0; font-size: 17px; line-height: 1.5; color: rgba(245,243,235,0.9); }
-
-      .asx-ruota-bottom { display: flex; align-items: flex-end; justify-content: flex-end; gap: 28px; }
-      .asx-ruota-bottom .asx-npanel { flex: 1; animation-delay: .2s; }
-      .asx-npanel--clamp p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-      .asx-ruota-bottom .asx-actions { width: 420px; flex: none; }
+      .asx-pz-quote .asx-chip--ink { margin: 0 0 10px; }
+      .asx-pz-quote p {
+        margin: 0; font-style: italic; font-size: 19px; line-height: 1.5; color: rgba(245,243,235,0.9);
+        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .asx-pz-bottom .asx-actions { width: 410px; flex: none; }
 
       /* ---------- 3 MANO ---------- */
       .asx-mano-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
