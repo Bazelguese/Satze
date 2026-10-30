@@ -141,7 +141,7 @@ import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
 import { ControlledCampaignHub } from '../src/components/campaign/ControlledCampaignHub';
 import { getCampaignRunSummary, abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
-import { MultiplayerLobby } from '../src/components/multiplayer/MultiplayerLobby';
+import { MultiplayerLobby, MULTIPLAYER_ACCENT } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase, useCurtain } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
@@ -4348,8 +4348,8 @@ export default function SatzeGame() {
         accent: MENU_ACCENTS.pink,
         onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
       },
-      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
-      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
+      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', accent: MENU_ACCENTS.magenta, onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
+      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', accent: MULTIPLAYER_ACCENT, onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
       { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
