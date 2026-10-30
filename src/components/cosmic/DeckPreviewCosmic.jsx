@@ -288,20 +288,47 @@ function DeckPreviewCosmic({
         }}
       />
       <div
+        aria-hidden
         style={{
           position: 'absolute',
-          top: -56,
-          left: -38,
-          fontFamily: 'Cinzel, serif',
-          fontWeight: 900,
-          fontSize: 320,
-          lineHeight: 0.75,
+          inset: 0,
+          opacity: 0.05,
+          backgroundImage: 'repeating-linear-gradient(-77deg, #fff 0 2px, transparent 2px 46px)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: '-20%',
+          bottom: '-20%',
+          right: 440,
+          width: 14,
+          background: accent,
+          transform: 'skewX(-14deg)',
+          boxShadow: `20px 0 0 -8px ${MENU_ACCENTS.void}, 28px 0 0 -10px ${accent}`,
+          opacity: 0.7,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -70,
+          left: -30,
+          fontFamily: 'Chakra Petch, sans-serif',
+          fontWeight: 700,
+          fontStyle: 'italic',
+          fontSize: 300,
+          lineHeight: 0.8,
           letterSpacing: '-0.04em',
           color: 'transparent',
-          WebkitTextStroke: `2px ${accent}22`,
-          transform: 'skewX(-8deg) rotate(-2deg)',
+          WebkitTextStroke: `2px ${accent}30`,
+          transform: 'rotate(-6deg) skewX(-10deg)',
           pointerEvents: 'none',
           userSelect: 'none',
+          whiteSpace: 'nowrap',
         }}
       >
         ESERCITO
@@ -311,29 +338,31 @@ function DeckPreviewCosmic({
         style={{
           position: 'relative',
           zIndex: 2,
-          padding: '20px 36px 14px',
+          padding: '22px 36px 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: `1px solid ${accent}33`,
         }}
       >
         <button
+          type="button"
           onClick={onBack}
           style={{
-            padding: '8px 14px',
-            background: 'transparent',
-            border: `1px solid ${soft}88`,
-            color: soft,
-            fontFamily: 'Share Tech Mono, monospace',
-            fontSize: 10,
-            letterSpacing: '0.3em',
+            padding: '10px 24px 10px 18px',
+            background: MENU_ACCENTS.void,
+            border: 'none',
+            color: MENU_ACCENTS.text,
+            fontFamily: 'Chakra Petch, sans-serif',
+            fontStyle: 'italic',
+            fontSize: 20,
+            letterSpacing: '0.08em',
             fontWeight: 700,
-            clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+            transform: 'skewX(-14deg) rotate(-2deg)',
+            boxShadow: `5px 5px 0 ${accent}`,
             cursor: 'pointer',
           }}
         >
-          ← INDIETRO
+          <span style={{ display: 'inline-block', transform: 'skewX(14deg)' }}>← INDIETRO</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -364,20 +393,36 @@ function DeckPreviewCosmic({
             )}
           </div>
 
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, color: heat, letterSpacing: '0.45em' }}>· ANTEPRIMA ESERCITO ·</div>
+          <div style={{ textAlign: 'left', transform: 'rotate(-2deg)' }}>
             <div
               style={{
-                fontFamily: 'Cinzel, serif',
-                fontWeight: 900,
-                fontSize: 28,
-                letterSpacing: '0.2em',
-                textShadow: `2px 2px 0 ${accent}88`,
+                display: 'inline-block',
+                background: accent,
+                color: MENU_ACCENTS.void,
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: '0.26em',
+                padding: '2px 12px',
+                transform: 'skewX(-14deg)',
               }}
             >
-              «{(D.name || 'ESERCITO').toUpperCase()}»
+              ANTEPRIMA ESERCITO
             </div>
-            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: accent, letterSpacing: '0.3em' }}>
+            <div
+              style={{
+                fontFamily: 'Chakra Petch, sans-serif',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                fontSize: 44,
+                lineHeight: 1.05,
+                letterSpacing: '-0.01em',
+                textShadow: `4px 4px 0 ${accent}, 8px 8px 0 ${MENU_ACCENTS.void}`,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {(D.name || 'ESERCITO').toUpperCase()}
+            </div>
+            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: soft, letterSpacing: '0.24em', marginTop: 2 }}>
               {(displayArmies.length >= 2 ? displayArmies.join(' · ') : (D.army || '—')).toUpperCase()} · {cards.length} CARTE · {totalLega} LEGA
             </div>
           </div>
@@ -437,11 +482,13 @@ function DeckPreviewCosmic({
                 style={{
                   width: 220,
                   height: 320,
-                  border: active ? `2px solid ${heat}` : `1px solid ${accent}66`,
+                  border: 'none',
+                  borderRadius: '0 0 12px 12px',
                   boxShadow: active
-                    ? `0 0 26px ${heat}99`
-                    : `0 0 12px ${accent}44`,
-                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                    ? `0 0 0 3px ${MENU_ACCENTS.text}, 10px 10px 0 3px ${accent}`
+                    : `6px 6px 0 rgba(0,0,0,0.6)`,
+                  transform: active ? 'rotate(-2.5deg) translateY(-6px)' : 'none',
+                  transition: 'box-shadow 0.2s ease, transform 0.2s cubic-bezier(.3,1.5,.5,1)',
                   padding: 0,
                   background: 'transparent',
                   cursor: 'pointer',
@@ -455,22 +502,21 @@ function DeckPreviewCosmic({
                 <div
                   style={{
                     position: 'absolute',
-                    top: -10,
-                    left: -8,
+                    top: -12,
+                    left: -10,
                     zIndex: 6,
-                    width: 30,
-                    height: 34,
-                    background: active
-                      ? `linear-gradient(180deg, ${heat} 0%, ${deep} 100%)`
-                      : `linear-gradient(180deg, ${accent} 0%, ${deep} 100%)`,
-                    clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)',
+                    padding: '2px 9px',
+                    background: active ? MENU_ACCENTS.text : MENU_ACCENTS.void,
+                    boxShadow: `3px 3px 0 ${accent}`,
+                    transform: 'skewX(-14deg) rotate(-4deg)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontFamily: 'Cinzel, serif',
-                    fontWeight: 900,
-                    fontSize: 13,
-                    color: MENU_ACCENTS.void,
+                    fontFamily: 'Chakra Petch, sans-serif',
+                    fontStyle: 'italic',
+                    fontWeight: 700,
+                    fontSize: 16,
+                    color: active ? MENU_ACCENTS.void : MENU_ACCENTS.text,
                     pointerEvents: 'none',
                   }}
                 >
@@ -500,35 +546,51 @@ function DeckPreviewCosmic({
 
         <div
           style={{
-            background: `linear-gradient(180deg, color-mix(in srgb, ${accent} 18%, rgba(6,3,10,0.92)) 0%, rgba(6,3,10,0.88) 100%)`,
-            border: `1px solid ${accent}55`,
-            padding: 16,
+            background: 'rgba(5,5,7,0.92)',
+            borderLeft: `5px solid ${accent}`,
+            padding: '18px 18px 16px',
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)',
+            boxShadow: '10px 10px 0 rgba(0,0,0,0.6)',
           }}
         >
           {selectedCard ? (
             <>
               <div style={{ minHeight: 0, overflow: 'auto' }}>
-                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, letterSpacing: '0.08em', fontSize: 20, color: MENU_ACCENTS.text }}>
+                <div
+                  key={selectedCard.id ?? selectedIndex}
+                  style={{
+                    display: 'inline-block',
+                    background: MENU_ACCENTS.text,
+                    color: MENU_ACCENTS.void,
+                    fontFamily: 'Chakra Petch, sans-serif',
+                    fontWeight: 700,
+                    fontStyle: 'italic',
+                    textTransform: 'uppercase',
+                    fontSize: 22,
+                    lineHeight: 1.1,
+                    padding: '5px 16px',
+                    transform: 'rotate(-1.5deg)',
+                    boxShadow: `5px 5px 0 ${accent}`,
+                  }}
+                >
                   {selectedCard.name}
                 </div>
-                <div style={{ marginTop: 4, fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: '0.25em', color: '#94a3b8' }}>
+                <div style={{ marginTop: 10, fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: '0.25em', color: soft }}>
                   LEGA {selectedCard.league || selectedCard.lega || 0} · ARMATA {(selectedCard.army || D.army || '—').toUpperCase()}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
                   <BigStat label="POT" value={selectedCard.power ?? selectedCard.pot ?? 0} c={COLOR_POTENZA} />
                   <BigStat label="DAN" value={selectedCard.damage ?? selectedCard.dan ?? 0} c={COLOR_DANNO} />
                 </div>
-                <div style={{ marginTop: 12, padding: '10px 12px', border: `1px solid ${COLOR_POTERE}55`, background: `${COLOR_POTERE}14` }}>
+                <div style={{ marginTop: 12, padding: '10px 12px', borderLeft: `4px solid ${COLOR_POTERE}`, background: `${COLOR_POTERE}14` }}>
                   <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: COLOR_POTERE, letterSpacing: '0.22em', marginBottom: 4 }}>POTERE — DETTAGLIO</div>
                   <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.35 }}>
                     {selectedCard.powerDesc || selectedCard.description || selectedCard.abilityText || selectedCard.powerEffect || '—'}
                   </div>
                 </div>
-                <div style={{ marginTop: 8, padding: '10px 12px', border: `1px solid ${COLOR_BONUS}55`, background: `${COLOR_BONUS}14` }}>
+                <div style={{ marginTop: 8, padding: '10px 12px', borderLeft: `4px solid ${COLOR_BONUS}`, background: `${COLOR_BONUS}14` }}>
                   <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 9, color: COLOR_BONUS, letterSpacing: '0.22em', marginBottom: 4 }}>BONUS — DETTAGLIO</div>
                   <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.35 }}>
                     {selectedCard.bonusDesc || selectedCard.bonusEffect || '—'}
@@ -575,8 +637,20 @@ function DeckPreviewCosmic({
                   </div>
                 ) : null}
                 {deckHighlights ? (
-                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${accent}55` }}>
-                    <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: '#d8e1ee', letterSpacing: '0.2em', marginBottom: 10, textShadow: `0 0 10px ${accent}59` }}>
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(245,243,235,0.12)' }}>
+                    <div
+                      style={{
+                        display: 'inline-block',
+                        background: accent,
+                        color: MENU_ACCENTS.void,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        letterSpacing: '0.24em',
+                        padding: '2px 12px',
+                        marginBottom: 10,
+                        transform: 'skewX(-14deg)',
+                      }}
+                    >
                       PROFILO ESERCITO
                     </div>
                     <div style={{ display: 'grid', gap: 8 }}>
@@ -630,47 +704,51 @@ function DeckPreviewCosmic({
             gap: 14,
           }}
         >
-          <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, color: '#94a3b8', letterSpacing: '0.25em' }}>
-            // ANTEPRIMA COMPLETA ESERCITO
+          <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: soft, letterSpacing: '0.25em' }}>
+            CLICCA UNA CARTA PER I DETTAGLI
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {onEdit ? (
               <button
+                type="button"
                 onClick={() => onEdit(D)}
                 style={{
-                  padding: '11px 22px',
-                  background: 'transparent',
-                  border: `1px solid ${soft}88`,
-                  color: soft,
-                  fontFamily: 'Share Tech Mono, monospace',
-                  fontSize: 10,
-                  letterSpacing: '0.3em',
+                  padding: '12px 24px',
+                  background: MENU_ACCENTS.void,
+                  border: 'none',
+                  boxShadow: `inset 0 0 0 2px ${MENU_ACCENTS.text}, 5px 5px 0 ${accent}`,
+                  color: MENU_ACCENTS.text,
+                  fontFamily: 'Chakra Petch, sans-serif',
+                  fontSize: 16,
+                  letterSpacing: '0.12em',
                   fontWeight: 700,
-                  clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+                  transform: 'skewX(-14deg)',
                   cursor: 'pointer',
                 }}
               >
-                ✎ MODIFICA
+                <span style={{ display: 'inline-block', transform: 'skewX(14deg)' }}>✎ MODIFICA</span>
               </button>
             ) : null}
             {onConfirm ? (
               <button
+                type="button"
                 onClick={() => onConfirm(D)}
                 style={{
-                  padding: '12px 28px',
-                  background: `linear-gradient(90deg, ${accent} 0%, ${heat} 100%)`,
+                  padding: '12px 30px',
+                  background: accent,
                   border: 'none',
                   color: MENU_ACCENTS.void,
-                  fontFamily: 'Cinzel, serif',
-                  fontWeight: 900,
-                  fontSize: 15,
-                  letterSpacing: '0.3em',
+                  fontFamily: 'Chakra Petch, sans-serif',
+                  fontStyle: 'italic',
+                  fontWeight: 700,
+                  fontSize: 24,
+                  letterSpacing: '0.02em',
                   cursor: 'pointer',
-                  clipPath: 'polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)',
-                  boxShadow: `0 0 24px ${heat}88, 0 4px 0 ${deep}`,
+                  transform: 'skewX(-14deg)',
+                  boxShadow: `6px 6px 0 ${MENU_ACCENTS.text}`,
                 }}
               >
-                SCHIERA ESERCITO ›
+                <span style={{ display: 'inline-block', transform: 'skewX(14deg)' }}>SCHIERA ESERCITO ›</span>
               </button>
             ) : null}
           </div>
@@ -684,15 +762,17 @@ function MiniStat({ label, value, c }) {
   return (
     <div
       style={{
-        padding: '6px 12px',
+        padding: '6px 16px 6px 14px',
         background: MENU_ACCENTS.void,
-        border: `1px solid ${c}55`,
-        clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
-        minWidth: 94,
+        borderBottom: `3px solid ${c}`,
+        transform: 'skewX(-14deg)',
+        minWidth: 104,
       }}
     >
-      <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 8, color: '#94a3b8', letterSpacing: '0.3em' }}>{label}</div>
-      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20, color: c, lineHeight: 1.05 }}>{value}</div>
+      <div style={{ transform: 'skewX(14deg)' }}>
+        <div style={{ fontFamily: 'Chakra Petch, sans-serif', fontWeight: 700, fontSize: 10, color: MENU_ACCENTS.text, letterSpacing: '0.24em' }}>{label}</div>
+        <div style={{ fontFamily: 'Chakra Petch, sans-serif', fontStyle: 'italic', fontWeight: 700, fontSize: 28, color: c, lineHeight: 1 }}>{value}</div>
+      </div>
     </div>
   );
 }
@@ -701,13 +781,16 @@ function BigStat({ label, value, c }) {
   return (
     <div
       style={{
-        padding: '8px 10px',
-        background: MENU_ACCENTS.void,
-        border: `1px solid ${c}55`,
+        padding: '6px 12px',
+        background: 'rgba(245,243,235,0.04)',
+        borderLeft: `4px solid ${c}`,
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
       }}
     >
-      <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 8, color: '#94a3b8', letterSpacing: '0.3em' }}>{label}</div>
-      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 26, color: c, lineHeight: 1.05 }}>{value}</div>
+      <div style={{ fontFamily: 'Chakra Petch, sans-serif', fontWeight: 700, fontSize: 12, color: MENU_ACCENTS.text, letterSpacing: '0.22em' }}>{label}</div>
+      <div style={{ fontFamily: 'Chakra Petch, sans-serif', fontStyle: 'italic', fontWeight: 700, fontSize: 38, color: c, lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
