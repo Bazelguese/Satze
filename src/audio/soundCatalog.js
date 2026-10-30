@@ -22,6 +22,8 @@ export const GAME_SOUND = {
   DUEL_POWER: 'game.duel.power',
   DUEL_FOCUS: 'game.duel.focus',
   DUEL_CLASH: 'game.duel.clash',
+  DUEL_COIN: 'game.duel.coin',
+  DUEL_PERFECT: 'game.duel.perfect',
   DUEL_WIN: 'game.duel.win',
   DUEL_LOSE: 'game.duel.lose',
   DUEL_DRAW: 'game.duel.draw',
@@ -58,6 +60,23 @@ const FALLBACK = {
   shuffle: 'audio/sfx/shuffle.wav',
 };
 
+/** Set della partita (ElevenLabs): code naturali, volume già bilanciato tra i file. */
+const MATCH = {
+  cardArrive: 'audio/sfx/match/card-arrive.mp3',
+  confirm: 'audio/sfx/match/confirm.mp3',
+  coin: 'audio/sfx/match/coin.mp3',
+  clash: 'audio/sfx/match/clash.mp3',
+};
+
+/**
+ * Millisecondi dall'inizio del file al colpo udibile: chi sincronizza un suono
+ * con un'animazione lo anticipa di questo tanto.
+ * @type {Record<string, number>}
+ */
+export const SOUND_HIT_MS = {
+  [GAME_SOUND.DUEL_CLASH]: 850,
+};
+
 /** @type {Record<string, string>} */
 export const SOUND_CATALOG = {
   [UI_SOUND.CLICK]: FALLBACK.ui,
@@ -66,18 +85,19 @@ export const SOUND_CATALOG = {
   [UI_SOUND.NAVIGATE]: FALLBACK.soft,
   'ui.soft': FALLBACK.soft,
 
-  [GAME_SOUND.CARD_SELECT]: FALLBACK.place,
+  [GAME_SOUND.CARD_SELECT]: MATCH.cardArrive,
   [GAME_SOUND.CARD_DESELECT]: FALLBACK.soft,
-  [GAME_SOUND.CARD_PLACE]: FALLBACK.place,
+  [GAME_SOUND.CARD_PLACE]: MATCH.cardArrive,
   [GAME_SOUND.FIELD_SELECT]: FALLBACK.confirm,
-  [GAME_SOUND.FC_TICK]: FALLBACK.tick,
-  [GAME_SOUND.LOCK_IN]: FALLBACK.confirm,
+  [GAME_SOUND.FC_TICK]: MATCH.coin,
+  [GAME_SOUND.LOCK_IN]: MATCH.confirm,
   [GAME_SOUND.SHUFFLE]: FALLBACK.shuffle,
   [GAME_SOUND.DUEL_START]: FALLBACK.launch,
   [GAME_SOUND.DUEL_DEPLOY]: FALLBACK.launch,
   [GAME_SOUND.DUEL_POWER]: FALLBACK.tick,
   [GAME_SOUND.DUEL_FOCUS]: FALLBACK.tick,
-  [GAME_SOUND.DUEL_CLASH]: FALLBACK.clash,
+  [GAME_SOUND.DUEL_CLASH]: MATCH.clash,
+  [GAME_SOUND.DUEL_COIN]: MATCH.coin,
   [GAME_SOUND.DUEL_WIN]: FALLBACK.win,
   [GAME_SOUND.DUEL_LOSE]: FALLBACK.lose,
   [GAME_SOUND.DUEL_DRAW]: FALLBACK.soft,
