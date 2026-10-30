@@ -429,6 +429,10 @@ export default function DeckSelectCinematic({
   const [coverStyle] = useState(() => getDeckCoverStyle());
   /** Anteprima attiva: shuffle | click | drop | effects */
   const [previewMode, setPreviewMode] = useState('shuffle');
+  /** Menù a comparsa Personalizza aperto: la schermata sotto non ascolta tasti e rotella. */
+  const [customizing, setCustomizing] = useState(false);
+  const customizingRef = useRef(false);
+  customizingRef.current = customizing;
   const rootRef = useRef(null);
   const wheelLockRef = useRef(0);
   const phaseRef = useRef(phase);
@@ -520,17 +524,47 @@ export default function DeckSelectCinematic({
   const dropMeta = getDropPlaceFxMeta(placeFx.drop);
   const styleMeta = getPlaceFxStyleMeta(placeFx.style);
 
+  /** Le preferenze del duello, in ordine, per il menù Personalizza. */
+  const prefRows = [
+    {
+      key: 'shuffle', label: 'MISCHIA', mode: 'shuffle', meta: shuffleMeta,
+      hint: 'Come si mescola il mazzo a inizio duello.',
+      step: (d) => cycleShuffle(d),
+    },
+    {
+      key: 'click', label: 'INGRESSO · CLIC', mode: 'click', meta: clickMeta,
+      hint: 'Come entra in campo la carta giocata con un clic.',
+      step: (d) => cycleOption(CLICK_PLACE_FX_OPTIONS, placeFx.click, d, (key) => patchPlaceFx({ click: key })),
+    },
+    {
+      key: 'drop', label: 'INGRESSO · TRASCINA', mode: 'drop', meta: dropMeta,
+      hint: 'Come entra in campo la carta trascinata.',
+      step: (d) => cycleOption(DROP_PLACE_FX_OPTIONS, placeFx.drop, d, (key) => patchPlaceFx({ drop: key })),
+    },
+    {
+      key: 'effects', label: 'EFFETTI', mode: 'effects', meta: styleMeta,
+      hint: 'Lo stile del colpo quando la carta tocca il campo.',
+      step: (d) => cycleOption(PLACE_FX_STYLE_OPTIONS, placeFx.style, d, (key) => patchPlaceFx({ style: key })),
+    },
+    {
+      key: 'army', label: "INGRESSO D'ARMATA", mode: null, meta: getArmyEntryModeMeta(placeFx.army),
+      hint: "L'annuncio dell'armata all'inizio del duello.",
+      step: (d) => cycleOption(ARMY_ENTRY_MODE_OPTIONS, placeFx.army, d, (key) => patchPlaceFx({ army: key })),
+    },
+  ];
+
   useEffect(() => {
     const onKey = (e) => {
-      if (phaseRef.current !== 'idle') return;
+      if (phaseRef.current !== 'idle' || customizingRef.current) return;
       if (e.key === 'ArrowLeft') go(-1);
       if (e.key === 'ArrowRight') go(1);
       if (e.key === 'Enter') confirm();
       if (e.key === 'Escape' && onBack) onBack();
+      if ((e.key === 'p' || e.key === 'P') && !isManager) { playUiClick(); setCustomizing(true); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onBack, go, confirm]);
+  }, [onBack, go, confirm, isManager]);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -549,7 +583,7 @@ export default function DeckSelectCinematic({
     if (!el) return;
 
     const onWheel = (e) => {
-      if (phaseRef.current !== 'idle') return;
+      if (phaseRef.current !== 'idle' || customizingRef.current) return;
 
       const scrollable = e.target?.closest?.('.dsk-prefstack');
       if (scrollable && scrollable.scrollHeight > scrollable.clientHeight + 1) {
@@ -679,94 +713,29 @@ export default function DeckSelectCinematic({
         </div>
       </div>
 
-      {/* Preferenze duello: anteprima (mischia / ingresso / effetti) + controlli */}
-      {!isManager && phase === 'idle' && (
-        <div className="dsk-prefstack">
-          <DuelAnimPreview
-            mode={previewMode}
-            onModeChange={setPreviewMode}
-            accent={accent}
-            shuffleKind={shuffleKind}
-            placeFx={placeFx}
-            shuffleMeta={shuffleMeta}
-            clickMeta={clickMeta}
-            dropMeta={dropMeta}
-            styleMeta={styleMeta}
-            deckCards={deck.deckCards || []}
-            card={deck.leaderAgent || deck.deckCards?.[0] || null}
-          />
-          <aside className="dsk-prefpanel" aria-label="Preferenze animazioni duello">
-            <div className="dsk-prefpanel-head">
-              <span className="eye">PREFERENZE DUELLO</span>
-              <span className="hint">MISCHIA · INGRESSO</span>
-            </div>
-            <div className="dsk-prefpanel-rows">
-              <PrefRow
-                label="MISCHIA"
-                meta={shuffleMeta}
-                rowKey={shuffleKind}
-                onPrev={() => { setPreviewMode('shuffle'); cycleShuffle(-1); }}
-                onNext={() => { setPreviewMode('shuffle'); cycleShuffle(1); }}
-                prevLabel="Mischia precedente"
-                nextLabel="Mischia successiva"
-              />
-              <PrefRow
-                label="CLICK"
-                meta={clickMeta}
-                rowKey={placeFx.click}
-                onPrev={() => {
-                  setPreviewMode('click');
-                  cycleOption(CLICK_PLACE_FX_OPTIONS, placeFx.click, -1, (key) => patchPlaceFx({ click: key }));
-                }}
-                onNext={() => {
-                  setPreviewMode('click');
-                  cycleOption(CLICK_PLACE_FX_OPTIONS, placeFx.click, 1, (key) => patchPlaceFx({ click: key }));
-                }}
-                prevLabel="Ingresso click precedente"
-                nextLabel="Ingresso click successivo"
-              />
-              <PrefRow
-                label="DROP"
-                meta={dropMeta}
-                rowKey={placeFx.drop}
-                onPrev={() => {
-                  setPreviewMode('drop');
-                  cycleOption(DROP_PLACE_FX_OPTIONS, placeFx.drop, -1, (key) => patchPlaceFx({ drop: key }));
-                }}
-                onNext={() => {
-                  setPreviewMode('drop');
-                  cycleOption(DROP_PLACE_FX_OPTIONS, placeFx.drop, 1, (key) => patchPlaceFx({ drop: key }));
-                }}
-                prevLabel="Ingresso drop precedente"
-                nextLabel="Ingresso drop successivo"
-              />
-              <PrefRow
-                label="EFFETTI"
-                meta={styleMeta}
-                rowKey={String(placeFx.style)}
-                onPrev={() => {
-                  setPreviewMode('effects');
-                  cycleOption(PLACE_FX_STYLE_OPTIONS, placeFx.style, -1, (key) => patchPlaceFx({ style: key }));
-                }}
-                onNext={() => {
-                  setPreviewMode('effects');
-                  cycleOption(PLACE_FX_STYLE_OPTIONS, placeFx.style, 1, (key) => patchPlaceFx({ style: key }));
-                }}
-                prevLabel="Stile effetti precedente"
-                nextLabel="Stile effetti successivo"
-              />
-              <PrefRow
-                label="ARMATA"
-                meta={getArmyEntryModeMeta(placeFx.army)}
-                rowKey={String(placeFx.army)}
-                onPrev={() => cycleOption(ARMY_ENTRY_MODE_OPTIONS, placeFx.army, -1, (key) => patchPlaceFx({ army: key }))}
-                onNext={() => cycleOption(ARMY_ENTRY_MODE_OPTIONS, placeFx.army, 1, (key) => patchPlaceFx({ army: key }))}
-                prevLabel="Ingresso d'armata: opzione precedente"
-                nextLabel="Ingresso d'armata: opzione successiva"
-              />
-            </div>
-          </aside>
-        </div>
+      {/* Personalizza: preferenze del duello in un menù a comparsa (tasto P) */}
+      {!isManager && phase === 'idle' && customizing && (
+        <PersonalizePanel
+          accent={accent}
+          rows={prefRows}
+          onClose={() => setCustomizing(false)}
+          onFocusRow={(row) => row.mode && setPreviewMode(row.mode)}
+          preview={(
+            <DuelAnimPreview
+              mode={previewMode}
+              onModeChange={setPreviewMode}
+              accent={accent}
+              shuffleKind={shuffleKind}
+              placeFx={placeFx}
+              shuffleMeta={shuffleMeta}
+              clickMeta={clickMeta}
+              dropMeta={dropMeta}
+              styleMeta={styleMeta}
+              deckCards={deck.deckCards || []}
+              card={deck.leaderAgent || deck.deckCards?.[0] || null}
+            />
+          )}
+        />
       )}
 
       {/* Bottom: pager + selezionato + SCHIERA */}
@@ -779,6 +748,13 @@ export default function DeckSelectCinematic({
           </div>
         </div>
         <div className="dsk-ctabar-actions">
+          {!isManager && (
+            <button type="button" className="dsk-preview dsk-customize" onClick={() => setCustomizing(true)}>
+              <span className="ic">✦</span>
+              <span className="lbl">PERSONALIZZA</span>
+              <kbd>P</kbd>
+            </button>
+          )}
           {onPreviewDeck && (
             <button type="button" className="dsk-preview" onClick={() => onPreviewDeck(deck)}>
               <span className="ic">👁</span>
@@ -948,6 +924,9 @@ function DeckSelectPersonaSkin() {
       }
       .dsk--p .dsk-preview > * { display: inline-block; transform: skewX(14deg); }
       .dsk--p .dsk-preview:hover { background: var(--p-ink); color: var(--p-void); box-shadow: 5px 5px 0 var(--accent); }
+      .dsk--p .dsk-customize { display: inline-flex; align-items: center; gap: 8px; }
+      .dsk--p .dsk-customize kbd { margin-left: 4px; }
+      .dsk--p .dsk-customize:hover kbd { background: var(--p-void); color: var(--p-ink); }
       .dsk--p .dsk-schiera {
         clip-path: none; transform: skewX(-14deg);
         font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
@@ -1466,6 +1445,252 @@ function DuelAnimPreview({
       </div>
       {caption.desc && <p className="dsk-fxpreview-desc">{caption.desc}</p>}
     </div>
+  );
+}
+
+// ============================================================
+// PERSONALIZZA: preferenze del duello in un menù a comparsa
+// ============================================================
+/**
+ * rows: [{ key, label, hint, mode, meta: { sub, title }, step(delta) }]
+ * Tastiera: ↑↓ voce, ←→ valore, Esc / P / Invio chiude.
+ */
+function PersonalizePanel({ accent, rows, preview, onClose, onFocusRow }) {
+  const [focus, setFocus] = useState(0);
+  const stateRef = useRef({});
+  stateRef.current = { rows, focus, onClose };
+  const cur = rows[Math.min(focus, rows.length - 1)];
+
+  useEffect(() => {
+    onFocusRow?.(cur);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus]);
+
+  const step = (i, d) => {
+    playUiClick();
+    setFocus(i);
+    stateRef.current.rows[i].step(d);
+  };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const { rows: rs, focus: f, onClose: close } = stateRef.current;
+      const k = e.key;
+      // i tasti restano al pannello: la scelta esercito sotto non deve sentirli
+      e.stopImmediatePropagation();
+      if (k === 'Escape' || k === 'Enter' || k === 'p' || k === 'P') { e.preventDefault(); playUiClick(); close(); return; }
+      if (k === 'ArrowUp' || k === 'ArrowDown') {
+        e.preventDefault();
+        playUiClick();
+        setFocus((x) => (x + (k === 'ArrowUp' ? -1 : 1) + rs.length) % rs.length);
+        return;
+      }
+      if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        e.preventDefault();
+        step(f, k === 'ArrowLeft' ? -1 : 1);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
+  return (
+    <div className="dpz" style={{ '--accent': accent }} onClick={onClose}>
+      <div className="dpz-card" role="dialog" aria-modal="true" aria-label="Personalizza il duello" onClick={(e) => e.stopPropagation()}>
+        <div className="dpz-sheet">
+          <header className="dpz-head">
+            <span className="dpz-eye">PREFERENZE DUELLO</span>
+            <h2>PERSONALIZZA</h2>
+            <span className="dpz-note">VALGONO PER TUTTE LE PARTITE</span>
+            <button type="button" className="dpz-x" onClick={onClose} aria-label="Chiudi Personalizza">
+              <kbd>ESC</kbd><span>CHIUDI</span>
+            </button>
+          </header>
+
+          <div className="dpz-body">
+            <div className="dpz-preview">{preview}</div>
+            <div className="dpz-rows">
+              {rows.map((r, i) => (
+                <div
+                  key={r.key}
+                  className={`dpz-row${i === focus ? ' on' : ''}`}
+                  style={{ '--zz': `${[0, 14, 4, 18, 8][i % 5]}px` }}
+                  onMouseEnter={() => setFocus(i)}
+                >
+                  <span className="dpz-row-cursor" aria-hidden="true" />
+                  <div className="dpz-row-lbl">
+                    <span className="n">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="t">{r.label}</span>
+                  </div>
+                  <div className="dpz-step">
+                    <button type="button" onClick={() => step(i, -1)} aria-label={`${r.label}: precedente`}>‹</button>
+                    <div className="dpz-val" key={`${r.key}-${r.meta?.title}`}>
+                      <span className="sub">{r.meta?.sub}</span>
+                      <span className="v">{r.meta?.title}</span>
+                    </div>
+                    <button type="button" onClick={() => step(i, 1)} aria-label={`${r.label}: successivo`}>›</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <footer className="dpz-foot">
+            <div className="dpz-help" key={cur.key}>
+              <span className="lbl">{cur.label}</span>
+              <span className="hint">{cur.hint}</span>
+            </div>
+            <div className="dpz-keys">
+              <span><kbd>↑</kbd><kbd>↓</kbd>VOCE</span>
+              <span><kbd>←</kbd><kbd>→</kbd>VALORE</span>
+            </div>
+            <button type="button" className="dpz-done" onClick={onClose}><span>FATTO</span></button>
+          </footer>
+        </div>
+      </div>
+      <PersonalizeStyles />
+    </div>
+  );
+}
+
+function PersonalizeStyles() {
+  return (
+    <style>{`
+      .dpz {
+        --ink: #f5f3eb; --void: #050507; --plate: #111116;
+        position: absolute; inset: 0; z-index: 400; display: grid; place-items: center;
+        background:
+          radial-gradient(circle, color-mix(in srgb, var(--accent) 28%, transparent) 1.4px, transparent 1.8px) 0 0 / 11px 11px,
+          rgba(5,5,7,0.84);
+        font-family: 'Chakra Petch', sans-serif; color: var(--ink);
+        animation: dpz-fade .2s ease both;
+      }
+      @keyframes dpz-fade { from { opacity: 0; } }
+      .dpz * { box-sizing: border-box; }
+      .dpz kbd {
+        display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 5px;
+        background: var(--ink); color: var(--void); border: 0;
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px;
+        clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+      }
+      .dpz-card {
+        width: 1500px; transform: rotate(-1.2deg);
+        filter: drop-shadow(16px 16px 0 var(--accent));
+        animation: dpz-in .34s cubic-bezier(.2,1.2,.4,1) both;
+      }
+      @keyframes dpz-in { from { opacity: 0; transform: rotate(-1.2deg) translateY(60px) skewX(-6deg); } }
+      .dpz-sheet {
+        position: relative; display: flex; flex-direction: column;
+        background: var(--void);
+        clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%);
+      }
+      .dpz-sheet::before {
+        content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--accent);
+      }
+
+      .dpz-head { position: relative; display: flex; align-items: flex-end; gap: 22px; padding: 30px 56px 14px 52px; }
+      .dpz-eye {
+        position: absolute; left: 50px; top: 18px;
+        background: var(--accent); color: var(--void); font-weight: 700; font-size: 14px; letter-spacing: 0.28em;
+        padding: 3px 14px; transform: skewX(-14deg);
+      }
+      .dpz-head h2 {
+        margin: 18px 0 0; font-weight: 700; font-style: italic; font-size: 92px; line-height: 0.95; letter-spacing: -0.02em;
+        text-shadow: 6px 6px 0 var(--accent);
+      }
+      .dpz-note { margin-bottom: 14px; font-family: 'Share Tech Mono', monospace; font-size: 14px; letter-spacing: 0.16em; color: rgba(245,243,235,0.55); }
+      .dpz-x {
+        margin-left: auto; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 10px;
+        border: 0; cursor: pointer; background: transparent; color: var(--ink);
+        font: italic 700 20px/1 'Chakra Petch', sans-serif; letter-spacing: 0.08em;
+      }
+      .dpz-x:hover span, .dpz-x:focus-visible span { color: var(--accent); }
+
+      .dpz-body { display: grid; grid-template-columns: 560px 1fr; gap: 44px; padding: 10px 70px 26px 52px; }
+
+      /* anteprima animata, più grande e senza schede (la guida la voce scelta) */
+      .dpz-preview .dsk-fxpreview {
+        padding: 0; background: #0c0c11; border: 0; border-left: 6px solid var(--accent); box-shadow: none; gap: 0;
+      }
+      .dpz-preview .dsk-fxpreview-head { position: absolute; right: 8px; top: 8px; z-index: 3; }
+      .dpz-preview .dsk-fxpreview { position: relative; }
+      .dpz-preview .dsk-fxpreview-tabs { display: none; }
+      .dpz-preview .dsk-fxpreview-stage,
+      .dpz-preview .dsk-fxpreview-stage.is-shuffle,
+      .dpz-preview .dsk-fxpreview-stage.is-place,
+      .dpz-preview .dsk-fxpreview-stage.is-effects { height: 470px; border: 0; }
+      .dpz-preview .dsk-fxpreview-scale { transform: scale(0.95); }
+      .dpz-preview .dsk-fxpreview-stage.is-effects .dsk-fxpreview-scale { transform: scale(0.85); }
+      .dpz-preview .dsk-fxpreview-caption { padding: 12px 18px 4px; align-items: center; }
+      .dpz-preview .dsk-fxpreview-caption .sub { font-size: 12px; color: var(--accent); }
+      .dpz-preview .dsk-fxpreview-caption .name { font: italic 700 24px/1 'Chakra Petch', sans-serif; letter-spacing: 0; }
+      .dpz-preview .dsk-fxpreview-desc { padding: 0 18px 16px; font-size: 13px; line-height: 1.45; }
+
+      .dpz-rows { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+      .dpz-row {
+        position: relative; display: grid; grid-template-columns: 330px 1fr; align-items: center; gap: 20px;
+        min-height: 84px; padding: 10px 22px 10px 34px; background: var(--plate);
+        clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+        transform: translateX(var(--zz));
+        transition: background .15s, color .15s, transform .18s cubic-bezier(.3,1.5,.5,1);
+      }
+      .dpz-row::before {
+        content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 6px;
+        background: rgba(245,243,235,0.18); transform: skewX(-12deg);
+      }
+      .dpz-row.on { background: var(--ink); color: var(--void); transform: translateX(calc(var(--zz) - 14px)) rotate(-1deg); }
+      .dpz-row.on::before { background: var(--accent); }
+      .dpz-row-cursor { display: none; }
+      .dpz-row-lbl { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+      .dpz-row-lbl .n { font-family: 'Share Tech Mono', monospace; font-size: 14px; color: var(--accent); }
+      .dpz-row.on .dpz-row-lbl .n { color: var(--void); }
+      .dpz-row-lbl .t { font-weight: 700; font-size: 26px; letter-spacing: 0.02em; white-space: nowrap; }
+      .dpz-row.on .dpz-row-lbl .t { font-style: italic; }
+
+      .dpz-step { display: flex; align-items: stretch; gap: 8px; height: 58px; min-width: 0; }
+      .dpz-step > button {
+        flex: none; width: 54px; border: 0; cursor: pointer; background: var(--ink); color: var(--void);
+        font: 700 30px/1 'Chakra Petch', sans-serif; transform: skewX(-14deg); transition: background .15s;
+      }
+      .dpz-row.on .dpz-step > button { background: var(--void); color: var(--ink); }
+      .dpz-step > button:hover, .dpz-step > button:focus-visible { background: var(--accent) !important; color: var(--void) !important; }
+      .dpz-val {
+        flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 22px;
+        background: var(--void); color: var(--ink); box-shadow: inset 0 0 0 2px var(--accent);
+        transform: skewX(-14deg); animation: dpz-val .22s cubic-bezier(.2,1.2,.4,1) both;
+      }
+      .dpz-val > * { transform: skewX(14deg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dpz-val .sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--accent); }
+      .dpz-val .v { font-weight: 700; font-style: italic; font-size: 22px; line-height: 1.1; text-transform: uppercase; }
+      @keyframes dpz-val { from { opacity: 0; transform: skewX(-14deg) translateX(18px); } }
+
+      .dpz-foot {
+        display: flex; align-items: center; gap: 26px; padding: 18px 70px 18px 52px;
+        background: var(--ink); color: var(--void);
+        clip-path: polygon(0 16px, 100% 0, 100% 100%, 0 100%);
+      }
+      .dpz-help { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; padding-top: 10px; animation: dpz-fade .2s ease both; }
+      .dpz-help .lbl {
+        flex: none; background: var(--void); color: var(--ink); font-weight: 700; font-size: 14px; letter-spacing: 0.14em;
+        padding: 4px 14px; transform: skewX(-14deg); box-shadow: 4px 4px 0 var(--accent);
+      }
+      .dpz-help .hint { font-weight: 600; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dpz-keys { display: flex; gap: 18px; padding-top: 10px; font-weight: 700; font-style: italic; font-size: 15px; letter-spacing: 0.1em; }
+      .dpz-keys span { display: inline-flex; align-items: center; gap: 4px; }
+      .dpz-keys kbd { background: var(--void); color: var(--ink); margin-right: 2px; }
+      .dpz-done {
+        border: 0; cursor: pointer; height: 56px; padding: 0 34px; margin-top: 8px;
+        background: var(--accent); color: var(--void); font: italic 700 26px/1 'Chakra Petch', sans-serif; letter-spacing: 0.06em;
+        transform: skewX(-14deg); box-shadow: 6px 6px 0 var(--void); transition: transform .15s, box-shadow .15s;
+      }
+      .dpz-done > span { display: inline-block; transform: skewX(14deg); }
+      .dpz-done:hover, .dpz-done:focus-visible { transform: skewX(-14deg) translate(-3px,-3px); box-shadow: 9px 9px 0 var(--void); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dpz, .dpz-card, .dpz-val, .dpz-help { animation: none; }
+      }
+    `}</style>
   );
 }
 
