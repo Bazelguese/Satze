@@ -552,3 +552,26 @@
   translate: calc(var(--mx) * 12px) calc(var(--my) * 8px);
   transition: translate 0.35s ease-out;
 }
+
+/* ============================================================
+   Ingresso a tappe (prop intro): prima solo il tuo lato, a sinistra
+   la ruota al buio; con 'reveal' riparte tutto ciò che era fermo.
+   ============================================================ */
+.vsx.vsx-intro { animation-play-state: paused; }
+.vsx-intro .vsx-half--l,
+.vsx-intro .vsx-side--l,
+.vsx-intro .vsx-vs,
+.vsx-intro .vsx-sparks { visibility: hidden; }
+.vsx-intro .vsx-half--l,
+.vsx-intro .vsx-half--l *,
+.vsx-intro .vsx-side--l,
+.vsx-intro .vsx-side--l *,
+.vsx-intro .vsx-vs,
+.vsx-intro .vsx-vs *,
+.vsx-intro .vsx-sparks *,
+.vsx-intro .vsx-side--r .dcv-box * { animation-play-state: paused !important; }
+/* la metà nemica, al buio, arriva di colpo come una lastra quando la ruota si ferma */
+.vsx-has-intro .vsx-half--l { animation-duration: 0.42s; animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1.2); }
+/* la tua scatola arriva in volo dalla scelta esercito: il resto del lato appare attorno */
+.vsx-intro-handoff .vsx-side--r { animation: none; }
+.vsx-intro-handoff .vsx-side--r > :not(.vsx-ticket) { animation: vsx-fade-in 0.5s 0.7s ease-out both; }

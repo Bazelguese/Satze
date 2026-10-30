@@ -162,6 +162,7 @@ import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCaro
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
+import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
 import { DuelLoadingOverlay } from '../src/components/DuelLoadingOverlay';
 import { buildDuelVersusData } from '../src/components/versus/versusMatchData';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
@@ -4582,27 +4583,6 @@ export default function SatzeGame() {
   const MIXED_DECKS_OPTION = 'Eserciti personalizzati';
   const MIXED_DECKS_COLOR = '#a78bfa'; // violet-400
 
-  const buildDeckConfirmDisplay = (army, deckKey, accent) => {
-    if (!deckKey) return { accent, deckName: 'Esercito', armyLabel: army || '' };
-    if (Array.isArray(deckKey)) {
-      return { accent, deckName: 'Esercito hub', armyLabel: army || '' };
-    }
-    if (deckKey.startsWith('custom_')) {
-      const decks = loadCustomDecks();
-      const id = deckKey.replace('custom_', '');
-      return {
-        accent,
-        deckName: decks[id]?.name || 'Esercito personalizzato',
-        armyLabel: decks[id]?.army || army || '',
-      };
-    }
-    return {
-      accent,
-      deckName: ARMY_DECKS[army]?.[deckKey]?.name || 'Esercito',
-      armyLabel: army || '',
-    };
-  };
-
   // Durante la transizione post-difficoltà resta visibile la schermata esercito sotto l'iris (portal).
 
   // Schermata Selezione Armata (la campagna non passa più di qui: lancio diretto dall'hub)
@@ -4666,24 +4646,25 @@ export default function SatzeGame() {
             excludeArmy={isMixedMode ? null : selectedArmy}
             onClose={() => setShowDifficultyPopup(false)}
             onSelect={(choice) => {
+              // INIZIA: si passa subito al VS; la scatola dell'esercito scelto vola da qui
+              // al suo posto e la ruota sorteggia l'avversario mentre il duello si carica.
+              armVersusHandoff(document.querySelector('.dsk .dsk-tk.is-center')?.getBoundingClientRect() ?? null);
               setShowDifficultyPopup(false);
               clearCardPreview();
               setSelectedMode(choice.mode);
-              const display = buildDeckConfirmDisplay(selectedArmy, selectedDeckKey, colors.accent);
-              setLaunchShowText(true);
-              setLaunchVisualPhase('animate');
-              setPendingGameLaunch({
-                sessionId: Date.now(),
-                army: selectedArmy,
-                deckKey: selectedDeckKey,
-                mode: choice.mode,
-                difficulty: choice.difficulty,
-                enemyArmy: choice.enemyArmy ?? null,
-                startOptions: {
-                  eminenceFormat: choice.eminenceFormat,
-                },
-                ...display,
-              });
+              // prima si ridisegna senza il riquadro, poi parte il lavoro pesante dell'avvio
+              const start = () => startStandardGameRef.current(
+                selectedArmy,
+                selectedDeckKey,
+                choice.mode,
+                choice.difficulty,
+                ALL_BATTLEFIELDS,
+                choice.enemyArmy ?? null,
+                null,
+                null,
+                { eminenceFormat: choice.eminenceFormat }
+              );
+              requestAnimationFrame(() => requestAnimationFrame(start));
             }}
           />
         )
@@ -5045,6 +5026,7 @@ export default function SatzeGame() {
         eminenceMatchState={eminenceMatchState}
         showChrome={!launchHandoffBusy}
         versus={duelVersus}
+        versusIntro={!isOnlinePvP}
         onComplete={() => {
           const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');
           setPendingDuelPhase(null);
