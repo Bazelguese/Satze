@@ -58,276 +58,112 @@ function Rune({ index, className = "" }) {
   );
 }
 
+/** Pseudo-casuale deterministico: lo schizzo ha sempre la stessa forma. */
+function rnd(seed) {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** Schizzo di vernice: macchia irregolare con punte e colature (viewBox 300×180). */
+function splashPath(seed) {
+  const pts = [];
+  const n = 22;
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2;
+    const spike = i % 4 === 1 ? 1.25 + rnd(seed + i) * 0.35 : 0.72 + rnd(seed + i * 3) * 0.24;
+    pts.push([150 + Math.cos(a) * 128 * spike, 90 + Math.sin(a) * 58 * spike]);
+  }
+  return `M ${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L ")} Z`;
+}
+
+const SPLASH = splashPath(11);
+
 const STAR_CLIP =
   "polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%, 96% 74%, 74% 76%, 70% 98%, 52% 84%, 34% 100%, 28% 78%, 4% 80%, 16% 60%, 0% 42%, 20% 32%, 14% 10%, 36% 18%)";
 
-/** Versioni del menu da confrontare; ognuna mette il logo dove le lascia spazio. */
-export const MENU_VARIANTS = {
-  barra: { label: "Barra in basso", logo: { x: 960, y: 420, w: 900 } },
-  mezzaGhiera: { label: "Mezza ghiera", logo: { x: 640, y: 520, w: 760 } },
-  scalini: { label: "Scalini", logo: { x: 600, y: 500, w: 760 } },
-  ventaglio: { label: "Carte a ventaglio", logo: { x: 960, y: 300, w: 720 } },
-};
-
-/* ------------------------------------------------------------------ */
-/* Barra in basso (ispirazione Metaphor: ReFantazio)                   */
-/* ------------------------------------------------------------------ */
+/** Filtri SVG per i bordi a pennellata (fascia, targa e schizzo). */
+function BrushFilters() {
+  return (
+    <svg className="smp-defs" width="0" height="0" aria-hidden="true">
+      <defs>
+        <filter id="smp-brush" x="-10%" y="-30%" width="120%" height="160%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04 0.09" numOctaves="3" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="16" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="smp-splash" x="-20%" y="-30%" width="140%" height="160%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+  );
+}
 
 /**
- * Voci in fila su una fascia nera in basso, separate da rune delle carte.
- * La voce scelta sale su targa crema con ombra d'accento; il sottotitolo
- * compare sopra la fascia.
+ * Barra in basso (ispirazione Metaphor / Persona 3 Portable, con pennellate
+ * alla Dishonored): una lama crema taglia lo schermo in diagonale; sopra,
+ * il nome della voce scelta in grande nel carattere del logo, col
+ * sottotitolo; sotto, una fascia a pennellata con le voci separate da rune.
+ * La voce scelta sale su una targa dipinta con uno schizzo di colore dietro.
  */
 function BarMenu({ rows, active, buttonRefs, onHover, onPick }) {
   const current = rows[active];
   const sub = current ? sublineOf(current) : "";
+  const headSize = current ? Math.min(132, Math.floor(1560 / (current.label.length * 0.8))) : 132;
   return (
     <nav className={`mb ${rows.length > 7 ? "mb--dense" : ""}`} aria-label="Menu principale">
-      <div className="mb-band" aria-hidden="true" />
-      {sub && (
-        <div className="mb-sub" key={`sub-${active}`}>
-          <span>{sub}</span>
+      <div className="mb-slash" aria-hidden="true" />
+      {current && (
+        <div className="mb-head" key={`h-${active}`} aria-hidden="true" style={{ "--c": current.accent }}>
+          <span className="mb-head-word" style={{ fontSize: headSize }}>
+            {current.label}
+          </span>
+          {sub && <span className="mb-head-sub">{sub}</span>}
         </div>
       )}
+      <div className="mb-band" aria-hidden="true" />
       <div className="mb-items">
-        {rows.map((row, i) => (
-          <Fragment key={`${row.label}-${i}`}>
-            {i > 0 && <Rune index={i * 3} className="mb-sep" />}
-            <button
-              ref={(el) => {
-                buttonRefs.current[i] = el;
-              }}
-              type="button"
-              className={`mb-item ${i === active ? "on" : ""}`}
-              style={{ "--c": row.accent, "--d": `${0.2 + i * 0.05}s` }}
-              disabled={row.disabled}
-              aria-current={i === active ? "true" : undefined}
-              onMouseEnter={() => onHover(i)}
-              onFocus={() => onHover(i)}
-              onClick={() => onPick(i)}
-            >
-              <span className="mb-plate" aria-hidden="true" />
-              <span className="mb-label">
-                {row.label}
-                {row.hasChoices && <span className="mb-more" aria-hidden="true">+</span>}
-              </span>
-            </button>
-          </Fragment>
-        ))}
+        {rows.map((row, i) => {
+          const on = i === active;
+          return (
+            <Fragment key={`${row.label}-${i}`}>
+              {i > 0 && <Rune index={i * 3} className="mb-sep" />}
+              <button
+                ref={(el) => {
+                  buttonRefs.current[i] = el;
+                }}
+                type="button"
+                className={`mb-item ${on ? "on" : ""}`}
+                style={{ "--c": row.accent, "--d": `${0.25 + i * 0.05}s` }}
+                disabled={row.disabled}
+                aria-current={on ? "true" : undefined}
+                onMouseEnter={() => onHover(i)}
+                onFocus={() => onHover(i)}
+                onClick={() => onPick(i)}
+              >
+                {on && (
+                  <svg className="mb-splash" key={`s-${active}`} viewBox="0 0 300 180" aria-hidden="true">
+                    <path d={SPLASH} />
+                    <circle cx="28" cy="40" r="7" />
+                    <circle cx="278" cy="132" r="9" />
+                    <circle cx="262" cy="30" r="4" />
+                  </svg>
+                )}
+                <span className="mb-plate" aria-hidden="true" />
+                <span className="mb-label">
+                  {row.label}
+                  {row.hasChoices && <span className="mb-more" aria-hidden="true">+</span>}
+                </span>
+              </button>
+            </Fragment>
+          );
+        })}
       </div>
     </nav>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Mezza ghiera                                                        */
-/* ------------------------------------------------------------------ */
-
-const ARC = { cx: 2080, cy: 540, r: 560 };
-
-/**
- * Tutte le voci ferme su un arco corto di una ruota che esce dal bordo
- * destro; si sposta solo il puntatore (e l'anello di rune gira un poco).
- */
-function HalfDialMenu({ rows, active, buttonRefs, onHover, onPick }) {
-  const { cx, cy, r } = ARC;
-  const n = rows.length;
-  const step = Math.min(10, 66 / Math.max(1, n - 1));
-  const angleOf = (i) => (i - (n - 1) / 2) * step;
-  const activeAngle = angleOf(active);
-  const span = ((n - 1) / 2) * step + step * 0.6;
-  const arcPoint = (deg, rad) => {
-    const a = (deg * Math.PI) / 180;
-    return [cx - rad * Math.cos(a), cy + rad * Math.sin(a)];
-  };
-  const [ax, ay] = arcPoint(-span, r - 2);
-  const [bx, by] = arcPoint(span, r - 2);
-  return (
-    <nav className="mh" aria-label="Menu principale">
-      <svg className="mh-ring" viewBox="0 0 1920 1080" aria-hidden="true">
-        <circle className="mh-disc" cx={cx} cy={cy} r={r + 6} />
-        <path className="mh-sector" d={`M ${ax} ${ay} A ${r - 2} ${r - 2} 0 0 0 ${bx} ${by}`} />
-        <g className="mh-spin" style={{ transform: `rotate(${activeAngle * 1.5}deg)`, transformOrigin: `${cx}px ${cy}px` }}>
-          {Array.from({ length: 120 }, (_, i) => {
-            const a = (i / 120) * Math.PI * 2;
-            const long = i % 5 === 0;
-            const r1 = r - 14 - (long ? 10 : 4);
-            return (
-              <line
-                key={`t${i}`}
-                className={long ? "mh-tick mh-tick--long" : "mh-tick"}
-                x1={cx + Math.cos(a) * r1}
-                y1={cy + Math.sin(a) * r1}
-                x2={cx + Math.cos(a) * (r - 14)}
-                y2={cy + Math.sin(a) * (r - 14)}
-              />
-            );
-          })}
-          {Array.from({ length: 48 }, (_, i) => {
-            const a = (i / 48) * 360;
-            const x = cx + Math.cos((a * Math.PI) / 180) * (r - 46);
-            const y = cy + Math.sin((a * Math.PI) / 180) * (r - 46);
-            return (
-              <path
-                key={`r${i}`}
-                className="mh-rune"
-                d={CARD_RUNES[(i * 5) % CARD_RUNES.length]}
-                transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90}) scale(2)`}
-              />
-            );
-          })}
-        </g>
-        <g className="mh-needle" style={{ transform: `rotate(${-activeAngle}deg)`, transformOrigin: `${cx}px ${cy}px` }}>
-          <path className="mh-pointer" d={`M ${cx - r + 12} ${cy} l 20 -12 l -5 12 l 5 12 z`} />
-        </g>
-      </svg>
-      {rows.map((row, i) => {
-        const deg = angleOf(i);
-        const [x, y] = arcPoint(deg, r);
-        const on = i === active;
-        const sub = sublineOf(row);
-        return (
-          <div
-            key={`${row.label}-${i}`}
-            className={`mh-arm ${on ? "on" : ""}`}
-            style={{ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${-deg}deg)`, "--c": row.accent }}
-          >
-            <button
-              ref={(el) => {
-                buttonRefs.current[i] = el;
-              }}
-              type="button"
-              className="mh-item"
-              disabled={row.disabled}
-              aria-current={on ? "true" : undefined}
-              onMouseEnter={() => onHover(i)}
-              onFocus={() => onHover(i)}
-              onClick={() => onPick(i)}
-            >
-              <span className="mh-body">
-                {on && <span className="mh-plate" key={`p-${active}`} aria-hidden="true" />}
-                <span className="mh-label">{row.label}</span>
-                {row.hasChoices && <span className="mh-more" aria-hidden="true">+</span>}
-                {on && sub ? <span className="mh-sub" key={`s-${active}`}>{sub}</span> : null}
-              </span>
-            </button>
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Scalini (ispirazione Persona 5)                                     */
-/* ------------------------------------------------------------------ */
-
-/**
- * Voci a scalini in diagonale sulla destra; la scelta prende una fascia
- * crema che corre fino al bordo dello schermo, con stella e sottotitolo.
- */
-function StairsMenu({ rows, active, buttonRefs, onHover, onPick }) {
-  const n = rows.length;
-  const rowH = n > 7 ? 80 : 98;
-  const top = 540 - ((n - 1) * rowH) / 2;
-  return (
-    <nav className="ms" aria-label="Menu principale">
-      {rows.map((row, i) => {
-        const on = i === active;
-        const sub = sublineOf(row);
-        return (
-          <button
-            key={`${row.label}-${i}`}
-            ref={(el) => {
-              buttonRefs.current[i] = el;
-            }}
-            type="button"
-            className={`ms-item ${on ? "on" : ""}`}
-            style={{
-              top: top + i * rowH,
-              right: 150 + i * 34,
-              "--c": row.accent,
-              "--t": `${i % 2 ? -3 : -6}deg`,
-              "--d": `${0.15 + i * 0.05}s`,
-            }}
-            disabled={row.disabled}
-            aria-current={on ? "true" : undefined}
-            onMouseEnter={() => onHover(i)}
-            onFocus={() => onHover(i)}
-            onClick={() => onPick(i)}
-          >
-            {on && <span className="ms-band" key={`b-${active}`} aria-hidden="true" />}
-            {on && <span className="ms-star" aria-hidden="true" />}
-            <span className="ms-label">
-              {row.label}
-              {row.hasChoices && <span className="ms-more" aria-hidden="true">+</span>}
-            </span>
-            {on && sub ? <span className="ms-sub" key={`s-${active}`}>{sub}</span> : null}
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Carte a ventaglio                                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * Ogni voce è una carta: aperte a ventaglio sotto il logo. La scelta si
- * solleva e si gira mostrando il fronte con titolo e sottotitolo.
- */
-function FanMenu({ rows, active, buttonRefs, onHover, onPick }) {
-  const n = rows.length;
-  const spread = Math.min(9, 64 / Math.max(1, n - 1));
-  return (
-    <nav className="mf" aria-label="Menu principale">
-      {rows.map((row, i) => {
-        const on = i === active;
-        const deg = (i - (n - 1) / 2) * spread;
-        const sub = sublineOf(row);
-        return (
-          <button
-            key={`${row.label}-${i}`}
-            ref={(el) => {
-              buttonRefs.current[i] = el;
-            }}
-            type="button"
-            className={`mf-slot ${on ? "on" : ""}`}
-            style={{ transform: `rotate(${deg}deg)`, "--c": row.accent, "--d": `${0.15 + i * 0.05}s`, zIndex: on ? 50 : i }}
-            disabled={row.disabled}
-            aria-label={[row.label, sub].filter(Boolean).join(" · ")}
-            aria-current={on ? "true" : undefined}
-            onMouseEnter={() => onHover(i)}
-            onFocus={() => onHover(i)}
-            onClick={() => onPick(i)}
-          >
-            <span className="mf-card">
-              <span className="mf-face mf-back" aria-hidden="true">
-                <Rune index={i * 5} className="mf-back-rune" />
-                <span className="mf-back-label">{row.label}</span>
-              </span>
-              <span className="mf-face mf-front" aria-hidden="true">
-                <Rune index={i * 5} className="mf-front-rune" />
-                <span className="mf-front-label">{row.label}</span>
-                {sub && <span className="mf-front-sub">{sub}</span>}
-                {row.hasChoices && <span className="mf-more">+</span>}
-              </span>
-            </span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
-const VARIANT_VIEWS = { barra: BarMenu, mezzaGhiera: HalfDialMenu, scalini: StairsMenu, ventaglio: FanMenu };
-
-/* ------------------------------------------------------------------ */
-/* Pannello delle sotto-scelte (comune a tutte le versioni)            */
-/* ------------------------------------------------------------------ */
-
+/** Pannello delle sotto-scelte (es. Strumenti dev). */
 function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover, onPick, onBack, onDismiss }) {
   return (
     <div className="mp-backdrop" role="presentation" onClick={onDismiss}>
@@ -384,11 +220,10 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
 }
 
 /**
- * Menu principale. Quattro versioni da confrontare (`variant`): barra in
- * basso, mezza ghiera, scalini e carte a ventaglio. Logica comune: voce
- * scelta, tastiera (frecce in entrambe le direzioni, Invio/Spazio, Esc),
- * rotella del mouse, passaggio del mouse, sotto-scelte in un pannello.
- * Logo animato e pioggia di carte restano sullo sfondo in tutte.
+ * Menu principale — barra in basso. Logo animato e pioggia di carte sullo
+ * sfondo; voce scelta con frecce (in entrambe le direzioni), rotella o
+ * passaggio del mouse; Invio/Spazio o clic aprono; le sotto-scelte
+ * (`choices`) si aprono in un pannello, Esc torna indietro.
  * `inputLocked` sospende i comandi quando sopra il menu c'è un altro overlay.
  *
  * @param {{ menuItems: Array<{
@@ -400,9 +235,9 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  *   disabled?: boolean,
  *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
- * }>, buildLabel?: string, inputLocked?: boolean, variant?: keyof typeof MENU_VARIANTS }} props
+ * }>, buildLabel?: string, inputLocked?: boolean }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, variant = "barra" }) {
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false }) {
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -415,8 +250,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const pickerListRef = useRef(null);
   /** Scorre il pannello solo dopo un passo da tastiera, non al passaggio del mouse. */
   const keyNavRef = useRef(false);
-  const config = MENU_VARIANTS[variant] ?? MENU_VARIANTS.barra;
-  const View = VARIANT_VIEWS[variant] ?? BarMenu;
 
   const choicePicker = choicePickerStack[choicePickerStack.length - 1] ?? null;
 
@@ -631,7 +464,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     .replace(/-/g, ".")}`;
 
   const hints = [
-    { keys: variant === "barra" || variant === "ventaglio" ? ["←", "→"] : ["↑", "↓"], label: "VOCE" },
+    { keys: ["←", "→"], label: "VOCE" },
     { keys: ["INVIO"], label: "SCEGLI" },
     ...(choicePicker ? [{ keys: ["ESC"], label: choicePickerStack.length > 1 ? "INDIETRO" : "ANNULLA" }] : []),
   ];
@@ -641,7 +474,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   return (
     <div
       ref={rootRef}
-      className={`satze-menu-v5-root smp smp--${variant}`}
+      className="satze-menu-v5-root smp"
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -650,22 +483,23 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         "--halftone": vfxProfile.quality === "low" ? 0.12 : 0.26,
       }}
     >
+      <BrushFilters />
       <div className="smp-bg" aria-hidden="true">
         <div className="smp-bg-glow" />
         <MenuAgentRain />
         <div className="smp-bg-halftone" />
       </div>
 
-      <div className="smp-brand" style={{ left: config.logo.x, top: config.logo.y, width: config.logo.w + 100 }}>
+      <div className="smp-brand">
         <AnimatedSatzeLogo
           reducedMotion={vfxProfile.quality === "low"}
           paused={inputLocked || Boolean(choicePicker)}
           strength={vfxProfile.quality === "medium" ? 0.7 : 1}
-          style={{ width: config.logo.w, maxWidth: "100%", pointerEvents: "none" }}
+          style={{ width: 820, maxWidth: "100%", pointerEvents: "none" }}
         />
       </div>
 
-      <View
+      <BarMenu
         rows={items}
         active={mainActive}
         buttonRefs={rowRefs}
@@ -730,6 +564,7 @@ function SatzeMenuStyles() {
         font-family: 'Chakra Petch', system-ui, sans-serif;
       }
       .smp * { box-sizing: border-box; }
+      .smp-defs { position: absolute; width: 0; height: 0; }
       .smp kbd {
         display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 6px;
         background: ${T}; color: ${V}; border: 0;
@@ -742,7 +577,7 @@ function SatzeMenuStyles() {
 
       /* ---------- Fondo ---------- */
       .smp-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-      .smp-bg-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #2a0a3a 0%, #14051f 40%, ${V} 80%); }
+      .smp-bg-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 34%, #2a0a3a 0%, #14051f 40%, ${V} 80%); }
       .smp-bg-halftone {
         position: absolute; inset: 0; z-index: 2; opacity: var(--halftone);
         background-image: radial-gradient(circle, var(--active) 1.4px, transparent 1.8px);
@@ -751,210 +586,113 @@ function SatzeMenuStyles() {
         mask-image: linear-gradient(200deg, transparent 50%, #000 90%);
       }
       .smp-brand {
-        position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center;
+        position: absolute; left: 960px; top: 330px; z-index: 10; width: 920px;
+        display: flex; flex-direction: column; align-items: center;
         transform: translate(-50%, -50%) rotate(-3deg); pointer-events: none;
       }
 
-      /* ========== Barra in basso ========== */
-      .mb { position: absolute; left: 0; right: 0; bottom: 70px; height: 170px; z-index: 12; }
+      /* ---------- Barra ---------- */
+      .mb { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
+
+      /* lama crema che taglia lo schermo, passa dietro il titolo */
+      .mb-slash {
+        position: absolute; left: -80px; right: -80px; top: 790px; height: 16px;
+        background: ${T}; transform: rotate(-3deg); transform-origin: left center;
+        box-shadow: 0 9px 0 -4px var(--active);
+        filter: url(#smp-brush);
+        animation: mb-slash-in .6s .1s cubic-bezier(.2,1,.3,1) both;
+        transition: box-shadow .3s;
+      }
+      @keyframes mb-slash-in { from { transform: rotate(-3deg) scaleX(0); } }
+
+      /* nome della voce scelta, in grande */
+      .mb-head {
+        position: absolute; left: 96px; top: 640px; z-index: 2;
+        display: flex; flex-direction: column; align-items: flex-start;
+        transform: rotate(-3deg); transform-origin: left center;
+      }
+      .mb-head-word {
+        font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase; line-height: 0.9;
+        letter-spacing: -0.02em; white-space: nowrap; color: ${T};
+        text-shadow: 6px 6px 0 var(--c), 11px 11px 0 #000;
+        animation: mb-head-in .42s cubic-bezier(.2,1,.3,1) both;
+      }
+      @keyframes mb-head-in {
+        from { clip-path: inset(0 100% 0 0); transform: translateX(-60px) skewX(-12deg); }
+        to { clip-path: inset(-20% -10% -20% -2%); transform: none; }
+      }
+      .mb-head-sub {
+        margin: 12px 0 0 10px; background: var(--c); color: ${V};
+        font-family: 'Share Tech Mono', monospace; font-size: 16px; letter-spacing: 0.26em; white-space: nowrap;
+        padding: 5px 16px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+        animation: mb-sub-in .32s .14s cubic-bezier(.2,1.2,.4,1) both;
+      }
+      @keyframes mb-sub-in { from { opacity: 0; transform: translateX(-30px); } }
+
+      /* fascia a pennellata con le voci */
       .mb-band {
-        position: absolute; left: -60px; right: -60px; bottom: 0; height: 86px;
-        background: ${V}; transform: rotate(-1.2deg);
-        border-top: 4px solid var(--active); box-shadow: 0 -24px 60px rgba(0,0,0,0.65);
-        transition: border-color .3s;
+        position: absolute; left: -60px; right: -60px; top: 898px; height: 92px;
+        background: ${V}; transform: rotate(-1.4deg);
+        box-shadow: 0 -4px 0 var(--active);
+        filter: url(#smp-brush);
+        transition: box-shadow .3s;
         animation: mb-band-in .55s cubic-bezier(.2,1,.3,1) both;
       }
-      @keyframes mb-band-in { from { transform: rotate(-1.2deg) translateY(140px); } }
+      @keyframes mb-band-in { from { transform: rotate(-1.4deg) translateY(160px); } }
       .mb-items {
-        position: absolute; left: 0; right: 0; bottom: 0; height: 86px;
+        position: absolute; left: 0; right: 0; top: 898px; height: 92px;
         display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 60px;
-        transform: rotate(-1.2deg);
+        transform: rotate(-1.4deg);
       }
       .mb-sep { color: color-mix(in srgb, var(--active) 70%, transparent); font-size: 14px; }
       .mb-item {
-        position: relative; height: 86px; padding: 0 20px; border: 0; background: transparent; cursor: pointer;
-        color: ${T}; outline: none; animation: mb-item-in .45s var(--d, .2s) cubic-bezier(.2,1.2,.4,1) backwards;
+        position: relative; height: 92px; padding: 0 20px; border: 0; background: transparent; cursor: pointer; pointer-events: auto;
+        color: ${T}; outline: none; animation: mb-item-in .45s var(--d) cubic-bezier(.2,1.2,.4,1) backwards;
       }
       @keyframes mb-item-in { from { opacity: 0; transform: translateY(40px); } }
       .mb-item:disabled { cursor: not-allowed; opacity: 0.4; }
       .mb-label {
-        position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 10px;
+        position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 10px;
         font-weight: 700; font-style: italic; text-transform: uppercase; font-size: 30px; letter-spacing: 0.02em; white-space: nowrap;
-        text-shadow: 3px 3px 0 #000;
-        transition: transform .25s cubic-bezier(.3,1.6,.5,1), color .15s;
+        text-shadow: 3px 3px 0 #000; opacity: 0.86;
+        transition: transform .25s cubic-bezier(.3,1.6,.5,1), color .15s, opacity .15s;
       }
       .mb--dense .mb-label { font-size: 23px; }
       .mb--dense .mb-item { padding: 0 10px; }
       .mb--dense .mb-items { gap: 4px; padding: 0 70px; }
-      .mb-item:not(.on):not(:disabled):hover .mb-label { color: var(--c); }
+      .mb-item:not(.on):not(:disabled):hover .mb-label { color: var(--c); opacity: 1; }
       .mb-plate {
-        position: absolute; left: 4px; right: 4px; top: 6px; bottom: 6px; z-index: 0;
-        background: ${T}; clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
-        filter: drop-shadow(6px 6px 0 var(--c));
+        position: absolute; left: 0; right: 0; top: 10px; bottom: 10px; z-index: 1;
+        background: ${T}; filter: url(#smp-brush);
         transform: translateY(26px) scaleY(0); transform-origin: bottom;
         transition: transform .28s cubic-bezier(.2,1.4,.4,1);
       }
-      .mb-item.on .mb-plate { transform: translateY(-18px) scaleY(1); }
-      .mb-item.on .mb-label { color: ${V}; text-shadow: none; transform: translateY(-18px); }
+      .mb-item.on .mb-plate { transform: translateY(-20px) rotate(-2deg) scaleY(1); }
+      .mb-item.on .mb-label { color: ${V}; text-shadow: none; opacity: 1; transform: translateY(-20px) rotate(-2deg); }
+      .mb-splash {
+        position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 200px); height: 200px;
+        transform: translate(-50%, -64%) rotate(-6deg); overflow: visible; filter: url(#smp-splash);
+        animation: mb-splat .38s cubic-bezier(.2,1.6,.4,1) both;
+      }
+      .mb-splash path, .mb-splash circle { fill: var(--c); }
+      @keyframes mb-splat {
+        from { opacity: 0; transform: translate(-50%, -64%) rotate(-30deg) scale(0.2); }
+        60% { opacity: 1; }
+      }
       .mb-more {
         display: grid; place-items: center; width: 24px; height: 24px; font-style: normal; font-size: 18px;
         background: var(--c); color: ${V}; clip-path: ${STAR_CLIP};
       }
       .mb-item.on .mb-more { background: ${V}; color: var(--c); }
-      .mb-sub {
-        position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%) rotate(-1.2deg);
-        animation: mb-sub-in .3s cubic-bezier(.2,1.2,.4,1) both;
-      }
-      .mb-sub > span {
-        display: inline-block; background: var(--active); color: ${V};
-        font-family: 'Share Tech Mono', monospace; font-size: 15px; letter-spacing: 0.26em; white-space: nowrap;
-        padding: 5px 16px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
-      }
-      @keyframes mb-sub-in { from { opacity: 0; transform: translateX(-50%) rotate(-1.2deg) translateY(10px); } }
-
-      /* ========== Mezza ghiera ========== */
-      .mh { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
-      .mh-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: mh-in .7s cubic-bezier(.2,.9,.25,1) both; transform-origin: ${ARC.cx}px ${ARC.cy}px; }
-      @keyframes mh-in { from { opacity: 0; transform: rotate(-20deg); } }
-      .mh-disc { fill: ${V}; stroke: color-mix(in srgb, ${T} 30%, transparent); stroke-width: 3; filter: drop-shadow(0 0 60px rgba(0,0,0,0.9)); }
-      .mh-sector { fill: none; stroke: var(--active); stroke-width: 9; stroke-linecap: round; transition: stroke .3s; }
-      .mh-spin, .mh-needle { transition: transform .45s cubic-bezier(.2,1.2,.35,1); }
-      .mh-tick { stroke: color-mix(in srgb, ${T} 30%, transparent); stroke-width: 1.5; }
-      .mh-tick--long { stroke: ${T}; stroke-width: 2.2; }
-      .mh-rune { fill: none; stroke: var(--active); stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: 0.7; transition: stroke .3s; }
-      .mh-pointer { fill: var(--active); stroke: ${T}; stroke-width: 2; transition: fill .3s; }
-      .mh-arm { position: absolute; left: 0; top: 0; width: 0; height: 0; }
-      .mh-item {
-        position: absolute; right: 34px; top: 0; transform: translateY(-50%); pointer-events: auto;
-        border: 0; padding: 0; background: transparent; color: ${T}; cursor: pointer; outline: none;
-        animation: mh-item-in .4s cubic-bezier(.2,1.2,.4,1) backwards;
-      }
-      .mh-item:disabled { cursor: not-allowed; opacity: 0.4; }
-      @keyframes mh-item-in { from { opacity: 0; transform: translate(60px, -50%); } }
-      .mh-body {
-        position: relative; display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 10px; padding: 6px 14px;
-        font-weight: 700; font-style: italic; text-transform: uppercase; font-size: 34px; line-height: 1; white-space: nowrap;
-        transform: scale(0.8); transform-origin: right center; opacity: 0.78;
-        transition: transform .3s cubic-bezier(.3,1.5,.5,1), opacity .2s;
-      }
-      .mh-label { position: relative; z-index: 1; text-shadow: 3px 3px 0 ${V}; }
-      .mh-item:hover .mh-body { opacity: 1; }
-      .mh-arm.on .mh-body { transform: scale(1.18); opacity: 1; }
-      .mh-arm.on .mh-label { color: ${V}; text-shadow: none; }
-      .mh-plate {
-        position: absolute; inset: -2px -14px; z-index: 0; background: ${T};
-        clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-        filter: drop-shadow(6px 5px 0 var(--c)); transform-origin: right center;
-        animation: mh-plate-in .28s cubic-bezier(.2,1.3,.4,1) both;
-      }
-      @keyframes mh-plate-in { from { transform: scaleX(0); } }
-      .mh-more { position: relative; z-index: 1; display: grid; place-items: center; width: 26px; height: 26px; font-style: normal; font-size: 20px; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
-      .mh-arm.on .mh-more { background: ${V}; color: var(--c); }
-      .mh-sub {
-        position: absolute; z-index: 2; right: 6px; top: calc(100% + 4px);
-        background: var(--c); color: ${V}; font-family: 'Share Tech Mono', monospace; font-style: normal; font-weight: 400;
-        font-size: 11px; letter-spacing: 0.2em; padding: 3px 10px; white-space: nowrap;
-        clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
-        animation: mb-fade .3s .1s both;
-      }
-      @keyframes mb-fade { from { opacity: 0; } }
-
-      /* ========== Scalini ========== */
-      .ms { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
-      .ms-item {
-        position: absolute; transform: translateY(-50%) rotate(var(--t)); transform-origin: right center; pointer-events: auto;
-        display: inline-flex; align-items: center; gap: 12px; padding: 4px 6px;
-        border: 0; background: transparent; color: ${T}; cursor: pointer; outline: none; text-align: right;
-        animation: ms-in .45s var(--d) cubic-bezier(.2,1.2,.4,1) backwards;
-      }
-      @keyframes ms-in { from { opacity: 0; transform: translateY(-50%) rotate(var(--t)) translateX(200px); } }
-      .ms-item:disabled { cursor: not-allowed; opacity: 0.4; }
-      .ms-label {
-        position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 10px;
-        font-weight: 700; font-style: italic; text-transform: uppercase; font-size: 42px; line-height: 1; white-space: nowrap;
-        text-shadow: 4px 4px 0 #000; transition: transform .22s cubic-bezier(.3,1.6,.5,1), color .15s;
-      }
-      .ms-item:not(.on):not(:disabled):hover .ms-label { color: var(--c); transform: translateX(-8px); }
-      .ms-item.on .ms-label { color: ${V}; text-shadow: none; transform: translateX(-14px) scale(1.06); }
-      .ms-band {
-        position: absolute; z-index: 0; left: -26px; right: -900px; top: -6px; bottom: -6px;
-        background: ${T}; clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%);
-        filter: drop-shadow(8px 7px 0 var(--c));
-        transform-origin: right center; animation: ms-band-in .3s cubic-bezier(.2,1.2,.4,1) both;
-      }
-      @keyframes ms-band-in { from { transform: scaleX(0); } }
-      .ms-star {
-        position: absolute; z-index: 2; left: -70px; top: 50%; width: 48px; height: 48px; margin-top: -24px;
-        background: var(--c); clip-path: ${STAR_CLIP}; filter: drop-shadow(3px 3px 0 ${T});
-        animation: ms-star .3s cubic-bezier(.2,1.6,.4,1) both, ms-spin 3.5s linear .3s infinite;
-      }
-      @keyframes ms-star { from { transform: scale(0) rotate(-120deg); } }
-      @keyframes ms-spin { to { transform: rotate(360deg); } }
-      .ms-more { display: grid; place-items: center; width: 30px; height: 30px; font-style: normal; font-size: 22px; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
-      .ms-item.on .ms-more { background: ${V}; color: var(--c); }
-      .ms-sub {
-        position: absolute; z-index: 2; right: 20px; top: calc(100% + 6px);
-        background: ${V}; color: var(--c); font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 0.22em;
-        padding: 4px 12px; white-space: nowrap; animation: mb-fade .3s .12s both;
-      }
-
-      /* ========== Carte a ventaglio ========== */
-      .mf { position: absolute; inset: 0; z-index: 12; pointer-events: none; perspective: 1600px; }
-      .mf-slot {
-        position: absolute; left: 860px; top: 600px; width: 200px; height: 280px; padding: 0; border: 0; background: transparent;
-        cursor: pointer; outline: none; pointer-events: auto;
-        transform-origin: 100px 1000px; perspective: 1200px;
-        animation: mf-in .55s var(--d) cubic-bezier(.2,1.1,.35,1) backwards;
-      }
-      @keyframes mf-in { from { opacity: 0; transform: rotate(0deg) translateY(300px); } }
-      .mf-slot:disabled { cursor: not-allowed; opacity: 0.45; }
-      .mf-card {
-        position: absolute; inset: 0; transform-style: preserve-3d;
-        transition: transform .45s cubic-bezier(.2,1.1,.35,1);
-      }
-      .mf-slot:not(.on):not(:disabled):hover .mf-card { transform: translateY(-18px); }
-      .mf-slot.on .mf-card { transform: translateY(-90px) scale(1.16) rotateY(180deg); }
-      .mf-face {
-        position: absolute; inset: 0; border-radius: 12px; overflow: hidden;
-        backface-visibility: hidden; -webkit-backface-visibility: hidden;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px 14px;
-        box-shadow: 0 18px 40px rgba(0,0,0,0.6);
-      }
-      .mf-back {
-        background:
-          radial-gradient(circle, color-mix(in srgb, var(--c) 40%, transparent) 1.2px, transparent 1.6px) 0 0 / 10px 10px,
-          radial-gradient(ellipse at 50% 35%, #1d1028, ${V} 75%);
-        border: 2px solid color-mix(in srgb, var(--c) 70%, transparent);
-        box-shadow: inset 0 0 0 7px ${V}, inset 0 0 0 8px color-mix(in srgb, var(--c) 45%, transparent), 0 18px 40px rgba(0,0,0,0.6);
-      }
-      .mf-back-rune { font-size: 70px; color: var(--c); filter: drop-shadow(0 0 10px var(--c)); }
-      .mf-back-label {
-        position: absolute; left: 12px; right: 12px; bottom: 16px; text-align: center;
-        font-weight: 700; font-style: italic; font-size: 16px; letter-spacing: 0.04em; text-transform: uppercase; color: ${T};
-        background: ${V}; padding: 4px 6px; transform: skewX(-10deg);
-      }
-      .mf-front {
-        transform: rotateY(180deg); background: ${T}; color: ${V};
-        box-shadow: inset 0 0 0 6px ${T}, inset 0 0 0 9px var(--c), 10px 12px 0 var(--c), 0 24px 50px rgba(0,0,0,0.7);
-      }
-      .mf-front-rune { font-size: 44px; color: var(--c); }
-      .mf-front-label {
-        font-weight: 700; font-style: italic; font-size: 26px; line-height: 1; text-transform: uppercase; text-align: center;
-        text-shadow: 2px 2px 0 var(--c); overflow-wrap: anywhere;
-      }
-      .mf-front-sub {
-        font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-align: center; line-height: 1.4;
-        background: ${V}; color: ${T}; padding: 3px 6px;
-      }
-      .mf-more { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 26px; height: 26px; font-size: 20px; background: ${V}; color: var(--c); clip-path: ${STAR_CLIP}; }
 
       /* ========== Pannello sotto-scelte ========== */
       .mp-backdrop {
         position: absolute; inset: 0; z-index: 100;
         display: flex; align-items: center; justify-content: center; padding: 60px 24px 80px;
         background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent) 1.3px, transparent 1.7px) 0 0 / 11px 11px, rgba(5,5,7,0.86);
-        animation: mb-fade .2s ease-out both;
+        animation: mp-fade .2s ease-out both;
       }
+      @keyframes mp-fade { from { opacity: 0; } }
       .mp { position: relative; width: 760px; max-height: 100%; display: flex; flex-direction: column; filter: drop-shadow(14px 14px 0 var(--accent)); transform: rotate(-1.5deg); animation: mp-in .32s cubic-bezier(.2,1.2,.4,1) both; }
       @keyframes mp-in { from { opacity: 0; transform: rotate(-1.5deg) translateX(90px) skewX(-8deg); } }
       .mp-in {
