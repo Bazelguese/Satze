@@ -6,6 +6,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { buildDuelStepFx, currentStepFx } from '../../game/duel/duelStepFx.js';
+import { GAME_SOUND, playGameAt } from '../../audio/gameSounds.js';
 
 const W = 1920;
 const H = 1080;
@@ -79,6 +80,14 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
     return () => clearTimeout(id);
   }, [curKey]);
   const leaving = leavingKey != null && leavingKey === curKey;
+
+  // suono del passo: sul timbro di un blocco, sull'arrivo del fascio, o sull'impulso attorno alla carta
+  useEffect(() => {
+    if (!curKey || !cur) return undefined;
+    if (cur.state === 'blocked' && cur.burst) return playGameAt(GAME_SOUND.DUEL_BLOCKED, cur.burst.delay);
+    const atMs = cur.beams.length ? cur.beams[0].delay + BEAM_MS : cur.pulse ? 240 : 0;
+    return playGameAt(GAME_SOUND.DUEL_EFFECT, atMs);
+  }, [curKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // fasci, impulso, timbro
   const cvRef = useRef(null);

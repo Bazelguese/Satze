@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildPhaseAdvanceDelaysMs } from '../../config/duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
+import { GAME_SOUND, playGameAt } from '../../audio/gameSounds.js';
 import {
   HP_PROJECTILE_START_RATIO,
   HP_PROJECTILE_FLIGHT_MS,
@@ -150,6 +151,14 @@ export function useDuelHpPresentation({
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const events = plan?.events || [];
 
+  // Colpetti dei PV degli effetti: arrivano dopo l'inizio del passo seguente, quindi si annullano
+  // solo cambiando duello o con «Salta»
+  const hitCancelsRef = useRef([]);
+  const cancelStepHits = () => {
+    hitCancelsRef.current.forEach((cancel) => cancel());
+    hitCancelsRef.current = [];
+  };
+
   // Inizio di ogni step della fase 1 (performance.now) e ridisegno sugli istanti dei tick
   const stepStartRef = useRef(new Map());
   const [, setStepTick] = useState(0);
@@ -168,6 +177,9 @@ export function useDuelHpPresentation({
     const marks = new Set();
     mine.forEach((x) => { marks.add(x.t); marks.add(x.t + BURST_HOLD_MS); marks.add(x.t + BURST_HOLD_MS + BURST_LEAVE_MS); });
     const ids = [...marks].map((m) => setTimeout(() => setStepTick((n) => n + 1), m + 5));
+    mine
+      .filter((x) => x.stat === 'PV' && x.kind === 'hit')
+      .forEach((x) => hitCancelsRef.current.push(playGameAt(GAME_SOUND.DUEL_HP_HIT, x.t)));
     return () => ids.forEach(clearTimeout);
   }, [key, duelPhase, duelEffectStep, stepTicks]);
 
@@ -198,6 +210,21 @@ export function useDuelHpPresentation({
     }
     return undefined;
   }, [key, duelPhase, t0, battleResult, duelVfx]);
+
+  useEffect(() => cancelStepHits, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (elapsed === Infinity) cancelStepHits();
+  }, [elapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Un colpetto per ogni PV tolto dopo lo scontro (DAN, Tossina), all'impatto del suo proiettile
+  useEffect(() => {
+    if (!key || t0 == null || elapsed === Infinity) return undefined;
+    const now = performance.now();
+    const cancels = events
+      .filter((e) => e.stat === 'PV' && e.kind === 'hit' && t0 + e.t >= now)
+      .map((e) => playGameAt(GAME_SOUND.DUEL_HP_HIT, t0 + e.t - now));
+    return () => cancels.forEach((cancel) => cancel());
+  }, [key, t0, events, elapsed === Infinity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Avanza il tempo solo sugli istanti degli eventi (niente re-render a ogni frame)
   useEffect(() => {

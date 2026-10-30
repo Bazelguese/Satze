@@ -4,6 +4,10 @@ import { ARMY_COLORS } from '../../data';
 import { FIELD_STYLES } from '../../utils/constants';
 import { resolveFieldThumbUrl, resolvePublicAssetUrl } from '../../utils/preloadAssets';
 import { FieldCurseOverlay } from './FieldCurseOverlay.jsx';
+import { GAME_SOUND, playGameAt } from '../../audio/gameSounds.js';
+
+/** Il sigillo si posa al 55% di wax-seal-stamp (.55s): lì suona. */
+const SEAL_LAND_MS = 300;
 
 /**
  * Componente campo di battaglia compatto
@@ -24,6 +28,14 @@ export const MiniBattlefield = React.memo(({
   curseAccent = null,
   curseArriving = false,
 }) => {
+  // il sigillo suona quando il campo passa a conquistato, non ridisegnando campi già presi
+  const wasConqueredRef = React.useRef(conquered);
+  React.useEffect(() => {
+    const was = wasConqueredRef.current;
+    wasConqueredRef.current = conquered;
+    return conquered && !was ? playGameAt(GAME_SOUND.FIELD_SEAL, SEAL_LAND_MS) : undefined;
+  }, [conquered]);
+
   if (hidden) {
     return (
       <div

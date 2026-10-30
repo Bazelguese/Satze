@@ -152,6 +152,23 @@ export function bindAudioUnlock() {
   window.addEventListener('keydown', once, true);
 }
 
+/** Sospensioni attive (es. riscaldamento grafico: scontri finti che non devono suonare). */
+let suspendCount = 0;
+
+/**
+ * Silenzia tutti i suoni finché non si chiama la funzione restituita.
+ * @returns {() => void} riprende
+ */
+export function suspendSounds() {
+  suspendCount += 1;
+  let resumed = false;
+  return () => {
+    if (resumed) return;
+    resumed = true;
+    suspendCount = Math.max(0, suspendCount - 1);
+  };
+}
+
 /**
  * Come playSound, ma dopo `delayMs` (per allineare il suono a un momento dell'animazione).
  * @param {string} soundId
@@ -176,6 +193,7 @@ export function scheduleSound(soundId, delayMs, opts = {}) {
 export function playSound(soundId, opts = {}) {
   const src = resolveSoundSrc(soundId);
   if (!src) return false;
+  if (suspendCount > 0 && !opts.force) return false;
 
   const settings = readSettings();
   if (settings.muted && !opts.force) return false;
@@ -253,6 +271,7 @@ export function playUiClick(opts = {}) {
 /** Solo test / lab: svuota cache frame. */
 export function __resetSoundBusForTests() {
   lastPlayFrame.clear();
+  suspendCount = 0;
   cachedSettings = null;
   unlocked = false;
   pool = [];

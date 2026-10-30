@@ -20,6 +20,7 @@ import { getFocusCoinGlowColor } from '../../utils/focusCoinGlow';
 import { DUEL_ACCENTS, getArmyAccent } from '../../theme/duelAccents.js';
 import { PerfectFocusStamp } from './PerfectFocusStamp.jsx';
 import { ArmyDefeatFx } from '../fx/ArmyCardFx.jsx';
+import { GAME_SOUND, playGame } from '../../audio/gameSounds.js';
 import { getPerfectFocusSide } from '../../game/duel/perfectFocusBet.js';
 import { getFieldSetupFlags } from '../../game/battlefieldEffects.js';
 import { resolveAbilityForDisplay, resolveArmyBonusForDisplay } from '../../game/cardTextDisplay.js';
@@ -1880,6 +1881,7 @@ export function DuelClashAuroraSequence({
     if (t >= CLASH_DEFEAT_START_T && !defeatArmedRef.current) {
       defeatArmedRef.current = true;
       setDefeatOn(true);
+      playGame(GAME_SOUND.DUEL_DEFEAT);
     }
 
     if (t >= 1) {
