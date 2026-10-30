@@ -2366,24 +2366,49 @@ function plateHTML(d) {
     <span class="plab"><b>Esercito</b><span>Lega <em>${d.used}</em>/${d.budget}</span></span>`;
 }
 /* the rim of a disc of radius r (in the plate's own pixels), turned like the plate and seen through the same camera, as a closed path in band coordinates */
-function rimPath(cx, cy, D, rx, ry, rz, persp, r, bandTop) {
+function rimPath(cx, cy, D, rx, ry, rz, persp, r, bandTop, sc = 1) {
   const R = a => a * Math.PI / 180, [ax, ay, az] = [R(rx), R(ry), R(rz)], pts = [];
   for (let k = 0; k < 96; k++) {
     const t = k / 96 * 2 * Math.PI; let x = r * Math.cos(t), y = r * Math.sin(t), z = 0;
     [x, y] = [x * Math.cos(az) - y * Math.sin(az), x * Math.sin(az) + y * Math.cos(az)];
     [x, z] = [x * Math.cos(ay) + z * Math.sin(ay), -x * Math.sin(ay) + z * Math.cos(ay)];
     [y, z] = [y * Math.cos(ax) - z * Math.sin(ax), y * Math.sin(ax) + z * Math.cos(ax)];
-    const s = persp / (persp - z); pts.push([cx + x * s, cy + y * s - bandTop]);
+    const s = persp / (persp - z) * sc; pts.push([cx + x * s, cy + y * s - bandTop]);
   }
   return ` M${pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L')} Z`;
 }
 /* the housing in the band has the plate's own shape: its rim and ring of runes plus a margin, in the same perspective; the band is 640 tall here */
 function fitPlateHousing() {
   const band = document.querySelector('.band.bot'); if (!band) return;
-  const c = PLATE, h = 640, top0 = h - 400, r = c.D / 2 * 342 / 320 + c.hm, bandTop = 1080 - h;
-  band.querySelector('b').style.clipPath = `path('M0 ${top0 + 330} L1920 ${top0 + 272} L1920 ${h} L0 ${h} Z${rimPath(c.cx, c.cy, c.D, c.rx, c.ry, c.rz, c.persp, r, bandTop)}')`;
-  band.querySelector('i').style.clipPath = `path('M0 ${top0 + 335.2} L1920 ${top0 + 277.2} L1920 ${h} L0 ${h} Z${rimPath(c.cx, c.cy, c.D, c.rx, c.ry, c.rz, c.persp, r - 7, bandTop)}')`;
+  const c = PLATE, h = 640, top0 = h - 400, r = c.D / 2 * 342 / 320 + c.hm, bandTop = 1080 - h, t = tuckGeo(TUCK.k);
+  band.querySelector('b').style.clipPath = `path('M0 ${top0 + 330} L1920 ${top0 + 272} L1920 ${h} L0 ${h} Z${rimPath(t.cx, t.cy, c.D, c.rx, c.ry, c.rz, c.persp, r, bandTop, t.s)}')`;
+  band.querySelector('i').style.clipPath = `path('M0 ${top0 + 335.2} L1920 ${top0 + 277.2} L1920 ${h} L0 ${h} Z${rimPath(t.cx, t.cy, c.D, c.rx, c.ry, c.rz, c.persp, r - 7, bandTop, t.s)}')`;
 }
+/* in a stage with two or more thresholds the plate steps out of their way, shrunk into the bottom-right corner and still usable.
+   TUCK.k is how far it went (0 in place, 1 in the corner) */
+const TUCK = { k: 0, ctx: false, run: null };
+function tuckGeo(k) { const c = PLATE; return { s: 1 - .5 * k, cx: c.cx + 150 * k, cy: c.cy + 160 * k }; }
+/* the plate and its label follow k; the housing is cut again from the same numbers */
+function applyTuck() {
+  const t = tuckGeo(TUCK.k), c = PLATE, cam = $('#bar.v-etereo .fan .pcam'), lab = $('#bar.v-etereo .fan .plab');
+  if (cam) cam.style.transform = TUCK.k ? `translate(${(t.cx - c.cx).toFixed(1)}px, ${(t.cy - c.cy).toFixed(1)}px) scale(${t.s.toFixed(4)})` : '';
+  if (lab) lab.style.transform = TUCK.k ? `translate(${((t.cx - c.cx) * 1.6).toFixed(1)}px, 0px) rotate(-3deg)` : '';
+  if ($('#stage').dataset.bv === 'etereo') fitPlateHousing();
+}
+/* is a choice of two or more thresholds on screen, with nothing open over it? */
+function tuckSync() {
+  const top = [...document.querySelectorAll('#scenes > .layer:not(.off)')].at(-1);
+  const ctx = $('#stage').dataset.bv === 'etereo' && view === 'scene' && !!top && top === current && current.querySelectorAll('.gate').length >= 2;
+  TUCK.ctx = ctx; tuckTo(ctx ? 1 : 0);
+}
+function tuckTo(goal) {
+  if (TUCK.goal === goal && (TUCK.run || TUCK.k === goal)) { applyTuck(); return; }
+  TUCK.goal = goal; const from = TUCK.k, id = (TUCK.run = {});
+  animate(goal ? 650 : 560, t => { if (TUCK.run !== id) return; const e = goal ? 1 - (1 - t) ** 3 * (1 - 2.2 * t * (1 - t)) : 1 - (1 - t) ** 3; TUCK.k = from + (goal - from) * e; applyTuck(); })
+    .then(() => { if (TUCK.run === id) { TUCK.k = goal; TUCK.run = null; applyTuck(); } });
+}
+/* a scene, a sheet or the bivouac coming or going changes whether the plate should step aside */
+new MutationObserver(() => requestAnimationFrame(tuckSync)).observe($('#scenes'), { childList: true });
 const portalHTML = d => `<span class="portal"><span class="pswirl"></span><span class="psun"></span>
   <svg class="shards cards" viewBox="0 0 640 640" aria-hidden="true"><defs><linearGradient id="shSheen" x1="0" y1="0" x2=".7" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset=".8" stop-color="#05040f" stop-opacity="0"/><stop offset="1" stop-color="#05040f" stop-opacity=".45"/></linearGradient>
     <filter id="shBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter><radialGradient id="hubG" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fffbe6"/><stop offset=".35" stop-color="#f1dcaa"/><stop offset=".75" stop-color="#c7ad71"/><stop offset="1" stop-color="#8a6a36"/></radialGradient></defs>
@@ -2578,7 +2603,8 @@ function hud() {
   $('#bar').className = v === 'geometrico' ? 'v-tamburo v-geo' : ['ladro', 'custode', 'duellante', 'figli', 'etereo'].includes(v) ? `v-tamburo v-${v}` : `v-${v}`;
   $('#bar').innerHTML = `${parts.me}<div id="line">${lineHTML}</div><div id="acts">${actsHTML}</div>${parts.fan}`;
   hudNew = null;
-  if ($('#stage').dataset.bv === 'etereo') fitPlateHousing(); else document.querySelectorAll('.band.bot b, .band.bot i').forEach(x => { x.style.clipPath = ''; });
+  if ($('#stage').dataset.bv === 'etereo') { fitPlateHousing(); applyTuck(); } else document.querySelectorAll('.band.bot b, .band.bot i').forEach(x => { x.style.clipPath = ''; });
+  requestAnimationFrame(tuckSync);
 }
 let lineHTML = '', actsHTML = '', hudNew = null, view = 'world';
 function setBar(line, acts = '') { lineHTML = line; actsHTML = acts; const l = $('#line'), a = $('#acts'); if (l) { l.innerHTML = line; a.innerHTML = acts; } }
