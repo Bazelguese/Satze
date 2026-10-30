@@ -37,7 +37,9 @@ const WARMUP_MS = 3800;
 const VS_MIN_MS = 5200;
 const VS_LEAVE_MS = 450;
 /** Ingresso a tappe: la ruota gira almeno così (il tuo lato si sistema intanto). */
-const ROULETTE_MIN_MS = 3200;
+const ROULETTE_MIN_MS = 2400;
+/** Il sorteggio si ferma quando il caricamento arriva qui (in percentuale). */
+const ROULETTE_STOP_AT = 80;
 /** Ingresso a tappe: il caricamento pesante aspetta la fine del volo della scatola (al massimo questo). */
 const INTRO_FLIGHT_MAX_MS = 3200;
 /** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
@@ -209,6 +211,8 @@ export function DuelLoadingOverlay({
   preloadUrls = EMPTY_ASSETS,
   versus = null,
   versusIntro = false,
+  /** Armata nemica scelta dal giocatore: il rullo mostra i suoi eserciti. */
+  versusDeckArmy = null,
   onComplete,
 }) {
   const rootRef = useRef(null);
@@ -250,17 +254,22 @@ export function DuelLoadingOverlay({
 
   // La ruota si ferma quando il duello è pronto (e dopo un giro minimo); poi parte il VS.
   useEffect(() => {
-    if (!vsActive || !loadDone || vsStage !== 'spin') return undefined;
+    if (!vsActive || vsStage !== 'spin' || (progress < ROULETTE_STOP_AT && !loadDone)) return undefined;
     const wait = Math.max(0, ROULETTE_MIN_MS - (performance.now() - spinStartRef.current));
     const stopT = window.setTimeout(() => setVsStage('stop'), wait);
     return () => window.clearTimeout(stopT);
-  }, [vsActive, loadDone, vsStage]);
+  }, [vsActive, loadDone, vsStage, progress >= ROULETTE_STOP_AT]);
 
+  // dopo la fermata il VS parte appena il duello è pronto
+  const [reelLanded, setReelLanded] = useState(false);
   useEffect(() => {
     if (vsStage !== 'stop') return undefined;
-    const revealT = window.setTimeout(() => setVsStage('reveal'), ROULETTE_STOP_MS + 150);
-    return () => window.clearTimeout(revealT);
+    const t = window.setTimeout(() => setReelLanded(true), ROULETTE_STOP_MS + 350);
+    return () => window.clearTimeout(t);
   }, [vsStage]);
+  useEffect(() => {
+    if (vsStage === 'stop' && reelLanded && loadDone) setVsStage('reveal');
+  }, [vsStage, reelLanded, loadDone]);
 
   // Fine: senza VS come prima; con VS dopo la durata minima e la dissolvenza d'uscita.
   useEffect(() => {
@@ -696,7 +705,7 @@ export function DuelLoadingOverlay({
             enemyCardBack={enemyCardBack}
             fx={VS_FX}
             progress={progress}
-            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done } : null}
+            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done, deckArmy: versusDeckArmy } : null}
           />
         </VersusViewport>
       ) : null}

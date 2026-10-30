@@ -20,7 +20,7 @@ import { getEminenceArtUrl } from '../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { EMINENCE_ARMY_ORDER } from '../../data/eminences.js';
-import { VersusRoulette } from './VersusRoulette.jsx';
+import { VersusRoulette, buildRouletteItems } from './VersusRoulette.jsx';
 import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
 import { pickDistinctCardBackPair } from '../../utils/cardBackPicker.js';
 import { buildVersusIdentity } from './versusMatchData.js';
@@ -357,11 +357,14 @@ export function DuelVersusScreen({
     };
   }, [handoff]);
 
-  const armyRing = useMemo(() => {
-    const list = EMINENCE_ARMY_ORDER.filter((a) => ARMY_COLORS[a]);
-    const target = enemyEntry.armies?.[0] || enemyDeck?.army;
-    return target && !list.includes(target) ? [...list, target] : list;
-  }, [enemyEntry, enemyDeck]);
+  // voci del sorteggio: le armate, o gli eserciti dell'armata nemica se l'ha scelta il giocatore
+  const deckArmy = intro?.deckArmy || null;
+  const reel = useMemo(() => {
+    const armies = EMINENCE_ARMY_ORDER.filter((a) => ARMY_COLORS[a]);
+    const enemyArmy = enemyEntry.armies?.[0] || enemyDeck?.army || null;
+    if (enemyArmy && !armies.includes(enemyArmy)) armies.push(enemyArmy);
+    return buildRouletteItems({ armies, enemyArmy, enemyDeckKey: enemyDeck?.deckKey || null, deckArmy });
+  }, [enemyEntry, enemyDeck, deckArmy]);
 
   const fxClass = [
     intro && 'vsx-has-intro',
@@ -387,8 +390,9 @@ export function DuelVersusScreen({
       {/* il sorteggio sta sotto la metà nemica: quando parte il VS la lastra ci passa sopra */}
       {intro ? (
         <VersusRoulette
-          armies={armyRing}
-          target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
+          items={reel.items}
+          targetKey={reel.targetKey}
+          mode={reel.mode}
           stopping={intro.stage !== 'spin'}
           leaving={intro.stage === 'reveal'}
         />

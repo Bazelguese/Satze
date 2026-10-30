@@ -1296,6 +1296,8 @@ export default function SatzeGame() {
   const [pendingGameLaunch, setPendingGameLaunch] = useState(null);
   /** INIZIA premuto: la scelta esercito si smonta prima dell'avvio del duello. */
   const [deckLaunching, setDeckLaunching] = useState(false);
+  /** Armata nemica scelta in Imposta la partita: il sorteggio nel VS gira sui suoi eserciti. */
+  const [vsChosenEnemyArmy, setVsChosenEnemyArmy] = useState(null);
   const [launchVisualPhase, setLaunchVisualPhase] = useState(null);
   const [launchShowText, setLaunchShowText] = useState(false);
   const launchStartedRef = useRef(null);
@@ -4660,6 +4662,7 @@ export default function SatzeGame() {
               setSelectedMode(choice.mode);
               // la scelta esercito si smonta a pezzi attorno alla scatola, poi parte l'avvio
               setDeckLaunching(true);
+              setVsChosenEnemyArmy(choice.enemyArmy ?? null);
               const start = () => startStandardGameRef.current(
                 selectedArmy,
                 selectedDeckKey,
@@ -5038,6 +5041,7 @@ export default function SatzeGame() {
         showChrome={!launchHandoffBusy}
         versus={duelVersus}
         versusIntro={!isOnlinePvP}
+        versusDeckArmy={vsChosenEnemyArmy}
         onComplete={() => {
           const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');
           setPendingDuelPhase(null);
