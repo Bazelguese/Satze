@@ -439,10 +439,10 @@ function LayoutPalco({ armies, idx, army, goTo, onConfirm, onDossier }) {
 // Geometria della ruota (px, centro fuori schermo a sinistra).
 const WHEEL_CX = -220;
 const WHEEL_CY = 540;
-const HUB_R = 360;       // mozzo d'inchiostro
+const HUB_R = 360;       // mozzo scuro
 const WEDGE_RI = 410;    // spicchi: raggio interno
 const WEDGE_RO = 700;    // spicchi: raggio esterno
-const WEDGE_GAP = 2.4;   // gradi di vuoto tra uno spicchio e l'altro
+const WEDGE_GAP = 2;   // gradi di vuoto tra uno spicchio e l'altro
 const WEDGE_POP = 34;    // quanto sporge lo spicchio scelto
 const CARDS_R = 842;     // arco delle carte di punta
 const CARDS_STEP = 14.5; // gradi tra una carta e l'altra
@@ -451,35 +451,13 @@ const CARD_W = 150;
 const rad = (deg) => (deg * Math.PI) / 180;
 const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
 
-/** PRNG deterministico: stessi strappi a ogni render. */
-function seeded(seed) {
-  let t = seed * 2654435761;
-  return () => {
-    t = (t + 0x6d2b79f5) | 0;
-    let r = Math.imul(t ^ (t >>> 15), 1 | t);
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Spicchio "tagliato a mano": settore di corona centrato sull'angolo 0 con
- * bordo esterno strappato, lati appena storti e qualche tacca da taglierino.
- */
-function tornSector(ri, ro, half, seed) {
-  const rnd = seeded(seed);
-  const pts = [];
-  const side = (deg) => {
-    for (let r = ri; r < ro; r += 48) pts.push(polar(r, deg + (rnd() - 0.5) * 0.5));
-  };
-  side(-half);
-  for (let a = -half; a <= half + 0.01; a += 1.3) {
-    const notch = rnd() < 0.12 ? -10 - rnd() * 10 : 0;
-    pts.push(polar(ro + (rnd() - 0.6) * 12 + notch, a));
-  }
-  for (let r = ro; r > ri; r -= 48) pts.push(polar(r, half + (rnd() - 0.5) * 0.5));
-  for (let a = half; a >= -half - 0.01; a -= 3) pts.push(polar(ri + (rnd() - 0.5) * 6, a));
-  return `M ${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L ')} Z`;
+/** Settore di corona circolare centrato sull'angolo 0, ampio 2*half gradi. */
+function sectorPath(ri, ro, half) {
+  const [ox1, oy1] = polar(ro, -half);
+  const [ox2, oy2] = polar(ro, half);
+  const [ix2, iy2] = polar(ri, half);
+  const [ix1, iy1] = polar(ri, -half);
+  return `M ${ix1} ${iy1} L ${ox1} ${oy1} A ${ro} ${ro} 0 0 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${ri} ${ri} 0 0 0 ${ix1} ${iy1} Z`;
 }
 
 /** Arco (senso orario): serve a textPath e alle pennellate. */
@@ -489,62 +467,12 @@ function arcPath(r, from, to) {
   return `M ${x1} ${y1} A ${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
 }
 
-/** Schizzi d'inchiostro fissi attorno allo spicchio scelto: [r, gradi, raggio]. */
-const INK_SPLATS = [
-  [742, -24, 9], [768, -19, 4], [726, 21, 7], [760, 26, 3.5], [790, 23, 5],
-  [380, -12, 6], [372, 15, 4], [654, -31, 3], [810, -2, 3],
-];
-
-/** Filtri SVG condivisi (id globali nel documento). */
-function InkDefs() {
-  return (
-    <defs>
-      <filter id="asx-ink-rough" filterUnits="userSpaceOnUse" x="-1100" y="-1100" width="2200" height="2200">
-        <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7" result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="16" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-      <filter id="asx-ink-brush" filterUnits="userSpaceOnUse" x="-1100" y="-1100" width="2200" height="2200">
-        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="3" seed="3" result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-      <pattern id="asx-ink-dots" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
-        <circle cx="5" cy="5" r="2.6" fill="#050507" />
-      </pattern>
-      <pattern id="asx-ink-dots-accent" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
-        <circle cx="6" cy="6" r="2.4" className="asx-ink-dot" />
-      </pattern>
-      <radialGradient id="asx-ink-hubfade" r="0.5">
-        <stop offset="0.55" stopColor="#000" />
-        <stop offset="1" stopColor="#fff" />
-      </radialGradient>
-      <mask id="asx-ink-hubmask" maskContentUnits="userSpaceOnUse">
-        <circle r={HUB_R} fill="url(#asx-ink-hubfade)" />
-      </mask>
-      <linearGradient id="asx-ink-wedgefade" gradientUnits="userSpaceOnUse" x1={WEDGE_RI} x2={WEDGE_RO} y1="0" y2="0">
-        <stop offset="0" stopColor="#fff" />
-        <stop offset="0.55" stopColor="#fff" stopOpacity="0.15" />
-        <stop offset="1" stopColor="#fff" stopOpacity="0" />
-      </linearGradient>
-      <mask id="asx-ink-wedgemask" maskContentUnits="userSpaceOnUse">
-        <rect x={WEDGE_RI - 20} y={-WEDGE_RO} width={WEDGE_RO} height={WEDGE_RO * 2} fill="url(#asx-ink-wedgefade)" />
-      </mask>
-      <pattern id="asx-rw-stripes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="14" height="14" fill="#0d0b16" />
-        <rect width="6" height="14" fill="rgba(167,139,250,0.22)" />
-      </pattern>
-    </defs>
-  );
-}
-
 function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
   const total = armies.length;
   const step = 360 / total;
   const half = (step - WEDGE_GAP) / 2;
-  const shapes = React.useMemo(
-    () => armies.map((_, i) => tornSector(WEDGE_RI, WEDGE_RO, half, i + 1)),
-    [armies, half],
-  );
-  const paper = React.useMemo(() => tornSector(WEDGE_RI - 14, WEDGE_RO + 16, half + 1.4, 99), [half]);
+  const sector = sectorPath(WEDGE_RI, WEDGE_RO, half);
+  const paper = sectorPath(WEDGE_RI - 12, WEDGE_RO + 14, half + 1.2);
   const cards = army.showcase || [];
   const mid = (cards.length - 1) / 2;
   const artX = WEDGE_RI * Math.cos(rad(half));
@@ -558,24 +486,10 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
     <>
       <div className="asx-ruota-slab" aria-hidden="true" />
 
-      {/* Sotto la ruota (fisso): mozzo, pennellata, carta e ombra dello spicchio scelto */}
+      {/* Sotto la ruota (fisso): mozzo, sagoma bianca e ombra dello spicchio scelto */}
       <div className="asx-rw-layer asx-rw-under" style={center} aria-hidden="true">
         <svg viewBox={vb} width={box * 2} height={box * 2}>
-          <InkDefs />
           <circle r={HUB_R} className="asx-rw-hub" />
-          <circle r={HUB_R} fill="url(#asx-ink-dots-accent)" mask="url(#asx-ink-hubmask)" />
-          <circle r={HUB_R + 4} className="asx-rw-hub-ring" filter="url(#asx-ink-rough)" />
-          <path
-            d={arcPath(WEDGE_RO + 46, -half - 16, half + 12)}
-            className="asx-rw-brush"
-            filter="url(#asx-ink-brush)"
-          />
-          <g filter="url(#asx-ink-rough)">
-            {INK_SPLATS.map(([r, a, s], i) => {
-              const [x, y] = polar(r, a);
-              return <circle key={i} cx={x} cy={y} r={s} className="asx-rw-splat" />;
-            })}
-          </g>
           <path d={paper} className="asx-rw-shadow" />
           <path d={paper} className="asx-rw-paper" />
         </svg>
@@ -585,9 +499,16 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
       <div className="asx-wheel" style={{ ...center, '--spin': spin, '--step': `${step}deg` }}>
         <svg viewBox={vb} width={box * 2} height={box * 2}>
           <defs>
-            {shapes.map((d, i) => (
-              <clipPath key={i} id={`asx-rw-clip-${i}`}><path d={d} /></clipPath>
-            ))}
+            <clipPath id="asx-rw-clip"><path d={sector} /></clipPath>
+            <linearGradient id="asx-rw-shade" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stopColor="#050507" stopOpacity="0.92" />
+              <stop offset="0.45" stopColor="#050507" stopOpacity="0.35" />
+              <stop offset="1" stopColor="#050507" stopOpacity="0.1" />
+            </linearGradient>
+            <pattern id="asx-rw-stripes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="14" height="14" fill="#0d0b16" />
+              <rect width="6" height="14" fill="rgba(167,139,250,0.22)" />
+            </pattern>
           </defs>
           {armies.map((a, i) => {
             const on = i === idx;
@@ -602,7 +523,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
                 aria-label={a.name}
               >
                 <g className="asx-rw-pop">
-                  <g clipPath={`url(#asx-rw-clip-${i})`}>
+                  <g clipPath="url(#asx-rw-clip)">
                     {a.bg ? (
                       <image
                         href={a.bg}
@@ -615,14 +536,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
                     ) : (
                       <rect x={WEDGE_RI - 20} y={-WEDGE_RO} width={WEDGE_RO} height={WEDGE_RO * 2} fill="url(#asx-rw-stripes)" />
                     )}
-                    <rect
-                      x={WEDGE_RI - 20}
-                      y={-WEDGE_RO}
-                      width={WEDGE_RO}
-                      height={WEDGE_RO * 2}
-                      fill="url(#asx-ink-dots)"
-                      mask="url(#asx-ink-wedgemask)"
-                    />
+                    <path d={sector} fill="url(#asx-rw-shade)" />
                     <path d={arcPath(WEDGE_RO - 2, -half - 2, half + 2)} className="asx-rw-rim" />
                   </g>
                   {a.portrait ? (
@@ -643,7 +557,7 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
                   <text className={`asx-rw-name${long ? ' long' : ''}`}>
                     <textPath href={`#asx-rw-name-${i}`} startOffset="50%">{a.name}</textPath>
                   </text>
-                  <path d={shapes[i]} className="asx-rw-dim" />
+                  <path d={sector} className="asx-rw-dim" />
                 </g>
               </g>
             );
@@ -677,10 +591,9 @@ function LayoutRuota({ armies, idx, army, spin, goTo, onConfirm, onDossier }) {
       {cards.length > 0 && (
         <div className="asx-rw-layer asx-rw-over" style={center} aria-hidden="true">
           <svg viewBox={vb} width={box * 2} height={box * 2}>
-            <path d={arcPath(labelR, -31, -8)} className="asx-rw-label-brush" filter="url(#asx-ink-brush)" />
-            <path id="asx-rw-cards-label" d={arcPath(labelR, -31, -8)} fill="none" />
+            <path id="asx-rw-cards-label" d={arcPath(labelR, -31, 31)} fill="none" />
             <text className="asx-rw-cards-label">
-              <textPath href="#asx-rw-cards-label" startOffset="50%" textAnchor="middle">CARTE DI PUNTA</textPath>
+              <textPath href="#asx-rw-cards-label" startOffset="50%" textAnchor="middle">CARTE DI PUNTA · POTENZIALE PIÙ ALTO</textPath>
             </text>
           </svg>
         </div>
@@ -1079,24 +992,20 @@ function ArmySelectStyles() {
       .asx-wheel svg { pointer-events: none; }
       .asx-ruota-dial-text { z-index: 7; pointer-events: none; animation: asx-spin 120s linear infinite; }
       .asx-ruota-dial-text text {
-        fill: var(--ink); opacity: .85; font-family: 'Chakra Petch', sans-serif;
+        fill: color-mix(in srgb, var(--accent) 60%, transparent); font-family: 'Chakra Petch', sans-serif;
         font-weight: 700; font-style: italic; font-size: 28px; letter-spacing: 9px;
       }
       @keyframes asx-spin { to { transform: rotate(360deg); } }
       .asx-rw-over { z-index: 10; }
 
-      .asx-rw-hub { fill: #050507; }
-      .asx-ink-dot { fill: var(--accent); transition: fill .3s; }
-      .asx-rw-hub-ring { fill: none; stroke: var(--accent); stroke-width: 16; transition: stroke .3s; }
-      .asx-rw-brush { fill: none; stroke: var(--accent); stroke-width: 74; stroke-linecap: round; opacity: .92; transition: stroke .3s; }
-      .asx-rw-splat { fill: var(--accent); transition: fill .3s; }
+      .asx-rw-hub { fill: rgba(5,5,7,0.9); stroke: var(--accent); stroke-width: 8; transition: stroke .3s; }
       .asx-rw-shadow { fill: var(--accent); transform: translate(${WEDGE_POP + 18}px, 14px); transition: fill .3s; }
       .asx-rw-paper { fill: var(--ink); transform: translateX(${WEDGE_POP}px); }
 
       .asx-rw-wedge { cursor: pointer; pointer-events: auto; }
       .asx-rw-pop { transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
       .asx-rw-wedge.on .asx-rw-pop { transform: translateX(${WEDGE_POP}px); }
-      .asx-rw-rim { fill: none; stroke: var(--c); stroke-width: 12; }
+      .asx-rw-rim { fill: none; stroke: var(--c); stroke-width: 10; }
       .asx-rw-emblem { filter: drop-shadow(0 8px 10px rgba(0,0,0,0.85)); transition: transform .45s cubic-bezier(.3,1.5,.5,1); transform-box: fill-box; transform-origin: center; transform: scale(0.82); }
       .asx-rw-wedge.on .asx-rw-emblem { transform: scale(1.05); }
       .asx-rw-glyph { fill: var(--c); font-size: 120px; text-anchor: middle; dominant-baseline: central; }
@@ -1122,10 +1031,9 @@ function ArmySelectStyles() {
       }
       @keyframes asx-rw-stamp { from { transform: translate(-50%, -50%) rotate(-50deg) scale(1.8); opacity: 0; } }
 
-      .asx-rw-label-brush { fill: none; stroke: var(--ink); stroke-width: 34; stroke-linecap: butt; }
       .asx-rw-cards-label {
-        fill: var(--void); font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
-        font-size: 17px; letter-spacing: 5px; dominant-baseline: central;
+        fill: var(--ink); opacity: .9; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-style: italic;
+        font-size: 15px; letter-spacing: 5px; dominant-baseline: central;
       }
 
       .asx-rw-cards { z-index: 9; }
