@@ -1516,7 +1516,7 @@ function PersonalizePanel({ accent, rows, preview, onClose, onFocusRow }) {
                   key={r.key}
                   className={`dpz-row${i === focus ? ' on' : ''}`}
                   style={{ '--zz': `${[0, 14, 4, 18, 8][i % 5]}px` }}
-                  onMouseEnter={() => setFocus(i)}
+                  onMouseMove={(e) => { if ((e.movementX || e.movementY) && i !== focus) setFocus(i); }}
                 >
                   <span className="dpz-row-cursor" aria-hidden="true" />
                   <div className="dpz-row-lbl">

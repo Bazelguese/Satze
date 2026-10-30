@@ -4653,8 +4653,9 @@ export default function SatzeGame() {
       }
       return ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.name || 'Esercito';
     };
-    const difficultyPopupEl = showDifficultyPopup && typeof document !== 'undefined'
-      ? createPortal(
+    // dentro il canvas di gioco (scalato con lui), sopra la scelta esercito
+    const difficultyPopupEl = showDifficultyPopup
+      ? (
           <DifficultySelectPopup
             isOpen
             armyName={selectedArmy}
@@ -4683,8 +4684,7 @@ export default function SatzeGame() {
                 ...display,
               });
             }}
-          />,
-          document.body
+          />
         )
       : null;
     const customDecks = loadCustomDecks();
@@ -4748,7 +4748,6 @@ export default function SatzeGame() {
     if (deckOptions.length > 0) {
       return (
         <>
-          {difficultyPopupEl}
           <DeckSelectCinematic
           armyName={isMixedMode ? null : selectedArmy}
           gameDeckOptions={deckOptions}
@@ -4804,6 +4803,7 @@ export default function SatzeGame() {
             });
           }}
         />
+          {difficultyPopupEl}
         </>
       );
     }
