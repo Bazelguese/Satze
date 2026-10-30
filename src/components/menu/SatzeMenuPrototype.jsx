@@ -117,16 +117,6 @@ function Splash({ splash, className = "" }) {
   );
 }
 
-/**
- * Cornici da confrontare: cosa dà appoggio alle parole inclinate senza
- * dividere lo schermo (la pioggia di carte resta sempre visibile).
- */
-export const MENU_FRAMES = {
-  velo: "Velo scuro",
-  righe: "Righe",
-  angoli: "Angoli",
-};
-
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
 function fitSize(label, maxW, cap) {
   return Math.min(cap, Math.floor(maxW / (Math.max(1, label.length) * 0.8)));
@@ -278,10 +268,9 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  *   disabled?: boolean,
  *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
- * }>, buildLabel?: string, inputLocked?: boolean, frame?: keyof typeof MENU_FRAMES }} props
+ * }>, buildLabel?: string, inputLocked?: boolean }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, frame = "velo" }) {
-  const frameKey = MENU_FRAMES[frame] ? frame : "velo";
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false }) {
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -518,7 +507,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   return (
     <div
       ref={rootRef}
-      className={`satze-menu-v5-root smp smp--${frameKey}`}
+      className="satze-menu-v5-root smp"
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -530,11 +519,26 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       <BrushFilters />
       <div className="smp-bg" aria-hidden="true">
         <div className="smp-bg-glow" />
-        <MenuAgentRain />
+        {vfxProfile.menuGlowEnabled && (
+          <div
+            className="smp-bg-pulse"
+            style={{
+              filter: vfxProfile.menuBlurPx > 0 ? `blur(${Math.min(vfxProfile.menuBlurPx, 16)}px)` : "none",
+              animationPlayState: vfxProfile.menuSigilAnimation ? "running" : "paused",
+            }}
+          />
+        )}
         <div className="smp-bg-halftone" />
+        <MenuAgentRain />
+        <div className="smp-wm">SATZE</div>
+        {items[mainActive] && (
+          <div className="smp-echo" key={`echo-${mainActive}`}>
+            {items[mainActive].label}
+          </div>
+        )}
       </div>
 
-      {frameKey === "velo" && <div className="mfr-veil" aria-hidden="true" />}
+      <div className="mfr-veil" aria-hidden="true" />
 
       <div className="smp-brand">
         <AnimatedSatzeLogo
@@ -623,7 +627,31 @@ function SatzeMenuStyles() {
 
       /* ---------- Fondo ---------- */
       .smp-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-      .smp-bg-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 34%, #2a0a3a 0%, #14051f 40%, ${V} 80%); }
+      .smp-bg-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 46%, #3a0f50 0%, #1c0829 42%, #0b0512 82%); }
+      /* bagliore magenta che pulsa dietro il logo (come nel menu di prima) */
+      .smp-bg-pulse {
+        position: absolute; left: 560px; top: 500px; width: 1100px; height: 900px; transform: translate(-50%, -50%);
+        background: radial-gradient(ellipse at 50% 50%, rgba(192,38,211,0.3) 0%, rgba(88,28,135,0.24) 32%, transparent 66%);
+        animation: smp-pulse 6s ease-in-out infinite;
+      }
+      @keyframes smp-pulse { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
+      /* scritte di sfondo a contorno: SATZE dietro il logo, la voce scelta dietro la colonna */
+      .smp-wm, .smp-echo {
+        position: absolute; z-index: 3; font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase;
+        line-height: 0.8; white-space: nowrap; color: transparent; pointer-events: none; user-select: none;
+      }
+      .smp-wm {
+        left: -70px; top: -40px; font-size: 340px; letter-spacing: -0.04em;
+        color: rgba(192,38,211,0.07); -webkit-text-stroke: 2px rgba(192,38,211,0.2);
+        transform: skewX(-8deg) rotate(-2deg);
+      }
+      .smp-echo {
+        right: -60px; bottom: 96px; font-size: 230px; letter-spacing: -0.03em;
+        -webkit-text-stroke: 2px color-mix(in srgb, var(--active) 34%, transparent);
+        transform: rotate(-7deg); transform-origin: right bottom;
+        animation: smp-echo-in .5s cubic-bezier(.2,1,.3,1) both;
+      }
+      @keyframes smp-echo-in { from { opacity: 0; transform: rotate(-7deg) translateX(120px); } }
       .smp-bg-halftone {
         position: absolute; inset: 0; z-index: 2; opacity: var(--halftone);
         background-image: radial-gradient(circle, var(--active) 1.4px, transparent 1.8px);
@@ -652,30 +680,11 @@ function SatzeMenuStyles() {
       /* velo: ombra trasparente inclinata solo dietro la colonna */
       .mfr-veil {
         position: absolute; z-index: 5; right: -6%; top: 50px; width: 62%; height: 940px; pointer-events: none;
-        background: radial-gradient(ellipse 50% 46% at 62% 50%, rgba(5,5,7,0.9) 0%, rgba(5,5,7,0.68) 50%, transparent 100%);
+        background: radial-gradient(ellipse 50% 46% at 62% 50%, rgba(5,5,7,0.78) 0%, rgba(5,5,7,0.5) 50%, transparent 100%);
         transform: rotate(-7deg);
         animation: mfr-veil-in .6s ease-out both;
       }
       @keyframes mfr-veil-in { from { opacity: 0; } }
-      /* righe: ogni parola poggia su un filo che esce dal bordo destro */
-      .smp--righe .mi-item::after {
-        content: ''; position: absolute; z-index: 0; left: -60px; right: -460px; bottom: 0.1em;
-        height: 2px; font-size: var(--fs); background: linear-gradient(90deg, transparent, rgba(245,243,235,0.5) 18%);
-        transition: background .2s, height .2s;
-      }
-      .smp--righe .mi-item.on::after { height: 4px; background: linear-gradient(90deg, transparent, var(--c) 12%); }
-      /* angoli: due angolari inquadrano la colonna */
-      .smp--angoli .mi-col::before, .smp--angoli .mi-col::after {
-        content: ''; position: absolute; width: 150px; height: 110px; pointer-events: none;
-        animation: mfr-corner-in .5s .2s cubic-bezier(.2,1.3,.4,1) both;
-      }
-      .smp--angoli .mi-col::before { left: -70px; top: -46px; border-top: 4px solid ${T}; border-left: 4px solid ${T}; }
-      .smp--angoli .mi-col::after {
-        right: -54px; bottom: -40px; border-bottom: 4px solid var(--active); border-right: 4px solid var(--active);
-        transition: border-color .3s;
-      }
-      @keyframes mfr-corner-in { from { opacity: 0; transform: scale(1.4); } }
-
       /* ========== Parole impilate ========== */
       .mi { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
       .mi-col {
