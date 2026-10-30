@@ -103,22 +103,25 @@ export function DifficultySelectPopup({
     else if (key === 'difficulty') setDifficultyId((x) => cycle(difficulties.map((y) => y.id), x, d));
   };
 
+  const [leaving, setLeaving] = useState(false);
   const start = () => {
-    if (!canConfirm) return;
+    if (!canConfirm || leaving) return;
     const format = getMatchFormat(formatId);
     const enemyArmy = enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
     writeSetup({ formatId: format.id, enemyPick, enemyArmy: chosenEnemyArmy, difficulty: difficultyId });
-    onSelect({
+    // il riquadro vola via, poi parte il passaggio al VS
+    setLeaving(true);
+    window.setTimeout(() => onSelect({
       difficulty: difficultyId,
       mode: format.mode,
       eminenceFormat: format.eminenceFormat,
       formatId: format.id,
       enemyArmy,
-    });
+    }), 280);
   };
 
   const stateRef = useRef({});
-  stateRef.current = { stepRow, start, onClose };
+  stateRef.current = { stepRow, start, onClose, leaving };
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -127,6 +130,7 @@ export function DifficultySelectPopup({
       // la scelta esercito sotto non deve sentire questi tasti
       e.stopImmediatePropagation();
       const k = stateRef.current;
+      if (k.leaving) return;
       if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.onClose?.(); return; }
       if (e.key === 'Enter') { e.preventDefault(); k.start(); return; }
       const rs = rowsFor(live.current.enemyPick);
@@ -168,7 +172,7 @@ export function DifficultySelectPopup({
   const helpLabel = { format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ' }[focusKey];
 
   return (
-    <div className="mst" style={{ '--accent': accentColor }} onClick={onClose}>
+    <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : onClose}>
       <div className="mst-card" role="dialog" aria-modal="true" aria-label="Imposta la partita" onClick={(e) => e.stopPropagation()}>
         <div className="mst-sheet">
           <header className="mst-head">
@@ -318,6 +322,10 @@ function MatchSetupStyles() {
         animation: mst-in .34s cubic-bezier(.2,1.2,.4,1) both;
       }
       @keyframes mst-in { from { opacity: 0; transform: rotate(-1.2deg) translateY(60px) skewX(-6deg); } }
+      .mst.is-leaving { animation: mst-out-bg .32s ease forwards; }
+      .mst.is-leaving .mst-card { animation: mst-out .3s cubic-bezier(.6,0,.9,.4) forwards; }
+      @keyframes mst-out { to { opacity: 0; transform: rotate(4deg) translate(140px, -220px) skewX(-10deg) scale(.9); } }
+      @keyframes mst-out-bg { to { background-color: transparent; opacity: 0; } }
       .mst-sheet {
         position: relative; display: flex; flex-direction: column; background: var(--void);
         clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%);

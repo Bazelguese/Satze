@@ -404,6 +404,8 @@ export default function DeckSelectCinematic({
   onSelectDeck,
   onPreviewDeck,
   onBack,
+  /** INIZIA premuto: la schermata si smonta a pezzi, resta solo la scatola al centro. */
+  launching = false,
 }) {
   const isManager = variant === 'manager';
   const DECKS = useMemo(() => {
@@ -639,7 +641,7 @@ export default function DeckSelectCinematic({
   const compactPager = total > 12;
 
   return (
-    <div ref={rootRef} className={`dsk dsk--p phase-${phase}`} style={{ '--accent': accent }}>
+    <div ref={rootRef} className={`dsk dsk--p phase-${phase}${launching ? ' is-launching' : ''}`} style={{ '--accent': accent }}>
       {handoffEl}
       {/* BG */}
       <div className="dsk-bg-layer">
@@ -959,6 +961,24 @@ function DeckSelectPersonaSkin() {
         transform: skewX(-14deg);
       }
       .dsk--p .dsk-fxpreview-tabs button.on { background: var(--p-ink); color: var(--p-void); }
+
+      /* INIZIA: la schermata si smonta, la scatola scelta resta al centro sul nero */
+      .dsk--p.is-launching { pointer-events: none; }
+      .dsk--p.is-launching::after {
+        content: ''; position: absolute; inset: 0; z-index: 1; background: #050507; pointer-events: none;
+        animation: dsk-launch-dark .7s ease .1s both;
+      }
+      @keyframes dsk-launch-dark { from { opacity: 0; } }
+      .dsk--p.is-launching .dsk-stage { z-index: 2; }
+      .dsk--p.is-launching .dsk-top { animation: dsk-launch-up .45s cubic-bezier(.6,0,.9,.4) both; }
+      .dsk--p.is-launching .dsk-ctabar { animation: dsk-launch-down .45s cubic-bezier(.6,0,.9,.4) .05s both; }
+      .dsk--p.is-launching .dsk-watermark { animation: dsk-launch-left .5s cubic-bezier(.6,0,.9,.4) both; }
+      .dsk--p.is-launching .dsk-nav { animation: dsk-launch-fade .2s ease both; }
+      .dsk--p.is-launching .dsk-tk:not(.is-center) { animation: dsk-launch-fade .35s ease both; }
+      @keyframes dsk-launch-up { to { transform: translateY(-160%) rotate(-4deg); opacity: 0; } }
+      @keyframes dsk-launch-down { to { transform: translateY(160%) rotate(2deg); opacity: 0; } }
+      @keyframes dsk-launch-left { to { transform: translateX(-30%) rotate(-6deg) skewX(-10deg); opacity: 0; } }
+      @keyframes dsk-launch-fade { to { opacity: 0; } }
 
       /* Lista vuota */
       .dsk--p.dsk-empty .dsk-empty-msg {

@@ -255,6 +255,14 @@ export function DuelVersusScreen({
   const rootRef = useRef(null);
   const introHeld = Boolean(intro) && intro.stage !== 'reveal';
   const [handoff] = useState(() => intro?.handoff || null);
+  // aspetto del sorteggio (prove): localStorage satze_vs_roulette = ruota | rullo | griglia
+  const [rouletteVariant] = useState(() => {
+    try {
+      return window.localStorage?.getItem('satze_vs_roulette') || 'ruota';
+    } catch {
+      return 'ruota';
+    }
+  });
   // Dorsi: quelli della partita se passati, altrimenti due dorsi casuali distinti (come in partita).
   const [randomBacks] = useState(() => pickDistinctCardBackPair());
   const playerBack = playerCardBack || randomBacks.playerCardBack;
@@ -328,6 +336,16 @@ export function DuelVersusScreen({
       <DeckSelectStyles />
 
       {/* Slot: avversario sempre a sinistra, chi guarda sempre a destra (anche online, ognuno dal suo client). */}
+      {/* il sorteggio sta sotto la metà nemica: quando parte il VS la lastra ci passa sopra */}
+      {intro ? (
+        <VersusRoulette
+          variant={rouletteVariant}
+          armies={armyRing}
+          target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
+          stopping={intro.stage !== 'spin'}
+          leaving={intro.stage === 'reveal'}
+        />
+      ) : null}
       <div className="vsx-half vsx-half--l">
         <div className="vsx-half-bg" style={{ backgroundImage: enemyBg ? `url('${enemyBg}')` : 'none' }} />
         <div className="vsx-half-tint" />
@@ -339,15 +357,6 @@ export function DuelVersusScreen({
         <div className="vsx-half-glow" />
       </div>
       <div className="vsx-seam" aria-hidden />
-
-      {intro ? (
-        <VersusRoulette
-          armies={armyRing}
-          target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
-          stopping={intro.stage !== 'spin'}
-          leaving={intro.stage === 'reveal'}
-        />
-      ) : null}
 
       <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} backImage={enemyBack} />
       <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} backImage={playerBack} />

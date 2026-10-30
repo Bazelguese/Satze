@@ -37,7 +37,7 @@ const WARMUP_MS = 3800;
 const VS_MIN_MS = 5200;
 const VS_LEAVE_MS = 450;
 /** Ingresso a tappe: la ruota gira almeno così (il tuo lato si sistema intanto). */
-const ROULETTE_MIN_MS = 1700;
+const ROULETTE_MIN_MS = 2600;
 /** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
 const VS_LAYOUT = 'shadow';
 const VS_COVER = 'box';

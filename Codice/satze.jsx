@@ -163,6 +163,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
+
 import { DuelLoadingOverlay } from '../src/components/DuelLoadingOverlay';
 import { buildDuelVersusData } from '../src/components/versus/versusMatchData';
 import { CosmicDeckManagerList } from '../src/components/menu/cosmic/CosmicDeckManagerList';
@@ -202,6 +203,9 @@ import {
 } from '../src/config/buildProfile.js';
 import { confirmQuitDesktopGame, shouldShowMainMenuQuit } from '../src/utils/electronApp.js';
 import { computeLegalMaxFocus } from '../src/game/legalFocusSpend.js';
+
+/** Quanto dura lo smontaggio della scelta esercito prima del VS. */
+const DECK_LAUNCH_MS = 750;
 
 // ============================================
 // SATZE - Componente principale del gioco
@@ -1290,6 +1294,8 @@ export default function SatzeGame() {
   const [previewDeckData, setPreviewDeckData] = useState(null);
   const [showDifficultyPopup, setShowDifficultyPopup] = useState(false);
   const [pendingGameLaunch, setPendingGameLaunch] = useState(null);
+  /** INIZIA premuto: la scelta esercito si smonta prima dell'avvio del duello. */
+  const [deckLaunching, setDeckLaunching] = useState(false);
   const [launchVisualPhase, setLaunchVisualPhase] = useState(null);
   const [launchShowText, setLaunchShowText] = useState(false);
   const launchStartedRef = useRef(null);
@@ -4652,7 +4658,8 @@ export default function SatzeGame() {
               setShowDifficultyPopup(false);
               clearCardPreview();
               setSelectedMode(choice.mode);
-              // prima si ridisegna senza il riquadro, poi parte il lavoro pesante dell'avvio
+              // la scelta esercito si smonta a pezzi attorno alla scatola, poi parte l'avvio
+              setDeckLaunching(true);
               const start = () => startStandardGameRef.current(
                 selectedArmy,
                 selectedDeckKey,
@@ -4664,7 +4671,10 @@ export default function SatzeGame() {
                 null,
                 { eminenceFormat: choice.eminenceFormat }
               );
-              requestAnimationFrame(() => requestAnimationFrame(start));
+              window.setTimeout(() => {
+                start();
+                setDeckLaunching(false);
+              }, DECK_LAUNCH_MS);
             }}
           />
         )
@@ -4731,6 +4741,7 @@ export default function SatzeGame() {
       return (
         <>
           <DeckSelectCinematic
+          launching={deckLaunching}
           armyName={isMixedMode ? null : selectedArmy}
           gameDeckOptions={deckOptions}
           selectedArmy={selectedArmy}
