@@ -3,10 +3,10 @@
 // ============================================================
 // Mentre il duello si carica la metà nemica, ancora al buio, si accende un
 // rullo da slot: fasce inclinate (arte, icona, nome, sottotitolo) che partono
-// velocissime, rallentano piano e con `stopping` si fermano sull'avversario.
+// piano, accelerano e con `stopping` rallentano fino a fermarsi sull'avversario.
 // Le voci sono le armate, oppure gli eserciti dell'armata nemica se il
 // giocatore l'ha scelta lui (vedi buildRouletteItems).
-// Il movimento: `pos` avanza in voci; la velocità cala da VMAX verso VMIN e
+// Il movimento: `pos` avanza in voci; parte piano, accelera fino a VMAX e
 // la fermata è una curva che parte alla velocità corrente e arriva ferma su
 // un intero.
 // ============================================================
@@ -21,13 +21,12 @@ import { UI_SOUND } from '../../audio/soundCatalog';
 
 export const ROULETTE_STOP_MS = 3200;
 
-/** Voci al secondo: si parte a VMAX e si scende verso VMIN con costante TAU. */
+/** Voci al secondo: partenza tranquilla a VSTART, accelerazione fino a VMAX in ACCEL_MS. */
+const VSTART = 3;
 const VMAX = 18;
-const VMIN = 2.2;
-const TAU_MS = 1600;
-/** Le fasce si accendono, poi il rullo parte di scatto. */
+const ACCEL_MS = 2200;
+/** Le fasce si accendono, poi il rullo parte. */
 const POWER_ON_MS = 380;
-const RAMP_MS = 220;
 
 const SPARKS = Array.from({ length: 16 }, (_, i) => ({
   a: `${Math.round((360 / 16) * i + ((i * 37) % 13))}deg`,
@@ -98,11 +97,12 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
     let lastShown = 0;
     let lastTick = 0;
     let raf = 0;
+    // partenza modesta, poi accelera (sempre più forte) fino al massimo; la fermata parte da lì
     const speedAt = (now) => {
       const t = now - tStart;
       if (t <= 0) return 0;
-      const ramp = Math.min(1, t / RAMP_MS);
-      return (VMIN + (VMAX - VMIN) * Math.exp(-t / TAU_MS)) * ramp / 1000;
+      const k = Math.min(1, t / ACCEL_MS);
+      return (VSTART + (VMAX - VSTART) * k * k) / 1000;
     };
     const frame = (now) => {
       const dt = Math.min(64, now - last);
