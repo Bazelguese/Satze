@@ -23,6 +23,8 @@ import { EminenzaZone } from './eminence/EminenzaZone';
 import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
 import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
 import { DuelVersusScreen } from './versus/DuelVersusScreen';
+import { ROULETTE_STOP_MS } from './versus/VersusRoulette.jsx';
+import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
 import { computeViewportScale } from '../settings/viewportScale';
 import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
@@ -34,6 +36,8 @@ const WARMUP_MS = 3800;
  */
 const VS_MIN_MS = 5200;
 const VS_LEAVE_MS = 450;
+/** Ingresso a tappe: la ruota gira almeno così (il tuo lato si sistema intanto). */
+const ROULETTE_MIN_MS = 1700;
 /** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
 const VS_LAYOUT = 'shadow';
 const VS_COVER = 'box';
@@ -202,6 +206,7 @@ export function DuelLoadingOverlay({
   preloadCards = EMPTY_ASSETS,
   preloadUrls = EMPTY_ASSETS,
   versus = null,
+  versusIntro = false,
   onComplete,
 }) {
   const rootRef = useRef(null);
@@ -221,10 +226,32 @@ export function DuelLoadingOverlay({
   const vsStartRef = useRef(0);
   // Il VS compare solo quando non copre l'ultima transizione di lancio (showChrome).
   const vsActive = Boolean(versus) && showChrome;
+  // Ingresso a tappe: spin → stop (la ruota si ferma sull'avversario) → reveal (VS pieno).
+  const introOn = Boolean(versus) && versusIntro;
+  const [vsStage, setVsStage] = useState(introOn ? 'spin' : 'reveal');
+  const [vsHandoff] = useState(() => (introOn ? peekVersusHandoff() : null));
+  useEffect(() => { clearVersusHandoff(); }, []);
+  const spinStartRef = useRef(0);
 
   useEffect(() => {
-    if (vsActive && !vsStartRef.current) vsStartRef.current = performance.now();
-  }, [vsActive]);
+    if (!vsActive) return;
+    if (!spinStartRef.current) spinStartRef.current = performance.now();
+    if (vsStage === 'reveal' && !vsStartRef.current) vsStartRef.current = performance.now();
+  }, [vsActive, vsStage]);
+
+  // La ruota si ferma quando il duello è pronto (e dopo un giro minimo); poi parte il VS.
+  useEffect(() => {
+    if (!vsActive || !loadDone || vsStage !== 'spin') return undefined;
+    const wait = Math.max(0, ROULETTE_MIN_MS - (performance.now() - spinStartRef.current));
+    const stopT = window.setTimeout(() => setVsStage('stop'), wait);
+    return () => window.clearTimeout(stopT);
+  }, [vsActive, loadDone, vsStage]);
+
+  useEffect(() => {
+    if (vsStage !== 'stop') return undefined;
+    const revealT = window.setTimeout(() => setVsStage('reveal'), ROULETTE_STOP_MS + 150);
+    return () => window.clearTimeout(revealT);
+  }, [vsStage]);
 
   // Fine: senza VS come prima; con VS dopo la durata minima e la dissolvenza d'uscita.
   useEffect(() => {
@@ -239,7 +266,7 @@ export function DuelLoadingOverlay({
         window.clearTimeout(t);
       };
     }
-    if (!vsActive) return undefined;
+    if (!vsActive || vsStage !== 'reveal' || !vsStartRef.current) return undefined;
     const shownFor = performance.now() - vsStartRef.current;
     let leaveT = 0;
     const holdT = window.setTimeout(() => {
@@ -250,7 +277,7 @@ export function DuelLoadingOverlay({
       window.clearTimeout(holdT);
       window.clearTimeout(leaveT);
     };
-  }, [loadDone, versus, vsActive]);
+  }, [loadDone, versus, vsActive, vsStage]);
 
   const fields = useMemo(
     () => (Array.isArray(battlefields) ? battlefields.filter(Boolean) : []),
@@ -652,6 +679,7 @@ export function DuelLoadingOverlay({
             enemyCardBack={enemyCardBack}
             fx={VS_FX}
             progress={progress}
+            intro={introOn ? { stage: vsStage, handoff: vsHandoff } : null}
           />
         </VersusViewport>
       ) : null}

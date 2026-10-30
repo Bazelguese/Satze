@@ -13,12 +13,14 @@
 //   shadow — arte dell'Eminenza come sfondo della metà + fascia con la sua statica
 // ============================================================
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { getEminence } from '../../data/eminences.js';
 import { getEminenceArtUrl } from '../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../data/eminenceArtFrames.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
+import { EMINENCE_ARMY_ORDER } from '../../data/eminences.js';
+import { VersusRoulette } from './VersusRoulette.jsx';
 import { resolveSideEminence } from '../../game/eminence/eminenceSetup.js';
 import { pickDistinctCardBackPair } from '../../utils/cardBackPicker.js';
 import { buildVersusIdentity } from './versusMatchData.js';
@@ -229,6 +231,9 @@ function halfBackground(entry, em, layout) {
  * @param {string|null} [props.enemyCardBack] dorso carte dell'avversario
  * @param {number|null} [props.progress] 0–100; null nasconde la barra
  * @param {string} [props.statusLabel]
+ * @param {{ stage: 'spin'|'stop'|'reveal', handoff?: { rect: object }|null }|null} [props.intro]
+ *   ingresso a tappe: prima solo il tuo lato (la scatola vola dalla scelta esercito), a sinistra
+ *   la ruota delle armate gira al buio; 'stop' la ferma sull'avversario, 'reveal' fa partire il VS.
  */
 export function DuelVersusScreen({
   playerIdentity,
@@ -245,14 +250,18 @@ export function DuelVersusScreen({
   enemyCardBack = null,
   progress = null,
   statusLabel = 'Preparazione scontro',
+  intro = null,
 }) {
   const rootRef = useRef(null);
+  const introHeld = Boolean(intro) && intro.stage !== 'reveal';
+  const [handoff] = useState(() => intro?.handoff || null);
   // Dorsi: quelli della partita se passati, altrimenti due dorsi casuali distinti (come in partita).
   const [randomBacks] = useState(() => pickDistinctCardBackPair());
   const playerBack = playerCardBack || randomBacks.playerCardBack;
   const enemyBack = enemyCardBack || randomBacks.enemyCardBack;
   const opening = Boolean(fx.open) && coverStyle === 'box';
-  const spin = Boolean(fx.spin) && coverStyle === 'box';
+  // la rotazione della scatola parte solo a VS avviato (il suo ritardo conta da lì)
+  const spin = Boolean(fx.spin) && coverStyle === 'box' && !introHeld;
   // Parallasse: variabili CSS sul root, senza re-render a ogni movimento.
   const onPointerMove = useCallback((e) => {
     const el = rootRef.current;
@@ -274,7 +283,34 @@ export function DuelVersusScreen({
   const p = progress == null ? null : Math.min(100, Math.max(0, Number(progress) || 0));
   const playerBg = halfBackground(playerEntry, playerEm, layout);
   const enemyBg = halfBackground(enemyEntry, enemyEm, layout);
+  // La scatola vola dal punto in cui era nella scelta esercito al suo posto nel VS.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const wrap = root?.querySelector('.vsx-side--r .vsx-ticket');
+    const tk = wrap?.querySelector('.dsk-tk');
+    if (!handoff?.rect || !wrap || !tk || typeof wrap.animate !== 'function') return;
+    const fin = tk.getBoundingClientRect();
+    const k = root.getBoundingClientRect().width / 1920 || 1;
+    const o = handoff.rect;
+    const dx = (o.left + o.width / 2 - (fin.left + fin.width / 2)) / k;
+    const dy = (o.top + o.height / 2 - (fin.top + fin.height / 2)) / k;
+    const sc = fin.width ? o.width / fin.width : 1;
+    wrap.animate(
+      [{ transform: `translate(${dx}px, ${dy}px) scale(${sc})` }, { transform: 'none' }],
+      { duration: 900, delay: 180, easing: 'cubic-bezier(.6,0,.2,1)', fill: 'backwards' }
+    );
+  }, [handoff]);
+
+  const armyRing = useMemo(() => {
+    const list = EMINENCE_ARMY_ORDER.filter((a) => ARMY_COLORS[a]);
+    const target = enemyEntry.armies?.[0] || enemyDeck?.army;
+    return target && !list.includes(target) ? [...list, target] : list;
+  }, [enemyEntry, enemyDeck]);
+
   const fxClass = [
+    intro && 'vsx-has-intro',
+    introHeld && 'vsx-intro',
+    handoff && 'vsx-intro-handoff',
     opening && 'vsx-fx-open',
     fx.awaken && 'vsx-fx-awaken',
     fx.impact && 'vsx-fx-impact',
@@ -303,6 +339,15 @@ export function DuelVersusScreen({
         <div className="vsx-half-glow" />
       </div>
       <div className="vsx-seam" aria-hidden />
+
+      {intro ? (
+        <VersusRoulette
+          armies={armyRing}
+          target={enemyEntry.armies?.[0] || enemyDeck?.army || null}
+          stopping={intro.stage !== 'spin'}
+          leaving={intro.stage === 'reveal'}
+        />
+      ) : null}
 
       <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} backImage={enemyBack} />
       <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} backImage={playerBack} />
