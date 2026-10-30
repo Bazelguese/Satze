@@ -1,4 +1,4 @@
-import { useId, useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { MENU_ACCENTS } from "../../theme/hudOratorioPalette";
 import AnimatedSatzeLogo from "../brand/AnimatedSatzeLogo";
 import { MenuAgentRain } from "./MenuAgentRain";
@@ -117,117 +117,53 @@ function Splash({ splash, className = "" }) {
   );
 }
 
-/** Pennellata orizzontale (viewBox 400×100): bordi ondulati, capi sfrangiati, strisce di pennello secco. */
-function makeStroke(seed) {
-  const f = (v) => v.toFixed(1);
-  const top = [];
-  const bottom = [];
-  for (let x = 24; x <= 376; x += 22) {
-    top.push(`${f(x)} ${f(14 + rnd(seed + x) * 10)}`);
-    bottom.unshift(`${f(x)} ${f(86 - rnd(seed + x * 3) * 10)}`);
-  }
-  // capi sfrangiati: setole di lunghezza diversa
-  const right = [];
-  const left = [];
-  for (let k = 0; k <= 6; k += 1) {
-    const y = 18 + k * 11;
-    right.push(`${f(372 + rnd(seed + 50 + k) * 28)} ${f(y)}`);
-    left.unshift(`${f(rnd(seed + 70 + k) * 30)} ${f(y)}`);
-  }
-  const d = `M ${[...top, ...right, ...bottom, ...left].join(" L ")} Z`;
-  const streaks = Array.from({ length: 3 + Math.floor(rnd(seed + 1) * 3) }, (_, k) => {
-    const y = 26 + rnd(seed + 90 + k) * 48;
-    const x1 = 20 + rnd(seed + 110 + k) * 160;
-    const x2 = x1 + 80 + rnd(seed + 130 + k) * 180;
-    return { x1, x2: Math.min(396, x2), y, w: 1.5 + rnd(seed + 150 + k) * 3 };
-  });
-  return { d, streaks, rot: -4 + rnd(seed + 5) * 5 };
-}
-
-/** Bordo strappato (clip-path): denti irregolari sopra e sotto. */
-function makeTorn(seed) {
-  const top = [];
-  const bottom = [];
-  for (let k = 0; k <= 25; k += 1) {
-    const x = k * 4;
-    top.push(`${x}% ${(rnd(seed + k) * 14).toFixed(1)}%`);
-    bottom.unshift(`${x}% ${(100 - rnd(seed + 40 + k) * 14).toFixed(1)}%`);
-  }
-  return { clip: `polygon(${[...top, ...bottom].join(", ")})`, rot: -3 + rnd(seed + 5) * 4 };
-}
-
-/** Tre artigliate (viewBox 400×140): tratti affusolati in diagonale. */
-function makeClaws(seed) {
-  const f = (v) => v.toFixed(1);
-  const lean = 0.45 + rnd(seed) * 0.35;
-  const paths = [0, 1, 2].map((k) => {
-    const x0 = 40 + k * 70 + rnd(seed + 10 + k) * 30;
-    const x1 = x0 + 220 + rnd(seed + 20 + k) * 60;
-    const y0 = 128 - rnd(seed + 30 + k) * 12;
-    const y1 = y0 - (x1 - x0) * lean;
-    const mx = (x0 + x1) / 2;
-    const my = (y0 + y1) / 2;
-    const w = 14 + rnd(seed + 40 + k) * 10;
-    // normale al tratto per lo spessore al centro
-    const len = Math.hypot(x1 - x0, y1 - y0);
-    const nx = (-(y1 - y0) / len) * w;
-    const ny = ((x1 - x0) / len) * w;
-    return `M ${f(x0)} ${f(y0)} Q ${f(mx + nx)} ${f(my + ny)} ${f(x1)} ${f(y1)} Q ${f(mx - nx * 0.4)} ${f(my - ny * 0.4)} ${f(x0)} ${f(y0)} Z`;
-  });
-  return { paths, flip: rnd(seed + 6) > 0.5 ? -1 : 1 };
-}
-
-/** Evidenziatori della voce scelta da confrontare. */
-export const MENU_HIGHLIGHTS = {
-  macchia: "Macchia",
-  pennellata: "Pennellata",
-  lama: "Lama",
-  carta: "Carta strappata",
-  graffi: "Graffi",
+/** Cornici da confrontare: cosa dà contesto alle parole impilate. */
+export const MENU_FRAMES = {
+  lastra: "Lastra diagonale",
+  dritto: "Testo dritto su filo di rune",
+  fascia: "Fascia che taglia lo schermo",
 };
 
-/** Segno dietro la voce scelta; `seed` cambia a ogni cambio di voce. */
-function Highlight({ type, seed }) {
-  const maskId = useId().replace(/:/g, "");
-  const shape = useMemo(() => {
-    if (type === "pennellata") return makeStroke(seed);
-    if (type === "carta") return makeTorn(seed);
-    if (type === "graffi") return makeClaws(seed);
-    if (type === "lama") return { rot: -3 + rnd(seed) * 3 };
-    return makeSplash(seed);
-  }, [type, seed]);
+/** Filo verticale di rune a cui si appendono le voci (cornice "dritto"). */
+function RuneThread() {
+  const runes = Array.from({ length: 15 }, (_, i) => i);
+  return (
+    <svg className="mfr-thread" viewBox="0 0 40 660" aria-hidden="true">
+      <line x1="20" y1="0" x2="20" y2="660" />
+      {runes.map((i) => (
+        <g key={i} transform={`translate(20 ${30 + i * 43}) scale(2.4)`}>
+          <rect x="-4.2" y="-4.2" width="8.4" height="8.4" />
+          <path d={CARD_RUNES[(i * 5) % CARD_RUNES.length]} />
+        </g>
+      ))}
+    </svg>
+  );
+}
 
-  if (type === "pennellata") {
+/** Decorazione di fondo della cornice: sta sotto il logo, sopra lo sfondo. */
+function MenuFrame({ frame }) {
+  if (frame === "dritto") {
     return (
-      <svg className="hl hl-stroke" key={seed} viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true" style={{ "--sr": `${shape.rot.toFixed(1)}deg` }}>
-        <defs>
-          <mask id={maskId}>
-            <path d={shape.d} fill="#fff" />
-            {shape.streaks.map((st, k) => (
-              <line key={k} x1={st.x1} x2={st.x2} y1={st.y} y2={st.y + 2} stroke="#000" strokeWidth={st.w} strokeLinecap="round" />
-            ))}
-          </mask>
-        </defs>
-        <rect width="400" height="100" mask={`url(#${maskId})`} />
-      </svg>
+      <div className="mfr mfr--dritto" aria-hidden="true">
+        <RuneThread />
+        <span className="mfr-tag">MENÙ</span>
+      </div>
     );
   }
-  if (type === "carta") {
-    return <span className="hl hl-paper" key={seed} aria-hidden="true" style={{ clipPath: shape.clip, "--sr": `${shape.rot.toFixed(1)}deg` }} />;
-  }
-  if (type === "lama") {
-    return <span className="hl hl-blade" key={seed} aria-hidden="true" style={{ "--sr": `${shape.rot.toFixed(1)}deg` }} />;
-  }
-  if (type === "graffi") {
+  if (frame === "fascia") {
     return (
-      <svg className="hl hl-claws" key={seed} viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true" style={{ "--sf": shape.flip }}>
-        {shape.paths.map((d, k) => (
-          <path key={k} d={d} style={{ animationDelay: `${k * 60}ms` }} />
-        ))}
-      </svg>
+      <div className="mfr mfr--fascia" aria-hidden="true">
+        <span className="mfr-band" />
+      </div>
     );
   }
-  return <Splash splash={shape} className="mi-splash" />;
+  return (
+    <div className="mfr mfr--lastra" aria-hidden="true">
+      <span className="mfr-slab" />
+      <span className="mfr-slab-edge" />
+      <span className="mfr-slab-dots" />
+    </div>
+  );
 }
 
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
@@ -258,6 +194,10 @@ function BrushFilters() {
   return (
     <svg className="smp-defs" width="0" height="0" aria-hidden="true">
       <defs>
+        <filter id="smp-brush" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="3" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
         <filter id="smp-splash" x="-20%" y="-30%" width="140%" height="160%">
           <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G" />
@@ -272,11 +212,11 @@ function BrushFilters() {
  * grandi e inclinate; la scelta è enorme su una macchia, le vicine medie,
  * le altre piccole. Logo a sinistra.
  */
-function StackMenu({ rows, active, highlight, buttonRefs, onHover, onPick }) {
-  // seme nuovo a ogni cambio di voce (anche tornando sulla stessa)
-  const seed = useMemo(() => Math.floor(Math.random() * 100000), [active]);
+function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
+  // forma nuova a ogni cambio di voce (anche tornando sulla stessa)
+  const splash = useMemo(() => makeSplash(Math.floor(Math.random() * 100000)), [active]);
   return (
-    <nav className={`mi mi--${highlight}`} aria-label="Menu principale">
+    <nav className="mi" aria-label="Menu principale">
       <div className="mi-col">
         {rows.map((row, i) => {
           const d = Math.abs(i - active);
@@ -295,7 +235,7 @@ function StackMenu({ rows, active, highlight, buttonRefs, onHover, onPick }) {
                 "--d": `${0.15 + i * 0.05}s`,
               }}
             >
-              {on && <Highlight type={highlight} seed={seed} />}
+              {on && <Splash splash={splash} className="mi-splash" />}
               <span className="mi-label">
                 {row.label}
                 {row.hasChoices && <span className="mi-more" aria-hidden="true">+</span>}
@@ -381,9 +321,10 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  *   disabled?: boolean,
  *   choices?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
  *   children?: Array<{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }>,
- * }>, buildLabel?: string, inputLocked?: boolean, highlight?: keyof typeof MENU_HIGHLIGHTS }} props
+ * }>, buildLabel?: string, inputLocked?: boolean, frame?: keyof typeof MENU_FRAMES }} props
  */
-export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, highlight = "macchia" }) {
+export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false, frame = "lastra" }) {
+  const frameKey = MENU_FRAMES[frame] ? frame : "lastra";
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
   const [choicePickerStack, setChoicePickerStack] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null);
@@ -620,7 +561,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   return (
     <div
       ref={rootRef}
-      className="satze-menu-v5-root smp"
+      className={`satze-menu-v5-root smp smp--${frameKey}`}
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -636,6 +577,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         <div className="smp-bg-halftone" />
       </div>
 
+      <MenuFrame frame={frameKey} />
+
       <div className="smp-brand">
         <AnimatedSatzeLogo
           reducedMotion={vfxProfile.quality === "low"}
@@ -646,7 +589,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
       </div>
 
       <StackMenu
-        highlight={MENU_HIGHLIGHTS[highlight] ? highlight : "macchia"}
         rows={items}
         active={mainActive}
         buttonRefs={rowRefs}
@@ -749,6 +691,51 @@ function SatzeMenuStyles() {
         from { opacity: 0; transform: translate(-50%, var(--sy, -50%)) rotate(calc(var(--sr) - 30deg)) scale(0.2); }
         60% { opacity: 1; }
       }
+      /* ========== Cornici ========== */
+      .mfr { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+      /* lastra nera inclinata come la colonna, bordo d'accento e retino */
+      .mfr-slab, .mfr-slab-edge, .mfr-slab-dots {
+        position: absolute; top: -30%; bottom: -30%; transform: rotate(-7deg); transform-origin: center;
+      }
+      .mfr-slab { right: -14%; width: 63%; background: ${V}; box-shadow: 0 0 90px rgba(0,0,0,0.85); animation: mfr-slab-in .6s cubic-bezier(.2,.9,.2,1) both; }
+      .mfr-slab-edge {
+        right: calc(-14% + 63% - 11px); width: 22px; background: var(--active);
+        box-shadow: -24px 0 0 -12px ${V}, -32px 0 0 -14px ${T};
+        transition: background .3s; animation: mfr-slab-in .6s .05s cubic-bezier(.2,.9,.2,1) both;
+      }
+      .mfr-slab-dots {
+        right: -14%; width: 63%; opacity: 0.22;
+        background-image: radial-gradient(circle, var(--active) 1.4px, transparent 1.8px); background-size: 11px 11px;
+        -webkit-mask-image: linear-gradient(180deg, transparent 40%, #000 95%);
+        mask-image: linear-gradient(180deg, transparent 40%, #000 95%);
+      }
+      @keyframes mfr-slab-in { from { transform: rotate(-7deg) translateX(110%); } }
+      /* filo verticale di rune a destra, voci dritte */
+      .mfr-thread { position: absolute; right: 70px; top: 190px; width: 40px; height: 660px; overflow: visible; animation: mfr-thread-in .6s cubic-bezier(.2,1,.3,1) both; }
+      .mfr-thread line { stroke: ${T}; stroke-width: 2; opacity: 0.55; }
+      .mfr-thread rect { fill: ${V}; stroke: var(--active); stroke-width: 0.5; vector-effect: non-scaling-stroke; transform: rotate(45deg); transition: stroke .3s; }
+      .mfr-thread path { fill: none; stroke: var(--active); stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke .3s; }
+      @keyframes mfr-thread-in { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(-5% -50% -5% -50%); } }
+      .mfr-tag {
+        position: absolute; right: 52px; top: 120px; background: ${T}; color: ${V};
+        font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 22px; letter-spacing: 0.3em; padding: 6px 8px 6px 14px;
+        box-shadow: 5px 5px 0 var(--active); transition: box-shadow .3s;
+      }
+      /* fascia nera dipinta che attraversa lo schermo dietro la colonna */
+      .mfr-band {
+        position: absolute; left: -10%; right: -10%; top: 540px; height: 700px; margin-top: -350px;
+        background: ${V}; transform: rotate(-7deg); filter: url(#smp-brush);
+        box-shadow: 0 -10px 0 -2px var(--active), 0 10px 0 -2px var(--active), 0 0 80px rgba(0,0,0,0.8);
+        -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 100%);
+        mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 100%);
+        transition: box-shadow .3s; animation: mfr-band-in .6s cubic-bezier(.2,1,.3,1) both;
+      }
+      @keyframes mfr-band-in { from { transform: rotate(-7deg) translateX(100%); } }
+
+      /* voci dritte, allineate al filo */
+      .smp--dritto .mi-col { right: 150px; transform: translateY(-50%); }
+      .smp--dritto .mi-item { padding-right: 0; }
+
       /* ========== Parole impilate ========== */
       .mi { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
       .mi-col {
@@ -772,43 +759,6 @@ function SatzeMenuStyles() {
       .mi-item:not(.on):hover .mi-label { color: var(--c); }
       .mi-item.on .mi-label { text-shadow: 6px 6px 0 #000, 10px 10px 0 color-mix(in srgb, var(--c) 60%, #000); }
       .mi-splash { --sw: calc(100% + 0.9em); --sh: 150%; --sy: -52%; font-size: var(--fs); }
-      /* evidenziatori alternativi */
-      .hl {
-        position: absolute; z-index: 0; left: 50%; top: 50%; pointer-events: none; display: block;
-        transform: translate(-50%, -50%) rotate(var(--sr, 0deg)) scaleX(var(--sf, 1));
-      }
-      .hl-stroke {
-        width: calc(100% + 1.1em); height: 118%; font-size: var(--fs); overflow: visible; filter: url(#smp-splash);
-        transform-origin: right center; animation: hl-wipe .32s cubic-bezier(.2,1,.3,1) both;
-      }
-      .hl-stroke rect { fill: var(--c); }
-      @keyframes hl-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(-20% -10% -20% -10%); } }
-      .hl-paper {
-        width: calc(100% + 0.7em); height: 104%; font-size: var(--fs); background: ${T};
-        animation: hl-slap .28s cubic-bezier(.2,1.5,.4,1) both;
-      }
-      @keyframes hl-slap { from { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--sr) - 12deg)) scale(1.3); } }
-      .mi--carta .mi-item.on .mi-label { color: ${V}; text-shadow: 3px 3px 0 var(--c); }
-      .mi--carta .mi-item.on::before {
-        content: ''; position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 0.7em); height: 104%;
-        transform: translate(calc(-50% + 9px), calc(-50% + 8px)) rotate(-2deg); background: var(--c); font-size: var(--fs);
-      }
-      .hl-blade {
-        width: calc(100% + 0.9em); height: 96%; font-size: var(--fs); background: ${T};
-        clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
-        transform-origin: right center; animation: hl-blade-in .26s cubic-bezier(.2,1.4,.4,1) both;
-      }
-      @keyframes hl-blade-in { from { transform: translate(-50%, -50%) rotate(var(--sr)) scaleX(0); } }
-      .mi--lama .mi-item.on .mi-label { color: ${V}; text-shadow: none; }
-      .mi--lama .mi-item.on::before {
-        content: ''; position: absolute; z-index: 0; left: 50%; top: 50%; width: calc(100% + 0.9em); height: 96%; font-size: var(--fs);
-        background: var(--c); clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
-        transform: translate(calc(-50% + 12px), calc(-50% + 10px)) rotate(-3deg);
-        animation: hl-blade-in .3s .05s cubic-bezier(.2,1.4,.4,1) both;
-      }
-      .hl-claws { width: calc(100% + 0.6em); height: 210%; font-size: var(--fs); overflow: visible; }
-      .hl-claws path { fill: var(--c); animation: hl-claw .22s cubic-bezier(.3,1.2,.4,1) both; transform-box: fill-box; transform-origin: left bottom; }
-      @keyframes hl-claw { from { transform: scale(0); opacity: 0; } }
       .mi-more { display: grid; place-items: center; width: 0.5em; height: 0.5em; min-width: 22px; min-height: 22px; font-size: 0.4em; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
 
       /* ========== Pannello sotto-scelte ========== */
