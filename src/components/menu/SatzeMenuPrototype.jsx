@@ -10,6 +10,7 @@ import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
 import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
+import { useScreenActiveRef, useScreenState } from "../screenCache/ScreenCache.jsx";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -273,9 +274,11 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
  */
 export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked = false }) {
   /** @type {Array<{ accent: string, title: string, trail: string[], options: ReturnType<typeof normalizeChoiceOption>[] }>} */
-  const [choicePickerStack, setChoicePickerStack] = useState([]);
-  const [activeIndex, setActiveIndex] = useState(null);
-  const [pickerIndex, setPickerIndex] = useState(0);
+  // stato di navigazione: a ogni rientro dalla cache riparte da capo, come appena creato
+  const [choicePickerStack, setChoicePickerStack] = useScreenState([]);
+  const [activeIndex, setActiveIndex] = useScreenState(null);
+  const [pickerIndex, setPickerIndex] = useScreenState(0);
+  const screenActiveRef = useScreenActiveRef();
   const [vfxProfile, setVfxProfile] = useState(() => getVfxQualityProfile());
   const uiScale = useUiScale();
   const rootRef = useRef(null);
@@ -445,6 +448,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
 
   useEffect(() => {
     const onKey = (e) => {
+      // in cache e nascosto: i tasti sono della schermata visibile
+      if (!screenActiveRef.current) return;
       const k = keyRef.current;
       if (k.inputLocked || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || isTypingTarget(e.target)) return;
       switch (e.key) {

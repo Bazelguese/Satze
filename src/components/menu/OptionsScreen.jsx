@@ -9,7 +9,8 @@
 // Tastiera: Q/E categoria · ↑/↓ voce · ←/→ cambia valore · Esc menu.
 // ============================================================
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useScreenActiveRef, useScreenState, useScreenVisit } from '../screenCache/ScreenCache.jsx';
 import {
   DISPLAY_MODES,
   RESOLUTION_PRESETS,
@@ -97,12 +98,15 @@ function isTypingTarget(el) {
 }
 
 export function OptionsScreen({ onClose }) {
-  const [settings, setSettings] = useState(() => getDisplaySettings());
-  const [audio, setAudio] = useState(() => getAudioSettings());
-  const [status, setStatus] = useState(/** @type {null | { tone: 'ok'|'warn'|'err', text: string }} */ (null));
-  const [applying, setApplying] = useState(false);
-  const [catIndex, setCatIndex] = useState(0);
-  const [rowIndex, setRowIndex] = useState(0);
+  // a ogni rientro dalla cache delle schermate: impostazioni rilette e navigazione da capo
+  const [settings, setSettings] = useScreenState(() => getDisplaySettings());
+  const [audio, setAudio] = useScreenState(() => getAudioSettings());
+  const [status, setStatus] = useScreenState(/** @type {null | { tone: 'ok'|'warn'|'err', text: string }} */ (null));
+  const [applying, setApplying] = useScreenState(false);
+  const [catIndex, setCatIndex] = useScreenState(0);
+  const [rowIndex, setRowIndex] = useScreenState(0);
+  const screenActiveRef = useScreenActiveRef();
+  const visit = useScreenVisit();
   const electronReady = hasElectronDisplayApi();
 
   const resolutionLocked = settings.displayMode !== 'windowed';
@@ -213,7 +217,7 @@ export function OptionsScreen({ onClose }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [visit]);
 
   // ---------- Voci per categoria (un solo modello per mouse e tastiera) ----------
   const reduceMotionLock = settings.reduceMotion ? 'Disattivato da «Riduci animazioni».' : null;
@@ -402,6 +406,7 @@ export function OptionsScreen({ onClose }) {
 
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || isTypingTarget(e.target)) return;
       const k = keyStateRef.current;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;

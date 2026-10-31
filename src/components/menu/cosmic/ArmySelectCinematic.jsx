@@ -35,6 +35,7 @@ import { getCardSprite } from '../../../utils';
 import { AGENT_IMAGES } from '../../../data/images';
 import { armSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 import { armTransitionFrom } from '../../cosmic/ScreenTransition';
+import { useScreenActiveRef, useScreenState } from '../../screenCache/ScreenCache.jsx';
 
 const SHOWCASE_SIZE = 5;
 /** Durata della chiusura a lastra prima di passare alla scelta esercito. */
@@ -140,11 +141,13 @@ function buildArmies() {
 export default function ArmySelectCinematic({ onSelect, onBack }) {
   const ARMIES = React.useMemo(() => buildArmies(), []);
   const total = ARMIES.length;
-  const [idx, setIdx] = useState(1);
-  const [phase, setPhase] = useState('idle'); // idle -> confirming
-  const [dossier, setDossier] = useState(false);
+  // a ogni rientro dalla cache si riparte da capo, come appena creata (il giro avviene sotto la cortina)
+  const [idx, setIdx] = useScreenState(1);
+  const [phase, setPhase] = useScreenState('idle'); // idle -> confirming
+  const [dossier, setDossier] = useScreenState(false);
   /** Passi cumulativi della ruota (senza wrap): gira sempre dal lato più corto. */
-  const [spin, setSpin] = useState(1);
+  const [spin, setSpin] = useScreenState(1);
+  const screenActiveRef = useScreenActiveRef();
   const rootRef = useRef(null);
   const wheelLockRef = useRef(0);
   const stateRef = useRef({});
@@ -191,6 +194,7 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
   // Tastiera
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (stateRef.current.phase !== 'idle') return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;

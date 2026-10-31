@@ -6,6 +6,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
+import { useScreenActiveRef } from '../screenCache/ScreenCache.jsx';
 import { playUiClick } from '../../audio/soundBus';
 
 /** Stesso colore della voce TUTORIAL del menù. */
@@ -20,9 +21,11 @@ function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted })
   const [active, setActive] = useState(0);
   const ref = useRef({});
   ref.current = { active, tracks, onClose, onSelect };
+  const screenActiveRef = useScreenActiveRef();
 
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // menu in cache e nascosto
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       // il menù sotto non deve sentire questi tasti
       e.stopImmediatePropagation();

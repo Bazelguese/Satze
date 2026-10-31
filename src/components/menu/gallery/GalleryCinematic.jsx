@@ -12,7 +12,8 @@
 // del routing, NON dentro CosmicScreenLayout o altri wrapper.
 // ============================================================
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
+import { useScreenState, useScreenVisit } from '../../screenCache/ScreenCache.jsx';
 import { ALL_BATTLEFIELDS, getBattlefieldAnimationType } from '../../../data/battlefields.js';
 import {
   BATTLEFIELD_CATEGORY_ORDER,
@@ -110,9 +111,11 @@ export default function GalleryCinematic({
     () => BATTLEFIELD_CATEGORY_ORDER.filter((c) => FIELDS.some((f) => f.category === c)),
     [FIELDS],
   );
-  const [category, setCategory] = useState(categories[0]);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [token, setToken] = useState(0);
+  // a ogni rientro dalla cache delle schermate: sezione e campo iniziali, rivelazione da capo
+  const [category, setCategory] = useScreenState(categories[0]);
+  const [activeIndex, setActiveIndex] = useScreenState(0);
+  const [token, setToken] = useScreenState(0);
+  const visit = useScreenVisit();
   const heavyOk = useCosmicHeavyContentReady();
 
   const shown = useMemo(() => FIELDS.filter((f) => f.category === category), [FIELDS, category]);
@@ -181,7 +184,7 @@ export default function GalleryCinematic({
         list={<PersonaList items={listItems} activeIndex={index} onSelect={setActiveIndex} />}
         stage={(
           <FieldStage
-            key={field.id}
+            key={`${field.id}-${visit}`}
             field={field}
             token={token}
             heavyOk={heavyOk}

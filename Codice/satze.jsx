@@ -14,6 +14,7 @@ import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/compo
 import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS, DROP_IMPACT_MS } from '../src/components/battle/placeHandoff.js';
 import { ArmyEntryFx } from '../src/components/fx/ArmyCardFx.jsx';
 import { EntryPrecapture, entrySnapshotKey } from '../src/components/fx/EntryPrecapture.jsx';
+import { ScreenCacheHost } from '../src/components/screenCache/ScreenCache.jsx';
 import { getArmyAccent } from '../src/theme/duelAccents.js';
 import { FX_CATALOG, FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
@@ -4188,14 +4189,23 @@ export default function SatzeGame() {
   // RENDER
   // ============================================
 
+  // Ogni schermata passa dalla cache: quelle conservabili restano montate e nascoste quando
+  // si esce, così tornandoci non si ricostruiscono (vedi ScreenCacheHost). Le altre, legate
+  // allo stato della partita, si smontano come prima.
+  const screen = (key, cacheable, element) => (
+    <ScreenCacheHost screenKey={key} cacheable={cacheable}>
+      {element}
+    </ScreenCacheHost>
+  );
+
   // Scelta slot salvataggio campagna
   if ((campaignPersistenceError || campaignOutcomeError) && campaignDuelMod?.firstAct && gamePhase !== 'campaignHub' && gamePhase !== 'menu') {
-    return <div role="alert" style={{padding:32,color:'white',background:'#211',minHeight:'100vh'}}><p>{campaignPersistenceError || campaignOutcomeError}</p><button onClick={()=>setGamePhaseRaw('campaignHub')}>Torna alla campagna salvata</button></div>;
+    return screen('campaignError', false, <div role="alert" style={{padding:32,color:'white',background:'#211',minHeight:'100vh'}}><p>{campaignPersistenceError || campaignOutcomeError}</p><button onClick={()=>setGamePhaseRaw('campaignHub')}>Torna alla campagna salvata</button></div>);
   }
 
   if (gamePhase === 'campaignSlots') {
     return (
-      <CampaignSaveSlots
+      screen('campaignSlots', true, <CampaignSaveSlots
         onBack={() => setGamePhase('menu')}
         onSlotChosen={(slotIndex) => {
           campaignAssetsSlotRef.current = null;
@@ -4203,15 +4213,15 @@ export default function SatzeGame() {
           setCampaignSaveSlot(slotIndex);
           setGamePhase('campaignLoading');
         }}
-      />
+      />)
     );
   }
 
   if (gamePhase === 'campaignLoading') {
-    return <CampaignDuelPreload run={campaignEntryRun} onComplete={()=>{
+    return screen('campaignLoading', false, <CampaignDuelPreload run={campaignEntryRun} onComplete={()=>{
       campaignAssetsSlotRef.current = campaignSaveSlot;
       setGamePhase('campaignHub');
-    }}/>;
+    }}/>);
   }
 
   // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
@@ -4219,7 +4229,7 @@ export default function SatzeGame() {
     const summary = getCampaignRunSummary(campaignSaveSlot);
     const CampaignHub = summary.firstAct ? FirstActHub : summary.controlled ? ControlledCampaignHub : CampaignAtto1Hub;
     return (
-      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
+      screen('campaignHub', false, <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         <CampaignHub
           campaignSaveSlot={campaignSaveSlot}
           onStartMission={startCampaignMission}
@@ -4255,7 +4265,7 @@ export default function SatzeGame() {
               }}
             />
           )}
-      </div>
+      </div>)
     );
   }
 
@@ -4444,7 +4454,7 @@ export default function SatzeGame() {
         ]
       : menuItems;
     return (
-      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
+      screen('menu', true, <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         {!showDeckManager && (
           <SatzeMenuPrototype
             menuItems={menuItemsResolved}
@@ -4496,25 +4506,25 @@ export default function SatzeGame() {
             />
           )}
         
-      </div>
+      </div>)
     );
   }
 
   if (gamePhase === 'playtestHistory') {
     return (
-      <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />
+      screen('playtestHistory', true, <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />)
     );
   }
 
   if (gamePhase === 'options') {
     return (
-      <OptionsScreen onClose={() => setGamePhase('menu')} />
+      screen('options', true, <OptionsScreen onClose={() => setGamePhase('menu')} />)
     );
   }
 
   if (gamePhase === 'deckManager') {
     return (
-      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
+      screen('deckManager', false, <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         {deckManagerView === 'list' && (
           <CosmicDeckManagerList
             onEditDeck={(deckId) => {
@@ -4551,14 +4561,14 @@ export default function SatzeGame() {
             }}
           />
         )}
-      </div>
+      </div>)
     );
   }
 
   // Multiplayer Lobby
   if (gamePhase === 'multiplayerLobby') {
     return (
-      <MultiplayerLobby
+      screen('multiplayerLobby', false, <MultiplayerLobby
         onStartGame={(gameData) => {
           setOnlineOpponentLeft(false);
           setMpConnectionLost(false);
@@ -4587,7 +4597,7 @@ export default function SatzeGame() {
           cleanupMultiplayerSession();
           setGamePhase('menu');
         }}
-      />
+      />)
     );
   }
 
@@ -4601,7 +4611,7 @@ export default function SatzeGame() {
   if (gamePhase === 'selectArmy') {
     const availableArmies = Object.keys(ARMY_SETS);
     return (
-      <ArmySelectCinematic
+      screen('selectArmy', true, <ArmySelectCinematic
         onSelect={(armyName) => {
           if (armyName == null) {
             setSelectedArmy(MIXED_DECKS_OPTION);
@@ -4628,7 +4638,7 @@ export default function SatzeGame() {
           setSelectedDeckKey(null);
           setGamePhase(selectedMode === 'campaign' ? 'campaignHub' : 'menu');
         }}
-      />
+      />)
     );
   }
 
@@ -4741,7 +4751,7 @@ export default function SatzeGame() {
 
     if (deckOptions.length > 0) {
       return (
-        <>
+        screen('selectDeck', true, <>
           <DeckSelectCinematic
           armyName={isMixedMode ? null : selectedArmy}
           gameDeckOptions={deckOptions}
@@ -4798,12 +4808,12 @@ export default function SatzeGame() {
           }}
         />
           {difficultyPopupEl}
-        </>
+        </>)
       );
     }
 
     return (
-      <>
+      screen('selectDeckList', false, <>
         {difficultyPopupEl}
         <CosmicScreenLayout
         title={selectedArmy}
@@ -4831,14 +4841,14 @@ export default function SatzeGame() {
           </div>
         )}
       </CosmicScreenLayout>
-      </>
+      </>)
     );
   }
 
   if (gamePhase === 'previewDeck' && previewDeckData) {
     const previewIsCustom = Boolean(previewDeckData?.id?.startsWith?.('custom_'));
     return (
-      <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
+      screen('previewDeck', false, <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: MENU_ACCENTS.void }}>
         <DeckPreviewCosmic
           deck={previewDeckData}
           onBack={() => {
@@ -4865,7 +4875,7 @@ export default function SatzeGame() {
             d?._opt?.onSelect?.();
           }}
         />
-      </div>
+      </div>)
     );
   }
 
@@ -4905,7 +4915,7 @@ export default function SatzeGame() {
         : "In attesa dell'avversario…";
 
     return (
-      <MenuScreenLayout
+      screen('onlineDeckReady', false, <MenuScreenLayout
         title={onlineRematchActive ? 'Rematch online' : 'Partita online'}
         subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
       >
@@ -4948,7 +4958,7 @@ export default function SatzeGame() {
             Cambia esercito
           </MenuBackButton>
         </div>
-      </MenuScreenLayout>
+      </MenuScreenLayout>)
     );
   }
 
@@ -4966,38 +4976,38 @@ export default function SatzeGame() {
 
     if (galleryTab === 'agents') {
       return (
-        <CardGallery
+        screen('gallery-cards', true, <CardGallery
           totalCards={GALLERY_AGENT_COUNT}
           onBack={() => setGamePhase('menu')}
           {...galleryTabProps}
-        />
+        />)
       );
     }
     if (galleryTab === 'alternative') {
       return (
-        <CardGallery
+        screen('gallery-cards', true, <CardGallery
           alternativeOnly
           totalCards={GALLERY_ALTERNATIVE_COUNT}
           onBack={() => setGamePhase('menu')}
           {...galleryTabProps}
-        />
+        />)
       );
     }
     if (galleryTab === 'eminences') {
       return (
-        <EminenceGallery
+        screen('gallery-eminences', true, <EminenceGallery
           totalCards={EMINENCE_IDS.length}
           onBack={() => setGamePhase('menu')}
           {...galleryTabProps}
-        />
+        />)
       );
     }
     return (
-      <GalleryCinematic
+      screen('gallery-fields', true, <GalleryCinematic
         totalFields={ALL_BATTLEFIELDS.length}
         onBack={() => setGamePhase('menu')}
         {...galleryTabProps}
-      />
+      />)
     );
   }
 
@@ -5027,7 +5037,7 @@ export default function SatzeGame() {
       eminenceMatchState,
     });
     return (
-      <DuelLoadingOverlay
+      screen('duelLoading', false, <DuelLoadingOverlay
         battlefields={battlefields}
         playerCards={duelPlayerCards}
         enemyCards={duelEnemyCards}
@@ -5044,7 +5054,7 @@ export default function SatzeGame() {
           setPendingDuelPhase(null);
           setGamePhase(next);
         }}
-      />
+      />)
     );
   }
 
@@ -5153,7 +5163,7 @@ export default function SatzeGame() {
   const entranceAnimationType = activeFieldForBg ? getBattlefieldAnimationType(activeFieldForBg.id) : 'default';
 
   return (
-    <div 
+    screen('duel', false, <div 
         className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
@@ -6734,6 +6744,6 @@ export default function SatzeGame() {
       />
 
       <div className="dep-vignette" aria-hidden />
-    </div>
+    </div>)
   );
 }

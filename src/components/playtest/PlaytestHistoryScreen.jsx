@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
+import { useScreenState } from '../screenCache/ScreenCache.jsx';
 import { MenuScreenLayout, MenuCard, MenuBackButton } from '../menu';
 import { loadPlaytestHistory, clearPlaytestHistory, downloadPlaytestCsv, updatePlaytestRecord } from '../../utils/playtestHistory';
 
 export function PlaytestHistoryScreen({ onClose }) {
-  const [records, setRecords] = useState(() => loadPlaytestHistory());
-  const [armyFilter, setArmyFilter] = useState('');
-  const [deckFilter, setDeckFilter] = useState('');
-  const [winnerFilter, setWinnerFilter] = useState('');
-  const [notesDraft, setNotesDraft] = useState({});
+  // a ogni rientro dalla cache delle schermate: storico riletto (nuove partite) e filtri da capo
+  const [records, setRecords] = useScreenState(() => loadPlaytestHistory());
+  const [armyFilter, setArmyFilter] = useScreenState('');
+  const [deckFilter, setDeckFilter] = useScreenState('');
+  const [winnerFilter, setWinnerFilter] = useScreenState('');
+  const [notesDraft, setNotesDraft] = useScreenState({});
 
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {

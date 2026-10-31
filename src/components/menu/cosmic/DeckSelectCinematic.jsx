@@ -61,6 +61,7 @@ import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
 import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
 import { peekSlabHandoff, clearSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 import { useArrivedByCurtain } from '../../cosmic/ScreenTransition';
+import { useScreenActiveRef, useScreenState, useScreenVisit } from '../../screenCache/ScreenCache.jsx';
 const _slug = (name) => String(name)
   .toLowerCase().replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -417,20 +418,24 @@ export default function DeckSelectCinematic({
     return buildDecks(armyName);
   }, [armyName, gameDeckOptions, selectedArmy, isMixedMode, campaignDeckIds]);
   const total = DECKS.length;
-  const [idx, setIdx] = useState(0);
+  // Stato "di nascita": a ogni rientro dalla cache delle schermate riparte da capo
+  // (indice, intro, preferenze rilette), come se la schermata fosse appena creata.
+  const visit = useScreenVisit();
+  const screenActiveRef = useScreenActiveRef();
+  const [idx, setIdx] = useScreenState(0);
   // intro -> idle -> confirming: l'intro si salta arrivando dalla lastra della
   // scelta armata o da sotto la cortina (es. ritorno dall'anteprima)
   const arrivedByCurtain = useArrivedByCurtain();
-  const [phase, setPhase] = useState(() => (peekSlabHandoff() || arrivedByCurtain ? 'idle' : 'intro'));
-  const [pulse, setPulse] = useState(0);
-  const [shuffleKind, setShuffleKind] = useState(() => getShuffleStyle());
-  const [placeFx, setPlaceFx] = useState(() => getPlaceFxPreference());
+  const [phase, setPhase] = useScreenState(() => (peekSlabHandoff() || arrivedByCurtain ? 'idle' : 'intro'));
+  const [pulse, setPulse] = useScreenState(0);
+  const [shuffleKind, setShuffleKind] = useScreenState(() => getShuffleStyle());
+  const [placeFx, setPlaceFx] = useScreenState(() => getPlaceFxPreference());
   /** Stile copertina (default scatola 3D; le altre proposte si scelgono dal VS LAB). */
-  const [coverStyle] = useState(() => getDeckCoverStyle());
+  const [coverStyle] = useScreenState(() => getDeckCoverStyle());
   /** Anteprima attiva: shuffle | click | drop | effects */
-  const [previewMode, setPreviewMode] = useState('shuffle');
+  const [previewMode, setPreviewMode] = useScreenState('shuffle');
   /** Menù a comparsa Personalizza aperto: la schermata sotto non ascolta tasti e rotella. */
-  const [customizing, setCustomizing] = useState(false);
+  const [customizing, setCustomizing] = useScreenState(false);
   const customizingRef = useRef(false);
   customizingRef.current = customizing;
   const rootRef = useRef(null);
@@ -439,10 +444,11 @@ export default function DeckSelectCinematic({
   const idxRef = useRef(idx);
   const goRef = useRef(null);
   // Arrivo dalla scelta armata: si parte con la sua lastra a schermo pieno e la si fa scorrere via.
-  const handoffRef = useRef(undefined);
-  if (handoffRef.current === undefined) handoffRef.current = peekSlabHandoff();
-  const handoff = handoffRef.current;
-  useEffect(() => { clearSlabHandoff(); }, []);
+  // Letta una volta per ingresso (anche rientrando dalla cache).
+  const handoffRef = useRef({ visit: null, value: null });
+  if (handoffRef.current.visit !== visit) handoffRef.current = { visit, value: peekSlabHandoff() };
+  const handoff = handoffRef.current.value;
+  useEffect(() => { clearSlabHandoff(); }, [visit]);
   const handoffEl = handoff ? (
     <>
       <div className="dsk-handoff" style={{ '--hc': handoff.color }} aria-hidden="true" />
@@ -461,7 +467,7 @@ export default function DeckSelectCinematic({
   useEffect(() => {
     const t = setTimeout(() => setPhase((p) => (p === 'intro' ? 'idle' : p)), 1500);
     return () => clearTimeout(t);
-  }, []);
+  }, [visit]);
 
   const go = useCallback((delta) => {
     if (phaseRef.current !== 'idle' || total === 0) return;
@@ -555,6 +561,7 @@ export default function DeckSelectCinematic({
 
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (phaseRef.current !== 'idle' || customizingRef.current) return;
       if (e.key === 'ArrowLeft') go(-1);
       if (e.key === 'ArrowRight') go(1);
@@ -1457,6 +1464,7 @@ function DuelAnimPreview({
  */
 function PersonalizePanel({ accent, rows, preview, onClose, onFocusRow }) {
   const [focus, setFocus] = useState(0);
+  const screenActiveRef = useScreenActiveRef();
   const stateRef = useRef({});
   stateRef.current = { rows, focus, onClose };
   const cur = rows[Math.min(focus, rows.length - 1)];
@@ -1474,6 +1482,7 @@ function PersonalizePanel({ accent, rows, preview, onClose, onFocusRow }) {
 
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // schermata in cache e nascosta
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const { rows: rs, focus: f, onClose: close } = stateRef.current;
       const k = e.key;

@@ -4,6 +4,7 @@
 // ============================================
 
 import { useEffect } from 'react';
+import { useScreenActiveRef } from '../screenCache/ScreenCache.jsx';
 import { MENU_ACCENTS, PALETTE, HUD_ORATORIO_FONT_UI, HUD_ORATORIO_FONT_DISPLAY } from '../../theme/hudOratorioPalette';
 
 export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, onComplete, onGoToStep, steps }) {
@@ -13,11 +14,13 @@ export function Tutorial({ isActive, currentStep, onNext, onPrevious, onClose, o
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
-  // Gestione tasti freccia
+  // Gestione tasti freccia (non quando il menu che lo contiene è in cache e nascosto)
+  const screenActiveRef = useScreenActiveRef();
   useEffect(() => {
     if (!isActive) return;
 
     const handleKeyPress = (e) => {
+      if (!screenActiveRef.current) return;
       if (e.key === 'ArrowRight' && !isLast) {
         onNext();
       } else if (e.key === 'ArrowLeft' && !isFirst) {
