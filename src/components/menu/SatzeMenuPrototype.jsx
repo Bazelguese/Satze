@@ -10,6 +10,7 @@ import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
 import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
+import { IS_PUBLIC_PLAYTEST_BUILD } from "../../config/buildProfile";
 
 /**
  * @param {{ label: string, onClick?: () => void, sub?: string, meta?: string, disabled?: boolean, choices?: Array<unknown> }} c
@@ -100,11 +101,11 @@ function makeSplash(seed) {
 }
 
 /** Macchia di colore dietro la voce scelta; posizione e misura dalla classe. */
-function Splash({ splash, className = "" }) {
+function Splash({ splash, className = "", hitKey = 0 }) {
   return (
     <svg
       className={`spl ${className}`}
-      key={splash.d}
+      key={`${splash.d}-${hitKey}`}
       viewBox="0 0 300 180"
       preserveAspectRatio="none"
       aria-hidden="true"
@@ -116,6 +117,88 @@ function Splash({ splash, className = "" }) {
       ))}
     </svg>
   );
+}
+
+/**
+ * Animazioni di clic in prova: la voce reagisce, poi l'azione parte dopo
+ * `commitMs` (la cortina altrimenti copre subito il menu).
+ */
+const PRESS_VARIANTS = [
+  { id: "timbro", tag: "A", name: "TIMBRO", commitMs: 160 },
+  { id: "onda", tag: "B", name: "ONDA D'URTO", commitMs: 190 },
+  { id: "schizzi", tag: "C", name: "SCHIZZI", commitMs: 200 },
+  { id: "taglio", tag: "D", name: "TAGLIO", commitMs: 170 },
+];
+const PRESS_STORAGE_KEY = "satze.menuPressVariant";
+
+function readPressVariant() {
+  try {
+    const id = window.localStorage.getItem(PRESS_STORAGE_KEY);
+    return PRESS_VARIANTS.find((v) => v.id === id) ?? PRESS_VARIANTS[0];
+  } catch {
+    return PRESS_VARIANTS[0];
+  }
+}
+
+function prefersReducedMotion() {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Effetti sopra la voce cliccata (anelli, gocce, taglio): rimontati a ogni
+ * clic. `half` è mezza larghezza della scritta in em (le voci sono lunghe e basse).
+ */
+function PressFx({ variant, seed, half }) {
+  const style = { "--hw": `${half.toFixed(2)}em` };
+  if (variant === "onda") {
+    return (
+      <span className="pfx" style={style} aria-hidden="true">
+        <span className="pfx-ring" />
+        <span className="pfx-ring pfx-ring-2" />
+      </span>
+    );
+  }
+  if (variant === "schizzi") {
+    return (
+      <span className="pfx" style={style} aria-hidden="true">
+        {Array.from({ length: 14 }, (_, k) => {
+          // partono dal bordo di un'ellisse larga quanto la scritta e volano verso fuori
+          const a = ((k / 14) * 360 + rnd(seed + k) * 20) * (Math.PI / 180);
+          const cos = Math.cos(a);
+          const sin = Math.sin(a);
+          const fly = 0.5 + rnd(seed + 20 + k) * 0.9;
+          const f = (v) => `${v.toFixed(2)}em`;
+          return (
+            <span
+              key={k}
+              className={`pfx-drop ${k % 4 === 0 ? "w" : ""}`}
+              style={{
+                "--a": `${((Math.atan2(sin * 0.7, cos) * 180) / Math.PI).toFixed(0)}deg`,
+                "--x0": f(cos * half * 0.8),
+                "--y0": f(sin * 0.45),
+                "--x1": f(cos * (half + fly)),
+                "--y1": f(sin * (0.7 + fly * 0.6)),
+                "--s": f(0.09 + rnd(seed + 40 + k) * 0.1),
+              }}
+            />
+          );
+        })}
+      </span>
+    );
+  }
+  if (variant === "taglio") {
+    return (
+      <span className="pfx" style={style} aria-hidden="true">
+        <span className="pfx-slash" />
+        <span className="pfx-slash pfx-slash-2" />
+      </span>
+    );
+  }
+  return null;
 }
 
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
@@ -160,7 +243,7 @@ function BrushFilters() {
  * grandi e inclinate; la scelta è enorme su una macchia, le vicine medie,
  * le altre piccole. Logo a sinistra.
  */
-function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
+function StackMenu({ rows, active, buttonRefs, onHover, onPick, hit, pressVariant }) {
   // forma nuova a ogni cambio di voce (anche tornando sulla stessa)
   const splash = useMemo(() => makeSplash(Math.floor(Math.random() * 100000)), [active]);
   return (
@@ -169,12 +252,13 @@ function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
         {rows.map((row, i) => {
           const d = Math.abs(i - active);
           const on = d === 0;
+          const isHit = on && hit?.scope === "main" && hit.index === i;
           const size = on ? fitSize(row.label, 900, 124) : d === 1 ? fitSize(row.label, 640, 62) : fitSize(row.label, 520, 44);
           return (
             <button
               key={`${row.label}-${i}`}
               {...entryProps(row, i, active, buttonRefs, onHover, onPick)}
-              className={`mi-item ${on ? "on" : ""}`}
+              className={`mi-item ${on ? "on" : ""} ${isHit ? "hit" : ""}`}
               style={{
                 "--c": row.accent,
                 "--fs": `${size}px`,
@@ -183,11 +267,12 @@ function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
                 "--d": `${0.15 + i * 0.05}s`,
               }}
             >
-              {on && <Splash splash={splash} className="mi-splash" />}
-              <span className="mi-label">
+              {on && <Splash splash={splash} className="mi-splash" hitKey={isHit ? hit.n : 0} />}
+              <span className="mi-label" key={isHit ? `hit-${hit.n}` : "label"}>
                 {row.label}
                 {row.hasChoices && <span className="mi-more" aria-hidden="true">+</span>}
               </span>
+              {isHit && <PressFx key={hit.n} variant={pressVariant} seed={hit.n * 31} half={row.label.length * 0.37} />}
             </button>
           );
         })}
@@ -197,7 +282,7 @@ function StackMenu({ rows, active, buttonRefs, onHover, onPick }) {
 }
 
 /** Pannello delle sotto-scelte (es. Strumenti dev). */
-function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover, onPick, onBack, onDismiss }) {
+function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover, onPick, onBack, onDismiss, hit }) {
   return (
     <div className="mp-backdrop" role="presentation" onClick={onDismiss}>
       <div
@@ -220,6 +305,7 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
           <div className="mp-list" ref={listRef}>
             {rows.map((row, i) => {
               const on = i === active;
+              const isHit = on && hit?.scope === "picker" && hit.index === i;
               const sub = sublineOf(row);
               return (
                 <button
@@ -228,13 +314,14 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
                     buttonRefs.current[i] = el;
                   }}
                   type="button"
-                  className={`mp-row ${on ? "on" : ""}`}
+                  className={`mp-row ${on ? "on" : ""} ${isHit ? "hit" : ""}`}
                   disabled={row.disabled}
                   aria-current={on ? "true" : undefined}
                   onMouseEnter={() => onHover(i)}
                   onFocus={() => onHover(i)}
                   onClick={() => onPick(i)}
                 >
+                  {isHit && <span className="mp-hit" key={hit.n} aria-hidden="true" />}
                   <span className="mp-row-label">{row.label}</span>
                   {sub && <span className="mp-row-sub">{sub}</span>}
                   {row.hasChoices && <span className="mp-row-more">+</span>}
@@ -242,7 +329,12 @@ function ChoicePanel({ picker, rows, active, depth, buttonRefs, listRef, onHover
               );
             })}
           </div>
-          <button type="button" className="mp-back" onClick={onBack}>
+          <button
+            type="button"
+            className={`mp-back ${hit?.scope === "back" ? "hit" : ""}`}
+            key={hit?.scope === "back" ? `back-${hit.n}` : "back"}
+            onClick={onBack}
+          >
             <span className="key">ESC</span>
             <span className="lbl">{depth > 1 ? "INDIETRO" : "ANNULLA"}</span>
           </button>
@@ -286,6 +378,31 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const pickerListRef = useRef(null);
   /** Scorre il pannello solo dopo un passo da tastiera, non al passaggio del mouse. */
   const keyNavRef = useRef(false);
+  const [pressVariant, setPressVariant] = useState(readPressVariant);
+  /** Voce appena cliccata: `n` cambia a ogni clic e fa ripartire l'animazione. */
+  const [hit, setHit] = useState(null);
+  const hitCountRef = useRef(0);
+  /** Tra il clic e l'azione: niente altri clic né cambi di voce. */
+  const pressLockRef = useRef(false);
+  const pressTimerRef = useRef(0);
+
+  useEffect(() => () => window.clearTimeout(pressTimerRef.current), []);
+
+  /** Anima la voce e, se c'è, esegue `run` dopo il tempo della variante. */
+  const press = (scope, index, run) => {
+    hitCountRef.current += 1;
+    setHit({ scope, index, n: hitCountRef.current });
+    if (!run) return;
+    pressLockRef.current = true;
+    window.clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = window.setTimeout(
+      () => {
+        pressLockRef.current = false;
+        run();
+      },
+      prefersReducedMotion() ? 0 : pressVariant.commitMs,
+    );
+  };
 
   const choicePicker = choicePickerStack[choicePickerStack.length - 1] ?? null;
 
@@ -341,33 +458,43 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   };
 
   const selectMain = (i) => {
-    if (i === mainActive || items[i]?.disabled) return;
+    if (pressLockRef.current || i === mainActive || items[i]?.disabled) return;
     playSound(UI_SOUND.NAVIGATE);
+    setHit(null);
     setActiveIndex(i);
   };
   const selectPicker = (i) => {
-    if (i === pickerIndex || pickerRows[i]?.disabled) return;
+    if (pressLockRef.current || i === pickerIndex || pickerRows[i]?.disabled) return;
     playSound(UI_SOUND.NAVIGATE);
+    setHit(null);
     setPickerIndex(i);
   };
 
   const activateMain = (i) => {
     const item = items[i];
-    if (!item || item.disabled) return;
+    if (!item || item.disabled || pressLockRef.current) return;
     playUiClick();
-    if (item.hasChoices) {
-      openPicker({ accent: item.accent, title: item.label, trail: [], options: item.options });
-      return;
-    }
-    // la cortina verso la schermata prende il colore della voce scelta
-    armTransitionFrom({ accent: item.accent });
-    item.leafOnClick?.();
+    press("main", i, () => {
+      if (item.hasChoices) {
+        setHit(null);
+        openPicker({ accent: item.accent, title: item.label, trail: [], options: item.options });
+        return;
+      }
+      // la cortina verso la schermata prende il colore della voce scelta
+      armTransitionFrom({ accent: item.accent });
+      item.leafOnClick?.();
+    });
   };
 
   const activatePicker = (i) => {
     const opt = choicePicker?.options[i];
-    if (!opt || opt.disabled) return;
+    if (!opt || opt.disabled || pressLockRef.current) return;
     playUiClick();
+    press("picker", i, () => runPickerOption(opt));
+  };
+
+  const runPickerOption = (opt) => {
+    setHit(null);
     if (opt.choices?.length) {
       openPicker({
         accent: choicePicker.accent,
@@ -392,9 +519,28 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   };
 
   const backFromPicker = () => {
+    if (pressLockRef.current) return;
     playUiClick();
-    if (choicePickerStack.length > 1) closeTopPicker();
-    else closeAllPickers();
+    press("back", 0, () => {
+      setHit(null);
+      if (choicePickerStack.length > 1) closeTopPicker();
+      else closeAllPickers();
+    });
+  };
+
+  /** Selettore delle varianti di clic (solo build interne): cambia e mostra subito. */
+  const cyclePressVariant = () => {
+    const i = PRESS_VARIANTS.findIndex((v) => v.id === pressVariant.id);
+    const next = PRESS_VARIANTS[(i + 1) % PRESS_VARIANTS.length];
+    setPressVariant(next);
+    try {
+      window.localStorage.setItem(PRESS_STORAGE_KEY, next.id);
+    } catch {
+      // senza storage la scelta vale solo per questa sessione
+    }
+    playUiClick();
+    hitCountRef.current += 1;
+    setHit({ scope: "main", index: mainActive, n: hitCountRef.current });
   };
 
   // Focus sulla voce scelta: così Invio su un bottone apre sempre quella evidenziata.
@@ -513,6 +659,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     <div
       ref={rootRef}
       className="satze-menu-v5-root smp"
+      data-press={pressVariant.id}
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -558,6 +705,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         rows={items}
         active={mainActive}
         buttonRefs={rowRefs}
+        hit={hit}
+        pressVariant={pressVariant.id}
         onHover={(i) => !choicePicker && selectMain(i)}
         onPick={(i) => {
           selectMain(i);
@@ -580,11 +729,26 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
           }}
           onBack={backFromPicker}
           onDismiss={closeAllPickers}
+          hit={hit}
         />
       )}
 
       <footer className="smp-hints">
         <span className="smp-build">{buildTag}</span>
+        {!IS_PUBLIC_PLAYTEST_BUILD && (
+          <button
+            type="button"
+            className="smp-press-pick"
+            title="Cambia l'animazione di clic delle voci (prova)"
+            onClick={cyclePressVariant}
+          >
+            <span className="k">CLIC</span>
+            <span className="v">
+              {pressVariant.tag} · {pressVariant.name}
+            </span>
+            <span className="n">{PRESS_VARIANTS.findIndex((v) => v.id === pressVariant.id) + 1}/{PRESS_VARIANTS.length} ▸</span>
+          </button>
+        )}
         <span className="smp-hints-keys">
           {hints.map((h) => (
             <span key={h.label} className="smp-hint">
@@ -703,11 +867,117 @@ function SatzeMenuStyles() {
         position: relative; z-index: 1; display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 14px;
         font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase; font-size: var(--fs);
         line-height: 1.04; letter-spacing: -0.02em; white-space: nowrap;
-        text-shadow: 4px 4px 0 #000; transition: font-size .3s cubic-bezier(.2,1.1,.35,1), color .15s;
+        text-shadow: 4px 4px 0 #000;
+        transition: font-size .3s cubic-bezier(.2,1.1,.35,1), color .15s, transform .12s cubic-bezier(.3,1.6,.5,1), text-shadow .12s;
       }
       .mi-item:not(.on):hover .mi-label { color: var(--c); }
       .mi-item.on .mi-label { text-shadow: 6px 6px 0 #000, 10px 10px 0 color-mix(in srgb, var(--c) 60%, #000); }
       .mi-splash { --sw: calc(100% + 0.9em); --sh: 150%; --sy: -52%; font-size: var(--fs); }
+      /* tenuta premuta: la scritta affonda nella sua ombra */
+      .mi-item.on:not(:disabled):active .mi-label {
+        transform: translate(5px, 5px) scale(0.96);
+        text-shadow: 1px 1px 0 #000, 3px 3px 0 color-mix(in srgb, var(--c) 60%, #000);
+        transition-duration: .3s, .15s, .05s, .05s;
+      }
+
+      /* ========== Clic: varianti in prova (data-press sulla radice) ========== */
+      .pfx { position: absolute; left: calc(50% - var(--x) / 2); top: 50%; width: 0; height: 0; z-index: 2; pointer-events: none; font-size: var(--fs); }
+
+      /* A · Timbro: la voce si schiaccia nell'ombra e rimbalza fuori */
+      .smp[data-press="timbro"] .mi-item.hit .mi-label { animation: mi-hit-stamp .42s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="timbro"] .mi-item.hit .spl { animation: spl-hit-stamp .42s cubic-bezier(.2,.9,.3,1); }
+      @keyframes mi-hit-stamp {
+        0% { transform: translate(7px, 7px) scale(0.9); text-shadow: 0 0 0 #000; }
+        38% { transform: translate(-5px, -5px) scale(1.09); text-shadow: 10px 10px 0 #000, 18px 18px 0 color-mix(in srgb, var(--c) 70%, #000); }
+        70% { transform: translate(1px, 1px) scale(0.99); }
+      }
+      @keyframes spl-hit-stamp {
+        0% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(0.84); }
+        40% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1.16); }
+        72% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(0.98); }
+      }
+
+      /* B · Onda d'urto: lampo bianco sulla macchia, anelli che si allargano, scossa */
+      .smp[data-press="onda"] .mi-item.hit .mi-label { animation: mi-hit-shock .45s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="onda"] .mi-item.hit .spl { animation: spl-hit-shock .45s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="onda"] .mi-item.hit .spl path,
+      .smp[data-press="onda"] .mi-item.hit .spl circle { animation: spl-hit-flash .32s ease-out; }
+      @keyframes mi-hit-shock {
+        0% { transform: scale(0.94); }
+        12% { transform: translateX(-9px) scale(1.07); }
+        24% { transform: translateX(8px) scale(1.05); }
+        36% { transform: translateX(-5px); }
+        50% { transform: translateX(3px); }
+        66% { transform: translateX(-1px); }
+      }
+      @keyframes spl-hit-shock {
+        0% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1); }
+        30% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1.18); }
+      }
+      @keyframes spl-hit-flash { 0%, 25% { fill: ${T}; } }
+      .pfx-ring {
+        position: absolute; left: 0; top: 0; width: calc(var(--hw) * 2 + 1em); height: 1.5em; border-radius: 50%;
+        border: 0.07em solid var(--c); transform: translate(-50%, -50%) scale(0.4); opacity: 0;
+        animation: pfx-ring .5s cubic-bezier(.1,.8,.3,1);
+      }
+      .pfx-ring-2 { border-width: 0.03em; border-color: ${T}; animation-delay: .06s; }
+      @keyframes pfx-ring {
+        0% { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1.45, 1.9); opacity: 0; }
+      }
+
+      /* C · Schizzi: la macchia sbatte e la vernice schizza fuori */
+      .smp[data-press="schizzi"] .mi-item.hit .mi-label { animation: mi-hit-squash .46s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="schizzi"] .mi-item.hit .spl { animation: spl-hit-slam .46s cubic-bezier(.2,.9,.3,1); }
+      @keyframes mi-hit-squash {
+        0% { transform: scale(1.12, 0.82); }
+        32% { transform: scale(0.94, 1.08); }
+        62% { transform: scale(1.03, 0.98); }
+      }
+      @keyframes spl-hit-slam {
+        0% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1.32); }
+        30% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(0.9); }
+        60% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1.05); }
+      }
+      .pfx-drop {
+        position: absolute; left: 0; top: 0; width: calc(var(--s) * 1.7); height: var(--s); border-radius: 50%;
+        background: var(--c); opacity: 0;
+        animation: pfx-drop .5s cubic-bezier(.15,.8,.3,1);
+      }
+      .pfx-drop.w { background: ${T}; }
+      @keyframes pfx-drop {
+        0% { transform: translate(-50%, -50%) translate(var(--x0), var(--y0)) rotate(var(--a)) scale(1.4); opacity: 1; }
+        70% { opacity: 1; }
+        100% { transform: translate(-50%, -50%) translate(var(--x1), var(--y1)) rotate(var(--a)) scale(0.25); opacity: 0; }
+      }
+
+      /* D · Taglio: lampo in negativo e un fendente bianco attraverso la voce */
+      .smp[data-press="taglio"] .mi-item.hit .mi-label { animation: mi-hit-slash .4s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="taglio"] .mi-item.hit .spl { animation: spl-hit-slash .4s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="taglio"] .mi-item.hit .spl path,
+      .smp[data-press="taglio"] .mi-item.hit .spl circle { animation: spl-hit-flash .26s steps(1, end); }
+      @keyframes mi-hit-slash {
+        0% { transform: skewX(-16deg) translateX(-22px); color: ${V}; text-shadow: none; }
+        30% { color: ${V}; text-shadow: none; }
+        42% { transform: skewX(7deg) translateX(8px); }
+        70% { transform: skewX(-2deg) translateX(-2px); }
+      }
+      @keyframes spl-hit-slash {
+        0% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(1.28, 0.7); }
+        45% { transform: translate(-50%, var(--sy, -50%)) rotate(var(--sr)) scaleX(var(--sf)) scale(0.96, 1.06); }
+      }
+      .pfx-slash {
+        position: absolute; left: calc(var(--hw) * -1 - 0.7em); top: -0.05em; width: calc(var(--hw) * 2 + 1.4em); height: 0.08em; background: ${T};
+        transform: rotate(-9deg); clip-path: inset(0 100% 0 0);
+        animation: pfx-slash .32s cubic-bezier(.6,0,.2,1);
+      }
+      .pfx-slash-2 { top: 0.09em; height: 0.03em; background: var(--c); animation-delay: .05s; }
+      @keyframes pfx-slash {
+        0% { clip-path: inset(0 100% 0 0); }
+        45% { clip-path: inset(0 0 0 0); }
+        100% { clip-path: inset(0 0 0 100%); }
+      }
+
       .mi-more { display: grid; place-items: center; width: 0.5em; height: 0.5em; min-width: 22px; min-height: 22px; font-size: 0.4em; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
 
       /* ========== Pannello sotto-scelte ========== */
@@ -745,6 +1015,41 @@ function SatzeMenuStyles() {
       .mp-row-sub { flex: 1; min-width: 0; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.16em; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .mp-row-more { flex: none; display: grid; place-items: center; width: 24px; height: 24px; font-size: 18px; background: var(--accent); color: ${V}; clip-path: ${STAR_CLIP}; align-self: center; }
       .mp-row.on { background: ${T}; color: ${V}; transform: translateX(14px) rotate(-1deg); }
+      .mp-row.on:not(:disabled):active { transform: translateX(10px) rotate(-1deg) scale(0.97); transition-duration: .05s; }
+      .mp-row > span:not(.mp-hit) { position: relative; z-index: 1; }
+      .mp-hit { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; }
+      .smp[data-press="timbro"] .mp-row.hit { animation: mp-hit-stamp .38s cubic-bezier(.2,.9,.3,1); }
+      @keyframes mp-hit-stamp {
+        0% { transform: translateX(6px) rotate(-1deg) scale(0.94); }
+        40% { transform: translateX(22px) rotate(-1deg) scale(1.03); }
+      }
+      .smp[data-press="onda"] .mp-row.hit { animation: mp-hit-shock .4s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="onda"] .mp-hit { background: var(--accent); animation: mp-hit-fade .32s ease-out; }
+      @keyframes mp-hit-shock {
+        0% { transform: translateX(14px) rotate(-1deg) scale(1.04); }
+        20% { transform: translateX(6px) rotate(-1deg); }
+        40% { transform: translateX(20px) rotate(-1deg); }
+        60% { transform: translateX(11px) rotate(-1deg); }
+      }
+      @keyframes mp-hit-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+      .smp[data-press="schizzi"] .mp-row.hit { animation: mp-hit-squash .42s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="schizzi"] .mp-hit {
+        background: radial-gradient(circle at var(--hx, 20%) 50%, var(--accent) 0 35%, transparent 36%) 0 0 / 100% 100%,
+          radial-gradient(circle at 70% 30%, var(--accent) 0 6%, transparent 7%), radial-gradient(circle at 88% 70%, var(--accent) 0 4%, transparent 5%);
+        animation: mp-hit-splat .42s cubic-bezier(.2,.9,.3,1);
+      }
+      @keyframes mp-hit-squash {
+        0% { transform: translateX(14px) rotate(-1deg) scale(1.05, 0.88); }
+        35% { transform: translateX(14px) rotate(-1deg) scale(0.98, 1.06); }
+      }
+      @keyframes mp-hit-splat { 0% { opacity: 1; transform: scale(0.6); } 50% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.4); } }
+      .smp[data-press="taglio"] .mp-row.hit { animation: mp-hit-slash .36s cubic-bezier(.2,.9,.3,1); }
+      .smp[data-press="taglio"] .mp-hit { opacity: 1; background: linear-gradient(100deg, transparent 0 38%, var(--accent) 38% 62%, transparent 62%); animation: mp-hit-wipe .3s cubic-bezier(.6,0,.2,1) forwards; }
+      @keyframes mp-hit-slash {
+        0% { transform: translateX(4px) rotate(-1deg) skewX(-12deg); }
+        45% { transform: translateX(20px) rotate(-1deg) skewX(4deg); }
+      }
+      @keyframes mp-hit-wipe { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); opacity: 1; } }
       .mp-row.on .mp-row-sub { opacity: 0.8; }
       .mp-row.on .mp-row-more { background: ${V}; color: var(--accent); }
       .mp-back {
@@ -754,6 +1059,12 @@ function SatzeMenuStyles() {
       }
       .mp-back > * { transform: skewX(14deg); }
       .mp-back:hover, .mp-back:focus-visible { outline: none; transform: skewX(-14deg) translate(-3px,-3px); box-shadow: 8px 8px 0 var(--accent); }
+      .mp-back:active { transform: skewX(-14deg) translate(4px,4px); box-shadow: 1px 1px 0 var(--accent); transition-duration: .05s; }
+      .mp-back.hit { animation: mp-back-hit .3s cubic-bezier(.2,.9,.3,1); }
+      @keyframes mp-back-hit {
+        0% { transform: skewX(-14deg) translate(5px,5px); box-shadow: 0 0 0 var(--accent); }
+        45% { transform: skewX(-14deg) translate(-4px,-4px); box-shadow: 10px 10px 0 var(--accent); }
+      }
       .mp-back .key { background: ${V}; color: ${T}; font-weight: 700; font-size: 12px; padding: 3px 7px; }
       .mp-back .lbl { font-weight: 700; font-style: italic; font-size: 18px; letter-spacing: 0.1em; }
 
@@ -764,6 +1075,18 @@ function SatzeMenuStyles() {
         background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.6) 70%, transparent);
       }
       .smp-build { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.28em; color: rgba(245,243,235,0.55); white-space: nowrap; }
+      .smp-press-pick {
+        display: inline-flex; align-items: center; gap: 8px; margin-right: auto; padding: 4px 12px 4px 4px;
+        background: transparent; color: rgba(245,243,235,0.75); border: 1px solid color-mix(in srgb, var(--active) 55%, transparent);
+        cursor: pointer; font-size: 12px; letter-spacing: 0.16em; white-space: nowrap; transform: skewX(-12deg);
+        transition: transform .12s cubic-bezier(.3,1.6,.5,1), border-color .15s, color .15s;
+      }
+      .smp-press-pick > * { transform: skewX(12deg); }
+      .smp-press-pick:hover, .smp-press-pick:focus-visible { outline: none; color: ${T}; border-color: var(--active); }
+      .smp-press-pick:active { transform: skewX(-12deg) translate(2px,2px) scale(0.96); transition-duration: .05s; }
+      .smp-press-pick .k { background: var(--active); color: ${V}; font-weight: 700; padding: 2px 7px; }
+      .smp-press-pick .v { font-weight: 700; font-style: italic; }
+      .smp-press-pick .n { font-family: 'Share Tech Mono', monospace; opacity: 0.6; }
       .smp-hints-keys { display: inline-flex; align-items: center; gap: 26px; }
       .smp-hint { display: inline-flex; align-items: center; gap: 5px; }
       .smp-hint .lbl { margin-left: 6px; font-weight: 700; font-size: 14px; letter-spacing: 0.16em; font-style: italic; }
