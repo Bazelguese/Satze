@@ -269,10 +269,10 @@ function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25, fastNam
     const el = wrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const apply = () => {
-      setBox({
-        w: Math.max(36, el.clientWidth),
-        h: Math.max(12, el.clientHeight),
-      });
+      const w = Math.max(36, el.clientWidth);
+      const h = Math.max(12, el.clientHeight);
+      // stesso riquadro = stesso stato: niente nuovo render a ogni notifica del ResizeObserver
+      setBox((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -515,11 +515,11 @@ function P4ArmyBarNameFit({ name }) {
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const apply = () =>
-      setBox({
-        w: Math.max(32, el.clientWidth),
-        h: Math.max(14, el.clientHeight),
-      });
+    const apply = () => {
+      const w = Math.max(32, el.clientWidth);
+      const h = Math.max(14, el.clientHeight);
+      setBox((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
@@ -537,24 +537,15 @@ function P4ArmyBarNameFit({ name }) {
       el.style.letterSpacing = `${em}em`;
     };
 
-    let low = 5;
-    let high = 11;
-    let best = low;
-    for (let i = 0; i < 40; i += 1) {
-      if (high - low < 0.08) break;
-      const mid = (low + high) / 2;
-      el.style.fontSize = `${mid}px`;
-      applyTracking(mid);
-      const fits = el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1;
-      if (fits) {
-        best = mid;
-        low = mid;
-      } else {
-        high = mid;
-      }
-    }
-    el.style.fontSize = `${best}px`;
-    applyTracking(best);
+    fitNameFontSize(
+      el,
+      `army|${name}|${maxW}|${maxH}`,
+      5,
+      11,
+      0.08,
+      () => el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1,
+      applyTracking
+    );
   }, [name, box.w, box.h]);
 
   return (
