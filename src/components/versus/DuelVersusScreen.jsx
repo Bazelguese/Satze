@@ -301,6 +301,9 @@ export function DuelVersusScreen({
   // blocca il disegno, la scatola resta ferma dov'era invece di saltare a metà volo.
   const onFlightDoneRef = useRef(intro?.onFlightDone);
   onFlightDoneRef.current = intro?.onFlightDone;
+  const onReelLandedRef = useRef(intro?.onReelLanded);
+  onReelLandedRef.current = intro?.onReelLanded;
+  const onReelLanded = useCallback(() => onReelLandedRef.current?.(), []);
   useLayoutEffect(() => {
     const done = () => onFlightDoneRef.current?.();
     const root = rootRef.current;
@@ -389,6 +392,9 @@ export function DuelVersusScreen({
     fx.parallax && 'vsx-fx-parallax',
   ].filter(Boolean).map((c) => ` ${c}`).join('');
   const impact = Boolean(fx.impact);
+  const hasIntro = Boolean(intro);
+  const reelStopping = hasIntro && intro.stage !== 'spin';
+  const reelLeaving = hasIntro && intro.stage === 'reveal';
 
   // Scatole, carte e sfondi non dipendono dalla barra: stesso elemento fra un avanzamento e l'altro.
   const scene = useMemo(() => (
@@ -397,13 +403,14 @@ export function DuelVersusScreen({
 
       {/* Slot: avversario sempre a sinistra, chi guarda sempre a destra (anche online, ognuno dal suo client). */}
       {/* il sorteggio sta sotto la metà nemica: quando parte il VS la lastra ci passa sopra */}
-      {intro ? (
+      {hasIntro ? (
         <VersusRoulette
           items={reel.items}
           targetKey={reel.targetKey}
           mode={reel.mode}
-          stopping={intro.stage !== 'spin'}
-          leaving={intro.stage === 'reveal'}
+          stopping={reelStopping}
+          leaving={reelLeaving}
+          onLanded={onReelLanded}
         />
       ) : null}
       <div className="vsx-half vsx-half--l">
@@ -437,6 +444,7 @@ export function DuelVersusScreen({
   ), [
     enemyBg, playerBg, enemyIdentity, playerIdentity, enemyEntry, playerEntry,
     layout, coverStyle, enemyEm, playerEm, opening, spin, enemyBack, playerBack, impact,
+    hasIntro, reel, reelStopping, reelLeaving, onReelLanded,
   ]);
 
   return (

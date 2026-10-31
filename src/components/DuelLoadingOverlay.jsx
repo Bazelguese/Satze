@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ARMY_COLORS, ARMY_GIFS } from '../data';
 import { getEminence, getEminenceForArmy } from '../data/eminences.js';
@@ -24,7 +24,7 @@ import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
 import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
 import { suspendSounds } from '../audio/soundBus.js';
 import { DuelVersusScreen } from './versus/DuelVersusScreen';
-import { ROULETTE_STOP_MS } from './versus/VersusRoulette.jsx';
+import { ROULETTE_STOP_MAX_MS } from './versus/VersusRoulette.jsx';
 import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
 import { computeViewportScale } from '../settings/viewportScale';
 import { LoadingScreen } from './LoadingScreen';
@@ -39,7 +39,9 @@ const WARMUP_MS = 3800;
 const VS_MIN_MS = 5200;
 const VS_LEAVE_MS = 450;
 /** Ingresso a tappe: la ruota gira almeno così (il tuo lato si sistema intanto). */
-const ROULETTE_MIN_MS = 2400;
+const ROULETTE_MIN_MS = 2800;
+/** Pausa sull'avversario appena la ruota si è fermata, prima che parta il VS. */
+const ROULETTE_HOLD_MS = 650;
 /** Il sorteggio si ferma quando il caricamento arriva qui (in percentuale). */
 const ROULETTE_STOP_AT = 80;
 /** Ingresso a tappe: il caricamento pesante aspetta la fine del volo della scatola (al massimo questo). */
@@ -249,13 +251,15 @@ export function DuelLoadingOverlay({
     return () => window.clearTimeout(stopT);
   }, [vsActive, loadDone, vsStage, progress >= ROULETTE_STOP_AT]);
 
-  // dopo la fermata il VS parte appena il duello è pronto
+  // dopo la fermata (e una breve pausa sull'avversario) il VS parte appena il duello è pronto
   const [reelLanded, setReelLanded] = useState(false);
+  const [reelArrived, setReelArrived] = useState(false);
+  const onReelLanded = useCallback(() => setReelArrived(true), []);
   useEffect(() => {
     if (vsStage !== 'stop') return undefined;
-    const t = window.setTimeout(() => setReelLanded(true), ROULETTE_STOP_MS + 350);
+    const t = window.setTimeout(() => setReelLanded(true), reelArrived ? ROULETTE_HOLD_MS : ROULETTE_STOP_MAX_MS + ROULETTE_HOLD_MS);
     return () => window.clearTimeout(t);
-  }, [vsStage]);
+  }, [vsStage, reelArrived]);
   useEffect(() => {
     if (vsStage === 'stop' && reelLanded && loadDone) setVsStage('reveal');
   }, [vsStage, reelLanded, loadDone]);
@@ -708,7 +712,7 @@ export function DuelLoadingOverlay({
             enemyCardBack={enemyCardBack}
             fx={VS_FX}
             progress={progress}
-            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done, deckArmy: versusDeckArmy } : null}
+            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done, onReelLanded, deckArmy: versusDeckArmy } : null}
           />
         </VersusViewport>
       ) : null}
