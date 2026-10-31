@@ -63,8 +63,12 @@ function slabLayers(dir, accent) {
   ];
 }
 
-/** Campo di punti di retino disegnato su canvas, sull'orologio a tempo 1. */
-function DotField({ layers, stepPx, tempo }) {
+/**
+ * Campo di punti di retino disegnato su canvas, sull'orologio a tempo 1.
+ * `t0` è l'avvio della cortina; finché `release.at` è 0 la lastra resta piena
+ * (la nuova schermata sta ancora montando), poi si ritira da lì in avanti.
+ */
+function DotField({ layers, stepPx, tempo, t0, release }) {
   const canvasRef = useRef(null);
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
@@ -75,10 +79,18 @@ function DotField({ layers, stepPx, tempo }) {
     for (let y = stepPx / 2, row = 0; y < H + stepPx; y += stepPx, row += 1) {
       for (let x = row % 2 ? stepPx : stepPx / 2; x < W + stepPx; x += stepPx) dots.push([x, y]);
     }
-    const start = performance.now();
+    const start = t0 ?? performance.now();
     let raf = 0;
-    const draw = (now) => {
+    const clock = (now) => {
       const t = (now - start) / tempo;
+      if (!release || t < REVEAL) return t;
+      if (!release.at) return REVEAL - 1;
+      // l'attesa oltre REVEAL slitta in avanti la ritirata
+      const held = Math.max(0, release.at - (start + REVEAL * tempo));
+      return (now - start - held) / tempo;
+    };
+    const draw = (now) => {
+      const t = clock(now);
       ctx.clearRect(0, 0, W, H);
       for (const layer of layers) {
         ctx.fillStyle = layer.color;
@@ -97,7 +109,7 @@ function DotField({ layers, stepPx, tempo }) {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [layers, stepPx, tempo]);
+  }, [layers, stepPx, tempo, t0, release]);
   return <canvas ref={canvasRef} className="ptr-dots" width={W} height={H} />;
 }
 
@@ -113,7 +125,7 @@ export function PersonaTransitionOverlay({ run }) {
       className={`ptr ptr--${run.dir === 'back' ? 'back' : 'fwd'}`}
       style={{ '--acc': run.accent, '--d': run.dir === 'back' ? -1 : 1, '--k': tempo }}
     >
-      <DotField layers={layers} stepPx={run.lite ? 34 : 24} tempo={tempo} />
+      <DotField layers={layers} stepPx={run.lite ? 34 : 24} tempo={tempo} t0={run.t0} release={run.release} />
       {run.label ? (
         <>
           <div className="ptr-echo" aria-hidden="true">{run.label}</div>

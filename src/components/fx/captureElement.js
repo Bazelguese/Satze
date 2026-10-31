@@ -4,6 +4,34 @@
 
 import { toCanvas, getFontEmbedCSS } from 'html-to-image';
 
+/**
+ * Proprietà che non cambiano l'aspetto di una foto statica (animazioni, transizioni, scroll,
+ * interazione, impaginazione) o che duplicano le fisiche (logiche block/inline, sempre in
+ * orizzontale qui). html-to-image copia ogni proprietà calcolata su ogni elemento clonato:
+ * togliendo queste la foto resta identica al pixel e costa meno al thread principale.
+ */
+const SKIP_STYLE_RE =
+  /^(animation|transition|scroll|overscroll|view-timeline|view-transition|timeline|trigger|anchor|position-(anchor|area|try|visibility)|interest|caret|column-rule|row-rule|rule-overlap|math-|ruby-|-webkit-ruby|text-emphasis|hyphenate|scrollbar|-webkit-user|break-|contain-intrinsic-(block|inline)|border-(block|inline)-|border-(start|end)-(start|end)-radius|inset-(block|inline)|margin-(block|inline)|padding-(block|inline)|(min-|max-)?(block|inline)-size$|overflow-(block|inline)$|corner-(start|end))/;
+const SKIP_STYLE = new Set([
+  'interactivity', 'cursor', 'pointer-events', 'user-select', 'touch-action', 'resize', 'speak',
+  'app-region', 'window-drag', 'will-change', '-webkit-tap-highlight-color', 'field-sizing',
+  'reading-flow', 'reading-order', 'print-color-adjust', 'forced-color-adjust', 'accent-color',
+  'buffered-rendering', 'orphans', 'widows', 'initial-letter', 'overlay', 'dynamic-range-limit',
+  'overflow-anchor', 'interpolate-size', 'container-name', 'scroll-marker-group', 'scroll-target-group',
+  'text-fit', '-webkit-user-drag', '-webkit-user-modify', 'caption-side', 'empty-cells', '-webkit-locale',
+  '-webkit-rtl-ordering', 'text-size-adjust', 'flex-line-count', 'column-height', 'column-wrap', 'border-shape',
+]);
+
+let snapshotStyleProps = null;
+function snapshotStyleProperties() {
+  if (!snapshotStyleProps) {
+    snapshotStyleProps = Array.from(window.getComputedStyle(document.documentElement)).filter(
+      (name) => !SKIP_STYLE.has(name) && !SKIP_STYLE_RE.test(name)
+    );
+  }
+  return snapshotStyleProps;
+}
+
 /** CSS dei font già incorporati in base64, per famiglia: le foto successive non riscaricano. */
 const fontCssCache = new Map();
 
@@ -81,5 +109,6 @@ export async function captureElementToCanvas(node, opts = {}) {
     // (il contenuto può essere già nascosto da una bruciatura precedente)
     style: { transform: 'none', margin: '0', opacity: '1', transition: 'none' },
     cacheBust: false,
+    includeStyleProperties: snapshotStyleProperties(),
   });
 }

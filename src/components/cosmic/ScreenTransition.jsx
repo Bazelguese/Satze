@@ -183,6 +183,8 @@ export function CosmicTransitionProvider({ children, tempo: tempoOverride }) {
   const vfxLite = getVfxQualityProfile().quality !== 'high';
 
   const SWAP_MS = 280;
+  /** Cortina Persona: tetto all'attesa della nuova schermata prima di ritirarsi. */
+  const MAX_HOLD_MS = 2500;
   /** Carte / reveal: subito dopo lo swap, ancora sotto copertura piena. */
   const HEAVY_MS = 320;
   /** Inizio dissolvenza overlay (CSS uncover già quasi finito). */
@@ -206,11 +208,35 @@ export function CosmicTransitionProvider({ children, tempo: tempoOverride }) {
       runIdRef.current += 1;
       const runId = runIdRef.current;
       const persona = variant === 'cosmic';
-      setTransition({ label, kicker, variant, dir, accent, tempo, persona, lite: vfxLite, runId, exiting: false });
+      // orologio condiviso con la lastra di punti; release.at = quando la cortina parte a ritirarsi
+      const release = { at: 0 };
+      setTransition({ label, kicker, variant, dir, accent, tempo, persona, lite: vfxLite, runId, exiting: false, t0: performance.now(), release });
       const pt = ptrTiming(tempo);
       const swapMs = persona ? pt.cover : SWAP_MS;
       const heavyMs = persona ? pt.cover + 40 : HEAVY_MS;
       const totalMs = persona ? pt.end + 20 : TOTAL_MS;
+
+      const finish = () => {
+        setTransition(null);
+        setSceneSwapped(false);
+        setCurtainOpening(false);
+        setHeavyContentReady(true);
+        busyRef.current = false;
+      };
+
+      // La cortina Persona si ritira solo quando la nuova schermata è montata e ha disegnato
+      // un frame: se il montaggio sfora, resta chiusa invece di bloccarsi a metà e poi saltare.
+      let revealDue = false;
+      let settled = false;
+      const releaseCurtain = () => {
+        if (release.at || runIdRef.current !== runId) return;
+        release.at = performance.now();
+        setCurtainOpening(true);
+        timersRef.current.push(setTimeout(finish, pt.end - pt.reveal + 20));
+      };
+      const tryRelease = () => {
+        if (revealDue && settled) releaseCurtain();
+      };
 
       timersRef.current.push(
         setTimeout(() => {
@@ -226,28 +252,33 @@ export function CosmicTransitionProvider({ children, tempo: tempoOverride }) {
       timersRef.current.push(
         setTimeout(() => {
           setHeavyContentReady(true);
+          if (!persona) return;
+          // due frame dopo il contenuto pesante: montaggio e primo disegno sono finiti
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              settled = true;
+              tryRelease();
+            })
+          );
         }, heavyMs)
       );
 
       if (persona) {
-        timersRef.current.push(setTimeout(() => setCurtainOpening(true), pt.reveal));
+        timersRef.current.push(
+          setTimeout(() => {
+            revealDue = true;
+            tryRelease();
+          }, pt.reveal)
+        );
+        timersRef.current.push(setTimeout(releaseCurtain, pt.reveal + MAX_HOLD_MS));
       } else {
         timersRef.current.push(
           setTimeout(() => {
             setTransition((t) => (t && t.runId === runId ? { ...t, exiting: true } : t));
           }, FADE_MS)
         );
+        timersRef.current.push(setTimeout(finish, totalMs));
       }
-
-      timersRef.current.push(
-        setTimeout(() => {
-          setTransition(null);
-          setSceneSwapped(false);
-          setCurtainOpening(false);
-          setHeavyContentReady(true);
-          busyRef.current = false;
-        }, totalMs)
-      );
     },
     [clearTimers, vfxLite, tempo]
   );
