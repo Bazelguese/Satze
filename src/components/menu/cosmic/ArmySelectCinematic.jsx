@@ -587,13 +587,15 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
             <div className="asx-decks-tag asx-sk"><b>ESERCITI</b><small>PREDEFINITI</small></div>
             <div className="asx-decks-list">
               {army.deckList.map((dk, i) => (
-                <div key={dk.key} className="asx-deck" style={{ '--d': `${0.12 + i * 0.05}s` }}>
+                <div key={dk.key} className="asx-deck" style={{ '--d': `${0.12 + i * 0.06}s` }}>
+                  <div className="asx-deck-head asx-sk">
+                    <span className="code">{dk.code}</span>
+                    <b className={dk.name.length > 18 ? 'long' : ''}>{dk.name}</b>
+                  </div>
                   <div className="asx-deck-box" aria-hidden="true">
                     {dk.entry ? <DeckCover deck={dk.entry} variant="box" isCenter={false} /> : null}
                   </div>
                   <div className="asx-deck-txt asx-sk">
-                    <span className="code">{dk.code}</span>
-                    <b>{dk.name}</b>
                     {dk.archetype && <span className="type">{dk.archetype}</span>}
                     {dk.flavor && <p>{dk.flavor}</p>}
                   </div>
@@ -949,26 +951,30 @@ function ArmySelectStyles() {
 
       /* eserciti predefiniti: tre righe con la scatola 3D, nome, tipo e frase */
       .asx-decks {
-        flex: 1; min-height: 0; display: grid; grid-template-columns: 196px 1fr; margin-right: 50px;
+        flex: 1; min-height: 0; display: grid; grid-template-columns: 150px 1fr; margin-right: 50px;
         background: rgba(14,13,20,0.96); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      .asx-decks-tag { display: flex; flex-direction: column; justify-content: center; padding: 12px 16px 12px 24px; background: var(--accent); color: var(--void); }
-      .asx-decks-tag b { font-weight: 700; font-style: italic; font-size: 33px; line-height: 0.9; letter-spacing: -0.01em; }
+      .asx-decks-tag { display: flex; flex-direction: column; justify-content: center; padding: 12px 12px 12px 22px; background: var(--accent); color: var(--void); }
+      .asx-decks-tag b { font-weight: 700; font-style: italic; font-size: 27px; line-height: 0.9; letter-spacing: -0.01em; }
       .asx-decks-tag small { margin-top: 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.24em; }
-      .asx-decks-list { display: flex; flex-direction: column; justify-content: space-evenly; min-width: 0; padding: 6px 18px 6px 10px; }
+      /* tre colonne affiancate: nome in alto, scatola 3D grande al centro, tipo e frase sotto */
+      .asx-decks-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; min-width: 0; padding: 14px 26px 14px 30px; }
       .asx-deck {
-        display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 14px; min-height: 0;
+        display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; text-align: center;
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      .asx-deck + .asx-deck { border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
+      .asx-deck + .asx-deck { box-shadow: -8px 0 0 -6px color-mix(in srgb, var(--accent) 30%, transparent); }
+      .asx-deck-head { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
+      .asx-deck-head .code { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
+      .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
+      .asx-deck-head b.long { font-size: 21px; }
       /* la scatola si raddrizza rispetto all'inclinazione della scheda */
-      .asx-deck-box { position: relative; width: 120px; height: 146px; transform: skewX(8deg); }
-      .asx-deck-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
-      .asx-deck-txt .code { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
-      .asx-deck-txt b { font-weight: 700; font-style: italic; font-size: 28px; line-height: 1; text-transform: uppercase; color: var(--ink); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .asx-deck-txt .type { background: var(--ink); color: var(--void); font-weight: 700; font-size: 12px; letter-spacing: 0.16em; padding: 1px 9px; transform: skewX(-14deg); margin: 3px 0 2px 4px; }
-      .asx-deck-txt p { margin: 0; font-size: 16px; line-height: 1.3; color: rgba(245,243,235,0.82); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .asx-deck-box { position: relative; flex: 1; min-height: 0; width: 100%; transform: skewX(8deg); }
+      .asx-deck-box .dcv-box { --bw: 80cqw; }
+      .asx-deck-txt { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; width: 100%; }
+      .asx-deck-txt .type { background: var(--ink); color: var(--void); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; padding: 1px 9px; transform: skewX(-14deg); }
+      .asx-deck-txt p { margin: 0; font-size: 14px; line-height: 1.3; color: rgba(245,243,235,0.82); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
       .asx-bd-go {
         display: grid; grid-template-columns: 196px 1fr; flex: none; height: 108px; margin-right: 40px;
