@@ -414,6 +414,7 @@ button:focus-visible { outline: 3px solid var(--gold-hi); outline-offset: 4px; }
 .v-scheda .me .pow span { min-width: 0; margin-left: -6px; padding: 4px 12px 2px 12px; font: 700 italic 15px/1.15 var(--f-body); color: var(--bone); background: var(--ink); clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* the army: a hand of cards. The fan opens out of the bar inside its own burst; under it the posts as diamonds and the League as a gauge, its name on a gold pillar */
 #bar .fan { position: relative; align-self: stretch; border: 0; background: none; padding: 0; cursor: pointer; }
+#bar .fan.fan-ghost { z-index: 2; pointer-events: none; transition: opacity .5s ease-out; }
 .v-scheda .fan .burst { position: absolute; left: 0; bottom: 0; width: 420px; height: 250px; pointer-events: none; }
 .v-scheda .fan .burst i { position: absolute; inset: 0; transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); }
 .v-scheda .fan .burst i:nth-child(1) { background: var(--void); transform: translate(-12px, -10px); opacity: .85; }
@@ -2085,6 +2086,9 @@ function animate(ms, fn) {
   return new Promise(res => {
     const D = dur(ms), t0 = performance.now();
     const step = now => { const t = D ? Math.min(1, (now - t0) / D) : 1; fn(t); if (t < 1) requestAnimationFrame(step); else res(); };
+    /* the first state goes on at once: started from inside another animation's frame (a walk that just ended), the
+       next frame would come only after a paint, and the new scene would show for a frame uncut, hiding the map */
+    if (D) fn(0);
     requestAnimationFrame(step);
   });
 }
@@ -2591,22 +2595,41 @@ const FAN_BURST = (() => {
 })();
 function hud() {
   const g = { stages: C.firstActStages(run) }, n = C.runCard(run, C.NASCENTE);
-  $('#thread').innerHTML = `<div class="ttl"><span class="n">${String(Math.min(run.stage + 1, g.stages.length)).padStart(2, '0')}</span><span class="of">/${g.stages.length}</span><div><small>Atto I</small><b>Fino ai piedi di Cael</b></div></div>
+  const threadHTML = `<div class="ttl"><span class="n">${String(Math.min(run.stage + 1, g.stages.length)).padStart(2, '0')}</span><span class="of">/${g.stages.length}</span><div><small>Atto I</small><b>Fino ai piedi di Cael</b></div></div>
     <div class="line"><div class="fill" style="width:${(Math.min(run.stage, g.stages.length - 1) / (g.stages.length - 1)) * 100}%"></div>${g.stages.map((ids, i) => {
       const nd = C.firstActRunNode(run, ids[0]), cls = (i < run.stage ? 'd' : i === run.stage && !run.outcome ? 'c' : nd.kind === 'boss' ? 'b' : '') + (nd.kind === 'event' && i !== run.stage ? ' e' : '');
       const names = [...new Set(ids.map(id => C.firstActRunNode(run, id).title))];
       return `<span class="bead ${cls}" data-i="${i}"><span class="tip">${i + 1}. ${esc(names.length > 2 ? `${names.length} vie` : names.join(' / '))}</span></span>`;
     }).join('')}</div>
     <button class="btn" data-a="map" ${view === 'world' ? 'hidden' : ''}>Mappa</button>`;
-  const deck = run.deck.map(id => C.runCard(run, id));
-  const v = BAR_V[$('#stage').dataset.bv] ? $('#stage').dataset.bv : 'etereo', parts = BAR_V[v](barData());
-  $('#bar').className = v === 'geometrico' ? 'v-tamburo v-geo' : ['ladro', 'custode', 'duellante', 'figli', 'etereo'].includes(v) ? `v-tamburo v-${v}` : `v-${v}`;
-  $('#bar').innerHTML = `${parts.me}<div id="line">${lineHTML}</div><div id="acts">${actsHTML}</div>${parts.fan}`;
+  if (threadHTML !== threadShown) { $('#thread').innerHTML = threadHTML; threadShown = threadHTML; }
+  const v = BAR_V[$('#stage').dataset.bv] ? $('#stage').dataset.bv : 'etereo', d = barData();
+  /* the bar is redrawn only when what it shows changes: rebuilding it at every scene change restarted the plate's
+     animations and reloaded its images, so the HUD flickered on each step between map and stage */
+  const key = JSON.stringify([v, run.deck, d.deck.map(x => [x.c.id, x.c.campaignCopyId, x.r]), d.n.id, d.n.power, d.n.damage, d.n.league, d.pw, d.fx, d.used, d.budget, d.slots, d.rdy, hudNew]);
+  const bar = $('#bar');
+  if (key === barKey && $('#line')) {
+    $('#line').innerHTML = lineHTML; $('#acts').innerHTML = actsHTML;
+  } else {
+    const parts = BAR_V[v](d), oldFan = barKey !== null && P.motion ? bar.querySelector('.fan') : null;
+    /* when the army really changes, the old plate stays a moment over the new one and fades: no hole in between */
+    const ghost = oldFan ? { el: oldFan, x: oldFan.offsetLeft, y: oldFan.offsetTop, w: oldFan.offsetWidth, h: oldFan.offsetHeight } : null;
+    bar.className = v === 'geometrico' ? 'v-tamburo v-geo' : ['ladro', 'custode', 'duellante', 'figli', 'etereo'].includes(v) ? `v-tamburo v-${v}` : `v-${v}`;
+    bar.innerHTML = `${parts.me}<div id="line">${lineHTML}</div><div id="acts">${actsHTML}</div>${parts.fan}`;
+    if (ghost && barKey.startsWith(`["${v}"`)) {
+      const g = ghost.el; g.classList.add('fan-ghost'); g.removeAttribute('data-a');
+      Object.assign(g.style, { position: 'absolute', left: ghost.x + 'px', top: ghost.y + 'px', width: ghost.w + 'px', height: ghost.h + 'px' });
+      bar.appendChild(g);
+      requestAnimationFrame(() => { g.style.opacity = '0'; });
+      setTimeout(() => g.remove(), dur(520));
+    }
+    barKey = key;
+  }
   hudNew = null;
   if ($('#stage').dataset.bv === 'etereo') { fitPlateHousing(); applyTuck(); } else document.querySelectorAll('.band.bot b, .band.bot i').forEach(x => { x.style.clipPath = ''; });
   requestAnimationFrame(tuckSync);
 }
-let lineHTML = '', actsHTML = '', hudNew = null, view = 'world';
+let lineHTML = '', actsHTML = '', hudNew = null, view = 'world', barKey = null, threadShown = null;
 function setBar(line, acts = '') { lineHTML = line; actsHTML = acts; const l = $('#line'), a = $('#acts'); if (l) { l.innerHTML = line; a.innerHTML = acts; } }
 
 /* ---------- scenes ---------- */
