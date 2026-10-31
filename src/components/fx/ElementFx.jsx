@@ -1,5 +1,5 @@
 import React from 'react';
-import { captureElementToCanvas } from './captureElement.js';
+import { captureElementToCanvas, getSharedSnapshot } from './captureElement.js';
 
 /** Entrata: da questa quota il disegno sfuma verso la carta vera, già visibile sotto. */
 const IN_HANDOVER_START = 0.86;
@@ -75,7 +75,12 @@ export function ElementFx({
     if (snap.key === captureKey && snap.promise) return snap.promise;
     const node = contentRef.current;
     if (!node) return Promise.reject(new Error('fx: contenuto non montato'));
-    const promise = captureElementToCanvas(node, { pixelRatio }).then((cv) => {
+    // foto già preparata altrove con la stessa chiave (stesso contenuto): niente scatto adesso
+    const shared = pixelRatio == null ? getSharedSnapshot(captureKey) : null;
+    const capture = shared
+      ? shared.catch(() => captureElementToCanvas(node, { pixelRatio }))
+      : captureElementToCanvas(node, { pixelRatio });
+    const promise = capture.then((cv) => {
       if (snapshotRef.current.promise === promise) {
         snapshotRef.current = { key: captureKey, canvas: cv, promise: null };
       }

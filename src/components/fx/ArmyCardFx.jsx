@@ -18,9 +18,15 @@ import { prefersReducedMotion } from '../battle/placeHandoff.js';
 /** Attesa massima della foto della carta per l'ingresso (sui PC lenti l'effetto si salta). */
 export const ENTRY_SNAPSHOT_TIMEOUT_MS = 900;
 
-export function ArmyEntryFx({ agent, enabled = true, variant = null, delayMs = 0, children, onComplete }) {
+/**
+ * `captureKey`: chiave della foto (vedi precaptureElement). Se descrive tutto l'aspetto della
+ * carta, una foto preparata in anticipo con la stessa chiave evita lo scatto all'ingresso.
+ */
+export function ArmyEntryFx({ agent, enabled = true, variant = null, delayMs = 0, captureKey = null, children, onComplete }) {
   const effect = enabled && agent?.army && !prefersReducedMotion() ? armyEntryFor(agent.army, variant) : null;
   const params = React.useMemo(() => ({ color: getArmyAccent(agent) }), [agent?.army]);
+  // chiave fissata all'ingresso: se poi la carta cambia (bonus, valori) l'effetto non riparte
+  const [entryKey] = React.useState(() => captureKey ?? `entry-${agent?.id}`);
   // durante l'attesa (es. il volo dalla mano) la carta resta nascosta: quota 0 dell'ingresso
   const [started, setStarted] = React.useState(delayMs <= 0);
   React.useEffect(() => {
@@ -36,7 +42,7 @@ export function ArmyEntryFx({ agent, enabled = true, variant = null, delayMs = 0
       active={started}
       progress={started ? null : 0}
       params={params}
-      captureKey={`entry-${agent.id}`}
+      captureKey={entryKey}
       snapshotTimeoutMs={ENTRY_SNAPSHOT_TIMEOUT_MS}
       onComplete={onComplete}
     >

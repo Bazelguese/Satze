@@ -112,3 +112,61 @@ export async function captureElementToCanvas(node, opts = {}) {
     includeStyleProperties: snapshotStyleProperties(),
   });
 }
+
+/**
+ * Foto preparate in anticipo, condivise tra componenti: la chiave descrive tutto ciò che
+ * cambia l'aspetto del contenuto (chi la usa deve garantirlo). Chi poi monta lo stesso
+ * contenuto con la stessa chiave riusa la foto invece di scattarla nel momento critico.
+ */
+const sharedSnapshots = new Map();
+const SHARED_SNAPSHOT_LIMIT = 24;
+/** Per i test: con window.__satzeFxDebug le foto preparate e i riusi diventano ispezionabili. */
+const sharedStats = { hit: 0, miss: 0, missKeys: [] };
+if (typeof window !== 'undefined' && window.__satzeFxDebug === true) {
+  window.__satzeSharedSnapshots = {
+    map: sharedSnapshots,
+    stats: sharedStats,
+    capture: (node) => captureElementToCanvas(node),
+  };
+}
+
+function sharedKeyOf(key) {
+  return `${key}|dpr${typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1}`;
+}
+
+/** Foto condivisa (Promise del canvas) per questa chiave, o null. */
+export function getSharedSnapshot(key) {
+  if (key == null) return null;
+  const found = sharedSnapshots.get(sharedKeyOf(key)) || null;
+  sharedStats[found ? 'hit' : 'miss'] += 1;
+  if (!found && window.__satzeSharedSnapshots) {
+    sharedStats.missKeys.push({ key, phase: document.documentElement.dataset.satzePhase, at: Math.round(performance.now()) });
+  }
+  return found;
+}
+
+export function hasSharedSnapshot(key) {
+  return key != null && sharedSnapshots.has(sharedKeyOf(key));
+}
+
+/** Toglie una foto condivisa (es. scattata su un nodo smontato a metà). */
+export function discardSharedSnapshot(key) {
+  if (key != null) sharedSnapshots.delete(sharedKeyOf(key));
+}
+
+/** Scatta (una volta sola per chiave) e conserva la foto di `node`. */
+export function precaptureElement(key, node, opts = {}) {
+  const k = sharedKeyOf(key);
+  const existing = sharedSnapshots.get(k);
+  if (existing) return existing;
+  const promise = captureElementToCanvas(node, opts);
+  sharedSnapshots.set(k, promise);
+  promise.catch(() => {
+    if (sharedSnapshots.get(k) === promise) sharedSnapshots.delete(k);
+  });
+  // le più vecchie escono per prime (Map conserva l'ordine d'inserimento)
+  while (sharedSnapshots.size > SHARED_SNAPSHOT_LIMIT) {
+    sharedSnapshots.delete(sharedSnapshots.keys().next().value);
+  }
+  return promise;
+}
