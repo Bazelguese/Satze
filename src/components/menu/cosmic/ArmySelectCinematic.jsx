@@ -584,7 +584,7 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
         ) : (
           // gli eserciti predefiniti dell'armata; stile, note e storia sono nel Dossier
           <section className="asx-decks" style={{ '--d': '0.1s' }} aria-label="Eserciti dell'armata">
-            <div className="asx-decks-tag asx-sk"><b>ESERCITI</b><small>PREDEFINITI</small></div>
+            <div className="asx-decks-kicker asx-sk"><span>ESERCITI PREDEFINITI</span></div>
             <div className="asx-decks-list">
               {army.deckList.map((dk, i) => (
                 <div key={dk.key} className="asx-deck" style={{ '--d': `${0.12 + i * 0.06}s` }}>
@@ -955,21 +955,22 @@ function ArmySelectStyles() {
       .asx-bd--ink + .asx-bd--accent + .asx-bd--ink { margin-right: 120px; }
 
       /* eserciti predefiniti: tre righe con la scatola 3D, nome, tipo e frase */
+      /* eserciti: niente pannello, solo una piccola etichetta e le tre colonne sullo sfondo */
       .asx-decks {
-        flex: 1; min-height: 0; display: grid; grid-template-columns: 150px 1fr; margin-right: 50px;
-        background: rgba(14,13,20,0.96); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+        flex: 1; min-height: 0; display: flex; flex-direction: column; margin-right: 40px;
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      .asx-decks-tag { display: flex; flex-direction: column; justify-content: center; padding: 12px 12px 12px 22px; background: var(--accent); color: var(--void); }
-      .asx-decks-tag b { font-weight: 700; font-style: italic; font-size: 27px; line-height: 0.9; letter-spacing: -0.01em; }
-      .asx-decks-tag small { margin-top: 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.24em; }
+      .asx-decks-kicker { padding-left: 24px; }
+      .asx-decks-kicker span {
+        display: inline-block; background: var(--accent); color: var(--void); font-weight: 700; font-size: 13px; letter-spacing: 0.26em;
+        padding: 3px 14px; transform: skewX(-14deg);
+      }
       /* tre colonne affiancate: nome in alto, scatola 3D grande al centro, tipo e frase sotto */
-      .asx-decks-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; min-width: 0; padding: 14px 26px 14px 30px; }
+      .asx-decks-list { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; min-width: 0; padding: 8px 10px 4px 20px; }
       .asx-deck {
         display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; text-align: center;
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      .asx-deck + .asx-deck { box-shadow: -8px 0 0 -6px color-mix(in srgb, var(--accent) 30%, transparent); }
       .asx-deck-head { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
       .asx-deck-head .code { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
       .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
