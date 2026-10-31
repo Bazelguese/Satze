@@ -601,10 +601,10 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
             <div className="asx-decks-list">
               {army.deckList.map((dk, i) => (
                 <div key={dk.key} className="asx-deck" style={{ '--d': `${0.12 + i * 0.06}s` }}>
-                  <div className="asx-deck-head asx-sk">
-                    <b className={dk.name.length > 18 ? 'long' : ''}>{dk.name}</b>
-                  </div>
                   <div className="asx-deck-box">
+                    <div className="asx-deck-head">
+                      <b className={dk.name.length > 18 ? 'long' : ''}>{dk.name}</b>
+                    </div>
                     <div className="asx-deck-cover" aria-hidden="true">
                       {dk.entry ? <DeckCover deck={dk.entry} variant="box" isCenter={false} /> : null}
                     </div>
@@ -985,7 +985,7 @@ function ArmySelectStyles() {
         display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; text-align: center;
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
-      .asx-deck-head { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
+      .asx-deck-head { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
       .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
       .asx-deck-head b.long { font-size: 24px; }
       /* la scatola si raddrizza rispetto all'inclinazione della scheda */
