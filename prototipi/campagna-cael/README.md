@@ -17,6 +17,19 @@ npx serve prototipi/campagna-cael
 Funziona anche aprendo il file direttamente nel browser.
 three.js (per le campane) viene caricato da jsDelivr, quindi la promozione ha bisogno della rete.
 
+## Nel gioco
+
+Il gioco apre questa pagina in un frame come schermata della campagna, con `?slot=N`:
+
+- la run è lo slot di salvataggio N del gioco (`satze_campaign_slot_N`), non quella del prototipo;
+- si vedono solo la scena e le barre (niente intestazione e note), con un bottone Menu e Esc per tornare al menù;
+- dopo «Attraversa» la scena dello scontro resta un attimo, va al nero e il gioco avvia il duello vero;
+  a duello finito il gioco riapre la pagina, che parte subito dal premio (o dalla squadra successiva) e poi torna alla mappa.
+
+Il frame parla col gioco con `postMessage` (`{ source: 'satze-campaign', type: 'ready' | 'duel' | 'menu' }`),
+vedi `src/components/campaign/CampaignPrototypeFrame.jsx`. In sviluppo Vite serve la cartella così com'è,
+nella build viene copiata in `dist/prototipi/campagna-cael` (vedi `vite.config.js`).
+
 ## File
 
 - `index.html`: la pagina, con stile e logica della schermata.

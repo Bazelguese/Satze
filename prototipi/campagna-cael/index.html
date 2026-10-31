@@ -51,6 +51,15 @@ button:focus-visible { outline: 3px solid var(--gold-hi); outline-offset: 4px; }
 .stage-wrap { max-width: 1700px; margin: 0 auto; padding-inline: 16px; }
 .stage-box { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; overflow: hidden; background: #000; box-shadow: 0 20px 60px #000a, 0 0 0 1px #3b2fa855; }
 #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: var(--ink); isolation: isolate; }
+/* inside the game (?slot=N): only the stage, filling the frame; the game owns menus and the duel */
+body.ingame { margin: 0; height: 100vh; overflow: hidden; background: #000; }
+body.ingame .chrome, body.ingame .notes { display: none; }
+body.ingame .stage-wrap { max-width: none; height: 100vh; padding: 0; display: grid; place-items: center; }
+body.ingame .stage-box { width: min(100vw, calc(100vh * 16 / 9)); box-shadow: none; }
+#blackout { position: absolute; inset: 0; z-index: 90; background: #000; pointer-events: none; opacity: 0; transition: opacity .6s ease; }
+#blackout.on { opacity: 1; pointer-events: auto; }
+.dep-launch { position: absolute; left: 150px; bottom: 230px; z-index: 19; display: grid; justify-items: start; gap: 10px; animation: snapL .55s .3s cubic-bezier(.2, 1.3, .35, 1) both; }
+.dep-launch .kicker { margin-left: 18px; }
 .notes { max-width: 1700px; margin: 0 auto; padding: 22px 16px 48px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
 .notes h2 { font: 400 24px/1.15 var(--f-disp); margin: 0 0 8px; color: var(--bone); }
 .notes p, .notes li { font-size: 16px; line-height: 1.5; color: #d4cfe6; max-width: 62ch; margin: 0 0 8px; font-weight: 500; }
@@ -1521,6 +1530,7 @@ button:focus-visible { outline: 3px solid var(--gold-hi); outline-offset: 4px; }
   <div id="bar"></div>
   <div id="modal"></div>
   <div id="evo"></div>
+  <div id="blackout"></div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="hz-warp" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence id="hz-turb" type="fractalNoise" baseFrequency="0.012 0.05" numOctaves="2" seed="7" result="n"/><feDisplacementMap id="hz-disp" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
 </div></div></div>
 <section class="notes">
@@ -1547,6 +1557,10 @@ const C = window.SatzeCampaign;
 /* automated checks only (?test): a window onto the prototype's state */
 if (/[?&]test\b/.test(location.search)) window.__t = { eld: () => ({ grab: ELD.grab && ELD.grab.phase, overlay: ELD.overlay, m: TENTS.map(T => +(T.m || 0).toFixed(2)), pulse: TENTS.map(T => +(T.pulse || 0).toFixed(2)), gm: TENTS.map(T => +(T.gm || 0).toFixed(2)), rim: !!document.querySelector('.membrane-rim'), host: $('#eld').parentNode.className || $('#eld').parentNode.id }), C, get run() { return run; }, geometry: () => geometry(), tokenPoint: () => tokenPoint(), clampCam: v => clampCam(v), W: () => W, commit: a => commit(a), hud: () => hud(), makeCells: cv => makeCells(cv), panePoly: (el, pt) => panePoly(el, pt) };
 const $ = (s, el = document) => el.querySelector(s);
+/* inside the game: ?slot=N. The game hosts this page in a frame; it starts the real duel and comes back here after it */
+const INGAME = (m => (m ? { slot: Number(m[1]) } : null))(/[?&]slot=(\d)\b/.exec(location.search));
+if (INGAME) document.body.classList.add('ingame');
+const toGame = (type, data = {}) => { try { parent.postMessage({ source: 'satze-campaign', type, ...data }, location.origin === 'null' ? '*' : location.origin); } catch (e) { /* not framed */ } };
 const stage = $('#stage'), box = $('#box');
 const IMG = n => `img/${n}.webp`;
 const fit = () => { stage.style.transform = `scale(${box.clientWidth / 1920})`; };
@@ -1895,9 +1909,10 @@ new MutationObserver(list => {
 const leaderOf = node => { const ids = node.squads?.[0] || node.roster; const id = node.signature ?? ids.find(x => !CROWDS.includes(x)) ?? ids[0]; return C.firstActCard(id); };
 
 /* ---------- run state ---------- */
-const KEY = 'satze-proto-cael-run';
+/* In the game (?slot=N) the run is the save slot itself, the same one the game's campaign reads and writes. */
+const KEY = INGAME ? `satze_campaign_slot_${INGAME.slot}` : 'satze-proto-cael-run';
 let run = null;
-function save() { try { localStorage.setItem(KEY, JSON.stringify(run)); } catch (e) { /* storage unavailable: the run lives in memory */ } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(INGAME ? { ...run, savedAt: Date.now() } : run)); } catch (e) { /* storage unavailable: the run lives in memory */ } }
 function load() {
   try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && C.isCaelRun(r)) return C.assertFirstActRun(r); } catch (e) { /* fall through to a new run */ }
   return null;
@@ -2601,7 +2616,7 @@ function hud() {
       const names = [...new Set(ids.map(id => C.firstActRunNode(run, id).title))];
       return `<span class="bead ${cls}" data-i="${i}"><span class="tip">${i + 1}. ${esc(names.length > 2 ? `${names.length} vie` : names.join(' / '))}</span></span>`;
     }).join('')}</div>
-    <button class="btn" data-a="map" ${view === 'world' ? 'hidden' : ''}>Mappa</button>`;
+    <button class="btn" data-a="map" ${view === 'world' ? 'hidden' : ''}>Mappa</button>${INGAME ? '<button class="btn" data-a="menu">Menu</button>' : ''}`;
   if (threadHTML !== threadShown) { $('#thread').innerHTML = threadHTML; threadShown = threadHTML; }
   const v = BAR_V[$('#stage').dataset.bv] ? $('#stage').dataset.bv : 'etereo', d = barData();
   /* the bar is redrawn only when what it shows changes: rebuilding it at every scene change restarted the plate's
@@ -2690,11 +2705,14 @@ function departureScene() {
       <p class="dep-rule">${WIN_RULE[node.winRule] || ''}</p>
       <div class="dep-fields">${fields.map(f => `<span>${esc(f)}</span>`).join('')}</div>
     </div>
-    <div class="outs"><span class="kicker k">Esito del duello</span>
+    ${INGAME ? `<div class="dep-launch"><span class="kicker k">${a.snapshot ? 'Scontro interrotto' : a.phase ? `Squadra ${a.phase + 1} di ${a.enemySquads.length}` : 'Il duello'}</span>
+      <button class="mi" data-a="duel" data-eld=".1">${a.snapshot ? 'Riprendi lo scontro' : a.phase ? 'Affronta la squadra' : 'Entra nello scontro'}</button></div>
+    <div class="dep-foot"><small>Il tentativo è salvato: puoi riorganizzare l’esercito prima di entrare.</small><button class="btn danger" data-a="abandon" data-eld=".7">Abbandona</button></div>`
+    : `<div class="outs"><span class="kicker k">Esito del duello</span>
       <button class="mi" data-a="res" data-w="player" data-eld=".1">${multi && a.phase + 1 < a.enemySquads.length ? 'Vinci la squadra' : 'Vittoria'}</button>
       <button class="mi t-bone" data-a="res" data-w="draw" data-eld=".45">Pareggio</button>
       <button class="mi t-wine" data-a="res" data-w="enemy" data-eld=".84">Sconfitta</button></div>
-    <div class="dep-foot"><small>Qui nel gioco parte il duello. Scegli l’esito: i round vinti contano come vittorie personali delle copie.</small><button class="btn danger" data-a="abandon" data-eld=".7">Abbandona</button></div>`;
+    <div class="dep-foot"><small>Qui nel gioco parte il duello. Scegli l’esito: i round vinti contano come vittorie personali delle copie.</small><button class="btn danger" data-a="abandon" data-eld=".7">Abbandona</button></div>`}`;
 }
 function rewardScene() {
   const pr = run.pendingReward, node = C.firstActRunNode(run, pr.nodeId), id = pr.offer[0];
@@ -2979,6 +2997,16 @@ async function cross() {
   eldRelease(true);
   setBar(`<em>${esc(C.firstActRunNode(run, id).title)}</em> · scontro in corso`, '');
   busy = false;
+  if (INGAME) { await wait(1400); startDuel(); }
+}
+/* In the game: the scene holds a moment, goes to black and the game takes over with the real duel (useGameFlow).
+   The result comes back through the save slot: reopened, this page goes straight to the reward or the next squad. */
+async function startDuel() {
+  if (!INGAME || !run.active || startDuel.sent) return;
+  startDuel.sent = true; busy = true; setBar('', '');
+  stage.classList.add('cine'); $('#blackout').classList.add('on');
+  await wait(650);
+  toGame('duel');
 }
 /* One entry per round, in the same shape duelResolve.js records (campaignProgress): a copy that wins its round
    gains a personal victory when the encounter is won, which is what unlocks promotions. */
@@ -3944,6 +3972,8 @@ stage.addEventListener('click', e => {
   if (act === 'camptransform' && campPick && !busy) campEvolve({ type: 'TRANSFORM', uid: campPick });
   if (act === 'close') closeModal();
   if (act === 'res') result(a.dataset.w);
+  if (act === 'duel' && !busy) startDuel();
+  if (act === 'menu' && !busy) toGame('menu');
   if (act === 'accept') accept();
   if (act === 'choose') choose();
   if (act === 'fams') current?._fams?.();
@@ -5025,6 +5055,17 @@ run = load();
 if (!run) { run = C.createCaelRun(); save(); }
 buildWorld();
 W.cam = W.target = camFor(Math.max(START_PT().x, tokenPoint().x));
-enterStage();
+if (INGAME && (run.pendingReward || run.active)) {
+  /* back from the duel: the reward (or the next squad) opens out of the black, the map comes after */
+  $('#blackout').style.transition = 'none'; $('#blackout').classList.add('on');
+  W.cam = W.target = camFor(stagePoint(run.stage).x);
+  view = 'scene'; W.el.style.visibility = 'hidden';
+  mountScene(sceneFor()); hud();
+  requestAnimationFrame(() => { $('#blackout').style.transition = ''; $('#blackout').classList.remove('on'); });
+} else enterStage();
+if (INGAME) {
+  toGame('ready');
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !busy && !campLayer && !heroLayer && !rosterLayer && !agentLayer && !modal.innerHTML) toGame('menu'); });
+}
 })();
 </script>

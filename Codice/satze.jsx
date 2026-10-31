@@ -1,6 +1,8 @@
 import { useFirstActPersistence, restoreFirstActSnapshot } from '../src/hooks/useFirstActPersistence.js';
 import { CampaignDuelPreload } from '../src/components/campaign/CampaignDuelPreload.jsx';
 import { FirstActHub } from '../src/components/campaign/FirstActHub.jsx';
+import { CampaignPrototypeFrame } from '../src/components/campaign/CampaignPrototypeFrame.jsx';
+import { isCaelRun } from '../src/campaign/state/firstActState.js';
 import { firstActMatchOutcome, revealedAt } from '../src/campaign/logic/firstActBattle.js';
 import { selectConcordiaAbility } from '../src/campaign/logic/concordiaAI.js';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
@@ -4228,7 +4230,9 @@ export default function SatzeGame() {
   // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
   if (gamePhase === 'campaignHub') {
     const summary = getCampaignRunSummary(campaignSaveSlot);
-    const CampaignHub = summary.firstAct ? FirstActHub : summary.controlled ? ControlledCampaignHub : CampaignAtto1Hub;
+    // La campagna verso Cael è il prototipo (prototipi/campagna-cael) aperto sullo stesso slot.
+    const caelRun = summary.firstAct && isCaelRun(loadCampaignRun(campaignSaveSlot, CAMPAIGN_ACT));
+    const CampaignHub = caelRun ? CampaignPrototypeFrame : summary.firstAct ? FirstActHub : summary.controlled ? ControlledCampaignHub : CampaignAtto1Hub;
     return (
       <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
         <CampaignHub
