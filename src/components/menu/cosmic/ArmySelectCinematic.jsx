@@ -595,10 +595,7 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
                   <div className="asx-deck-box" aria-hidden="true">
                     {dk.entry ? <DeckCover deck={dk.entry} variant="box" isCenter={false} /> : null}
                   </div>
-                  <div className="asx-deck-txt asx-sk">
-                    {dk.archetype && <span className="type">{dk.archetype}</span>}
-                    {dk.flavor && <p>{dk.flavor}</p>}
-                  </div>
+                  {dk.archetype && <span className="asx-deck-type asx-sk">{dk.archetype}</span>}
                 </div>
               ))}
             </div>
@@ -700,6 +697,14 @@ function Dossier({ army, onClose }) {
           {blocks.map((b, i) => <p key={i}>{b}</p>)}
           {army.style && (<><div className="asx-chip asx-chip--ink">STILE CONSIGLIATO</div><p>{army.style}</p></>)}
           {army.tips && (<><div className="asx-chip asx-chip--ink">NOTE TATTICHE</div><p>{army.tips}</p></>)}
+          {army.deckList?.length > 0 && (
+            <>
+              <div className="asx-chip asx-chip--ink">ESERCITI PREDEFINITI</div>
+              {army.deckList.map((dk) => (
+                <p key={dk.key}><b>{dk.name}</b>{dk.archetype ? ` · ${dk.archetype.toLowerCase()}` : ''}{dk.flavor ? ` — ${dk.flavor}` : ''}</p>
+              ))}
+            </>
+          )}
         </div>
       </aside>
     </div>
@@ -967,14 +972,18 @@ function ArmySelectStyles() {
       .asx-deck + .asx-deck { box-shadow: -8px 0 0 -6px color-mix(in srgb, var(--accent) 30%, transparent); }
       .asx-deck-head { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
       .asx-deck-head .code { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
-      .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
-      .asx-deck-head b.long { font-size: 21px; }
+      .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
+      .asx-deck-head b.long { font-size: 24px; }
       /* la scatola si raddrizza rispetto all'inclinazione della scheda */
       .asx-deck-box { position: relative; flex: 1; min-height: 0; width: 100%; transform: skewX(8deg); }
-      .asx-deck-box .dcv-box { --bw: 80cqw; }
-      .asx-deck-txt { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; width: 100%; }
-      .asx-deck-txt .type { background: var(--ink); color: var(--void); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; padding: 1px 9px; transform: skewX(-14deg); }
-      .asx-deck-txt p { margin: 0; font-size: 14px; line-height: 1.3; color: rgba(245,243,235,0.82); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .asx-deck-box .dcv-box { --bw: 84cqw; }
+      /* passando sopra, la scatola si alza un poco */
+      .asx-deck-box > * { transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
+      .asx-deck:hover .asx-deck-box > * { transform: translateY(-8px) scale(1.04); }
+      .asx-deck-type {
+        margin-top: 10px; background: var(--ink); color: var(--void); font-weight: 700; font-size: 13px; letter-spacing: 0.14em;
+        padding: 3px 12px; box-shadow: 4px 4px 0 var(--accent); white-space: nowrap;
+      }
 
       .asx-bd-go {
         display: grid; grid-template-columns: 196px 1fr; flex: none; height: 108px; margin-right: 40px;
