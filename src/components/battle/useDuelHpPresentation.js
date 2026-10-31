@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildPhaseAdvanceDelaysMs } from '../../config/duelVisualTimeline.js';
 import { DUEL_VISUAL_DEFAULTS } from '../../config/duelVisualConfig.js';
 import { GAME_SOUND, playGameAt } from '../../audio/gameSounds.js';
+import { getDuelPlaybackSpeed, scaleDuelMs } from '../../settings/duelPlayback.js';
 import {
   HP_PROJECTILE_START_RATIO,
   HP_PROJECTILE_FLIGHT_MS,
@@ -87,15 +88,22 @@ function burstText(e) {
   return e.label && labelled ? `${sign}${e.n} · ${e.label}` : `${sign}${e.n}`;
 }
 
-function burstOf(key, group, e, elapsed, end) {
+function burstOf(key, group, e, elapsed, end, holdMs = BURST_HOLD_MS) {
   return {
     key: `${key}:${group}`,
     n: e.n,
     kind: e.kind,
     text: burstText(e),
     slot: e.slot ?? 0,
-    leaving: elapsed > end + BURST_HOLD_MS,
+    leaving: elapsed > end + holdMs,
   };
+}
+
+function withScaledTimes(list, speed) {
+  if (!list || speed === 1) return list;
+  return list.map((item) => (
+    item && Number.isFinite(item.t) ? { ...item, t: Math.round(item.t / speed) } : item
+  ));
 }
 
 /**
@@ -130,11 +138,15 @@ export function useDuelHpPresentation({
   }
   if (!key && startRef.current.key) startRef.current = { key: null };
   const { hp: startHP, fc: startFC, toxin: startToxin } = startRef.current;
+  const duelSpeed = getDuelPlaybackSpeed();
+  const burstHoldMs = scaleDuelMs(BURST_HOLD_MS, duelSpeed);
+  const burstLeaveMs = scaleDuelMs(BURST_LEAVE_MS, duelSpeed);
+  const flightMs = scaleDuelMs(HP_PROJECTILE_FLIGHT_MS, duelSpeed);
 
   const stepTicks = useMemo(
-    () => (key ? scheduleStepTicks(buildDuelStepEffects(battleResult)) : []),
+    () => (key ? withScaledTimes(scheduleStepTicks(buildDuelStepEffects(battleResult)), duelSpeed) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [key]
+    [key, duelSpeed]
   );
   const plan = useMemo(() => {
     if (!key || !startHP) return null;
@@ -142,13 +154,18 @@ export function useDuelHpPresentation({
     const afterFC = { ...startFC };
     stepTicks.forEach((x) => { if (x.stat === 'FC') afterFC[x.side] += 1; });
     const res = scheduleDuelResultEvents(battleResult, { startHP, startFC, startToxin });
+    const events = withScaledTimes(res.events, duelSpeed);
     const toxinTickAt = { player: null, enemy: null };
-    res.events.forEach((e) => { if (e.cause === 'toxin' && toxinTickAt[e.side] == null) toxinTickAt[e.side] = e.t; });
+    events.forEach((e) => { if (e.cause === 'toxin' && toxinTickAt[e.side] == null) toxinTickAt[e.side] = e.t; });
     // Tossina dopo gli effetti: quella di partenza, o quella applicata da un Potere nel suo passo
     const toxinAfterSteps = { ...startToxin };
     stepTicks.forEach((x) => { if (x.stat === 'TOX') toxinAfterSteps[x.side] = x.toxin; });
-    return { afterHP, afterFC, events: res.events, toxinAfterTick: res.toxinAfterTick, toxinTickAt, toxinAppliedAt: res.toxinAppliedAt, toxinAfterSteps };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+    const toxinAppliedAt = {
+      player: res.toxinAppliedAt.player ? { ...res.toxinAppliedAt.player, t: scaleDuelMs(res.toxinAppliedAt.player.t, duelSpeed) } : null,
+      enemy: res.toxinAppliedAt.enemy ? { ...res.toxinAppliedAt.enemy, t: scaleDuelMs(res.toxinAppliedAt.enemy.t, duelSpeed) } : null,
+    };
+    return { afterHP, afterFC, events, toxinAfterTick: res.toxinAfterTick, toxinTickAt, toxinAppliedAt, toxinAfterSteps };
+  }, [key, duelSpeed]); // eslint-disable-line react-hooks/exhaustive-deps
   const events = plan?.events || [];
 
   // Colpetti dei PV degli effetti: arrivano dopo l'inizio del passo seguente, quindi si annullano
@@ -175,13 +192,13 @@ export function useDuelHpPresentation({
     // ridisegna subito: i proiettili dello step partono prima del primo punto
     setStepTick((n) => n + 1);
     const marks = new Set();
-    mine.forEach((x) => { marks.add(x.t); marks.add(x.t + BURST_HOLD_MS); marks.add(x.t + BURST_HOLD_MS + BURST_LEAVE_MS); });
+    mine.forEach((x) => { marks.add(x.t); marks.add(x.t + burstHoldMs); marks.add(x.t + burstHoldMs + burstLeaveMs); });
     const ids = [...marks].map((m) => setTimeout(() => setStepTick((n) => n + 1), m + 5));
     mine
       .filter((x) => x.stat === 'PV' && x.kind === 'hit')
       .forEach((x) => hitCancelsRef.current.push(playGameAt(GAME_SOUND.DUEL_HP_HIT, x.t)));
     return () => ids.forEach(clearTimeout);
-  }, [key, duelPhase, duelEffectStep, stepTicks]);
+  }, [key, duelPhase, duelEffectStep, stepTicks, burstHoldMs, burstLeaveMs]);
 
   // t0 (performance.now) dei proiettili del DAN, verso la fine della fase 4; «Salta» = tutto subito
   const [t0, setT0] = useState(null);
@@ -233,8 +250,8 @@ export function useDuelHpPresentation({
     const marks = new Set();
     events.forEach((e) => {
       marks.add(e.t);
-      marks.add(e.t + BURST_HOLD_MS);
-      marks.add(e.t + BURST_HOLD_MS + BURST_LEAVE_MS);
+      marks.add(e.t + burstHoldMs);
+      marks.add(e.t + burstHoldMs + burstLeaveMs);
     });
     marks.add(0);
     const now = performance.now();
@@ -243,7 +260,7 @@ export function useDuelHpPresentation({
       timers.push(setTimeout(() => setElapsed(performance.now() - t0), Math.max(0, wait)));
     });
     return () => timers.forEach(clearTimeout);
-  }, [key, t0, events, elapsed === Infinity]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, t0, events, elapsed === Infinity, burstHoldMs, burstLeaveMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const now = performance.now();
   const stepsDone = duelPhase >= 2 || elapsed === Infinity;
@@ -299,8 +316,8 @@ export function useDuelHpPresentation({
     });
     latest.forEach(({ x, se }, group) => {
       const end = groupEnd.get(group);
-      if (se > end + BURST_HOLD_MS + BURST_LEAVE_MS) return;
-      push(burstOf(key, group, { ...x, cause: 'step' }, se, end), x.stat, x.side);
+      if (se > end + burstHoldMs + burstLeaveMs) return;
+      push(burstOf(key, group, { ...x, cause: 'step' }, se, end, burstHoldMs), x.stat, x.side);
     });
   }
   if (key && elapsed >= 0 && elapsed !== Infinity) {
@@ -312,8 +329,8 @@ export function useDuelHpPresentation({
     }
     latest.forEach((cur, group) => {
       const end = groupEnd.get(group);
-      if (elapsed > end + BURST_HOLD_MS + BURST_LEAVE_MS) return;
-      push(burstOf(key, group, cur, elapsed, end), cur.stat, cur.side);
+      if (elapsed > end + burstHoldMs + burstLeaveMs) return;
+      push(burstOf(key, group, cur, elapsed, end, burstHoldMs), cur.stat, cur.side);
     });
   }
   [bursts, fcBursts].forEach((b) => { b.player.sort((x, y) => x.slot - y.slot); b.enemy.sort((x, y) => x.slot - y.slot); });
@@ -325,12 +342,12 @@ export function useDuelHpPresentation({
   if (key && !skipped) {
     if (t0 != null) {
       events.forEach((e, i) => {
-        if (e.origin && e.kind !== 'heal') shots.push({ key: `m${i}`, launch: t0 + e.t - HP_PROJECTILE_FLIGHT_MS, origin: e.origin, target: e.side, stat: e.stat });
+        if (e.origin && e.kind !== 'heal') shots.push({ key: `m${i}`, launch: t0 + e.t - flightMs, origin: e.origin, target: e.side, stat: e.stat });
       });
     }
     stepTicks.forEach((x, i) => {
       const st = stepStartRef.current.get(x.stepIndex);
-      if (x.origin && st != null) shots.push({ key: `s${i}`, launch: st + x.t - HP_PROJECTILE_FLIGHT_MS, origin: x.origin, target: x.side, stat: x.stat === 'FC' ? 'FC' : 'PV' });
+      if (x.origin && st != null) shots.push({ key: `s${i}`, launch: st + x.t - flightMs, origin: x.origin, target: x.side, stat: x.stat === 'FC' ? 'FC' : 'PV' });
     });
   }
   const shotsKey = shots.map((x) => `${x.key}@${Math.round(x.launch)}`).join('|');
@@ -339,7 +356,7 @@ export function useDuelHpPresentation({
 
   // Sequenza finita: «Continua» può comparire. Senza eventi basta che i proiettili siano partiti.
   const lastT = events.length ? events[events.length - 1].t : 0;
-  const settled = !key || elapsed === Infinity || (elapsed >= 0 && elapsed >= lastT + (events.length ? BURST_HOLD_MS : 0));
+  const settled = !key || elapsed === Infinity || (elapsed >= 0 && elapsed >= lastT + (events.length ? burstHoldMs : 0));
 
   return {
     active: Boolean(key), displayHP, displayFC, displayToxin, bursts, fcBursts, projectiles,

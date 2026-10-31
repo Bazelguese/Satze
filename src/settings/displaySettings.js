@@ -22,6 +22,8 @@ export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', '
 export const SCREEN_TRANSITION_MS_PRESETS = /** @type {const} */ ([1450, 1800, 2150]);
 /** Cap FPS (0 = illimitato / VSync monitor). */
 export const FPS_CAP_PRESETS = /** @type {const} */ ([0, 30, 60, 120]);
+/** Ritmo presentazione duello. 1 = tempi di default; sotto rallenta, sopra accelera. */
+export const DUEL_SPEED_PRESETS = /** @type {const} */ ([0.75, 1, 2, 3]);
 
 export const RESOLUTION_PRESETS = [
   { key: 'native', label: 'Nativa (monitor)' },
@@ -47,6 +49,7 @@ export const RESOLUTION_PRESETS = [
  *   cursorTrailDuration: typeof CURSOR_TRAIL_DURATION_PRESETS[number],
  *   eminenceFoil: boolean,
  *   screenTransitionMs: typeof SCREEN_TRANSITION_MS_PRESETS[number],
+ *   duelSpeed: typeof DUEL_SPEED_PRESETS[number],
  * }} DisplaySettings */
 
 /** @type {DisplaySettings} */
@@ -67,6 +70,7 @@ export const DEFAULT_DISPLAY_SETTINGS = {
   eminenceFoil: false,
   /** Cortina tra menù e schermate: la più lenta è la predefinita. */
   screenTransitionMs: 2150,
+  duelSpeed: 1,
 };
 
 function readStorage() {
@@ -115,6 +119,12 @@ function isFpsCap(v) {
   return FPS_CAP_PRESETS.includes(/** @type {typeof FPS_CAP_PRESETS[number]} */ (Number(v)));
 }
 
+function matchDuelSpeed(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return DUEL_SPEED_PRESETS.find((p) => Math.abs(p - n) < 1e-6) ?? null;
+}
+
 /**
  * @param {unknown} raw
  * @returns {DisplaySettings}
@@ -144,6 +154,10 @@ export function normalizeDisplaySettings(raw) {
   }
   if (isCursorTrailDuration(o.cursorTrailDuration)) {
     base.cursorTrailDuration = /** @type {typeof CURSOR_TRAIL_DURATION_PRESETS[number]} */ (Number(o.cursorTrailDuration));
+  }
+  const duelSpeed = matchDuelSpeed(o.duelSpeed);
+  if (duelSpeed != null) {
+    base.duelSpeed = /** @type {typeof DUEL_SPEED_PRESETS[number]} */ (duelSpeed);
   }
 
   if (isScreenTransitionMs(o.screenTransitionMs)) {

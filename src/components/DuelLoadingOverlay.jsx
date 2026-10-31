@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { ARMY_COLORS, ARMY_GIFS } from '../data';
 import { getEminence, getEminenceForArmy } from '../data/eminences.js';
 import { getEminenceArtUrl } from '../data/eminenceArt';
-import { getCardImageUrl } from '../data/images';
+import { getCardImageUrl, isImageUrlPreloaded, markImageUrlPreloaded } from '../data/images';
 import { getCardSprite } from '../utils/cardUtils';
 import { getBattlefieldAnimationType } from '../data/battlefields';
 import {
@@ -27,6 +27,7 @@ import { DuelVersusScreen } from './versus/DuelVersusScreen';
 import { ROULETTE_STOP_MS } from './versus/VersusRoulette.jsx';
 import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
 import { computeViewportScale } from '../settings/viewportScale';
+import { LoadingScreen } from './LoadingScreen';
 import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
 
@@ -43,6 +44,8 @@ const ROULETTE_MIN_MS = 2400;
 const ROULETTE_STOP_AT = 80;
 /** Ingresso a tappe: il caricamento pesante aspetta la fine del volo della scatola (al massimo questo). */
 const INTRO_FLIGHT_MAX_MS = 3200;
+/** Fine apertura scatola: il warm-up pesante parte solo dopo, altrimenti fa scattare l'apertura. */
+const VS_OPEN_MS = 3100;
 /** Modello scelto nel VS LAB: «Alle spalle» + «Scatola 3D» con tutti gli effetti tenuti. */
 const VS_LAYOUT = 'shadow';
 const VS_COVER = 'box';
@@ -55,44 +58,6 @@ const PLACE_WARMUP = [
   ...DROP_PLACE_FX.map((fx) => ({ fx, play: `play-${fx}`, wrap: `fx-${fx}` })),
   ...CLICK_PLACE_FX.map((fx) => ({ fx, play: `play-${fx}`, wrap: `fx-${fx}` })),
 ];
-
-/** Solo nero + barra (niente logo / testo LoadingScreen). */
-function BlackProgressBar({ progress = 0 }) {
-  const p = Math.min(100, Math.max(0, Number(progress) || 0));
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: '#000',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          width: 'min(320px, 56vw)',
-          height: 3,
-          background: 'rgba(255,255,255,0.12)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            height: '100%',
-            width: `${p}%`,
-            background: 'rgba(245,243,235,0.92)',
-            transition: 'width 0.28s ease-out',
-          }}
-        />
-      </div>
-    </div>
-  );
-}
 
 /** Canvas 1920×1080 scalato in contain sopra a tutto (il portale esce da GameViewport). */
 function VersusViewport({ leaving, children }) {
@@ -172,9 +137,13 @@ function preloadUrl(url) {
       return;
     }
     const img = new Image();
+    const done = () => {
+      markImageUrlPreloaded(url);
+      resolve();
+    };
     img.onload = () => {
-      if (typeof img.decode === 'function') img.decode().then(resolve).catch(resolve);
-      else resolve();
+      if (typeof img.decode === 'function') img.decode().then(done).catch(done);
+      else done();
     };
     img.onerror = () => resolve();
     img.src = url;
@@ -210,18 +179,29 @@ export function DuelLoadingOverlay({
   showChrome = true,
   preloadCards = EMPTY_ASSETS,
   preloadUrls = EMPTY_ASSETS,
-  versus = null,
+  versus: versusProp = null,
   versusIntro = false,
   /** Armata nemica scelta dal giocatore: il rullo mostra i suoi eserciti. */
   versusDeckArmy = null,
+  /** Testo sotto la barra quando non c'è il VS (campagna). */
+  loadingDetail = 'Preparazione duello',
+  /** Avanzamento 0–100 per chi mostra la barra al posto nostro (`showChrome={false}`). */
+  onProgress,
   onComplete,
 }) {
+  // Il genitore ricostruisce l'oggetto a ogni render: stabile per contenuto, così il VS non si ridisegna.
+  const versusKey = versusProp ? JSON.stringify(versusProp) : '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const versus = useMemo(() => versusProp, [versusKey]);
   const rootRef = useRef(null);
   const doneRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
   const [progress, setProgress] = useState(0);
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  useEffect(() => { onProgressRef.current?.(progress); }, [progress]);
   const [fieldIdx, setFieldIdx] = useState(0);
   const [slamKey, setSlamKey] = useState(0);
   const [warmupReady, setWarmupReady] = useState(false);
@@ -246,6 +226,14 @@ export function DuelLoadingOverlay({
   }
   useEffect(() => { clearVersusHandoff(); }, []);
   const spinStartRef = useRef(0);
+  const hasVersusRef = useRef(Boolean(versus));
+  hasVersusRef.current = Boolean(versus);
+  const vsOpenRef = useRef(null);
+  if (!vsOpenRef.current) {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    vsOpenRef.current = { promise, resolve };
+  }
 
   useEffect(() => {
     if (!vsActive) return;
@@ -274,6 +262,13 @@ export function DuelLoadingOverlay({
 
   // il palco di riscaldamento (scontro finto, quasi invisibile) non deve suonare
   useEffect(() => (warmupReady ? suspendSounds() : undefined), [warmupReady]);
+
+  useEffect(() => {
+    if (!vsActive) return undefined;
+    const wait = Math.max(0, VS_OPEN_MS - (performance.now() - vsStartRef.current));
+    const t = window.setTimeout(() => vsOpenRef.current.resolve(), wait);
+    return () => window.clearTimeout(t);
+  }, [vsActive]);
 
   // Fine: senza VS come prima; con VS dopo la durata minima e la dissolvenza d'uscita.
   useEffect(() => {
@@ -422,12 +417,13 @@ export function DuelLoadingOverlay({
       if (armyGifE) extraUrls.add(resolvePublicAssetUrl(armyGifE) || armyGifE);
       extraUrls.add(resolvePublicAssetUrl('/Immagini_bg/CampoLOG_bg.webp'));
       extraUrls.add(resolvePublicAssetUrl('/Immagini_bg/CampoFC_bg.webp'));
-      fields.forEach((f) => {
-        const full = resolvePublicAssetUrl(f?.bgImage);
-        if (full) extraUrls.add(full);
-      });
 
-      const extras = [...extraUrls].filter(Boolean);
+      // I campi (thumb + full) li ha già decodificati preloadBattlefieldImages.
+      // Boot e passaggi precedenti marcano il resto: qui restano solo le texture nuove.
+      const extras = [...extraUrls].filter((url) => url && !isImageUrlPreloaded(url));
+      if (extras.length === 0) {
+        if (!cancelled) setProgress(60);
+      }
       let loaded = 0;
       const total = Math.max(1, extras.length);
       for (let i = 0; i < extras.length; i += 8) {
@@ -438,6 +434,11 @@ export function DuelLoadingOverlay({
       }
       if (cancelled) return;
 
+      if (hasVersusRef.current) {
+        await vsOpenRef.current.promise;
+        if (cancelled) return;
+      }
+
       setWarmupReady(true);
       await nextFrame();
       await nextFrame();
@@ -445,11 +446,9 @@ export function DuelLoadingOverlay({
       if (cancelled) return;
       setProgress(68);
 
-      const host = rootRef.current;
       const t0 = performance.now();
       while (!cancelled && performance.now() - t0 < WARMUP_MS) {
         await nextFrame();
-        if (host) void host.offsetHeight;
         const p = 68 + Math.min(30, ((performance.now() - t0) / WARMUP_MS) * 30);
         setProgress(Math.round(p));
       }
@@ -713,7 +712,7 @@ export function DuelLoadingOverlay({
           />
         </VersusViewport>
       ) : null}
-      {!versus && showChrome ? <BlackProgressBar progress={progress} /> : null}
+      {!versus && showChrome ? <LoadingScreen progress={progress} detail={loadingDetail} /> : null}
     </>,
     document.body
   );

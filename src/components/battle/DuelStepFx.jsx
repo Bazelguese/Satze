@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { buildDuelStepFx, currentStepFx } from '../../game/duel/duelStepFx.js';
 import { GAME_SOUND, playGameAt } from '../../audio/gameSounds.js';
+import { getDuelPlaybackSpeed } from '../../settings/duelPlayback.js';
 
 const W = 1920;
 const H = 1080;
@@ -76,7 +77,7 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
   const [leavingKey, setLeavingKey] = useState(null);
   useEffect(() => {
     if (!curKey) return undefined;
-    const id = setTimeout(() => setLeavingKey(curKey), CALLOUT_HOLD_MS);
+    const id = setTimeout(() => setLeavingKey(curKey), Math.max(0, Math.round(CALLOUT_HOLD_MS / (getDuelPlaybackSpeed() || 1))));
     return () => clearTimeout(id);
   }, [curKey]);
   const leaving = leavingKey != null && leavingKey === curKey;
@@ -84,8 +85,9 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
   // suono del passo: sul timbro di un blocco, sull'arrivo del fascio, o sull'impulso attorno alla carta
   useEffect(() => {
     if (!curKey || !cur) return undefined;
-    if (cur.state === 'blocked' && cur.burst) return playGameAt(GAME_SOUND.DUEL_BLOCKED, cur.burst.delay);
-    const atMs = cur.beams.length ? cur.beams[0].delay + BEAM_MS : cur.pulse ? 240 : 0;
+    const pace = getDuelPlaybackSpeed() || 1;
+    if (cur.state === 'blocked' && cur.burst) return playGameAt(GAME_SOUND.DUEL_BLOCKED, cur.burst.delay / pace);
+    const atMs = cur.beams.length ? (cur.beams[0].delay + BEAM_MS) / pace : cur.pulse ? 240 / pace : 0;
     return playGameAt(GAME_SOUND.DUEL_EFFECT, atMs);
   }, [curKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -97,12 +99,16 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
     const ctx = cv.getContext('2d');
     const scene = cv.parentElement;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const pace = getDuelPlaybackSpeed() || 1;
+    const beamMs = BEAM_MS / pace;
+    const pulseMs = PULSE_MS / pace;
+    const burstMs = BURST_MS / pace;
     const t0 = performance.now();
     const end = Math.max(
       0,
-      ...cur.beams.map((b) => b.delay + BEAM_MS * 1.35),
-      cur.pulse ? 80 + 160 + PULSE_MS : 0,
-      cur.burst ? cur.burst.delay + BURST_MS : 0
+      ...cur.beams.map((b) => (b.delay + BEAM_MS * 1.35) / pace),
+      cur.pulse ? (80 + 160 + PULSE_MS) / pace : 0,
+      cur.burst ? (cur.burst.delay + BURST_MS) / pace : 0
     );
     let raf = 0;
     const frame = () => {
@@ -116,7 +122,7 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
           const p2 = pointOf(scene, bm.to);
           if (!p0 || !p2) return;
           const p1 = { x: (p0.x + p2.x) / 2, y: Math.min(p0.y, p2.y) - 200 };
-          const bu = (local - bm.delay) / BEAM_MS;
+          const bu = (local - bm.delay / pace) / beamMs;
           if (bu <= 0 || bu > 1.35) return;
           for (let i = TRAIL - 1; i >= 0; i -= 1) {
             const uu = bu - i * 0.035;
@@ -138,7 +144,7 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
           const r = rectIn(scene, cardEl(scene, cur.pulse.side));
           if (r) {
             for (let i = 0; i < 2; i += 1) {
-              const pu = (local - 80 - i * 160) / PULSE_MS;
+              const pu = (local - (80 + i * 160) / pace) / pulseMs;
               if (pu <= 0 || pu >= 1) continue;
               const w = r.w * (1 + pu * 0.35);
               const h = r.h * (1 + pu * 0.25);
@@ -155,7 +161,7 @@ export function DuelStepFx({ battleResult, duelPhase, duelEffectStep }) {
         }
         if (cur.burst) {
           const p = pointOf(scene, cur.burst);
-          const bu = (local - cur.burst.delay) / BURST_MS;
+          const bu = (local - cur.burst.delay / pace) / burstMs;
           if (p && bu >= 0 && bu <= 1) {
             ctx.save();
             ctx.translate(p.x, p.y);

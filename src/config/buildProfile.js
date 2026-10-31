@@ -8,7 +8,6 @@ export const IS_PUBLIC_PLAYTEST_BUILD =
 
 /** Voci menu principale nascoste nella build pubblica. */
 export const PUBLIC_BUILD_HIDDEN_MENU_LABELS = new Set([
-  'CAMPAGNA',
   'STORICO PLAYTEST',
   'STRUMENTI DEV',
 ]);

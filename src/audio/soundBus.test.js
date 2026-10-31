@@ -19,17 +19,28 @@ import { clashContactMs, duelPhaseCues, playDuelPhaseBeat, playPhaseTransition }
 
 test('catalog: id cinematici e fallback', () => {
   assert.equal(cinematicSoundId('LINK_AGENT', 'launch'), 'cinematic.LINK_AGENT.launch');
-  assert.match(resolveSoundSrc(UI_SOUND.CLICK), /audio\/sfx\/ui-click\.wav$/);
-  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH), /audio\/sfx\/match\/clash\.mp3$/);
-  assert.match(resolveSoundSrc(GAME_SOUND.FC_TICK), /audio\/sfx\/match\/coin\.mp3$/);
-  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_COIN), /audio\/sfx\/match\/coin\.mp3$/);
+  assert.match(resolveSoundSrc(UI_SOUND.CLICK, {}), /audio\/sfx\/ui-click\.wav$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH, {}), /audio\/sfx\/match\/clash\.mp3$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.FC_TICK, {}), /audio\/sfx\/match\/coin\.mp3$/);
+  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_COIN, {}), /audio\/sfx\/match\/coin\.mp3$/);
   for (const [id, file] of [[GAME_SOUND.DUEL_PERFECT, 'perfect'], [GAME_SOUND.DUEL_WIN, 'win'], [GAME_SOUND.DUEL_LOSE, 'lose'], [GAME_SOUND.DUEL_DRAW, 'draw'],
     [GAME_SOUND.DUEL_EFFECT, 'effect'], [GAME_SOUND.DUEL_BLOCKED, 'blocked'], [GAME_SOUND.DUEL_OVERDRIVE, 'overdrive'],
     [GAME_SOUND.DUEL_DEFEAT, 'defeat'], [GAME_SOUND.DUEL_HP_HIT, 'hp-hit'], [GAME_SOUND.FIELD_SEAL, 'seal']]) {
-    assert.match(resolveSoundSrc(id), new RegExp(`audio/sfx/match/${file}\\.mp3$`));
+    assert.match(resolveSoundSrc(id, {}), new RegExp(`audio/sfx/match/${file}\\.mp3$`));
   }
-  assert.match(resolveSoundSrc('cinematic.HP_TICK.impact'), /audio\/sfx\/impact\.wav$/);
-  assert.equal(resolveSoundSrc('nope'), null);
+  assert.match(resolveSoundSrc('cinematic.HP_TICK.impact', {}), /audio\/sfx\/impact\.wav$/);
+  assert.equal(resolveSoundSrc('nope', {}), null);
+});
+
+test('catalog: suoni ElevenLabs generati hanno priorità', () => {
+  const generated = {
+    [GAME_SOUND.DUEL_CLASH]: 'audio/sfx/el/game-duel-clash.mp3',
+    'cinematic._.impact': 'audio/sfx/el/cinematic-impact.mp3',
+  };
+  assert.match(resolveSoundSrc(GAME_SOUND.DUEL_CLASH, generated), /el\/game-duel-clash\.mp3$/);
+  assert.match(resolveSoundSrc('cinematic.UNKNOWN.impact', generated), /el\/cinematic-impact\.mp3$/);
+  assert.match(resolveSoundSrc('cinematic.UNKNOWN.launch', generated), /audio\/sfx\/whoosh\.wav$/);
+  assert.match(resolveSoundSrc(UI_SOUND.CLICK, generated), /audio\/sfx\/ui-click\.wav$/);
 });
 
 test('prefs: normalize clamp volume e mute', () => {
@@ -37,6 +48,9 @@ test('prefs: normalize clamp volume e mute', () => {
   assert.equal(normalizeAudioSettings({ muted: 1, sfxVolume: 2 }).sfxVolume, 1);
   assert.equal(normalizeAudioSettings({ sfxVolume: -1 }).sfxVolume, 0);
   assert.equal(normalizeAudioSettings({ muted: true }).muted, true);
+  assert.equal(DEFAULT_AUDIO_SETTINGS.muted, true);
+  assert.equal(normalizeAudioSettings({ muted: false, schemaVersion: 1 }).muted, true);
+  assert.equal(normalizeAudioSettings({ muted: false, schemaVersion: 2 }).muted, false);
 });
 
 test('policy: reduced-motion salta launch, tiene impact', () => {

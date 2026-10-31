@@ -262,13 +262,26 @@ export function DuelVersusScreen({
   const opening = Boolean(fx.open) && coverStyle === 'box';
   // la rotazione della scatola parte solo a VS avviato (il suo ritardo conta da lì)
   const spin = Boolean(fx.spin) && coverStyle === 'box' && !introHeld;
-  // Parallasse: variabili CSS sul root, senza re-render a ogni movimento.
+  // Parallasse: `translate` scritto direttamente sui nodi che si muovono (niente re-render a ogni movimento).
+  const parallaxNodesRef = useRef(null);
   const onPointerMove = useCallback((e) => {
     const el = rootRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    el.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
-    el.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+    const mx = ((e.clientX - r.left) / r.width) * 2 - 1;
+    const my = ((e.clientY - r.top) / r.height) * 2 - 1;
+    let nodes = parallaxNodesRef.current;
+    if (!nodes || !nodes.bgs[0]?.isConnected) {
+      nodes = {
+        bgs: [...el.querySelectorAll('.vsx-half-bg')],
+        sides: [...el.querySelectorAll('.vsx-side')],
+      };
+      parallaxNodesRef.current = nodes;
+    }
+    const bg = `${(mx * -22).toFixed(1)}px ${(my * -14).toFixed(1)}px`;
+    const side = `${(mx * 12).toFixed(1)}px ${(my * 8).toFixed(1)}px`;
+    nodes.bgs.forEach((n) => { n.style.translate = bg; });
+    nodes.sides.forEach((n) => { n.style.translate = side; });
   }, []);
   const playerEntry = useMemo(() => buildDeckTicketEntry(playerDeck || {}), [playerDeck]);
   const enemyEntry = useMemo(() => buildDeckTicketEntry(enemyDeck || {}), [enemyDeck]);
@@ -375,15 +388,11 @@ export function DuelVersusScreen({
     fx.impact && 'vsx-fx-impact',
     fx.parallax && 'vsx-fx-parallax',
   ].filter(Boolean).map((c) => ` ${c}`).join('');
+  const impact = Boolean(fx.impact);
 
-  return (
-    <div
-      ref={rootRef}
-      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}${fxClass}`}
-      style={{ '--la': enemyEntry.accent, '--ra': playerEntry.accent }}
-      role="presentation"
-      onPointerMove={fx.parallax ? onPointerMove : undefined}
-    >
+  // Scatole, carte e sfondi non dipendono dalla barra: stesso elemento fra un avanzamento e l'altro.
+  const scene = useMemo(() => (
+    <>
       <DeckSelectStyles />
 
       {/* Slot: avversario sempre a sinistra, chi guarda sempre a destra (anche online, ognuno dal suo client). */}
@@ -419,11 +428,26 @@ export function DuelVersusScreen({
         <span className="vsx-vs-s">S</span>
       </div>
 
-      {fx.impact ? (
+      {impact ? (
         <div className="vsx-sparks" aria-hidden>
           {SPARKS.map((sp, i) => <span key={i} style={{ '--a': sp.a, '--d': sp.d }} />)}
         </div>
       ) : null}
+    </>
+  ), [
+    enemyBg, playerBg, enemyIdentity, playerIdentity, enemyEntry, playerEntry,
+    layout, coverStyle, enemyEm, playerEm, opening, spin, enemyBack, playerBack, impact,
+  ]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}${fxClass}`}
+      style={{ '--la': enemyEntry.accent, '--ra': playerEntry.accent }}
+      role="presentation"
+      onPointerMove={fx.parallax ? onPointerMove : undefined}
+    >
+      {scene}
 
       {p != null ? (
         <div className="vsx-foot">

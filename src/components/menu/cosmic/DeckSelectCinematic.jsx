@@ -193,6 +193,11 @@ function buildDecks(armyName) {
   return out;
 }
 
+/** Copertine (arte del leader) di tutti i mazzi precostruiti: scelta mazzo e schermata VS. */
+export function getBuiltInDeckCoverUrls() {
+  return [...new Set(buildDecks(null).map((d) => d.leader?.img).filter(Boolean))];
+}
+
 /** Adapter per le opzioni costruite in satze.jsx (precostruiti, custom, campagna). */
 function cleanDeckDisplayName(name) {
   return String(name)
@@ -400,6 +405,8 @@ export default function DeckSelectCinematic({
   isMixedMode = false,
   campaignDeckIds = null,
   variant = 'duel',
+  /** 'handoff' = arrivo da Scelta armata (lastra slab già armata; prop tenuta per satze.jsx). */
+  entry = 'intro',
   onCreateNew,
   onSelectDeck,
   onPreviewDeck,
@@ -407,6 +414,7 @@ export default function DeckSelectCinematic({
   /** INIZIA premuto: la schermata si smonta a pezzi, resta solo la scatola al centro. */
   launching = false,
 }) {
+  void entry;
   const isManager = variant === 'manager';
   const DECKS = useMemo(() => {
     if (gameDeckOptions?.length) {

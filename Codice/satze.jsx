@@ -1,8 +1,6 @@
 import { useFirstActPersistence, restoreFirstActSnapshot } from '../src/hooks/useFirstActPersistence.js';
 import { CampaignDuelPreload } from '../src/components/campaign/CampaignDuelPreload.jsx';
-import { FirstActHub } from '../src/components/campaign/FirstActHub.jsx';
 import { CampaignPrototypeFrame } from '../src/components/campaign/CampaignPrototypeFrame.jsx';
-import { isCaelRun } from '../src/campaign/state/firstActState.js';
 import { firstActMatchOutcome, revealedAt } from '../src/campaign/logic/firstActBattle.js';
 import { selectConcordiaAbility } from '../src/campaign/logic/concordiaAI.js';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
@@ -70,6 +68,7 @@ import {
   getEminenceSparkNoticeGapMs,
 } from '../src/utils/eminenceSystemPreference.js';
 import { isEminenceSubsystemEnabled } from '../src/game/eminence/eminenceState.js';
+import { waitForFieldAgentEntrance } from '../src/components/eminence/eminenceMarkCinematic.js';
 import { stampComposeParams } from '../src/game/eminence/composeAbilityParams.js';
 import { mergeSlotCurseCounts } from '../src/game/eminence/slotCurses.js';
 import { REVEAL_GATES } from '../src/game/eminence/eminenceConstants.js';
@@ -113,6 +112,7 @@ import {
   resolvePlaceFxForVia,
   placeFxStyleClass,
   needsTwoFaces,
+  getPlaceFxDurationMs,
 } from '../src/utils/placeFxPreference';
 import { CARD_BACK_IMAGES } from '../src/utils/cardBackPicker';
 import {
@@ -140,14 +140,13 @@ import {
 } from '../src/components/tutorial';
 import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
-import { CampaignAtto1Hub } from '../src/components/campaign/CampaignAtto1Hub';
-import { ControlledCampaignHub } from '../src/components/campaign/ControlledCampaignHub';
-import { getCampaignRunSummary, abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
+import { abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby, MULTIPLAYER_ACCENT } from '../src/components/multiplayer/MultiplayerLobby';
 import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase, useCurtain } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
+import { scaleDuelMs, scaleDuelVisualConfig } from '../src/settings/duelPlayback.js';
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings, resolveDuelLayoutBreathClass } from '../src/settings/displaySettings';
 import { isSatzeCursorDuelPhase, setSatzeCursorProps } from '../src/components/cursor/satzeCursorState';
 import DeckSelectCosmic from '../src/components/cosmic/DeckSelectCosmic.jsx';
@@ -1187,12 +1186,7 @@ export default function SatzeGame() {
 
   useEffect(() => {
     if (!IS_PUBLIC_PLAYTEST_BUILD) return;
-    if (
-      gamePhase === 'playtestHistory' ||
-      gamePhase === 'campaignSlots' ||
-      gamePhase === 'campaignLoading' ||
-      gamePhase === 'campaignHub'
-    ) {
+    if (gamePhase === 'playtestHistory') {
       setGamePhaseRaw('menu');
     }
   }, [gamePhase, setGamePhaseRaw]);
@@ -1214,6 +1208,20 @@ export default function SatzeGame() {
     }
     return null;
   }, [playerUsedCards.length, enemyUsedCards.length, conqueredFields]);
+
+  // Ingresso galleria: le lame coprono lo schermo solo alla prima apertura della visita.
+  const galleryPhaseRef = useRef(null);
+  const galleryVisitRef = useRef(0);
+  const galleryIntroSeenRef = useRef(0);
+  if (galleryPhaseRef.current !== gamePhase) {
+    if (gamePhase === 'gallery') galleryVisitRef.current += 1;
+    galleryPhaseRef.current = gamePhase;
+  }
+  const playGalleryIntro = gamePhase === 'gallery'
+    && galleryIntroSeenRef.current !== galleryVisitRef.current;
+  useEffect(() => {
+    if (gamePhase === 'gallery') galleryIntroSeenRef.current = galleryVisitRef.current;
+  }, [gamePhase]);
 
   // Galleria: differisci il rendering pesante di un frame per mantenere l'UI reattiva
   useEffect(() => {
@@ -1296,6 +1304,8 @@ export default function SatzeGame() {
   // Stato per modal carta ingrandita nella galleria
   const [selectedCardForModal, setSelectedCardForModal] = useState(null);
   const [previewDeckData, setPreviewDeckData] = useState(null);
+  /** Passaggio armata ⇄ esercito sullo stesso sfondo: { from: 'army'|'deck', army }. */
+  const [armyDeckHandoff, setArmyDeckHandoff] = useState(null);
   const [showDifficultyPopup, setShowDifficultyPopup] = useState(false);
   const [pendingGameLaunch, setPendingGameLaunch] = useState(null);
   /** INIZIA premuto: la scelta esercito si smonta prima dell'avvio del duello. */
@@ -1369,7 +1379,7 @@ export default function SatzeGame() {
     };
   }, []);
   const duelVfx = useMemo(
-    () => applyVfxQualityToDuelConfig(getDuelVisualConfig(), getVfxQualityProfile()),
+    () => scaleDuelVisualConfig(applyVfxQualityToDuelConfig(getDuelVisualConfig(), getVfxQualityProfile())),
     [duelVfxRev],
   );
   const vfxProfile = useMemo(() => getVfxQualityProfile(), [duelVfxRev]);
@@ -1840,6 +1850,10 @@ export default function SatzeGame() {
   const aiAgentThinkTimerRef = useRef(null);
   /** Incrementato a ogni reset/menu/round: invalida timeout pensiero IA orfani. */
   const aiThinkGenerationRef = useRef(0);
+  /** Istante in cui l'agente nemico è comparso in campo (ingresso place-fx). */
+  const enemyAgentPlacedAtRef = useRef(0);
+  /** Evita un secondo handoff allo scontro mentre il primo è ancora in attesa. */
+  const clashHoldPendingRef = useRef(false);
   const guidedEnemyDeployTimerRef = useRef(null);
   const guidedEnemyDeployScheduledRef = useRef(false);
   const fcPanelRef = useRef(null);
@@ -2031,11 +2045,19 @@ export default function SatzeGame() {
 
   const selectArmyAndContinue = useCallback(
     (army) => {
+      setArmyDeckHandoff({ from: 'army', army });
       setSelectedArmy(army);
       setGamePhase('selectDeck');
     },
     [setSelectedArmy, setGamePhase]
   );
+
+  // Fuori dal flusso armata/esercito si torna all'intro completa (sigillo).
+  useEffect(() => {
+    if (gamePhase !== 'selectArmy' && gamePhase !== 'selectDeck' && gamePhase !== 'previewDeck') {
+      setArmyDeckHandoff(null);
+    }
+  }, [gamePhase]);
 
   useEffect(() => {
     const sessionId = pendingGameLaunch?.sessionId;
@@ -2652,13 +2674,63 @@ export default function SatzeGame() {
   useEffect(() => {
     const id = enemyAgent?.id ?? null;
     if (id && id !== prevEnemyAgentIdRef.current) {
+      enemyAgentPlacedAtRef.current = Date.now();
       const prefs = getPlaceFxPreference();
       setEnemyPlaceFx(resolvePlaceFxForVia(isPlayerFirst ? 'click' : 'drop', prefs));
       setEnemyPlaceFxStyle(prefs.style);
       setEnemyArmyEntry(prefs.army);
     }
+    if (!id) enemyAgentPlacedAtRef.current = 0;
     prevEnemyAgentIdRef.current = id;
   }, [enemyAgent?.id, isPlayerFirst]);
+
+  /**
+   * Ingresso d'armata (WebGL) per lato: id dell'agente il cui ingresso è finito.
+   * `getAnimations` non lo vede, quindi lo segnala `ArmyEntryFx` con `onComplete`.
+   */
+  const armyEntryDoneRef = useRef({ player: null, enemy: null });
+  const armyEntryWaitersRef = useRef(new Set());
+  const deployedAgentIdRef = useRef({ player: null, enemy: null });
+  deployedAgentIdRef.current = { player: selectedAgent?.id ?? null, enemy: enemyAgent?.id ?? null };
+  const playerAgentPlacedAtRef = useRef(0);
+  const notifyArmyEntryWaiters = useCallback(() => {
+    armyEntryWaitersRef.current.forEach((check) => check());
+  }, []);
+  const markArmyEntryDone = useCallback((side, agentId) => {
+    armyEntryDoneRef.current[side] = agentId;
+    notifyArmyEntryWaiters();
+  }, [notifyArmyEntryWaiters]);
+  const markPlayerArmyEntryDone = useCallback(() => markArmyEntryDone('player', selectedAgent?.id ?? null), [markArmyEntryDone, selectedAgent?.id]);
+  const markEnemyArmyEntryDone = useCallback(() => markArmyEntryDone('enemy', enemyAgent?.id ?? null), [markArmyEntryDone, enemyAgent?.id]);
+  useEffect(() => {
+    if (selectedAgent?.id) playerAgentPlacedAtRef.current = Date.now();
+    else {
+      playerAgentPlacedAtRef.current = 0;
+      armyEntryDoneRef.current.player = null;
+    }
+    notifyArmyEntryWaiters();
+  }, [selectedAgent?.id, notifyArmyEntryWaiters]);
+  useEffect(() => {
+    if (!enemyAgent?.id) armyEntryDoneRef.current.enemy = null;
+    notifyArmyEntryWaiters();
+  }, [enemyAgent?.id, notifyArmyEntryWaiters]);
+  /** Risolve quando l'ingresso d'armata dell'agente schierato su `side` è finito (o non c'è agente). */
+  const waitForArmyEntry = useCallback((side, timeoutMs) => new Promise((resolve) => {
+    let timer = 0;
+    const check = () => {
+      const id = deployedAgentIdRef.current[side];
+      if (id != null && armyEntryDoneRef.current[side] !== id) return;
+      armyEntryWaitersRef.current.delete(check);
+      window.clearTimeout(timer);
+      resolve();
+    };
+    timer = window.setTimeout(() => {
+      armyEntryWaitersRef.current.delete(check);
+      resolve();
+    }, timeoutMs);
+    armyEntryWaitersRef.current.add(check);
+    check();
+  }), []);
 
   /** Ultimo gesto sulla carta (pressione o rilascio): da lì parte l'ingresso in campo. */
   const placeHandoffRef = useRef(null);
@@ -3044,6 +3116,65 @@ export default function SatzeGame() {
   selectEnemyAgentAndFocusRef.current = ai.selectEnemyAgentAndFocus;
   selectEnemyAgentAndFocusAsyncRef.current = ai.selectEnemyAgentAndFocusAsync;
   getThinkingTimeRef.current = ai.getThinkingTime;
+  const afterAgentsLockedRef = useRef(afterAgentsLocked);
+  afterAgentsLockedRef.current = afterAgentsLocked;
+  /**
+   * Dopo la posa dell'agente nemico: fine ingresso (posa + ingresso d'armata di entrambi
+   * i lati), poi almeno 1s di scelta FC (anche se i FC sono già stati fissati insieme alla
+   * carta) prima dello scontro. Se nel frattempo il giocatore ritira la carta non si procede.
+   * `mode: 'afterAnimation'` aggiunge sempre il secondo dopo l'ingresso
+   * (risposta IA a conferma già data). `mode: 'floor'` rispetta solo il minimo
+   * da quando la carta è comparsa (conferma del giocatore più tardi).
+   */
+  const ENEMY_FC_BEAT_MS = 1000;
+  /** Tetto all'attesa dell'ingresso d'armata: ritardo del volo + foto (900ms) + effetto più lungo. */
+  const ARMY_ENTRY_WAIT_MS = 6500;
+  const holdClashForEnemyDeployRef = useRef(async () => false);
+  holdClashForEnemyDeployRef.current = async (mode = 'floor') => {
+    const generation = aiThinkGenerationRef.current;
+    if (!enemyAgentPlacedAtRef.current) enemyAgentPlacedAtRef.current = Date.now();
+    // La posa (classe play-*) può arrivare nel render subito dopo il set dell'agente.
+    await new Promise((resolve) => {
+      if (typeof requestAnimationFrame !== 'function') {
+        setTimeout(resolve, 32);
+        return;
+      }
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+    if (generation !== aiThinkGenerationRef.current) return false;
+    // posa del giocatore a tempo: le animazioni `backwards` finite spariscono da getAnimations,
+    // e su una carta già ferma l'attesa DOM ripartirebbe da capo
+    const playerPoseLeft = playerAgentPlacedAtRef.current && agentPose !== 'none'
+      ? Math.max(0, playerAgentPlacedAtRef.current + agentArmyEntry.delayMs + getPlaceFxDurationMs(agentPose) - Date.now())
+      : 0;
+    await Promise.all([
+      waitForFieldAgentEntrance('enemy', { timeoutMs: 4500 }),
+      waitForArmyEntry('enemy', ARMY_ENTRY_WAIT_MS),
+      waitForArmyEntry('player', ARMY_ENTRY_WAIT_MS),
+      playerPoseLeft > 0 ? new Promise((resolve) => setTimeout(resolve, playerPoseLeft)) : null,
+    ]);
+    if (generation !== aiThinkGenerationRef.current) return false;
+    const elapsed = Date.now() - enemyAgentPlacedAtRef.current;
+    const remain = mode === 'afterAnimation'
+      ? ENEMY_FC_BEAT_MS
+      : Math.max(0, ENEMY_FC_BEAT_MS - elapsed);
+    if (remain > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remain));
+    }
+    return generation === aiThinkGenerationRef.current && deployedAgentIdRef.current.player != null;
+  };
+  const queueClashAfterEnemyDeploy = (proceed, mode = 'floor') => {
+    if (clashHoldPendingRef.current) return;
+    clashHoldPendingRef.current = true;
+    void (async () => {
+      try {
+        const ok = await holdClashForEnemyDeployRef.current(mode);
+        if (ok) proceed();
+      } finally {
+        clashHoldPendingRef.current = false;
+      }
+    })();
+  };
   const holdDuelForEminenceRef = useRef(false);
   holdDuelForEminenceRef.current = eminenceBlocksMatch;
 
@@ -3226,11 +3357,10 @@ export default function SatzeGame() {
       });
       if (cancelled || aiHasSelectedAgent.current) return;
 
-      const result = await selectEnemyAgentAndFocusAsyncRef.current?.();
-      const waitMs = delay - (Date.now() - startedAt);
-      if (waitMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-      }
+      const result = await selectEnemyAgentAndFocusAsyncRef.current?.(true, {
+        revealAt: startedAt + delay,
+        shouldAbort: () => cancelled || holdDuelForEminenceRef.current,
+      });
       if (cancelled || holdDuelForEminenceRef.current || aiHasSelectedAgent.current) return;
       if (result?.agent) {
         aiHasSelectedAgent.current = true;
@@ -3513,7 +3643,7 @@ export default function SatzeGame() {
       if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
       playGame(GAME_SOUND.LOCK_IN);
       if (enemyAgent) {
-        setGamePhase('battle');
+        queueClashAfterEnemyDeploy(() => setGamePhase('battle'));
         return;
       }
       if (isPlayerFirst) {
@@ -3534,7 +3664,7 @@ export default function SatzeGame() {
           agentId: selectedAgent.id,
           focus: selectedFocus,
         });
-        afterAgentsLocked();
+        queueClashAfterEnemyDeploy(() => afterAgentsLocked());
         return;
       }
       if (isPlayerFirst) {
@@ -3552,9 +3682,9 @@ export default function SatzeGame() {
       return;
     }
 
-    // Se l'IA ha già scelto (IA inizia), avanza il flusso Eminenza o passa al duello
+    // Se l'IA ha già scelto (IA inizia), avanza solo a ingresso finito e dopo il minimo sui FC
     if (enemyAgent) {
-      afterAgentsLocked();
+      queueClashAfterEnemyDeploy(() => afterAgentsLocked());
       return;
     }
 
@@ -3575,24 +3705,34 @@ export default function SatzeGame() {
           else setTimeout(resolve, 0);
         });
         if (scheduledGeneration !== aiThinkGenerationRef.current) return;
-        await ai.selectEnemyAgentAndFocusAsync(false);
-        const waitMs = delay - (Date.now() - startedAt);
-        if (waitMs > 0) {
-          await new Promise((resolve) => setTimeout(resolve, waitMs));
-        }
+        await ai.selectEnemyAgentAndFocusAsync(false, {
+          revealAt: startedAt + delay,
+          shouldAbort: () => scheduledGeneration !== aiThinkGenerationRef.current,
+        });
       })().catch((err) => {
         console.error('[SATZE] IA risposta (giocatore primo):', err);
       });
     }
   };
 
-  // Quando l'IA ha scelto dopo che il giocatore (primo) ha confermato: passa a battle
+  // Quando l'IA ha scelto dopo che il giocatore (primo) ha confermato:
+  // resta in selectAgent finché l'ingresso dell'agente non è finito, poi un secondo
+  // di scelta FC (anche se i FC erano già fissati) e solo allora lo scontro.
   useEffect(() => {
-    if (gamePhase === 'selectAgent' && selectedAgent && enemyAgent && isPlayerFirst && playerConfirmedAwaitingAI) {
-      setPlayerConfirmedAwaitingAI(false);
-      afterAgentsLocked();
+    if (!(gamePhase === 'selectAgent' && selectedAgent && enemyAgent && isPlayerFirst && playerConfirmedAwaitingAI)) {
+      return undefined;
     }
-  }, [gamePhase, selectedAgent, enemyAgent, isPlayerFirst, playerConfirmedAwaitingAI, afterAgentsLocked]);
+    let cancelled = false;
+    (async () => {
+      const ok = await holdClashForEnemyDeployRef.current('afterAnimation');
+      if (cancelled || !ok) return;
+      setPlayerConfirmedAwaitingAI(false);
+      afterAgentsLockedRef.current();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gamePhase, selectedAgent, enemyAgent, isPlayerFirst, playerConfirmedAwaitingAI, enemyPlaceFx, enemyPlaceFxStyle]);
 
   // Trigger risoluzione battaglia (deve rieseguire quando enemyAgent viene impostato dopo il delay)
   useEffect(() => {
@@ -3772,7 +3912,7 @@ export default function SatzeGame() {
       setTimeout(() => {
         setShowClashAnimation(false);
         proceedToNextRound();
-      }, getDuelVisualConfig().nextRoundClashHoldMs);
+      }, duelVfx.nextRoundClashHoldMs ?? scaleDuelMs(getDuelVisualConfig().nextRoundClashHoldMs));
       return;
     }
     
@@ -4060,11 +4200,11 @@ export default function SatzeGame() {
       setGamePhase('selectField');
       setShowFinalRoundAnimation(true);
       r5VictoryTimersRef.current.push(
-        setTimeout(() => setVictoryCondFx('reveal'), DUEL_R5_VICTORY_FLIP_MS),
+        setTimeout(() => setVictoryCondFx('reveal'), scaleDuelMs(DUEL_R5_VICTORY_FLIP_MS)),
         setTimeout(() => {
           setVictoryCondFx(null);
           setShowFinalRoundAnimation(false);
-        }, DUEL_OV_DUR.r5),
+        }, scaleDuelMs(DUEL_OV_DUR.r5)),
       );
     } else {
       setGamePhase('selectField');
@@ -4227,15 +4367,11 @@ export default function SatzeGame() {
     }}/>;
   }
 
-  // Schermata Campagna — hub Atto I (mappa nodi, missioni, eventi, mazzo)
+  // Schermata Campagna — il cammino verso Cael (prototipi/campagna-cael) aperto sullo stesso slot
   if (gamePhase === 'campaignHub') {
-    const summary = getCampaignRunSummary(campaignSaveSlot);
-    // La campagna verso Cael è il prototipo (prototipi/campagna-cael) aperto sullo stesso slot.
-    const caelRun = summary.firstAct && isCaelRun(loadCampaignRun(campaignSaveSlot, CAMPAIGN_ACT));
-    const CampaignHub = caelRun ? CampaignPrototypeFrame : summary.firstAct ? FirstActHub : summary.controlled ? ControlledCampaignHub : CampaignAtto1Hub;
     return (
-      <div className="relative w-full h-full min-h-full" style={{ minHeight: '100%' }}>
-        <CampaignHub
+      <div className="relative w-full h-full min-h-full" style={{ position: 'absolute', inset: 0, width: 1920, height: 1080 }}>
+        <CampaignPrototypeFrame
           campaignSaveSlot={campaignSaveSlot}
           onStartMission={startCampaignMission}
           onBack={() => setGamePhase('menu')}
@@ -4617,8 +4753,11 @@ export default function SatzeGame() {
     const availableArmies = Object.keys(ARMY_SETS);
     return (
       <ArmySelectCinematic
+        entry={armyDeckHandoff?.from === 'deck' ? 'handoff' : 'intro'}
+        initialArmy={armyDeckHandoff?.from === 'deck' ? armyDeckHandoff.army : undefined}
         onSelect={(armyName) => {
           if (armyName == null) {
+            setArmyDeckHandoff({ from: 'army', army: null });
             setSelectedArmy(MIXED_DECKS_OPTION);
             setGamePhase('selectDeck');
             return;
@@ -4764,6 +4903,7 @@ export default function SatzeGame() {
         <>
           <DeckSelectCinematic
           launching={deckLaunching}
+          entry={armyDeckHandoff?.from === 'army' ? 'handoff' : 'intro'}
           armyName={isMixedMode ? null : selectedArmy}
           gameDeckOptions={deckOptions}
           selectedArmy={selectedArmy}
@@ -4787,6 +4927,7 @@ export default function SatzeGame() {
               { accent: colors.accent, label: 'SCEGLI LA TUA ARMATA', kicker: 'FASE I · SCHIERAMENTO', dir: 'back' },
               () => {
                 setShowDifficultyPopup(false);
+                setArmyDeckHandoff({ from: 'deck', army: isMixedMode ? null : selectedArmy });
                 setSelectedArmy(null);
                 setSelectedDeckKey(null);
                 setGamePhase('selectArmy');
@@ -4983,6 +5124,7 @@ export default function SatzeGame() {
       alternativeCount: GALLERY_ALTERNATIVE_COUNT,
       fieldCount: ALL_BATTLEFIELDS.length,
       eminenceCount: EMINENCE_IDS.length,
+      playIntro: playGalleryIntro,
     };
 
     if (galleryTab === 'agents') {
@@ -6201,12 +6343,13 @@ export default function SatzeGame() {
         style={{
           top: '50%', 
           left: '50%', 
-          transform: isZoomed ? 'translate(-450px, -50%) scale(1.05)' : 'translate(-380px, -50%)', 
+          transform: isZoomed ? 'translate3d(-450px, -50%, 0) scale(1.05)' : 'translate3d(-380px, -50%, 0)', 
           width: '240px', 
           height: '400px', 
           zIndex: 5,
           overflow: 'visible',
-          transitionProperty: 'transform, border-color, background-color, box-shadow',
+          willChange: 'transform',
+          transitionProperty: 'transform',
           transitionDuration: `${duelVfx.zoomTransitionMs}ms`,
           transitionTimingFunction: 'ease-in-out',
           transitionDelay: isZoomed ? `${duelVfx.zoomDelayMs}ms` : '0ms',
@@ -6237,7 +6380,7 @@ export default function SatzeGame() {
                 {needsTwoFaces(enemyPose) ? (
                   <div className="place-flip-inner">
                     <div className="place-flip-face">
-                      <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0}>
+                      <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0} onComplete={markEnemyArmyEntryDone}>
                         <GameCard
                           cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
                           agent={displayEnemyAgent}
@@ -6262,7 +6405,7 @@ export default function SatzeGame() {
                     </div>
                   </div>
                 ) : (
-                  <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0}>
+                  <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0} onComplete={markEnemyArmyEntryDone}>
                     <GameCard
                       cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
                       agent={displayEnemyAgent}
@@ -6310,12 +6453,13 @@ export default function SatzeGame() {
         style={{
           top: '50%', 
           left: '50%', 
-          transform: isZoomed ? 'translate(210px, -50%) scale(1.05)' : 'translate(140px, -50%)', 
+          transform: isZoomed ? 'translate3d(210px, -50%, 0) scale(1.05)' : 'translate3d(140px, -50%, 0)', 
           width: '240px', 
           height: '400px', 
           zIndex: 5,
           overflow: 'visible',
-          transitionProperty: 'transform, border-color, background-color, box-shadow',
+          willChange: 'transform',
+          transitionProperty: 'transform',
           transitionDuration: `${duelVfx.zoomTransitionMs}ms`,
           transitionTimingFunction: 'ease-in-out',
           transitionDelay: isZoomed ? `${duelVfx.zoomDelayMs}ms` : '0ms',
@@ -6351,7 +6495,7 @@ export default function SatzeGame() {
                 {needsTwoFaces(agentPose) ? (
                   <div className="place-flip-inner">
                     <div className="place-flip-face">
-                      <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs}>
+                      <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs} onComplete={markPlayerArmyEntryDone}>
                         <GameCard
                           cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
                           agent={displaySelectedAgent}
@@ -6381,7 +6525,7 @@ export default function SatzeGame() {
                     </div>
                   </div>
                 ) : (
-                  <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs}>
+                  <ArmyEntryFx agent={selectedAgent} enabled={agentArmyEntry.mode !== 'off'} delayMs={agentArmyEntry.delayMs} onComplete={markPlayerArmyEntryDone}>
                     <GameCard
                       cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
                       agent={displaySelectedAgent}

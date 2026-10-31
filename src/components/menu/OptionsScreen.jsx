@@ -19,6 +19,7 @@ import {
   CURSOR_TRAIL_DURATION_PRESETS,
   VFX_QUALITY_LEVELS,
   DUEL_LAYOUT_BREATH_LEVELS,
+  DUEL_SPEED_PRESETS,
   FPS_CAP_PRESETS,
   SCREEN_TRANSITION_MS_PRESETS,
   applyElectronDisplay,
@@ -76,6 +77,13 @@ const TRANSITION_LABELS = {
   1450: '1,45 s',
   1800: '1,8 s',
   2150: '2,15 s',
+};
+
+const DUEL_SPEED_LABELS = {
+  0.75: '0,75×',
+  1: '1×',
+  2: '2×',
+  3: '3×',
 };
 
 const ON_OFF = [
@@ -264,6 +272,15 @@ export function OptionsScreen({ onClose }) {
         onPick: (q) => persistPresentation({ vfxQuality: q }),
       },
       {
+        key: 'duelSpeed',
+        label: 'Velocità duello',
+        hint: '1× è il ritmo normale. Vale solo per lo scontro tra i due agenti.',
+        type: 'choice',
+        value: settings.duelSpeed,
+        options: DUEL_SPEED_PRESETS.map((n) => ({ value: n, label: DUEL_SPEED_LABELS[n] })),
+        onPick: (n) => persistPresentation({ duelSpeed: n }),
+      },
+      {
         key: 'reduceMotion',
         label: 'Riduci animazioni',
         hint: 'Forza il profilo effetti Basso e spegne respiro del layout e scia del cursore.',
@@ -345,7 +362,7 @@ export function OptionsScreen({ onClose }) {
       {
         key: 'muted',
         label: 'Effetti sonori',
-        hint: 'Silenzia gli effetti (non la musica, quando arriverà).',
+        hint: 'Il gioco parte in muto. Silenzia gli effetti (non la musica, quando arriverà).',
         type: 'choice',
         value: audio.muted,
         options: [

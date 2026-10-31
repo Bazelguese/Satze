@@ -204,7 +204,7 @@ function AppContent() {
         {bootPhase === 'warmup' ? (
           <WarmupStage onComplete={onWarmupComplete} onProgress={onWarmupProgress} />
         ) : null}
-        <LoadingScreen progress={progress} detail={detail} />
+        <LoadingScreen progress={progress} detail={detail} skipIntro />
       </>
     );
   }

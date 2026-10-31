@@ -14,6 +14,8 @@
 // Props:
 //   onSelect(armyName: string | null)  // null = "Eserciti Personalizzati"
 //   onBack()                           // torna al menu
+//   entry: 'intro' | 'handoff'         // handoff = rientro da Scelta esercito
+//   initialArmy: string | null         // armata centrata al mount
 //
 // Si renderizza fullscreen (position: fixed). Renderizzala al livello del
 // routing, NON dentro CosmicScreenLayout o altri wrapper.
@@ -163,14 +165,27 @@ function buildArmies() {
 // COMPONENTE PRINCIPALE
 // ============================================================
 
-export default function ArmySelectCinematic({ onSelect, onBack }) {
+export default function ArmySelectCinematic({
+  onSelect,
+  onBack,
+  /** 'handoff' = rientro da Scelta esercito (niente intro, armata già scelta). */
+  entry = 'intro',
+  /** Armata da centrare al mount (null = Personalizzati). */
+  initialArmy,
+}) {
   const ARMIES = React.useMemo(() => buildArmies(), []);
   const total = ARMIES.length;
-  const [idx, setIdx] = useState(1);
+  const [initialIdx] = useState(() => {
+    if (initialArmy === undefined) return 1;
+    const found = ARMIES.findIndex((a) => (initialArmy == null ? a.isMixed : a.id === initialArmy || a.name === initialArmy));
+    return found >= 0 ? found : 1;
+  });
+  const [idx, setIdx] = useState(initialIdx);
   const [phase, setPhase] = useState('idle'); // idle -> confirming
   const [dossier, setDossier] = useState(false);
   /** Passi cumulativi della ruota (senza wrap): gira sempre dal lato più corto. */
-  const [spin, setSpin] = useState(1);
+  const [spin, setSpin] = useState(initialIdx);
+  void entry;
   const rootRef = useRef(null);
   const wheelLockRef = useRef(0);
   const stateRef = useRef({});
@@ -180,10 +195,14 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
 
   const goTo = useCallback((i) => {
     if (stateRef.current.phase !== 'idle') return;
+    const cur = stateRef.current.idx;
     const next = (i + total) % total;
-    if (next === stateRef.current.idx) return;
+    if (next === cur) return;
     playUiClick();
-    setSpin((sp) => sp + wrapOffset(next, stateRef.current.idx, total));
+    // Offset calcolato qui: l'updater può girare dopo che il render ha già aggiornato stateRef (StrictMode).
+    const delta = wrapOffset(next, cur, total);
+    stateRef.current.idx = next;
+    setSpin((sp) => sp + delta);
     setIdx(next);
   }, [total]);
 
@@ -238,8 +257,8 @@ export default function ArmySelectCinematic({ onSelect, onBack }) {
     const el = rootRef.current;
     if (!el) return undefined;
     const onWheel = (e) => {
-      if (stateRef.current.phase !== 'idle') return;
-      if (e.target?.closest?.('.asx-dossier, .asx-scroll')) return;
+      if (stateRef.current.phase !== 'idle' || stateRef.current.dossier) return;
+      if (e.target?.closest?.('.asx-scroll')) return;
       const dominant = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (Math.abs(dominant) < 6) return;
       e.preventDefault();

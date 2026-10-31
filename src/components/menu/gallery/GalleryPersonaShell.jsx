@@ -12,10 +12,10 @@
 //   Esc  onBack
 // ============================================================
 
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import GalleryTabSwitcher, { GALLERY_TAB_ORDER } from './GalleryTabSwitcher.jsx';
 import { playUiClick } from '../../../audio/soundBus.js';
-import { ARMY_COLORS, ARMY_GIFS } from '../../../data/armies.js';
+import { ARMY_COLORS, ARMY_GIFS, ARMY_ICONS } from '../../../data/armies.js';
 import { ARMY_LORE } from '../cosmic/armyLore.js';
 import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
 import { useArrivedByCurtain } from '../../cosmic/ScreenTransition';
@@ -26,6 +26,28 @@ export function armyAccent(army, fallback = '#94a3b8') {
 
 export function armyGlyph(army) {
   return (ARMY_LORE[army] || {}).glyph || '◈';
+}
+
+export function armyIconUrl(army) {
+  return ARMY_ICONS[army] || null;
+}
+
+/** Emblema armata; se il file manca ripiega sul glifo testuale. */
+export function GalleryArmyIcon({ src, glyph, className = '' }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return glyph ? <span className={`${className} is-glyph`} aria-hidden="true">{glyph}</span> : null;
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      draggable={false}
+      decoding="async"
+      onError={() => setBroken(true)}
+    />
+  );
 }
 
 export function armyMotto(army) {
@@ -76,9 +98,12 @@ export function GalleryPersonaShell({
   onRailPrev,
   onRailNext,
   onReplay,
+  /** Lame d'ingresso: solo alla prima apertura, non a ogni cambio sezione. */
+  playIntro = false,
 }) {
   // arrivando dal menù la cortina fa già da ingresso: niente lame doppie
   const arrivedByCurtain = useArrivedByCurtain();
+  const [introOn] = useState(playIntro);
   const tabCounts = {
     agents: agentCount,
     alternative: alternativeCount,
@@ -188,7 +213,7 @@ export function GalleryPersonaShell({
         </footer>
       )}
 
-      {!arrivedByCurtain && (
+      {introOn && !arrivedByCurtain && (
         <div className="gp-intro" aria-hidden="true">
           <span /><span /><span />
         </div>
@@ -200,7 +225,7 @@ export function GalleryPersonaShell({
 }
 
 /**
- * Rail a bandiere skew. items: { id, label, glyph?, accent, group? }.
+ * Rail a bandiere skew. items: { id, label, icon?, glyph?, accent, group? }.
  * Le voci con group diverso dal precedente ricevono un separatore (groupLabel).
  */
 export function PersonaRail({ items, activeId, onSelect, groupLabels = {} }) {
@@ -237,7 +262,11 @@ export function PersonaRail({ items, activeId, onSelect, groupLabels = {} }) {
               title={it.label}
             >
               <span className="gp-flag-in">
-                {it.glyph && <span className="gy">{it.glyph}</span>}
+                {it.icon ? (
+                  <GalleryArmyIcon src={it.icon} glyph={it.glyph} className="gy-ic" />
+                ) : it.glyph ? (
+                  <span className="gy">{it.glyph}</span>
+                ) : null}
                 <span className="nm">{it.label}</span>
                 {it.count != null && <span className="ct">{it.count}</span>}
               </span>
@@ -251,7 +280,7 @@ export function PersonaRail({ items, activeId, onSelect, groupLabels = {} }) {
 }
 
 /**
- * Lista Compendium. items: { key, number, title, sub?, meta?, accent?, thumb?, glyph? }.
+ * Lista Compendium. items: { key, number, title, sub?, meta?, accent?, thumb?, icon?, glyph? }.
  */
 export function PersonaList({ items, activeIndex, onSelect, emptyLabel = 'Nessuna voce' }) {
   const listRef = useRef(null);
@@ -284,7 +313,7 @@ export function PersonaList({ items, activeIndex, onSelect, emptyLabel = 'Nessun
             aria-selected={on}
             ref={(el) => { rowRefs.current[i] = el; }}
             className={`gp-row ${on ? 'on' : ''}`}
-            style={{ '--c': it.accent || 'var(--accent)', '--zz': `${[0, 14, 6, 18, 2][i % 5]}px` }}
+            style={{ '--c': it.accent || 'var(--accent)' }}
             onClick={() => { if (!on) { playUiClick(); onSelect(i); } }}
           >
             <span className="gp-row-shadow" aria-hidden="true" />
@@ -293,6 +322,8 @@ export function PersonaList({ items, activeIndex, onSelect, emptyLabel = 'Nessun
               <span className="gp-row-num">{it.number}</span>
               {it.thumb ? (
                 <span className="gp-row-thumb"><img src={it.thumb} alt="" loading="lazy" decoding="async" /></span>
+              ) : it.icon ? (
+                <GalleryArmyIcon src={it.icon} glyph={it.glyph} className="gp-row-icon" />
               ) : it.glyph ? (
                 <span className="gp-row-glyph">{it.glyph}</span>
               ) : null}
@@ -464,7 +495,14 @@ function GalleryPersonaStyles() {
         transition: background .15s, color .15s;
       }
       .gp-flag-in > * { transform: skewX(14deg); }
-      .gp-flag .gy { font-size: 16px; color: var(--c); line-height: 1; }
+      .gp-flag .gy, .gp-flag .gy-ic.is-glyph { font-size: 16px; color: var(--c); line-height: 1; }
+      .gp-flag img.gy-ic {
+        flex: none; width: 28px; height: 28px; object-fit: contain; display: block;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+        opacity: 0.85; transition: opacity .15s;
+      }
+      .gp-flag:hover img.gy-ic, .gp-flag.on img.gy-ic { opacity: 1; }
+      .gp-flag.on img.gy-ic { filter: drop-shadow(2px 2px 0 #050507); }
       .gp-flag .ct { font-size: 11px; opacity: 0.6; font-family: 'Share Tech Mono', monospace; }
       .gp-flag:hover { transform: skewX(-14deg) translateY(-3px); }
       .gp-flag:hover .gp-flag-in { color: #f5f3eb; background: #1c1c22; }
@@ -516,6 +554,7 @@ function GalleryPersonaStyles() {
       .gp-list::-webkit-scrollbar { display: none; }
       .gp-list--empty { display: grid; place-items: center; font-style: italic; color: rgba(245,243,235,0.5); }
       .gp-row {
+        --zz: 0px;
         position: relative; display: block; width: calc(100% - 30px); height: 52px; margin: 0 0 6px;
         padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit;
         transform: translateX(var(--zz)); transition: transform .2s cubic-bezier(.3,1.5,.5,1);
@@ -545,7 +584,12 @@ function GalleryPersonaStyles() {
         clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%);
       }
       .gp-row-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block; }
-      .gp-row-glyph { flex: none; width: 30px; text-align: center; font-size: 20px; color: var(--c); }
+      .gp-row-glyph, .gp-row-icon.is-glyph { flex: none; width: 30px; text-align: center; font-size: 20px; color: var(--c); }
+      img.gp-row-icon {
+        flex: none; width: 40px; height: 40px; object-fit: contain; display: block;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+      }
+      .gp-row.on img.gp-row-icon { filter: drop-shadow(2px 2px 0 var(--c)); }
       .gp-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
       .gp-row-title {
         font-weight: 600; font-size: 19px; text-transform: uppercase; letter-spacing: 0.02em;
