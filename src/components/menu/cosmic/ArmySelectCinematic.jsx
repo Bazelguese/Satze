@@ -38,6 +38,7 @@ import { armTransitionFrom } from '../../cosmic/ScreenTransition';
 import { buildDeckTicketEntry } from './DeckSelectCinematic.jsx';
 import { DECK_LORE } from './deckLore.js';
 import { DeckCover } from '../../deckCover/DeckCover.jsx';
+import { loadCustomDecks } from '../../../utils/deckManager.js';
 
 const SHOWCASE_SIZE = 5;
 /** Durata della chiusura a lastra prima di passare alla scelta esercito. */
@@ -99,8 +100,17 @@ function buildArmyDeckList(armyName) {
   });
 }
 
+/**
+ * Carte sbloccate di un'armata. Oggi nel gioco sono tutte sbloccate: la collezione
+ * (src/collection) non è ancora collegata; quando lo sarà, il conteggio va letto da lì.
+ */
+function unlockedCount(armyName, cards) {
+  return cards.length;
+}
+
 function buildArmies() {
   const list = [];
+  const customDecks = Object.values(loadCustomDecks() || {});
 
   // Voce speciale "Eserciti Personalizzati" (tutti i mazzi creati dall'utente)
   list.push({
@@ -127,7 +137,9 @@ function buildArmies() {
   for (const armyName of Object.keys(ARMY_SETS)) {
     const lore = ARMY_LORE[armyName] || {};
     const cards = ARMY_SETS[armyName] || [];
-    const decks = ARMY_DECKS?.[armyName] ? Object.keys(ARMY_DECKS[armyName]).length : 2;
+    // eserciti: quelli predefiniti più quelli creati dal giocatore per questa armata
+    const decks = (ARMY_DECKS?.[armyName] ? Object.keys(ARMY_DECKS[armyName]).length : 0)
+      + customDecks.filter((d) => d?.army === armyName).length;
     const colors = ARMY_COLORS[armyName] || { accent: '#94a3b8' };
     const bonus = ARMY_BONUSES[armyName];
     const bg = ARMY_GIFS[armyName] || null;
@@ -140,6 +152,7 @@ function buildArmies() {
       portrait: ARMY_ICONS[armyName] || null,
       glyph: lore.glyph || '◈',
       cards: cards.length,
+      unlocked: unlockedCount(armyName, cards),
       decks,
       bonus: bonus?.description || '—',
       bonusLabel: lore.bonusLabel || (bonus?.trigger ? bonus.trigger.toUpperCase() : 'PASSIVO'),
@@ -563,7 +576,7 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
           </div>
           {!army.isMixed && (
             <div className="asx-bd-stats asx-sk">
-              <Burst value={army.cards} label="CARTE" />
+              <Burst value={`${army.unlocked}/${army.cards}`} label="CARTE" small />
               <Burst value={army.decks} label="ESERCITI" dark />
             </div>
           )}
@@ -589,13 +602,14 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
               {army.deckList.map((dk, i) => (
                 <div key={dk.key} className="asx-deck" style={{ '--d': `${0.12 + i * 0.06}s` }}>
                   <div className="asx-deck-head asx-sk">
-                    <span className="code">{dk.code}</span>
                     <b className={dk.name.length > 18 ? 'long' : ''}>{dk.name}</b>
                   </div>
-                  <div className="asx-deck-box" aria-hidden="true">
-                    {dk.entry ? <DeckCover deck={dk.entry} variant="box" isCenter={false} /> : null}
+                  <div className="asx-deck-box">
+                    <div className="asx-deck-cover" aria-hidden="true">
+                      {dk.entry ? <DeckCover deck={dk.entry} variant="box" isCenter={false} /> : null}
+                    </div>
+                    {dk.archetype && <span className="asx-deck-type">{dk.archetype}</span>}
                   </div>
-                  {dk.archetype && <span className="asx-deck-type asx-sk">{dk.archetype}</span>}
                 </div>
               ))}
             </div>
@@ -668,9 +682,9 @@ function Band({ tone, tag, sub, d = 0, children }) {
 
 const BURST_CLIP = 'polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 84% 54%, 96% 74%, 74% 76%, 70% 98%, 52% 84%, 34% 100%, 28% 78%, 4% 80%, 16% 60%, 0% 42%, 20% 32%, 14% 10%, 36% 18%)';
 
-function Burst({ value, label, dark = false }) {
+function Burst({ value, label, dark = false, small = false }) {
   return (
-    <div className={`asx-burst${dark ? ' dark' : ''}${label ? '' : ' solo'}`}>
+    <div className={`asx-burst${dark ? ' dark' : ''}${label ? '' : ' solo'}${small ? ' small' : ''}`}>
       <span className="shape" aria-hidden="true" />
       <span className="val">{value}</span>
       {label && <span className="lbl">{label}</span>}
@@ -972,17 +986,17 @@ function ArmySelectStyles() {
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
       .asx-deck-head { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
-      .asx-deck-head .code { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--accent); }
       .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
       .asx-deck-head b.long { font-size: 24px; }
       /* la scatola si raddrizza rispetto all'inclinazione della scheda */
-      .asx-deck-box { position: relative; flex: 1; min-height: 0; width: 100%; transform: skewX(8deg); }
-      .asx-deck-box .dcv-box { --bw: 84cqw; }
+      /* la scatola e il suo tipo di mazzo stanno nello stesso riquadro raddrizzato: il tipo resta centrato sotto di lei */
+      .asx-deck-box { position: relative; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; transform: skewX(8deg); }
+      .asx-deck-cover { position: relative; flex: 1; min-height: 0; width: 100%; transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
+      .asx-deck-cover .dcv-box { --bw: 84cqw; }
       /* passando sopra, la scatola si alza un poco */
-      .asx-deck-box > * { transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
-      .asx-deck:hover .asx-deck-box > * { transform: translateY(-8px) scale(1.04); }
+      .asx-deck:hover .asx-deck-cover { transform: translateY(-8px) scale(1.04); }
       .asx-deck-type {
-        margin-top: 10px; background: var(--ink); color: var(--void); font-weight: 700; font-size: 13px; letter-spacing: 0.14em;
+        flex: none; margin-top: 10px; background: var(--ink); color: var(--void); font-weight: 700; font-size: 13px; letter-spacing: 0.14em;
         padding: 3px 12px; box-shadow: 4px 4px 0 var(--accent); white-space: nowrap;
       }
 
@@ -1009,6 +1023,7 @@ function ArmySelectStyles() {
       .asx-burst.dark .shape { background: var(--accent); filter: drop-shadow(5px 5px 0 var(--void)); }
       .asx-burst .val { position: relative; font-weight: 700; font-style: italic; font-size: 44px; line-height: 1; color: var(--void); transform: translateY(-10px) rotate(-6deg); }
       .asx-burst.solo .val { font-size: 50px; transform: rotate(-6deg); }
+      .asx-burst.small .val { font-size: 26px; letter-spacing: -0.03em; }
       .asx-burst .lbl { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%) skewX(-14deg); background: var(--void); color: var(--ink); font-weight: 700; font-size: 10px; letter-spacing: 0.2em; padding: 1px 7px; }
 
       /* ---------- Dossier ---------- */
