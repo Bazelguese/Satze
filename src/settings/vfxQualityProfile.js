@@ -23,6 +23,8 @@ const STATIC_OVERDRIVE = 'ember-field';
  *   rainbowEnabled: boolean,
  *   zoomTransitionMsMul: number,
  *   zoomDelayMsMul: number,
+ *   duelCosmoScale: number,
+ *   duelCosmoFps: number,
  * }} VfxQualityProfile
  */
 
@@ -42,6 +44,8 @@ function profileForQuality(quality) {
       rainbowEnabled: false,
       zoomTransitionMsMul: 0,
       zoomDelayMsMul: 0,
+      duelCosmoScale: 0.5,
+      duelCosmoFps: 30,
     };
   }
   if (quality === 'medium') {
@@ -58,6 +62,8 @@ function profileForQuality(quality) {
       rainbowEnabled: false,
       zoomTransitionMsMul: 0.5,
       zoomDelayMsMul: 0.5,
+      duelCosmoScale: 0.5,
+      duelCosmoFps: 0,
     };
   }
   return {
@@ -73,6 +79,10 @@ function profileForQuality(quality) {
     rainbowEnabled: true,
     zoomTransitionMsMul: 1,
     zoomDelayMsMul: 1,
+    /** risoluzione del cosmo nei pannelli del duello rispetto ai px CSS */
+    duelCosmoScale: 0.75,
+    /** aggiornamenti al secondo del cosmo (0 = a ogni frame) */
+    duelCosmoFps: 0,
   };
 }
 

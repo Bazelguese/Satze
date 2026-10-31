@@ -187,6 +187,9 @@ ipcMain.handle('save-crop-config', async (_event, payload) => {
 
 ipcMain.handle('satze:display:getDisplays', () => listDisplays());
 
+// Diagnostica prestazioni (pannello FPS): dice se Chromium compone sulla GPU o in software.
+ipcMain.handle('satze:gpu:getStatus', () => app.getGPUFeatureStatus());
+
 ipcMain.handle('satze:display:getState', () => getDisplayState(mainWindow));
 
 ipcMain.handle('satze:display:getSaved', () => loadDisplaySettings(app));

@@ -216,7 +216,7 @@ export function toElectronDisplayPayload(settings = getDisplaySettings()) {
 }
 
 /**
- * Applica scala UI + classe reduce-motion sul document.
+ * Applica scala UI + classi reduce-motion e qualità effetti sul document.
  * @param {DisplaySettings} [settings]
  */
 export function applyDisplaySettingsToDom(settings = getDisplaySettings()) {
@@ -226,6 +226,9 @@ export function applyDisplaySettingsToDom(settings = getDisplaySettings()) {
   root.style.setProperty('--satze-ui-scale', String(s.uiScale / 100));
   root.classList.toggle('satze-reduce-motion', s.reduceMotion);
   document.body?.classList.toggle('satze-reduce-motion', s.reduceMotion);
+  // Qualità effetti effettiva (Riduci animazioni forza Bassa): agganci CSS per gli effetti costosi
+  const vfx = s.reduceMotion ? 'low' : s.vfxQuality;
+  for (const q of VFX_QUALITY_LEVELS) root.classList.toggle(`satze-vfx-${q}`, q === vfx);
   applyFrameRateCap(s.fpsCap);
 }
 

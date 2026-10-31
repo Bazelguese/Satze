@@ -10,4 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     apply: (payload) => ipcRenderer.invoke('satze:display:apply', payload),
     getSaved: () => ipcRenderer.invoke('satze:display:getSaved'),
   },
+  gpu: {
+    getStatus: () => ipcRenderer.invoke('satze:gpu:getStatus'),
+  },
 });
