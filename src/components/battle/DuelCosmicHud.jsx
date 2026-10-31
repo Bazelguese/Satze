@@ -81,21 +81,6 @@ function layoutOffset(el, root) {
   return [x, y];
 }
 
-/**
- * Consegna senza copie: il contesto GL vive su un OffscreenCanvas e ogni pannello
- * riceve il frame con transferToImageBitmap → bitmaprenderer. Il ripiego copia con
- * drawImage nel canvas 2D del pannello, che costringe la GPU a finire il disegno
- * prima di ogni copia (nove volte a frame).
- */
-function supportsBitmapHandoff() {
-  if (typeof OffscreenCanvas === 'undefined' || !('transferToImageBitmap' in OffscreenCanvas.prototype)) return false;
-  try {
-    return !!document.createElement('canvas').getContext('bitmaprenderer');
-  } catch {
-    return false;
-  }
-}
-
 /** canvas figlio del pannello, dietro al contenuto (o sopra, per i sigilli) */
 function ensurePanelCanvas(el, key, z) {
   let cv = el[key];
@@ -195,33 +180,16 @@ export function DuelCosmicHud({
     const scene = host.parentElement;
 
     // contesto WebGL unico, fuori dal DOM
-    const glOpts = { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: false };
-    let handoff = supportsBitmapHandoff();
-    let glCv = null;
-    let gl = null;
-    if (handoff) {
-      glCv = new OffscreenCanvas(640, 960);
-      gl = glCv.getContext('webgl', glOpts);
-      if (!gl) handoff = false;
-    }
-    if (!handoff) {
-      glCv = document.createElement('canvas');
-      glCv.width = 640;
-      glCv.height = 960;
-      gl = glCv.getContext('webgl', glOpts);
-    }
+    const glCv = document.createElement('canvas');
+    let glW = 640;
+    let glH = 960;
+    glCv.width = glW;
+    glCv.height = glH;
+    const gl = glCv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: false });
     if (!gl) return undefined;
-    let glW = glCv.width;
-    let glH = glCv.height;
-    const panelCtxType = handoff ? 'bitmaprenderer' : '2d';
     const panelCtx = (cv) => {
-      if (!cv.__cosmoCtx) cv.__cosmoCtx = cv.getContext(panelCtxType);
-      return cv.__cosmoCtx;
-    };
-    const clearPanel = (cv) => {
-      const ctx = panelCtx(cv);
-      if (handoff) ctx.transferFromImageBitmap(null);
-      else ctx.clearRect(0, 0, cv.width, cv.height);
+      if (!cv.__cosmo2d) cv.__cosmo2d = cv.getContext('2d');
+      return cv.__cosmo2d;
     };
     let dead = false;
     let raf = 0;
@@ -298,21 +266,8 @@ export function DuelCosmicHud({
     };
     resyncPanels();
 
-    // disegna una regione (cw ├ù ch) nel contesto GL e la consegna al canvas del pannello
+    // disegna una regione (cw ├ù ch) nel contesto GL e la copia nel canvas del pannello
     const blit = (cv, cw, ch) => {
-      if (handoff) {
-        // il canvas GL prende la misura del pannello: il bitmap passa intero, senza copie
-        if (cv.width !== cw) cv.width = cw;
-        if (cv.height !== ch) cv.height = ch;
-        if (glCv.width !== cw) glCv.width = cw;
-        if (glCv.height !== ch) glCv.height = ch;
-        gl.viewport(0, 0, cw, ch);
-        gl.uniform1f(U.uVH, ch);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        panelCtx(cv).transferFromImageBitmap(glCv.transferToImageBitmap());
-        return;
-      }
       if (cv.width !== cw) cv.width = cw;
       if (cv.height !== ch) cv.height = ch;
       if (cw > glW || ch > glH) {
@@ -395,7 +350,8 @@ export function DuelCosmicHud({
         let kind = def.kind;
         if (def.portal && !el.querySelector('.satze-bf-portal-disc')) {
           // pannello campo senza portale (fine partita, passaggi di fase): niente riquadro
-          clearPanel(cv);
+          const ctxClear = panelCtx(cv);
+          ctxClear.clearRect(0, 0, cv.width, cv.height);
           continue;
         }
         if (def.portal) {
