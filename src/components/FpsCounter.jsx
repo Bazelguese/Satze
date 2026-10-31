@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 
 const DETAILS_KEY = 'F9';
 const WINDOW_MS = 2000;
+/** Frame più lunghi di così (≥ 2 frame persi a 60 Hz) finiscono nel registro scatti. */
+const HITCH_MS = 33;
+const HITCH_LOG_SIZE = 10;
 const SOFTWARE_GPU = /swiftshader|llvmpipe|software|basic render|microsoft basic/i;
 
 /** Nome della GPU che Chromium usa davvero per WebGL (e quindi per la composizione). */
@@ -26,7 +29,8 @@ function pct(sorted, q) {
 
 /**
  * Overlay FPS in alto a destra (imperativo: non re-renderizza React ogni frame).
- * F9 apre la diagnostica: tempi frame, thread principale bloccato, GPU in uso.
+ * F9 apre la diagnostica: tempi frame, thread principale bloccato, GPU in uso e
+ * registro degli ultimi scatti con la fase di gioco in cui sono avvenuti.
  */
 export function FpsCounter() {
   const elRef = useRef(null);
@@ -43,6 +47,9 @@ export function FpsCounter() {
     let frameLog = [];
     /** @type {{ t: number, d: number }[]} */
     let longLog = [];
+    /** @type {{ at: number, d: number, phase: string }[]} */
+    let hitches = [];
+    let hitchCount = 0;
     let gpuLine = '';
     let compositing = '';
 
@@ -75,13 +82,26 @@ export function FpsCounter() {
         gpuLine,
         compositing,
         `finestra ${window.innerWidth}×${window.innerHeight} · DPR ${window.devicePixelRatio}`,
+        `scatti (>${HITCH_MS} ms) dall'avvio: ${hitchCount}${hitches.length ? ' · ultimi:' : ''}`,
+        ...hitches
+          .slice()
+          .reverse()
+          .map((h) => `  ${(h.at / 1000).toFixed(1).padStart(7)} s   ${h.d.toFixed(0).padStart(4)} ms   ${h.phase}`),
       ].filter(Boolean);
       box.textContent = lines.join('\n');
     };
 
     const tick = (now) => {
       frames += 1;
-      frameLog.push({ t: now, d: now - prev });
+      const d = now - prev;
+      frameLog.push({ t: now, d });
+      // il primo frame dopo una scheda nascosta non è uno scatto del gioco
+      if (d > HITCH_MS && d < 10000 && !document.hidden) {
+        hitchCount += 1;
+        const phase = document.documentElement.dataset.satzePhase || 'avvio';
+        hitches.push({ at: now, d, phase });
+        if (hitches.length > HITCH_LOG_SIZE) hitches = hitches.slice(-HITCH_LOG_SIZE);
+      }
       prev = now;
       const elapsed = now - last;
       if (elapsed >= 500) {

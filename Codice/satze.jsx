@@ -331,6 +331,11 @@ export default function SatzeGame() {
     setEminenceMatchState,
   } = gameState;
 
+  // Fase corrente sul documento: il registro scatti del pannello F9 la associa a ogni frame lento.
+  useEffect(() => {
+    document.documentElement.dataset.satzePhase = gamePhase || '';
+  }, [gamePhase]);
+
   const [emDraftId, setEmDraftId] = useState(null);
   const [emDraftParams, setEmDraftParams] = useState(null);
   const [eminenceNotices, setEminenceNotices] = useState([]);

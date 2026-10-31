@@ -118,6 +118,41 @@ function makeRng(seed) {
   };
 }
 
+/**
+ * Taglia del nome già trovata per (nome, riquadro, limiti): la ricerca binaria scrive il
+ * font e rilegge le misure, cioè un layout forzato a ogni passo. Con molte carte montate
+ * insieme (mano, scelta armata, galleria) quei layout si sommano in un unico frame lungo.
+ * Si memorizza solo a font caricati, quando la misura è definitiva.
+ */
+const nameFitCache = new Map();
+
+function fitNameFontSize(el, key, minFs, maxFs, precision, fits, applyTracking) {
+  const cached = nameFitCache.get(key);
+  if (cached != null) {
+    el.style.fontSize = `${cached}px`;
+    applyTracking(cached);
+    return;
+  }
+  let low = minFs;
+  let high = maxFs;
+  let best = minFs;
+  for (let i = 0; i < 36; i += 1) {
+    if (high - low < precision) break;
+    const mid = (low + high) / 2;
+    el.style.fontSize = `${mid}px`;
+    applyTracking(mid);
+    if (fits()) {
+      best = mid;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  el.style.fontSize = `${best}px`;
+  applyTracking(best);
+  if (typeof document !== 'undefined' && document.fonts?.status === 'loaded') nameFitCache.set(key, best);
+}
+
 function SashNameLabel({ name, accent, reserveTrailingPx = 0, fastNameFit = false }) {
   const wrapRef = useRef(null);
   const ref = useRef(null);
@@ -147,24 +182,15 @@ function SashNameLabel({ name, accent, reserveTrailingPx = 0, fastNameFit = fals
       el.style.letterSpacing = `${em}em`;
     };
 
-    let low = minFs;
-    let high = maxFs;
-    let best = minFs;
-    for (let i = 0; i < 32; i += 1) {
-      if (high - low < 0.1) break;
-      const mid = (low + high) / 2;
-      el.style.fontSize = `${mid}px`;
-      applyTracking(mid);
-      const fits = el.scrollWidth <= maxW + 0.5 && el.scrollHeight <= maxH + 0.5;
-      if (fits) {
-        best = mid;
-        low = mid;
-      } else {
-        high = mid;
-      }
-    }
-    el.style.fontSize = `${best}px`;
-    applyTracking(best);
+    fitNameFontSize(
+      el,
+      `sash|${name}|${maxW}|${maxH}`,
+      minFs,
+      maxFs,
+      0.1,
+      () => el.scrollWidth <= maxW + 0.5 && el.scrollHeight <= maxH + 0.5,
+      applyTracking
+    );
   }, [name, maxW, fastNameFit]);
 
   if (fastNameFit) {
@@ -266,24 +292,15 @@ function SashHudNameFit({ name, accent, maxFontPx = 8, minFontPx = 4.25, fastNam
       el.style.letterSpacing = `${em}em`;
     };
 
-    let low = minFontPx;
-    let high = maxFontPx;
-    let best = minFontPx;
-    for (let i = 0; i < 36; i += 1) {
-      if (high - low < 0.08) break;
-      const mid = (low + high) / 2;
-      el.style.fontSize = `${mid}px`;
-      applyTracking(mid);
-      const fits = el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1;
-      if (fits) {
-        best = mid;
-        low = mid;
-      } else {
-        high = mid;
-      }
-    }
-    el.style.fontSize = `${best}px`;
-    applyTracking(best);
+    fitNameFontSize(
+      el,
+      `hud|${name}|${maxW}|${maxH}|${minFontPx}|${maxFontPx}`,
+      minFontPx,
+      maxFontPx,
+      0.08,
+      () => el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1,
+      applyTracking
+    );
   }, [name, box.w, box.h, maxFontPx, minFontPx, fastNameFit]);
 
   // Anteprima compatta: clamp CSS a larghezza reale (niente box 80px congelato).
