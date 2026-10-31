@@ -257,7 +257,7 @@ export function OptionsScreen({ onClose }) {
       {
         key: 'vfxQuality',
         label: 'Qualità effetti',
-        hint: 'Particelle, overdrive, clash, zoom.',
+        hint: 'Particelle, overdrive, clash, zoom, cosmo del duello. Bassa spegne anche sfocature di sfondo e rotazioni decorative: scegli Media o Bassa se gli FPS calano.',
         type: 'choice',
         value: settings.vfxQuality,
         options: VFX_QUALITY_LEVELS.map((q) => ({ value: q, label: QUALITY_LABELS[q] })),

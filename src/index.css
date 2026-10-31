@@ -3492,3 +3492,21 @@ body.satze-layout-mobile-portrait {
   outline: none;
   border-color: var(--st-border-hi);
 }
+
+/* ── Qualità effetti Bassa (o Riduci animazioni) ───────────────────────────
+   Le sfocature di sfondo e le animazioni decorative infinite costringono la GPU
+   a ricomporre a ogni frame i livelli a tutto schermo (blur, blend, maschere)
+   che stanno sopra o sotto. In Bassa si spengono le une e si fermano le altre. */
+html.satze-vfx-low *,
+html.satze-vfx-low *::before,
+html.satze-vfx-low *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html.satze-vfx-low .asx-ruota-dial-text,
+html.satze-vfx-low .asx-burst .shape,
+html.satze-vfx-low .dsk-stars,
+html.satze-vfx-low .dcv-box.is-center .dcv-box-cube {
+  animation-play-state: paused !important;
+}

@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { DISPLAY_SETTINGS_CHANGED_EVENT } from '../../settings/displaySettings';
+import { getVfxQualityProfile } from '../../settings/vfxQualityProfile';
 
 /**
  * HUD cosmico del duello.
@@ -27,7 +29,6 @@ const W = 1920;
 const PORTAL_INTRO_S = 0.9;
 const H = 1080;
 const PAD = 28; // alone fuori dal pannello
-const SC = 0.75; // risoluzione del disegno rispetto ai px CSS
 
 // argento freddo: il colore nel duello resta alle due armate (box PV/FC, sigilli, lampo)
 const SILVER = '#b4bfd0';
@@ -279,6 +280,21 @@ function layoutOffset(el, root) {
   return [x, y];
 }
 
+/**
+ * Consegna senza copie: il contesto GL vive su un OffscreenCanvas e ogni pannello
+ * riceve il frame con transferToImageBitmap → bitmaprenderer. Il ripiego copia con
+ * drawImage nel canvas 2D del pannello, che costringe la GPU a finire il disegno
+ * prima di ogni copia (nove volte a frame).
+ */
+function supportsBitmapHandoff() {
+  if (typeof OffscreenCanvas === 'undefined' || !('transferToImageBitmap' in OffscreenCanvas.prototype)) return false;
+  try {
+    return !!document.createElement('canvas').getContext('bitmaprenderer');
+  } catch {
+    return false;
+  }
+}
+
 /** canvas figlio del pannello, dietro al contenuto (o sopra, per i sigilli) */
 function ensurePanelCanvas(el, key, z) {
   let cv = el[key];
@@ -378,13 +394,34 @@ export function DuelCosmicHud({
     const scene = host.parentElement;
 
     // contesto WebGL unico, fuori dal DOM
-    const glCv = document.createElement('canvas');
-    let glW = 640;
-    let glH = 960;
-    glCv.width = glW;
-    glCv.height = glH;
-    const gl = glCv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: false });
+    const glOpts = { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: false };
+    let handoff = supportsBitmapHandoff();
+    let glCv = null;
+    let gl = null;
+    if (handoff) {
+      glCv = new OffscreenCanvas(640, 960);
+      gl = glCv.getContext('webgl', glOpts);
+      if (!gl) handoff = false;
+    }
+    if (!handoff) {
+      glCv = document.createElement('canvas');
+      glCv.width = 640;
+      glCv.height = 960;
+      gl = glCv.getContext('webgl', glOpts);
+    }
     if (!gl) return undefined;
+    let glW = glCv.width;
+    let glH = glCv.height;
+    const panelCtxType = handoff ? 'bitmaprenderer' : '2d';
+    const panelCtx = (cv) => {
+      if (!cv.__cosmoCtx) cv.__cosmoCtx = cv.getContext(panelCtxType);
+      return cv.__cosmoCtx;
+    };
+    const clearPanel = (cv) => {
+      const ctx = panelCtx(cv);
+      if (handoff) ctx.transferFromImageBitmap(null);
+      else ctx.clearRect(0, 0, cv.width, cv.height);
+    };
     let dead = false;
     let raf = 0;
     const onLost = (e) => { e.preventDefault(); dead = true; cancelAnimationFrame(raf); };
@@ -423,7 +460,18 @@ export function DuelCosmicHud({
       'uLum', 'uHitT', 'uFcT', 'uCor', 'uHead', 'uCircle', 'uEll', 'uStar', 'uRow', 'uSealB', 'uSealW', 'uColP', 'uColE']
       .forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     gl.clearColor(0, 0, 0, 0);
-    gl.uniform1f(U.uScale, SC);
+    // risoluzione e ritmo del cosmo seguono la Qualità effetti
+    let sc = 0.75;
+    let minFrameMs = 0;
+    let lastDrawMs = -1e9;
+    const applyQuality = () => {
+      const profile = getVfxQualityProfile();
+      sc = profile.duelCosmoScale;
+      minFrameMs = profile.duelCosmoFps > 0 ? 1000 / profile.duelCosmoFps : 0;
+      gl.uniform1f(U.uScale, sc);
+    };
+    applyQuality();
+    window.addEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, applyQuality);
     gl.uniform1f(U.uPad, PAD);
 
     let look = [0, 0];
@@ -449,8 +497,21 @@ export function DuelCosmicHud({
     };
     resyncPanels();
 
-    // disegna una regione (cw ├ù ch) nel contesto GL e la copia nel canvas del pannello
+    // disegna una regione (cw ├ù ch) nel contesto GL e la consegna al canvas del pannello
     const blit = (cv, cw, ch) => {
+      if (handoff) {
+        // il canvas GL prende la misura del pannello: il bitmap passa intero, senza copie
+        if (cv.width !== cw) cv.width = cw;
+        if (cv.height !== ch) cv.height = ch;
+        if (glCv.width !== cw) glCv.width = cw;
+        if (glCv.height !== ch) glCv.height = ch;
+        gl.viewport(0, 0, cw, ch);
+        gl.uniform1f(U.uVH, ch);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        panelCtx(cv).transferFromImageBitmap(glCv.transferToImageBitmap());
+        return;
+      }
       if (cv.width !== cw) cv.width = cw;
       if (cv.height !== ch) cv.height = ch;
       if (cw > glW || ch > glH) {
@@ -463,11 +524,7 @@ export function DuelCosmicHud({
       gl.uniform1f(U.uVH, ch);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      let ctx = cv.__cosmo2d;
-      if (!ctx) {
-        ctx = cv.getContext('2d');
-        cv.__cosmo2d = ctx;
-      }
+      const ctx = panelCtx(cv);
       ctx.clearRect(0, 0, cw, ch);
       ctx.drawImage(glCv, 0, glCv.height - ch, cw, ch, 0, 0, cw, ch);
     };
@@ -495,6 +552,9 @@ export function DuelCosmicHud({
         return;
       }
       raf = requestAnimationFrame(frame);
+      const nowMs = performance.now();
+      if (minFrameMs && nowMs - lastDrawMs < minFrameMs - 2) return;
+      lastDrawMs = nowMs;
       const t = now();
       const st = stateRef.current;
       const colP = hexToRgb(pr.playerColor, [0.635, 0.533, 0.984]);
@@ -522,8 +582,8 @@ export function DuelCosmicHud({
         if (w < 3 || h < 3) continue;
         hosts.add(el);
         const cv = ensurePanelCanvas(el, '__cosmoBg', -1);
-        const cw = Math.round((w + PAD * 2) * SC);
-        const ch = Math.round((h + PAD * 2) * SC);
+        const cw = Math.round((w + PAD * 2) * sc);
+        const ch = Math.round((h + PAD * 2) * sc);
         const acc = def.acc === 'player' ? colP : def.acc === 'enemy' ? colE : hexToRgb(def.acc);
 
         gl.uniform1f(U.uMode, 0);
@@ -534,9 +594,7 @@ export function DuelCosmicHud({
         let kind = def.kind;
         if (def.portal && !el.querySelector('.satze-bf-portal-disc')) {
           // pannello campo senza portale (fine partita, passaggi di fase): niente riquadro
-          const ctxClear = cv.__cosmo2d || cv.getContext('2d');
-          cv.__cosmo2d = ctxClear;
-          ctxClear.clearRect(0, 0, cv.width, cv.height);
+          clearPanel(cv);
           continue;
         }
         if (def.portal) {
@@ -601,6 +659,7 @@ export function DuelCosmicHud({
       dead = true;
       cancelAnimationFrame(raf);
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener(DISPLAY_SETTINGS_CHANGED_EVENT, applyQuality);
       document.removeEventListener('visibilitychange', onVisibility);
       glCv.removeEventListener('webglcontextlost', onLost);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
