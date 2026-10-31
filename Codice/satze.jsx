@@ -13,6 +13,7 @@ import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
 import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS, DROP_IMPACT_MS } from '../src/components/battle/placeHandoff.js';
 import { ArmyEntryFx } from '../src/components/fx/ArmyCardFx.jsx';
+import { EntryPrecapture, entrySnapshotKey } from '../src/components/fx/EntryPrecapture.jsx';
 import { getArmyAccent } from '../src/theme/duelAccents.js';
 import { FX_CATALOG, FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../src/components/fx/effects/catalog.js';
 import { CardTagsRow } from '../src/components/cards/CardTagBadges';
@@ -5072,6 +5073,62 @@ export default function SatzeGame() {
   const agentsLockedAwaitingField =
     gamePhase === 'selectField' && Boolean(selectedAgent && enemyAgent);
   const showDeployedEnemyAgent = (gamePhase === 'selectAgent' || agentsLockedAwaitingField) && Boolean(enemyAgent);
+
+  // Carta dell'agente nemico all'ingresso: le prop in un oggetto solo, così la chiave della foto
+  // d'ingresso nasce dagli stessi valori che la carta mostra (vedi EntryPrecapture).
+  const enemyEntryCardFor = (agent, display, effectiveArmyBonus) => ({
+    cardLayout: galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout,
+    agent: display,
+    showBonus: enemyArmyBonuses[agent.army] && isBonusTriggerSatisfied(agent.army, false, agent),
+    bonusBaseInactive: Boolean(ARMY_BONUSES[agent.army]) && !enemyArmyBonuses[agent.army],
+    effectiveArmyBonus,
+    effectiveAbility: resolveEffectiveAbility(display?.ability, false, display),
+    abilityCurrentValue: getAbilityCurrentValue(agent, false),
+  });
+  const enemyEntryCard = showDeployedEnemyAgent
+    ? enemyEntryCardFor(enemyAgent, displayEnemyAgent, enemyEffectiveArmyBonus)
+    : null;
+  const enemyEntryAccent = enemyAgent ? getArmyAccent(enemyAgent, enemyIdentityColor) : null;
+  const enemyEntryCaptureKey = enemyEntryCard ? entrySnapshotKey(enemyEntryCard, enemyEntryAccent) : null;
+
+  // Contro l'IA, mentre si sceglie, le foto d'ingresso delle carte che il nemico può ancora
+  // giocare si preparano in anticipo: all'ingresso (dopo CONFERMA) lo scontro non paga lo scatto.
+  // Il calcolo ricalca enemyLiveSwap / enemyEffectiveArmyBonus per una carta qualsiasi: se
+  // all'ingresso qualcosa differisce la chiave non combacia e si fotografa come prima.
+  const enemyEntryPrecaptureOn =
+    !isMultiplayer &&
+    aiDifficulty !== 'multiplayer' &&
+    !enemyAgent &&
+    (gamePhase === 'selectAgent' || gamePhase === 'selectField') &&
+    // posa e ingresso che l'IA userà alla prossima giocata (vedi l'effetto su enemyAgent.id)
+    getPlaceFxPreference().army !== 'off' &&
+    !needsTwoFaces(resolvePlaceFxForVia(isPlayerFirst ? 'click' : 'drop')) &&
+    !prefersReducedMotion();
+  const enemyEntryPrecaptureItems = enemyEntryPrecaptureOn
+    ? (enemyHand || [])
+        .filter((card) => card?.army && !(enemyUsedCards || []).includes(card.id))
+        .map((card) => {
+          const swap = resolveLivePowerBonusSwapDisplay({
+            agent: card,
+            side: 'enemy',
+            matchState: eminenceMatchState,
+            armyBonus: matchArmyBonuses[card.army] || null,
+          });
+          const display = swap.agent || card;
+          const base = swap.swapped ? swap.armyBonus : matchArmyBonuses[display.army];
+          const fieldBonus = resolveArmyBonusForDisplay({
+            field: activeFieldForAbilityDisplay,
+            fieldMods: activeFieldAbilityMods,
+            armyBonus: base || matchArmyBonuses[display.army] || null,
+            hasBonus: Boolean(enemyArmyBonuses[display.army]),
+            opponentArmyBonus: displaySelectedAgent ? matchArmyBonuses[displaySelectedAgent.army] : null,
+            opponentHasBonus: Boolean(displaySelectedAgent && playerArmyBonuses[displaySelectedAgent.army]),
+          });
+          const cardProps = enemyEntryCardFor(card, display, fieldBonus || (swap.swapped ? swap.armyBonus : null));
+          const accent = getArmyAccent(card, enemyIdentityColor);
+          return { key: entrySnapshotKey(cardProps, accent), accent, cardProps };
+        })
+    : [];
   const showDeployedPlayerAgent = (gamePhase === 'selectAgent' || agentsLockedAwaitingField) && Boolean(selectedAgent);
   const isPreviewEntranceBlocked =
     Boolean(pendingGameLaunch) ||
@@ -6239,15 +6296,9 @@ export default function SatzeGame() {
                     </div>
                   </div>
                 ) : (
-                  <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0}>
+                  <ArmyEntryFx agent={enemyAgent} enabled={enemyArmyEntry !== 'off'} delayMs={0} captureKey={enemyEntryCaptureKey}>
                     <GameCard
-                      cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
-                      agent={displayEnemyAgent}
-                      showBonus={enemyArmyBonuses[enemyAgent.army] && isBonusTriggerSatisfied(enemyAgent.army, false, enemyAgent)}
-                      bonusBaseInactive={Boolean(ARMY_BONUSES[enemyAgent.army]) && !enemyArmyBonuses[enemyAgent.army]}
-                      effectiveArmyBonus={enemyEffectiveArmyBonus}
-                      effectiveAbility={resolveEffectiveAbility(displayEnemyAgent?.ability, false, displayEnemyAgent)}
-                      abilityCurrentValue={getAbilityCurrentValue(enemyAgent, false)}
+                      {...enemyEntryCard}
                       onHover={handleEnemyPreviewClick}
                       onClick={holdForConfirmedAgentPick ? () => tryPickEminenceCard(enemyAgent.id) : undefined}
                     />
@@ -6260,6 +6311,7 @@ export default function SatzeGame() {
         {gamePhase === 'selectAgent' && !enemyAgent && (
           <div className="text-slate-500 text-sm text-center">In attesa...</div>
         )}
+        <EntryPrecapture items={enemyEntryPrecaptureItems} enabled={enemyEntryPrecaptureOn} />
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}
         {gamePhase === 'result' && battleResult && showDuelResultBodies && (
           <DuelResultEnemyResultBody

@@ -18,6 +18,7 @@ import { BattlefieldReveal } from './gallery/BattlefieldRevealAnimations';
 import { EminenceTarotCard } from './eminenceLab/EminenceTarotCard';
 import ArmySelectCinematic from './menu/cosmic/ArmySelectCinematic';
 import { DeckConfirmTransition } from './menu/cosmic/DeckConfirmTransition';
+import { createFxShaderWarmup } from './fx/warmupFxShaders';
 
 import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
@@ -44,6 +45,8 @@ const SCREEN_SCHEDULE = [
 
 const WARMUP_MS = 1800;
 const WARMUP_HARD_CAP_MS = 3200;
+/** Oltre WARMUP_MS si aspetta ancora gli shader degli effetti, fino a qui. */
+const SHADER_WARMUP_MAX_MS = 2900;
 
 const noop = () => {};
 
@@ -153,6 +156,7 @@ export function WarmupStage({ onComplete, onProgress }) {
 
   useEffect(() => {
     let cancelled = false;
+    const shaders = createFxShaderWarmup();
     const hardCap = window.setTimeout(() => {
       if (!cancelled) finish();
     }, WARMUP_HARD_CAP_MS);
@@ -174,24 +178,32 @@ export function WarmupStage({ onComplete, onProgress }) {
       onProgressRef.current?.(40);
 
       // Non aspetta il decode di tutte le img delle gallerie (quel wait bloccava il boot).
+      // un programma degli effetti per frame: compilato qui, nello scontro arriva dalla cache GPU
       const t0 = performance.now();
-      while (!cancelled && performance.now() - t0 < WARMUP_MS) {
+      let shadersLeft = true;
+      while (!cancelled) {
+        const elapsed = performance.now() - t0;
+        if (elapsed >= WARMUP_MS && (!shadersLeft || elapsed >= SHADER_WARMUP_MAX_MS)) break;
         await nextFrame();
+        if (shadersLeft) shadersLeft = shaders.step();
         if (host) void host.offsetHeight;
         const p = 40 + Math.min(55, ((performance.now() - t0) / WARMUP_MS) * 55);
         onProgressRef.current?.(Math.round(p));
       }
 
+      shaders.release();
       if (cancelled) return;
       finish();
     };
 
     run().catch(() => {
+      shaders.release();
       if (!cancelled) finish();
     });
 
     return () => {
       cancelled = true;
+      shaders.release();
       window.clearTimeout(hardCap);
     };
   }, []);
