@@ -32,9 +32,9 @@ function hexA(hex, a) {
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})`;
 }
 
-function rectIn(scene, el) {
+function rectIn(scene, el, sceneRect = null) {
   if (!scene || !el) return null;
-  const rs = scene.getBoundingClientRect();
+  const rs = sceneRect || scene.getBoundingClientRect();
   const r = el.getBoundingClientRect();
   if (!r.width) return null;
   const k = W / (rs.width || W);
@@ -114,14 +114,25 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
       const collapse = inClash ? ss(0.37, 0.445, u) : 0;
       const pull = inClash ? ss(0.395, 0.445, u) : 0;
       const vanish = inClash ? ss(0.44, 0.52, u) : 0;
+
+      // Prima tutte le letture (posizioni di carte e contatori FC), poi le scritture: alternate
+      // per lato costringevano il browser a ricalcolare stili e layout più volte a ogni frame.
+      const sceneRect = scene ? scene.getBoundingClientRect() : null;
+      const measured = {};
+      SIDES.forEach((side) => {
+        const card = scene?.querySelector(`[data-duel-card="${side}"]`);
+        const r = rectIn(scene, card, sceneRect);
+        const fcEl = r ? scene.querySelector(`[data-va-ledger="${side}"] [data-ledger-fc]`) : null;
+        measured[side] = { card, r, fr: rectIn(scene, fcEl, sceneRect) };
+      });
+
       // nello scontro le monete passano sopra lo strato della sequenza Aurora (z 58)
       if (backRef.current) backRef.current.style.zIndex = inClash ? '57' : '4';
       if (frontRef.current) frontRef.current.style.zIndex = inClash ? '59' : '6';
 
       SIDES.forEach((side) => {
         const R = refs.current[side];
-        const card = scene?.querySelector(`[data-duel-card="${side}"]`);
-        const r = rectIn(scene, card);
+        const { card, r, fr } = measured[side];
         const n = total[side];
         const launches = launchesRef.current?.[side] || [];
         if (!r || !n) {
@@ -142,8 +153,6 @@ export function DuelFocusStage({ battleResult, duelPhase, launchesRef, accent })
         const lastSlam = landed > 0 ? slams[landed - 1] : -1e9;
         const sign = side === 'enemy' ? 1 : -1;
         const angBase = reduce ? 0 : orbitAngle(slams, t, sign);
-        const fcEl = scene.querySelector(`[data-va-ledger="${side}"] [data-ledger-fc]`);
-        const fr = rectIn(scene, fcEl);
         const src = fr ? { x: fr.x + fr.w / 2, y: fr.y + fr.h / 2 } : cnt;
         const firstTemp = n - temp[side];
         const tempSrc = { x: cx, y: cy - 220 * sc };
