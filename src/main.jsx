@@ -18,11 +18,14 @@ import './styles/satze-duello-cosmo.css'
 import './lib/em-cells.js'
 
 import { App } from './App'
-import { bindAudioUnlock } from './audio/soundBus'
+import { bindAudioUnlock, unlockAudio } from './audio/soundBus'
 
 // Grafica cosmica attiva di default
 document.body.classList.add('graphics-prova')
 bindAudioUnlock()
+// Client desktop: niente gesto richiesto (switch autoplay in electron/main.cjs), quindi il
+// dispositivo audio si apre ora, a schermata di caricamento, e non al primo tasto nel menù.
+if (window.electronAPI) unlockAudio()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

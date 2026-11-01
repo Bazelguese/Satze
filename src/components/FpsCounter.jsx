@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 const DETAILS_KEY = 'F9';
+/** Registratore di prestazioni (solo client desktop): trace sul Desktop + riassunto qui. */
+const TRACE_KEY = 'F10';
+const TRACE_SECONDS = 8;
 const WINDOW_MS = 2000;
 /** Frame più lunghi di così (≥ 2 frame persi a 60 Hz) finiscono nel registro scatti. */
 const HITCH_MS = 33;
@@ -51,6 +54,8 @@ export function FpsCounter() {
     let hitches = [];
     let hitchCount = 0;
     let gpuLine = '';
+    /** Righe del registratore F10: stato della registrazione o riassunto dell'ultima. */
+    let traceLines = [];
     let compositing = '';
 
     let observer = null;
@@ -87,6 +92,8 @@ export function FpsCounter() {
           .slice()
           .reverse()
           .map((h) => `  ${(h.at / 1000).toFixed(1).padStart(7)} s   ${h.d.toFixed(0).padStart(4)} ms   ${h.phase}`),
+        window.electronAPI?.perf ? `F10: registra ${TRACE_SECONDS} s di prestazioni` : '',
+        ...traceLines,
       ].filter(Boolean);
       box.textContent = lines.join('\n');
     };
@@ -132,7 +139,36 @@ export function FpsCounter() {
       }
     };
 
+    const showDetails = () => {
+      open = true;
+      const box = detailsRef.current;
+      if (box) box.style.display = 'block';
+      if (!gpuLine) loadGpuInfo().then(() => renderDetails(performance.now()));
+      renderDetails(performance.now());
+    };
+
+    const recordTrace = async () => {
+      const api = window.electronAPI?.perf;
+      if (!api) {
+        traceLines = ['registratore F10: disponibile solo nel client desktop'];
+        showDetails();
+        return;
+      }
+      traceLines = [`● REGISTRAZIONE ${TRACE_SECONDS} s… gioca normalmente`];
+      showDetails();
+      const res = await api.recordTrace(TRACE_SECONDS);
+      traceLines = res?.error
+        ? [`registrazione fallita: ${res.error}`]
+        : ['── trace registrato ──', ...(res?.lines || []), `file: ${res?.file || '?'}`];
+      showDetails();
+    };
+
     const onKey = (e) => {
+      if (e.key === TRACE_KEY) {
+        e.preventDefault();
+        void recordTrace();
+        return;
+      }
       if (e.key !== DETAILS_KEY) return;
       e.preventDefault();
       open = !open;
