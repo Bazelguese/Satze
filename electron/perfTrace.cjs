@@ -112,15 +112,29 @@ function summarize(events, seconds) {
   }
   const fnTop = [...byFn.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${Math.round(v)}`);
   if (fnTop.length) lines.push(`JS più pesante: ${fnTop.join(' ; ')}`);
-  // cosa fanno GPU e compositor (le operazioni più costose)
+  // cosa fanno GPU e compositor: tempo "proprio" di ogni operazione (senza quello delle
+  // operazioni annidate dentro), così i contenitori generici come GPUTask non coprono tutto
   const topOps = (threadName) => {
-    const m = new Map();
-    for (const e of events) {
-      if (e.ph !== 'X' || !e.dur || names.get(`${e.pid}:${e.tid}`) !== threadName) continue;
-      if (e.name === 'ThreadControllerImpl::RunTask' || e.name === 'RunTask' || e.name.startsWith('ThreadPool')) continue;
-      m.set(e.name, (m.get(e.name) || 0) + e.dur / 1000);
+    const list = events
+      .filter((e) => e.ph === 'X' && e.dur && names.get(`${e.pid}:${e.tid}`) === threadName)
+      .sort((a, b) => a.ts - b.ts || b.dur - a.dur);
+    const self = new Map();
+    const stack = [];
+    const close = (until) => {
+      while (stack.length && stack[stack.length - 1].end <= until) {
+        const f = stack.pop();
+        self.set(f.name, (self.get(f.name) || 0) + Math.max(0, f.dur - f.kids) / 1000);
+      }
+    };
+    for (const e of list) {
+      close(e.ts);
+      if (stack.length) stack[stack.length - 1].kids += e.dur;
+      stack.push({ name: e.name, dur: e.dur, end: e.ts + e.dur, kids: 0 });
     }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${Math.round(v)}`).join(' ; ');
+    close(Infinity);
+    const skip = /^(ThreadControllerImpl::RunTask|RunTask|ThreadPool|SimpleWatcher|Closed mojo|Receive mojo)/;
+    return [...self.entries()].filter(([k]) => !skip.test(k)).sort((a, b) => b[1] - a[1]).slice(0, 6)
+      .map(([k, v]) => `${k} ${Math.round(v)}`).join(' ; ');
   };
   const gpuOps = topOps('CrGpuMain');
   if (gpuOps) lines.push(`GPU: ${gpuOps}`);

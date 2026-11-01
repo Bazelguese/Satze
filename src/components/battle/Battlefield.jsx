@@ -444,21 +444,32 @@ export const BattlefieldBackground = React.memo(({ activeField, cursed = false, 
         zIndex: 0
       }}
     >
-      {/* Base gradient con animazione */}
+      {/* Base gradient con animazione.
+          Prima era un fondo 200% × 200% che scorreva animando background-position: il
+          browser lo ridisegnava a tutto schermo a ogni frame. Ora il fondo è una lastra
+          grande quanto quel fondo (3840 × 2160) che scorre con transform: stessa immagine,
+          stessa corsa (0 → -1920 px e ritorno, 8 s, ease), ma resta disegnata una volta sola
+          e la sposta il compositor. */}
       <div 
-        className="absolute transition-all duration-700 animate-gradient-shift"
+        className="absolute transition-all duration-700 overflow-hidden"
         style={{ 
           top: 0,
           left: 0,
           width: '1920px',
           height: '1080px',
-          background: `${fieldStyle.gradient || 'linear-gradient(135deg, #1a1a2e, #2a2a4e)'}, ${fieldStyle.gradient || 'linear-gradient(315deg, #2a2a4e, #1a1a2e)'}`,
-          backgroundSize: '200% 200%',
           // Tenere basso: lo sfondo vero è la foto del campo (BattlefieldReveal).
           // A 0.5 il gradiente mangia l'immagine e il duello sembra "senza campo".
           opacity: 0.18
         }}
-      />
+      >
+        <div
+          className="satze-bf-gradient-plane"
+          style={{
+            background: `${fieldStyle.gradient || 'linear-gradient(135deg, #1a1a2e, #2a2a4e)'}, ${fieldStyle.gradient || 'linear-gradient(315deg, #2a2a4e, #1a1a2e)'}`,
+            backgroundSize: '100% 100%',
+          }}
+        />
+      </div>
       
       {/* Glow pulsante */}
       <div 
