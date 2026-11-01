@@ -21,14 +21,16 @@ import {
 } from '../../../data/battlefieldMeta.js';
 import { BattlefieldReveal } from '../../gallery/BattlefieldRevealAnimations.jsx';
 import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
-import { resolvePublicAssetUrl, resolveFieldThumbUrl } from '../../../utils/preloadAssets.js';
+import { resolvePublicAssetUrl } from '../../../utils/preloadAssets.js';
 import {
   GalleryPersonaShell,
   PersonaRail,
   PersonaList,
   PersonaNamePlate,
+  GalleryArmyIcon,
   armyAccent,
   armyGlyph,
+  armyIconUrl,
   wrapIndex,
 } from './GalleryPersonaShell.jsx';
 
@@ -67,12 +69,8 @@ const RARITY_LABEL = {
 };
 
 function resolveFieldImage(bgImage, fieldId) {
-  // Griglia/viewer galleria: thumb (leggere). Full-res resta per il duello.
-  if (bgImage) {
-    return resolveFieldThumbUrl(bgImage) || resolvePublicAssetUrl(bgImage) || bgImage;
-  }
-  return resolveFieldThumbUrl(`/campi_bg/campo-${fieldId}.webp`)
-    || resolvePublicAssetUrl(`/campi_bg/campo-${fieldId}.webp`);
+  if (bgImage) return resolvePublicAssetUrl(bgImage) || bgImage;
+  return resolvePublicAssetUrl(`/campi_bg/campo-${fieldId}.webp`);
 }
 
 function buildFields() {
@@ -83,6 +81,7 @@ function buildFields() {
       name: f.name,
       army: themed ? f.tema : 'Generico',
       accent: themed ? armyAccent(f.tema, CATEGORY_ACCENT[f.category]) : (CATEGORY_ACCENT[f.category] || '#94a3b8'),
+      icon: themed ? armyIconUrl(f.tema) : null,
       glyph: themed ? armyGlyph(f.tema) : '◈',
       anim: getBattlefieldAnimationType(f.id),
       img: resolveFieldImage(f.bgImage, f.id),
@@ -140,6 +139,7 @@ export default function GalleryCinematic({
     title: f.name,
     sub: f.effect,
     accent: f.accent,
+    icon: f.icon,
     glyph: f.glyph,
   })), [shown]);
 
@@ -231,7 +231,11 @@ function FieldStage({ field, token, heavyOk, onReplay }) {
         </div>
         <div className="glp-side gp-anim-swipe d2">
           <div className="glp-chip glp-chip--theme">
-            <span className="gy">{field.glyph}</span>
+            {field.icon ? (
+              <GalleryArmyIcon src={field.icon} glyph={field.glyph} className="gy-ic" />
+            ) : (
+              <span className="gy">{field.glyph}</span>
+            )}
             <span>{field.army}</span>
           </div>
           {field.rarity && <div className="glp-chip"><span>{field.rarity}</span></div>}
@@ -297,7 +301,11 @@ function GalleryStyles() {
       }
       .glp-chip > * { display: inline-block; transform: skewX(14deg); }
       .glp-chip--theme { background: var(--accent); color: #050507; }
-      .glp-chip .gy { font-size: 17px; }
+      .glp-chip .gy, .glp-chip .gy-ic.is-glyph { font-size: 17px; }
+      .glp-chip img.gy-ic {
+        width: 26px; height: 26px; margin: -4px 0; object-fit: contain;
+        filter: drop-shadow(2px 2px 0 #050507);
+      }
       .glp-flavour { grid-column: 1 / -1; }
       .glp-flavour p { margin: 0; font-size: 15px; line-height: 1.5; font-style: italic; color: rgba(245,243,235,0.85); }
     `}</style>

@@ -1,31 +1,31 @@
 // Galleria agenti — Compendium stile Persona: lista inclinata a sinistra,
 // carta grande (CardReworkP4 baked-tilt o faccia alternativa) + ritratto a destra.
 
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useScreenState } from '../../screenCache/ScreenCache.jsx';
 import { ALL_AGENTS } from '../../../data/cards.js';
 import { CONCORDIA_ARMY, CONCORDIA_CARDS } from '../../../campaign/data/concordia.js';
 import { firstActCard } from '../../../campaign/data/firstAct.js';
-import { getCardDisplayLabels } from '../../../data/cardArchetypes.js';
+import { getCardDisplayLabels, LABEL_TOOLTIPS } from '../../../data/cardArchetypes.js';
 import { CardPointerTiltStyles } from '../../cards/CardPointerTilt.jsx';
 import { GalleryBakedTiltCard } from './GalleryBakedTiltCard.jsx';
-import { CardTagsRow } from '../../cards/CardTagBadges.jsx';
 import { getAgentThumbUrl, getCardImageUrl } from '../../../data/images.js';
 import { getCardSprite } from '../../../utils/cardUtils.js';
 import { useCosmicHeavyContentReady } from '../../cosmic/ScreenTransition.jsx';
 import { ELDRITCH_FRAME_W, ELDRITCH_FRAME_H } from '../../cards/EldritchCardFace.jsx';
 import { AltArtCardFace } from '../../cards/AltArtCardFace.jsx';
-import { hasLayeredAltArt } from '../../cardFaceLab/cardFaceLabData.js';
+import { getLayeredAltArt, hasLayeredAltArt } from '../../cardFaceLab/cardFaceLabData.js';
 import { useEldritchFacePreference } from '../../../hooks/useEldritchFacePreference.js';
 import {
   GalleryPersonaShell,
   PersonaRail,
   PersonaList,
   PersonaNamePlate,
-  PersonaStatBurst,
   armyAccent,
   armyBgUrl,
   armyGlyph,
+  armyIconUrl,
   armyMotto,
   wrapIndex,
 } from './GalleryPersonaShell.jsx';
@@ -88,6 +88,23 @@ function agentArtUrls(agent) {
   return { full, thumb: thumb || full };
 }
 
+/** Sfondo + soggetto del kit alternativo, con la stessa composizione della carta a livelli. */
+function altPortraitLayers(agentId) {
+  const kit = getLayeredAltArt(agentId);
+  if (!kit?.background || !kit?.subject) return null;
+  const c = kit.composition || {};
+  const arcana = kit.style === 'arcana';
+  const bgScale = arcana ? (c.backgroundScale ?? 1) * 1.03 : (c.backgroundScale ?? 1.07);
+  const subjectScale = c.subjectScale ?? (arcana ? 1 : 1.025);
+  return {
+    arcana,
+    background: kit.background,
+    subject: kit.subject,
+    bgTransform: `translate(0%, ${c.backgroundYPercent || 0}%) scale(${bgScale})`,
+    subjectTransform: `translate(${c.subjectXPercent || 0}%, ${c.subjectYPercent || 0}%) scale(${subjectScale})`,
+  };
+}
+
 function powerDescription(agent) {
   if (!agent?.description) return null;
   return agent.description.replace(/^Potere:\s*/i, '');
@@ -139,6 +156,7 @@ export default function CardGallery({
   const railItems = useMemo(() => allArmies.map((army) => ({
     id: army,
     label: army,
+    icon: armyIconUrl(army),
     glyph: armyGlyph(army),
     accent: armyAccent(army),
     count: agentPool.filter((a) => a.army === army).length,
@@ -149,8 +167,6 @@ export default function CardGallery({
     key: a.id,
     number: `№${String(a.id).padStart(3, '0')}`,
     title: a.name,
-    sub: `Lega ${a.league}`,
-    meta: `${a.power ?? '–'} / ${a.damage ?? '–'}`,
     accent: armyAccent(a.army),
     thumb: agentArtUrls(a).thumb,
   })), [shown]);
@@ -218,7 +234,7 @@ export default function CardGallery({
 function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = false }) {
   const accent = armyAccent(agent.army);
   const powerBody = powerDescription(agent);
-  const hasTags = getCardDisplayLabels(agent.id).length > 0;
+  const stageRef = useRef(null);
   const { full: artUrl } = agentArtUrls(agent);
   const {
     hasKit,
@@ -229,11 +245,45 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
   } = useEldritchFacePreference(agent.id);
   const altLabel = styleLabel || 'Eldritch';
   const displayEldritch = !forceStandard && (forceEldritch || showEldritch);
+  const altPortrait = displayEldritch ? altPortraitLayers(agent.id) : null;
+  const matchFaceLabel = showEldritch ? altLabel : 'Standard';
+  const faceHint = forceEldritch
+    ? `Qui vedi sempre ${altLabel} · in partita: ${matchFaceLabel}`
+    : 'Scelta salvata per mazzo e duelli';
+  // Standard e alternativa occupano lo stesso riquadro (carta + zona tilt): niente salti al cambio.
+  const cardBox = {
+    width: STAGE_CARD_W,
+    height: displayEldritch && heavyOk ? STAGE_ELD_H : STAGE_CARD_H,
+    padding: STAGE_HIT_PAD,
+    boxSizing: 'content-box',
+  };
 
   return (
-    <div className="cgp-stage" style={{ '--accent': accent }}>
-      <div className="cgp-portrait" aria-hidden="true">
-        {artUrl && <img src={artUrl} alt="" decoding="async" />}
+    <div className="cgp-stage" ref={stageRef} style={{ '--accent': accent }}>
+      <div
+        key={altPortrait ? 'alt' : 'std'}
+        className={`cgp-portrait${altPortrait ? ' cgp-portrait--alt' : ''}`}
+        aria-hidden="true"
+      >
+        {altPortrait ? (
+          <div className="cgp-portrait-alt">
+            <img
+              className={`cgp-portrait-alt-bg${altPortrait.arcana ? ' is-oversize' : ''}`}
+              src={altPortrait.background}
+              alt=""
+              decoding="async"
+              style={{ transform: altPortrait.bgTransform }}
+            />
+            <img
+              src={altPortrait.subject}
+              alt=""
+              decoding="async"
+              style={{ transform: altPortrait.subjectTransform }}
+            />
+          </div>
+        ) : (
+          artUrl && <img src={artUrl} alt="" decoding="async" />
+        )}
         <div className="cgp-portrait-tone" />
       </div>
 
@@ -245,26 +295,20 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
         />
       </div>
 
-      <div className="cgp-stats">
-        <div className="gp-anim-swipe d1"><PersonaStatBurst label="POT" value={agent.power} tone="light" /></div>
-        <div className="gp-anim-swipe d2"><PersonaStatBurst label="DAN" value={agent.damage} tone="accent" /></div>
-        <div className="gp-anim-swipe d3"><PersonaStatBurst label="LEGA" value={agent.league} tone="dark" /></div>
-      </div>
-
       <div className="cgp-card-slot">
         <div className="cgp-card-slam">
           {/* Stessa misura della carta: il contenitore include il padding hit del tilt. */}
           <div
             className="cgp-card-back"
             aria-hidden="true"
-            style={displayEldritch || !heavyOk
-              ? { left: 0, top: 0, width: STAGE_CARD_W, height: displayEldritch ? STAGE_ELD_H : STAGE_CARD_H }
-              : { left: STAGE_HIT_PAD, top: STAGE_HIT_PAD, width: STAGE_CARD_W, height: STAGE_CARD_H }}
+            style={{ left: STAGE_HIT_PAD, top: STAGE_HIT_PAD, width: cardBox.width, height: cardBox.height }}
           />
           {!heavyOk ? (
-            <div className="cgp-card-ph" style={{ width: STAGE_CARD_W, height: STAGE_CARD_H }} />
+            <div style={cardBox}>
+              <div className="cgp-card-ph" style={{ width: '100%', height: '100%' }} />
+            </div>
           ) : displayEldritch ? (
-            <div className="cgp-eldritch" style={{ width: STAGE_CARD_W, height: STAGE_ELD_H }}>
+            <div className="cgp-eldritch" style={cardBox}>
               <AltArtCardFace
                 agent={agent}
                 width={STAGE_CARD_W}
@@ -293,11 +337,12 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
         </div>
 
         {hasKit && !forceStandard && (
-          <div className="cgp-face-switch" role="tablist" aria-label="Versione carta">
+          <div className="cgp-face-switch" role="radiogroup" aria-label="Versione della carta usata in partita">
+            <div className="cgp-face-label"><span>Versione in partita</span></div>
             <button
               type="button"
-              role="tab"
-              aria-selected={faceMode === 'standard'}
+              role="radio"
+              aria-checked={faceMode === 'standard'}
               className={`cgp-face-btn ${faceMode === 'standard' ? 'on' : ''}`}
               onClick={() => setPreference('standard')}
             >
@@ -305,16 +350,14 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={faceMode === 'eldritch'}
+              role="radio"
+              aria-checked={faceMode === 'eldritch'}
               className={`cgp-face-btn ${faceMode === 'eldritch' ? 'on' : ''}`}
               onClick={() => setPreference('eldritch')}
             >
               <span>{altLabel}</span>
             </button>
-            <div className="cgp-face-hint">
-              {showEldritch ? `In partita: ${altLabel}` : 'In partita: Standard'}
-            </div>
+            <div className="cgp-face-hint">{faceHint}</div>
           </div>
         )}
       </div>
@@ -326,17 +369,76 @@ function AgentStage({ agent, heavyOk, forceEldritch = false, forceStandard = fal
             <p className="cgp-power">{powerBody}</p>
           </div>
         )}
-        {hasTags && (
-          <div className="cgp-tags gp-anim-swipe d2">
-            <CardTagsRow cardId={agent.id} compact={false} />
-          </div>
-        )}
+        <GalleryArchetypeTags cardId={agent.id} stageRef={stageRef} />
         {agent.flavour && (
           <div className="gp-panel cgp-flavour gp-anim-swipe d3">
             <p>{agent.flavour.startsWith('«') ? agent.flavour : <>&ldquo;{agent.flavour}&rdquo;</>}</p>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+const TAG_KIND_LABEL = {
+  archetype: 'ARCHETIPO',
+  secondary: 'SECONDARIO',
+  focus: 'FOCUS',
+  scaling: 'SCALANTE',
+};
+
+/**
+ * Chip archetipo / secondario / focus / scalante in stile Persona.
+ * Il tooltip vive nello stage (non nel pannello info scrollabile) per non essere tagliato
+ * e per scalare insieme al canvas.
+ */
+function GalleryArchetypeTags({ cardId, stageRef }) {
+  const [tip, setTip] = useState(null);
+  const labels = getCardDisplayLabels(cardId);
+  if (!labels.length) return null;
+
+  const show = (el, label) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const s = stage.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const k = stage.offsetWidth ? s.width / stage.offsetWidth : 1;
+    setTip({
+      label,
+      x: (r.left + r.width / 2 - s.left) / k,
+      y: (r.top - s.top) / k,
+    });
+  };
+  const hide = () => setTip(null);
+
+  return (
+    <div className="cgp-tags gp-anim-swipe d2">
+      {labels.map((label) => (
+        <span
+          key={`${label.kind}-${label.text}`}
+          className={`cgp-tag cgp-tag--${label.kind}`}
+          tabIndex={0}
+          aria-label={`${TAG_KIND_LABEL[label.kind] || ''} ${label.text}`}
+          onMouseEnter={(e) => show(e.currentTarget, label)}
+          onMouseLeave={hide}
+          onFocus={(e) => show(e.currentTarget, label)}
+          onBlur={hide}
+        >
+          <span className="cgp-tag-in"><span>{label.text}</span></span>
+        </span>
+      ))}
+      {tip && stageRef.current && createPortal(
+        <div className="cgp-tip" role="tooltip" style={{ left: tip.x, top: tip.y }}>
+          <div className="cgp-tip-plate">
+            <div className="cgp-tip-head">
+              <span className="cgp-tip-kind">{TAG_KIND_LABEL[tip.label.kind] || ''}</span>
+              <span className="cgp-tip-name">{tip.label.text}</span>
+            </div>
+            <p className="cgp-tip-body">{tip.label.title || LABEL_TOOLTIPS[tip.label.text] || tip.label.text}</p>
+          </div>
+        </div>,
+        stageRef.current,
+      )}
     </div>
   );
 }
@@ -357,6 +459,18 @@ function CardGalleryStyles() {
         filter: saturate(1.1) contrast(1.05);
         image-rendering: pixelated;
       }
+      /* Arte alternativa: riquadro 23:33 in "cover" (come object-position 50% 18%). */
+      .cgp-portrait--alt { container-type: size; }
+      .cgp-portrait-alt {
+        position: absolute; left: 50%; top: 18%;
+        width: max(100cqw, calc(100cqh * 1104 / 1584)); aspect-ratio: 1104 / 1584;
+        transform: translate(-50%, -18%);
+      }
+      .cgp-portrait-alt img {
+        object-fit: fill; object-position: 50% 50%; transform-origin: center center;
+        image-rendering: auto;
+      }
+      .cgp-portrait-alt img.is-oversize { inset: -4%; width: 108%; height: 108%; }
       .cgp-portrait::after {
         content: ''; position: absolute; inset: 0; pointer-events: none;
         background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, #000) 1.3px, transparent 1.8px) 0 0 / 8px 8px;
@@ -373,12 +487,6 @@ function CardGalleryStyles() {
 
       .cgp-head { position: absolute; top: 4px; right: 0; z-index: 5; max-width: 820px; display: flex; justify-content: flex-end; }
       .cgp-head .gp-nameplate-name { font-size: 42px; }
-
-      .cgp-stats {
-        position: absolute; top: 150px; left: 440px; z-index: 7;
-        display: flex; gap: 2px; transform: rotate(-6deg);
-      }
-      .gp-burst--light .gp-burst-shape { background: #f5f3eb; }
 
       .cgp-card-slot {
         position: absolute; left: 0; top: 70px; z-index: 6;
@@ -414,6 +522,12 @@ function CardGalleryStyles() {
       .cgp-eldritch .arcana-layered__card { filter: none; width: 100%; height: 100%; aspect-ratio: auto; }
 
       .cgp-face-switch { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; transform: rotate(-2deg); max-width: 380px; }
+      .cgp-face-label { width: 100%; display: flex; justify-content: center; margin-bottom: 2px; }
+      .cgp-face-label > span {
+        background: #f5f3eb; color: #050507; padding: 2px 12px;
+        font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+        transform: skewX(-14deg); box-shadow: 3px 3px 0 var(--accent);
+      }
       .cgp-face-btn {
         border: 0; cursor: pointer; padding: 8px 18px; transform: skewX(-14deg);
         background: #050507; color: rgba(245,243,235,0.7);
@@ -436,8 +550,53 @@ function CardGalleryStyles() {
       }
       .cgp-info::-webkit-scrollbar { display: none; }
       .cgp-power { margin: 0; font-weight: 600; font-size: 21px; line-height: 1.3; }
-      .cgp-tags { padding-left: 6px; }
-      .cgp-tags > div { justify-content: flex-start !important; }
+      .cgp-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 4px 0 6px 10px; }
+      .cgp-tag {
+        --c: var(--accent);
+        flex: none; cursor: help; outline: none;
+        transform: skewX(-14deg); transition: transform .18s cubic-bezier(.3,1.6,.5,1);
+      }
+      .cgp-tag--focus { --c: #67e8f9; }
+      .cgp-tag--scaling { --c: #c084fc; }
+      .cgp-tag-in {
+        display: inline-flex; align-items: center; height: 36px; padding: 0 18px;
+        background: rgba(5,5,7,0.92); color: rgba(245,243,235,0.85);
+        border-left: 4px solid var(--c);
+        font-weight: 700; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+        transition: background .15s, color .15s, box-shadow .15s;
+      }
+      .cgp-tag-in > span { display: inline-block; transform: skewX(14deg); }
+      .cgp-tag--archetype .cgp-tag-in {
+        background: #f5f3eb; color: #050507; border-left-color: #050507;
+        box-shadow: 4px 4px 0 var(--accent);
+      }
+      .cgp-tag--secondary .cgp-tag-in > span::before { content: '/ '; opacity: 0.55; }
+      .cgp-tag:hover, .cgp-tag:focus-visible { transform: skewX(-14deg) translateY(-3px) rotate(-2deg); }
+      .cgp-tag:hover .cgp-tag-in, .cgp-tag:focus-visible .cgp-tag-in { color: #f5f3eb; background: #1c1c22; }
+      .cgp-tag--archetype:hover .cgp-tag-in, .cgp-tag--archetype:focus-visible .cgp-tag-in {
+        color: #050507; background: #f5f3eb; box-shadow: 7px 7px 0 var(--accent);
+      }
+
+      .cgp-tip {
+        position: absolute; z-index: 40; pointer-events: none;
+        width: max-content; max-width: 380px;
+        transform: translate(-50%, calc(-100% - 16px));
+        filter: drop-shadow(7px 7px 0 var(--accent)) drop-shadow(0 10px 18px rgba(0,0,0,0.6));
+        animation: cgp-tip-in .18s cubic-bezier(.2,1.3,.4,1) both;
+      }
+      @keyframes cgp-tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)) rotate(3deg); } }
+      .cgp-tip-plate {
+        background: #f5f3eb; color: #050507; padding: 12px 24px 14px 20px;
+        clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+        transform: rotate(-2deg);
+      }
+      .cgp-tip-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+      .cgp-tip-kind {
+        background: #050507; color: #f5f3eb; font-weight: 700; font-size: 11px; letter-spacing: 0.24em;
+        padding: 2px 9px; transform: skewX(-14deg);
+      }
+      .cgp-tip-name { font-weight: 700; font-style: italic; font-size: 20px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+      .cgp-tip-body { margin: 0; font-weight: 600; font-size: 15px; line-height: 1.35; }
       .cgp-flavour p {
         margin: 0; font-size: 15px; line-height: 1.55; font-style: italic;
         color: rgba(245,243,235,0.88); white-space: pre-line;

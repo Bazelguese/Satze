@@ -20,6 +20,7 @@ import {
   armyAccent,
   armyBgUrl,
   armyGlyph,
+  armyIconUrl,
   armyMotto,
   wrapIndex,
 } from './GalleryPersonaShell.jsx';
@@ -60,6 +61,7 @@ export default function EminenceGallery({
     sub: e.army,
     meta: `P${e.initialPresence ?? 0}`,
     accent: armyAccent(e.army),
+    icon: armyIconUrl(e.army),
     glyph: armyGlyph(e.army),
   })), []);
 
