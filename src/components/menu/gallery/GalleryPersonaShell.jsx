@@ -13,6 +13,7 @@
 // ============================================================
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useScreenActiveRef } from '../../screenCache/ScreenCache.jsx';
 import GalleryTabSwitcher, { GALLERY_TAB_ORDER } from './GalleryTabSwitcher.jsx';
 import { playUiClick } from '../../../audio/soundBus.js';
 import { ARMY_COLORS, ARMY_GIFS, ARMY_ICONS } from '../../../data/armies.js';
@@ -115,9 +116,11 @@ export function GalleryPersonaShell({
   // Ref sempre aggiornato: un solo listener per tutta la vita del guscio.
   const handlersRef = useRef({});
   handlersRef.current = { onPrev, onNext, onRailPrev, onRailNext, onReplay, onBack, onGalleryTabChange, galleryTab, tabs };
+  const screenActiveRef = useScreenActiveRef();
 
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || isTypingTarget(e.target)) return;
       const h = handlersRef.current;
       const step = (fn) => {

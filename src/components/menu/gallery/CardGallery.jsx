@@ -1,7 +1,8 @@
 // Galleria agenti — Compendium stile Persona: lista inclinata a sinistra,
 // carta grande (CardReworkP4 baked-tilt o faccia alternativa) + ritratto a destra.
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
+import { useScreenState } from '../../screenCache/ScreenCache.jsx';
 import { ALL_AGENTS } from '../../../data/cards.js';
 import { CONCORDIA_ARMY, CONCORDIA_CARDS } from '../../../campaign/data/concordia.js';
 import { firstActCard } from '../../../campaign/data/firstAct.js';
@@ -111,12 +112,13 @@ export default function CardGallery({
   const enemyArmies = alternativeOnly ? ALT_ENEMY_ARMIES : ENEMY_ARMIES;
   const allArmies = useMemo(() => [...playableArmies, ...enemyArmies], [playableArmies, enemyArmies]);
   const resolvedTotal = totalCards ?? (alternativeOnly ? GALLERY_ALTERNATIVE_COUNT : GALLERY_AGENT_COUNT);
-  const [filterState, setFilter] = useState(
+  // a ogni rientro dalla cache delle schermate si riparte dall'armata e dalla carta iniziali
+  const [filterState, setFilter] = useScreenState(
     alternativeOnly ? DEFAULT_ALT_GALLERY_ARMY : DEFAULT_GALLERY_ARMY,
   );
   // Agenti ↔ Alternative riusano l'istanza: l'armata può non esistere nell'altro pool.
   const filter = allArmies.includes(filterState) ? filterState : allArmies[0];
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useScreenState(0);
   const heavyOk = useCosmicHeavyContentReady();
 
   const shown = useMemo(

@@ -2,6 +2,7 @@ import { createFirstActRun } from '../../campaign/state/firstActState.js';
 // Scelta slot salvataggio campagna (3 slot indipendenti).
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useScreenActiveRef, useScreenState } from '../screenCache/ScreenCache.jsx';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
 import {
   CAMPAIGN_SLOT_COUNT,
@@ -24,15 +25,16 @@ import '../../styles/campaign/atto1-components.css';
  * }} props
  */
 export function CampaignSaveSlots({ onSlotChosen, onBack }) {
-  const [summaries, setSummaries] = useState(() =>
+  // a ogni rientro dalla cache delle schermate: salvataggi riletti e schermata da capo
+  const [summaries, setSummaries] = useScreenState(() =>
     Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignRunSummary(i))
   );
-  const [pendingDelete, setPendingDelete] = useState(null);
+  const [pendingDelete, setPendingDelete] = useScreenState(null);
   // Slot su cui è aperta la scelta dell'esercito iniziale (nuova campagna)
-  const [armySlot, setArmySlot] = useState(null);
+  const [armySlot, setArmySlot] = useScreenState(null);
 
-  const [editor, setEditor] = useState(false);
-  const [error, setError] = useState('');
+  const [editor, setEditor] = useScreenState(false);
+  const [error, setError] = useScreenState('');
 
   const refresh = useCallback(() => {
     setSummaries(Array.from({ length: CAMPAIGN_SLOT_COUNT }, (_, i) => getCampaignRunSummary(i)));
@@ -123,7 +125,8 @@ function describeSlot(sum) {
 }
 
 function SlotsScreen({ summaries, pendingDelete, onAskDelete, onConfirmDelete, onCancelDelete, onNew, onContinue, onEditor, onBack }) {
-  const [active, setActive] = useState(() => Math.max(0, summaries.findIndex((s) => !s.empty)));
+  const [active, setActive] = useScreenState(() => Math.max(0, summaries.findIndex((s) => !s.empty)));
+  const screenActiveRef = useScreenActiveRef();
   const slots = summaries.map(describeSlot);
   const cur = slots[active];
 
@@ -144,6 +147,7 @@ function SlotsScreen({ summaries, pendingDelete, onAskDelete, onConfirmDelete, o
   keyRef.current = { active, primary, askDelete, onBack, pendingDelete, n: slots.length };
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const k = keyRef.current;
       if (k.pendingDelete != null) return; // la conferma ha i suoi tasti
@@ -251,8 +255,10 @@ function DeleteConfirm({ slot, onConfirm, onCancel }) {
   const [pick, setPick] = useState(0); // 0 annulla, 1 elimina
   const ref = useRef({});
   ref.current = { pick, onConfirm, onCancel };
+  const screenActiveRef = useScreenActiveRef();
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const k = ref.current;
       if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.onCancel(); return; }

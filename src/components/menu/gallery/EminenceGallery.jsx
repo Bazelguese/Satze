@@ -2,6 +2,7 @@
 // carta Arena (EminenceTarotCard) con ingresso reale + ritratto e abilità a destra.
 
 import React, { useLayoutEffect, useMemo, useState } from 'react';
+import { useScreenState, useScreenVisit } from '../../screenCache/ScreenCache.jsx';
 import { EMINENCES, EMINENCE_IDS_BY_ARMY_ORDER } from '../../../data/eminences.js';
 import { getEminenceArtUrl } from '../../../data/eminenceArt.js';
 import { getEminenceArtFrame } from '../../../data/eminenceArtFrames.js';
@@ -47,7 +48,7 @@ export default function EminenceGallery({
   fieldCount,
   eminenceCount = ALL_EMINENCES.length,
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useScreenState(0);
   const total = ALL_EMINENCES.length;
   const eminence = ALL_EMINENCES[activeIndex] || null;
   const accent = armyAccent(eminence?.army, '#f5f3eb');
@@ -113,11 +114,13 @@ function EminenceStage({ eminence }) {
     accent,
   });
   const [entryRevealed, setEntryRevealed] = useState(false);
+  // l'ingresso riparte anche a ogni rientro dalla cache delle schermate, come alla creazione
+  const visit = useScreenVisit();
 
   useLayoutEffect(() => {
     setEntryRevealed(false);
     play();
-  }, [eminence.id, play]);
+  }, [eminence.id, play, visit]);
 
   useLayoutEffect(() => {
     if (cardArmClass) setEntryRevealed(true);

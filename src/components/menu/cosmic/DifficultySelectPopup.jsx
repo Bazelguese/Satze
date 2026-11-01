@@ -8,6 +8,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useScreenActiveRef } from '../../screenCache/ScreenCache.jsx';
 import { Icon } from '../../ui/Icon';
 import { getAllDifficulties } from '../../../utils';
 import { ARMY_COLORS, ARMY_ICONS } from '../../../data/armies.js';
@@ -122,10 +123,12 @@ export function DifficultySelectPopup({
 
   const stateRef = useRef({});
   stateRef.current = { stepRow, start, onClose, leaving };
+  const screenActiveRef = useScreenActiveRef();
 
   useEffect(() => {
     if (!isOpen) return undefined;
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // schermata in cache e nascosta
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       // la scelta esercito sotto non deve sentire questi tasti
       e.stopImmediatePropagation();

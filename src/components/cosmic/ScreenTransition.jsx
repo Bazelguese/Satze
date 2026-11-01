@@ -11,6 +11,7 @@ import { getVfxQualityProfile } from '../../settings/vfxQualityProfile.js';
 import { DISPLAY_SETTINGS_CHANGED_EVENT, getDisplaySettings } from '../../settings/displaySettings.js';
 import './cosmic-transitions.css';
 import { PersonaTransitionOverlay, ptrTiming } from './PersonaTransition.jsx';
+import { useScreenVisit } from '../screenCache/ScreenCache.jsx';
 
 const PHASE_LABELS = {
   menu: 'MENU PRINCIPALE',
@@ -105,8 +106,16 @@ export function useCosmicHeavyContentReady() {
  */
 export function useArrivedByCurtain() {
   const ctx = useContext(CosmicTransitionContext);
-  const [arrived] = useState(() => !!ctx?.isTransitioning);
-  return arrived;
+  const transitioning = !!ctx?.isTransitioning;
+  // per ingresso: una schermata tenuta in cache rientra (di solito sotto la cortina) senza rinascere
+  const visit = useScreenVisit();
+  const [seen, setSeen] = useState(() => ({ visit, arrived: transitioning }));
+  if (seen.visit !== visit) {
+    const next = { visit, arrived: transitioning };
+    setSeen(next);
+    return next.arrived;
+  }
+  return seen.arrived;
 }
 
 export function useReportCosmicScreenReady() {}

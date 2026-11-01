@@ -41,6 +41,7 @@ import { buildDeckTicketEntry } from './DeckSelectCinematic.jsx';
 import { DECK_LORE } from './deckLore.js';
 import { DeckCover } from '../../deckCover/DeckCover.jsx';
 import { loadCustomDecks } from '../../../utils/deckManager.js';
+import { useScreenActiveRef, useScreenState } from '../../screenCache/ScreenCache.jsx';
 
 const SHOWCASE_SIZE = 5;
 /** Durata della chiusura a lastra prima di passare alla scelta esercito. */
@@ -188,16 +189,18 @@ export default function ArmySelectCinematic({
 }) {
   const ARMIES = React.useMemo(() => buildArmies(), []);
   const total = ARMIES.length;
-  const [initialIdx] = useState(() => {
+  const initialIdx = (() => {
     if (initialArmy === undefined) return 1;
     const found = ARMIES.findIndex((a) => (initialArmy == null ? a.isMixed : a.id === initialArmy || a.name === initialArmy));
     return found >= 0 ? found : 1;
-  });
-  const [idx, setIdx] = useState(initialIdx);
-  const [phase, setPhase] = useState('idle'); // idle -> confirming
-  const [dossier, setDossier] = useState(false);
+  })();
+  // a ogni rientro dalla cache si riparte dall'armata richiesta, come appena creata (il giro avviene sotto la cortina)
+  const [idx, setIdx] = useScreenState(initialIdx);
+  const [phase, setPhase] = useScreenState('idle'); // idle -> confirming
+  const [dossier, setDossier] = useScreenState(false);
   /** Passi cumulativi della ruota (senza wrap): gira sempre dal lato più corto. */
-  const [spin, setSpin] = useState(initialIdx);
+  const [spin, setSpin] = useScreenState(initialIdx);
+  const screenActiveRef = useScreenActiveRef();
   void entry;
   const rootRef = useRef(null);
   const wheelLockRef = useRef(0);
@@ -249,6 +252,7 @@ export default function ArmySelectCinematic({
   // Tastiera
   useEffect(() => {
     const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (stateRef.current.phase !== 'idle') return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
