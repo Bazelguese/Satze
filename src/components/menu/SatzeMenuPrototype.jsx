@@ -522,7 +522,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
         "--accent": MENU_ACCENTS.magenta,
-        "--active": activeAccent,
         "--halftone": vfxProfile.quality === "low" ? 0.12 : 0.26,
       }}
     >
@@ -538,10 +537,12 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
             }}
           />
         )}
-        <div className="smp-bg-halftone" />
+        {/* --active solo sui due elementi che lo usano: sulla radice, a ogni freccia, il
+            browser ricalcolava gli stili dell'intero menu (pioggia di carte, logo, sfondo) */}
+        <div className="smp-bg-halftone" style={{ "--active": activeAccent }} />
         <MenuAgentRain />
         {items[mainActive] && (
-          <div className="smp-echo" key={`echo-${mainActive}`}>
+          <div className="smp-echo" key={`echo-${mainActive}`} style={{ "--active": activeAccent }}>
             {items[mainActive].label}
           </div>
         )}

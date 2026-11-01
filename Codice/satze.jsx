@@ -336,6 +336,8 @@ export default function SatzeGame() {
   // Fase corrente sul documento: il registro scatti del pannello F9 la associa a ogni frame lento.
   useEffect(() => {
     document.documentElement.dataset.satzePhase = gamePhase || '';
+    // segnaposto nel trace del registratore F10: ogni blocco porta la fase in cui è avvenuto
+    try { performance.mark(`satze:${gamePhase || ''}`); } catch { /* ignore */ }
   }, [gamePhase]);
 
   const [emDraftId, setEmDraftId] = useState(null);
@@ -1243,38 +1245,57 @@ export default function SatzeGame() {
     }
   }, [gamePhase, galleryTab]);
   
-  // Menu: precarica texture carte in idle (galleria / deck aprono più leggeri).
+  // Menu: precarica l'arte delle carte (galleria / deck aprono più leggeri), ma con garbo:
+  // due immagini alla volta, solo a gioco libero e mai a ridosso di tasti o mouse. Prima
+  // partivano blocchi da 28 immagini full-res ogni ~0,5 s anche mentre si navigava il menù,
+  // e il loro caricamento cadeva proprio sui tasti.
   useEffect(() => {
     if (gamePhase !== 'menu') return undefined;
     let cancelled = false;
     let cursor = 0;
-    const batch = 28;
     let idleId = 0;
+    let lastInput = performance.now();
+    const onInput = () => { lastInput = performance.now(); };
+    window.addEventListener('keydown', onInput, true);
+    window.addEventListener('pointermove', onInput, true);
+    window.addEventListener('pointerdown', onInput, true);
+    window.addEventListener('wheel', onInput, true);
 
-    const pump = () => {
-      if (cancelled) return;
-      preloadCardImagesForAgents(ALL_AGENTS.slice(cursor, cursor + batch), getCardSprite);
-      cursor += batch;
-      if (cursor < ALL_AGENTS.length) {
+    const QUIET_MS = 1500;
+    const schedule = (delay) => {
+      const run = () => {
         idleId =
           typeof requestIdleCallback === 'function'
-            ? requestIdleCallback(pump, { timeout: 500 })
-            : setTimeout(pump, 80);
+            ? requestIdleCallback(pump)
+            : setTimeout(pump, 120);
+      };
+      if (delay > 0) idleId = setTimeout(run, delay);
+      else run();
+    };
+    const pump = (deadline) => {
+      if (cancelled) return;
+      const sinceInput = performance.now() - lastInput;
+      if (sinceInput < QUIET_MS || (deadline && deadline.timeRemaining() < 8)) {
+        schedule(Math.max(200, QUIET_MS - sinceInput));
+        return;
       }
+      const slice = ALL_AGENTS.slice(cursor, cursor + 2);
+      cursor += 2;
+      Promise.all(preloadCardImagesForAgents(slice, getCardSprite)).then(() => {
+        if (!cancelled && cursor < ALL_AGENTS.length) schedule(0);
+      });
     };
 
-    idleId =
-      typeof requestIdleCallback === 'function'
-        ? requestIdleCallback(pump, { timeout: 1200 })
-        : setTimeout(pump, 400);
+    schedule(1200);
 
     return () => {
       cancelled = true;
-      if (typeof cancelIdleCallback === 'function') {
-        cancelIdleCallback(idleId);
-      } else {
-        clearTimeout(idleId);
-      }
+      clearTimeout(idleId);
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(idleId);
+      window.removeEventListener('keydown', onInput, true);
+      window.removeEventListener('pointermove', onInput, true);
+      window.removeEventListener('pointerdown', onInput, true);
+      window.removeEventListener('wheel', onInput, true);
     };
   }, [gamePhase]);
 

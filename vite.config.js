@@ -15,6 +15,9 @@ export default defineConfig({
     }
   },
   base: './', // Importante per Electron: usa path relativi
+  // Nomi di funzioni e componenti conservati nel bundle minificato: il registratore di
+  // prestazioni (F10) li mostra al posto di sigle illeggibili. Costo: qualche KB.
+  esbuild: { keepNames: true },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

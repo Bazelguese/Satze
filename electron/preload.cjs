@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gpu: {
     getStatus: () => ipcRenderer.invoke('satze:gpu:getStatus'),
   },
+  perf: {
+    recordTrace: (seconds) => ipcRenderer.invoke('satze:perf:recordTrace', seconds),
+  },
 });

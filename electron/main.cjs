@@ -16,6 +16,11 @@ const {
   prepareUpgradeHousekeeping,
   clearWindowSessionCache,
 } = require('./upgradeHousekeeping.cjs');
+const { recordPerfTrace } = require('./perfTrace.cjs');
+
+// L'audio del gioco non deve aspettare il primo tasto: senza gesto richiesto il dispositivo
+// audio si apre durante il caricamento (vedi main.jsx), non al primo input nel menù.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // Mantieni un riferimento globale dell'oggetto window
 let mainWindow;
@@ -189,6 +194,10 @@ ipcMain.handle('satze:display:getDisplays', () => listDisplays());
 
 // Diagnostica prestazioni (pannello FPS): dice se Chromium compone sulla GPU o in software.
 ipcMain.handle('satze:gpu:getStatus', () => app.getGPUFeatureStatus());
+
+// Registratore di prestazioni (F10): trace di Chromium sul Desktop + riassunto a schermo.
+ipcMain.handle('satze:perf:recordTrace', (_event, seconds) =>
+  recordPerfTrace(Math.min(20, Math.max(2, Number(seconds) || 8))));
 
 ipcMain.handle('satze:display:getState', () => getDisplayState(mainWindow));
 

@@ -119,8 +119,10 @@ export function isImageUrlPreloaded(url) {
 }
 
 /** Precarica texture agenti (menu / galleria) senza montare React. */
+/** Ritorna le Promise dei caricamenti avviati (risolte anche in caso di errore). */
 export function preloadCardImagesForAgents(agents, resolveSprite) {
-  if (!agents?.length || typeof resolveSprite !== 'function') return;
+  const pending = [];
+  if (!agents?.length || typeof resolveSprite !== 'function') return pending;
   for (let i = 0; i < agents.length; i += 1) {
     const agent = agents[i];
     const spriteInfo = resolveSprite(agent);
@@ -129,8 +131,13 @@ export function preloadCardImagesForAgents(agents, resolveSprite) {
     preloadedImageUrls.add(url);
     const img = new Image();
     img.decoding = 'async';
+    pending.push(new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    }));
     img.src = url;
   }
+  return pending;
 }
 
 /**
