@@ -3207,6 +3207,23 @@ body.graphics-prova .satze-stats-bracket {
   animation: gradientShift 8s ease infinite;
 }
 
+/* Fondo del campo nel duello (Battlefield.jsx): equivale a .animate-gradient-shift su un
+   box 1920 × 1080, ma scorre con transform invece di background-position, così non va
+   ridisegnato a ogni frame. Fondo 200% → lastra 3840 × 2160; background-position-y 50% →
+   top -540 px; background-position-x 0% → 100% → translateX(0) → translateX(-1920px). */
+.satze-bf-gradient-plane {
+  position: absolute;
+  left: 0;
+  top: -540px;
+  width: 3840px;
+  height: 2160px;
+  animation: satzeBfGradientPlane 8s ease infinite;
+}
+@keyframes satzeBfGradientPlane {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-1920px); }
+}
+
 .animate-glow-pulse {
   animation: glowPulse 3s ease-in-out infinite;
 }
