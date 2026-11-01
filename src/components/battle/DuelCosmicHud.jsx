@@ -336,6 +336,9 @@ export function DuelCosmicHud({
         const w = el.offsetWidth;
         const h = el.offsetHeight;
         if (w < 3 || h < 3) continue;
+        // Pannello invisibile (es. a opacità 0 sotto la sequenza dello scontro): niente shader
+        // né copia. Appena torna visibile, anche all'1%, si ridisegna in questo stesso frame.
+        if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
         hosts.add(el);
         const cv = ensurePanelCanvas(el, '__cosmoBg', -1);
         const cw = Math.round((w + PAD * 2) * sc);

@@ -80,7 +80,7 @@ function summarize(events, seconds) {
   };
 
   const tasks = complete
-    .filter((e) => (e.name === 'ThreadControllerImpl::RunTask' || e.name === 'RunTask') && e.dur > 33000)
+    .filter((e) => (e.name === 'ThreadControllerImpl::RunTask' || e.name === 'RunTask') && e.dur > 16000)
     .sort((a, b) => a.ts - b.ts);
   const top = [];
   for (const t of tasks) {
@@ -93,7 +93,39 @@ function summarize(events, seconds) {
 
   const lines = [];
   const blocked = Math.round(unionMs(top));
-  lines.push(`thread gioco ${busyOf('CrRendererMain')}% · GPU ${busyOf('CrGpuMain')}% · compositor ${busyOf('VizCompositorThread')}% · blocchi >33 ms: ${top.length} (${blocked} ms)`);
+  lines.push(`thread gioco ${busyOf('CrRendererMain')}% · GPU ${busyOf('CrGpuMain')}% · compositor ${busyOf('VizCompositorThread')}% · blocchi >16 ms: ${top.length} (${blocked} ms)`);
+  // ripartizione di tutto il lavoro del thread del gioco nella registrazione
+  const totals = [];
+  for (const [label, list] of Object.entries(GROUPS)) {
+    const ms = Math.round(unionMs(complete.filter((e) => list.includes(e.name))));
+    if (ms >= 5) totals.push(`${label} ${ms}`);
+  }
+  lines.push(`totale thread gioco (ms in ${seconds} s): ${totals.join(' · ') || '—'}`);
+  // funzioni JS più pesanti in tutta la registrazione
+  const byFn = new Map();
+  for (const e of complete) {
+    if (e.name !== 'FunctionCall') continue;
+    const d = (e.args && e.args.data) || {};
+    const file = String(d.url || '').split('/').pop().replace(/-[A-Za-z0-9_]{8}\.js$/, '.js');
+    const k = `${d.functionName || '?'}@${file}:${d.lineNumber ?? ''}`;
+    byFn.set(k, (byFn.get(k) || 0) + e.dur / 1000);
+  }
+  const fnTop = [...byFn.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${Math.round(v)}`);
+  if (fnTop.length) lines.push(`JS più pesante: ${fnTop.join(' ; ')}`);
+  // cosa fanno GPU e compositor (le operazioni più costose)
+  const topOps = (threadName) => {
+    const m = new Map();
+    for (const e of events) {
+      if (e.ph !== 'X' || !e.dur || names.get(`${e.pid}:${e.tid}`) !== threadName) continue;
+      if (e.name === 'ThreadControllerImpl::RunTask' || e.name === 'RunTask' || e.name.startsWith('ThreadPool')) continue;
+      m.set(e.name, (m.get(e.name) || 0) + e.dur / 1000);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${Math.round(v)}`).join(' ; ');
+  };
+  const gpuOps = topOps('CrGpuMain');
+  if (gpuOps) lines.push(`GPU: ${gpuOps}`);
+  const vizOps = topOps('VizCompositorThread');
+  if (vizOps) lines.push(`compositor: ${vizOps}`);
   biggest.forEach((t, i) => {
     const inner = complete.filter((e) => e !== t && e.ts >= t.ts && e.ts + e.dur <= t.ts + t.dur);
     const parts = [];
@@ -113,7 +145,7 @@ function summarize(events, seconds) {
     const ph = phaseAt(t.ts);
     lines.push(`${String(i + 1).padStart(2)}. +${((t.ts - t0) / 1e6).toFixed(2)}s ${String(Math.round(t.dur / 1000)).padStart(4)} ms ${ph ? `[${ph}] ` : ''}${parts.join(' · ')}${fns.length ? `  | ${fns.join(' ; ')}` : ''}`);
   });
-  if (!biggest.length) lines.push('nessun blocco del thread del gioco sopra 33 ms');
+  if (!biggest.length) lines.push('nessun blocco del thread del gioco sopra 16 ms');
   return lines;
 }
 
