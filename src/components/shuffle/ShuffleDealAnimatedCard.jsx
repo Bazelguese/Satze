@@ -8,6 +8,17 @@ import {
   SHUFFLE_DEAL_TIMING,
 } from './cardShuffleDealLayout';
 
+/**
+ * Toglie left/top da una transizione: la posizione viaggia dentro transform, che ha sempre
+ * la stessa durata e curva (vedi SHUFFLE_DEAL_TIMING, CARD_TRANSITION).
+ */
+function withoutLeftTop(transition) {
+  return String(transition)
+    .split(/,(?![^(]*\))/) // virgole fuori dalle parentesi di cubic-bezier(...)
+    .filter((part) => !/^\s*(left|top)\s/.test(part))
+    .join(',');
+}
+
 export function ShuffleDealAnimatedCard({
   animatedCard,
   deck,
@@ -21,17 +32,31 @@ export function ShuffleDealAnimatedCard({
   const motionTransition =
     transition ??
     `${SHUFFLE_DEAL_TIMING.moveTransition}, ${SHUFFLE_DEAL_TIMING.opacityTransition}`;
+  // Posizione in transform invece che in left/top: stesso movimento (le funzioni si
+  // interpolano una per una con la stessa curva), ma sul compositor. Con left/top il
+  // browser rifaceva il layout della scena del duello a ogni frame della distribuzione.
+  const inPx = typeof x === 'number' && typeof y === 'number';
+  const placement = inPx
+    ? {
+        left: 0,
+        top: 0,
+        transform: `translate(${x}px, ${y}px) translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`,
+        transition: withoutLeftTop(motionTransition),
+      }
+    : {
+        left: x,
+        top: y,
+        transform: `translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`,
+        transition: motionTransition,
+      };
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: x,
-        top: y,
         width: cardW,
         height: cardH,
-        transform: `translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`,
-        transition: motionTransition,
+        ...placement,
         opacity,
         zIndex: z,
       }}
