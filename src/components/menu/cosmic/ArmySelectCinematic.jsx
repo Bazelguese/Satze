@@ -82,10 +82,13 @@ function pickShowcaseCards(cards) {
 // Adapter: traduce i dati reali del gioco nel formato usato dal V3
 // ------------------------------------------------------------
 /** Gli eserciti predefiniti di un'armata, per la scheda: codice, nome, tipo, frase, scatola. */
+/** Eserciti mostrati nella scheda: al massimo tre, i primi dell'armata (gli altri restano nella Fase II). */
+const SHEET_DECKS = 3;
+
 function buildArmyDeckList(armyName) {
   const decks = ARMY_DECKS?.[armyName] || {};
   const lore = DECK_LORE[armyName] || {};
-  return Object.keys(decks).map((key) => {
+  return Object.keys(decks).slice(0, SHEET_DECKS).map((key) => {
     let entry = null;
     try {
       entry = buildDeckTicketEntry({ army: armyName, deckKey: key });
@@ -613,7 +616,7 @@ function RuotaSheet({ army, idx, dir, out = false, onConfirm, onDossier }) {
         </Band>
         {army.isMixed ? (
           army.synopsis && (
-            <Band tone="ink" tag="COSA" sub="TROVI QUI" d={0.1}>
+            <Band tone="ink mixed" tag="COSA" sub="TROVI QUI" d={0.1}>
               <p className="asx-bd-story">{army.synopsis}</p>
             </Band>
           )
@@ -985,6 +988,7 @@ function ArmySelectStyles() {
       .asx-bd--paper .asx-bd-tag small { color: var(--accent); }
       .asx-bd--ink { background: rgba(14,13,20,0.96); color: rgba(245,243,235,0.92); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); margin-right: 70px; }
       .asx-bd--ink .asx-bd-tag { background: var(--accent); color: var(--void); }
+      .asx-bd--ink.mixed { margin-left: 70px; }
       .asx-bd--accent { background: var(--accent); color: var(--void); margin-right: 30px; }
       .asx-bd--accent .asx-bd-tag { background: var(--ink); color: var(--void); }
       .asx-bd--accent .asx-bd-tag small { color: var(--accent); }
@@ -1003,24 +1007,25 @@ function ArmySelectStyles() {
         padding: 3px 14px; transform: skewX(-14deg);
       }
       /* tre colonne affiancate: nome in alto, scatola 3D grande al centro, tipo e frase sotto */
-      .asx-decks-list { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; min-width: 0; padding: 8px 10px 4px 20px; }
+      .asx-decks-list { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; min-width: 0; padding: 8px 40px 4px 64px; }
       .asx-deck {
         display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; text-align: center;
         animation: asx-bd-in .5s var(--ease) calc(var(--d) * .6 + .16s) both;
       }
       .asx-deck-head { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: flex-end; width: 100%; }
-      .asx-deck-head b { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
-      .asx-deck-head b.long { font-size: 24px; }
+      .asx-deck-head b { max-width: 100%; overflow-wrap: anywhere; font-weight: 700; font-style: italic; font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--ink); text-shadow: 3px 3px 0 var(--void); text-wrap: balance; }
+      .asx-deck-head b.long { font-size: 22px; }
       /* la scatola si raddrizza rispetto all'inclinazione della scheda */
       /* la scatola e il suo tipo di mazzo stanno nello stesso riquadro raddrizzato: il tipo resta centrato sotto di lei */
       .asx-deck-box { position: relative; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; transform: skewX(8deg); }
       .asx-deck-cover { position: relative; flex: 1; min-height: 0; width: 100%; transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
-      .asx-deck-cover .dcv-box { --bw: 84cqw; }
+      /* la scatola sta nel suo spazio sia in larghezza sia in altezza (alta 1,43 volte la larghezza) */
+      .asx-deck-cover .dcv-box { --bw: min(84cqw, 62cqh); }
       /* passando sopra, la scatola si alza un poco */
       .asx-deck:hover .asx-deck-cover { transform: translateY(-8px) scale(1.04); }
       .asx-deck-type {
-        flex: none; margin-top: 10px; background: var(--ink); color: var(--void); font-weight: 700; font-size: 13px; letter-spacing: 0.14em;
-        padding: 3px 12px; box-shadow: 4px 4px 0 var(--accent); white-space: nowrap;
+        flex: none; max-width: 100%; margin-top: 10px; background: var(--ink); color: var(--void); font-weight: 700; font-size: 12px; letter-spacing: 0.1em;
+        line-height: 1.25; text-align: center; padding: 3px 10px; box-shadow: 4px 4px 0 var(--accent);
       }
 
       .asx-bd-go {
