@@ -10,7 +10,8 @@ import { prefersReducedMotion } from '../battle/placeHandoff.js';
  * - <ArmyEntryFx>: l'agente entra in campo con l'ingresso della SUA armata (nel suo colore).
  *   Parte al montaggio; `enabled` false (o nessun ingresso, o movimento ridotto) = niente effetto.
  * - <ArmyDefeatFx>: l'agente battuto fa la fine che gli infligge l'armata che VINCE (nel colore
- *   di chi vince). Parte quando `active` diventa true e la carta resta nascosta dopo.
+ *   di chi vince, o di chi perde se l'effetto ha `colorFrom: 'loser'`). Parte quando `active`
+ *   diventa true e la carta resta nascosta dopo.
  *
  * Entrambi lasciano la carta DOM viva sotto: senza WebGL si ripiega su una dissolvenza.
  */
@@ -51,9 +52,17 @@ export function ArmyEntryFx({ agent, enabled = true, variant = null, delayMs = 0
   );
 }
 
+/**
+ * Colore di una sconfitta: di norma quello dell'armata che vince; gli effetti con
+ * `colorFrom: 'loser'` (es. il costume strappato dei Mascarada) usano quello della carta battuta.
+ */
+export function defeatColorFor(effect, winnerArmy, loser) {
+  return effect?.colorFrom === 'loser' ? getArmyAccent(loser) : getArmyAccent({ army: winnerArmy });
+}
+
 export function ArmyDefeatFx({ agent, winnerArmy, active = false, children, onComplete }) {
   const effect = winnerArmy && !prefersReducedMotion() ? armyDefeatFor(winnerArmy) : null;
-  const params = React.useMemo(() => ({ color: getArmyAccent({ army: winnerArmy }) }), [winnerArmy]);
+  const params = React.useMemo(() => ({ color: defeatColorFor(effect, winnerArmy, agent) }), [effect, winnerArmy, agent?.army]);
   if (!effect) return children;
   return (
     // foto al via (non in anticipo): durante lo scontro il thread principale serve all'animazione

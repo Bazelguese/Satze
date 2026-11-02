@@ -4,6 +4,7 @@ import { GameCard } from '../cards/GameCard';
 import { ARMY_SETS } from '../../data/cards';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
+import { defeatColorFor } from '../fx/ArmyCardFx.jsx';
 import { FX_ARMY_EFFECTS, FX_EFFECTS, FX_EFFECTS_BY_ID, FX_GENERIC_EFFECTS } from '../fx/effects/index.js';
 import { FX_LAB_ARMY_PARAM, FX_LAB_PARAM } from '../fx/effects/catalog.js';
 import { ArmyFxView } from './ArmyFxView.jsx';
@@ -107,10 +108,14 @@ function AllFxView({ paramsById, setParamsFor }) {
   const params = paramsById[effectId];
   const agent = React.useMemo(() => agentOf(army, cardIndex), [army, cardIndex]);
   // un'armata senza carte giocabili (es. Concordia di Caelion) usa comunque il suo colore
-  // sconfitta: la carta è quella battuta, il colore è dell'armata che vince.
+  // sconfitta: la carta è quella battuta, il colore è dell'armata che vince (o della carta
+  // battuta, per gli effetti con colorFrom 'loser').
   // ingresso (o armata senza carte giocabili): colore dell'armata dell'effetto.
   const isDefeat = effect.role === 'defeat';
-  const armyColor = effect.army && (isDefeat || !ARMY_SETS[effect.army]) ? getArmyAccent({ army: effect.army }) : getArmyAccent(agent);
+  const loserColored = isDefeat && effect.colorFrom === 'loser';
+  const armyColor = isDefeat
+    ? defeatColorFor(effect, effect.army, agent)
+    : effect.army && !ARMY_SETS[effect.army] ? getArmyAccent({ army: effect.army }) : getArmyAccent(agent);
   const color = useArmyColor ? armyColor : customColor;
   const effectParams = React.useMemo(() => ({ ...params, color }), [params, color]);
   const usesOrigin = Boolean(effect.usesOrigin || params.direction === 'point');
@@ -226,7 +231,7 @@ function AllFxView({ paramsById, setParamsFor }) {
             </label>
             <label className="flex items-center gap-2 text-xs text-slate-300">
               <input type="checkbox" checked={useArmyColor} onChange={(e) => setUseArmyColor(e.target.checked)} />
-              {isDefeat ? `Colore di chi vince (${effect.army})` : "Colore dell'armata"}
+              {loserColored ? `Colore di chi perde (${agent?.army ?? '—'})` : isDefeat ? `Colore di chi vince (${effect.army})` : "Colore dell'armata"}
               <span className="inline-block w-4 h-4 rounded" style={{ background: armyColor, boxShadow: `0 0 8px ${armyColor}` }} />
             </label>
             {!useArmyColor ? (
@@ -344,7 +349,7 @@ function AllFxView({ paramsById, setParamsFor }) {
                       <ElementFx
                         effect={effect}
                         active={rowPlaying}
-                        params={{ ...params, color: isDefeat ? armyColor : getArmyAccent(a), seed: (params.seed ?? 0) + i * 13 }}
+                        params={{ ...params, color: isDefeat ? defeatColorFor(effect, effect.army, a) : getArmyAccent(a), seed: (params.seed ?? 0) + i * 13 }}
                         captureKey={`${a.id}`}
                         precapture
                       >

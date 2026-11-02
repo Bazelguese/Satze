@@ -3,7 +3,7 @@
 // Ogni armata ha (o avrà) due animazioni:
 // - role 'entry': come entra in campo un suo agente;
 // - role 'defeat': la fine che fa fare all'agente che batte (si gioca sul perdente, nel
-//   colore dell'armata vincitrice).
+//   colore dell'armata vincitrice; con `colorFrom: 'loser'` nel colore di chi perde).
 import { burnEffect } from './burn.js';
 import { dustEffect } from './dust.js';
 import { shatterEffect } from './shatter.js';
