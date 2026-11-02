@@ -2,7 +2,9 @@
 // html-to-image incorpora arte (<img>), canvas interni e font web usati dall'elemento:
 // senza, un SVG foreignObject perderebbe immagini e Chakra Petch.
 
-import { toCanvas, getFontEmbedCSS } from 'html-to-image';
+// Copia vendorizzata (src/vendor/html-to-image): aggiunge le opzioni omitStyle/omitPseudoStyle.
+import { toCanvas, getFontEmbedCSS } from '../../vendor/html-to-image/index.js';
+import { makeStyleOmitter, usedCodePoints, filterFontFaces } from './captureStyleFilter.js';
 
 /**
  * Proprietà che non cambiano l'aspetto di una foto statica (animazioni, transizioni, scroll,
@@ -100,16 +102,23 @@ export async function captureElementToCanvas(node, opts = {}) {
     fontCssCache.set(key, fontEmbedCSS);
   }
 
+  // solo le @font-face che il testo della foto può usare (le altre il browser le ignorerebbe)
+  fontEmbedCSS = filterFontFaces(fontEmbedCSS, usedCodePoints(node));
+  const props = snapshotStyleProperties();
+  const { omitStyle, omitPseudoStyle } = makeStyleOmitter(node, props);
+
   return toCanvas(node, {
     width,
     height,
     pixelRatio,
     fontEmbedCSS,
+    omitStyle,
+    omitPseudoStyle,
     // la foto è dell'elemento a riposo: niente transform del nodo radice e piena opacità
     // (il contenuto può essere già nascosto da una bruciatura precedente)
     style: { transform: 'none', margin: '0', opacity: '1', transition: 'none' },
     cacheBust: false,
-    includeStyleProperties: snapshotStyleProperties(),
+    includeStyleProperties: props,
   });
 }
 
