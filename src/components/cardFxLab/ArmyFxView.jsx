@@ -4,6 +4,7 @@ import { ARMY_SETS } from '../../data/cards';
 import { ARMY_COLORS } from '../../data/armies.js';
 import { getArmyAccent } from '../../theme/duelAccents.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
+import { defeatColorFor } from '../fx/ArmyCardFx.jsx';
 import { armyDefeatFor, armyEntriesFor, armyEntryFor, materializeEffect } from '../fx/effects/index.js';
 import { FxParamsPanel } from './FxParamsPanel.jsx';
 
@@ -71,7 +72,7 @@ export function ArmyFxView({ paramsById, setParamsFor, initialArmy }) {
   const loser = React.useMemo(() => agentOf(opponent, opponentCard), [opponent, opponentCard]);
 
   const entryParams = { ...paramsById[entryEffect.id], color: accent };
-  const defeatParams = defeatEffect ? { ...paramsById[defeatEffect.id], color: accent } : null;
+  const defeatParams = defeatEffect ? { ...paramsById[defeatEffect.id], color: defeatColorFor(defeatEffect, army, loser) } : null;
 
   const pulse = (setter) => {
     setMode('anim');

@@ -3,6 +3,8 @@
 // arriccia, compaiono le pieghe di tensione), poi si lacera dal basso verso l'alto: il bordo
 // è sfilacciato, i fili si allungano tra la stoffa che sale e il fondo e si spezzano uno dopo
 // l'altro. Sotto non resta niente. Senza costume non sei nessuno. «Il pubblico paga. Tu riscuoti.»
+// Il costume è della carta battuta: tutto (cucitura compresa) prende il colore della SUA armata,
+// non di chi vince.
 
 import { createQuadFxRenderer, QUAD_HEADER, toCanvasUv } from '../../quadRenderer.js';
 import { widePadding } from './common.js';
@@ -35,7 +37,8 @@ float minAlpha4(vec2 p, float r) {
 void main() {
   vec2 p = (vUv - uRect.xy) / uRect.zw;
   vec3 blue = uColor;
-  vec3 gold = vec3(1.0, 0.82, 0.32);
+  // filo della cucitura: una tinta chiara e brillante dello stesso colore
+  vec3 gold = min(mix(blue, vec3(1.0), 0.45) * 1.15, vec3(1.0));
   vec3 fiber = mix(vec3(0.93, 0.9, 0.86), blue, 0.3);
 
   // s: lungo la direzione dello strappo (dal basso verso l'alto); t: lungo il fronte
@@ -183,6 +186,7 @@ export const mascaradaSmascheratoEffect = {
   role: 'defeat',
   label: 'Smascherato',
   kind: 'out',
+  colorFrom: 'loser',
   description: 'La faccia della carta è un costume: si tende e viene strappata via come stoffa, con il bordo sfilacciato e i fili che si spezzano, lasciando il vuoto.',
   defaults: {
     durationMs: 2600,
@@ -244,7 +248,7 @@ export const mascaradaSmascheratoEffect = {
           vy: Math.sin(a) * sp,
           life: 0.5 + Math.random() * 0.6,
           size: 1.5 + Math.random() * 2.5,
-          color: Math.random() < 0.6 ? [0.93, 0.9, 0.86] : env.color,
+          color: Math.random() < 0.4 ? [0.93, 0.9, 0.86] : env.color,
           shape: 0,
           gravity: 0.25,
           drag: 2,
