@@ -21,6 +21,9 @@ const CATEGORIES = [
   'loading',
   'gpu',
   'viz',
+  // chi invalida gli stili (per i blocchi con molti ricalcoli) e campioni JS (per le funzioni)
+  'disabled-by-default-devtools.timeline.invalidationTracking',
+  'disabled-by-default-v8.cpu_profiler',
 ];
 
 const GROUPS = {
@@ -49,6 +52,61 @@ function unionMs(list) {
   }
   if (cur) total += cur[1] - cur[0];
   return total / 1000;
+}
+
+/** Campioni del profiler JS del thread `tid` (eventi Profile/ProfileChunk): [{ ts, stack }]. */
+function cpuSamples(events, pid, tid) {
+  const profiles = new Map(); // id → { t, nodes: Map(id → { cf, parent }) }
+  const out = [];
+  for (const e of events) {
+    if (e.pid !== pid || (e.name !== 'Profile' && e.name !== 'ProfileChunk')) continue;
+    // Profile ha il thread campionato; i ProfileChunk arrivano dal thread del profiler, con lo
+    // stesso id (che si ripete tra processi: la chiave include il pid)
+    const id = `${e.pid}:${e.id}`;
+    const d = (e.args && e.args.data) || {};
+    if (e.name === 'Profile') {
+      profiles.set(id, { t: d.startTime || e.ts, nodes: new Map(), tid: e.tid });
+      continue;
+    }
+    const prof = profiles.get(id);
+    if (!prof || prof.tid !== tid) continue;
+    const cp = d.cpuProfile || {};
+    for (const n of cp.nodes || []) prof.nodes.set(n.id, { cf: n.callFrame || {}, parent: n.parent });
+    const samples = cp.samples || [];
+    const deltas = d.timeDeltas || [];
+    for (let i = 0; i < samples.length; i += 1) {
+      prof.t += deltas[i] || 0;
+      out.push({ ts: prof.t, node: samples[i], prof });
+    }
+  }
+  return out;
+}
+
+function frameLabel(cf) {
+  const file = String(cf.url || '').split('/').pop().replace(/-[A-Za-z0-9_]{8}\.js$/, '.js');
+  return `${cf.functionName || '(anon)'}@${file}:${(cf.lineNumber ?? -1) + 1}:${(cf.columnNumber ?? -1) + 1}`;
+}
+
+/**
+ * Dove si spende il tempo nell'intervallo: funzioni "foglia" dei campioni JS (tempo proprio),
+ * incluse quelle del browser chiamate dal gioco (es. getComputedStyle), con la percentuale.
+ */
+function topSampled(samples, t0, t1, n = 3) {
+  const self = new Map();
+  let total = 0;
+  for (const s of samples) {
+    if (s.ts < t0 || s.ts > t1) continue;
+    const node = s.prof.nodes.get(s.node);
+    if (!node) continue;
+    total += 1;
+    const cf = node.cf;
+    if (/^\((program|idle|root|garbage collector)\)$/.test(cf.functionName || '')) continue;
+    const k = cf.url ? frameLabel(cf) : `${cf.functionName || '(nativo)'}`;
+    self.set(k, (self.get(k) || 0) + 1);
+  }
+  if (total < 3) return '';
+  return [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, n)
+    .map(([k, c]) => `${k} ${Math.round((c / total) * 100)}%`).join(' ; ');
 }
 
 /** Riassunto del trace: blocchi più lunghi del thread del gioco con cause e funzioni. */
@@ -140,6 +198,8 @@ function summarize(events, seconds) {
   if (gpuOps) lines.push(`GPU: ${gpuOps}`);
   const vizOps = topOps('VizCompositorThread');
   if (vizOps) lines.push(`compositor: ${vizOps}`);
+  const [mainPid, mainTid] = mainKey.split(':').map(Number);
+  const samples = cpuSamples(events, mainPid, mainTid);
   biggest.forEach((t, i) => {
     const inner = complete.filter((e) => e !== t && e.ts >= t.ts && e.ts + e.dur <= t.ts + t.dur);
     const parts = [];
@@ -156,6 +216,26 @@ function summarize(events, seconds) {
         const file = String(d.url || '').split('/').pop().replace(/-[A-Za-z0-9_]{8}\.js$/, '.js');
         return `${d.functionName || '?'}@${file}:${d.lineNumber ?? ''}:${d.columnNumber ?? ''} ${Math.round(e.dur / 1000)}`;
       });
+    // stili: quanti elementi e chi li ha invalidati (dalla fine del ricalcolo precedente)
+    const recalcs = inner.filter((e) => e.name === 'UpdateLayoutTree');
+    const styleMs = unionMs(recalcs);
+    if (styleMs >= 8) {
+      const els = recalcs.reduce((a, e) => a + ((e.args && e.args.elementCount) || 0), 0);
+      const prevEnd = complete
+        .filter((e) => e.name === 'UpdateLayoutTree' && e.ts + e.dur <= t.ts)
+        .reduce((m, e) => Math.max(m, e.ts + e.dur), t.ts - 50000);
+      const why = new Map();
+      for (const e of main) {
+        if (e.ts < prevEnd || e.ts > t.ts + t.dur || !/InvalidationTracking$/.test(e.name)) continue;
+        const d = (e.args && e.args.data) || {};
+        const k = `${d.reason || e.name.replace('InvalidationTracking', '')}←${String(d.nodeName || '?').slice(0, 48)}`;
+        why.set(k, (why.get(k) || 0) + 1);
+      }
+      const top = [...why.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, c]) => `${c}× ${k}`).join(', ');
+      parts.push(`[${els} el.${top ? ': ' + top : ''}]`);
+    }
+    const sampled = topSampled(samples, t.ts, t.ts + t.dur);
+    if (sampled) fns.push(sampled);
     const ph = phaseAt(t.ts);
     lines.push(`${String(i + 1).padStart(2)}. +${((t.ts - t0) / 1e6).toFixed(2)}s ${String(Math.round(t.dur / 1000)).padStart(4)} ms ${ph ? `[${ph}] ` : ''}${parts.join(' · ')}${fns.length ? `  | ${fns.join(' ; ')}` : ''}`);
   });
