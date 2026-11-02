@@ -70,7 +70,7 @@ const FPS_CAP_LABELS = {
   0: 'Illimitato',
   30: '30',
   60: '60',
-  120: '120',
+  90: '90',
 };
 
 const TRANSITION_LABELS = {
