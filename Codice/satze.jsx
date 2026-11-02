@@ -41,6 +41,7 @@ import {
   DUEL_R5_VICTORY_FLIP_MS,
 } from '../src/components/battle/DuelCinematicOverlays';
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
+import { ClaimVictoryPopup, OpponentClaimPendingPopup } from '../src/components/battle/ClaimVictoryPopup';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, ARMY_ICONS } from '../src/data';
 import { ACT as CAMPAIGN_ACT } from '../src/campaign/data/atto1.js';
 import { buildDuelConfig as buildCampaignDuelConfig, restartCampaignEncounter } from '../src/campaign/logic/missionAdapter.js';
@@ -6815,78 +6816,37 @@ export default function SatzeGame() {
       {/* RECLAMAZIONE - Scelta vittoria (round 3 o 4) */}
       {/* ============================================ */}
       {showClaimVictoryChoice && showClaimVictoryChoice.winner === 'player' && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-[100]"
-          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.92)' }}
-        >
-          <div 
-            className="flex flex-col items-center gap-6 p-8 rounded-2xl max-w-md text-center border border-amber-500/50"
-            style={{ fontFamily: HUD_ORATORIO_FONT_UI, boxShadow: '0 0 60px rgba(251, 191, 36, 0.2)' }}
-          >
-            <div className="text-2xl font-bold" style={{ color: PALETTE.amber }}>
-              🏆 Hai conquistato 3 campi!
-            </div>
-            <div className="text-slate-300 text-sm">
-              Puoi reclamare la vittoria ora o continuare a giocare per accumulare più punti.
-            </div>
-            <div className="flex gap-4 w-full justify-center">
-              <button
-                onClick={() => {
-                  if (gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only' && enemyHP > 0) {
-                    return;
-                  }
-                  sendClaimDecisionRelay(
-                    'victory',
-                    showClaimVictoryChoice.playerFields,
-                    showClaimVictoryChoice.enemyFields
-                  );
-                  setGameResult({ winner: 'player', reason: 'fields', playerFields: showClaimVictoryChoice.playerFields, enemyFields: showClaimVictoryChoice.enemyFields });
-                  setShowClaimVictoryChoice(null);
-                  setGamePhase('gameOver');
-                }}
-                className="flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-amber-600/90 hover:bg-amber-500 text-white border border-amber-400/50"
-              >
-                <Icon name="star" type="cardIcon" size={18} color="#fff" />
-                Reclamare vittoria
-              </button>
-              <button
-                onClick={() => {
-                  sendClaimDecisionRelay(
-                    'continue',
-                    showClaimVictoryChoice.playerFields,
-                    showClaimVictoryChoice.enemyFields
-                  );
-                  setShowClaimVictoryChoice(null);
-                  doResetAndNextRound(showClaimVictoryChoice.playerFields, showClaimVictoryChoice.enemyFields);
-                }}
-                className="flex-1 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-slate-600/80 hover:bg-slate-500 text-slate-200 border border-slate-500/50"
-              >
-                <Icon name="check" type="cardIcon" size={18} color="#fff" />
-                Continua a giocare
-              </button>
-            </div>
-          </div>
-        </div>
+        <ClaimVictoryPopup
+          fields={showClaimVictoryChoice.playerFields ?? 3}
+          accentColor={playerIdentityColor}
+          onClaim={() => {
+            if (gameMode === 'campaign' && campaignDuelMod?.winCondition === 'annihilation_only' && enemyHP > 0) {
+              return;
+            }
+            sendClaimDecisionRelay(
+              'victory',
+              showClaimVictoryChoice.playerFields,
+              showClaimVictoryChoice.enemyFields
+            );
+            setGameResult({ winner: 'player', reason: 'fields', playerFields: showClaimVictoryChoice.playerFields, enemyFields: showClaimVictoryChoice.enemyFields });
+            setShowClaimVictoryChoice(null);
+            setGamePhase('gameOver');
+          }}
+          onContinue={() => {
+            sendClaimDecisionRelay(
+              'continue',
+              showClaimVictoryChoice.playerFields,
+              showClaimVictoryChoice.enemyFields
+            );
+            setShowClaimVictoryChoice(null);
+            doResetAndNextRound(showClaimVictoryChoice.playerFields, showClaimVictoryChoice.enemyFields);
+          }}
+        />
       )}
 
       {/* Attesa decisione reclamazione avversario (multiplayer, round 3–4) */}
       {opponentClaimPending && isOnlinePvP && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-[100]"
-          style={{ pointerEvents: 'auto', background: 'rgba(10, 14, 26, 0.88)' }}
-        >
-          <div
-            className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-md text-center border border-slate-500/50"
-            style={{ fontFamily: HUD_ORATORIO_FONT_UI }}
-          >
-            <div className="text-xl font-bold text-slate-200">
-              {onlinePeerName || 'L\'avversario'} ha conquistato 3 campi
-            </div>
-            <div className="text-slate-400 text-sm">
-              Può reclamare la vittoria o continuare la partita. In attesa della sua scelta…
-            </div>
-          </div>
-        </div>
+        <OpponentClaimPendingPopup opponentName={onlinePeerName} accentColor={enemyIdentityColor} />
       )}
 
       {/* Carta trascinata: cresce dalla mano, si inclina col moto, si aggancia allo slot.
