@@ -62,6 +62,11 @@ describe('displaySettings', () => {
     expect(s.fpsCap).toBe(60);
   });
 
+  it('maps the removed 120 fps preset to 90', () => {
+    expect(normalizeDisplaySettings({ fpsCap: 120 }).fpsCap).toBe(90);
+    expect(normalizeDisplaySettings({ fpsCap: 90 }).fpsCap).toBe(90);
+  });
+
   it('falls back fps cap to default when invalid', () => {
     const n = normalizeDisplaySettings({ fpsCap: 144 });
     expect(n.fpsCap).toBe(DEFAULT_DISPLAY_SETTINGS.fpsCap);

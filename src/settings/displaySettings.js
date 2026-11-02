@@ -20,8 +20,9 @@ export const CURSOR_TRAIL_DURATION_PRESETS = /** @type {const} */ ([200, 400, 70
 export const DUEL_LAYOUT_BREATH_LEVELS = /** @type {const} */ (['off', 'soft', 'strong']);
 /** Durata in ms della cortina tra le schermate del menù. */
 export const SCREEN_TRANSITION_MS_PRESETS = /** @type {const} */ ([1450, 1800, 2150]);
-/** Cap FPS (0 = illimitato / VSync monitor). */
-export const FPS_CAP_PRESETS = /** @type {const} */ ([0, 30, 60, 120]);
+/** Cap FPS (0 = illimitato / VSync monitor). 90 al posto di 120: su un monitor a 180 Hz il
+ * limitatore salta un refresh ogni due, quindi 120 dava comunque 90 FPS. */
+export const FPS_CAP_PRESETS = /** @type {const} */ ([0, 30, 60, 90]);
 /** Ritmo presentazione duello. 1 = tempi di default; sotto rallenta, sopra accelera. */
 export const DUEL_SPEED_PRESETS = /** @type {const} */ ([0.75, 1, 2, 3]);
 
@@ -138,6 +139,9 @@ export function normalizeDisplaySettings(raw) {
   if (isResolutionPreset(o.resolutionPreset)) base.resolutionPreset = o.resolutionPreset;
   if (isFpsCap(o.fpsCap)) {
     base.fpsCap = /** @type {typeof FPS_CAP_PRESETS[number]} */ (Number(o.fpsCap));
+  } else if (Number(o.fpsCap) === 120) {
+    // preset 120 tolto: chi l'aveva scelto passa a 90 invece di finire su illimitato
+    base.fpsCap = 90;
   }
   if (isVfxQuality(o.vfxQuality)) base.vfxQuality = o.vfxQuality;
   if (isUiScale(o.uiScale)) {
