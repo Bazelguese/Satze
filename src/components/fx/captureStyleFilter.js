@@ -50,6 +50,9 @@ const ALWAYS_KEEP = new Set([
   'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
   'top', 'left', 'right', 'bottom',
   'transform-origin', 'perspective-origin', 'content', 'd',
+  // in un pannello del duello ometterla cambiava qualche pixel del testo (non riprodotto
+  // in modo stabile): per prudenza si copia sempre
+  'line-height',
 ]);
 
 /** Proprietà non ereditate dal valore predefinito dipendente da altro: si copiano sempre. */
@@ -143,6 +146,7 @@ export function makeStyleOmitter(root, props) {
     const parent = el.parentElement;
     if (!parent) return false;
     if (inlineOf(el).has(name)) return false;
+    if (ALWAYS_KEEP.has(name)) return false;
     if (INHERITED.has(name)) {
       if (defaultsFor(el, props).uaInherited.has(name)) return false;
       return cs(parent).getPropertyValue(name) === value;
@@ -153,6 +157,7 @@ export function makeStyleOmitter(root, props) {
 
   // ::before / ::after: ereditano dall'elemento stesso; senza regole del browser (come uno span)
   const omitPseudoStyle = (el, pseudo, name, value) => {
+    if (ALWAYS_KEEP.has(name)) return false;
     if (INHERITED.has(name)) return cs(el).getPropertyValue(name) === value;
     if (alwaysKeep(name, value)) return false;
     return defaultsFor(span, props).values.get(name) === value;
