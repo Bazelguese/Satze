@@ -1,10 +1,10 @@
 # Font di Satze — raccolta e dove si usano
 
-Ricognizione del codice al 2 novembre 2026. Copre `src/`, `Codice/`, `index.html`, `public/fonts/` e `tailwind.config.js`.
+Ricognizione del codice al 2 novembre 2026. Copre `src/`, `Codice/`, `index.html`, `public/fonts/`, `tailwind.config.js` e la mappa della campagna in `prototipi/campagna-cael/`.
 
 ## In breve
 
-Il gioco usa **tre famiglie**. Tutto il resto è un ripiego di sistema oppure compare solo nei laboratori di sviluppo.
+L'app React usa **tre famiglie**. La mappa della campagna (pagina a parte, aperta in un riquadro) ne aggiunge altre cinque: vedi §3. Il resto è un ripiego di sistema oppure compare solo nei laboratori di sviluppo.
 
 | Famiglia | Ruolo | Pesi caricati | Token / costanti |
 |---|---|---|---|
@@ -57,7 +57,20 @@ Per numeri ed etichette "da terminale":
 - **Campagna**: quasi tutti i componenti Atto 1 (`EvolutionPanel`, `HudBar`, `StartingArmySelection`, `RewardScreen`, `EventModal`, `MapNode`, `Rift`, `MissionPanel`, `Edge`, `CampaignMapShell`), `CampaignSaveSlots`, `CampaignAtto1Hub`.
 - **Altro**: carte (`Card.jsx`, `CardPrototype.jsx`), `Glossary.jsx`, tutorial (`TutorialSteps`, `TutorialSelector`), `MultiplayerLobby.jsx`, `deckCover.css`, `duelVersusScreen.css`, `src/dialogue/satzeDialogue.js`.
 
-## 3. Font che compaiono solo nei laboratori di sviluppo
+## 3. Mappa della campagna (`prototipi/campagna-cael/`)
+
+Dopo "Inizia il cammino" il gioco apre `prototipi/campagna-cael/index.html` dentro un riquadro (`src/components/campaign/CampaignPrototypeFrame.jsx`). È una pagina HTML separata, con i suoi font:
+
+| Famiglia | Ruolo nella pagina | Come arriva |
+|---|---|---|
+| **Anton** | Titoli (`--f-disp`, `--f-display`): "Fino ai piedi di Cael", nomi delle tappe | Google Fonts (`index.html:4`) |
+| **Barlow Condensed** | Testo (`--f-body`) | Google Fonts |
+| **Archivo Black** | Scritte di forte impatto | Google Fonts |
+| **Bodoni Moda** (corsivo 900) | Titoli scenici | Google Fonts |
+| **Arcana** | Testi delle carte | `prototipi/campagna-cael/fonts/Arcana-Roman-Bold.woff` (`@font-face` in `index.html:720`) |
+| Cinzel, Chakra Petch | Dettagli | Google Fonts (non usa le copie self-hosted del gioco) |
+
+## 4. Font che compaiono solo nei laboratori di sviluppo
 
 Non arrivano al giocatore in partita.
 
@@ -69,16 +82,16 @@ Non arrivano al giocatore in partita.
 
 Le facce Arcana possono però apparire anche fuori dal lab, se una faccia alternativa viene scelta in galleria (`AltArtCardFace.jsx` → `ArcanaCardFace.jsx`). In quel caso entra in gioco anche Lora.
 
-## 4. Ripieghi di sistema (non caricati)
+## 5. Ripieghi di sistema (non caricati)
 
 - `body` in `index.html` e `src/index.css`: pila di sistema (`-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', …`). Si vede solo dove un componente non imposta un font.
 - `src/styles/satze-eminenza.css:636` (`.em-announce-text`): `'Segoe UI', 'Iowan Old Style', Georgia, serif`. È l'unico testo di gioco che non usa una delle tre famiglie.
 - `Georgia, serif` e `'Times New Roman', serif` compaiono solo come ripiego dietro Cinzel.
 
-## 5. Incongruenze notate (non corrette)
+## 6. Incongruenze notate (non corrette)
 
-1. **Google Fonts ancora importato**: `src/styles/campaign/colors_and_type.css` (importato da `CampaignAtto1Hub.jsx` e `CampaignSaveSlots.jsx`) fa `@import` da `fonts.googleapis.com`, anche se gli stessi font sono già self-hosted. Offline o senza rete è una richiesta inutile.
-2. **Costanti duplicate**: `GAME_CARD_UI_FONT` (in `CardReworkP4.jsx` e `CardReworkP4AsHtml.jsx`), `EM_UI_FONT` (`EminenzaZone.jsx`) e `CAMPAIGN_FONTS.ui` hanno lo stesso valore di `HUD_ORATORIO_FONT_UI`, ma sono ridichiarate a mano invece di essere importate.
+1. **Google Fonts ancora importato**: `src/styles/campaign/colors_and_type.css:10` fa `@import` da `fonts.googleapis.com`, anche se gli stessi font sono già self-hosted. Il file è importato da `CampaignSaveSlots.jsx:17`, che `Codice/satze.jsx` carica all'avvio: le richieste a Google partono a ogni avvio del gioco, non solo in campagna (verificato: 5 richieste prima di aprire qualsiasi schermata). Anche la mappa della campagna (§3) scarica tutti i suoi font da Google. Senza rete i testi ripiegano sui font di sistema.
+2. **Costanti duplicate**: `GAME_CARD_UI_FONT` (`CardReworkP4.jsx:31`, `CardReworkP4AsHtml.jsx:10`), `EM_UI_FONT` (`EminenzaZone.jsx:48`) e `CAMPAIGN_FONTS.ui` (`src/campaign/campaignTheme.js:27`) hanno lo stesso valore di `HUD_ORATORIO_FONT_UI`, ma sono ridichiarate a mano invece di essere importate.
 3. **Pile di ripiego diverse per lo stesso font**: Chakra Petch compare come `'Chakra Petch', sans-serif`, `'Chakra Petch', 'Segoe UI', sans-serif`, `'Chakra Petch', system-ui, sans-serif` e altre varianti. Cinzel compare con Georgia oppure con Times New Roman. In pratica non cambia nulla finché il font si carica.
-4. **Due fonti per gli stessi token**: `--font-ui`, `--font-display` e `--font-mono` sono definiti sia in `src/styles/cosmic-tokens.css` sia in `src/styles/campaign/colors_and_type.css`. Oggi i valori coincidono.
-5. **`.em-announce-text`** (annuncio dell'Eminenza) usa un serif di sistema invece di Cinzel o Chakra Petch (vedi §4).
+4. **Due fonti per gli stessi token**: `--font-ui`, `--font-display` e `--font-mono` sono definiti sia in `src/styles/cosmic-tokens.css:68-70` sia in `src/styles/campaign/colors_and_type.css:81-83`. Oggi i valori coincidono.
+5. **`.em-announce-text`** (`src/styles/satze-eminenza.css:636`, testo dell'annuncio dell'Eminenza durante il duello) usa `'Segoe UI', 'Iowan Old Style', Georgia, serif`: su Windows esce in Segoe UI, mentre tutto il resto dell'annuncio è in Chakra Petch e Cinzel. La pelle "Vetro" (`src/styles/em-announce-vetro.css`) non cambia il font.

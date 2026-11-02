@@ -11,8 +11,7 @@ import {
 } from '../../campaign/state/persistence.js';
 import { saveCampaignRun } from '../../campaign/state/persistence.js';
 import { CampaignEventEditor } from './CampaignEventEditor.jsx';
-import { CampaignScene, CampaignMotionControl } from './CampaignScene.jsx';
-import { CampaignBackdrop, CampaignSigil, heroArt } from './CampaignScenery.jsx';
+import { heroArt } from './CampaignScenery.jsx';
 import { playUiClick, playUiConfirm } from '../../audio/gameSounds.js';
 
 import '../../styles/campaign/colors_and_type.css';
@@ -41,27 +40,21 @@ export function CampaignSaveSlots({ onSlotChosen, onBack }) {
   }, []);
 
   if (editor) return <CampaignEventEditor onBack={() => setEditor(false)} />;
-  if (armySlot != null) return <CampaignScene>
-    <CampaignBackdrop/>
-    <div className="cs-content">
-      <header className="cs-hud"><div className="cs-brand"><CampaignSigil kind="sun"/><div><span className="cs-kicker">SATZE · NUOVA CAMPAGNA</span><strong>Il cammino del Nascente</strong></div></div><nav className="cs-actions"><CampaignMotionControl/><button onClick={() => { setArmySlot(null); setError(''); }}>Torna agli slot</button></nav></header>
-      <div className="cs-origin">
-        <div className="cs-origin-portrait"><img src={heroArt({league: 2})} alt="Il Nascente, arciere dell’Orizzonte"/><div>2 POT · 2 DAN · LEGA 2</div></div>
-        <div className="cs-origin-copy"><p className="cs-kicker">ATTO I · UN’IDENTITÀ DA FORGIARE</p><h1>Il Nascente</h1><p>Un tempo Concordia governava tutto il mondo. Poi i colori della Nebula illuminarono una parte del cielo notturno: chi ne fu colpito ricevette la Domanda. Ora i Figli cercano una risposta negli altri, mentre le campane di Concordia chiamano i suoi soldati alla difesa. Il Nascente affronta il primo varco da solo. Gli agenti ottenuti dagli avversari formeranno il tuo esercito. La forma che assumerai dipende dalle tue scelte.</p>
-          <p>Il primo Potere prenderà forma attraverso le Domande lungo il cammino.</p>
-          {error && <p role="alert" className="cs-error">{error}</p>}
-          <button className="cs-primary" onClick={() => {
-            try {
-              const run = createFirstActRun();
-              if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
-              playUiConfirm();
-              onSlotChosen(armySlot);
-            } catch (e) { setError(e.message); }
-          }}>Inizia il cammino</button><small className="cs-footnote">Il Nascente è sempre nella mano iniziale. Ogni incontro apre un passo del percorso.</small>
-        </div>
-      </div>
-    </div>
-  </CampaignScene>;
+  if (armySlot != null) return (
+    <OriginScreen
+      slot={armySlot}
+      error={error}
+      onBack={() => { setArmySlot(null); setError(''); }}
+      onStart={() => {
+        try {
+          const run = createFirstActRun();
+          if (!saveCampaignRun(run, armySlot)) throw new Error('Salvataggio non riuscito.');
+          playUiConfirm();
+          onSlotChosen(armySlot);
+        } catch (e) { setError(e.message); }
+      }}
+    />
+  );
 
   return (
     <SlotsScreen
@@ -280,6 +273,148 @@ function DeleteConfirm({ slot, onConfirm, onCancel }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Ingresso di una nuova campagna: presentazione del Nascente, poi INIZIA.
+ * Stesso linguaggio degli slot (lastra d'accento inclinata, retino, piede chiaro).
+ * Tastiera: Invio inizia, Esc torna agli slot.
+ */
+function OriginScreen({ slot, error, onStart, onBack }) {
+  const screenActiveRef = useScreenActiveRef();
+  const keyRef = useRef({});
+  keyRef.current = { onStart, onBack };
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!screenActiveRef.current) return; // in cache e nascosta
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); keyRef.current.onBack(); return; }
+      if (e.key === 'Enter') { e.preventDefault(); keyRef.current.onStart(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const slotLabel = String(slot + 1).padStart(2, '0');
+
+  return (
+    <div className="csl cso" style={{ '--accent': ACCENT }}>
+      <div className="csl-bg" aria-hidden="true">
+        <div className="csl-bg-slab" />
+        <div className="csl-bg-edge" />
+        <div className="csl-bg-halftone" />
+        <div className="csl-bg-stripes" />
+      </div>
+      <div className="csl-watermark" aria-hidden="true">NASCENTE</div>
+
+      <button type="button" className="csl-back" onClick={() => { playUiClick(); onBack(); }}>
+        <span className="key">ESC</span><span className="lbl">SLOT</span>
+      </button>
+
+      <figure className="cso-hero">
+        <span className="cso-hero-shadow" aria-hidden="true" />
+        <div className="cso-hero-frame">
+          <img src={heroArt({ league: 2 })} alt="Il Nascente, arciere dell’Orizzonte" />
+        </div>
+        <figcaption className="cso-stats">2 POT · 2 DAN · LEGA 2</figcaption>
+      </figure>
+
+      <div className="cso-copy">
+        <div className="cso-eyes">
+          <span className="cso-eye cso-eye--ink">NUOVA CAMPAGNA · SLOT {slotLabel}</span>
+          <span className="cso-eye">ATTO I · UN’IDENTITÀ DA FORGIARE</span>
+        </div>
+        <h1>Il Nascente</h1>
+        <p className="cso-sub">Il cammino del Nascente</p>
+
+        <div className="cso-plate">
+          <p>Un tempo Concordia governava tutto il mondo. Poi i colori della Nebula illuminarono una parte del cielo notturno: chi ne fu colpito ricevette la Domanda. Ora i Figli cercano una risposta negli altri, mentre le campane di Concordia chiamano i suoi soldati alla difesa. Il Nascente affronta il primo varco da solo. Gli agenti ottenuti dagli avversari formeranno il tuo esercito. La forma che assumerai dipende dalle tue scelte.</p>
+          <p className="cso-power">Il primo Potere prenderà forma attraverso le Domande lungo il cammino.</p>
+        </div>
+
+        <div className="cso-go-row">
+          {error && <p role="alert" className="cso-error">{error}</p>}
+          <button type="button" className="cso-go" onClick={onStart}>
+            <span>Inizia il cammino</span>
+          </button>
+        </div>
+      </div>
+
+      <footer className="csl-help">
+        <div className="csl-help-text">
+          <span className="csl-help-label">SLOT {slot + 1}</span>
+          <span className="csl-help-hint">Il Nascente è sempre nella mano iniziale. Ogni incontro apre un passo del percorso.</span>
+        </div>
+        <div className="csl-help-keys">
+          <span><kbd>↵</kbd>INIZIA</span>
+          <span><kbd>ESC</kbd>SLOT</span>
+        </div>
+      </footer>
+
+      <SlotsStyles />
+      <OriginStyles />
+    </div>
+  );
+}
+
+function OriginStyles() {
+  return (
+    <style>{`
+      .cso-hero { position: absolute; top: 150px; left: 110px; z-index: 12; width: 520px; height: 730px; margin: 0; transform: rotate(-3deg); }
+      .cso-hero-shadow, .cso-hero-frame { position: absolute; inset: 0; clip-path: polygon(36px 0, 100% 0, calc(100% - 36px) 100%, 0 100%); }
+      .cso-hero-shadow { background: var(--void); transform: translate(16px, 16px); }
+      .cso-hero-frame { background: var(--void); box-shadow: inset 0 0 0 6px var(--ink); }
+      .cso-hero-frame img {
+        position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px);
+        object-fit: cover; object-position: 50% 22%;
+        clip-path: polygon(33px 0, 100% 0, calc(100% - 33px) 100%, 0 100%);
+      }
+      .cso-stats {
+        position: absolute; left: 30px; bottom: -22px; z-index: 2;
+        background: var(--ink); color: var(--void); padding: 8px 22px;
+        font-weight: 700; font-style: italic; font-size: 26px; letter-spacing: 0.06em;
+        transform: skewX(-14deg); box-shadow: 6px 6px 0 var(--void);
+      }
+
+      .cso-copy { position: absolute; top: 120px; left: 760px; right: 110px; z-index: 12; }
+      .cso-eyes { display: flex; flex-wrap: wrap; gap: 12px; }
+      .cso-eye {
+        display: inline-block; background: var(--accent); color: var(--void);
+        font-weight: 700; font-size: 15px; letter-spacing: 0.28em; padding: 4px 14px; transform: skewX(-14deg);
+      }
+      .cso-eye--ink { background: var(--ink); }
+      .cso-copy h1 {
+        margin: 18px 0 0; font-weight: 700; font-style: italic; font-size: 128px; line-height: 0.9; letter-spacing: -0.02em;
+        text-transform: uppercase; color: var(--ink); text-shadow: 8px 8px 0 var(--accent); white-space: nowrap;
+      }
+      .cso-sub { margin: 14px 0 0; font-weight: 700; font-style: italic; font-size: 28px; letter-spacing: 0.04em; color: var(--dim); }
+
+      .cso-plate {
+        position: relative; margin-top: 30px; padding: 30px 60px 30px 52px; background: var(--plate);
+        clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+      }
+      .cso-plate::before { content: ''; position: absolute; left: 18px; top: 0; bottom: 0; width: 8px; background: var(--accent); transform: skewX(-12deg); }
+      .cso-plate p { margin: 0; font-weight: 600; font-size: 21px; line-height: 1.5; color: var(--ink); }
+      .cso-plate .cso-power { margin-top: 16px; font-weight: 700; font-style: italic; color: var(--accent); }
+
+      .cso-go-row { display: flex; align-items: center; justify-content: flex-end; gap: 24px; margin-top: 34px; }
+      .cso-go {
+        display: inline-flex; align-items: center; border: 0; cursor: pointer; height: 78px; padding: 0 42px;
+        background: var(--accent); color: var(--void); text-transform: uppercase;
+        font: italic 700 40px/1 'Chakra Petch', sans-serif; letter-spacing: 0.02em;
+        transform: skewX(-14deg); box-shadow: 8px 8px 0 var(--ink); transition: transform .15s, box-shadow .15s;
+      }
+      .cso-go > * { transform: skewX(14deg); }
+      .cso-go:hover, .cso-go:focus-visible { transform: skewX(-14deg) translate(-3px,-3px) rotate(-1deg); box-shadow: 12px 12px 0 var(--ink); }
+      .cso-error {
+        margin: 0; background: var(--danger); color: var(--void); padding: 6px 16px;
+        font-weight: 700; font-size: 17px; transform: skewX(-14deg);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cso-go { transition: none; }
+      }
+    `}</style>
   );
 }
 
