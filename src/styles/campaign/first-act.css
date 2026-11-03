@@ -114,7 +114,8 @@
 @keyframes cs-node-breathe { 50% { box-shadow:0 0 0 5px #171c1ac4,0 0 0 8px #e0c08060,0 0 42px #efd08070; } }
 @keyframes cs-rift-turn { to { transform:rotate(360deg); } }
 @keyframes cs-traveler-glow { 50% { opacity:.5; filter:drop-shadow(0 0 20px #ffe09c); } }
-@keyframes cs-landscape-drift { from { transform:translate3d(var(--cs-pan-x,0px),var(--cs-pan-y,0px),0) scale(1.055); } to { transform:translate3d(calc(var(--cs-pan-x,0px) - 18px),calc(var(--cs-pan-y,0px) + 8px),0) scale(1.095); } }
+/* il pan del puntatore sta nella proprietà translate dell'immagine (campaign-scene.css) */
+@keyframes cs-landscape-drift { from { transform:translate3d(0px,0px,0) scale(1.055); } to { transform:translate3d(-18px,8px,0) scale(1.095); } }
 
 /* One saved outcome, revealed through dissolution, convergence and a new card. */
 .cs-transformation { position:relative; isolation:isolate; height:740px; display:flex; align-items:center; flex-direction:column; justify-content:center; overflow:hidden; background:radial-gradient(ellipse,#32473a70,#071115 72%); }

@@ -18,6 +18,9 @@
 .cs-backdrop > img { width: 100%; height: 100%; object-fit: cover; object-position: 45% center; opacity: .78; animation: cs-reveal 1s ease-out; }
 .cs-backdrop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #071115d9 0%, #0b14173d 26%, #0a15172a 57%, #071014f5 100%), linear-gradient(90deg, #0814184a, transparent 55%, #070c10bd); }
 .cs-mist { position: absolute; inset: 20% -15%; background: radial-gradient(ellipse at 30% 60%, #b1cbc535, transparent 45%), radial-gradient(ellipse at 70% 50%, #9fa9c021, transparent 50%); filter: blur(16px); animation: cs-mist 20s ease-in-out infinite alternate; will-change: transform, opacity; }
+/* Nebbia già sfocata (BakedMist in CampaignScenery.jsx): stessa immagine, senza blur per frame. */
+.cs-mist.is-baked { filter: none; background: none; }
+.cs-mist.is-baked::before { content: ''; position: absolute; inset: calc(-1 * var(--cs-mist-pad, 48px)); background: var(--cs-mist-image) 0 0 / 100% 100% no-repeat; }
 .cs-grain { position: absolute; inset: 0; opacity: .09; background-image: repeating-linear-gradient(0deg, transparent 0 3px, #fff2 3px 4px); }
 .cs-content { max-width: 1920px; margin: auto; padding: 22px clamp(20px, 3.6vw, 70px) 24px; }
 .cs-hud { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid #d5b77b30; }
@@ -168,7 +171,10 @@
 @media (max-width: 420px) { .cs-map-node:not(.cs-kind-boss) { transform: translate(-50%, -22px); } }
 
 /* Motion language: background depth, route intent and action feedback. */
-.cs-backdrop > img { transform: translate3d(var(--cs-pan-x, 0px), var(--cs-pan-y, 0px), 0) scale(1.055); transition: transform .35s ease-out; }
+/* Parallasse del puntatore nella proprietà `translate`, separata da `transform`: le animazioni
+   di transform (deriva del primo atto) non dipendono più da variabili e il compositor non deve
+   riavviarle a ogni movimento del mouse. translate + transform = translate3d(pan) scale(1.055). */
+.cs-backdrop > img { translate: var(--cs-pan-x, 0px) var(--cs-pan-y, 0px); transform: scale(1.055); transition: translate .35s ease-out; }
 .cs-embers { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
 .cs-embers i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #d9ddbe; box-shadow: 0 0 9px #dde6b7; opacity: 0; animation: cs-ember var(--cs-duration) linear infinite; }
 .cs-backdrop[data-act="2"] .cs-embers i { background: #f1b983; box-shadow: 0 0 9px #ee975f; }
@@ -198,7 +204,7 @@
 .cs-departure button { margin-top: 20px; padding: 10px 25px; background: #0a1517bb; border: 1px solid #d5b77b77; color: #e7d1a0; }
 .cs-motion-off *, .cs-motion-off *::before, .cs-motion-off *::after { animation: none !important; transition: none !important; }
 .cs-motion-off .cs-embers { display: none; }
-.cs-motion-off .cs-backdrop > img { transform: none; }
+.cs-motion-off .cs-backdrop > img { transform: none; translate: none; }
 .campaign-scene[data-paused="true"] *, .campaign-scene[data-paused="true"] *::before, .campaign-scene[data-paused="true"] *::after { animation-play-state: paused !important; }
 @keyframes cs-ember { 0%, 100% { opacity: 0; } 20%, 65% { opacity: .5; } 100% { transform: translate3d(var(--cs-drift), -140px, 0); } }
 @keyframes cs-route { to { stroke-dashoffset: -30; } }

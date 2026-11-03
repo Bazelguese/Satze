@@ -1,12 +1,18 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
-const Motion = createContext(null);
+export const Motion = createContext(null);
 const PREFERENCE = 'satze_campaign_motion_v1';
 const query = () => window.matchMedia?.('(prefers-reduced-motion: reduce)');
 export const useCampaignMotion = () => useContext(Motion) || { enabled:false, reduced:true };
 export function campaignMotionAllowed() {
   try { return localStorage.getItem(PREFERENCE) !== 'off' && !query()?.matches; }
   catch { return !query()?.matches; }
+}
+
+/** Variabili della parallasse sullo sfondo (.cs-backdrop): le legge `.cs-backdrop > img`. */
+export function applyPan(backdrop, { x, y }) {
+  backdrop.style.setProperty('--cs-pan-x', `${x}px`);
+  backdrop.style.setProperty('--cs-pan-y', `${y}px`);
 }
 
 /** Presentation preferences never enter the run or its random seed. */
@@ -23,19 +29,25 @@ export function CampaignScene({ children, className = '' }) {
     media?.addEventListener('change', update);
     return () => media?.removeEventListener('change', update);
   }, []);
+  // Ultimo spostamento della parallasse: gli sfondi montati dopo lo applicano subito.
+  const pan = useRef({ x: 0, y: 0 });
   useEffect(() => {
     const element = root.current;
     let frame = null, x = 0, y = 0;
+    // Le variabili si scrivono solo sugli sfondi che le usano: scritte sulla radice della scena
+    // (ereditate) obbligavano a ricalcolare gli stili di tutta la scena a ogni movimento.
+    const write = (px, py) => {
+      pan.current = { x: px, y: py };
+      for (const backdrop of element.querySelectorAll('.cs-backdrop')) applyPan(backdrop, pan.current);
+    };
     const reset = () => {
       if (frame !== null) cancelAnimationFrame(frame);
       frame = null;
-      element.style.setProperty('--cs-pan-x', '0px');
-      element.style.setProperty('--cs-pan-y', '0px');
+      write(0, 0);
     };
     const render = () => {
       frame = null;
-      element.style.setProperty('--cs-pan-x', `${x}px`);
-      element.style.setProperty('--cs-pan-y', `${y}px`);
+      write(x, y);
     };
     const move = event => {
       if (!enabled || document.hidden || event.pointerType !== 'mouse') return;
@@ -65,7 +77,7 @@ export function CampaignScene({ children, className = '' }) {
     try { localStorage.setItem(PREFERENCE, previous ? 'off' : 'on'); } catch { /* Works for this session. */ }
     return !previous;
   });
-  return <Motion.Provider value={{ enabled, reduced, toggle }}>
+  return <Motion.Provider value={{ enabled, reduced, toggle, pan }}>
     <section ref={root} className={`campaign-scene ${className} ${enabled ? 'cs-motion-on' : 'cs-motion-off'}`}>{children}</section>
   </Motion.Provider>;
 }

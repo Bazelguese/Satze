@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Motion, applyPan } from './CampaignScene.jsx';
 import { getNascenteStageImageUrl, nascenteStageFromLeague } from '../../data/images.js';
 import '../../styles/campaign/campaign-scene.css';
 import { campaignMapLayout } from './campaignMapLayout.js';
@@ -26,10 +27,57 @@ export function CampaignSigil({ kind = 'battle', ...props }) {
   </svg>;
 }
 
+/**
+ * Nebbia dello sfondo. In CSS è un gradiente con filter: blur(16px) animato in transform e
+ * opacity: il compositor rifà la sfocatura su tutta l'area a ogni frame. Qui la stessa nebbia
+ * (stesso gradiente e stesso blur letti dagli stili calcolati) viene disegnata una volta sola,
+ * già sfocata, in un'immagine SVG; l'elemento conserva la sua animazione. Differenza misurata:
+ * al massimo 1/255 per canale. Finché l'immagine non è pronta resta la nebbia CSS.
+ */
+function BakedMist() {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let size = '';
+    let source = null;
+    const bake = () => {
+      const w = el.offsetWidth, h = el.offsetHeight;
+      if (!w || !h) return;
+      if (!source) {
+        el.classList.remove('is-baked');
+        const cs = getComputedStyle(el);
+        const blur = /blur\(([\d.]+)px\)/.exec(cs.filter);
+        if (!blur || cs.backgroundImage === 'none') return;
+        source = { image: cs.backgroundImage, sigma: parseFloat(blur[1]) };
+      }
+      if (`${w}x${h}` === size) return;
+      size = `${w}x${h}`;
+      const pad = Math.ceil(source.sigma * 3); // oltre 3σ la sfocatura è sotto 1/255
+      const W = w + pad * 2, H = h + pad * 2;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="0" y="0" width="${W}" height="${H}">`
+        + `<div xmlns="http://www.w3.org/1999/xhtml" style="position:absolute;left:${pad}px;top:${pad}px;width:${w}px;height:${h}px;background-image:${source.image.replace(/"/g, "'")};filter:blur(${source.sigma}px)"></div>`
+        + '</foreignObject></svg>';
+      el.style.setProperty('--cs-mist-pad', `${pad}px`);
+      el.style.setProperty('--cs-mist-image', `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`);
+      el.classList.add('is-baked');
+    };
+    bake();
+    const ro = new ResizeObserver(bake);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return <div ref={ref} className="cs-mist"/>;
+}
+
 export function CampaignBackdrop({ actIndex = 0 }) {
-  return <div className="cs-backdrop" data-act={actIndex + 1} aria-hidden="true">
+  const ref = useRef(null);
+  const motion = useContext(Motion);
+  // parallasse corrente della scena, prima del primo paint (poi la aggiorna CampaignScene)
+  useLayoutEffect(() => { if (ref.current && motion?.pan) applyPan(ref.current, motion.pan.current); }, [motion]);
+  return <div ref={ref} className="cs-backdrop" data-act={actIndex + 1} aria-hidden="true">
     <CampaignArt key={actIndex} src={actScenery[actIndex]} alt="" />
-    <div className="cs-mist"/><div className="cs-grain"/>
+    <BakedMist/><div className="cs-grain"/>
     <div className="cs-embers">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{
       left: `${(i * 37 + 11) % 100}%`, top: `${(i * 19 + 7) % 100}%`,
       '--cs-drift': `${(i % 3 - 1) * 35}px`, '--cs-duration': `${8 + i % 7}s`,
