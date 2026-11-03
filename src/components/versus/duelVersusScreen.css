@@ -575,3 +575,62 @@
 /* la tua scatola arriva in volo dalla scelta esercito: il resto del lato appare attorno */
 .vsx-intro-handoff .vsx-side--r { animation: none; }
 .vsx-intro-handoff .vsx-side--r > :not(.vsx-ticket) { animation: vsx-fade-in 0.5s 0.7s ease-out both; }
+
+/* ============================================================
+   Modalità a più posti: altri giocatori ai lati esterni
+   ============================================================ */
+.vsx-allies-l-on .vsx-side--l { left: 33%; }
+.vsx-allies-r-on .vsx-side--r { left: 67%; }
+.vsx-allies {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  transform: translate(-50%, -50%);
+  --vsx-ticket-scale: 0.44;
+}
+.vsx-allies.is-stacked { --vsx-ticket-scale: 0.34; gap: 10px; }
+.vsx-allies--l { left: 11.5%; }
+.vsx-allies--r { left: 88.5%; }
+.vsx-ally {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: vsx-fade-in 0.5s calc(0.9s + var(--i) * 0.25s) ease-out both;
+}
+.vsx-ally-who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+.vsx-ally-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.9), 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.vsx-ally-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(245, 243, 235, 0.75);
+  text-transform: uppercase;
+}
+.vsx-allies .vsx-who-eyebrow { font-size: 11px; letter-spacing: 0.32em; }
+/* il lato nemico resta al buio finché la ruota non si ferma */
+.vsx-intro .vsx-allies--l { visibility: hidden; }
+.vsx-intro .vsx-allies--l * { animation-play-state: paused !important; }

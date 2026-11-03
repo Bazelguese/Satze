@@ -210,6 +210,32 @@ function VersusSide({ side, identity, entry, layout, coverStyle, em, opening, sp
   );
 }
 
+/**
+ * Modalità a più posti: mazzi degli altri giocatori sul lato esterno di ciascuna metà
+ * (compagno a destra, altri avversari a sinistra), più piccoli del mazzo principale.
+ */
+function VersusAllies({ side, allies, coverStyle }) {
+  const entries = useMemo(
+    () => allies.map((a) => ({ identity: a.identity, entry: buildDeckTicketEntry(a.deck || {}) })),
+    [allies]
+  );
+  if (!entries.length) return null;
+  return (
+    <div className={`vsx-allies vsx-allies--${side}${entries.length > 1 ? ' is-stacked' : ''}`}>
+      {entries.map(({ identity, entry }, i) => (
+        <div className="vsx-ally" key={`${entry.army}-${i}`} style={{ '--accent': entry.accent, '--i': i }}>
+          <header className="vsx-ally-who">
+            <span className="vsx-who-eyebrow">{identity.eyebrow}</span>
+            <span className="vsx-ally-name">{identity.name}</span>
+            {identity.sub ? <span className="vsx-ally-sub">{identity.sub}</span> : null}
+          </header>
+          <VersusCover entry={entry} coverStyle={coverStyle} mirror={side === 'r'} opening={false} spin={false} backImage={null} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function halfBackground(entry, em, layout) {
   if (layout === 'shadow' && em.eminence) return getEminenceArtUrl(em.eminence);
   return entry.bg || null;
@@ -251,6 +277,8 @@ export function DuelVersusScreen({
   progress = null,
   statusLabel = 'Preparazione scontro',
   intro = null,
+  playerAllies = [],
+  enemyAllies = [],
 }) {
   const rootRef = useRef(null);
   const introHeld = Boolean(intro) && intro.stage !== 'reveal';
@@ -427,6 +455,8 @@ export function DuelVersusScreen({
 
       <VersusSide side="l" identity={enemyIdentity} entry={enemyEntry} layout={layout} coverStyle={coverStyle} em={enemyEm} opening={opening} spin={spin} backImage={enemyBack} />
       <VersusSide side="r" identity={playerIdentity} entry={playerEntry} layout={layout} coverStyle={coverStyle} em={playerEm} opening={opening} spin={spin} backImage={playerBack} />
+      <VersusAllies side="l" allies={enemyAllies} coverStyle={coverStyle} />
+      <VersusAllies side="r" allies={playerAllies} coverStyle={coverStyle} />
 
       <div className="vsx-vs" aria-label="contro">
         <div className="vsx-vs-ring" />
@@ -444,13 +474,13 @@ export function DuelVersusScreen({
   ), [
     enemyBg, playerBg, enemyIdentity, playerIdentity, enemyEntry, playerEntry,
     layout, coverStyle, enemyEm, playerEm, opening, spin, enemyBack, playerBack, impact,
-    hasIntro, reel, reelStopping, reelLeaving, onReelLanded,
+    hasIntro, reel, reelStopping, reelLeaving, onReelLanded, playerAllies, enemyAllies,
   ]);
 
   return (
     <div
       ref={rootRef}
-      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}${fxClass}`}
+      className={`vsx vsx-lay-${layout} vsx-cover-${coverStyle}${fxClass}${enemyAllies.length ? ' vsx-allies-l-on' : ''}${playerAllies.length ? ' vsx-allies-r-on' : ''}`}
       style={{ '--la': enemyEntry.accent, '--ra': playerEntry.accent }}
       role="presentation"
       onPointerMove={fx.parallax ? onPointerMove : undefined}

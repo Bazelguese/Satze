@@ -165,9 +165,40 @@
 }
 .msp-tabs button.on { color: #fde68a; border-color: rgba(251, 191, 36, 0.6); background: rgba(251, 191, 36, 0.08); }
 
-/* Tabellone con più di 5 Campi (2v2: 10): una riga sola per Campo, l'effetto resta
-   leggibile passando sopra al Campo (anteprima). */
-.imp-fields-dense [data-field-slot] p { display: none; }
-.imp-fields-dense [data-field-slot] > div { min-height: 0 !important; padding-top: 0; padding-bottom: 0; }
-.imp-fields-dense [data-field-slot] h3 { font-size: 11px !important; }
-.imp-fields-dense [data-field-slot] span { font-size: 11px; }
+/* Tabellone con più di 5 Campi (2v2: 10): righe a grandezza normale, si scorre in giù
+   nello stesso pannello. */
+.imp-fields-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.55) transparent;
+}
+.imp-fields-scroll::-webkit-scrollbar { width: 6px; }
+.imp-fields-scroll::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.55); border-radius: 3px; }
+.imp-fields-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Tasti per guardare le altre mani, accanto ai riquadri PV dei due triangoli */
+.msp-hand-toggle {
+  position: absolute;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  background: rgba(8, 11, 22, 0.88);
+  color: #fde68a;
+  font: 700 12px/1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 2px 2px 0 #000;
+}
+.msp-hand-toggle:hover { background: rgba(251, 191, 36, 0.16); }
+.msp-hand-toggle span { font-size: 15px; }
+.msp-hand-toggle--enemy { left: 22px; top: 92px; }
+.msp-hand-toggle--player { right: 260px; bottom: 22px; }

@@ -703,6 +703,8 @@ export function DuelLoadingOverlay({
             enemyIdentity={versus.enemyIdentity}
             playerDeck={versus.playerDeck}
             enemyDeck={versus.enemyDeck}
+            playerAllies={versus.playerAllies || []}
+            enemyAllies={versus.enemyAllies || []}
             layout={VS_LAYOUT}
             coverStyle={VS_COVER}
             eminenceFormat={versus.eminenceFormat}
