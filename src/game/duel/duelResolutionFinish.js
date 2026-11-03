@@ -32,6 +32,11 @@ export function runDuelDamageAftermathAndFcAdjust({
   fieldVeiledSides = [],
   terminal = null,
   preventRevival = false,
+  pHPMax = 25,
+  eHPMax = 25,
+  // Investimento già pagato in uno scontro precedente (Re della collina): non si sottrae di nuovo.
+  pFocusPrepaid = false,
+  eFocusPrepaid = false,
 }) {
   if (battleLog && typeof battleLog.setContext === 'function') {
     battleLog.setContext(BATTLE_PHASES.post, BATTLE_REVEAL_AT.postFx);
@@ -74,6 +79,8 @@ export function runDuelDamageAftermathAndFcAdjust({
     battleLog,
     pFocusUsed,
     eFocusUsed,
+    pHPMax,
+    eHPMax,
   });
 
   emitAftermathResourceEvents(battleLog, field, beforeAftermath, {
@@ -92,12 +99,12 @@ export function runDuelDamageAftermathAndFcAdjust({
     // Mai sotto 1 FC per agente ancora da giocare (player e IA).
     finalPlayerFC: applyFocusSpendWithGuarantee(
       aftermath.pFCCurrent,
-      selectedFocus,
+      pFocusPrepaid ? 0 : selectedFocus,
       playerAgentsRemainingAfter
     ),
     finalEnemyFC: applyFocusSpendWithGuarantee(
       aftermath.eFCCurrent,
-      enemySelectedFocus,
+      eFocusPrepaid ? 0 : enemySelectedFocus,
       enemyAgentsRemainingAfter
     ),
   };

@@ -126,6 +126,20 @@ export function computeDuelResolution({
   presenceSnapshot = null,
   playerHasEminence = false,
   enemyHasEminence = false,
+
+  // Modalità a più posti (2v2, Re della collina). Tutti con default che lasciano il duello
+  // base identico a prima.
+  /** Massimo PV per lato, usato dalle cure. */
+  playerMaxHP = 25,
+  enemyMaxHP = 25,
+  /** Esito del proprio scontro precedente per lato ('won' | 'lost' | null); undefined = lastWinner. */
+  playerPreviousResult = undefined,
+  enemyPreviousResult = undefined,
+  /** Disattiva il Trigger Conquista delle carte (vittoria intermedia nel Re della collina). */
+  conquestTriggerSuppressed = false,
+  /** Investimento già pagato in uno scontro precedente: non si sottrae di nuovo dalla riserva. */
+  playerFocusPrepaid = false,
+  enemyFocusPrepaid = false,
 }) {
     // L'overlay entra qui una volta sola: tutti i sotto-moduli ricevono `checkTrigger` per
     // iniezione e continuano a ignorare l'esistenza delle Eminenze.
@@ -219,6 +233,8 @@ export function computeDuelResolution({
       presenceSnapshot,
       playerHasEminence,
       enemyHasEminence,
+      playerPreviousResult,
+      enemyPreviousResult,
     });
 
     attachFieldModifiersToContexts(field, playerContext, enemyContext);
@@ -286,6 +302,8 @@ export function computeDuelResolution({
       eAssaultMod: deployStats.enemyAssaultMod,
       pHPCurrent: playerHPAtDeploy,
       eHPCurrent: enemyHPAtDeploy,
+      pHPMax: playerMaxHP,
+      eHPMax: enemyMaxHP,
       pFCCurrent: playerFocus + readPoolFocus(eminenceBundle, 'player'),
       eFCCurrent: enemyFocus + readPoolFocus(eminenceBundle, 'enemy'),
       pAbilityBlocked: false,
@@ -858,7 +876,7 @@ export function computeDuelResolution({
     const conquestOverride = resolveConquestOverride(eminenceBundle, winner);
     const postFieldOptions = {
       ...fieldOptions,
-      conquestDisabled: fieldOptions.conquestDisabled || conquestOverride.suppressConquest,
+      conquestDisabled: fieldOptions.conquestDisabled || conquestOverride.suppressConquest || conquestTriggerSuppressed === true,
     };
 
     battleLog.setContext('post', 'postFx');
@@ -958,6 +976,10 @@ export function computeDuelResolution({
       fieldVeiledSides: veiledSides,
       terminal: campaignTerminal,
       preventRevival: campaign?.firstAct === true,
+      pHPMax: playerMaxHP,
+      eHPMax: enemyMaxHP,
+      pFocusPrepaid: playerFocusPrepaid === true,
+      eFocusPrepaid: enemyFocusPrepaid === true,
     });
 
     // phaseLogs rimosso: UI e sync usano battleResult.events + revealAt.

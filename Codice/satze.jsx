@@ -165,6 +165,8 @@ import { EMINENCE_IDS } from '../src/data/eminences.js';
 import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCarousel';
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
+import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
+import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
 
@@ -1541,7 +1543,19 @@ export default function SatzeGame() {
   };
 
   // Hook per la logica di battaglia
-  const { resolveBattle } = useBattle(gameState, animations, { revealHpCommittedRef });
+  const { resolveBattle, presentPrecomputedBattle } = useBattle(gameState, animations, { revealHpCommittedRef });
+
+  // Modalità a più posti (2v2, Re della collina): un controllore guida la scena del duello.
+  // La scena gli espone le proprie azioni tramite multiSeatSceneRef (assegnato prima del render).
+  const multiSeatSceneRef = useRef({});
+  const multiSeat = useMultiSeatDuel({ gameState, sceneRef: multiSeatSceneRef });
+  const isMultiSeat = multiSeat.isActive;
+  const multiSeatActiveRef = useRef(false);
+  multiSeatActiveRef.current = isMultiSeat;
+  const multiSeatDeployRef = useRef(false);
+  multiSeatDeployRef.current = multiSeat.acceptsHumanDeploy;
+  const multiSeatStageTimerRef = useRef(null);
+  const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
 
   useMatchAudio({ gamePhase, duelPhase, battleResult });
 
@@ -2791,6 +2805,7 @@ export default function SatzeGame() {
 
   const handleAgentSelect = useCallback((agent, via = 'click') => {
     if (eminenceBlocksMatch) return;
+    if (multiSeatActiveRef.current && !multiSeatDeployRef.current) return;
     if (
       guidedMatch.active &&
       !guidedMatch.freePlay &&
@@ -3209,7 +3224,7 @@ export default function SatzeGame() {
 
   // Gestione turno IA - selezione campo (tempo pensiero variabile)
   useEffect(() => {
-    if (isOnlinePvP) return;
+    if (isOnlinePvP || multiSeatActiveRef.current) return;
     if (eminenceBlocksMatch) return;
     const isGuidedScripted = guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound;
 
@@ -3367,7 +3382,7 @@ export default function SatzeGame() {
   // Non latchare aiHasSelectedAgent prima del timer: se l'effect si riarma
   // (re-render / cleanup) il flag resterebbe true e l'IA non sceglierebbe più.
   useEffect(() => {
-    if (isOnlinePvP) return;
+    if (isOnlinePvP || multiSeatActiveRef.current) return;
     if (eminenceBlocksMatch) return;
     if (guidedMatch.active && !guidedMatch.freePlay && currentGuidedRound) return;
     if (gamePhase !== 'selectAgent' || isPlayerFirst || enemyHand.length === 0 || enemyAgent) {
@@ -3644,6 +3659,13 @@ export default function SatzeGame() {
   const confirmPlayerChoice = () => {
     if (eminenceAnnounceHold || announcePointerGuard) return;
     if (eminenceBlocksMatch) return;
+    if (isMultiSeat) {
+      if (!multiSeat.acceptsHumanConfirm) return;
+      if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
+      playGame(GAME_SOUND.LOCK_IN);
+      multiSeat.onHumanConfirm({ agent: selectedAgent, focus: selectedFocus, fieldIndex: currentFieldIndex });
+      return;
+    }
     if (guidedMatch.active && currentGuidedRound && !guidedMatch.freePlay) {
       const expectedFieldName = battlefields[currentGuidedRound.fieldIndex]?.name || `Campo ${currentGuidedRound.fieldIndex + 1}`;
       const expectedAgentName = playerHand.find((c) => c.id === currentGuidedRound.playerAgentId)?.name || 'agente richiesto';
@@ -3765,6 +3787,8 @@ export default function SatzeGame() {
 
   // Trigger risoluzione battaglia (deve rieseguire quando enemyAgent viene impostato dopo il delay)
   useEffect(() => {
+    // Nelle modalità a più posti il risultato arriva già calcolato dal controllore.
+    if (multiSeatActiveRef.current) return;
     if (eminenceAnnounceHold || pendingEminenceDeals.length > 0 || (awaitingRevealParams && gamePhase === 'battle')) return;
     if (gamePhase === 'battle' && selectedAgent && enemyAgent) {
       const isGuidedDuelPaused =
@@ -3950,6 +3974,12 @@ export default function SatzeGame() {
   };
   
   const proceedToNextRound = () => {
+    if (isMultiSeat) {
+      setIsZoomed(false);
+      nextRoundInFlightRef.current = false;
+      multiSeat.onScontroDone();
+      return;
+    }
     let handedOffToAdvance = false;
     try {
     // Reset zoom
@@ -4361,8 +4391,64 @@ export default function SatzeGame() {
     setShowClaimVictoryChoice,
   ]);
 
-  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'TU';
-  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'IA';
+  // Azioni della scena usate dal controllore delle modalità a più posti.
+  multiSeatSceneRef.current = {
+    resetForProjection: () => {
+      if (multiSeatStageTimerRef.current) {
+        clearTimeout(multiSeatStageTimerRef.current);
+        multiSeatStageTimerRef.current = null;
+      }
+      setSelectedAgent(null);
+      setSelectedFocus(1);
+      setEnemyAgent(null);
+      setEnemySelectedFocus(1);
+      setCurrentFieldIndex(null);
+      setBattleResult(null);
+      setShowClashAnimation(false);
+      setIsZoomed(false);
+      ai.clearPendingDecision();
+      aiThinkGenerationRef.current += 1;
+      aiHasSelectedAgent.current = false;
+      if (aiAgentThinkTimerRef.current) {
+        clearTimeout(aiAgentThinkTimerRef.current);
+        aiAgentThinkTimerRef.current = null;
+      }
+      setPlayerConfirmedAwaitingAI(false);
+      nextRoundInFlightRef.current = false;
+    },
+    setGamePhase: (phase) => setGamePhase(phase),
+    showOpponentDeploy: ({ agent, fieldIndex }) => {
+      if (fieldIndex != null) setCurrentFieldIndex(fieldIndex);
+      setEnemySelectedFocus(1);
+      setEnemyAgent(agent);
+    },
+    // Uno scontro deciso dall'orchestratore: gli Agenti entrano in campo, poi la risoluzione.
+    stageBattle: ({ result, playerAgent, enemyAgent: eAgent, playerFocus: pFocus, enemyFocus: eFocus, fieldIndex }) => {
+      setCurrentFieldIndex(fieldIndex);
+      setSelectedFocus(pFocus);
+      setEnemySelectedFocus(eFocus);
+      setSelectedAgent(playerAgent);
+      setEnemyAgent(eAgent);
+      setGamePhase('selectAgent');
+      if (multiSeatStageTimerRef.current) clearTimeout(multiSeatStageTimerRef.current);
+      multiSeatStageTimerRef.current = setTimeout(() => {
+        multiSeatStageTimerRef.current = null;
+        presentPrecomputedBattle(result);
+      }, scaleDuelMs(1400));
+    },
+    showGameOver: (result) => {
+      setGameResult(result);
+      setGamePhase('gameOver');
+    },
+    hint: (message) => addLog(message),
+  };
+  const multiSeatView = multiSeat.view;
+  const multiSeatSeatName = (seatId) => multiSeatView?.seats?.find((s) => s.id === seatId)?.name || null;
+  const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
+  const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
+  const multiSeatThreshold = isMultiSeat && multiSeatView?.threshold ? multiSeatView.threshold : null;
+  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
+  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
   const mpEnemyHandLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'Mano Avversario';
 
@@ -4859,6 +4945,17 @@ export default function SatzeGame() {
               // la scelta esercito si smonta a pezzi attorno alla scatola, poi parte l'avvio
               setDeckLaunching(true);
               setVsChosenEnemyArmy(choice.enemyArmy ?? null);
+              if (choice.matchMode === MULTI_SEAT_KINDS.TEAM || choice.matchMode === MULTI_SEAT_KINDS.KOTH) {
+                multiSeat.arm({
+                  kind: choice.matchMode,
+                  teammatePreset: choice.teammatePreset,
+                  players: choice.players,
+                  difficulty: choice.difficulty,
+                  fieldMode: choice.mode,
+                });
+              } else {
+                multiSeat.cancel();
+              }
               const start = () => startStandardGameRef.current(
                 selectedArmy,
                 selectedDeckKey,
@@ -5550,8 +5647,33 @@ export default function SatzeGame() {
             className="text-sm font-bold mb-2 uppercase tracking-[0.15em]"
             style={{ color: PALETTE.textPrimary, textShadow: `0 0 20px ${PALETTE.amber}44, 0 2px 4px #000` }}
           >
-            <RuneTitle text="Anteprima" />
+            {isMultiSeat ? (
+              <div className="msp-tabs">
+                <button type="button" className={multiSeatLeftTab === 'table' ? 'on' : ''} onClick={() => setMultiSeatLeftTab('table')}>Tavolo</button>
+                <button type="button" className={multiSeatLeftTab === 'preview' ? 'on' : ''} onClick={() => setMultiSeatLeftTab('preview')}>Anteprima</button>
+              </div>
+            ) : (
+              <RuneTitle text="Anteprima" />
+            )}
           </div>
+          {isMultiSeat && multiSeatLeftTab === 'table' && !hoveredCard && (
+            <div
+              className="satze-hide-scrollbar"
+              style={{ position: 'absolute', inset: '52px 12px 12px 12px', zIndex: 6, background: 'rgba(8, 11, 22, 0.96)', display: 'flex', flexDirection: 'column' }}
+            >
+              <MultiSeatPanel
+                view={multiSeatView}
+                ownFocus={selectedFocus}
+                onPairing={multiSeat.setPlanPairing}
+                onSubmit={() => {
+                  if (!multiSeat.acceptsHumanConfirm) return;
+                  playGame(GAME_SOUND.LOCK_IN);
+                  multiSeat.submitPlan(selectedFocus);
+                }}
+                onClaim={multiSeat.decideClaim}
+              />
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto flex flex-col items-center">
             {displayPreviewCard ? (
               <div className="flex flex-col items-center w-full">
@@ -5770,7 +5892,7 @@ export default function SatzeGame() {
             const Row = ({ count, accent }) => (
               <div className="flex items-center justify-center gap-2 py-0.5">
                 <div className="flex gap-2 flex-1 min-w-0 justify-center">
-                  {[0, 1, 2].map((i) => <Slot key={i} filled={i < count} accent={accent} />)}
+                  {Array.from({ length: multiSeatThreshold || 3 }, (_, i) => i).map((i) => <Slot key={i} filled={i < count} accent={accent} />)}
                 </div>
               </div>
             );
@@ -5802,7 +5924,7 @@ export default function SatzeGame() {
           >
             <div className="text-[11px] uppercase tracking-wider mb-1" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>Condizione di Vittoria</div>
             <div className="text-sm font-bold leading-tight" style={{ color: PALETTE.amber, textShadow: `0 1px 3px #000, 0 0 12px ${PALETTE.amber}44` }}>
-              {showAnnihilate ? 'Annienta il nemico!' : `Conquista ${Math.floor(battlefields.length / 2) + 1} campi!`}
+              {showAnnihilate ? 'Annienta il nemico!' : `Conquista ${multiSeatThreshold || Math.floor(battlefields.length / 2) + 1} campi!`}
             </div>
             {!showAnnihilate && playerHand.length >= 5 && (
               <div className="text-xs mt-1.5" style={{ color: PALETTE.textSecondary, textShadow: '0 1px 2px #000' }}>
@@ -5840,11 +5962,12 @@ export default function SatzeGame() {
             <RuneTitle text="Prossima conquista!" />
           </div>
 
-          {/* Lista Campi di Battaglia - 5 righe */}
+          {/* Lista Campi di Battaglia - 5 righe (10 nel 2v2) */}
           <div 
-            className={`grid grid-rows-5 grid-cols-1 gap-0.5 flex-1 min-h-0 ${
+            className={`grid grid-cols-1 gap-0.5 flex-1 min-h-0 ${battlefields.length > 5 ? 'imp-fields-dense' : 'grid-rows-5'} ${
               gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
             }`}
+            style={battlefields.length > 5 ? { gridTemplateRows: `repeat(${battlefields.length}, minmax(0, 1fr))` } : undefined}
           >
             {battlefields.map((field, idx) => {
               const canSelectField = canSelectBattlefield({
@@ -5890,7 +6013,7 @@ export default function SatzeGame() {
                         : null
                     }
                     hidden={idx >= revealedFields}
-                    turnsUntilReveal={idx >= revealedFields ? idx - revealedFields + 1 : 0}
+                    turnsUntilReveal={idx >= revealedFields ? Math.ceil((idx - revealedFields + 1) / (multiSeat.kind === MULTI_SEAT_KINDS.TEAM ? 2 : 1)) : 0}
                     selected={currentFieldIndex === idx}
                     onClick={
                       legalSlotIndicesForChoice(eminenceChoiceView, { draftId: emDraftId }).includes(idx)

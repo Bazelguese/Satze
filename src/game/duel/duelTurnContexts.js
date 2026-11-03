@@ -53,8 +53,18 @@ export function buildDuelTurnContexts({
   presenceSnapshot = null,
   playerHasEminence = false,
   enemyHasEminence = false,
+
+  // Modalità a più posti: ogni lato ha la propria storia ('won' | 'lost' | null).
+  // Se assenti (undefined) si usa `lastWinner` come nel duello base.
+  playerPreviousResult = undefined,
+  enemyPreviousResult = undefined,
 }) {
   const rn = roundNumber || 1;
+  const prev = (own, ownSide, otherSide) => (own === undefined
+    ? { won: lastWinner === ownSide, lost: lastWinner === otherSide }
+    : { won: own === 'won', lost: own === 'lost' });
+  const pPrev = prev(playerPreviousResult, 'player', 'enemy');
+  const ePrev = prev(enemyPreviousResult, 'enemy', 'player');
 
   const playerFocus = createFocus(selectedFocus, playerTemporaryFocus);
   const enemyFocus = createFocus(enemySelectedFocus, enemyTemporaryFocus);
@@ -65,8 +75,8 @@ export function buildDuelTurnContexts({
       // confronto per riferimento non basta più.
       duelSide: 'player',
       isFirst: isPlayerFirst,
-      wonPrevious: lastWinner === 'player',
-      lostPrevious: lastWinner === 'enemy',
+      wonPrevious: pPrev.won,
+      lostPrevious: pPrev.lost,
       ...buildFocusContextFields(playerFocus, enemyFocus),
       cardsPlayed: playerUsedCards.length + 1,
       enemyCardsPlayed: enemyUsedCards.length + 1,
@@ -84,8 +94,8 @@ export function buildDuelTurnContexts({
     enemyContext: {
       duelSide: 'enemy',
       isFirst: !isPlayerFirst,
-      wonPrevious: lastWinner === 'enemy',
-      lostPrevious: lastWinner === 'player',
+      wonPrevious: ePrev.won,
+      lostPrevious: ePrev.lost,
       ...buildFocusContextFields(enemyFocus, playerFocus),
       cardsPlayed: enemyUsedCards.length + 1,
       enemyCardsPlayed: playerUsedCards.length + 1,
