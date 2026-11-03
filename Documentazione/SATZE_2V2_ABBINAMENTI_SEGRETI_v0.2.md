@@ -16,6 +16,7 @@ La v0.1 era stata redatta senza ispezionare il codice e conteneva valori superat
 | Vittoria | Solo PV | Come 1v1: Campi nei turni 1–4, Supremazia dal 5, Annientamento sempre | Decisione utente |
 | Soglia territoriale | — | **5 Campi su 8** | Decisione utente |
 | Rivelazione Campi | 2 iniziali + 1 per turno | **6 iniziali + 2 per turno** (doppio dell'1v1) | Decisione utente; 1v1 in `Codice/satze.jsx` |
+| PV | Riserva di squadra [P] | Riserva **condivisa** dalla squadra confermata; valore 50 ancora [P] | Decisione utente |
 | Segretezza | Server autoritativo | **Server custode** dei segreti; risoluzione deterministica | Decisione utente |
 | Investimento | Visibile al compagno [P] | Visibile **solo** al compagno (regola) | Decisione utente |
 
@@ -71,7 +72,7 @@ Ogni Agente affronta esattamente un avversario, su un solo Campo. Il suo VA non 
 | Pescata | Nessuna; un Agente consumato per turno | Base verificata |
 | FC | 18 per persona, riserve separate, nessun prestito | Base verificata |
 | Investimento | Intero, minimo 1 FC per Agente | Base verificata |
-| PV | Riserva unica per squadra: 50 iniziali, massimo 50 | [P] |
+| PV | Riserva **condivisa** dalla squadra: 50 iniziali, massimo 50 | Condivisione: decisione utente · valore 50: [P] |
 | Campi | **10** per partita, uno per scontro | Decisione utente |
 | Soglia territoriale | **5 Campi** conquistati dalla squadra | Decisione utente |
 | Durata | Cinque turni | Base verificata |
