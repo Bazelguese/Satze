@@ -35,7 +35,6 @@ Non aggiungere fusioni, trasferimenti di statistiche o poteri fra compagni, scom
 | Elemento | Dove | Uso nel 2v2 |
 | --- | --- | --- |
 | Risoluzione di uno scontro | `computeDuelResolution` in `src/game/duelResolve.js` | Chiamata una volta per fronte, con contesti isolati |
-| Esempio di modalità a 4 giocatori sul motore base | `src/game/arenaContesa/` (`resolveArenaDuel`, `buildDuelConqueredMap`) | Modello di riferimento per l'adattatore |
 | Trigger | `src/game/triggerLogic.js`, `src/data/triggers.js` | Riutilizzo integrale, cambia solo il contesto (§7) |
 | Riserva minima FC | `src/game/legalFocusSpend.js` | Riutilizzo integrale (§3.2) |
 | Selezione Campi | `selectBattlefields` / `pickBattlefieldsByRarity` in `src/game/fieldLogic.js` (parametro `fieldCount`) | 10 Campi, vincolo `minTurn` sui primi 6 (§3.3) |
@@ -47,7 +46,7 @@ Non aggiungere fusioni, trasferimenti di statistiche o poteri fra compagni, scom
 | Server | `server/index.mjs` | Oggi solo relay, stanze da 2. Va esteso (§12) |
 | Payload partita online | `src/utils/onlineMatch.js` | Oggi contiene entrambe le mani: **non riutilizzabile** così nel 2v2 |
 
-Cursor deve comunque verificare il repository attuale prima di scegliere file e API. Non modificare il comportamento della modalità classica, della campagna o di Arena Contesa. Se una regola qui richiamata contraddice il motore, segnalarlo: le regole specifiche di questa modalità prevalgono solo nel 2v2.
+Cursor deve comunque verificare il repository attuale prima di scegliere file e API. Non modificare il comportamento della modalità classica o della campagna. `src/game/arenaContesa/` è un esperimento accantonato: non usarlo come base, non estenderlo e non eliminarlo. Se una regola qui richiamata contraddice il motore, segnalarlo: le regole specifiche di questa modalità prevalgono solo nel 2v2.
 
 ## 2. Terminologia
 
@@ -224,7 +223,7 @@ Registrare danni, cure, costi e Tossine con origine e bersaglio. Esempio: a 49/5
 
 Il motore attuale riceve `playerHP` ed `enemyHP` separati: per ogni fronte passare gli snapshot delle due squadre e raccogliere le variazioni restituite, senza far mutare a ciascun resolver la stessa Vita globale.
 
-**Vincolo tecnico verificato:** il motore limita le cure a 25 PV con una costante scritta nel codice (`Math.min(25, …)` in `src/game/duel/duelApplyEffect.js`, caso `heal`, e in circa 16 punti di `src/game/fieldBattleAftermath.js`). Con 50 PV di squadra una cura riporterebbe la riserva a 25. Prima del 2v2 il massimo dei PV va reso un parametro del motore, con default 25 per 1v1 e campagna. Lo stesso difetto colpisce già Arena Contesa, che parte da 50 PV.
+**Vincolo tecnico verificato:** il motore limita le cure a 25 PV con una costante scritta nel codice (`Math.min(25, …)` in `src/game/duel/duelApplyEffect.js`, caso `heal`, e in circa 16 punti di `src/game/fieldBattleAftermath.js`). Con 50 PV di squadra una cura riporterebbe la riserva a 25. Prima del 2v2 il massimo dei PV va reso un parametro del motore, con default 25 per 1v1 e campagna.
 
 ## 8. Campi e persistenza
 
@@ -313,7 +312,9 @@ LOBBY -> SETUP -> ROUND_START -> OPENING_DEPLOY -> RESPONSE_DEPLOY
 -> (CLAIM_CHOICE) -> ROUND_START oppure MATCH_END
 ```
 
-Per ogni fronte costruire un contesto `computeDuelResolution` con: Campo del fronte, i due Agenti, gli investimenti, gli snapshot PV delle due squadre, FC, carte usate e mano dei due giocatori abbinati, `isPlayerFirst` dall'apertura, `lastWinner` dalla storia personale, `roundNumber`, `conqueredFields` riportato alla prospettiva delle due squadre (vedi `buildDuelConqueredMap` in Arena Contesa), Bonus Armata e Tossina dei rispettivi giocatori. Poi aggregare gli eventi.
+Per ogni fronte costruire un contesto `computeDuelResolution` con: Campo del fronte, i due Agenti, gli investimenti, gli snapshot PV delle due squadre, FC, carte usate e mano dei due giocatori abbinati, `isPlayerFirst` dall'apertura, la storia personale di ciascun giocatore, `roundNumber`, `conqueredFields` riportato alla prospettiva delle due squadre, Bonus Armata e Tossina dei rispettivi giocatori. Poi aggregare gli eventi.
+
+**Vincolo tecnico verificato:** il motore deriva Gloria e Vendetta da un unico `lastWinner` condiviso dai due lati (`src/game/duel/duelTurnContexts.js`): se un lato ha vinto lo scontro precedente, l'altro risulta sconfitto. Nel 2v2 i due giocatori abbinati hanno storie indipendenti (entrambi possono aver vinto il proprio scontro precedente contro avversari diversi). L'adattatore deve fornire a ciascun lato il proprio esito; se il motore non lo consente, estenderlo in modo retrocompatibile senza cambiare l'1v1.
 
 ### 12.2 Server custode dei segreti
 
@@ -343,7 +344,7 @@ La risoluzione può restare sui client, perché dopo la rivelazione tutti i dati
 4. Classificazione di carte e Campi compatibili; nessuna capacità sconosciuta diventa un no-op silenzioso.
 5. Server custode: stanze da 4, viste filtrate, piani, rivelazione, riconnessione.
 6. Interfaccia, replay e diagnostica, partita completa con quattro client.
-7. Test e build; verificare l'assenza di regressioni in 1v1, campagna e Arena Contesa.
+7. Test e build; verificare l'assenza di regressioni in 1v1 e campagna.
 
 ## 13. Criteri di accettazione
 
@@ -390,7 +391,7 @@ Test da implementare ed eseguire, non già superati.
 | Client avversario durante le scelte o la riconnessione | Non riceve mani, investimenti, proposte o disposizione |
 | Seed e mani | Nessun client può ricostruire la mano degli avversari |
 | Cinque turni completi | Cinque Agenti consumati per persona |
-| 1v1, campagna, Arena Contesa | Comportamento e salvataggi invariati |
+| 1v1 e campagna | Comportamento e salvataggi invariati |
 
 ## 14. Punti da riesaminare con il playtest
 
