@@ -16,6 +16,8 @@
  * @param {number} p.pFCCurrent
  * @param {number} p.eFCCurrent
  * @param {string[]} p.battleLog
+ * @param {number} [p.pHPMax=25] - Massimo PV del lato player per le cure
+ * @param {number} [p.eHPMax=25] - Massimo PV del lato enemy per le cure
  * @returns {{ pHPCurrent: number, eHPCurrent: number, pFCCurrent: number, eFCCurrent: number }}
  */
 export function applyBattlefieldRoundAftermath({
@@ -30,6 +32,9 @@ export function applyBattlefieldRoundAftermath({
   pFocusUsed = 0,
   eFocusUsed = 0,
   preventRevival = false,
+  // Massimo PV per lato: 25 nel duello base; le modalità a squadre lo alzano.
+  pHPMax = 25,
+  eHPMax = 25,
 }) {
   let pHP = pHPCurrent;
   let eHP = eHPCurrent;
@@ -49,7 +54,7 @@ export function applyBattlefieldRoundAftermath({
     }
     if (field.name === 'Miniera di Lacrime') {
       const pBefore = pHP;
-      pHP = Math.min(25, pHP + 2);
+      pHP = Math.min(pHPMax, pHP + 2);
       battleLog.push(`💎 Miniera di Lacrime: +2 PV (${pBefore} → ${pHP})`);
     }
     if (field.name === "Torre d'Avorio") {
@@ -75,7 +80,7 @@ export function applyBattlefieldRoundAftermath({
     }
     if (field.name === 'Miniera di Lacrime') {
       const eBefore = eHP;
-      eHP = Math.min(25, eHP + 2);
+      eHP = Math.min(eHPMax, eHP + 2);
       battleLog.push(`💎 Miniera di Lacrime: IA +2 PV (${eBefore} → ${eHP})`);
     }
     if (field.name === "Torre d'Avorio") {
@@ -125,11 +130,11 @@ export function applyBattlefieldRoundAftermath({
   if (field.id === 37 || field.name === 'Trono Solare') {
     if (winner === 'player') {
       const before = pHP;
-      pHP = Math.min(25, pHP + 1);
+      pHP = Math.min(pHPMax, pHP + 1);
       battleLog.push(`☀️ Trono Solare: +1 PV (${before} → ${pHP})`);
     } else {
       const before = eHP;
-      eHP = Math.min(25, eHP + 1);
+      eHP = Math.min(eHPMax, eHP + 1);
       battleLog.push(`☀️ Trono Solare: IA +1 PV (${before} → ${eHP})`);
     }
   }
@@ -203,8 +208,8 @@ export function applyBattlefieldRoundAftermath({
   if (field.name === 'Pianura Divorata') {
     const pBefore = pHP;
     const eBefore = eHP;
-    pHP = Math.min(25, pHP + 1);
-    eHP = Math.min(25, eHP + 1);
+    pHP = Math.min(pHPMax, pHP + 1);
+    eHP = Math.min(eHPMax, eHP + 1);
     battleLog.push(`🏓️ Pianura Divorata: Tu ${pBefore} → ${pHP} | IA ${eBefore} → ${eHP} PV`);
   }
 
@@ -232,14 +237,14 @@ export function applyBattlefieldRoundAftermath({
 
   if (field.id === 57) {
     if (pHP < eHP) {
-      pHP = Math.min(25, pHP + 1);
+      pHP = Math.min(pHPMax, pHP + 1);
       battleLog.push(`🔧 La Grande Forgia: Tu +1 PV (meno PV)`);
     } else if (eHP < pHP) {
-      eHP = Math.min(25, eHP + 1);
+      eHP = Math.min(eHPMax, eHP + 1);
       battleLog.push(`🔧 La Grande Forgia: IA +1 PV (meno PV)`);
     } else {
-      pHP = Math.min(25, pHP + 1);
-      eHP = Math.min(25, eHP + 1);
+      pHP = Math.min(pHPMax, pHP + 1);
+      eHP = Math.min(eHPMax, eHP + 1);
       battleLog.push(`🔧 La Grande Forgia: pari PV, +1 a entrambi`);
     }
   }
@@ -258,10 +263,10 @@ export function applyBattlefieldRoundAftermath({
 
   if (field.id === 82) {
     if (winner === 'player') {
-      pHP = Math.min(25, pHP + 1);
+      pHP = Math.min(pHPMax, pHP + 1);
       battleLog.push(`🏛️ Necropoli Dorata: Tu +1 PV`);
     } else {
-      eHP = Math.min(25, eHP + 1);
+      eHP = Math.min(eHPMax, eHP + 1);
       battleLog.push(`🏛️ Necropoli Dorata: IA +1 PV`);
     }
   }
@@ -286,11 +291,11 @@ export function applyBattlefieldRoundAftermath({
   if (field.id === 103) {
     if (winner === 'player') {
       const before = pHP;
-      pHP = Math.min(25, pHP + 2);
+      pHP = Math.min(pHPMax, pHP + 2);
       battleLog.push(`♨️ Terme di Karsil: Tu +2 PV (${before} → ${pHP})`);
     } else {
       const before = eHP;
-      eHP = Math.min(25, eHP + 2);
+      eHP = Math.min(eHPMax, eHP + 2);
       battleLog.push(`♨️ Terme di Karsil: IA +2 PV (${before} → ${eHP})`);
     }
   }
@@ -314,13 +319,13 @@ export function applyBattlefieldRoundAftermath({
       const beforeFC = eFC;
       const beforeHP = eHP;
       eFC += 1;
-      eHP = Math.min(25, eHP + 1);
+      eHP = Math.min(eHPMax, eHP + 1);
       battleLog.push(`🌙 Lago delle Sette Lune: IA +1 FC (${beforeFC} → ${eFC}), +1 PV (${beforeHP} → ${eHP})`);
     } else {
       const beforeFC = pFC;
       const beforeHP = pHP;
       pFC += 1;
-      pHP = Math.min(25, pHP + 1);
+      pHP = Math.min(pHPMax, pHP + 1);
       battleLog.push(`🌙 Lago delle Sette Lune: Tu +1 FC (${beforeFC} → ${pFC}), +1 PV (${beforeHP} → ${pHP})`);
     }
   }

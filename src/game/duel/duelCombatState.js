@@ -74,6 +74,8 @@ export function createDuelCombatState(duel, fieldStatDeltas = null, slotCurseSta
     eAssaultMod: duel.eAssaultMod,
     pHPCurrent: duel.pHPCurrent,
     eHPCurrent: duel.eHPCurrent,
+    pHPMax: duel.pHPMax ?? 25,
+    eHPMax: duel.eHPMax ?? 25,
     pFCCurrent: duel.pFCCurrent,
     eFCCurrent: duel.eFCCurrent,
     pAbilityBlocked: duel.pAbilityBlocked,

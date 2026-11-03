@@ -703,7 +703,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
     case 'heal': {
       if (target === 'player') {
         const before = state.pHPCurrent;
-        state.pHPCurrent = Math.min(25, state.pHPCurrent + value);
+        state.pHPCurrent = Math.min(state.pHPMax ?? 25, state.pHPCurrent + value);
         pushLog(log, `${source}: +${value} PV (${before} → ${state.pHPCurrent})`);
         if (hasEmitter(log)) {
           emitResourceChange(log, {
@@ -716,7 +716,7 @@ export function applyDuelPowerEffect(effect, value, target, source, log, options
         }
       } else {
         const before = state.eHPCurrent;
-        state.eHPCurrent = Math.min(25, state.eHPCurrent + value);
+        state.eHPCurrent = Math.min(state.eHPMax ?? 25, state.eHPCurrent + value);
         pushLog(log, `${source}: IA +${value} PV (${before} → ${state.eHPCurrent})`);
         if (hasEmitter(log)) {
           emitResourceChange(log, {
