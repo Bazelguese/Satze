@@ -73,7 +73,20 @@ it('keeps every stage on one scrollable illustrated route',()=>{
  expect(host.querySelector('.cs-map-pages')).toBeNull();
  const viewport=host.querySelector('.cs-map-scroll');expect(viewport.tabIndex).toBe(0);
  Object.defineProperty(viewport,'clientWidth',{value:600});Object.defineProperty(viewport,'scrollWidth',{value:2880});viewport.scrollLeft=0;
- act(()=>viewport.dispatchEvent(new WheelEvent('wheel',{deltaY:200,bubbles:true,cancelable:true})));expect(viewport.scrollLeft).toBe(200);
+ // scorrimento morbido: arriva a destinazione dopo qualche frame, tacche ravvicinate si sommano
+ const frames=[];const raf=window.requestAnimationFrame,caf=window.cancelAnimationFrame;let clock=0;
+ window.requestAnimationFrame=cb=>{frames.push(cb);return frames.length;};window.cancelAnimationFrame=()=>{};
+ try {
+  act(()=>viewport.dispatchEvent(new WheelEvent('wheel',{deltaY:200,bubbles:true,cancelable:true})));
+  act(()=>viewport.dispatchEvent(new WheelEvent('wheel',{deltaY:100,bubbles:true,cancelable:true})));
+  expect(viewport.scrollLeft).toBe(0);
+  for(let i=0;i<60&&frames.length;i++){const cb=frames.shift();clock+=16;act(()=>cb(clock));}
+  expect(viewport.scrollLeft).toBe(300);
+ } finally {window.requestAnimationFrame=raf;window.cancelAnimationFrame=caf;}
+ // animazioni della campagna spente: spostamento immediato
+ localStorage.setItem('satze_campaign_motion_v1','off');
+ act(()=>viewport.dispatchEvent(new WheelEvent('wheel',{deltaY:200,bubbles:true,cancelable:true})));expect(viewport.scrollLeft).toBe(500);
+ localStorage.removeItem('satze_campaign_motion_v1');
  const branches=[...host.querySelectorAll('.cs-map-node')].filter(b=>b.textContent.includes('Arena del Sole')||b.textContent.includes('Custodia del Vallo'));
  expect(branches[0].style.top).not.toBe(branches[1].style.top);
  expect([...host.querySelectorAll('.cs-map-node')].filter(b=>!b.disabled)).toHaveLength(1);
@@ -187,12 +200,12 @@ it('motion-off transformation reveals immediately and still saves its single res
  const b=[...host.querySelectorAll('.cs-reserve-list button')].find(b=>b.textContent.includes('Trasformazione disponibile'));act(()=>b.click());click('Conferma trasformazione casuale');
  expect(host.querySelector('.cs-transformation.is-revealed')).toBeTruthy();expect(host.textContent).not.toContain('Salta animazione');
 });
-it('uses a view transition for campaign progression when supported, respecting motion preference',()=>{
+it('advances the campaign without a view transition (it froze the whole page at every stage change)',()=>{
  const transition=vi.fn(callback=>{callback();return {ready:Promise.resolve()};});
  Object.defineProperty(document,'startViewTransition',{value:transition,configurable:true});
  try {
-  saveCampaignRun(createLegacyFirstActRun({seed:2}),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Test: vinci incontro');expect(transition).toHaveBeenCalledOnce();
-  click('Animazioni: sì');click('Accogli');expect(transition).toHaveBeenCalledOnce();expect(loadCampaignRun(0).stage).toBe(1);
+  saveCampaignRun(createLegacyFirstActRun({seed:2}),0);render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Test: vinci incontro');
+  click('Accogli');expect(transition).not.toHaveBeenCalled();expect(loadCampaignRun(0).stage).toBe(1);
  } finally {delete document.startViewTransition;}
 });
 it('migrates old L4 cards in saved hands and checkpoints without replaying past results',()=>{
