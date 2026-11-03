@@ -259,7 +259,55 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     setIsZoomed,
   ]);
 
+  /**
+   * Modalità a più posti: presenta un risultato già calcolato dall'orchestratore con la stessa
+   * sequenza di resolveBattle (PV/FC mostrati, carte usate, animazioni dello scontro).
+   * I PV e le FC del risultato sono già nella prospettiva player/enemy dello scontro.
+   */
+  const presentPrecomputedBattle = useCallback((result) => {
+    if (!result?.playerAgent || !result?.enemyAgent) {
+      console.error('presentPrecomputedBattle: risultato incompleto', result);
+      return;
+    }
+    setPlayerHP(result.finalPlayerHP);
+    setEnemyHP(result.finalEnemyHP);
+    setPlayerFocus(result.finalPlayerFC);
+    setEnemyFocus(result.finalEnemyFC);
+    setPlayerUsedCards((prev) => (prev.includes(result.playerAgent.id) ? prev : [...prev, result.playerAgent.id]));
+    setEnemyUsedCards((prev) => (prev.includes(result.enemyAgent.id) ? prev : [...prev, result.enemyAgent.id]));
+    setLastWinner(result.winner);
+    setBattleResult({ ...result, eminencePrepNotices: [], eminenceOutcomeNotices: [] });
+    setDuelPhase(0);
+    setDuelEffectStep(1);
+    setPlayerCardGlow(0);
+    setEnemyCardGlow(0);
+    setPlayerFocusCoinsShown(0);
+    setEnemyFocusCoinsShown(0);
+    setCardGlowIntensity(0);
+    setIsZoomed(true);
+    setGamePhase('result');
+  }, [
+    setPlayerHP,
+    setEnemyHP,
+    setPlayerFocus,
+    setEnemyFocus,
+    setPlayerUsedCards,
+    setEnemyUsedCards,
+    setLastWinner,
+    setBattleResult,
+    setDuelPhase,
+    setDuelEffectStep,
+    setPlayerCardGlow,
+    setEnemyCardGlow,
+    setPlayerFocusCoinsShown,
+    setEnemyFocusCoinsShown,
+    setCardGlowIntensity,
+    setIsZoomed,
+    setGamePhase,
+  ]);
+
   return {
     resolveBattle,
+    presentPrecomputedBattle,
   };
 }

@@ -16,6 +16,7 @@ import { EMINENCE_ARMY_ORDER } from '../../../data/eminences.js';
 import { MATCH_FORMATS, getMatchFormat, matchFormatIdFromMode } from '../../../data/gameModes.js';
 import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { playUiClick } from '../../../audio/soundBus';
+import { SEAT_AI_PROFILES, TEAMMATE_PRESET_IDS } from '../../../game/multiSeat/seatAI.js';
 
 const ENEMY_PICK = {
   random: 'random',
@@ -23,6 +24,16 @@ const ENEMY_PICK = {
 };
 
 const SETUP_STORAGE_KEY = 'satze_match_setup';
+
+/** Modalità di partita locale: duello 1v1 e le modalità a più posti. */
+const MATCH_MODES = [
+  { id: 'duel', name: 'Duello', description: '1 contro 1' },
+  { id: 'teamDuel', name: '2v2', description: 'Abbinamenti segreti' },
+  { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti' },
+];
+const PLAYER_COUNTS = [3, 4];
+/** Le modalità a più posti non usano le Eminenze. */
+const MULTI_SEAT_FORMAT_IDS = ['noEminence', 'bareHands'];
 
 function readSetup() {
   try {
@@ -52,7 +63,7 @@ export function DifficultySelectPopup({
   excludeArmy = null,
 }) {
   const difficulties = getAllDifficulties();
-  const formats = useMemo(() => Object.values(MATCH_FORMATS), []);
+  const allFormats = useMemo(() => Object.values(MATCH_FORMATS), []);
   const armyOptions = useMemo(() => {
     const ordered = EMINENCE_ARMY_ORDER.filter((name) => ARMY_COLORS[name]);
     if (!excludeArmy) return ordered;
@@ -73,13 +84,36 @@ export function DifficultySelectPopup({
   const [difficultyId, setDifficultyId] = useState(() =>
     difficulties.some((d) => d.id === saved?.difficulty) ? saved.difficulty : 'medium'
   );
+  const [matchModeId, setMatchModeIdState] = useState(() =>
+    MATCH_MODES.some((m) => m.id === saved?.matchMode) ? saved.matchMode : 'duel'
+  );
+  const [teammatePreset, setTeammatePreset] = useState(() =>
+    TEAMMATE_PRESET_IDS.includes(saved?.teammatePreset) ? saved.teammatePreset : TEAMMATE_PRESET_IDS[0]
+  );
+  const [playerCount, setPlayerCount] = useState(() => (PLAYER_COUNTS.includes(saved?.players) ? saved.players : 3));
   const [focus, setFocusState] = useState(0);
   /** Valori correnti anche tra un tasto e l'altro, prima del nuovo render. */
-  const live = useRef({ focus: 0, enemyPick });
+  const live = useRef({ focus: 0, enemyPick, matchMode: matchModeId });
 
-  const canConfirm = enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
-  const rowsFor = (pick) => ['format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty'];
-  const rows = rowsFor(enemyPick);
+  const isMultiSeat = matchModeId !== 'duel';
+  const formats = useMemo(
+    () => (isMultiSeat ? allFormats.filter((f) => MULTI_SEAT_FORMAT_IDS.includes(f.id)) : allFormats),
+    [allFormats, isMultiSeat]
+  );
+  // Nelle modalità a più posti il formato con Eminenze non c'è: si passa al primo disponibile.
+  const effectiveFormatId = formats.some((f) => f.id === formatId) ? formatId : formats[0].id;
+
+  const canConfirm = isMultiSeat || enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
+  const rowsFor = (pick, mode = live.current.matchMode) => {
+    if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty'];
+    if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty'];
+    return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty'];
+  };
+  const setMatchModeId = (id) => {
+    live.current.matchMode = id;
+    setMatchModeIdState(id);
+  };
+  const rows = rowsFor(enemyPick, matchModeId);
   const focusKey = rows[Math.min(focus, rows.length - 1)];
 
   const setFocus = (i) => {
@@ -98,7 +132,10 @@ export function DifficultySelectPopup({
 
   const stepRow = (key, d) => {
     playUiClick();
-    if (key === 'format') setFormatId((f) => cycle(formats.map((x) => x.id), f, d));
+    if (key === 'mode') setMatchModeId(cycle(MATCH_MODES.map((m) => m.id), live.current.matchMode, d));
+    else if (key === 'teammate') setTeammatePreset((x) => cycle(TEAMMATE_PRESET_IDS, x, d));
+    else if (key === 'players') setPlayerCount((x) => cycle(PLAYER_COUNTS, x, d));
+    else if (key === 'format') setFormatId((f) => cycle(formats.map((x) => x.id), formats.some((x) => x.id === f) ? f : formats[0].id, d));
     else if (key === 'enemy') pickEnemy(live.current.enemyPick === ENEMY_PICK.random ? ENEMY_PICK.chosen : ENEMY_PICK.random);
     else if (key === 'army') setChosenEnemyArmy((a) => cycle(armyOptions, a ?? armyOptions[d > 0 ? armyOptions.length - 1 : 0], d));
     else if (key === 'difficulty') setDifficultyId((x) => cycle(difficulties.map((y) => y.id), x, d));
@@ -107,9 +144,17 @@ export function DifficultySelectPopup({
   const [leaving, setLeaving] = useState(false);
   const start = () => {
     if (!canConfirm || leaving) return;
-    const format = getMatchFormat(formatId);
-    const enemyArmy = enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
-    writeSetup({ formatId: format.id, enemyPick, enemyArmy: chosenEnemyArmy, difficulty: difficultyId });
+    const format = getMatchFormat(effectiveFormatId);
+    const enemyArmy = !isMultiSeat && enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
+    writeSetup({
+      formatId: format.id,
+      enemyPick,
+      enemyArmy: chosenEnemyArmy,
+      difficulty: difficultyId,
+      matchMode: matchModeId,
+      teammatePreset,
+      players: playerCount,
+    });
     // il riquadro vola via, poi parte il passaggio al VS
     setLeaving(true);
     window.setTimeout(() => onSelect({
@@ -118,11 +163,15 @@ export function DifficultySelectPopup({
       eminenceFormat: format.eminenceFormat,
       formatId: format.id,
       enemyArmy,
+      matchMode: matchModeId,
+      teammatePreset,
+      players: playerCount,
     }), 280);
   };
 
   const stateRef = useRef({});
   stateRef.current = { stepRow, start, onClose, leaving };
+  live.current.matchMode = matchModeId;
   const screenActiveRef = useScreenActiveRef();
 
   useEffect(() => {
@@ -155,8 +204,10 @@ export function DifficultySelectPopup({
 
   if (!isOpen) return null;
 
-  const format = getMatchFormat(formatId);
+  const format = getMatchFormat(effectiveFormatId);
   const difficulty = difficulties.find((d) => d.id === difficultyId) || difficulties[0];
+  const modeInfo = MATCH_MODES.find((m) => m.id === matchModeId) || MATCH_MODES[0];
+  const preset = SEAT_AI_PROFILES[teammatePreset];
   const rowIndex = (key) => rows.indexOf(key);
   const focusProps = (key) => ({
     className: `mst-row${focusKey === key ? ' on' : ''}`,
@@ -167,12 +218,23 @@ export function DifficultySelectPopup({
   });
 
   const help = {
+    mode: matchModeId === 'teamDuel'
+      ? 'Tu e un compagno IA contro due IA. Una squadra sceglie in segreto chi affronta chi.'
+      : matchModeId === 'kingOfHill'
+        ? 'Tutti contro tutti: chi vince resta sulla collina e affronta il successivo.'
+        : 'Il duello classico contro un’IA.',
+    teammate: preset ? `${preset.name}: ${preset.description}` : '',
+    players: `${playerCount} giocatori: tu e ${playerCount - 1} IA.`,
     format: format.description,
     enemy: enemyPick === ENEMY_PICK.random ? 'Armata ed esercito dell’IA scelti a caso.' : 'Scegli tu l’armata avversaria.',
     army: chosenEnemyArmy ? `Affronterai ${chosenEnemyArmy}.` : 'Scegli l’armata che affronterai.',
     difficulty: difficulty?.longDescription,
   }[focusKey];
-  const helpLabel = { format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ' }[focusKey];
+  const helpLabel = {
+    mode: 'MODALITÀ', teammate: 'COMPAGNO', players: 'GIOCATORI',
+    format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ',
+  }[focusKey];
+  const rowNumber = (key) => String(rows.indexOf(key) + 1).padStart(2, '0');
 
   return (
     <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : onClose}>
@@ -191,15 +253,33 @@ export function DifficultySelectPopup({
           </header>
 
           <div className="mst-rows">
+            <section {...focusProps('mode')}>
+              <h3><span className="n">{rowNumber('mode')}</span>MODALITÀ</h3>
+              <div className="mst-chips">
+                {MATCH_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`mst-chip${matchModeId === m.id ? ' sel' : ''}`}
+                    aria-pressed={matchModeId === m.id}
+                    onClick={() => { playUiClick(); setMatchModeId(m.id); }}
+                  >
+                    <span className="t">{m.name}</span>
+                    <span className="d">{m.description}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             <section {...focusProps('format')}>
-              <h3><span className="n">01</span>FORMATO</h3>
+              <h3><span className="n">{rowNumber('format')}</span>FORMATO</h3>
               <div className="mst-chips">
                 {formats.map((f) => (
                   <button
                     key={f.id}
                     type="button"
-                    className={`mst-chip${formatId === f.id ? ' sel' : ''}`}
-                    aria-pressed={formatId === f.id}
+                    className={`mst-chip${effectiveFormatId === f.id ? ' sel' : ''}`}
+                    aria-pressed={effectiveFormatId === f.id}
                     onClick={() => { playUiClick(); setFormatId(f.id); }}
                   >
                     <span className="t">{f.name}</span>
@@ -209,8 +289,49 @@ export function DifficultySelectPopup({
               </div>
             </section>
 
+            {matchModeId === 'teamDuel' && (
+              <section {...focusProps('teammate')}>
+                <h3><span className="n">{rowNumber('teammate')}</span>COMPAGNO</h3>
+                <div className="mst-chips">
+                  {TEAMMATE_PRESET_IDS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`mst-chip${teammatePreset === id ? ' sel' : ''}`}
+                      aria-pressed={teammatePreset === id}
+                      onClick={() => { playUiClick(); setTeammatePreset(id); }}
+                    >
+                      <span className="t">{SEAT_AI_PROFILES[id].name}</span>
+                      <span className="d">IA compagna</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {matchModeId === 'kingOfHill' && (
+              <section {...focusProps('players')}>
+                <h3><span className="n">{rowNumber('players')}</span>GIOCATORI</h3>
+                <div className="mst-chips">
+                  {PLAYER_COUNTS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`mst-chip${playerCount === n ? ' sel' : ''}`}
+                      aria-pressed={playerCount === n}
+                      onClick={() => { playUiClick(); setPlayerCount(n); }}
+                    >
+                      <span className="t">{n} giocatori</span>
+                      <span className="d">Tu e {n - 1} IA</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!isMultiSeat && (
             <section {...focusProps('enemy')}>
-              <h3><span className="n">02</span>NEMICO</h3>
+              <h3><span className="n">{rowNumber('enemy')}</span>NEMICO</h3>
               <div className="mst-chips">
                 <button
                   type="button"
@@ -232,8 +353,9 @@ export function DifficultySelectPopup({
                 </button>
               </div>
             </section>
+            )}
 
-            {enemyPick === ENEMY_PICK.chosen && (
+            {!isMultiSeat && enemyPick === ENEMY_PICK.chosen && (
               <section {...focusProps('army')}>
                 <h3><span className="n">↳</span>ARMATA NEMICA</h3>
                 <div className="mst-armies">
@@ -259,7 +381,7 @@ export function DifficultySelectPopup({
             )}
 
             <section {...focusProps('difficulty')}>
-              <h3><span className="n">03</span>DIFFICOLTÀ</h3>
+              <h3><span className="n">{rowNumber('difficulty')}</span>DIFFICOLTÀ</h3>
               <div className="mst-chips">
                 {difficulties.map((d) => (
                   <button
@@ -360,7 +482,7 @@ function MatchSetupStyles() {
       .mst-rows { display: flex; flex-direction: column; gap: 12px; padding: 10px 76px 26px 52px; }
       .mst-row {
         position: relative; display: grid; grid-template-columns: 280px 1fr; align-items: center; gap: 20px;
-        min-height: 100px; padding: 12px 22px 12px 34px; background: var(--plate);
+        min-height: 88px; padding: 12px 22px 12px 34px; background: var(--plate);
         clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
         transition: background .15s, transform .18s cubic-bezier(.3,1.5,.5,1);
       }
@@ -377,7 +499,7 @@ function MatchSetupStyles() {
       .mst-chips { display: flex; gap: 10px; min-width: 0; }
       .mst-chip {
         flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
-        min-height: 66px; padding: 8px 22px; border: 0; cursor: pointer; text-align: left;
+        min-height: 60px; padding: 6px 22px; border: 0; cursor: pointer; text-align: left;
         background: var(--void); color: var(--dim); font-family: inherit;
         transform: skewX(-14deg); box-shadow: inset 0 0 0 2px rgba(245,243,235,0.18);
         transition: background .15s, color .15s, box-shadow .15s, transform .15s;

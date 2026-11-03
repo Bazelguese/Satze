@@ -1,0 +1,173 @@
+/* ============================================================
+   Tavolo delle modalità a più posti (MultiSeatPanel)
+   Vive nel riquadro Anteprima della colonna sinistra del duello.
+   ============================================================ */
+
+.msp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.msp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  color: #fde68a;
+}
+
+.msp-stage {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #bae6fd;
+}
+
+.msp-dim { color: #94a3b8; font-weight: 400; }
+
+.msp-team {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.msp-team-head,
+.msp-seat-name {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.msp-team-head { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.msp-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 0 2px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.18);
+}
+
+.msp-seat-name > span:first-child { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.msp-seat-play { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.msp-out { flex-direction: row; justify-content: space-between; opacity: 0.55; }
+
+.msp-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+.msp-bar > span { display: block; height: 100%; border-radius: 2px; transition: width 400ms ease; }
+
+.msp-chip {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  font-size: 11px;
+}
+.msp-chip b { font-weight: 600; }
+.msp-chip i { font-style: normal; color: #cbd5e1; font-size: 10px; }
+.msp-chip-empty, .msp-chip-hidden { color: #64748b; background: transparent; border-style: dashed; }
+
+.msp-field {
+  font-size: 11px;
+  color: #fcd34d;
+  border: 1px solid rgba(252, 211, 77, 0.35);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.msp-contest { font-size: 12px; display: flex; gap: 6px; align-items: center; }
+
+.msp-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.msp-plan-title { font-weight: 700; font-size: 12px; color: #fde68a; }
+
+.msp-front {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 4px;
+  border-radius: 6px;
+}
+.msp-front.on { background: rgba(167, 139, 250, 0.18); }
+
+.msp-pairing { display: flex; gap: 6px; }
+
+.msp-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.msp-btn:hover { border-color: #a78bfa; }
+.msp-btn.on { background: rgba(167, 139, 250, 0.3); border-color: #a78bfa; }
+.msp-primary { background: #a78bfa; color: #0b1020; border-color: #a78bfa; }
+.msp-primary:hover { filter: brightness(1.08); }
+
+.msp-note { font-size: 11px; }
+
+.msp-tabs { display: flex; gap: 6px; margin-bottom: 6px; }
+.msp-tabs button {
+  flex: 1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.msp-tabs button.on { color: #fde68a; border-color: rgba(251, 191, 36, 0.6); background: rgba(251, 191, 36, 0.08); }
+
+/* Tabellone con più di 5 Campi (2v2: 10): una riga sola per Campo, l'effetto resta
+   leggibile passando sopra al Campo (anteprima). */
+.imp-fields-dense [data-field-slot] p { display: none; }
+.imp-fields-dense [data-field-slot] > div { min-height: 0 !important; padding-top: 0; padding-bottom: 0; }
+.imp-fields-dense [data-field-slot] h3 { font-size: 11px !important; }
+.imp-fields-dense [data-field-slot] span { font-size: 11px; }
