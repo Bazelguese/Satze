@@ -567,6 +567,8 @@ export const BattlefieldPanel = ({
   selectedAgent, 
   onConfirm,
   confirmDisabled = false,
+  /** Etichetta del pulsante di conferma (es. «Conferma piano» nel 2v2). */
+  confirmLabel = null,
   awaitingEnemySelection = false,
   /** true = testi "avversario" invece di "IA" (multiplayer online) */
   isOnlinePvP = false,
@@ -645,7 +647,7 @@ export const BattlefieldPanel = ({
     if (gamePhase === 'selectAgent' && selectedAgent) {
       portalActions.push(awaitingEnemySelection
         ? { key: 'wait', label: oppThink.replace(/\.+$/, '…'), variant: 'wait', dL: 132, dR: 48 }
-        : { key: 'confirm', label: 'Conferma', variant: 'primary', dL: 128, dR: 52, onClick: onConfirm, disabled: confirmDisabled });
+        : { key: 'confirm', label: confirmLabel || 'Conferma', variant: 'primary', dL: confirmLabel ? 140 : 128, dR: confirmLabel ? 40 : 52, onClick: onConfirm, disabled: confirmDisabled });
     }
     // Salta finché il duello e la sequenza del risultato non sono finiti; poi Riepilogo e Continua (che chiama)
     const resultSettled = duelPhase >= 6 && continueReady;

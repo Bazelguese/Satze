@@ -202,3 +202,121 @@
 .msp-hand-toggle span { font-size: 15px; }
 .msp-hand-toggle--enemy { left: 22px; top: 92px; }
 .msp-hand-toggle--player { right: 260px; bottom: 22px; }
+
+/* ============================================================
+   2v2 · tavolo a quattro carte prima dei duelli (TeamDuelBoard)
+   Coordinate della scena 1920×1080. Slot principali = posizioni del duello.
+   ============================================================ */
+.msb-board-on [data-field-agent] .place-card,
+.msb-board-on [data-field-agent] .place-fx,
+.msb-board-on .imp-wait-hint { visibility: hidden; }
+.msb-board-pair-2 .satze-agent-dropzone { visibility: hidden; }
+
+.tdb { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+.tdb-slot {
+  --s: 1;
+  position: absolute;
+  width: calc(230px * var(--s));
+  transition: left 0.35s ease, top 0.35s ease, transform 0.35s ease, filter 0.25s ease;
+}
+.tdb-card {
+  width: 230px;
+  transform: scale(var(--s));
+  transform-origin: top left;
+  pointer-events: auto;
+  animation: tdb-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
+}
+.tdb-card.is-clickable { cursor: pointer; }
+.tdb-card.is-proposal { outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
+@keyframes tdb-in { from { opacity: 0; transform: translateY(-22px) scale(var(--s)); } to { opacity: 1; transform: scale(var(--s)); } }
+.tdb-empty {
+  width: calc(230px * var(--s));
+  height: calc(330px * var(--s));
+  border: 2px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font: 600 13px 'Chakra Petch', sans-serif;
+  background: rgba(2, 6, 23, 0.35);
+}
+.tdb-tag {
+  position: absolute;
+  left: 0;
+  top: calc(330px * var(--s) + 8px);
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  justify-content: center;
+  font: 600 12px/1.2 'Chakra Petch', sans-serif;
+  color: #e2e8f0;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+.tdb-tag b { color: var(--acc); }
+.tdb-tag i { font-style: normal; color: #fde68a; font-size: 11px; }
+.tdb-field { color: #fcd34d; border: 1px solid rgba(252, 211, 77, 0.45); border-radius: 6px; padding: 0 6px; background: rgba(8, 11, 22, 0.75); }
+.tdb-note { color: #bae6fd; }
+
+/* posizioni base: slot principali come nel duello */
+.tdb .pos-enemy-main { left: 588px; top: 390px; z-index: 3; }
+.tdb .pos-player-main { left: 1106px; top: 390px; z-index: 3; }
+
+/* A · Quattro slot: due per lato, carte ridotte */
+.tdb--quattro .tdb-slot { --s: 0.72; }
+.tdb--quattro .pos-enemy-mate { left: 462px; top: 430px; }
+.tdb--quattro .pos-enemy-main { left: 650px; top: 430px; }
+.tdb--quattro .pos-player-main { left: 1106px; top: 430px; }
+.tdb--quattro .pos-player-mate { left: 1294px; top: 430px; }
+.msb-board--quattro [data-field-agent] { visibility: hidden; }
+
+/* B · Compagno accanto: principali pieni, compagni piccoli in basso all'esterno */
+.tdb--accanto .pos-enemy-mate,
+.tdb--accanto .pos-player-mate { --s: 0.5; top: 555px; z-index: 2; }
+.tdb--accanto .pos-enemy-mate { left: 462px; }
+.tdb--accanto .pos-player-mate { left: 1343px; }
+
+/* C · Ventaglio: compagni pieni dietro le principali, sfalsati e ruotati */
+.tdb--ventaglio .pos-enemy-mate,
+.tdb--ventaglio .pos-player-mate { top: 356px; z-index: 1; filter: brightness(0.62) saturate(0.8); }
+.tdb--ventaglio .pos-enemy-mate { left: 488px; transform: rotate(-9deg); transform-origin: bottom right; }
+.tdb--ventaglio .pos-player-mate { left: 1206px; transform: rotate(9deg); transform-origin: bottom left; }
+.tdb--ventaglio .pos-enemy-mate:hover,
+.tdb--ventaglio .pos-player-mate:hover { z-index: 6; filter: none; transform: rotate(0deg) translateY(-18px); }
+.tdb--ventaglio .pos-enemy-mate .tdb-tag { left: -70px; top: -26px; justify-content: flex-start; }
+.tdb--ventaglio .pos-player-mate .tdb-tag { left: 60px; top: -26px; justify-content: flex-end; }
+
+/* D · Alternanza: una coppia alla volta, a grandezza piena */
+.tdb-pairs {
+  position: absolute;
+  left: 960px;
+  top: 790px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.tdb-pairs button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(8, 11, 22, 0.88);
+  color: #cbd5e1;
+  font: 700 12px 'Chakra Petch', sans-serif;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tdb-pairs button.on { border-color: #fde68a; color: #fde68a; background: rgba(251, 191, 36, 0.14); }
+
+/* selettore delle versioni nel Tavolo */
+.msp-variants { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.msp-variant-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.msp-btn-sm { padding: 4px 6px; font-size: 10px; letter-spacing: 0.04em; }
+
+.tdb--accanto .pos-enemy-mate .tdb-tag,
+.tdb--accanto .pos-player-mate .tdb-tag { font-size: 10px; }
+.tdb--accanto .pos-enemy-mate .tdb-field,
+.tdb--accanto .pos-player-mate .tdb-field { font-size: 10px; }

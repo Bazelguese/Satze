@@ -167,6 +167,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
+import { TeamDuelBoard, readBoardVariant, writeBoardVariant } from '../src/components/battle/TeamDuelBoard';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
 
@@ -1558,6 +1559,10 @@ export default function SatzeGame() {
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
+  const [teamBoardVariant, setTeamBoardVariantState] = useState(readBoardVariant);
+  const setTeamBoardVariant = useCallback((v) => { writeBoardVariant(v); setTeamBoardVariantState(v); }, []);
+  const [teamBoardPair, setTeamBoardPair] = useState(0);
   const multiSeatProjectionKey = `${multiSeat.view?.projection?.playerSeatId || ''}|${multiSeat.view?.projection?.enemySeatId || ''}`;
   useEffect(() => {
     setMultiSeatHandView({ player: 0, enemy: 0 });
@@ -4453,6 +4458,14 @@ export default function SatzeGame() {
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
   const multiSeatThreshold = isMultiSeat && multiSeatView?.threshold ? multiSeatView.threshold : null;
+  // Piano del 2v2 quando risponde la tua squadra: sotto ogni carta, l'avversario del suo fronte.
+  const multiSeatOpponentOf = {};
+  if (multiSeatView?.fronts && multiSeatView.openingTeam === 'B') {
+    for (const f of multiSeatView.fronts) {
+      multiSeatOpponentOf[f.secondSeatId] = `contro ${multiSeatSeatName(f.firstSeatId)}`;
+      multiSeatOpponentOf[f.firstSeatId] = `contro ${multiSeatSeatName(f.secondSeatId)}`;
+    }
+  }
   const enemyHandOverride = isMultiSeat && multiSeatHandView.enemy > 0
     ? multiSeat.handViewFor(multiSeat.handSeats.enemy[multiSeatHandView.enemy], 'enemy')
     : null;
@@ -5473,7 +5486,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardVariant === 'alternanza' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -5676,7 +5689,7 @@ export default function SatzeGame() {
               <RuneTitle text="Anteprima" />
             )}
           </div>
-          {isMultiSeat && multiSeatLeftTab === 'table' && !hoveredCard && (
+          {isMultiSeat && multiSeatLeftTab === 'table' && (
             <div
               className="satze-hide-scrollbar"
               style={{ position: 'absolute', inset: '52px 12px 12px 12px', zIndex: 6, background: 'rgba(8, 11, 22, 0.96)', display: 'flex', flexDirection: 'column' }}
@@ -5691,6 +5704,8 @@ export default function SatzeGame() {
                   multiSeat.submitPlan(selectedFocus);
                 }}
                 onClaim={multiSeat.decideClaim}
+                boardVariant={teamBoardVariant}
+                onBoardVariant={setTeamBoardVariant}
               />
             </div>
           )}
@@ -6140,6 +6155,24 @@ export default function SatzeGame() {
         />
       )}
 
+      {/* 2v2: le quattro carte prima dei duelli (versione di prova scelta nel Tavolo) */}
+      {multiSeatView?.board && (
+        <TeamDuelBoard
+          board={multiSeatView.board}
+          variant={teamBoardVariant}
+          humanCard={selectedAgent}
+          battlefields={battlefields}
+          opponentOf={multiSeatOpponentOf}
+          pairIndex={teamBoardPair}
+          onPairIndex={setTeamBoardPair}
+          onHumanCardClick={multiSeat.acceptsHumanDeploy ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+          onHover={(card) => handlePlayerPreviewClick({ agent: card, isPlayer: true })}
+          cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+          playerColor={playerIdentityColor}
+          enemyColor={enemyIdentityColor}
+        />
+      )}
+
       {/* Modalità a più posti: tasti per guardare le altre mani (solo lettura) */}
       {isMultiSeat && multiSeat.handSeats.enemy.length > 1 && (
         <button
@@ -6453,6 +6486,7 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
+        confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI}
         isOnlinePvP={isOnlinePvP}
@@ -6677,7 +6711,7 @@ export default function SatzeGame() {
           </div>
         )}
         {gamePhase === 'selectAgent' && !enemyAgent && (
-          <div className="text-slate-500 text-sm text-center">In attesa...</div>
+          <div className="text-slate-500 text-sm text-center imp-wait-hint">In attesa...</div>
         )}
         <EntryPrecapture items={enemyEntryPrecaptureItems} enabled={enemyEntryPrecaptureOn} />
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}

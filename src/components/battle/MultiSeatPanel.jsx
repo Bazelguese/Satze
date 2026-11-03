@@ -8,6 +8,7 @@
 
 import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 import '../../styles/satze-multi-seat.css';
+import { TEAM_BOARD_VARIANTS } from './TeamDuelBoard';
 
 const PAIRING_LABEL = { direct: 'Diretta', crossed: 'Incrociata' };
 
@@ -85,7 +86,23 @@ function stageLine(view) {
   }
 }
 
-function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim }) {
+function BoardVariantPicker({ value, onChange }) {
+  if (!onChange) return null;
+  return (
+    <div className="msp-variants">
+      <span className="msp-dim">Carte sul tavolo (prova):</span>
+      <div className="msp-variant-row">
+        {TEAM_BOARD_VARIANTS.map((v) => (
+          <button key={v.id} type="button" className={`msp-btn msp-btn-sm${value === v.id ? ' on' : ''}`} onClick={() => onChange(v.id)}>
+            {v.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, onBoardVariant }) {
   const { seats, deployments, battlefields, teams, plan, openingTeam } = view;
   const seat = (id) => seats.find((s) => s.id === id);
   const planning = view.stage === 'planning';
@@ -125,6 +142,8 @@ function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim }) {
 
   return (
     <>
+
+      {view.board && <BoardVariantPicker value={boardVariant} onChange={onBoardVariant} />}
 
       {planning && view.fronts && (
         <div className="msp-plan">
@@ -241,7 +260,7 @@ function KothView({ view, onClaim }) {
   );
 }
 
-export function MultiSeatPanel({ view, ownFocus, onPairing, onSubmit, onClaim }) {
+export function MultiSeatPanel({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, onBoardVariant }) {
   if (!view) return null;
   const title = view.kind === 'teamDuel' ? '2v2 · Abbinamenti segreti' : 'Re della collina';
   return (
@@ -252,7 +271,7 @@ export function MultiSeatPanel({ view, ownFocus, onPairing, onSubmit, onClaim })
       </div>
       <div className="msp-stage">{stageLine(view)}</div>
       {view.seats && (view.kind === 'teamDuel'
-        ? <TeamView view={view} ownFocus={ownFocus} onPairing={onPairing} onSubmit={onSubmit} onClaim={onClaim} />
+        ? <TeamView view={view} ownFocus={ownFocus} onPairing={onPairing} onSubmit={onSubmit} onClaim={onClaim} boardVariant={boardVariant} onBoardVariant={onBoardVariant} />
         : <KothView view={view} onClaim={onClaim} />)}
     </div>
   );
