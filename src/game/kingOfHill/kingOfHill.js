@@ -59,7 +59,7 @@ export function aliveSeatIds(match) {
  * @param {() => number} p.rng
  * @param {string[]} [p.initialOrder] - ordine iniziale; se assente è sorteggiato (§4.1 [P])
  */
-export function createKothMatch({ seats, battlefields, rng, seed = null, mode = 'classic', config = {}, initialOrder = null }) {
+export function createKothMatch({ seats, battlefields, rng, seed = null, mode = 'classic', config = {}, initialOrder = null, perspectiveSeatId = null }) {
   const cfg = { ...KOTH_CONFIG, ...config };
   if (!Array.isArray(seats) || seats.length < 3 || seats.length > 4) {
     throw new Error('Re della collina: servono 3 o 4 giocatori');
@@ -71,6 +71,8 @@ export function createKothMatch({ seats, battlefields, rng, seed = null, mode = 
   return {
     mode: 'kingOfHill',
     fieldMode: mode,
+    // Posto mostrato sul lato `player` dei risultati quando combatte (il giocatore umano).
+    perspectiveSeatId,
     config: cfg,
     seed,
     seats: seats.map((seat) => ({
@@ -197,21 +199,29 @@ function resolveContest(match) {
     const chlCard = challenger.hand.find((c) => c.id === chlCommit.cardId);
     const hpBefore = { [occupantId]: occupant.hp, [challengerId]: challenger.hp };
 
+    // Lato player: l'occupante, salvo che lo sfidante sia il posto della prospettiva.
+    const swap = match.perspectiveSeatId != null && challengerId === match.perspectiveSeatId;
+    const pId = swap ? challengerId : occupantId;
+    const eId = swap ? occupantId : challengerId;
+    const pSeat = swap ? challenger : occupant;
+    const eSeat = swap ? occupant : challenger;
+    const pCommit = match.commits[pId];
+    const eCommit = match.commits[eId];
     const battleResult = resolveSeatDuel({
       field,
-      firstSeat: occupant,
-      secondSeat: challenger,
-      firstCard: occCard,
-      secondCard: chlCard,
-      firstFocus: occCommit.investment,
-      secondFocus: chlCommit.investment,
-      firstHP: occupant.hp,
-      secondHP: challenger.hp,
-      firstMaxHP: occupant.maxHp,
-      secondMaxHP: challenger.maxHp,
+      firstSeat: pSeat,
+      secondSeat: eSeat,
+      firstCard: swap ? chlCard : occCard,
+      secondCard: swap ? occCard : chlCard,
+      firstFocus: pCommit.investment,
+      secondFocus: eCommit.investment,
+      firstHP: pSeat.hp,
+      secondHP: eSeat.hp,
+      firstMaxHP: pSeat.maxHp,
+      secondMaxHP: eSeat.maxHp,
       conqueredFields: conqueredFieldsForPerspective(
         match.conqueredFields,
-        (owner) => (owner === occupantId ? 'player' : owner === challengerId ? 'enemy' : null)
+        (owner) => (owner === pId ? 'player' : owner === eId ? 'enemy' : null)
       ),
       roundNumber: match.roundNumber,
       fieldIndex,
@@ -219,23 +229,25 @@ function resolveContest(match) {
       conquestTriggerSuppressed: !isFinal,
       firstFocusPrepaid: true,
       secondFocusPrepaid: true,
+      // L'occupante ha sempre schierato prima dello sfidante.
+      playerHasInitiative: !swap,
     });
 
-    const occWon = battleResult.winner === 'player';
-    const winnerId = occWon ? occupantId : challengerId;
-    const loserId = occWon ? challengerId : occupantId;
-    seats = updateSeat(seats, occupantId, (s) => ({
+    const playerWon = battleResult.winner === 'player';
+    const winnerId = playerWon ? pId : eId;
+    const loserId = playerWon ? eId : pId;
+    seats = updateSeat(seats, pId, (s) => ({
       ...s,
       hp: Math.max(0, battleResult.finalPlayerHP),
       focus: finalSeatFocus(battleResult, 'player'),
-      previousResult: occWon ? 'won' : 'lost',
+      previousResult: playerWon ? 'won' : 'lost',
       toxin: battleResult.playerToxinActivated ?? s.toxin,
     }));
-    seats = updateSeat(seats, challengerId, (s) => ({
+    seats = updateSeat(seats, eId, (s) => ({
       ...s,
       hp: Math.max(0, battleResult.finalEnemyHP),
       focus: finalSeatFocus(battleResult, 'enemy'),
-      previousResult: occWon ? 'lost' : 'won',
+      previousResult: playerWon ? 'lost' : 'won',
       toxin: battleResult.enemyToxinActivated ?? s.toxin,
     }));
     // Eliminazioni subito dopo lo scontro (§9.1).
@@ -248,6 +260,8 @@ function resolveContest(match) {
     }
     const fight = {
       fightIndex: fights.length,
+      playerSeatId: pId,
+      enemySeatId: eId,
       firstSeatId: occupantId,
       secondSeatId: challengerId,
       firstCardId: occCard.id,

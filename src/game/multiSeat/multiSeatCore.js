@@ -127,8 +127,9 @@ export function countOwnedFields(conquered, owner) {
  *
  * @param {object} p
  * @param {object} p.field
- * @param {object} p.firstSeat - posto che ha schierato prima (lato player, iniziativa)
- * @param {object} p.secondSeat - posto che ha schierato dopo (lato enemy)
+ * @param {object} p.firstSeat - posto sul lato player
+ * @param {object} p.secondSeat - posto sul lato enemy
+ * @param {boolean} [p.playerHasInitiative=true] - il lato player ha schierato per primo
  * @param {object} p.firstCard
  * @param {object} p.secondCard
  * @param {number} p.firstFocus
@@ -162,6 +163,7 @@ export function resolveSeatDuel({
   conquestTriggerSuppressed = false,
   firstFocusPrepaid = false,
   secondFocusPrepaid = false,
+  playerHasInitiative = true,
 }) {
   const { battleResult } = computeDuelResolution({
     field,
@@ -175,7 +177,7 @@ export function resolveSeatDuel({
     enemyFocus: secondSeat.focus,
     playerUsedCards: firstSeat.usedCardIds,
     enemyUsedCards: secondSeat.usedCardIds,
-    isPlayerFirst: true,
+    isPlayerFirst: playerHasInitiative,
     lastWinner: null,
     playerArmyBonuses: firstSeat.armyBonuses || {},
     enemyArmyBonuses: secondSeat.armyBonuses || {},

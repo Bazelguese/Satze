@@ -264,3 +264,21 @@ describe('Re della collina — partita completa con IA', () => {
     });
   }
 });
+
+describe('Re della collina — prospettiva del giocatore', () => {
+  it('lo sfidante della prospettiva è sul lato player e i risultati non cambiano', () => {
+    const plan = {
+      A: { cardId: 'Ax', investment: 2, fieldIndex: 0 },
+      B: { cardId: 'Bx', investment: 3 },
+      C: { cardId: 'Cx', investment: 6 },
+    };
+    const plain = playContest(match3(card('Ax', 7, 4), card('Bx', 8, 3), card('Cx', 6, 5)), plan);
+    const persp = playContest({ ...match3(card('Ax', 7, 4), card('Bx', 8, 3), card('Cx', 6, 5)), perspectiveSeatId: 'C' }, plan);
+    expect(hp(persp)).toEqual(hp(plain));
+    expect(fc(persp)).toEqual(fc(plain));
+    const last = persp.contestResult.fights[1];
+    expect(last.playerSeatId).toBe('C');
+    expect(last.battleResult.winner).toBe('player');
+    expect(last.battleResult.playerAssault).toBe(36);
+  });
+});

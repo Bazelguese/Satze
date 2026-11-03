@@ -74,7 +74,7 @@ function updateSeat(seats, seatId, updater) {
  * @param {string} [p.mode='classic']
  * @param {object} [p.config]
  */
-export function createTeamDuelMatch({ seats, battlefields, rng, seed = null, mode = 'classic', config = {} }) {
+export function createTeamDuelMatch({ seats, battlefields, rng, seed = null, mode = 'classic', config = {}, perspectiveTeam = null }) {
   const cfg = { ...TEAM_DUEL_CONFIG, ...config };
   if (!Array.isArray(seats) || seats.length !== 4) throw new Error('2v2: servono quattro posti');
   for (const team of TEAM_IDS) {
@@ -99,6 +99,8 @@ export function createTeamDuelMatch({ seats, battlefields, rng, seed = null, mod
   return {
     mode: 'teamDuel',
     fieldMode: mode,
+    // Squadra mostrata sul lato `player` dei risultati (la squadra del giocatore umano).
+    perspectiveTeam,
     config: cfg,
     seed,
     seats: seats.map((seat) => ({ ...seat, focus: seat.focus ?? cfg.startFocus })),
@@ -254,58 +256,67 @@ function resolveRound(match) {
   for (const front of fronts) {
     const first = getSeat(match, front.firstSeatId);
     const second = getSeat(match, front.secondSeatId);
-    const firstCard = first.hand.find((c) => c.id === match.deployments[first.id].cardId);
-    const secondCard = second.hand.find((c) => c.id === match.deployments[second.id].cardId);
+    // Lato player: l'apertura, salvo che la squadra della prospettiva sia in risposta.
+    const swap = match.perspectiveTeam != null && second.team === match.perspectiveTeam;
+    const pSeat = swap ? second : first;
+    const eSeat = swap ? first : second;
+    const pCard = pSeat.hand.find((c) => c.id === match.deployments[pSeat.id].cardId);
+    const eCard = eSeat.hand.find((c) => c.id === match.deployments[eSeat.id].cardId);
     const field = match.battlefields[front.fieldIndex];
     const battleResult = resolveSeatDuel({
       field,
-      firstSeat: first,
-      secondSeat: second,
-      firstCard,
-      secondCard,
-      firstFocus: investments[first.id],
-      secondFocus: investments[second.id],
-      firstHP: hpBefore[first.team],
-      secondHP: hpBefore[second.team],
+      firstSeat: pSeat,
+      secondSeat: eSeat,
+      firstCard: pCard,
+      secondCard: eCard,
+      firstFocus: investments[pSeat.id],
+      secondFocus: investments[eSeat.id],
+      firstHP: hpBefore[pSeat.team],
+      secondHP: hpBefore[eSeat.team],
       // Il massimo si applica alla somma finale del turno, non dentro il singolo fronte.
       firstMaxHP: Number.POSITIVE_INFINITY,
       secondMaxHP: Number.POSITIVE_INFINITY,
       conqueredFields: conqueredFieldsForPerspective(
         match.conqueredFields,
-        (owner) => (owner === first.team ? 'player' : 'enemy')
+        (owner) => (owner === pSeat.team ? 'player' : 'enemy')
       ),
       roundNumber: match.roundNumber,
       fieldIndex: front.fieldIndex,
+      playerHasInitiative: !swap,
     });
 
-    const firstWon = battleResult.winner === 'player';
-    const winner = firstWon ? first : second;
-    const loser = firstWon ? second : first;
-    hpDelta[first.team] += battleResult.finalPlayerHP - hpBefore[first.team];
-    hpDelta[second.team] += battleResult.finalEnemyHP - hpBefore[second.team];
+    const playerWon = battleResult.winner === 'player';
+    const winner = playerWon ? pSeat : eSeat;
+    const loser = playerWon ? eSeat : pSeat;
+    hpDelta[pSeat.team] += battleResult.finalPlayerHP - hpBefore[pSeat.team];
+    hpDelta[eSeat.team] += battleResult.finalEnemyHP - hpBefore[eSeat.team];
 
     const conquest = !(battleResult.fieldDestroyed || battleResult.skipConquest);
     conquered[front.fieldIndex] = conquest
-      ? { owner: winner.team, seatId: winner.id, army: battleResult.winnerArmy ?? (firstWon ? firstCard.army : secondCard.army) }
+      ? { owner: winner.team, seatId: winner.id, army: battleResult.winnerArmy ?? (playerWon ? pCard.army : eCard.army) }
       : { owner: null, destroyed: true };
 
-    seats = updateSeat(seats, first.id, (s) => ({
+    seats = updateSeat(seats, pSeat.id, (s) => ({
       ...s,
       focus: finalSeatFocus(battleResult, 'player'),
-      usedCardIds: [...s.usedCardIds, firstCard.id],
-      previousResult: firstWon ? 'won' : 'lost',
+      usedCardIds: [...s.usedCardIds, pCard.id],
+      previousResult: playerWon ? 'won' : 'lost',
       toxin: battleResult.playerToxinActivated ?? s.toxin,
     }));
-    seats = updateSeat(seats, second.id, (s) => ({
+    seats = updateSeat(seats, eSeat.id, (s) => ({
       ...s,
       focus: finalSeatFocus(battleResult, 'enemy'),
-      usedCardIds: [...s.usedCardIds, secondCard.id],
-      previousResult: firstWon ? 'lost' : 'won',
+      usedCardIds: [...s.usedCardIds, eCard.id],
+      previousResult: playerWon ? 'lost' : 'won',
       toxin: battleResult.enemyToxinActivated ?? s.toxin,
     }));
 
+    const firstCard = first.id === pSeat.id ? pCard : eCard;
+    const secondCard = first.id === pSeat.id ? eCard : pCard;
     resolvedFronts.push({
       ...front,
+      playerSeatId: pSeat.id,
+      enemySeatId: eSeat.id,
       firstFocus: investments[first.id],
       secondFocus: investments[second.id],
       firstCardId: firstCard.id,

@@ -303,3 +303,18 @@ describe('2v2 — partita completa con IA', () => {
     for (const seat of m.seats) expect(seat.usedCardIds.length).toBe(m.history.length);
   });
 });
+
+describe('2v2 — prospettiva del giocatore', () => {
+  it('con perspectiveTeam A la squadra A è sul lato player e i risultati non cambiano', () => {
+    for (const pairing of [PAIRINGS.DIRECT, PAIRINGS.CROSSED]) {
+      const plain = play(exampleMatch(), { pairing });
+      const persp = play({ ...exampleMatch(), perspectiveTeam: 'A' }, { pairing });
+      expect(persp.teams).toEqual(plain.teams);
+      expect(fc(persp)).toEqual(fc(plain));
+      for (const front of persp.roundResult.fronts) {
+        expect(front.playerSeatId.startsWith('A')).toBe(true);
+        expect(front.battleResult.winner === 'player').toBe(front.winnerTeam === 'A');
+      }
+    }
+  });
+});
