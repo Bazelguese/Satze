@@ -89,7 +89,7 @@
 .cs-transform-result > div { flex-shrink:0; }
 
 /* Incoming content has its own surface; the viewport and HUD stay anchored. */
-.cs-first-act .cs-stage-content { min-height:0; height:100%; display:grid; view-transition-name:campaign-stage; }
+.cs-first-act .cs-stage-content { min-height:0; height:100%; display:grid; }
 .cs-motion-on.cs-first-act .cs-stage-content { animation:cs-stage-arrive .55s cubic-bezier(.16,1,.3,1) both; }
 .cs-motion-on.cs-first-act .cs-hud { animation:cs-chrome-arrive .65s ease-out both; }
 .cs-motion-on.cs-first-act .cs-act-heading { animation:cs-chrome-arrive .75s .1s ease-out both; }
@@ -105,16 +105,14 @@
 .cs-motion-on.cs-first-act .cs-traveler { animation:cs-traveler-glow 2.4s ease-in-out infinite; }
 .cs-motion-on.cs-first-act .cs-backdrop > img { animation:cs-landscape-drift 24s ease-in-out infinite alternate; }
 .cs-first-act .cs-choice-stats { color:#f4d99e; font-size:17px; }
-::view-transition-old(campaign-stage) { animation:cs-stage-leave .22s ease-in both; }
-::view-transition-new(campaign-stage) { animation:cs-stage-arrive .42s .1s ease-out both; }
 @keyframes cs-stage-arrive { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-@keyframes cs-stage-leave { to { opacity:0; transform:translateY(-12px); } }
 @keyframes cs-chrome-arrive { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:none; } }
 @keyframes cs-choice-reveal { from { opacity:0; transform:perspective(900px) rotateY(-12deg) translateY(16px); } to { opacity:1; transform:none; } }
 @keyframes cs-node-breathe { 50% { box-shadow:0 0 0 5px #171c1ac4,0 0 0 8px #e0c08060,0 0 42px #efd08070; } }
 @keyframes cs-rift-turn { to { transform:rotate(360deg); } }
 @keyframes cs-traveler-glow { 50% { opacity:.5; filter:drop-shadow(0 0 20px #ffe09c); } }
-@keyframes cs-landscape-drift { from { transform:translate3d(var(--cs-pan-x,0px),var(--cs-pan-y,0px),0) scale(1.055); } to { transform:translate3d(calc(var(--cs-pan-x,0px) - 18px),calc(var(--cs-pan-y,0px) + 8px),0) scale(1.095); } }
+/* il pan del puntatore sta nella proprietà translate dell'immagine (campaign-scene.css) */
+@keyframes cs-landscape-drift { from { transform:translate3d(0px,0px,0) scale(1.055); } to { transform:translate3d(-18px,8px,0) scale(1.095); } }
 
 /* One saved outcome, revealed through dissolution, convergence and a new card. */
 .cs-transformation { position:relative; isolation:isolate; height:740px; display:flex; align-items:center; flex-direction:column; justify-content:center; overflow:hidden; background:radial-gradient(ellipse,#32473a70,#071115 72%); }
@@ -141,7 +139,6 @@
 @keyframes cs-form-reveal { from { opacity:0; transform:rotateY(-65deg) scale(.85); filter:brightness(2.5); } to { opacity:1; transform:rotateY(0) scale(1); filter:brightness(1); } }
 @keyframes cs-form-ring { from { opacity:0; transform:translate(-50%,-50%) scale(.6); } 50% { opacity:.7; } to { opacity:0; transform:translate(-50%,-50%) scale(1.35); } }
 .cs-motion-off .cs-transformation-halo,.cs-motion-off .cs-transformation-rings,.cs-motion-off .cs-transformation-flare { display:none; }
-@media (prefers-reduced-motion:reduce) { ::view-transition-old(campaign-stage),::view-transition-new(campaign-stage) { animation:none; } }
 .cs-first-act img[data-art-ready] { transition:opacity .6s ease-out; }
 .cs-first-act img[data-art-ready=false] { opacity:0 !important; }
 

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { CampaignScene, CampaignMotionControl, campaignMotionAllowed } from './CampaignScene.jsx';
 import { CampaignBackdrop, CampaignArt, CampaignSigil, CampaignMap, campaignArt, heroArt, encounterKinds } from './CampaignScenery.jsx';
@@ -30,14 +29,37 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
   useEffect(()=>{
     const viewport=mapViewport.current;
     if (!viewport) return;
+    // Rotella → scorrimento orizzontale morbido: ogni tacca fa scivolare la mappa verso la
+    // nuova posizione (~95% in 135 ms) invece di saltare di colpo; tacche ravvicinate si
+    // sommano. Posizione tenuta in decimale: scrollLeft può arrotondare ai pixel interi.
+    // Con le animazioni della campagna spente lo spostamento resta immediato.
+    let target=null, pos=0, frame=null, last=0;
+    const stop=()=>{ if(frame!==null) cancelAnimationFrame(frame); frame=null; target=null; };
+    const step=now=>{
+      const dt=last ? Math.min(64,now-last) : 16; last=now;
+      pos+=(target-pos)*(1-Math.exp(-dt/45));
+      if(Math.abs(target-pos)<0.5){ viewport.scrollLeft=target; frame=null; target=null; return; }
+      viewport.scrollLeft=pos;
+      frame=requestAnimationFrame(step);
+    };
     const wheel=e=>{
       if(e.ctrlKey || Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
       const delta=e.deltaY*(e.deltaMode===1?24:e.deltaMode===2?viewport.clientWidth:1);
-      const next=Math.max(0,Math.min(viewport.scrollWidth-viewport.clientWidth,viewport.scrollLeft+delta));
-      if(next!==viewport.scrollLeft){e.preventDefault();viewport.scrollLeft=next;}
+      const from=target ?? viewport.scrollLeft;
+      const next=Math.max(0,Math.min(viewport.scrollWidth-viewport.clientWidth,from+delta));
+      if(next===from) return;
+      e.preventDefault();
+      if(!campaignMotionAllowed()){ stop(); viewport.scrollLeft=next; return; }
+      if(target===null) pos=viewport.scrollLeft;
+      target=next;
+      if(frame===null){ last=0; frame=requestAnimationFrame(step); }
     };
+    // trascinare la barra o premere sulla mappa interrompe l'animazione
+    const interrupt=()=>stop();
     viewport.addEventListener('wheel',wheel,{passive:false});
-    return ()=>viewport.removeEventListener('wheel',wheel);
+    viewport.addEventListener('pointerdown',interrupt);
+    viewport.addEventListener('keydown',interrupt);
+    return ()=>{ stop(); viewport.removeEventListener('wheel',wheel); viewport.removeEventListener('pointerdown',interrupt); viewport.removeEventListener('keydown',interrupt); };
   },[run?.pendingReward,run?.pendingEvent,run?.outcome]);
   const [draft,setDraft]=useState(run?.deck || []);
   if (!run) return <section className="campaign-control"><p>Salvataggio non leggibile.</p><button onClick={onBack}>Menu</button></section>;
@@ -46,12 +68,10 @@ export function FirstActHub({ campaignSaveSlot=0, onStartMission, onBack }) {
       const previous=currentRun.current, next=firstActReducer(previous,action);
       if(!saveCampaignRun(next,campaignSaveSlot)) throw new Error('Salvataggio non riuscito: nessuna azione confermata.');
       currentRun.current=next;
-      const update=()=>{setRun(currentRun.current);setDraft(currentRun.current.deck);setError('');};
-      const changed=previous.stage!==next.stage || previous.pendingReward!==next.pendingReward || previous.pendingEvent!==next.pendingEvent;
-      if(changed && campaignMotionAllowed() && document.startViewTransition) {
-        try { const transition=document.startViewTransition(()=>flushSync(update));transition.ready?.catch(()=>{}); }
-        catch { update(); }
-      } else update();
+      // Niente View Transition al cambio di tappa: fotografava e dissolveva l'intera pagina,
+      // bloccando lo schermo a ogni passaggio. Il nuovo contenuto (.cs-stage-content, con
+      // chiave per tappa) entra comunque con la sua animazione cs-stage-arrive.
+      setRun(currentRun.current);setDraft(currentRun.current.deck);setError('');
       return next;
     }
     catch(e){setError(e.message);return null;}
