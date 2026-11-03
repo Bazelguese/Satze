@@ -224,6 +224,8 @@ Registrare danni, cure, costi e Tossine con origine e bersaglio. Esempio: a 49/5
 
 Il motore attuale riceve `playerHP` ed `enemyHP` separati: per ogni fronte passare gli snapshot delle due squadre e raccogliere le variazioni restituite, senza far mutare a ciascun resolver la stessa Vita globale.
 
+**Vincolo tecnico verificato:** il motore limita le cure a 25 PV con una costante scritta nel codice (`Math.min(25, …)` in `src/game/duel/duelApplyEffect.js`, caso `heal`, e in circa 16 punti di `src/game/fieldBattleAftermath.js`). Con 50 PV di squadra una cura riporterebbe la riserva a 25. Prima del 2v2 il massimo dei PV va reso un parametro del motore, con default 25 per 1v1 e campagna. Lo stesso difetto colpisce già Arena Contesa, che parte da 50 PV.
+
 ## 8. Campi e persistenza
 
 Ogni fronte ha il proprio Campo: il suo effetto si applica solo ai due Agenti di quel fronte, esattamente come in un duello 1v1. Non servono istanze duplicate.
