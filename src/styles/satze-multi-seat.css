@@ -375,3 +375,65 @@
 .msp-reply { font-size: 12px; font-style: italic; padding-left: 50px; }
 .msp-reply.ok { color: #86efac; }
 .msp-reply.no { color: #fca5a5; }
+
+/* Riflessione delle IA nel Tavolo */
+.msp-seat-compact-wrap { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
+.msp-think { font-size: 11px; color: #fcd34d; }
+.msp-think em { font-style: normal; color: #94a3b8; }
+.msp-think.is-ready { color: #86efac; }
+.msp-dots i { font-style: normal; animation: msp-dot 1.2s infinite both; }
+.msp-dots i:nth-child(2) { animation-delay: 0.2s; }
+.msp-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes msp-dot { 0%, 80%, 100% { opacity: 0.15; } 40% { opacity: 1; } }
+.msp-mate-line { font-size: 11px; font-style: italic; color: #c4b5fd; }
+
+/* Lista dei Campi: contenitore per l'indicatore di scorrimento */
+.imp-fields-wrap { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.imp-fields-more {
+  position: absolute;
+  left: 0;
+  right: 4px;
+  bottom: 0;
+  z-index: 5;
+  padding: 18px 0 4px;
+  border: 0;
+  background: linear-gradient(to bottom, transparent, rgba(10, 14, 26, 0.95) 65%);
+  color: #fbbf24;
+  font: 700 11px/1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  animation: imp-fields-more-bob 1.6s ease-in-out infinite;
+}
+.imp-fields-more:hover { color: #fde68a; }
+@keyframes imp-fields-more-bob { 0%, 100% { padding-bottom: 4px; } 50% { padding-bottom: 1px; } }
+
+/* Chi ha scelto il Campo in questo turno (2v2) */
+.imp-field-claims {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+}
+.imp-field-claim {
+  max-width: 110px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--claim);
+  background: color-mix(in srgb, var(--claim) 35%, rgba(10, 14, 26, 0.92));
+  color: #fff;
+  font: 700 10px/1.1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 1px 1px 0 #000;
+}
+.imp-field-claim.is-tentative { border-style: dashed; background: rgba(10, 14, 26, 0.85); color: color-mix(in srgb, var(--claim) 50%, #fff); }
