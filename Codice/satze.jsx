@@ -167,7 +167,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
-import { TeamDuelBoard, readBoardVariant, writeBoardVariant } from '../src/components/battle/TeamDuelBoard';
+import { TeamDuelBoard, useBoardLayouts } from '../src/components/battle/TeamDuelBoard';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
 
@@ -1560,8 +1560,10 @@ export default function SatzeGame() {
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
   // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
-  const [teamBoardVariant, setTeamBoardVariantState] = useState(readBoardVariant);
-  const setTeamBoardVariant = useCallback((v) => { writeBoardVariant(v); setTeamBoardVariantState(v); }, []);
+  // Versioni del tavolo (modificabili in Strumenti dev → TAVOLO 2V2 LAB).
+  const teamBoardLayouts = useBoardLayouts();
+  const teamBoardVariant = teamBoardLayouts.activeId;
+  const setTeamBoardVariant = teamBoardLayouts.setActiveId;
   const [teamBoardPair, setTeamBoardPair] = useState(0);
   const multiSeatProjectionKey = `${multiSeat.view?.projection?.playerSeatId || ''}|${multiSeat.view?.projection?.enemySeatId || ''}`;
   useEffect(() => {
@@ -4596,6 +4598,11 @@ export default function SatzeGame() {
       url.searchParams.set('duelLayoutLab', '1');
       window.location.href = url.toString();
     };
+    const openTeamBoardLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('teamBoardLab', '1');
+      window.location.href = url.toString();
+    };
     const openCardFaceLab = () => {
       const url = new URL(window.location.href);
       url.searchParams.set('cardFaceLab', '1');
@@ -4677,6 +4684,7 @@ export default function SatzeGame() {
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'DUEL LAYOUT LAB', sub: 'SKIN', meta: 'ALT ART · STY', onClick: openDuelLayoutLab },
+          { label: 'TAVOLO 2V2 LAB', sub: 'LAYOUT', meta: 'QUATTRO CARTE · VERSIONI', onClick: openTeamBoardLab },
           { label: 'CARD FACE LAB', sub: 'CARTA', meta: 'ELDRITCH', onClick: openCardFaceLab },
           { label: 'VS LAB', sub: 'DUELLO', meta: 'INGRESSO · ESERCITI', onClick: openVersusLab },
           {
@@ -5486,7 +5494,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardVariant === 'alternanza' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -5705,6 +5713,7 @@ export default function SatzeGame() {
                 }}
                 onClaim={multiSeat.decideClaim}
                 boardVariant={teamBoardVariant}
+                boardVariants={teamBoardLayouts.layouts}
                 onBoardVariant={setTeamBoardVariant}
               />
             </div>
@@ -6159,8 +6168,10 @@ export default function SatzeGame() {
       {multiSeatView?.board && (
         <TeamDuelBoard
           board={multiSeatView.board}
-          variant={teamBoardVariant}
+          layout={teamBoardLayouts.active}
+          layoutId={teamBoardVariant}
           humanCard={selectedAgent}
+          humanFieldIndex={currentFieldIndex}
           battlefields={battlefields}
           opponentOf={multiSeatOpponentOf}
           pairIndex={teamBoardPair}

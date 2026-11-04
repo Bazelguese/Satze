@@ -243,8 +243,6 @@
 }
 .tdb-tag {
   position: absolute;
-  left: 0;
-  top: calc(330px * var(--s) + 8px);
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -260,39 +258,21 @@
 .tdb-field { color: #fcd34d; border: 1px solid rgba(252, 211, 77, 0.45); border-radius: 6px; padding: 0 6px; background: rgba(8, 11, 22, 0.75); }
 .tdb-note { color: #bae6fd; }
 
-/* posizioni base: slot principali come nel duello */
-.tdb .pos-enemy-main { left: 588px; top: 390px; z-index: 3; }
-.tdb .pos-player-main { left: 1106px; top: 390px; z-index: 3; }
+/* Posizioni, scala, rotazione, livello e luminosità arrivano dalla versione di layout
+   (src/config/teamBoardLayouts.js) come stili in linea e variabili --s, --r, --dim. */
+.tdb-slot { transform: rotate(var(--r, 0deg)); filter: brightness(var(--dim, 1)); }
+.tdb-slot.is-front-on-hover:hover { z-index: 6 !important; filter: none; transform: rotate(0deg) translateY(-18px); }
+.tdb-editable .tdb-slot { pointer-events: auto; cursor: grab; }
+.tdb-editable .tdb-slot:active { cursor: grabbing; }
+.tdb-editable .tdb-slot.is-front-on-hover:hover { transform: rotate(var(--r, 0deg)); filter: brightness(var(--dim, 1)); }
+.tdb-editable .tdb-card { pointer-events: none; animation: none; }
+.tdb-slot.is-selected { outline: 3px solid #fde68a; outline-offset: 6px; border-radius: 14px; }
+.tdb-pairs.is-selected { outline: 3px solid #fde68a; outline-offset: 4px; border-radius: 10px; }
+.tdb-editable .tdb-pairs { cursor: grab; }
 
-/* A · Quattro slot: due per lato, carte ridotte */
-.tdb--quattro .tdb-slot { --s: 0.72; }
-.tdb--quattro .pos-enemy-mate { left: 462px; top: 430px; }
-.tdb--quattro .pos-enemy-main { left: 650px; top: 430px; }
-.tdb--quattro .pos-player-main { left: 1106px; top: 430px; }
-.tdb--quattro .pos-player-mate { left: 1294px; top: 430px; }
-.msb-board--quattro [data-field-agent] { visibility: hidden; }
-
-/* B · Compagno accanto: principali pieni, compagni piccoli in basso all'esterno */
-.tdb--accanto .pos-enemy-mate,
-.tdb--accanto .pos-player-mate { --s: 0.5; top: 555px; z-index: 2; }
-.tdb--accanto .pos-enemy-mate { left: 462px; }
-.tdb--accanto .pos-player-mate { left: 1343px; }
-
-/* C · Ventaglio: compagni pieni dietro le principali, sfalsati e ruotati */
-.tdb--ventaglio .pos-enemy-mate,
-.tdb--ventaglio .pos-player-mate { top: 356px; z-index: 1; filter: brightness(0.62) saturate(0.8); }
-.tdb--ventaglio .pos-enemy-mate { left: 488px; transform: rotate(-9deg); transform-origin: bottom right; }
-.tdb--ventaglio .pos-player-mate { left: 1206px; transform: rotate(9deg); transform-origin: bottom left; }
-.tdb--ventaglio .pos-enemy-mate:hover,
-.tdb--ventaglio .pos-player-mate:hover { z-index: 6; filter: none; transform: rotate(0deg) translateY(-18px); }
-.tdb--ventaglio .pos-enemy-mate .tdb-tag { left: -70px; top: -26px; justify-content: flex-start; }
-.tdb--ventaglio .pos-player-mate .tdb-tag { left: 60px; top: -26px; justify-content: flex-end; }
-
-/* D · Alternanza: una coppia alla volta, a grandezza piena */
+/* Modalità a coppie: i due tasti per passare da una coppia all'altra */
 .tdb-pairs {
   position: absolute;
-  left: 960px;
-  top: 790px;
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
@@ -316,7 +296,6 @@
 .msp-variant-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .msp-btn-sm { padding: 4px 6px; font-size: 10px; letter-spacing: 0.04em; }
 
-.tdb--accanto .pos-enemy-mate .tdb-tag,
-.tdb--accanto .pos-player-mate .tdb-tag { font-size: 10px; }
-.tdb--accanto .pos-enemy-mate .tdb-field,
-.tdb--accanto .pos-player-mate .tdb-field { font-size: 10px; }
+.tdb-slot.is-small .tdb-tag,
+.tdb-slot.is-small .tdb-field,
+.tdb-slot.is-small .tdb-tag i { font-size: 10px; }

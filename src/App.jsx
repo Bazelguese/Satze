@@ -42,6 +42,9 @@ const EminenceSystemLabPage = lazy(() =>
 const DuelLayoutLabPage = lazy(() =>
   import('./components/duelLayoutLab/DuelLayoutLabPage').then((m) => ({ default: m.DuelLayoutLabPage }))
 );
+const TeamBoardLabPage = lazy(() =>
+  import('./components/teamBoardLab/TeamBoardLabPage').then((m) => ({ default: m.TeamBoardLabPage }))
+);
 const CardFaceLabPage = lazy(() =>
   import('./components/cardFaceLab/CardFaceLabPage').then((m) => ({ default: m.CardFaceLabPage }))
 );
@@ -222,6 +225,7 @@ function AppContent() {
   const showEminenceArtLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceArtLab') === '1';
   const showEminenceSystemLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('eminenceSystemLab') === '1';
   const showDuelLayoutLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duelLayoutLab') === '1';
+  const showTeamBoardLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('teamBoardLab') === '1';
   const showCardFaceLab = devToolsAllowed && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cardFaceLab') === '1';
   // ?cardBurnLab=1 resta valido: la pagina è diventata il lab di tutte le animazioni carta
   const showCardFxLab = devToolsAllowed && typeof window !== 'undefined' && (new URLSearchParams(window.location.search).get('cardFxLab') === '1' || new URLSearchParams(window.location.search).get('cardBurnLab') === '1');
@@ -299,6 +303,12 @@ function AppContent() {
     window.location.href = url.toString();
   };
 
+  const closeTeamBoardLab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('teamBoardLab');
+    window.location.href = url.toString();
+  };
+
   const closeCardFaceLab = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('cardFaceLab');
@@ -344,6 +354,8 @@ function AppContent() {
         <EminenceSystemLabPage onClose={closeEminenceSystemLab} />
       ) : showDuelLayoutLab ? (
         <DuelLayoutLabPage onClose={closeDuelLayoutLab} />
+      ) : showTeamBoardLab ? (
+        <TeamBoardLabPage onClose={closeTeamBoardLab} />
       ) : showCardFaceLab ? (
         <CardFaceLabPage onClose={closeCardFaceLab} />
       ) : showCardFxLab ? (
