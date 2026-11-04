@@ -9,6 +9,9 @@
 
 import { useEffect, useState } from 'react';
 import { GameCard } from '../cards';
+import { ArmyEntryFx } from '../fx/ArmyCardFx.jsx';
+import { getArmyAccent } from '../../theme/duelAccents';
+import { getPlaceFxPreference, placeFxStyleClass, resolvePlaceFxForVia } from '../../utils/placeFxPreference';
 import {
   CARD_H,
   CARD_W,
@@ -54,6 +57,39 @@ function tagStyle(cfg) {
   };
 }
 
+/**
+ * Ingresso della carta sul tavolo: stessa posa e stesso ingresso d'armata degli Agenti in
+ * campo nel duello (preferenze di «Ingresso carta»). Va rimontata (key) a ogni schieramento.
+ * Le pose «a tonfo» (drop) non hanno bisogno del dorso, quindi vanno bene per tutte e quattro.
+ */
+function BoardEntrance({ card, children }) {
+  const [fx] = useState(() => {
+    const prefs = getPlaceFxPreference();
+    return { pose: prefs.army === 'replace' ? 'none' : resolvePlaceFxForVia('drop', prefs), style: prefs.style, army: prefs.army };
+  });
+  return (
+    <div className="tdb-entry" style={{ '--acc': getArmyAccent(card) }}>
+      <div className={`place-fx fx-${fx.pose}${placeFxStyleClass(fx.style)}`} style={fx.pose === 'none' ? { display: 'none' } : undefined}>
+        <div className="place-shadow" />
+        <div className="place-flash" />
+        <div className="place-ring" />
+        <div className="place-ring b" />
+        <div className="place-echo" />
+        <div className="place-echo e2" />
+        <div className="place-echo e3" />
+        <div className="place-edge l" />
+        <div className="place-edge r" />
+        <div className="place-dust" />
+      </div>
+      <div className={`place-card play-${fx.pose}`}>
+        <ArmyEntryFx agent={card} enabled={fx.army !== 'off'} delayMs={0}>
+          {children}
+        </ArmyEntryFx>
+      </div>
+    </div>
+  );
+}
+
 function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHover, cardLayout, accent, editable, selected, onSlotPointerDown }) {
   const cls = [
     'tdb-slot',
@@ -71,12 +107,20 @@ function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHov
     >
       {card ? (
         <div
-          className={`tdb-card${entry?.proposal ? ' is-proposal' : ''}${onClick ? ' is-clickable' : ''}`}
+          // nuova carta (o proposta del compagno che diventa definitiva) = nuovo ingresso
+          key={`${card.id}-${entry?.proposal ? 'p' : 'd'}`}
+          className={`tdb-card${entry?.proposal ? ' is-proposal' : ''}${onClick ? ' is-clickable' : ''}${!editable && !entry?.proposal ? ' has-entrance' : ''}`}
           onClick={onClick}
           onMouseEnter={onHover ? () => onHover(card) : undefined}
           title={onClick ? 'Clicca per riportarla in mano' : undefined}
         >
-          <GameCard agent={card} cardLayout={cardLayout} disabled />
+          {!editable && !entry?.proposal ? (
+            <BoardEntrance card={card}>
+              <GameCard agent={card} cardLayout={cardLayout} disabled />
+            </BoardEntrance>
+          ) : (
+            <GameCard agent={card} cardLayout={cardLayout} disabled />
+          )}
         </div>
       ) : (
         <div className="tdb-empty"><span>{entry?.isHuman ? 'Trascina un Agente' : 'In attesa…'}</span></div>

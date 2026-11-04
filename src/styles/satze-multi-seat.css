@@ -229,6 +229,9 @@
 }
 .tdb-card.is-clickable { cursor: pointer; }
 .tdb-card.is-proposal { outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
+/* Carta schierata: l'ingresso è la posa del duello (BoardEntrance), non la dissolvenza. */
+.tdb-card.has-entrance { animation: none; }
+.tdb-entry { position: relative; width: 230px; }
 @keyframes tdb-in { from { opacity: 0; transform: translateY(-22px) scale(var(--s)); } to { opacity: 1; transform: scale(var(--s)); } }
 .tdb-empty {
   width: calc(230px * var(--s));
