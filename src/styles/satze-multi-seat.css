@@ -228,7 +228,28 @@
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
 }
 .tdb-card.is-clickable { cursor: pointer; }
-.tdb-card.is-proposal { outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
+.tdb-card.is-proposal { position: relative; outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
+/* Proposta del compagno: non è ancora la sua scelta, quindi carta velata e cartellino «Proposta». */
+.tdb-card.is-proposal > :not(.tdb-proposal-badge) { opacity: 0.5; filter: saturate(0.45) brightness(0.85); transition: opacity 0.3s ease, filter 0.3s ease; }
+.tdb-proposal-badge {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 3;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  padding: 6px 16px;
+  border: 2px dashed color-mix(in srgb, var(--acc) 85%, #fff);
+  border-radius: 8px;
+  background: rgba(10, 14, 26, 0.88);
+  color: #fff;
+  font: 700 22px/1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 #000;
+  pointer-events: none;
+  animation: tdb-proposal-pulse 1.8s ease-in-out infinite;
+}
+@keyframes tdb-proposal-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 /* Carta schierata: l'ingresso è la posa del duello (BoardEntrance), non la dissolvenza. */
 .tdb-card.has-entrance { animation: none; }
 .tdb-entry { position: relative; width: 230px; }

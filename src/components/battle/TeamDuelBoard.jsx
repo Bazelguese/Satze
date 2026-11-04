@@ -121,6 +121,7 @@ function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHov
           ) : (
             <GameCard agent={card} cardLayout={cardLayout} disabled />
           )}
+          {entry?.proposal ? <span className="tdb-proposal-badge">Proposta</span> : null}
         </div>
       ) : (
         <div className="tdb-empty"><span>{entry?.isHuman ? 'Trascina un Agente' : 'In attesa…'}</span></div>
