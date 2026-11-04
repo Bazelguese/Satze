@@ -170,17 +170,7 @@
 .msp-hand-toggle { border-color: rgba(212, 196, 232, 0.55); color: #eae4f2; background: rgba(12, 8, 20, 0.9); }
 .msp-hand-toggle:hover { background: rgba(212, 196, 232, 0.14); }
 
-/* Cambio di mano nei triangoli: il triangolo riparte dall'angolo con un lampo nel colore
-   della nuova armata (le parti del triangolo sono figli diretti di .imp-hand). */
-.imp-hand.msb-swap-in > * { animation: msb-hand-swap 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
-.imp-hand-player.msb-swap-in > * { transform-origin: bottom right; }
-.imp-hand-enemy.msb-swap-in > * { transform-origin: top left; }
-@keyframes msb-hand-swap {
-  0% { opacity: 0; transform: scale(0.82); filter: brightness(1.9) saturate(1.4); }
-  55% { opacity: 1; filter: brightness(1.3) saturate(1.2); }
-  100% { opacity: 1; transform: none; filter: none; }
-}
-@media (prefers-reduced-motion: reduce) { .imp-hand.msb-swap-in > * { animation: none; } }
+/* Cambio di mano nei triangoli: animazione in Codice/satze.jsx (Web Animations). */
 
 /* Riquadri PV/FC: i nomi PNG numerati («PNG Stratega 2») devono restare interi. */
 .msb-on .satze-stats-panel__name { max-width: 19ch; letter-spacing: 0.05em; }

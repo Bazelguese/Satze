@@ -1563,6 +1563,29 @@ export default function SatzeGame() {
   // Lista dei Campi scorrevole (più di 5 Campi): quanti ne restano sotto, per l'indicatore.
   const fieldsScrollRef = useRef(null);
   const [fieldsBelow, setFieldsBelow] = useState(0);
+  // Cambio di mano nei triangoli: animazione via Web Animations sui figli del triangolo, così
+  // non sostituisce le animazioni CSS d'ingresso/respiro/uscita delle mani (riprendono da sole).
+  const playerHandWrapRef = useRef(null);
+  const enemyHandWrapRef = useRef(null);
+  const prevHandViewRef = useRef({ player: 0, enemy: 0 });
+  useEffect(() => {
+    const prev = prevHandViewRef.current;
+    prevHandViewRef.current = multiSeatHandView;
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const play = (el, origin) => {
+      if (!el) return;
+      for (const child of Array.from(el.children)) {
+        child.animate?.([
+          { opacity: 0, transform: 'scale(0.82)', filter: 'brightness(1.9) saturate(1.4)', transformOrigin: origin },
+          { opacity: 1, filter: 'brightness(1.3) saturate(1.2)', offset: 0.55, transformOrigin: origin },
+          { opacity: 1, transform: 'none', filter: 'none', transformOrigin: origin },
+        ], { duration: 600, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.1)' });
+      }
+    };
+    if (prev.player !== multiSeatHandView.player) play(playerHandWrapRef.current, 'bottom right');
+    if (prev.enemy !== multiSeatHandView.enemy) play(enemyHandWrapRef.current, 'top left');
+  }, [multiSeatHandView]);
   // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
   // Versioni del tavolo (modificabili in Strumenti dev → TAVOLO 2V2 LAB).
   const teamBoardLayouts = useBoardLayouts();
@@ -4448,10 +4471,18 @@ export default function SatzeGame() {
       setEnemyAgent(eAgent);
       setGamePhase('selectAgent');
       if (multiSeatStageTimerRef.current) clearTimeout(multiSeatStageTimerRef.current);
+      // Come nel duello normale: lo scontro parte solo a ingresso finito (posa degli Agenti e
+      // ingresso d'armata di entrambi i lati) più il secondo di scelta FC. Una nuova proiezione
+      // (resetForProjection) cambia la generazione e annulla l'attesa.
+      const generation = aiThinkGenerationRef.current;
       multiSeatStageTimerRef.current = setTimeout(() => {
         multiSeatStageTimerRef.current = null;
-        presentPrecomputedBattle(result);
-      }, scaleDuelMs(1400));
+        void (async () => {
+          const ok = await holdClashForEnemyDeployRef.current('afterAnimation');
+          if (!ok || generation !== aiThinkGenerationRef.current) return;
+          presentPrecomputedBattle(result);
+        })();
+      }, 0);
     },
     showGameOver: (result) => {
       setGameResult(result);
@@ -5712,7 +5743,7 @@ export default function SatzeGame() {
             coinsShown={focusLaunch.landed.player}
             duelVfx={duelVfx}
             accentColor={playerIdentityColor}
-            kicker={isOnlinePvP ? mpSelfLabel : 'Tu'}
+            kicker={isOnlinePvP || isMultiSeat ? mpSelfLabel : 'Tu'}
           />
           {/* Passi del duello: riquadro con fonte e stato, fasci verso il bersaglio */}
           <DuelStepFx battleResult={battleResult} duelPhase={duelPhase} duelEffectStep={visualEffectStep} />
@@ -6280,7 +6311,7 @@ export default function SatzeGame() {
       )}
 
       {/* Modalità a più posti: tasti per guardare le altre mani (solo lettura) */}
-      {isMultiSeat && multiSeat.handSeats.enemy.length > 1 && (
+      {isMultiSeat && gamePhase !== 'result' && multiSeat.handSeats.enemy.length > 1 && (
         <button
           type="button"
           className="msp-hand-toggle msp-hand-toggle--enemy"
@@ -6290,7 +6321,7 @@ export default function SatzeGame() {
           <span aria-hidden>⇄</span> {multiSeatHandView.enemy === 0 ? 'Altre mani' : `${multiSeatHandView.enemy + 1}/${multiSeat.handSeats.enemy.length}`}
         </button>
       )}
-      {isMultiSeat && multiSeat.handSeats.player.length > 1 && (
+      {isMultiSeat && gamePhase !== 'result' && multiSeat.handSeats.player.length > 1 && (
         <button
           type="button"
           className="msp-hand-toggle msp-hand-toggle--player"
@@ -6304,10 +6335,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
-      <div
-        className={`imp-hand imp-hand-enemy${isMultiSeat ? ' msb-swap-in' : ''}`}
-        key={isMultiSeat ? `enemy-hand-${enemyHandOverride?.seatId || 'main'}` : 'enemy-hand'}
-      >
+      <div className="imp-hand imp-hand-enemy" ref={enemyHandWrapRef}>
       <Hand
         hand={enemyHandOverride ? enemyHandOverride.hand : enemyHand}
         usedCards={enemyHandOverride ? enemyHandOverride.usedCards : enemyUsedCards}
@@ -6345,10 +6373,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
-      <div
-        className={`imp-hand imp-hand-player${isMultiSeat ? ' msb-swap-in' : ''}`}
-        key={isMultiSeat ? `player-hand-${playerHandOverride?.seatId || 'own'}` : 'player-hand'}
-      >
+      <div className="imp-hand imp-hand-player" ref={playerHandWrapRef}>
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
         usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
@@ -6609,6 +6634,7 @@ export default function SatzeGame() {
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
         confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
+        sideNames={isMultiSeat ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}
         waitLabel={multiSeatStatus?.wait || null}
