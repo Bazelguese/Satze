@@ -1560,6 +1560,9 @@ export default function SatzeGame() {
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  // Lista dei Campi scorrevole (più di 5 Campi): quanti ne restano sotto, per l'indicatore.
+  const fieldsScrollRef = useRef(null);
+  const [fieldsBelow, setFieldsBelow] = useState(0);
   // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
   // Versioni del tavolo (modificabili in Strumenti dev → TAVOLO 2V2 LAB).
   const teamBoardLayouts = useBoardLayouts();
@@ -4461,6 +4464,27 @@ export default function SatzeGame() {
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
   const multiSeatThreshold = isMultiSeat && multiSeatView?.threshold ? multiSeatView.threshold : null;
+  // Anello centrale durante il ragionamento delle IA nelle modalità a più posti.
+  const multiSeatStatus = (() => {
+    const v = multiSeatView;
+    if (!isMultiSeat || !v || v.stage === 'presenting' || v.stage === 'over') return null;
+    const thinkingIds = Object.entries(v.thinkingSeats || {}).filter(([, st]) => st.status === 'thinking').map(([id]) => id);
+    const names = thinkingIds.map((id) => multiSeatSeatName(id)).filter(Boolean).join(' e ');
+    const task = thinkingIds.length ? v.thinkingSeats[thinkingIds[0]].task : '';
+    if (v.revealing) {
+      return { side: 'enemy', turnLabel: 'Rivelazione', kicker: 'Rivelazione', name: 'Piani scoperti', desc: 'Disposizione e investimenti' };
+    }
+    if (v.pendingConfirm) {
+      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName('A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
+    }
+    if (v.pendingSubmit) {
+      return { side: 'enemy', turnLabel: 'Turno avversario', kicker: 'Avversari', name: 'Pianificano', desc: 'Il tuo piano è bloccato', wait: 'Gli avversari pianificano…' };
+    }
+    if (v.stage === 'aiTurn' && thinkingIds.length) {
+      return { side: 'enemy', turnLabel: 'Turno avversario', name: thinkingIds.length > 1 ? 'Ragionano' : 'Ragiona', desc: names, wait: 'Gli avversari stanno pensando…' };
+    }
+    return null;
+  })();
   // Piano del 2v2 quando risponde la tua squadra: sotto ogni carta, l'avversario del suo fronte.
   const multiSeatOpponentOf = {};
   if (multiSeatView?.fronts && multiSeatView.openingTeam === 'B') {
@@ -4475,6 +4499,37 @@ export default function SatzeGame() {
   const playerHandOverride = isMultiSeat && multiSeatHandView.player > 0
     ? multiSeat.handViewFor(multiSeat.handSeats.player[multiSeatHandView.player], 'player')
     : null;
+  // Campi scelti in questo turno del 2v2 (anche la proposta del compagno), per la lista dei Campi.
+  const multiSeatFieldClaims = {};
+  if (isMultiSeat && multiSeatView?.board) {
+    const b = multiSeatView.board;
+    const add = (idx, claim) => {
+      if (!Number.isInteger(idx)) return;
+      (multiSeatFieldClaims[idx] ||= []).push(claim);
+    };
+    for (const e of b.player) {
+      const idx = e.isHuman ? (e.fieldIndex ?? (b.openingTeam === 'A' ? currentFieldIndex : null)) : e.fieldIndex;
+      add(idx, { key: e.seatId, side: 'ally', label: e.isHuman ? 'Tu' : e.name, tentative: !e.locked && !e.isHuman });
+    }
+    for (const e of b.enemy) add(e.fieldIndex, { key: e.seatId, side: 'foe', label: e.name, tentative: !e.locked });
+  }
+  const fieldsScrollable = battlefields.length > 5;
+  const updateFieldsScrollHint = useCallback(() => {
+    const el = fieldsScrollRef.current;
+    if (!el) return;
+    const rowH = el.firstElementChild?.getBoundingClientRect().height || 52;
+    const hiddenPx = el.scrollHeight - el.clientHeight - el.scrollTop;
+    setFieldsBelow(hiddenPx > 4 ? Math.max(1, Math.round(hiddenPx / (rowH + 2))) : 0);
+  }, []);
+  useEffect(() => {
+    if (!fieldsScrollable) { setFieldsBelow(0); return undefined; }
+    updateFieldsScrollHint();
+    const el = fieldsScrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(updateFieldsScrollHint);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fieldsScrollable, battlefields.length, gamePhase, updateFieldsScrollHint]);
   const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
   const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
@@ -5718,6 +5773,8 @@ export default function SatzeGame() {
                 onHoverField={setHoveredField}
                 boardVariant={teamBoardVariant}
                 boardVariants={teamBoardLayouts.layouts}
+                allyColor={playerIdentityColor}
+                foeColor={enemyIdentityColor}
                 onBoardVariant={setTeamBoardVariant}
               />
             </div>
@@ -6011,7 +6068,10 @@ export default function SatzeGame() {
           </div>
 
           {/* Lista Campi di Battaglia - 5 righe (10 nel 2v2) */}
+          <div className="imp-fields-wrap">
           <div 
+            ref={fieldsScrollRef}
+            onScroll={fieldsScrollable ? updateFieldsScrollHint : undefined}
             className={`grid grid-cols-1 gap-0.5 flex-1 min-h-0 ${battlefields.length > 5 ? 'imp-fields-scroll' : 'grid-rows-5'} ${
               gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
             }`}
@@ -6076,9 +6136,33 @@ export default function SatzeGame() {
                     curseAccent={slotCurseAccent}
                     curseArriving={preyFlight.arrivingSlot === idx}
                   />
+                  {multiSeatFieldClaims[idx] && !(idx in conqueredFields) ? (
+                    <div className="imp-field-claims">
+                      {multiSeatFieldClaims[idx].map((c) => (
+                        <span
+                          key={c.key}
+                          className={`imp-field-claim is-${c.side}${c.tentative ? ' is-tentative' : ''}`}
+                          style={{ '--claim': c.side === 'ally' ? playerIdentityColor : enemyIdentityColor }}
+                          title={c.tentative ? `${c.label} (proposta)` : c.label}
+                        >
+                          {c.label}{c.tentative ? '?' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
+          </div>
+          {fieldsScrollable && fieldsBelow > 0 ? (
+            <button
+              type="button"
+              className="imp-fields-more"
+              onClick={() => fieldsScrollRef.current?.scrollBy({ top: fieldsScrollRef.current.clientHeight * 0.8, behavior: 'smooth' })}
+            >
+              ▼ {fieldsBelow === 1 ? 'Altro Campo' : `Altri ${fieldsBelow} Campi`}
+            </button>
+          ) : null}
           </div>
         </div>
         
@@ -6213,7 +6297,10 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
-      <div className="imp-hand imp-hand-enemy">
+      <div
+        className={`imp-hand imp-hand-enemy${isMultiSeat ? ' msb-swap-in' : ''}`}
+        key={isMultiSeat ? `enemy-hand-${enemyHandOverride?.seatId || 'main'}` : 'enemy-hand'}
+      >
       <Hand
         hand={enemyHandOverride ? enemyHandOverride.hand : enemyHand}
         usedCards={enemyHandOverride ? enemyHandOverride.usedCards : enemyUsedCards}
@@ -6240,9 +6327,9 @@ export default function SatzeGame() {
         hideCards={shouldHideHandsForGuidedSetup}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
-        zoneArmy={shuffleDealSetup?.enemyArmy}
-        zoneColorHand={enemyDeckVisual?.deckCards}
-        zoneArmies={enemyDeckVisual?.armies}
+        zoneArmy={enemyHandOverride ? enemyHandOverride.army : shuffleDealSetup?.enemyArmy}
+        zoneColorHand={enemyHandOverride ? enemyHandOverride.hand : enemyDeckVisual?.deckCards}
+        zoneArmies={enemyHandOverride ? [enemyHandOverride.army] : enemyDeckVisual?.armies}
         elevateCards={revealEnemyHandForPrey}
         resolveEffectiveAbility={resolveEffectiveAbility}
       />
@@ -6251,7 +6338,10 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
-      <div className="imp-hand imp-hand-player">
+      <div
+        className={`imp-hand imp-hand-player${isMultiSeat ? ' msb-swap-in' : ''}`}
+        key={isMultiSeat ? `player-hand-${playerHandOverride?.seatId || 'own'}` : 'player-hand'}
+      >
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
         usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
@@ -6290,9 +6380,9 @@ export default function SatzeGame() {
           : (isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : highlightIdForHand('player'))}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
-        zoneArmy={shuffleDealSetup?.playerArmy}
-        zoneColorHand={playerDeckVisual?.deckCards}
-        zoneArmies={playerDeckVisual?.armies}
+        zoneArmy={playerHandOverride ? playerHandOverride.army : shuffleDealSetup?.playerArmy}
+        zoneColorHand={playerHandOverride ? playerHandOverride.hand : playerDeckVisual?.deckCards}
+        zoneArmies={playerHandOverride ? [playerHandOverride.army] : playerDeckVisual?.armies}
         resolveEffectiveAbility={resolveEffectiveAbility}
       />
       </div>
@@ -6495,7 +6585,9 @@ export default function SatzeGame() {
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
         portalFrame
-        turn={turnInfo}
+        turn={multiSeatStatus
+          ? { side: multiSeatStatus.side, label: multiSeatStatus.turnLabel, color: multiSeatStatus.side === 'player' ? playerIdentityColor : enemyIdentityColor }
+          : turnInfo}
         duelTint={portalDuelTint}
         outcomeColor={gameResult?.winner === 'player' ? playerIdentityColor : gameResult?.winner === 'enemy' ? enemyIdentityColor : null}
         commandPhase={forcedEminenceView}
@@ -6511,7 +6603,9 @@ export default function SatzeGame() {
         onConfirm={confirmPlayerChoice}
         confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
-        awaitingEnemySelection={playerConfirmedAwaitingAI}
+        awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}
+        waitLabel={multiSeatStatus?.wait || null}
+        statusStep={multiSeatStatus}
         isOnlinePvP={isOnlinePvP}
         duelPhase={duelPhase}
         battleResult={battleResult}

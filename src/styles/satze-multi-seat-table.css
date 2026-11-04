@@ -1,0 +1,183 @@
+/* ============================================================
+   Tavolo delle modalità a più posti (MultiSeatPanel)
+   Stesso linguaggio dei pannelli HUD del duello: palette lavanda (hudOratorioPalette),
+   titoli runici, colori delle due squadre in --ally / --foe.
+   ============================================================ */
+
+.mst {
+  --mst-text: #eae4f2;
+  --mst-muted: #a89bc4;
+  --mst-accent: #d4c4e8;
+  --mst-line: rgba(212, 196, 232, 0.16);
+  --mst-well: rgba(12, 8, 20, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 4px 8px 2px;
+  color: var(--mst-text);
+  font-size: 13px;
+  line-height: 1.3;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 196, 232, 0.35) transparent;
+}
+
+/* Il pannello scorre: le sezioni non si devono schiacciare (altrimenti i nomi vengono tagliati). */
+.mst > *, .mst-sec > *, .mst-front > *, .mst-vs-side > * { flex-shrink: 0; }
+/* nelle colonne dei fronti il «sta pensando» non deve prendere tutta l'altezza */
+.mst-vs-side .mst-think { flex-basis: auto; }
+
+.mst-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mst-mode { font-weight: 700; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mst-text); }
+.mst-round { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mst-muted); }
+
+/* fase: stesso riquadro della «Condizione di vittoria» */
+.mst-phase {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--mst-text);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.35);
+}
+.mst-phase.is-act { background: color-mix(in srgb, var(--ally) 14%, transparent); border-color: color-mix(in srgb, var(--ally) 55%, transparent); }
+.mst-phase.is-wait { color: var(--mst-muted); }
+
+/* sezioni */
+.mst-sec { display: flex; flex-direction: column; gap: 8px; }
+.mst-sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--mst-line); }
+.mst-sec-title { font-weight: 700; font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mst-text); text-shadow: 0 0 20px rgba(212, 196, 232, 0.25), 0 2px 4px #000; }
+.mst-sec-extra { font-size: 11px; color: var(--mst-muted); text-align: right; }
+.mst-hint { margin: 0; font-size: 12px; color: var(--mst-muted); }
+.mst-muted { color: var(--mst-muted); }
+
+/* fronti */
+.mst-front { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 10px; background: var(--mst-well); border: 1px solid var(--mst-line); }
+.mst-front.is-live { border-color: var(--mst-accent); box-shadow: 0 0 14px rgba(212, 196, 232, 0.25); }
+.mst-front-field { display: flex; gap: 6px; align-items: stretch; }
+.mst-front-n { flex: none; display: grid; place-items: center; width: 24px; border-radius: 6px; font-weight: 700; color: var(--mst-text); background: rgba(212, 196, 232, 0.12); }
+.mst-front-mini { flex: 1; min-width: 0; height: 48px; }
+.mst-front-mini.is-solo { flex: none; }
+.mst-front-empty { flex: 1; display: grid; place-items: center; height: 48px; border-radius: 6px; border: 1px dashed rgba(212, 196, 232, 0.3); color: var(--mst-muted); font-size: 12px; }
+.mst-front-result { font-size: 12px; color: var(--mst-accent); text-align: center; }
+
+.mst-vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: stretch; }
+.mst-vs-x { align-self: center; font-weight: 700; font-size: 11px; letter-spacing: 0.1em; color: var(--mst-muted); }
+.mst-vs-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 5px 7px; border-radius: 8px; background: rgba(12, 8, 20, 0.6); border-left: 3px solid var(--mst-line); }
+.mst-vs-side.is-ally { border-left-color: var(--ally); }
+.mst-vs-side.is-foe { border-left-color: var(--foe); }
+.mst-vs-side.is-unknown { border-left-style: dashed; justify-content: center; }
+.mst-vs-role { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mst-muted); }
+.mst-vs-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mst-vs-name.is-unknown { color: var(--mst-muted); font-size: 16px; }
+.mst-vs-side.is-ally .mst-vs-name { color: color-mix(in srgb, var(--ally) 45%, #fff); }
+.mst-vs-side.is-foe .mst-vs-name { color: color-mix(in srgb, var(--foe) 45%, #fff); }
+
+.mst-card { display: flex; flex-direction: column; font-size: 11px; min-width: 0; }
+.mst-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mst-text); }
+.mst-card-stats { color: var(--mst-muted); font-size: 10px; }
+.mst-card.is-empty { color: var(--mst-muted); }
+
+/* pulsanti nello stile dell'HUD */
+.mst-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 196, 232, 0.4);
+  background: rgba(12, 8, 20, 0.85);
+  color: var(--mst-text);
+  font: 700 12px/1.1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #000;
+}
+.mst-btn small { font-size: 10px; letter-spacing: 0.06em; text-transform: none; color: var(--mst-muted); font-weight: 600; }
+.mst-btn:hover { border-color: var(--mst-accent); background: rgba(212, 196, 232, 0.1); }
+.mst-btn.is-wide { width: 100%; }
+.mst-btn.is-primary { background: color-mix(in srgb, var(--ally) 30%, rgba(12, 8, 20, 0.9)); border-color: color-mix(in srgb, var(--ally) 80%, transparent); }
+.mst-btn.is-primary small { color: var(--mst-text); }
+
+.mst-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.mst-chip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 196, 232, 0.3);
+  background: rgba(12, 8, 20, 0.7);
+  color: var(--mst-muted);
+  font: 600 11px/1.1 'Chakra Petch', sans-serif;
+  cursor: pointer;
+}
+.mst-chip:hover { color: var(--mst-text); border-color: var(--mst-accent); }
+.mst-chip.is-on { color: var(--mst-text); border-color: var(--ally); background: color-mix(in srgb, var(--ally) 25%, transparent); }
+
+/* consigli */
+.mst-row { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: center; }
+.mst-row-k { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mst-muted); }
+.mst-row-v { min-width: 0; font-size: 12px; }
+.mst-reply { margin: 0 0 0 54px; font-size: 12px; font-style: italic; }
+.mst-reply.is-ok { color: #a7f3d0; }
+.mst-reply.is-no { color: #fecaca; }
+
+/* squadre */
+.mst-team { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 8px; background: var(--mst-well); border-left: 3px solid var(--mst-line); }
+.mst-team.is-ally { border-left-color: var(--ally); }
+.mst-team.is-foe { border-left-color: var(--foe); }
+.mst-team.is-out { opacity: 0.5; flex-direction: row; justify-content: space-between; }
+.mst-team-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.mst-team-name { font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.mst-team-role { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mst-muted); }
+.mst-team-stats { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-weight: 700; font-size: 13px; }
+.mst-team-stats small { font-weight: 400; font-size: 10px; color: var(--mst-muted); }
+.mst-bar { display: block; height: 5px; border-radius: 3px; background: rgba(212, 196, 232, 0.14); overflow: hidden; }
+.mst-bar > span { display: block; height: 100%; border-radius: 3px; transition: width 400ms ease; }
+.mst-team.is-ally .mst-bar > span { background: var(--ally); }
+.mst-team.is-foe .mst-bar > span { background: var(--foe); }
+.mst-seat { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; padding-top: 3px; border-top: 1px solid var(--mst-line); }
+.mst-seat-name { font-size: 12px; font-weight: 600; }
+.mst-seat-fc { font-size: 11px; color: var(--mst-muted); }
+.mst-quote { flex-basis: 100%; margin: 0; font-size: 11px; font-style: italic; color: color-mix(in srgb, var(--ally) 40%, #fff); }
+
+.mst-chain { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+.mst-chain.is-live { background: rgba(212, 196, 232, 0.12); }
+.mst-chain-win { grid-column: 1 / -1; font-size: 11px; color: var(--mst-accent); }
+
+/* riflessione delle IA */
+.mst-think { flex-basis: 100%; font-size: 11px; color: var(--mst-accent); }
+.mst-think em { font-style: normal; color: var(--mst-muted); }
+.mst-think.is-ready { color: #a7f3d0; }
+.mst-dots i { font-style: normal; animation: mst-dot 1.2s infinite both; }
+.mst-dots i:nth-child(2) { animation-delay: 0.2s; }
+.mst-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes mst-dot { 0%, 80%, 100% { opacity: 0.15; } 40% { opacity: 1; } }
+
+/* opzioni di prova, chiuse in fondo */
+.mst-proto { border-top: 1px solid var(--mst-line); padding-top: 6px; }
+.mst-proto summary { cursor: pointer; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mst-muted); margin-bottom: 6px; }
+
+/* schede Tavolo / Anteprima e tasti delle mani nella stessa palette */
+.msp-tabs button { border-color: rgba(212, 196, 232, 0.3); color: #a89bc4; }
+.msp-tabs button.on { color: #eae4f2; border-color: rgba(212, 196, 232, 0.7); background: rgba(212, 196, 232, 0.12); }
+.msp-hand-toggle { border-color: rgba(212, 196, 232, 0.55); color: #eae4f2; background: rgba(12, 8, 20, 0.9); }
+.msp-hand-toggle:hover { background: rgba(212, 196, 232, 0.14); }
+
+/* Cambio di mano nei triangoli: il triangolo riparte dall'angolo con un lampo nel colore
+   della nuova armata (le parti del triangolo sono figli diretti di .imp-hand). */
+.imp-hand.msb-swap-in > * { animation: msb-hand-swap 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.imp-hand-player.msb-swap-in > * { transform-origin: bottom right; }
+.imp-hand-enemy.msb-swap-in > * { transform-origin: top left; }
+@keyframes msb-hand-swap {
+  0% { opacity: 0; transform: scale(0.82); filter: brightness(1.9) saturate(1.4); }
+  55% { opacity: 1; filter: brightness(1.3) saturate(1.2); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .imp-hand.msb-swap-in > * { animation: none; } }
