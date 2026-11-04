@@ -1,7 +1,7 @@
 // P4 come Documentazione/Rework Carte/card-layouts.html (CardC2AP4), stessa struttura del mock.
 // Tipografia: Chakra Petch come il client (index-graphics-prova.css). Numeri POT/DAN: #fde047 / #c084fc.
 
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useId, useLayoutEffect, useMemo, useRef } from 'react';
 import { ARMY_COLORS, ARMY_BONUSES } from '../../data';
 import { formatAbilityHelper, getCardSprite, splitAbilityMinSuffix } from '../../utils';
 import { getImagePositioning } from '../../data/imagePositioning';
@@ -122,7 +122,8 @@ export function CardReworkP4AsHtml({ agent }) {
   const containerLeft = positioning.containerLeft;
   const containerTop = positioning.containerTop;
 
-  const gradId = `p4html-rg-${agent.id}`;
+  // Id unico per copia montata (vedi CardReworkP4: con id per carta i doppioni si rubano il gradiente).
+  const gradId = `p4html-rg-${useId().replace(/:/g, '')}`;
 
   const { topR, botR } = useMemo(() => {
     // Come nel mock: seed solo dal nome
