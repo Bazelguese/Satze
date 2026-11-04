@@ -19,12 +19,13 @@ La v0.1 era stata redatta senza ispezionare il codice e conteneva valori superat
 | PV | Riserva di squadra [P] | Riserva **condivisa** dalla squadra confermata; valore 50 ancora [P] | Decisione utente |
 | Segretezza | Server autoritativo | **Server custode** dei segreti; risoluzione deterministica | Decisione utente |
 | Investimento | Visibile al compagno [P] | Visibile **solo** al compagno (regola) | Decisione utente |
+| Momento degli FC | — | **Come nell'1v1:** chi apre sceglie gli FC con Agente e Campo; chi risponde con Agenti e disposizione | Decisione utente (regola A) |
 
 ## 1. Stato del documento e istruzione per Cursor
 
 Realizzare una modalità multiplayer separata per quattro giocatori, divisi in due squadre. Questo documento definisce un prototipo giocabile, non un bilanciamento definitivo. Il nome «Abbinamenti segreti» è provvisorio.
 
-**Direzione scelta dall'utente:** tutti e quattro partecipano a ogni turno con un Agente; ogni coppia di Agenti avversari si scontra su un proprio Campo; la squadra in apertura sceglie i Campi e vi assegna pubblicamente i propri Agenti; la squadra in risposta sceglie segretamente quale dei propri Agenti affronta ciascun fronte; tutti investono FC personali, visibili solo al compagno.
+**Direzione scelta dall'utente:** tutti e quattro partecipano a ogni turno con un Agente; ogni coppia di Agenti avversari si scontra su un proprio Campo; la squadra in apertura sceglie i Campi e vi assegna pubblicamente i propri Agenti; la squadra in risposta sceglie segretamente quale dei propri Agenti affronta ciascun fronte; tutti investono FC personali, visibili solo al compagno. **Gli FC si scelgono come nell'1v1 (regola A):** chi apre li fissa insieme ad Agente e Campo, prima di vedere le carte della risposta; chi risponde vede gli Agenti dell'apertura, non i loro FC, e sceglie insieme Agenti, FC e disposizione.
 
 **Convenzioni [P]:** le decisioni marcate [P] non sono ancora state approvate esplicitamente dall'utente. Implementarle come specificato, mantenendole configurabili e riportandole nel riepilogo delle modifiche. Non presentarle come regole definitive di Satze.
 
@@ -104,21 +105,19 @@ Mostrare Campi rivelati e conquistati, PV, riserve FC pubbliche, squadra in aper
 
 ### Fase 2 — Schieramento dell'apertura
 
-Ciascun giocatore dell'apertura sceglie **un Agente dalla propria mano e un Campo legale** (rivelato e non conquistato). I due compagni devono scegliere Campi diversi. Possono vedere le proposte del compagno e discuterne.
+Ciascun giocatore dell'apertura sceglie **un Agente dalla propria mano, un Campo legale** (rivelato e non conquistato) **e il proprio investimento di FC**, come chi apre nell'1v1. I due compagni devono scegliere Campi diversi. Possono vedere le proposte del compagno (FC compresi) e discuterne.
 
-Quando entrambi confermano la stessa revisione della proposta di squadra, i due Agenti e i rispettivi Campi diventano pubblici insieme e irrevocabili. Si formano i due fronti: «Fronte di A1» e «Fronte di A2» se apre A, o i corrispondenti di B.
-
-Non si assegnano ancora FC.
+Quando entrambi confermano la stessa revisione della proposta di squadra, i due Agenti e i rispettivi Campi diventano pubblici insieme e irrevocabili. Gli investimenti restano bloccati e nascosti agli avversari fino alla rivelazione. Si formano i due fronti: «Fronte di A1» e «Fronte di A2» se apre A, o i corrispondenti di B.
 
 ### Fase 3 — Schieramento della risposta
 
-La risposta vede i due fronti, sceglie e conferma i propri due Agenti, che diventano pubblici insieme e irrevocabili. **Non** viene ancora rivelato su quale fronte va ciascuno.
+La risposta vede i due fronti con gli Agenti dell'apertura (non i loro FC) e sceglie **insieme** i propri due Agenti, i propri investimenti e la disposizione (§ Fase 4). Niente di tutto questo è visibile agli avversari prima della rivelazione: chi apre ha già deciso.
 
 Gli Agenti dell'apertura sono «primi» e quelli della risposta «secondi» in entrambi gli scontri, qualunque sia la disposizione. L'ordine dei clic fra compagni non conta.
 
-### Fase 4 — Scelte segrete
+### Fase 4 — Disposizione (parte della risposta)
 
-Tutti vedono i quattro Agenti e i due fronti, poi scelgono il proprio investimento. Solo la risposta sceglie la disposizione.
+Solo la risposta sceglie la disposizione, nello stesso momento dei suoi Agenti e FC.
 
 Con posti fissi A1/A2 e B1/B2:
 
@@ -129,11 +128,11 @@ Con posti fissi A1/A2 e B1/B2:
 
 X è la squadra in apertura, Y quella in risposta. I posti identificano i giocatori, non i ruoli.
 
-**Piano di squadra:** disposizione proposta (solo risposta), i due investimenti e un numero di revisione formano il piano privato della squadra. Ogni modifica invalida le conferme precedenti. Il piano si blocca quando entrambi approvano la stessa revisione. Nessun compagno può impostare i FC dell'altro. Dopo il blocco nessuna modifica è possibile, anche se gli avversari stanno ancora decidendo. Anche l'apertura conferma un piano, con i soli investimenti.
+**Piano di squadra:** per l'apertura Agenti, Campi e investimenti; per la risposta Agenti, investimenti e disposizione; con un numero di revisione formano il piano privato della squadra. Ogni modifica invalida le conferme precedenti. Il piano si blocca quando entrambi approvano la stessa revisione. Nessun compagno può impostare i FC dell'altro. Dopo il blocco nessuna modifica è possibile.
 
 ### Fase 5 — Rivelazione atomica
 
-Quando entrambi i piani sono bloccati, il server pubblica in un unico evento la disposizione e i quattro investimenti. Si deducono le spese una sola volta e si costruiscono i due contesti di scontro. I FC restano legati al proprietario e al suo Agente.
+Quando la risposta ha bloccato il suo piano (quello dell'apertura è bloccato dalla Fase 2), il server pubblica in un unico evento gli Agenti della risposta, la disposizione e i quattro investimenti. Si deducono le spese una sola volta e si costruiscono i due contesti di scontro. I FC restano legati al proprietario e al suo Agente.
 
 ### Fase 6 — Risoluzione
 
@@ -273,11 +272,11 @@ Se B1 e B2 investono 3 ciascuno, entrambi hanno VA 21: A1 perde (8–21) e A2 vi
 1. Lobby con quattro posti, squadre esplicite e validazione dei mazzi individuale.
 2. Riserva PV grande per squadra; quattro contatori FC associati ai proprietari.
 3. Dieci slot Campo con stato chiaro: nascosto, rivelato, conquistato (con squadra), attivo nel turno.
-4. Durante lo schieramento dell'apertura: selezione di Agente e Campo per ciascun giocatore, con vincolo di Campi diversi.
+4. Durante lo schieramento dell'apertura: selezione di Agente, Campo e FC per ciascun giocatore, con vincolo di Campi diversi.
 5. Due fronti chiaramente distinti nel turno, ciascuno col proprio Campo e l'Agente dell'apertura.
 6. Etichette «Apertura» e «Scelta abbinamenti», che cambiano squadra a ogni turno.
 7. Mano personale e vista privata della mano del compagno, senza mescolare i proprietari.
-8. Selettore della disposizione solo per la risposta, con anteprima privata dei collegamenti fronte-Agente.
+8. Selettore della disposizione solo per la risposta, nello schieramento, con anteprima privata dei collegamenti fronte-Agente.
 9. Selettore FC personale, indicatori privati delle conferme della revisione corrente, pulsante di conferma.
 10. Attesa pubblica neutra: nessuna freccia, anteprima o tooltip che sveli la disposizione o gli investimenti.
 11. Rivelazione di disposizione e investimenti nello stesso passaggio, prima delle animazioni.

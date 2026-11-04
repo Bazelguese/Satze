@@ -4508,9 +4508,6 @@ export default function SatzeGame() {
     if (v.pendingConfirm) {
       return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName('A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
     }
-    if (v.pendingSubmit) {
-      return { side: 'enemy', turnLabel: 'Turno avversario', kicker: 'Avversari', name: 'Pianificano', desc: 'Il tuo piano è bloccato', wait: 'Gli avversari pianificano…' };
-    }
     if (v.stage === 'aiTurn' && thinkingIds.length) {
       return { side: 'enemy', turnLabel: 'Turno avversario', name: thinkingIds.length > 1 ? 'Ragionano' : 'Ragiona', desc: names, wait: 'Gli avversari stanno pensando…' };
     }
@@ -5799,12 +5796,7 @@ export default function SatzeGame() {
               <MultiSeatPanel
                 view={multiSeatView}
                 ownFocus={selectedFocus}
-                onPairing={multiSeat.setPlanPairing}
-                onSubmit={() => {
-                  if (!multiSeat.acceptsHumanConfirm) return;
-                  playGame(GAME_SOUND.LOCK_IN);
-                  multiSeat.submitPlan(selectedFocus);
-                }}
+                onPairing={(pairing) => { playUiClick(); multiSeat.setPlanPairing(pairing); }}
                 onClaim={multiSeat.decideClaim}
                 ownFieldIndex={currentFieldIndex}
                 onAdvise={(kind, value) => { playUiClick(); multiSeat.advise(kind, value); }}
@@ -6633,7 +6625,6 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
-        confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
         sideNames={isMultiSeat ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}

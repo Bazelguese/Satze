@@ -118,10 +118,14 @@ function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHov
             <BoardEntrance card={card}>
               <GameCard agent={card} cardLayout={cardLayout} disabled />
             </BoardEntrance>
+          ) : entry?.proposal ? (
+            // Proposta del compagno: la carta «respira» e un riflesso le scorre sopra.
+            <div className="tdb-proposal" title="Proposta del compagno: non è ancora la sua scelta">
+              <GameCard agent={card} cardLayout={cardLayout} disabled />
+            </div>
           ) : (
             <GameCard agent={card} cardLayout={cardLayout} disabled />
           )}
-          {entry?.proposal ? <span className="tdb-proposal-badge">Proposta</span> : null}
         </div>
       ) : (
         <div className="tdb-empty"><span>{entry?.isHuman ? 'Trascina un Agente' : 'In attesa…'}</span></div>

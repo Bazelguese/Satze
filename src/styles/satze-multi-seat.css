@@ -229,27 +229,36 @@
 }
 .tdb-card.is-clickable { cursor: pointer; }
 .tdb-card.is-proposal { position: relative; outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
-/* Proposta del compagno: non è ancora la sua scelta, quindi carta velata e cartellino «Proposta». */
-.tdb-card.is-proposal > :not(.tdb-proposal-badge) { opacity: 0.5; filter: saturate(0.45) brightness(0.85); transition: opacity 0.3s ease, filter 0.3s ease; }
-.tdb-proposal-badge {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  z-index: 3;
-  transform: translate(-50%, -50%) rotate(-8deg);
-  padding: 6px 16px;
-  border: 2px dashed color-mix(in srgb, var(--acc) 85%, #fff);
-  border-radius: 8px;
-  background: rgba(10, 14, 26, 0.88);
-  color: #fff;
-  font: 700 22px/1 'Chakra Petch', sans-serif;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  box-shadow: 3px 3px 0 #000;
-  pointer-events: none;
-  animation: tdb-proposal-pulse 1.8s ease-in-out infinite;
+/* Proposta del compagno: non è ancora la sua scelta. La carta alterna luminosità e un riflesso
+   le scorre sopra; tutto sta dentro la carta, quindi ne segue rotazione e scala. */
+.tdb-proposal {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: tdb-proposal-breathe 2.2s ease-in-out infinite;
 }
-@keyframes tdb-proposal-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.tdb-proposal::after {
+  content: '';
+  position: absolute;
+  inset: -20% -60%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, color-mix(in srgb, var(--acc) 35%, rgba(255, 255, 255, 0.55)) 50%, transparent 62%);
+  mix-blend-mode: screen;
+  animation: tdb-proposal-sheen 2.6s ease-in-out infinite;
+}
+@keyframes tdb-proposal-breathe {
+  0%, 100% { opacity: 0.55; filter: brightness(0.6) saturate(0.6); }
+  50% { opacity: 0.9; filter: brightness(1.05) saturate(1); }
+}
+@keyframes tdb-proposal-sheen {
+  0% { transform: translateX(-60%); }
+  55%, 100% { transform: translateX(60%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tdb-proposal { animation: none; opacity: 0.7; filter: brightness(0.8); }
+  .tdb-proposal::after { animation: none; opacity: 0; }
+}
 /* Carta schierata: l'ingresso è la posa del duello (BoardEntrance), non la dissolvenza. */
 .tdb-card.has-entrance { animation: none; }
 .tdb-entry { position: relative; width: 230px; }

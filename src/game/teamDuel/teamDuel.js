@@ -35,7 +35,6 @@ export const TEAM_DUEL_CONFIG = {
 export const TEAM_DUEL_PHASES = {
   OPENING_DEPLOY: 'openingDeploy',
   RESPONSE_DEPLOY: 'responseDeploy',
-  PLANNING: 'planning',
   RESOLVED: 'resolved',
   CLAIM: 'claim',
   GAME_OVER: 'gameOver',
@@ -153,10 +152,23 @@ function assertCardPlayable(seat, cardId) {
   return card;
 }
 
+/** Investimenti di una squadra validati sulla riserva minima di ciascun posto. */
+function teamInvestments(seats, deployments) {
+  const investments = {};
+  for (const seat of seats) {
+    const value = deployments?.[seat.id]?.focus;
+    if (!isLegalInvestment(seat, value)) throw new Error(`2v2: investimento non valido per ${seat.name}`);
+    investments[seat.id] = value;
+  }
+  return investments;
+}
+
 /**
- * Schieramento dell'apertura: ciascun posto sceglie Agente e Campo (§4 Fase 2).
+ * Schieramento dell'apertura: ciascun posto sceglie Campo, Agente e FC insieme, come chi apre
+ * nell'1v1 (§4 Fase 2). Gli Agenti e i Campi sono pubblici, gli FC restano nascosti fino alla
+ * rivelazione (li vede solo il compagno).
  * @param {object} match
- * @param {Record<string, { cardId: string|number, fieldIndex: number }>} deployments
+ * @param {Record<string, { cardId: string|number, fieldIndex: number, focus: number }>} deployments
  */
 export function submitOpeningDeploy(match, deployments) {
   assertPhase(match, TEAM_DUEL_PHASES.OPENING_DEPLOY);
@@ -173,13 +185,27 @@ export function submitOpeningDeploy(match, deployments) {
     used.add(choice.fieldIndex);
     next[seat.id] = { cardId: choice.cardId, fieldIndex: choice.fieldIndex };
   }
-  return { ...match, deployments: next, phase: TEAM_DUEL_PHASES.RESPONSE_DEPLOY };
+  const investments = teamInvestments(seats, deployments);
+  return {
+    ...match,
+    deployments: next,
+    plans: { [match.openingTeam]: { investments, pairing: null } },
+    phase: TEAM_DUEL_PHASES.RESPONSE_DEPLOY,
+  };
 }
 
-/** Schieramento della risposta: due Agenti, senza ancora il fronte (§4 Fase 3). */
-export function submitResponseDeploy(match, deployments) {
+/**
+ * Schieramento della risposta: visti gli Agenti dell'apertura (non i loro FC), ciascun posto
+ * sceglie Agente e FC e la squadra sceglie la disposizione (§4 Fase 3). Poi tutto si rivela
+ * insieme e il turno si risolve.
+ * @param {object} match
+ * @param {Record<string, { cardId: string|number, focus: number }>} deployments
+ * @param {'direct'|'crossed'} pairing
+ */
+export function submitResponseDeploy(match, deployments, pairing) {
   assertPhase(match, TEAM_DUEL_PHASES.RESPONSE_DEPLOY);
-  const seats = teamSeats(match, respondingTeam(match));
+  const responding = respondingTeam(match);
+  const seats = teamSeats(match, responding);
   const next = { ...match.deployments };
   for (const seat of seats) {
     const choice = deployments?.[seat.id];
@@ -187,7 +213,15 @@ export function submitResponseDeploy(match, deployments) {
     assertCardPlayable(seat, choice.cardId);
     next[seat.id] = { cardId: choice.cardId, fieldIndex: null };
   }
-  return { ...match, deployments: next, phase: TEAM_DUEL_PHASES.PLANNING, plans: {} };
+  if (pairing !== PAIRINGS.DIRECT && pairing !== PAIRINGS.CROSSED) {
+    throw new Error('2v2: la risposta deve scegliere la disposizione');
+  }
+  const investments = teamInvestments(seats, deployments);
+  return resolveRound({
+    ...match,
+    deployments: next,
+    plans: { ...match.plans, [responding]: { investments, pairing } },
+  });
 }
 
 /**
@@ -204,39 +238,6 @@ export function buildFronts(match, pairing) {
     firstSeatId: seat.id,
     secondSeatId: order[i].id,
   }));
-}
-
-/**
- * Piano segreto di una squadra: investimenti dei due posti e, solo per la risposta, la
- * disposizione. Quando entrambe le squadre hanno bloccato il piano il turno si risolve.
- * @param {object} match
- * @param {'A'|'B'} teamId
- * @param {{ investments: Record<string, number>, pairing?: 'direct'|'crossed' }} plan
- */
-export function submitTeamPlan(match, teamId, plan) {
-  assertPhase(match, TEAM_DUEL_PHASES.PLANNING);
-  if (match.plans[teamId]) throw new Error(`2v2: il piano della squadra ${teamId} è già bloccato`);
-  const seats = teamSeats(match, teamId);
-  const investments = {};
-  for (const seat of seats) {
-    const value = plan?.investments?.[seat.id];
-    if (!isLegalInvestment(seat, value)) throw new Error(`2v2: investimento non valido per ${seat.name}`);
-    investments[seat.id] = value;
-  }
-  const isResponse = teamId === respondingTeam(match);
-  let pairing = null;
-  if (isResponse) {
-    if (plan?.pairing !== PAIRINGS.DIRECT && plan?.pairing !== PAIRINGS.CROSSED) {
-      throw new Error('2v2: la risposta deve scegliere la disposizione');
-    }
-    pairing = plan.pairing;
-  } else if (plan?.pairing != null) {
-    throw new Error('2v2: solo la risposta sceglie la disposizione');
-  }
-  const plans = { ...match.plans, [teamId]: { investments, pairing } };
-  const next = { ...match, plans };
-  if (plans.A && plans.B) return resolveRound(next);
-  return next;
 }
 
 function resolveRound(match) {
