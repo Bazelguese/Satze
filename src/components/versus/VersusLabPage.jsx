@@ -3,7 +3,7 @@
 // Accesso: ?vsLab=1  |  menu → STRUMENTI DEV → VS LAB
 // ============================================
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameViewport } from '../GameViewport';
 import { ARMY_DECKS } from '../../data/cards.js';
 import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
@@ -11,6 +11,38 @@ import { loadCustomDecks } from '../../utils/deckManager.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
 import { DECK_COVER_STYLES, getDeckCoverStyle, setDeckCoverStyle } from '../../utils/deckCoverPreference.js';
 import { DuelVersusScreen, VERSUS_FX, VERSUS_LAYOUTS, buildVersusIdentity } from './DuelVersusScreen.jsx';
+import { MultiVersusScreen } from './MultiVersusScreen.jsx';
+
+/** Giocatori del VS di prova: 1v1 oppure le modalità a più posti. */
+const PLAYER_MODES = [
+  { key: '1v1', label: '1v1', meta: 'Duello' },
+  { key: 'ffa3', label: '3 giocatori', meta: 'Re della collina' },
+  { key: 'ffa4', label: '4 giocatori', meta: 'Re della collina' },
+  { key: '2v2', label: '2v2', meta: 'Abbinamenti segreti' },
+];
+
+/** Altri posti del VS di prova: armate diverse da quelle già in campo. */
+function buildLabAllies(playersMode, taken) {
+  const free = ARMY_NAMES.filter((a) => !taken.includes(a));
+  const pick = (i) => {
+    const army = free[i % free.length] || ARMY_NAMES[i % ARMY_NAMES.length];
+    return { army, deckKey: Object.keys(ARMY_DECKS[army] || {})[0] || null, cardIds: null, name: null };
+  };
+  if (playersMode === '2v2') {
+    return {
+      playerAllies: [{ identity: { eyebrow: 'Compagno IA', name: 'PNG Stratega', sub: pick(0).army }, deck: pick(0) }],
+      enemyAllies: [{ identity: { eyebrow: 'Avversario IA', name: 'PNG Calcolatore 2', sub: pick(1).army }, deck: pick(1) }],
+    };
+  }
+  const extra = playersMode === 'ffa4' ? 2 : playersMode === 'ffa3' ? 1 : 0;
+  return {
+    playerAllies: [],
+    enemyAllies: Array.from({ length: extra }, (_, i) => ({
+      identity: { eyebrow: 'Sfidante IA', name: `PNG Calcolatore ${i + 2}`, sub: pick(i).army },
+      deck: pick(i),
+    })),
+  };
+}
 
 /** Durata simulata del caricamento duello (≈ preload + warm-up reali). */
 const FAKE_LOADING_MS = 4800;
@@ -167,6 +199,23 @@ export function VersusLabPage({ onClose }) {
   const [fx, setFx] = useState(loadLabFx);
   const [playKey, setPlayKey] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [playersMode, setPlayersMode] = useState('1v1');
+  const [vsStage, setVsStage] = useState('spin');
+  const isMulti = playersMode !== '1v1';
+  const allies = useMemo(
+    () => buildLabAllies(playersMode, [playerPick.army, enemyPick.army]),
+    [playersMode, playerPick.army, enemyPick.army]
+  );
+  // VS a più giocatori: sorteggio simulato come in partita (ruote → fermata → VS).
+  useEffect(() => { setVsStage('spin'); }, [playKey, playersMode]);
+  useEffect(() => {
+    if (!isMulti || vsStage !== 'spin' || progress < 80) return undefined;
+    const t = window.setTimeout(() => setVsStage('stop'), 0);
+    return () => window.clearTimeout(t);
+  }, [isMulti, vsStage, progress]);
+  const onReelLanded = useCallback(() => {
+    window.setTimeout(() => setVsStage((s) => (s === 'stop' ? 'reveal' : s)), 650);
+  }, []);
 
   const identity = useMemo(
     () => buildVersusIdentity({ isOnline: mode === 'online', difficulty, selfName, peerName }),
@@ -212,6 +261,21 @@ export function VersusLabPage({ onClose }) {
   return (
     <>
       <GameViewport>
+        {isMulti ? (
+          <MultiVersusScreen
+            key={`${playKey}-${playersMode}`}
+            playerIdentity={identity.player}
+            enemyIdentity={{ ...identity.enemy, name: 'PNG Calcolatore 1' }}
+            playerDeck={playerDeck}
+            enemyDeck={enemyDeck}
+            playerAllies={allies.playerAllies}
+            enemyAllies={allies.enemyAllies}
+            coverStyle={coverStyle}
+            fx={fx}
+            progress={progress}
+            intro={{ stage: vsStage, handoff: null, onFlightDone: () => {}, onReelLanded }}
+          />
+        ) : (
         <DuelVersusScreen
           key={playKey}
           playerIdentity={identity.player}
@@ -224,6 +288,7 @@ export function VersusLabPage({ onClose }) {
           fx={fx}
           progress={progress}
         />
+        )}
       </GameViewport>
 
       <div
@@ -281,6 +346,12 @@ export function VersusLabPage({ onClose }) {
               </div>
             )}
 
+            <ChipRow
+              label="Giocatori"
+              options={PLAYER_MODES}
+              value={playersMode}
+              onChange={(key) => { setPlayersMode(key); replay(); }}
+            />
             <ChipRow label="Eminenze" options={VERSUS_LAYOUTS} value={layout} onChange={pickLayout} />
             <ChipRow
               label="Copertina (vale anche in scelta mazzo)"

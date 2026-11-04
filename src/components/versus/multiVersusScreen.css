@@ -1,0 +1,140 @@
+/* ============================================================
+   MultiVersusScreen — VS a 3 e 4 giocatori (canvas 1920×1080, .mvs)
+   Riusa le classi di base del VS a due (.vsx-*) per sfondi, nomi, copertine, VS e barra.
+   ============================================================ */
+
+.mvs { --mvs-ticket: 0.7; --mvs-name: 44px; }
+.mvs-n4 { --mvs-ticket: 0.6; --mvs-name: 34px; }
+
+/* ---------- colonne ---------- */
+.mvs-half {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  animation: mvs-half-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.mvs-half-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at var(--cx) 50%, color-mix(in srgb, var(--accent) 34%, transparent) 0%, transparent 32%),
+    linear-gradient(180deg, rgba(5, 6, 8, 0.25) 0%, rgba(5, 6, 8, 0.65) 100%);
+}
+/* la colonna arriva come una lastra dall'alto */
+@keyframes mvs-half-in { from { transform: translateY(-40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.mvs-has-intro .mvs-half.is-ai { animation-duration: 0.42s; animation-timing-function: cubic-bezier(0.5, 0, 0.2, 1.2); }
+
+/* tagli fra le colonne */
+.mvs-seam {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 1180px;
+  z-index: 2;
+  background: linear-gradient(180deg, var(--ra) 0%, #f5f3eb 50%, var(--la) 100%);
+  box-shadow:
+    0 0 16px rgba(245, 243, 235, 0.5),
+    0 0 50px color-mix(in srgb, var(--la) 40%, transparent),
+    0 0 50px color-mix(in srgb, var(--ra) 40%, transparent);
+  animation: mvs-seam-in 0.5s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both, vsx-seam-pulse 2.6s 1s ease-in-out infinite;
+}
+@keyframes mvs-seam-in {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(var(--seam-rot)) scaleY(0); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(var(--seam-rot)) scaleY(1); }
+}
+
+/* ---------- giocatori ---------- */
+.mvs-side {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: calc(1920px / 3 - 120px);
+  transform: translate(-50%, -50%);
+  --vsx-ticket-scale: var(--mvs-ticket);
+  animation: mvs-side-in 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.mvs-n4 .mvs-side { width: calc(1920px / 4 - 90px); }
+@keyframes mvs-side-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 60px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+.mvs-who { min-height: 92px; }
+.mvs .vsx-who-name { font-size: var(--mvs-name); max-width: 100%; }
+.mvs .vsx-who-sub { font-size: 13px; }
+.mvs .vsx-who-eyebrow { font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase; }
+
+/* ---------- VS ---------- */
+.mvs-vs-at { position: absolute; width: 0; height: 0; z-index: 4; transform: scale(0.62); }
+.mvs-vs-at.is-team { transform: scale(0.9); }
+.mvs-vs-at .vsx-vs { left: 0; top: 0; }
+
+/* ---------- freccia condivisa dalle ruote ---------- */
+.mvs-arrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 540px;
+  height: 256px;
+  margin-top: -128px;
+  z-index: 2;
+  pointer-events: none;
+  transform: skewY(-4deg);
+  transition: opacity 0.4s ease 0.5s;
+  --cur: #f5f3eb;
+}
+.mvs-arrow.is-leaving { opacity: 0; }
+.mvs-arrow-line {
+  position: absolute;
+  left: 0;
+  right: var(--ar);
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: repeating-linear-gradient(90deg, rgba(245, 243, 235, 0.85) 0 18px, transparent 18px 30px);
+  box-shadow: 0 0 0 1px rgba(5, 6, 8, 0.55);
+  transform-origin: left center;
+  animation: mvs-draw 0.6s cubic-bezier(0.6, 0, 0.2, 1) 0.45s both;
+}
+@keyframes mvs-draw { from { transform: scaleX(0); } }
+.mvs-needle {
+  position: absolute;
+  top: 50%;
+  width: 62px;
+  height: 96px;
+  margin-top: -48px;
+  filter: drop-shadow(2px 0 0 #050507) drop-shadow(-2px 0 0 #050507) drop-shadow(0 2px 0 #050507) drop-shadow(0 -2px 0 #050507)
+    drop-shadow(4px 5px 0 rgba(5, 5, 7, 0.8)) drop-shadow(0 0 10px rgba(245, 243, 235, 0.6));
+}
+.mvs-needle i { position: absolute; inset: 0; background: #f5f3eb; }
+.mvs-needle--l { left: 64px; animation: mvs-needle-in-l 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) 0.7s both; }
+.mvs-needle--l i { clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%); transform-origin: 0 50%; }
+.mvs-needle--r { right: var(--ar); margin-right: 8px; animation: mvs-needle-in-r 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) 0.65s both; }
+.mvs-needle--r i { clip-path: polygon(0 50%, 100% 0, 78% 50%, 100% 100%); transform-origin: 100% 50%; }
+@keyframes mvs-needle-in-l { from { opacity: 0; transform: translateX(-70px); } }
+@keyframes mvs-needle-in-r { from { opacity: 0; transform: translateX(70px); } }
+
+/* ============================================================
+   Ingresso a tappe: prima solo la tua colonna (le altre al buio con la ruota);
+   con 'reveal' riparte tutto ciò che era fermo.
+   ============================================================ */
+.mvs-intro .mvs-half.is-ai,
+.mvs-intro .mvs-side--ai,
+.mvs-intro .mvs-vs-at { visibility: hidden; }
+.mvs-intro .mvs-half.is-ai,
+.mvs-intro .mvs-half.is-ai *,
+.mvs-intro .mvs-side--ai,
+.mvs-intro .mvs-side--ai *,
+.mvs-intro .mvs-vs-at *,
+.mvs-intro .mvs-side--self .dcv-box * { animation-play-state: paused !important; }
+/* la tua scatola arriva in volo dalla scelta esercito: il resto della colonna appare attorno */
+.mvs-intro-handoff .mvs-side--self { animation: none; }
+.mvs-intro-handoff .mvs-side--self > :not(.vsx-ticket) { animation: vsx-fade-in 0.5s 0.7s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mvs-arrow-line, .mvs-needle, .mvs-half, .mvs-side, .mvs-seam { animation: none; }
+}
