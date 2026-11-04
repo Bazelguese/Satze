@@ -17,7 +17,7 @@ import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import { selectBattlefields } from '../game/fieldLogic.js';
 import { battleOutcomeKey } from '../game/duel/duelHelpers.js';
 import { createRng, createSeat, legalFocusRange } from '../game/multiSeat/multiSeatCore.js';
-import { getSeatAIProfile, profileForDifficulty } from '../game/multiSeat/seatAI.js';
+import { getSeatAIProfile, investmentForLevel, profileForDifficulty } from '../game/multiSeat/seatAI.js';
 import { pickAiArmyDeck } from '../game/multiSeat/seatSetup.js';
 import {
   PAIRINGS,
@@ -25,6 +25,7 @@ import {
   TEAM_DUEL_PHASES,
   advanceAfterRound,
   buildFronts,
+  legalFieldIndexes as legalFieldIndexesTeam,
   createTeamDuelMatch,
   getSeat as getTeamSeat,
   resolveClaim as resolveTeamClaim,
@@ -261,8 +262,10 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   // ------------------------------------------------------------------
   // 2v2
   // ------------------------------------------------------------------
-  const teamBeginTurn = useCallback((s) => {
+  const teamBeginTurn = useCallback((s0) => {
     const rng = rngRef.current;
+    // I consigli valgono per un turno.
+    const s = { ...s0, advice: {}, adviceMemo: {}, adviceReplies: {} };
     let match = s.match;
     const hp = (team) => match.teams[team].hp;
     if (match.openingTeam === 'A') {
@@ -304,6 +307,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       const opp = buildFronts(match, pairing).find((f) => f.secondSeatId === 'A2')?.firstSeatId;
       draftInvestments.A2 = aiInvestment(match, 'A2', rng, { opponentSeatId: opp });
     }
+    // Investimento consigliato e accettato dal compagno.
+    if (s.advice?.invest?.accepted) draftInvestments.A2 = investmentForLevel(getTeamSeat(match, 'A2'), s.advice.invest.value);
     commit({
       ...s,
       match,
@@ -770,9 +775,61 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const s = sessionRef.current;
     if (!s?.plan || respondingTeam(s.match) !== 'A') return;
     const opp = buildFronts(s.match, pairing).find((f) => f.secondSeatId === 'A2')?.firstSeatId;
-    const a2 = aiInvestment(s.match, 'A2', rngRef.current, { opponentSeatId: opp });
+    const a2 = s.advice?.invest?.accepted
+      ? investmentForLevel(getTeamSeat(s.match, 'A2'), s.advice.invest.value)
+      : aiInvestment(s.match, 'A2', rngRef.current, { opponentSeatId: opp });
     commit({ ...s, plan: { ...s.plan, pairing, investments: { ...s.plan.investments, A2: a2 } } });
   }, [commit]);
+
+  /**
+   * Consiglio al compagno IA (2v2): 'card' (carta dalla sua mano), 'field' (Campo, quando
+   * aprite), 'invest' ('basso' | 'medio' | 'alto'). Il compagno lo segue con la probabilità
+   * della fiducia del suo preset; lo stesso consiglio ripetuto riceve la stessa risposta.
+   * @returns {{ accepted: boolean, text: string }|null}
+   */
+  const advise = useCallback((kind, value) => {
+    const s = sessionRef.current;
+    if (!s || s.kind !== MULTI_SEAT_KINDS.TEAM || !s.match) return null;
+    const match = s.match;
+    const mate = getTeamSeat(match, 'A2');
+    const deployed = Boolean(match.deployments?.A2);
+    const deploying = s.stage === MULTI_SEAT_STAGES.HUMAN_DEPLOY && !deployed && s.teammateProposal;
+    if ((kind === 'card' || kind === 'field') && !deploying) return null;
+    if (kind === 'field' && s.role !== 'opening') return null;
+    if (kind === 'invest' && ![MULTI_SEAT_STAGES.HUMAN_DEPLOY, MULTI_SEAT_STAGES.AI_TURN, MULTI_SEAT_STAGES.PLANNING].includes(s.stage)) return null;
+    if (kind === 'card' && !mate.hand.some((c) => c.id === value && !mate.usedCardIds.includes(c.id))) {
+      commit({ ...s, adviceReplies: { ...(s.adviceReplies || {}), card: { accepted: false, text: 'Questa carta l’ho già giocata.', what: null } } });
+      return { accepted: false, text: 'Questa carta l’ho già giocata.' };
+    }
+
+    const profile = getSeatAIProfile(mate.aiProfile);
+    const memoKey = `${kind}:${value}`;
+    const memo = { ...(s.adviceMemo || {}) };
+    if (memo[memoKey] == null) memo[memoKey] = rngRef.current() < (profile.trust ?? 0.6);
+    const accepted = memo[memoKey];
+
+    const cardName = kind === 'card' ? mate.hand.find((c) => c.id === value)?.name : null;
+    const fieldName = kind === 'field' ? match.battlefields[value]?.name : null;
+    const what = kind === 'card' ? cardName : kind === 'field' ? fieldName : `investimento ${value}`;
+    const text = accepted
+      ? (kind === 'card' ? `Va bene, gioco ${cardName}.` : kind === 'field' ? `D'accordo, vado su ${fieldName}.` : `Ok, investimento ${value}.`)
+      : (kind === 'card' ? `Preferisco tenere la mia scelta.` : kind === 'field' ? `Resto sul mio Campo.` : `Investo come avevo deciso.`);
+
+    let next = {
+      ...s,
+      adviceMemo: memo,
+      advice: { ...(s.advice || {}), [kind]: { value, accepted } },
+      adviceReplies: { ...(s.adviceReplies || {}), [kind]: { accepted, text, what } },
+    };
+    if (accepted && kind === 'card') next.teammateProposal = { ...s.teammateProposal, cardId: value };
+    if (accepted && kind === 'field') next.teammateProposal = { ...s.teammateProposal, fieldIndex: value };
+    if (accepted && kind === 'invest' && s.stage === MULTI_SEAT_STAGES.PLANNING && s.plan) {
+      next.plan = { ...s.plan, investments: { ...s.plan.investments, A2: investmentForLevel(mate, value) } };
+    }
+    log(`[T${match.roundNumber}] Consiglio a ${mate.name} (${what}): ${accepted ? 'accettato' : 'rifiutato'}.`);
+    commit(next);
+    return { accepted, text };
+  }, [commit, log]);
 
   const decideClaim = useCallback((decision) => {
     const s = sessionRef.current;
@@ -869,6 +926,10 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         claim: match.claim,
         result: match.result,
         board: teamBoard(session),
+        advice: session.advice || {},
+        adviceReplies: session.adviceReplies || {},
+        legalFields: legalFieldIndexesTeam(match),
+        mateTrust: getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
         fronts: match.phase === TEAM_DUEL_PHASES.PLANNING && session.plan
           ? buildFronts(match, session.plan.pairing || PAIRINGS.DIRECT)
           : null,
@@ -911,5 +972,6 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     handSeats,
     handViewFor,
     versus,
+    advise,
   };
 }

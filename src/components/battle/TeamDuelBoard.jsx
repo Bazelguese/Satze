@@ -82,10 +82,8 @@ function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHov
         <div className="tdb-empty"><span>{entry?.isHuman ? 'Trascina un Agente' : 'In attesa…'}</span></div>
       )}
       <div className="tdb-tag" style={tagStyle(cfg)}>
+        {/* Solo il nome: Campi e direzione degli attacchi stanno nel pannello Tavolo. */}
         <b>{entry?.name}</b>
-        {entry?.proposal ? <i>proposta</i> : null}
-        {fieldName ? <span className="tdb-field">{fieldName}</span> : null}
-        {note ? <span className="tdb-note">{note}</span> : null}
       </div>
     </div>
   );
