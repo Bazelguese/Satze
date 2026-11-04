@@ -92,8 +92,8 @@ function aiTurnLine(view) {
   if (view.pendingConfirm) return 'Hai scelto: aspetti che il compagno decida la sua carta.';
   const kinds = view.thinkingKinds || [];
   if (view.kind === 'teamDuel') {
-    if (kinds.includes('opening')) return 'La squadra avversaria sceglie Campi e Agenti…';
-    if (kinds.includes('response')) return 'La squadra avversaria studia le vostre carte e risponde…';
+    if (kinds.includes('opening')) return 'La squadra avversaria sceglie Campi, Agenti e FC…';
+    if (kinds.includes('response')) return 'La squadra avversaria studia le vostre carte e sceglie chi attacca chi…';
     return 'Gli altri giocatori stanno scegliendo…';
   }
   const id = Object.keys(view.thinkingSeats || {})[0];
@@ -109,8 +109,8 @@ function phaseOf(view) {
         return {
           tone: 'act',
           text: view.role === 'opening'
-            ? 'Apri tu: scegli un Campo e trascina un Agente. Il compagno sceglie insieme a te.'
-            : 'Rispondi: trascina un Agente e conferma. La direzione la scegli dopo.',
+            ? 'Apri tu: scegli un Campo, trascina un Agente, regola i FC e conferma. Il compagno sceglie insieme a te.'
+            : 'Rispondi: scegli qui sotto chi attacca chi, trascina un Agente, regola i FC e conferma.',
         };
       }
       return {
@@ -119,10 +119,6 @@ function phaseOf(view) {
           ? 'Apri tu: scegli il Campo, schiera un Agente e i FC.'
           : 'Tocca a te: schiera un Agente e i FC contro chi resta sulla collina.',
       };
-    case 'planning':
-      return view.pendingSubmit
-        ? { tone: 'wait', text: 'Piano bloccato: aspetti che gli avversari finiscano di pianificare.' }
-        : { tone: 'act', text: 'Piano segreto: regola i tuoi FC nel pannello FC e conferma.' };
     case 'aiTurn': return { tone: 'wait', text: aiTurnLine(view) };
     case 'presenting': return { tone: 'info', text: presentingLine(view) };
     case 'claim': return { tone: 'act', text: 'Hai raggiunto la soglia dei Campi.' };
@@ -137,14 +133,15 @@ function phaseOf(view) {
 
 /**
  * I due fronti del turno: per ciascun Campo chi difende (apertura) e chi attacca
- * (risposta). Quando risponde la tua squadra, nel piano si inverte da qui la direzione.
+ * (risposta). Quando risponde la tua squadra, prima di confermare si inverte da qui la direzione.
  */
 function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
   const { seats, deployments, battlefields, plan, openingTeam, board } = view;
   const seat = (id) => seats.find((x) => x.id === id);
   const presenting = view.stage === 'presenting' && view.roundResult;
-  const planning = view.stage === 'planning';
   const usResponding = openingTeam === 'B';
+  // Risponde la tua squadra e gli avversari hanno aperto: si sceglie chi attacca chi.
+  const choosing = usResponding && Boolean(view.fronts) && Boolean(plan) && ['humanDeploy', 'aiTurn'].includes(view.stage) && !view.revealing;
 
   let fronts;
   if (presenting) {
@@ -156,7 +153,7 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
       if (id === 'A2') return board?.player?.[1]?.fieldIndex ?? null;
       return null;
     };
-    const responderOf = (id) => (planning && usResponding && view.fronts
+    const responderOf = (id) => (choosing
       ? view.fronts.find((f) => f.firstSeatId === id)?.secondSeatId ?? null
       : null);
     fronts = seats.filter((x) => x.team === openingTeam).map((o) => ({ fieldIndex: fieldOf(o.id), opener: o.id, responder: responderOf(o.id), winner: null }));
@@ -171,7 +168,7 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
   const hint = presenting
     ? null
     : usResponding
-      ? (planning ? null : 'Sceglierai chi attacca cosa dopo lo schieramento.')
+      ? (choosing ? null : 'Quando gli avversari hanno aperto scegli chi attacca chi, prima di confermare.')
       : 'Chi attacca cosa lo decide in segreto la squadra avversaria.';
 
   const extra = presenting
@@ -220,7 +217,7 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
           </div>
         );
       })}
-      {planning && usResponding && plan ? (
+      {choosing && view.stage === 'humanDeploy' ? (
         <button type="button" className="mst-btn is-wide" onClick={() => onPairing(plan.pairing === 'crossed' ? 'direct' : 'crossed')}>
           ⇄ Inverti direzione
           <small>{PAIRING_LABEL[plan.pairing]}{plan.suggestedPairing === plan.pairing ? ' · consigliata dal compagno' : ''}</small>
@@ -236,7 +233,8 @@ function Advice({ view, ownFieldIndex, onAdvise }) {
   const mate = view.seats.find((x) => x.id === 'A2');
   if (!mate || !onAdvise) return null;
   const deploying = view.stage === 'humanDeploy' && !view.deployments?.A2;
-  const canInvest = ['humanDeploy', 'aiTurn', 'planning'].includes(view.stage);
+  // Gli FC si consigliano finché il compagno non si è schierato.
+  const canInvest = ['humanDeploy', 'aiTurn'].includes(view.stage) && !view.deployments?.A2 && !view.revealing;
   if (!deploying && !canInvest) return null;
   const advice = view.advice || {};
   const replies = view.adviceReplies || {};
@@ -295,7 +293,7 @@ function Advice({ view, ownFieldIndex, onAdvise }) {
 
 function Teams({ view, ownFocus }) {
   const { seats, deployments, teams, plan, openingTeam } = view;
-  const revealed = view.stage === 'presenting' && view.roundResult;
+  const revealed = (view.stage === 'presenting' || view.revealing) && view.roundResult;
   const investment = (s) => {
     if (revealed) return `${view.roundResult.investments[s.id]} FC`;
     if (s.team === 'A') {
@@ -360,16 +358,11 @@ function Claim({ count, onClaim }) {
   );
 }
 
-function TeamView({ view, ownFocus, ownFieldIndex, onPairing, onSubmit, onClaim, onAdvise, onHoverField, boardVariant, boardVariants, onBoardVariant }) {
+function TeamView({ view, ownFocus, ownFieldIndex, onPairing, onClaim, onAdvise, onHoverField, boardVariant, boardVariants, onBoardVariant }) {
   const showFronts = Boolean(view.board) || (view.stage === 'presenting' && view.roundResult);
   return (
     <>
       {showFronts && <Fronts view={view} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onHoverField={onHoverField} />}
-      {view.stage === 'planning' && (
-        <button type="button" className="mst-btn is-primary is-wide" onClick={onSubmit}>
-          Conferma piano<small>{ownFocus} FC</small>
-        </button>
-      )}
       {view.stage === 'claim' && <Claim count={view.teams.A.fields} onClaim={onClaim} />}
       <Advice view={view} ownFieldIndex={ownFieldIndex} onAdvise={onAdvise} />
       <Teams view={view} ownFocus={ownFocus} />
@@ -444,7 +437,6 @@ export function MultiSeatPanel({
   ownFocus,
   ownFieldIndex = null,
   onPairing,
-  onSubmit,
   onClaim,
   onAdvise,
   onHoverField,
@@ -468,7 +460,7 @@ export function MultiSeatPanel({
         <span>{phase.text}</span>
       </div>
       {view.seats && (view.kind === 'teamDuel'
-        ? <TeamView view={view} ownFocus={ownFocus} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onSubmit={onSubmit} onClaim={onClaim} onAdvise={onAdvise} onHoverField={onHoverField} boardVariant={boardVariant} boardVariants={boardVariants} onBoardVariant={onBoardVariant} />
+        ? <TeamView view={view} ownFocus={ownFocus} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onClaim={onClaim} onAdvise={onAdvise} onHoverField={onHoverField} boardVariant={boardVariant} boardVariants={boardVariants} onBoardVariant={onBoardVariant} />
         : <KothView view={view} onClaim={onClaim} />)}
     </div>
   );

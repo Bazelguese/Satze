@@ -58,18 +58,19 @@ const reelTransform = (p) => `translate3d(0, ${(-p * BAND_H).toFixed(2)}px, 0)`;
  * Posizione della ruota (in voci, non avvolta) in funzione del tempo del documento.
  * @param {number} t0 inizio della carica
  */
-function createReelMotion(t0) {
+function createReelMotion(t0, { phase = 0, stopMs = null } = {}) {
   const tSpin = t0 + WIND_MS;
   const tCruise = tSpin + SPINUP_MS;
   // integrale di v(u) = VMAX·(1-(1-u)²): accelerazione che si spegne dolcemente in crociera
   const spin = (u) => u - (1 - (1 - u) ** 3) / 3;
-  const pCruise = -WIND + VMAX * SPINUP_MS * spin(1);
+  // `phase`: voce di partenza (le ruote del VS a più giocatori partono da punti diversi)
+  const pCruise = phase - WIND + VMAX * SPINUP_MS * spin(1);
   let stop = null;
 
   const free = (t) => {
-    if (t <= t0) return 0;
-    if (t < tSpin) return -WIND * easeInOut((t - t0) / WIND_MS);
-    if (t < tCruise) return -WIND + VMAX * SPINUP_MS * spin((t - tSpin) / SPINUP_MS);
+    if (t <= t0) return phase;
+    if (t < tSpin) return phase - WIND * easeInOut((t - t0) / WIND_MS);
+    if (t < tCruise) return phase - WIND + VMAX * SPINUP_MS * spin((t - tSpin) / SPINUP_MS);
     return pCruise + VMAX * (t - tCruise);
   };
 
@@ -84,12 +85,13 @@ function createReelMotion(t0) {
   const planStop = (at, targetIdx, n) => {
     const p0 = free(at);
     const v0 = Math.max(VMAX * 0.35, (p0 - free(at - 8)) / 8);
-    const dNat = (v0 * STOP_NOMINAL_MS) / STOP_K;
+    const dNat = (v0 * (stopMs || STOP_NOMINAL_MS)) / STOP_K;
     let land = Math.ceil(p0 + dNat * 0.75 - OVERSHOOT);
     while (mod(land, n) !== targetIdx) land += 1;
     const D = land + OVERSHOOT - p0;
-    // velocità iniziale della frenata = D·k/T: durata e k scelti per non avere strappi
-    const T = Math.min(STOP_MAX_MS, Math.max(STOP_MIN_MS, (STOP_K * D) / v0));
+    // velocità iniziale della frenata = D·k/T: durata e k scelti per non avere strappi.
+    // Con `stopMs` la durata è fissa: più ruote frenate insieme si fermano nello stesso istante.
+    const T = stopMs || Math.min(STOP_MAX_MS, Math.max(STOP_MIN_MS, (STOP_K * D) / v0));
     const k = Math.max(1.6, (v0 * T) / D);
     stop = { at, p0, D, T, k, land, end: at + T + SETTLE_MS };
     return stop;
@@ -158,10 +160,24 @@ export function buildRouletteItems({ armies, enemyArmy, enemyDeckKey, deckArmy }
   return { items, targetKey: enemyArmy, mode: 'armies' };
 }
 
+/** Durata fissa della frenata per le ruote che devono fermarsi insieme (VS a più giocatori). */
+export const ROULETTE_SHARED_STOP_MS = STOP_NOMINAL_MS;
+
 /**
  * @param {{ items: object[], targetKey: string|null, mode: 'armies'|'decks', stopping: boolean, leaving: boolean, onLanded?: () => void }} props
+ * Per il VS a più giocatori (una ruota per colonna):
+ *   column      { left, width, clip } in px del canvas 1920×1080: la ruota sta nella sua colonna
+ *   phase       voce da cui parte la ruota
+ *   stopMs      durata fissa della frenata (tutte le ruote si fermano insieme)
+ *   muted       niente suoni (li fa una sola ruota)
+ *   hideNeedles lancette e finestra condivise, disegnate da chi ospita le ruote
+ *   onTick(spd) a ogni fascia che passa sotto la lancetta
+ *   eyebrows    { spin, landed } testi sopra il nome
  */
-export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, leaving, onLanded }) {
+export function VersusRoulette({
+  items, targetKey, mode = 'armies', stopping, leaving, onLanded,
+  column = null, phase = 0, stopMs = null, muted = false, hideNeedles = false, onTick = null, eyebrows = null,
+}) {
   const n = Math.max(1, items.length);
   const targetIdx = Math.max(0, items.findIndex((it) => it.key === targetKey));
   const rootRef = useRef(null);
@@ -175,6 +191,8 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
   const engineRef = useRef(null);
   const onLandedRef = useRef(onLanded);
   onLandedRef.current = onLanded;
+  const onTickRef = useRef(onTick);
+  onTickRef.current = onTick;
   const [landed, setLanded] = useState(false);
   const [firstAccent] = useState(() => items[0]?.accent || '#f5f3eb');
   // abbastanza giri di fasce da coprire la metà schermo anche con 2-3 eserciti
@@ -186,7 +204,7 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
     if (!root || !track) return undefined;
     const timeline = document.timeline;
     const nowT = () => (timeline?.currentTime ?? performance.now());
-    const motion = createReelMotion(nowT() + POWER_ON_MS);
+    const motion = createReelMotion(nowT() + POWER_ON_MS, { phase, stopMs });
     const bandsByItem = Array.from({ length: n }, () => []);
     root.querySelectorAll('.vsr-band').forEach((el) => {
       bandsByItem[Number(el.dataset.item)]?.push(el);
@@ -224,6 +242,7 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
       }
     };
     const tick = (spd) => {
+      onTickRef.current?.(spd);
       // la lancetta: a ruota lenta scatta ampia e ricade piano, a ruota veloce vibra
       const swing = -(8 + 10 * (1 - spd));
       const dur = 150 + 230 * (1 - spd);
@@ -258,7 +277,7 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
         highlight(mod(s, n));
         if (!first) {
           tick(spd);
-          if (now - lastTick > 45) {
+          if (!muted && now - lastTick > 45) {
             lastTick = now;
             playSound(UI_SOUND.NAVIGATE);
           }
@@ -269,7 +288,7 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
         // resta la frenata (ferma sull'ultimo fotogramma); carica e crociera non servono più
         anims.slice(0, -1).forEach((a) => a.cancel());
         highlight(mod(stop.land, n));
-        playSound(GAME_SOUND.LOCK_IN);
+        if (!muted) playSound(GAME_SOUND.LOCK_IN);
         setLanded(true);
         onLandedRef.current?.();
         return;
@@ -311,8 +330,11 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
   return (
     <div
       ref={rootRef}
-      className={`vsr vsr--${mode}${landed ? ' is-landed' : ''}${leaving ? ' is-leaving' : ''}`}
-      style={{ '--cur': firstAccent, '--n': n, '--h': `${BAND_H}px` }}
+      className={`vsr vsr--${mode}${column ? ' vsr--col' : ''}${hideNeedles ? ' vsr--shared' : ''}${landed ? ' is-landed' : ''}${leaving ? ' is-leaving' : ''}`}
+      style={{
+        '--cur': firstAccent, '--n': n, '--h': `${BAND_H}px`,
+        ...(column ? { '--cl': `${column.left}px`, '--cw': `${column.width}px`, clipPath: column.clip } : null),
+      }}
       aria-hidden="true"
     >
       <div className="vsr-glow" ref={glowRef} />
@@ -366,9 +388,11 @@ export function VersusRoulette({ items, targetKey, mode = 'armies', stopping, le
 
       <div className="vsr-caption">
         <span className="vsr-eye">
-          {landed
-            ? (mode === 'decks' ? 'ESERCITO AVVERSARIO' : 'IL TUO AVVERSARIO')
-            : (mode === 'decks' ? 'SORTEGGIO DELL’ESERCITO' : 'SORTEGGIO DELL’AVVERSARIO')}
+          {eyebrows
+            ? (landed ? eyebrows.landed : eyebrows.spin)
+            : landed
+              ? (mode === 'decks' ? 'ESERCITO AVVERSARIO' : 'IL TUO AVVERSARIO')
+              : (mode === 'decks' ? 'SORTEGGIO DELL’ESERCITO' : 'SORTEGGIO DELL’AVVERSARIO')}
         </span>
         <span className="vsr-name" ref={nameRef}>{items[0]?.label}</span>
       </div>
@@ -542,6 +566,25 @@ function VersusRouletteStyles() {
       .vsr--decks .vsr-name { font-size: 54px; }
       .vsr.is-landed .vsr-name { animation: vsr-pop .55s cubic-bezier(.2,1.6,.4,1) both; }
       @keyframes vsr-pop { 40% { transform: scale(1.12) rotate(-1deg); } }
+
+      /* ---------- una colonna del VS a più giocatori ----------
+         Rullo e finestra coprono tutto il canvas (stessa inclinazione e stesso centro per tutte
+         le colonne, così le fasce e la finestra si allineano da una colonna all'altra); la
+         colonna li ritaglia col suo clip-path. Il contenuto delle fasce sta dentro la colonna. */
+      .vsr--col .vsr-reel, .vsr--col .vsr-reel-window { left: 0; right: 0; }
+      .vsr--col .vsr-glow { left: var(--cl); width: var(--cw); }
+      .vsr--col .vsr-band::before { left: var(--cl); width: 10px; }
+      .vsr--col .vsr-portrait { display: none; }
+      .vsr--col .vsr-band-tint { background: linear-gradient(90deg, transparent 0, transparent var(--cl), color-mix(in srgb, var(--c) 40%, transparent) var(--cl), transparent calc(var(--cl) + var(--cw) * 0.7)); }
+      .vsr--col .vsr-band-icon { left: calc(var(--cl) + 34px); width: 84px; height: 84px; margin-top: -42px; }
+      .vsr--col .vsr-band-txt { left: calc(var(--cl) + 130px); right: auto; width: calc(var(--cw) - 170px); gap: 6px; }
+      .vsr--col .vsr-band-txt b { font-size: 34px; }
+      .vsr--col .vsr-band-txt small { font-size: 14px; }
+      .vsr--shared .vsr-needle, .vsr--shared .vsr-centerline { display: none; }
+      .vsr--col .vsr-sparks { left: calc(var(--cl) + var(--cw) / 2); }
+      .vsr--col .vsr-caption { left: calc(var(--cl) + 40px); bottom: 150px; max-width: calc(var(--cw) - 80px); }
+      .vsr--col .vsr-eye { font-size: 13px; letter-spacing: 0.24em; padding: 3px 12px; }
+      .vsr--col .vsr-name { font-size: 38px; max-width: calc(var(--cw) - 80px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 4px 4px 0 var(--cur), 8px 8px 0 #050507; }
 
       @media (prefers-reduced-motion: reduce) {
         .vsr-reel, .vsr-band, .vsr-reel-window, .vsr-reel-window::before, .vsr-reel-window::after, .vsr-needle, .vsr-needle i,

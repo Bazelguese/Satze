@@ -15,10 +15,9 @@ import {
   resolveClaim,
   submitOpeningDeploy,
   submitResponseDeploy,
-  submitTeamPlan,
   teamFieldCount,
 } from './teamDuel.js';
-import { aiOpeningDeploy, aiResponseDeploy, aiTeamPlan } from './teamDuelAI.js';
+import { aiOpeningDeploy, aiResponsePlan } from './teamDuelAI.js';
 
 const neutral = ALL_BATTLEFIELDS.find((f) => f.id === 51);
 const fields = Array.from({ length: 10 }, () => ({ ...neutral }));
@@ -46,20 +45,24 @@ function exampleMatch() {
   return createTeamDuelMatch({ seats, battlefields: fields, rng: mulberry32(1) });
 }
 
-function deployExample(match) {
-  let m = submitOpeningDeploy(match, {
-    B1: { cardId: 'B1x', fieldIndex: 0 },
-    B2: { cardId: 'B2x', fieldIndex: 1 },
+/** Apertura di B (Agenti, Campi e FC insieme, come chi apre nell'1v1). */
+function openExample(match, b = { B1: 5, B2: 1 }) {
+  return submitOpeningDeploy(match, {
+    B1: { cardId: 'B1x', fieldIndex: 0, focus: b.B1 },
+    B2: { cardId: 'B2x', fieldIndex: 1, focus: b.B2 },
   });
-  m = submitResponseDeploy(m, { A1: { cardId: 'A1x' }, A2: { cardId: 'A2x' } });
-  return m;
+}
+
+/** Risposta di A: Agenti, FC e disposizione insieme; poi il turno si risolve. */
+function respondExample(m, { pairing, a = { A1: 1, A2: 6 } }) {
+  return submitResponseDeploy(m, {
+    A1: { cardId: 'A1x', focus: a.A1 },
+    A2: { cardId: 'A2x', focus: a.A2 },
+  }, pairing);
 }
 
 function play(match, { pairing, a = { A1: 1, A2: 6 }, b = { B1: 5, B2: 1 } }) {
-  let m = deployExample(match);
-  m = submitTeamPlan(m, 'B', { investments: b });
-  m = submitTeamPlan(m, 'A', { investments: a, pairing });
-  return m;
+  return respondExample(openExample(match, b), { pairing, a });
 }
 
 const fc = (m) => Object.fromEntries(m.seats.map((s) => [s.id, s.focus]));
@@ -133,35 +136,35 @@ describe('2v2 — esempio §10', () => {
 });
 
 describe('2v2 — regole del turno', () => {
-  it('solo la risposta sceglie la disposizione', () => {
-    const m = deployExample(exampleMatch());
-    expect(() => submitTeamPlan(m, 'B', { investments: { B1: 2, B2: 2 }, pairing: PAIRINGS.DIRECT })).toThrow(/solo la risposta/);
-    expect(() => submitTeamPlan(m, 'A', { investments: { A1: 2, A2: 2 } })).toThrow(/disposizione/);
+  it('la risposta deve scegliere la disposizione', () => {
+    const m = openExample(exampleMatch());
+    const deploy = { A1: { cardId: 'A1x', focus: 2 }, A2: { cardId: 'A2x', focus: 2 } };
+    expect(() => submitResponseDeploy(m, deploy)).toThrow(/disposizione/);
+    expect(() => submitResponseDeploy(m, deploy, 'boh')).toThrow(/disposizione/);
+  });
+
+  it('chi apre sceglie gli FC insieme ad Agente e Campo', () => {
+    const m = openExample(exampleMatch());
+    expect(m.phase).toBe(TEAM_DUEL_PHASES.RESPONSE_DEPLOY);
+    expect(m.plans.B.investments).toEqual({ B1: 5, B2: 1 });
+    expect(() => submitOpeningDeploy(exampleMatch(), {
+      B1: { cardId: 'B1x', fieldIndex: 0 },
+      B2: { cardId: 'B2x', fieldIndex: 1, focus: 2 },
+    })).toThrow(/non valido/);
   });
 
   it('investimenti non validi sono rifiutati', () => {
-    const m = deployExample(exampleMatch());
     for (const bad of [0, -1, 1.5, 15]) {
-      expect(() => submitTeamPlan(m, 'B', { investments: { B1: bad, B2: 2 } })).toThrow(/non valido/);
+      expect(() => openExample(exampleMatch(), { B1: bad, B2: 2 })).toThrow(/non valido/);
+      expect(() => respondExample(openExample(exampleMatch()), { pairing: PAIRINGS.DIRECT, a: { A1: bad, A2: 2 } })).toThrow(/non valido/);
     }
-    expect(legalFocusRange(m.seats.find((s) => s.id === 'B1'))).toEqual({ min: 1, max: 14 });
+    expect(legalFocusRange(exampleMatch().seats.find((s) => s.id === 'B1'))).toEqual({ min: 1, max: 14 });
   });
 
-  it('un piano bloccato non si può ripresentare', () => {
-    let m = deployExample(exampleMatch());
-    m = submitTeamPlan(m, 'B', { investments: { B1: 2, B2: 2 } });
-    expect(() => submitTeamPlan(m, 'B', { investments: { B1: 3, B2: 3 } })).toThrow(/già bloccato/);
-  });
-
-  it('l’ordine con cui le squadre bloccano il piano non cambia il risultato', () => {
-    let a = deployExample(exampleMatch());
-    a = submitTeamPlan(a, 'B', { investments: { B1: 5, B2: 1 } });
-    a = submitTeamPlan(a, 'A', { investments: { A1: 1, A2: 6 }, pairing: PAIRINGS.DIRECT });
-    let b = deployExample(exampleMatch());
-    b = submitTeamPlan(b, 'A', { investments: { A1: 1, A2: 6 }, pairing: PAIRINGS.DIRECT });
-    b = submitTeamPlan(b, 'B', { investments: { B1: 5, B2: 1 } });
-    expect(b.teams).toEqual(a.teams);
-    expect(fc(b)).toEqual(fc(a));
+  it('la risposta chiude il turno: non si può rispondere due volte', () => {
+    const m = play(exampleMatch(), { pairing: PAIRINGS.DIRECT });
+    expect(m.phase).toBe(TEAM_DUEL_PHASES.RESOLVED);
+    expect(() => respondExample(m, { pairing: PAIRINGS.DIRECT })).toThrow(/fase/);
   });
 
   it('a VA, Lega e POT pari vince l’Agente della risposta', () => {
@@ -172,10 +175,8 @@ describe('2v2 — regole del turno', () => {
       createSeat({ id: 'B2', name: 'B2', team: 'B', army: 'Test', focus: 18, hand: hand('B2', card('B2x', 6, 3), 2) }),
     ].map((s) => ({ ...s, hand: s.hand.map((c, i) => (i === 0 ? { ...c, league: 3 } : c)) }));
     let m = createTeamDuelMatch({ seats, battlefields: fields, rng: mulberry32(2) });
-    m = submitOpeningDeploy(m, { B1: { cardId: 'B1x', fieldIndex: 0 }, B2: { cardId: 'B2x', fieldIndex: 1 } });
-    m = submitResponseDeploy(m, { A1: { cardId: 'A1x' }, A2: { cardId: 'A2x' } });
-    m = submitTeamPlan(m, 'B', { investments: { B1: 2, B2: 2 } });
-    m = submitTeamPlan(m, 'A', { investments: { A1: 2, A2: 2 }, pairing: PAIRINGS.CROSSED });
+    m = submitOpeningDeploy(m, { B1: { cardId: 'B1x', fieldIndex: 0, focus: 2 }, B2: { cardId: 'B2x', fieldIndex: 1, focus: 2 } });
+    m = submitResponseDeploy(m, { A1: { cardId: 'A1x', focus: 2 }, A2: { cardId: 'A2x', focus: 2 } }, PAIRINGS.CROSSED);
     expect(m.roundResult.fronts.every((f) => f.winnerSeatId === f.secondSeatId)).toBe(true);
   });
 
@@ -195,7 +196,7 @@ describe('2v2 — regole del turno', () => {
   });
 
   it('la diretta e l’incrociata usano gli stessi fronti dell’apertura', () => {
-    const m = deployExample(exampleMatch());
+    const m = openExample(exampleMatch());
     expect(buildFronts(m, PAIRINGS.DIRECT).map((f) => [f.firstSeatId, f.secondSeatId, f.fieldIndex])).toEqual([
       ['B1', 'A1', 0], ['B2', 'A2', 1],
     ]);
@@ -257,10 +258,8 @@ describe('2v2 — Vita simultanea', () => {
     ];
     let m = createTeamDuelMatch({ seats, battlefields: fields, rng: mulberry32(3) });
     m = { ...m, teams: { ...m.teams, A: { ...m.teams.A, hp: 49 } } };
-    m = submitOpeningDeploy(m, { B1: { cardId: 'B1x', fieldIndex: 0 }, B2: { cardId: 'B2x', fieldIndex: 1 } });
-    m = submitResponseDeploy(m, { A1: { cardId: 'A1x' }, A2: { cardId: 'A2x' } });
-    m = submitTeamPlan(m, 'B', { investments: { B1: 1, B2: 5 } });
-    m = submitTeamPlan(m, 'A', { investments: { A1: 5, A2: 1 }, pairing: PAIRINGS.DIRECT });
+    m = submitOpeningDeploy(m, { B1: { cardId: 'B1x', fieldIndex: 0, focus: 1 }, B2: { cardId: 'B2x', fieldIndex: 1, focus: 5 } });
+    m = submitResponseDeploy(m, { A1: { cardId: 'A1x', focus: 5 }, A2: { cardId: 'A2x', focus: 1 } }, PAIRINGS.DIRECT);
     // A1 cura 3 e vince contro B1; A2 perde contro B2 e subisce 4: 49 − 4 + 3 = 48.
     expect(m.roundResult.hpDelta.A).toBe(-1);
     expect(m.teams.A.hp).toBe(48);
@@ -285,12 +284,9 @@ describe('2v2 — partita completa con IA', () => {
         const d2 = aiOpeningDeploy(m, s2.id, rng, [d1.fieldIndex]);
         m = submitOpeningDeploy(m, { [s1.id]: d1, [s2.id]: d2 });
       } else if (m.phase === TEAM_DUEL_PHASES.RESPONSE_DEPLOY) {
-        const rs = m.seats.filter((s) => s.team !== m.openingTeam);
-        m = submitResponseDeploy(m, Object.fromEntries(rs.map((s) => [s.id, aiResponseDeploy(m, s.id, rng)])));
-      } else if (m.phase === TEAM_DUEL_PHASES.PLANNING) {
-        m = submitTeamPlan(m, m.openingTeam, aiTeamPlan(m, m.openingTeam, rng));
         const responder = m.openingTeam === 'A' ? 'B' : 'A';
-        m = submitTeamPlan(m, responder, aiTeamPlan(m, responder, rng));
+        const plan = aiResponsePlan(m, responder, rng);
+        m = submitResponseDeploy(m, plan.deployments, plan.pairing);
       } else if (m.phase === TEAM_DUEL_PHASES.RESOLVED) {
         m = advanceAfterRound(m);
       } else if (m.phase === TEAM_DUEL_PHASES.CLAIM) {

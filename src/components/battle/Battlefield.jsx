@@ -573,6 +573,8 @@ export const BattlefieldPanel = ({
   waitLabel = null,
   /** Stato da mostrare nel portale senza chiamare il giocatore: { kicker, name, desc }. */
   statusStep = null,
+  /** Nomi dei due lati nel riepilogo (modalità a più posti: chi combatte davvero). */
+  sideNames = null,
   awaitingEnemySelection = false,
   /** true = testi "avversario" invece di "IA" (multiplayer online) */
   isOnlinePvP = false,
@@ -836,7 +838,7 @@ export const BattlefieldPanel = ({
     ].filter(Boolean);
     return (
       <div className="satze-recap-col">
-        <div className="satze-recap-side">{e ? (isOnlinePvP ? 'Avversario' : 'IA') : 'Tu'}</div>
+        <div className="satze-recap-side">{e ? (sideNames?.enemy || (isOnlinePvP ? 'Avversario' : 'IA')) : (sideNames?.player || 'Tu')}</div>
         {rows.map((row) => (
           <div key={row.k} className={`satze-recap-row${row.strong ? ' is-strong' : ''}`}>
             <span className="satze-recap-k">{row.k}</span>

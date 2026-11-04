@@ -24,6 +24,7 @@ import { EminenceMarkFlight } from './eminence/EminenceMarkFlight';
 import { DuelClashAuroraSequence } from './battle/DuelClashAuroraSequence';
 import { suspendSounds } from '../audio/soundBus.js';
 import { DuelVersusScreen } from './versus/DuelVersusScreen';
+import { MultiVersusScreen } from './versus/MultiVersusScreen.jsx';
 import { ROULETTE_STOP_MAX_MS } from './versus/VersusRoulette.jsx';
 import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
 import { computeViewportScale } from '../settings/viewportScale';
@@ -698,6 +699,22 @@ export function DuelLoadingOverlay({
       {stage}
       {vsActive ? (
         <VersusViewport leaving={vsLeaving}>
+          {(versus.playerAllies?.length || 0) + (versus.enemyAllies?.length || 0) > 0 ? (
+          // 3 o 4 giocatori: una colonna per giocatore, una ruota per ogni colonna non tua
+          <MultiVersusScreen
+            playerIdentity={versus.playerIdentity}
+            enemyIdentity={versus.enemyIdentity}
+            playerDeck={versus.playerDeck}
+            enemyDeck={versus.enemyDeck}
+            playerAllies={versus.playerAllies || []}
+            enemyAllies={versus.enemyAllies || []}
+            coverStyle={VS_COVER}
+            playerCardBack={playerCardBack}
+            fx={VS_FX}
+            progress={progress}
+            intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done, onReelLanded } : null}
+          />
+          ) : (
           <DuelVersusScreen
             playerIdentity={versus.playerIdentity}
             enemyIdentity={versus.enemyIdentity}
@@ -716,6 +733,7 @@ export function DuelLoadingOverlay({
             progress={progress}
             intro={introOn ? { stage: vsStage, handoff: vsHandoff, onFlightDone: flightRef.current.done, onReelLanded, deckArmy: versusDeckArmy } : null}
           />
+          )}
         </VersusViewport>
       ) : null}
       {!versus && showChrome ? <LoadingScreen progress={progress} detail={loadingDetail} /> : null}
