@@ -181,3 +181,6 @@
   100% { opacity: 1; transform: none; filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .imp-hand.msb-swap-in > * { animation: none; } }
+
+/* Riquadri PV/FC: i nomi PNG numerati («PNG Stratega 2») devono restare interi. */
+.msb-on .satze-stats-panel__name { max-width: 19ch; letter-spacing: 0.05em; }

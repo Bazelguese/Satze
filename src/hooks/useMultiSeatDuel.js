@@ -17,7 +17,7 @@ import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import { selectBattlefields } from '../game/fieldLogic.js';
 import { battleOutcomeKey } from '../game/duel/duelHelpers.js';
 import { createRng, createSeat, legalFocusRange } from '../game/multiSeat/multiSeatCore.js';
-import { getSeatAIProfile, investmentForLevel, profileForDifficulty } from '../game/multiSeat/seatAI.js';
+import { getSeatAIProfile, investmentForLevel, npcSeatNames, profileForDifficulty } from '../game/multiSeat/seatAI.js';
 import { pickAiArmyDeck } from '../game/multiSeat/seatSetup.js';
 import {
   PAIRINGS,
@@ -756,6 +756,9 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const firstEnemyArmy = enemyHand[0]?.army;
     // Posti IA aggiuntivi già scelti all'avvio (servono alla schermata VS).
     const queue = [...(s.extras || [])];
+    const nameQueue = [...(s.npcNames?.extras || [])];
+    const npcName = (fallback) => nameQueue.shift() || fallback;
+    const firstEnemyName = s.npcNames?.firstEnemy || firstEnemyArmy;
     const taken = [humanArmy, firstEnemyArmy, ...queue.map((x) => x.army)];
     const extra = () => {
       if (queue.length) return queue.shift();
@@ -770,10 +773,10 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       const preset = getSeatAIProfile(s.options.teammatePreset);
       const seats = [
         createSeat({ id: 'A1', name: 'Tu', isHuman: true, team: 'A', army: humanArmy, hand: humanHand, focus: TEAM_DUEL_CONFIG.startFocus }),
-        // Nome segnaposto del compagno: PNG + archetipo di personalità (l'armata resta a parte).
-        createSeat({ id: 'A2', name: `PNG ${preset.name}`, team: 'A', army: mate.army, hand: mate.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: preset.id, deckKey: mate.deckKey }),
-        createSeat({ id: 'B1', name: firstEnemyArmy, team: 'B', army: firstEnemyArmy, hand: enemyHand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile }),
-        createSeat({ id: 'B2', name: foe.army, team: 'B', army: foe.army, hand: foe.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: foe.deckKey }),
+        // Nomi segnaposto dei posti IA: PNG + archetipo di personalità (l'armata resta a parte).
+        createSeat({ id: 'A2', name: npcName(`PNG ${preset.name}`), team: 'A', army: mate.army, hand: mate.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: preset.id, deckKey: mate.deckKey }),
+        createSeat({ id: 'B1', name: firstEnemyName, team: 'B', army: firstEnemyArmy, hand: enemyHand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile }),
+        createSeat({ id: 'B2', name: npcName(foe.army), team: 'B', army: foe.army, hand: foe.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: foe.deckKey }),
       ];
       const battlefields = selectBattlefields(s.options.fieldMode, ALL_BATTLEFIELDS, {
         rng,
@@ -788,11 +791,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const players = s.options.players === 4 ? 4 : 3;
     const seats = [
       createSeat({ id: 'P1', name: 'Tu', isHuman: true, army: humanArmy, hand: humanHand, focus: KOTH_CONFIG.startFocus }),
-      createSeat({ id: 'P2', name: firstEnemyArmy, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }),
+      createSeat({ id: 'P2', name: firstEnemyName, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }),
     ];
     for (let i = 3; i <= players; i += 1) {
       const pick = extra();
-      seats.push(createSeat({ id: `P${i}`, name: pick.army, army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }));
+      seats.push(createSeat({ id: `P${i}`, name: npcName(pick.army), army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }));
     }
     const battlefields = selectBattlefields(s.options.fieldMode, ALL_BATTLEFIELDS, { rng });
     const match = createKothMatch({ seats, battlefields, rng, seed, mode: s.options.fieldMode, perspectiveSeatId: HUMAN_KOTH_SEAT });
@@ -862,6 +865,15 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const first = pick();
     const extraCount = options.kind === MULTI_SEAT_KINDS.TEAM ? 2 : (options.players === 4 ? 4 : 3) - 2;
     const extras = Array.from({ length: extraCount }, pick);
+    // Nomi PNG decisi subito: servono già alla schermata VS. Ordine: [compagno,] primo avversario, altri.
+    const enemyProfile = profileForDifficulty(options.difficulty);
+    const isTeam = options.kind === MULTI_SEAT_KINDS.TEAM;
+    const names = npcSeatNames(isTeam
+      ? [getSeatAIProfile(options.teammatePreset).id, enemyProfile, enemyProfile]
+      : Array.from({ length: 1 + extraCount }, () => enemyProfile));
+    const npcNames = isTeam
+      ? { mate: names[0], firstEnemy: names[1], extras: [names[0], names[2]] }
+      : { mate: null, firstEnemy: names[0], extras: names.slice(1) };
     commit({
       kind: options.kind,
       options,
@@ -871,6 +883,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       seed,
       firstEnemy: { army: first.army, deckKey: first.deckKey },
       extras,
+      npcNames,
     });
     return { enemyArmy: first.army, enemyDeckKey: first.deckKey };
   }, [clearTimers, commit]);
@@ -1014,17 +1027,19 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const deckOf = (x) => ({ army: x.army, deckKey: x.deckKey, cardIds: (x.deckCards || []).map((c) => c.id) });
     if (session.kind === MULTI_SEAT_KINDS.TEAM) {
       const [mate, foe] = session.extras;
-      const preset = getSeatAIProfile(session.options.teammatePreset);
+      const [mateName, foeName] = session.npcNames?.extras || [];
       return {
-        playerAllies: mate ? [{ identity: { eyebrow: 'Compagno IA', name: `PNG ${preset.name}`, sub: mate.army }, deck: deckOf(mate) }] : [],
-        enemyAllies: foe ? [{ identity: { eyebrow: 'Avversario IA', name: foe.army, sub: null }, deck: deckOf(foe) }] : [],
+        enemyName: session.npcNames?.firstEnemy || null,
+        playerAllies: mate ? [{ identity: { eyebrow: 'Compagno IA', name: mateName || mate.army, sub: mate.army }, deck: deckOf(mate) }] : [],
+        enemyAllies: foe ? [{ identity: { eyebrow: 'Avversario IA', name: foeName || foe.army, sub: foe.army }, deck: deckOf(foe) }] : [],
       };
     }
     return {
+      enemyName: session.npcNames?.firstEnemy || null,
       playerAllies: [],
-      enemyAllies: session.extras.map((x) => ({ identity: { eyebrow: 'Sfidante IA', name: x.army, sub: null }, deck: deckOf(x) })),
+      enemyAllies: session.extras.map((x, i) => ({ identity: { eyebrow: 'Sfidante IA', name: session.npcNames?.extras?.[i] || x.army, sub: x.army }, deck: deckOf(x) })),
     };
-  }, [session?.extras, session?.kind, session?.options]);
+  }, [session?.extras, session?.kind, session?.npcNames]);
 
   /** Dati in sola lettura per mostrare la mano di un posto in un triangolo. */
   const handViewFor = useCallback((seatId, side) => {

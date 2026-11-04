@@ -5419,7 +5419,14 @@ export default function SatzeGame() {
     });
     // Modalità a più posti: compagno e altri avversari accanto ai due mazzi principali.
     const duelVersus = duelVersusBase && multiSeat.versus
-      ? { ...duelVersusBase, playerAllies: multiSeat.versus.playerAllies, enemyAllies: multiSeat.versus.enemyAllies }
+      ? {
+          ...duelVersusBase,
+          enemyIdentity: multiSeat.versus.enemyName
+            ? { ...duelVersusBase.enemyIdentity, name: multiSeat.versus.enemyName, sub: duelEnemyArmy || duelVersusBase.enemyIdentity?.sub }
+            : duelVersusBase.enemyIdentity,
+          playerAllies: multiSeat.versus.playerAllies,
+          enemyAllies: multiSeat.versus.enemyAllies,
+        }
       : duelVersusBase;
     return (
       screen('duelLoading', false, <DuelLoadingOverlay
@@ -5550,7 +5557,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
