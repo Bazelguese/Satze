@@ -10,6 +10,8 @@ import { availableCards, legalFocusRange } from './multiSeatCore.js';
 export const SEAT_AI_PROFILES = {
   equilibrato: {
     id: 'equilibrato',
+    // Fiducia di base: probabilità di seguire un consiglio del compagno umano (2v2).
+    trust: 0.7,
     name: 'Stratega',
     description: 'Distribuisce i FC con regolarità e conserva una carta forte per il finale.',
     spendBias: 1,
@@ -19,6 +21,8 @@ export const SEAT_AI_PROFILES = {
   },
   aggressivo: {
     id: 'aggressivo',
+    // Fiducia di base: probabilità di seguire un consiglio del compagno umano (2v2).
+    trust: 0.5,
     name: 'Assaltatore',
     description: 'Gioca subito le carte migliori e investe molto nei primi turni.',
     spendBias: 1.35,
@@ -28,6 +32,8 @@ export const SEAT_AI_PROFILES = {
   },
   prudente: {
     id: 'prudente',
+    // Fiducia di base: probabilità di seguire un consiglio del compagno umano (2v2).
+    trust: 0.8,
     name: 'Custode',
     description: 'Risparmia FC e carte forti per gli ultimi turni.',
     spendBias: 0.8,
@@ -37,6 +43,8 @@ export const SEAT_AI_PROFILES = {
   },
   calcolatore: {
     id: 'calcolatore',
+    // Fiducia di base: probabilità di seguire un consiglio del compagno umano (2v2).
+    trust: 0.6,
     name: 'Calcolatore',
     description: 'Stima il VA avversario e investe quanto serve per superarlo.',
     spendBias: 1,
@@ -46,6 +54,8 @@ export const SEAT_AI_PROFILES = {
   },
   casuale: {
     id: 'casuale',
+    // Fiducia di base: probabilità di seguire un consiglio del compagno umano (2v2).
+    trust: 0.4,
     name: 'Recluta',
     description: 'Scelte poco ragionate.',
     spendBias: 1,
@@ -144,4 +154,20 @@ export function chooseInvestment(seat, card, profile, rng, hint = {}) {
   const damageFactor = Math.min(1.4, 0.7 + (Number(card?.damage) || 0) / 10);
   const jitter = 1 + (rng() * 2 - 1) * profile.noise;
   return clampInt(base * profile.spendBias * damageFactor * jitter, 1, max);
+}
+
+/** Livelli di investimento consigliabili al compagno. */
+export const ADVICE_INVEST_LEVELS = ['basso', 'medio', 'alto'];
+
+/**
+ * Investimento corrispondente a un livello consigliato, dentro il range legale del posto:
+ * basso ≈ metà della quota media, medio ≈ quota media, alto ≈ quasi il doppio.
+ */
+export function investmentForLevel(seat, level) {
+  const { min, max } = legalFocusRange(seat);
+  if (max <= 1) return Math.max(1, min);
+  const remaining = Math.max(1, availableCards(seat).length);
+  const base = seat.focus / remaining;
+  const factor = level === 'alto' ? 1.8 : level === 'basso' ? 0.5 : 1;
+  return clampInt(base * factor, 1, max);
 }

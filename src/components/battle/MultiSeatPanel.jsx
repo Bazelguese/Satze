@@ -8,6 +8,7 @@
 
 import { HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
 import '../../styles/satze-multi-seat.css';
+import { MiniBattlefield } from './MiniBattlefield';
 
 const PAIRING_LABEL = { direct: 'Diretta', crossed: 'Incrociata' };
 
@@ -101,12 +102,175 @@ function BoardVariantPicker({ value, variants, onChange }) {
   );
 }
 
-function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, boardVariants, onBoardVariant }) {
-  const { seats, deployments, battlefields, teams, plan, openingTeam } = view;
-  const seat = (id) => seats.find((s) => s.id === id);
+/**
+ * I due fronti del turno: per ciascun Campo chi lo occupa (apertura) e chi lo attacca
+ * (risposta). Quando risponde la tua squadra, nel piano si inverte da qui la direzione.
+ */
+function FrontsSection({ view, ownFieldIndex, onPairing, onHoverField }) {
+  const { seats, deployments, battlefields, plan, openingTeam, board } = view;
+  const seat = (id) => seats.find((x) => x.id === id);
+  const presenting = view.stage === 'presenting' && view.roundResult;
+  const planning = view.stage === 'planning';
+  const usResponding = openingTeam === 'B';
+
+  let fronts;
+  if (presenting) {
+    fronts = view.roundResult.fronts.map((f) => ({ fieldIndex: f.fieldIndex, opener: f.firstSeatId, responder: f.secondSeatId, winner: f.winnerSeatId }));
+  } else {
+    const openers = seats.filter((x) => x.team === openingTeam);
+    const fieldOf = (id) => {
+      if (deployments[id]?.fieldIndex != null) return deployments[id].fieldIndex;
+      if (id === 'A1') return ownFieldIndex ?? null;
+      if (id === 'A2') return board?.player?.[1]?.fieldIndex ?? null;
+      return null;
+    };
+    const responderOf = (id) => {
+      if (!(planning && usResponding) || !view.fronts) return null;
+      return view.fronts.find((f) => f.firstSeatId === id)?.secondSeatId ?? null;
+    };
+    fronts = openers.map((o) => ({ fieldIndex: fieldOf(o.id), opener: o.id, responder: responderOf(o.id), winner: null }));
+  }
+
+  const cardFor = (id) => {
+    const d = deployments?.[id];
+    const entry = [...(board?.player || []), ...(board?.enemy || [])].find((e) => e.seatId === id);
+    const cardId = d?.cardId ?? entry?.card?.id ?? null;
+    return cardId != null ? cardOf(seat(id), cardId) : null;
+  };
+
+  const responderHint = presenting
+    ? null
+    : usResponding
+      ? (planning ? null : 'Sceglierai la direzione dopo lo schieramento.')
+      : 'La direzione la sceglie in segreto la squadra avversaria.';
+
+  const sideClass = (id) => (seat(id)?.team === 'A' ? 'is-ally' : 'is-foe');
+
+  return (
+    <div className="msp-fronts">
+      <div className="msp-plan-title">
+        Fronti{presenting ? ` · disposizione ${PAIRING_LABEL[view.roundResult.pairing] || ''}` : ''}
+      </div>
+      {fronts.map((f, i) => {
+        const field = f.fieldIndex != null ? battlefields[f.fieldIndex] : null;
+        return (
+          <div key={f.opener} className={`msp-front-card${presenting && view.presentIndex === i ? ' on' : ''}`}>
+            <div className="msp-front-field">
+              <span className="msp-front-n">{i + 1}</span>
+              {field ? (
+                <div className="msp-front-mini" onMouseEnter={() => onHoverField?.(field)} onMouseLeave={() => onHoverField?.(null)}>
+                  <MiniBattlefield field={field} conquered={false} hidden={false} selected={false} />
+                </div>
+              ) : (
+                <div className="msp-front-empty">Campo da scegliere</div>
+              )}
+            </div>
+            <div className="msp-front-duel">
+              <div className={`msp-front-who ${sideClass(f.opener)}`}>
+                <span className="msp-front-role">Difende</span>
+                <b>{seat(f.opener)?.name}</b>
+                <CardChip card={cardFor(f.opener)} />
+              </div>
+              <div className="msp-front-arrow" aria-hidden>⚔</div>
+              <div className={`msp-front-who ${f.responder ? sideClass(f.responder) : 'is-unknown'}`}>
+                <span className="msp-front-role">Attacca</span>
+                {f.responder ? (
+                  <>
+                    <b>{seat(f.responder)?.name}</b>
+                    <CardChip card={cardFor(f.responder)} />
+                  </>
+                ) : (
+                  <b className="msp-dim">?</b>
+                )}
+              </div>
+            </div>
+            {presenting && f.winner && view.presentIndex > i ? (
+              <div className="msp-front-result">Conquista: {seat(f.winner)?.name}</div>
+            ) : null}
+          </div>
+        );
+      })}
+      {planning && usResponding && plan && (
+        <div className="msp-swap">
+          <button type="button" className="msp-btn msp-primary" onClick={() => onPairing(plan.pairing === 'crossed' ? 'direct' : 'crossed')}>
+            ⇄ Inverti direzione
+          </button>
+          <span className="msp-dim">
+            {PAIRING_LABEL[plan.pairing]}{plan.suggestedPairing === plan.pairing ? ' · consigliata dal compagno' : ''}
+          </span>
+        </div>
+      )}
+      {responderHint ? <div className="msp-dim msp-note">{responderHint}</div> : null}
+    </div>
+  );
+}
+
+const INVEST_LABEL = { basso: 'Basso', medio: 'Medio', alto: 'Alto' };
+
+/** Consigli al compagno IA: carta (dalla sua mano), Campo (quando aprite), investimento. */
+function AdviceSection({ view, ownFieldIndex, onAdvise }) {
+  const mate = view.seats.find((x) => x.id === 'A2');
+  if (!mate || !onAdvise) return null;
+  const deploying = view.stage === 'humanDeploy' && !view.deployments?.A2;
+  const canInvest = ['humanDeploy', 'aiTurn', 'planning'].includes(view.stage);
+  if (!deploying && !canInvest) return null;
+  const advice = view.advice || {};
+  const replies = view.adviceReplies || {};
+  const advisedCard = advice.card ? cardOf(mate, advice.card.value) : null;
+  const opening = view.openingTeam === 'A';
+  const fields = (view.legalFields || []).filter((i) => i !== ownFieldIndex);
+  const reply = (kind) => (replies[kind] ? (
+    <div className={`msp-reply${replies[kind].accepted ? ' ok' : ' no'}`}>«{replies[kind].text}»</div>
+  ) : null);
+
+  return (
+    <div className="msp-advice">
+      <div className="msp-plan-title">
+        Consigli a {mate.name}
+        {view.mateTrust != null ? <span className="msp-dim"> · ascolta il {Math.round(view.mateTrust * 100)}%</span> : null}
+      </div>
+      {deploying && (
+        <div className="msp-advice-row">
+          <span className="msp-advice-k">Carta</span>
+          <span>{advisedCard ? <b>{advisedCard.name}</b> : <span className="msp-dim">Apri «Mano compagno» e clicca una sua carta.</span>}</span>
+        </div>
+      )}
+      {deploying && reply('card')}
+      {deploying && opening && (
+        <div className="msp-advice-row">
+          <span className="msp-advice-k">Campo</span>
+          <div className="msp-advice-chips">
+            {fields.map((i) => (
+              <button key={i} type="button" className={`msp-btn msp-btn-sm${advice.field?.value === i ? ' on' : ''}`} onClick={() => onAdvise('field', i)}>
+                {view.battlefields[i]?.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {deploying && opening && reply('field')}
+      {canInvest && (
+        <div className="msp-advice-row">
+          <span className="msp-advice-k">FC</span>
+          <div className="msp-advice-chips">
+            {['basso', 'medio', 'alto'].map((lvl) => (
+              <button key={lvl} type="button" className={`msp-btn msp-btn-sm${advice.invest?.value === lvl ? ' on' : ''}`} onClick={() => onAdvise('invest', lvl)}>
+                {INVEST_LABEL[lvl]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {canInvest && reply('invest')}
+    </div>
+  );
+}
+
+function TeamView({ view, ownFocus, ownFieldIndex, onPairing, onSubmit, onClaim, onAdvise, onHoverField, boardVariant, boardVariants, onBoardVariant }) {
+  const { seats, deployments, teams, plan, openingTeam } = view;
   const planning = view.stage === 'planning';
   const revealed = view.stage === 'presenting' && view.roundResult;
-  const responding = openingTeam === 'B';
+  const showFronts = Boolean(view.board) || revealed;
 
   const investmentLabel = (s) => {
     if (revealed) return `${view.roundResult.investments[s.id]} FC`;
@@ -121,75 +285,24 @@ function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, 
         <span>{teams[teamId].hp}/{teams[teamId].maxHp} PV · {teams[teamId].fields}/{view.threshold} Campi</span>
       </div>
       <Bar value={teams[teamId].hp} max={teams[teamId].maxHp} accent={accent} />
-      {seats.filter((s) => s.team === teamId).map((s) => {
-        const d = deployments[s.id];
-        return (
-          <div className="msp-seat" key={s.id}>
-            <div className="msp-seat-name">
-              <span>{s.name}</span>
-              <span className="msp-dim">{s.focus} FC {investmentLabel(s) ? `· ${investmentLabel(s)}` : ''}</span>
-            </div>
-            <div className="msp-seat-play">
-              <CardChip card={d ? cardOf(s, d.cardId) : null} />
-              {d?.fieldIndex != null && <span className="msp-field">{battlefields[d.fieldIndex]?.name}</span>}
-            </div>
-          </div>
-        );
-      })}
+      {seats.filter((s) => s.team === teamId).map((s) => (
+        <div className="msp-seat-name msp-seat-compact" key={s.id}>
+          <span>{s.name}</span>
+          <span className="msp-dim">{s.focus} FC {investmentLabel(s) ? `· ${investmentLabel(s)}` : ''}</span>
+        </div>
+      ))}
     </div>
   );
 
   return (
     <>
+      {showFronts && <FrontsSection view={view} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onHoverField={onHoverField} />}
 
-      {view.board && <BoardVariantPicker value={boardVariant} variants={boardVariants} onChange={onBoardVariant} />}
-
-      {planning && view.fronts && (
-        <div className="msp-plan">
-          <div className="msp-plan-title">Fronti {responding ? '· scegli la disposizione' : '· la disposizione la sceglie la risposta'}</div>
-          {view.fronts.map((f) => {
-            const first = seat(f.firstSeatId);
-            const second = seat(f.secondSeatId);
-            return (
-              <div className="msp-front" key={f.index}>
-                <span className="msp-field">{battlefields[f.fieldIndex]?.name}</span>
-                <span>{first.name} <span className="msp-dim">contro</span> {responding ? second.name : '?'}</span>
-              </div>
-            );
-          })}
-          {responding && (
-            <div className="msp-pairing">
-              {['direct', 'crossed'].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`msp-btn${plan.pairing === p ? ' on' : ''}`}
-                  onClick={() => onPairing(p)}
-                >
-                  {PAIRING_LABEL[p]}{plan.suggestedPairing === p ? ' ★' : ''}
-                </button>
-              ))}
-            </div>
-          )}
-          {responding && <div className="msp-dim msp-note">★ consigliata dal compagno</div>}
-          <button type="button" className="msp-btn msp-primary" onClick={onSubmit}>Conferma piano ({ownFocus} FC)</button>
-        </div>
+      {planning && (
+        <button type="button" className="msp-btn msp-primary" onClick={onSubmit}>Conferma piano ({ownFocus} FC)</button>
       )}
 
-      {view.stage === 'presenting' && view.roundResult && (
-        <div className="msp-plan">
-          <div className="msp-plan-title">
-            Disposizione {PAIRING_LABEL[view.roundResult.pairing] || ''} · scontro {Math.min(2, (view.presentIndex ?? 0) + 1)} di 2
-          </div>
-          {view.roundResult.fronts.map((f, i) => (
-            <div className={`msp-front${i === view.presentIndex ? ' on' : ''}`} key={f.index}>
-              <span className="msp-field">{battlefields[f.fieldIndex]?.name}</span>
-              <span>{seat(f.playerSeatId).name} <span className="msp-dim">contro</span> {seat(f.enemySeatId).name}</span>
-            </div>
-          ))}
-          <div className="msp-dim msp-note">I due scontri leggono la Vita di inizio turno; i PV si sommano alla fine.</div>
-        </div>
-      )}
+      <AdviceSection view={view} ownFieldIndex={ownFieldIndex} onAdvise={onAdvise} />
 
       {view.stage === 'claim' && (
         <div className="msp-plan">
@@ -201,6 +314,8 @@ function TeamView({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, 
 
       {teamBlock('A', 'La tua squadra', '#a78bfa')}
       {teamBlock('B', 'Avversari', '#f87171')}
+
+      {view.board && <BoardVariantPicker value={boardVariant} variants={boardVariants} onChange={onBoardVariant} />}
     </>
   );
 }
@@ -259,7 +374,7 @@ function KothView({ view, onClaim }) {
   );
 }
 
-export function MultiSeatPanel({ view, ownFocus, onPairing, onSubmit, onClaim, boardVariant, boardVariants, onBoardVariant }) {
+export function MultiSeatPanel({ view, ownFocus, ownFieldIndex = null, onPairing, onSubmit, onClaim, onAdvise, onHoverField, boardVariant, boardVariants, onBoardVariant }) {
   if (!view) return null;
   const title = view.kind === 'teamDuel' ? '2v2 · Abbinamenti segreti' : 'Re della collina';
   return (
@@ -270,7 +385,7 @@ export function MultiSeatPanel({ view, ownFocus, onPairing, onSubmit, onClaim, b
       </div>
       <div className="msp-stage">{stageLine(view)}</div>
       {view.seats && (view.kind === 'teamDuel'
-        ? <TeamView view={view} ownFocus={ownFocus} onPairing={onPairing} onSubmit={onSubmit} onClaim={onClaim} boardVariant={boardVariant} boardVariants={boardVariants} onBoardVariant={onBoardVariant} />
+        ? <TeamView view={view} ownFocus={ownFocus} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onSubmit={onSubmit} onClaim={onClaim} onAdvise={onAdvise} onHoverField={onHoverField} boardVariant={boardVariant} boardVariants={boardVariants} onBoardVariant={onBoardVariant} />
         : <KothView view={view} onClaim={onClaim} />)}
     </div>
   );

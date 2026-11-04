@@ -104,6 +104,7 @@ import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
 import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
+import { playUiClick } from '../src/audio/soundBus';
 import { formatAIReasoningLogText } from '../src/game/ai/aiDebug.js';
 import { BattlefieldShuffleDealOverlay } from '../src/components/shuffle/BattlefieldShuffleDealOverlay';
 import { getLaunchRevealHoldMs, DUEL_REVEAL_MS } from '../src/components/shuffle/duelEntranceTiming';
@@ -5712,6 +5713,9 @@ export default function SatzeGame() {
                   multiSeat.submitPlan(selectedFocus);
                 }}
                 onClaim={multiSeat.decideClaim}
+                ownFieldIndex={currentFieldIndex}
+                onAdvise={(kind, value) => { playUiClick(); multiSeat.advise(kind, value); }}
+                onHoverField={setHoveredField}
                 boardVariant={teamBoardVariant}
                 boardVariants={teamBoardLayouts.layouts}
                 onBoardVariant={setTeamBoardVariant}
@@ -6257,7 +6261,13 @@ export default function SatzeGame() {
         selectedAgent={playerHandOverride ? null : selectedAgent}
         hideSelected
         onAgentSelect={playerHandOverride ? undefined : handleAgentSelect}
-        onPreviewClick={handlePlayerPreviewClick}
+        onPreviewClick={playerHandOverride?.seatId === 'A2'
+          ? (data) => {
+            handlePlayerPreviewClick(data);
+            // Mano del compagno: cliccare una carta la consiglia.
+            if (data?.agent?.id != null && multiSeat.advise('card', data.agent.id)) setMultiSeatLeftTab('table');
+          }
+          : handlePlayerPreviewClick}
         battleOutcomes={playerHandOverride ? playerHandOverride.outcomes : cardBattleOutcomes}
         battleOutcomeSide="player"
         cardPositions={playerCardPositions}
@@ -6275,7 +6285,9 @@ export default function SatzeGame() {
         isActive={!eminenceBlocksMatch && (gamePhase === 'selectField' && isPlayerFirst || (gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent)))}
         handCardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
         hideCards={shouldHideHandsForGuidedSetup}
-        highlightedAgentId={isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : highlightIdForHand('player')}
+        highlightedAgentId={playerHandOverride?.seatId === 'A2'
+          ? (multiSeatView?.advice?.card?.value ?? null)
+          : (isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : highlightIdForHand('player'))}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
         zoneArmy={shuffleDealSetup?.playerArmy}
