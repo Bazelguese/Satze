@@ -81,6 +81,8 @@ export function DuelLayoutLabStage({
   phase,
   showAgents,
   showHands,
+  /** Livello aggiuntivo dentro la scena (coordinate 1920×1080), es. il tavolo 2v2. */
+  children = null,
 }) {
   const [previewAgent, setPreviewAgent] = useState(null);
   const [selectedFieldIdx, setSelectedFieldIdx] = useState(0);
@@ -473,6 +475,8 @@ export function DuelLayoutLabStage({
         gamePhase={gamePhase}
         accentColor={playerAccent}
       />
+
+      {children}
 
       <div className="dep-vignette" aria-hidden />
     </div>

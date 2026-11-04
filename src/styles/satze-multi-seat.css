@@ -165,9 +165,137 @@
 }
 .msp-tabs button.on { color: #fde68a; border-color: rgba(251, 191, 36, 0.6); background: rgba(251, 191, 36, 0.08); }
 
-/* Tabellone con più di 5 Campi (2v2: 10): una riga sola per Campo, l'effetto resta
-   leggibile passando sopra al Campo (anteprima). */
-.imp-fields-dense [data-field-slot] p { display: none; }
-.imp-fields-dense [data-field-slot] > div { min-height: 0 !important; padding-top: 0; padding-bottom: 0; }
-.imp-fields-dense [data-field-slot] h3 { font-size: 11px !important; }
-.imp-fields-dense [data-field-slot] span { font-size: 11px; }
+/* Tabellone con più di 5 Campi (2v2: 10): righe a grandezza normale, si scorre in giù
+   nello stesso pannello. */
+.imp-fields-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.55) transparent;
+}
+.imp-fields-scroll::-webkit-scrollbar { width: 6px; }
+.imp-fields-scroll::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.55); border-radius: 3px; }
+.imp-fields-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Tasti per guardare le altre mani, accanto ai riquadri PV dei due triangoli */
+.msp-hand-toggle {
+  position: absolute;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  background: rgba(8, 11, 22, 0.88);
+  color: #fde68a;
+  font: 700 12px/1 'Chakra Petch', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 2px 2px 0 #000;
+}
+.msp-hand-toggle:hover { background: rgba(251, 191, 36, 0.16); }
+.msp-hand-toggle span { font-size: 15px; }
+.msp-hand-toggle--enemy { left: 22px; top: 92px; }
+.msp-hand-toggle--player { right: 260px; bottom: 22px; }
+
+/* ============================================================
+   2v2 · tavolo a quattro carte prima dei duelli (TeamDuelBoard)
+   Coordinate della scena 1920×1080. Slot principali = posizioni del duello.
+   ============================================================ */
+.msb-board-on [data-field-agent] .place-card,
+.msb-board-on [data-field-agent] .place-fx,
+.msb-board-on .imp-wait-hint { visibility: hidden; }
+.msb-board-pair-2 .satze-agent-dropzone { visibility: hidden; }
+
+.tdb { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+.tdb-slot {
+  --s: 1;
+  position: absolute;
+  width: calc(230px * var(--s));
+  transition: left 0.35s ease, top 0.35s ease, transform 0.35s ease, filter 0.25s ease;
+}
+.tdb-card {
+  width: 230px;
+  transform: scale(var(--s));
+  transform-origin: top left;
+  pointer-events: auto;
+  animation: tdb-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
+}
+.tdb-card.is-clickable { cursor: pointer; }
+.tdb-card.is-proposal { outline: 2px dashed color-mix(in srgb, var(--acc) 80%, transparent); outline-offset: 4px; border-radius: 14px; }
+@keyframes tdb-in { from { opacity: 0; transform: translateY(-22px) scale(var(--s)); } to { opacity: 1; transform: scale(var(--s)); } }
+.tdb-empty {
+  width: calc(230px * var(--s));
+  height: calc(330px * var(--s));
+  border: 2px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font: 600 13px 'Chakra Petch', sans-serif;
+  background: rgba(2, 6, 23, 0.35);
+}
+.tdb-tag {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  justify-content: center;
+  font: 600 12px/1.2 'Chakra Petch', sans-serif;
+  color: #e2e8f0;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+.tdb-tag b { color: var(--acc); }
+.tdb-tag i { font-style: normal; color: #fde68a; font-size: 11px; }
+.tdb-field { color: #fcd34d; border: 1px solid rgba(252, 211, 77, 0.45); border-radius: 6px; padding: 0 6px; background: rgba(8, 11, 22, 0.75); }
+.tdb-note { color: #bae6fd; }
+
+/* Posizioni, scala, rotazione, livello e luminosità arrivano dalla versione di layout
+   (src/config/teamBoardLayouts.js) come stili in linea e variabili --s, --r, --dim. */
+.tdb-slot { transform: rotate(var(--r, 0deg)); filter: brightness(var(--dim, 1)); }
+.tdb-slot.is-front-on-hover:hover { z-index: 6 !important; filter: none; transform: rotate(0deg) translateY(-18px); }
+.tdb-editable .tdb-slot { pointer-events: auto; cursor: grab; }
+.tdb-editable .tdb-slot:active { cursor: grabbing; }
+.tdb-editable .tdb-slot.is-front-on-hover:hover { transform: rotate(var(--r, 0deg)); filter: brightness(var(--dim, 1)); }
+.tdb-editable .tdb-card { pointer-events: none; animation: none; }
+.tdb-slot.is-selected { outline: 3px solid #fde68a; outline-offset: 6px; border-radius: 14px; }
+.tdb-pairs.is-selected { outline: 3px solid #fde68a; outline-offset: 4px; border-radius: 10px; }
+.tdb-editable .tdb-pairs { cursor: grab; }
+
+/* Modalità a coppie: i due tasti per passare da una coppia all'altra */
+.tdb-pairs {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.tdb-pairs button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(8, 11, 22, 0.88);
+  color: #cbd5e1;
+  font: 700 12px 'Chakra Petch', sans-serif;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tdb-pairs button.on { border-color: #fde68a; color: #fde68a; background: rgba(251, 191, 36, 0.14); }
+
+/* selettore delle versioni nel Tavolo */
+.msp-variants { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.msp-variant-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.msp-btn-sm { padding: 4px 6px; font-size: 10px; letter-spacing: 0.04em; }
+
+.tdb-slot.is-small .tdb-tag,
+.tdb-slot.is-small .tdb-field,
+.tdb-slot.is-small .tdb-tag i { font-size: 10px; }

@@ -167,6 +167,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
+import { TeamDuelBoard, useBoardLayouts } from '../src/components/battle/TeamDuelBoard';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
 import { armVersusHandoff } from '../src/components/versus/versusHandoff.js';
 
@@ -1556,6 +1557,18 @@ export default function SatzeGame() {
   multiSeatDeployRef.current = multiSeat.acceptsHumanDeploy;
   const multiSeatStageTimerRef = useRef(null);
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
+  // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
+  const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
+  // Versioni del tavolo (modificabili in Strumenti dev → TAVOLO 2V2 LAB).
+  const teamBoardLayouts = useBoardLayouts();
+  const teamBoardVariant = teamBoardLayouts.activeId;
+  const setTeamBoardVariant = teamBoardLayouts.setActiveId;
+  const [teamBoardPair, setTeamBoardPair] = useState(0);
+  const multiSeatProjectionKey = `${multiSeat.view?.projection?.playerSeatId || ''}|${multiSeat.view?.projection?.enemySeatId || ''}`;
+  useEffect(() => {
+    setMultiSeatHandView({ player: 0, enemy: 0 });
+  }, [multiSeatProjectionKey]);
 
   useMatchAudio({ gamePhase, duelPhase, battleResult });
 
@@ -4447,6 +4460,20 @@ export default function SatzeGame() {
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
   const multiSeatThreshold = isMultiSeat && multiSeatView?.threshold ? multiSeatView.threshold : null;
+  // Piano del 2v2 quando risponde la tua squadra: sotto ogni carta, l'avversario del suo fronte.
+  const multiSeatOpponentOf = {};
+  if (multiSeatView?.fronts && multiSeatView.openingTeam === 'B') {
+    for (const f of multiSeatView.fronts) {
+      multiSeatOpponentOf[f.secondSeatId] = `contro ${multiSeatSeatName(f.firstSeatId)}`;
+      multiSeatOpponentOf[f.firstSeatId] = `contro ${multiSeatSeatName(f.secondSeatId)}`;
+    }
+  }
+  const enemyHandOverride = isMultiSeat && multiSeatHandView.enemy > 0
+    ? multiSeat.handViewFor(multiSeat.handSeats.enemy[multiSeatHandView.enemy], 'enemy')
+    : null;
+  const playerHandOverride = isMultiSeat && multiSeatHandView.player > 0
+    ? multiSeat.handViewFor(multiSeat.handSeats.player[multiSeatHandView.player], 'player')
+    : null;
   const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
   const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
@@ -4571,6 +4598,11 @@ export default function SatzeGame() {
       url.searchParams.set('duelLayoutLab', '1');
       window.location.href = url.toString();
     };
+    const openTeamBoardLab = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('teamBoardLab', '1');
+      window.location.href = url.toString();
+    };
     const openCardFaceLab = () => {
       const url = new URL(window.location.href);
       url.searchParams.set('cardFaceLab', '1');
@@ -4652,6 +4684,7 @@ export default function SatzeGame() {
         choices: [
           { label: 'STYLE LAB', sub: 'UI', meta: 'EXPERIMENTS', onClick: openStyleLab },
           { label: 'DUEL LAYOUT LAB', sub: 'SKIN', meta: 'ALT ART · STY', onClick: openDuelLayoutLab },
+          { label: 'TAVOLO 2V2 LAB', sub: 'LAYOUT', meta: 'QUATTRO CARTE · VERSIONI', onClick: openTeamBoardLab },
           { label: 'CARD FACE LAB', sub: 'CARTA', meta: 'ELDRITCH', onClick: openCardFaceLab },
           { label: 'VS LAB', sub: 'DUELLO', meta: 'INGRESSO · ESERCITI', onClick: openVersusLab },
           {
@@ -4945,13 +4978,17 @@ export default function SatzeGame() {
               // la scelta esercito si smonta a pezzi attorno alla scatola, poi parte l'avvio
               setDeckLaunching(true);
               setVsChosenEnemyArmy(choice.enemyArmy ?? null);
+              // Modalità a più posti: le IA sono scelte subito; il primo avversario è il lato
+              // enemy della distribuzione del duello.
+              let multiSeatEnemy = null;
               if (choice.matchMode === MULTI_SEAT_KINDS.TEAM || choice.matchMode === MULTI_SEAT_KINDS.KOTH) {
-                multiSeat.arm({
+                multiSeatEnemy = multiSeat.arm({
                   kind: choice.matchMode,
                   teammatePreset: choice.teammatePreset,
                   players: choice.players,
                   difficulty: choice.difficulty,
                   fieldMode: choice.mode,
+                  humanArmy: selectedArmy,
                 });
               } else {
                 multiSeat.cancel();
@@ -4962,8 +4999,8 @@ export default function SatzeGame() {
                 choice.mode,
                 choice.difficulty,
                 ALL_BATTLEFIELDS,
-                choice.enemyArmy ?? null,
-                null,
+                multiSeatEnemy?.enemyArmy ?? choice.enemyArmy ?? null,
+                multiSeatEnemy?.enemyDeckKey ?? null,
                 null,
                 { eminenceFormat: choice.eminenceFormat }
               );
@@ -5309,7 +5346,7 @@ export default function SatzeGame() {
     // Non coprire l'ultima animazione di passaggio (iris DeckConfirm → fadeOut/hold)
     const launchHandoffBusy = Boolean(pendingGameLaunch?.sessionId) || Boolean(launchVisualPhase);
     // Schermata VS (IA e multiplayer; la campagna tiene il suo caricamento).
-    const duelVersus = buildDuelVersusData({
+    const duelVersusBase = buildDuelVersusData({
       gameMode,
       isOnline: isOnlinePvP,
       difficulty: aiDifficulty,
@@ -5324,6 +5361,10 @@ export default function SatzeGame() {
       peerDeck: onlinePeerDeck,
       eminenceMatchState,
     });
+    // Modalità a più posti: compagno e altri avversari accanto ai due mazzi principali.
+    const duelVersus = duelVersusBase && multiSeat.versus
+      ? { ...duelVersusBase, playerAllies: multiSeat.versus.playerAllies, enemyAllies: multiSeat.versus.enemyAllies }
+      : duelVersusBase;
     return (
       screen('duelLoading', false, <DuelLoadingOverlay
         battlefields={battlefields}
@@ -5453,7 +5494,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -5656,7 +5697,7 @@ export default function SatzeGame() {
               <RuneTitle text="Anteprima" />
             )}
           </div>
-          {isMultiSeat && multiSeatLeftTab === 'table' && !hoveredCard && (
+          {isMultiSeat && multiSeatLeftTab === 'table' && (
             <div
               className="satze-hide-scrollbar"
               style={{ position: 'absolute', inset: '52px 12px 12px 12px', zIndex: 6, background: 'rgba(8, 11, 22, 0.96)', display: 'flex', flexDirection: 'column' }}
@@ -5671,6 +5712,9 @@ export default function SatzeGame() {
                   multiSeat.submitPlan(selectedFocus);
                 }}
                 onClaim={multiSeat.decideClaim}
+                boardVariant={teamBoardVariant}
+                boardVariants={teamBoardLayouts.layouts}
+                onBoardVariant={setTeamBoardVariant}
               />
             </div>
           )}
@@ -5964,10 +6008,10 @@ export default function SatzeGame() {
 
           {/* Lista Campi di Battaglia - 5 righe (10 nel 2v2) */}
           <div 
-            className={`grid grid-cols-1 gap-0.5 flex-1 min-h-0 ${battlefields.length > 5 ? 'imp-fields-dense' : 'grid-rows-5'} ${
+            className={`grid grid-cols-1 gap-0.5 flex-1 min-h-0 ${battlefields.length > 5 ? 'imp-fields-scroll' : 'grid-rows-5'} ${
               gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
             }`}
-            style={battlefields.length > 5 ? { gridTemplateRows: `repeat(${battlefields.length}, minmax(0, 1fr))` } : undefined}
+            style={battlefields.length > 5 ? { gridTemplateRows: `repeat(${battlefields.length}, var(--imp-field-row, 52px))` } : undefined}
           >
             {battlefields.map((field, idx) => {
               const canSelectField = canSelectBattlefield({
@@ -6120,13 +6164,55 @@ export default function SatzeGame() {
         />
       )}
 
+      {/* 2v2: le quattro carte prima dei duelli (versione di prova scelta nel Tavolo) */}
+      {multiSeatView?.board && (
+        <TeamDuelBoard
+          board={multiSeatView.board}
+          layout={teamBoardLayouts.active}
+          layoutId={teamBoardVariant}
+          humanCard={selectedAgent}
+          humanFieldIndex={currentFieldIndex}
+          battlefields={battlefields}
+          opponentOf={multiSeatOpponentOf}
+          pairIndex={teamBoardPair}
+          onPairIndex={setTeamBoardPair}
+          onHumanCardClick={multiSeat.acceptsHumanDeploy ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+          onHover={(card) => handlePlayerPreviewClick({ agent: card, isPlayer: true })}
+          cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
+          playerColor={playerIdentityColor}
+          enemyColor={enemyIdentityColor}
+        />
+      )}
+
+      {/* Modalità a più posti: tasti per guardare le altre mani (solo lettura) */}
+      {isMultiSeat && multiSeat.handSeats.enemy.length > 1 && (
+        <button
+          type="button"
+          className="msp-hand-toggle msp-hand-toggle--enemy"
+          title="Mostra la mano di un altro giocatore"
+          onClick={() => setMultiSeatHandView((v) => ({ ...v, enemy: (v.enemy + 1) % multiSeat.handSeats.enemy.length }))}
+        >
+          <span aria-hidden>⇄</span> {multiSeatHandView.enemy === 0 ? 'Altre mani' : `${multiSeatHandView.enemy + 1}/${multiSeat.handSeats.enemy.length}`}
+        </button>
+      )}
+      {isMultiSeat && multiSeat.handSeats.player.length > 1 && (
+        <button
+          type="button"
+          className="msp-hand-toggle msp-hand-toggle--player"
+          title="Mostra la mano del compagno"
+          onClick={() => setMultiSeatHandView((v) => ({ ...v, player: (v.player + 1) % multiSeat.handSeats.player.length }))}
+        >
+          <span aria-hidden>⇄</span> {multiSeatHandView.player === 0 ? 'Mano compagno' : 'Torna alla tua'}
+        </button>
+      )}
+
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
       <div className="imp-hand imp-hand-enemy">
       <Hand
-        hand={enemyHand}
-        usedCards={enemyUsedCards}
+        hand={enemyHandOverride ? enemyHandOverride.hand : enemyHand}
+        usedCards={enemyHandOverride ? enemyHandOverride.usedCards : enemyUsedCards}
         fragmentCardIds={eminenceChoiceView.opponent?.persistent?.fragmentCardIds || []}
         preyCardIds={[
           ...preyFlight.visibleHandPreyIds(eminenceChoiceView.self?.persistent?.preyCardIds || []),
@@ -6134,16 +6220,16 @@ export default function SatzeGame() {
         ]}
         arrivingPreyId={preyFlight.preyLandId}
         highlightedAgentId={highlightIdForHand('enemy') ?? (revealEnemyHandForPrey ? emDraftParams?.preyCardId ?? null : null)}
-        selectedAgent={enemyAgent}
+        selectedAgent={enemyHandOverride ? null : enemyAgent}
         onPreviewClick={handleEnemyPreviewClick}
-        battleOutcomes={cardBattleOutcomes}
+        battleOutcomes={enemyHandOverride ? enemyHandOverride.outcomes : cardBattleOutcomes}
         battleOutcomeSide="enemy"
         cardPositions={iaCardPositions}
         position="top-left"
-        label={mpEnemyHandLabel}
+        label={enemyHandOverride ? enemyHandOverride.name : mpEnemyHandLabel}
         gamePhase={gamePhase}
         disabled={true}
-        armyBonuses={enemyArmyBonuses}
+        armyBonuses={enemyHandOverride ? enemyHandOverride.armyBonuses : enemyArmyBonuses}
         isBonusTriggerSatisfied={isBonusTriggerSatisfied}
         isActive={!eminenceBlocksMatch && (gamePhase === 'selectField' && !isPlayerFirst || (gamePhase === 'selectAgent' && !isPlayerFirst && !enemyAgent))}
         handCardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout}
@@ -6163,27 +6249,27 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <div className="imp-hand imp-hand-player">
       <Hand
-        hand={playerHand}
-        usedCards={playerUsedCards}
+        hand={playerHandOverride ? playerHandOverride.hand : playerHand}
+        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
         fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
         arrivingPreyId={preyFlight.preyLandId}
-        selectedAgent={selectedAgent}
+        selectedAgent={playerHandOverride ? null : selectedAgent}
         hideSelected
-        onAgentSelect={handleAgentSelect}
+        onAgentSelect={playerHandOverride ? undefined : handleAgentSelect}
         onPreviewClick={handlePlayerPreviewClick}
-        battleOutcomes={cardBattleOutcomes}
+        battleOutcomes={playerHandOverride ? playerHandOverride.outcomes : cardBattleOutcomes}
         battleOutcomeSide="player"
         cardPositions={playerCardPositions}
         position="bottom-right"
-        label={mpSelfHandLabel}
+        label={playerHandOverride ? playerHandOverride.name : mpSelfHandLabel}
         gamePhase={gamePhase}
-        disabled={eminenceBlocksMatch || gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent)}
-        onDragStart={handleDragStart}
+        disabled={Boolean(playerHandOverride) || eminenceBlocksMatch || gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent)}
+        onDragStart={playerHandOverride ? undefined : handleDragStart}
         draggingCard={draggingCard}
         isPlayerFirst={isPlayerFirst}
         enemyAgent={enemyAgent}
-        armyBonuses={playerArmyBonuses}
+        armyBonuses={playerHandOverride ? playerHandOverride.armyBonuses : playerArmyBonuses}
         isBonusTriggerSatisfied={isBonusTriggerSatisfied}
         selectedCardRef={selectedCardInHandRef}
         isActive={!eminenceBlocksMatch && (gamePhase === 'selectField' && isPlayerFirst || (gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent)))}
@@ -6411,6 +6497,7 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
+        confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI}
         isOnlinePvP={isOnlinePvP}
@@ -6635,7 +6722,7 @@ export default function SatzeGame() {
           </div>
         )}
         {gamePhase === 'selectAgent' && !enemyAgent && (
-          <div className="text-slate-500 text-sm text-center">In attesa...</div>
+          <div className="text-slate-500 text-sm text-center imp-wait-hint">In attesa...</div>
         )}
         <EntryPrecapture items={enemyEntryPrecaptureItems} enabled={enemyEntryPrecaptureOn} />
         {/* Risultato duello: fasi VA/FC/danno = src/components/battle/DuelResultDuelBodies.jsx (stesso del VFX Lab) */}
