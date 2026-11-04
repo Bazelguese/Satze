@@ -55,7 +55,7 @@ function pickCard(army, index) {
 function buildBoard(scenario) {
   const [human, mate, foe1, foe2] = ARMIES;
   const cards = { A1: pickCard(human, 3), A2: pickCard(mate, 5), B1: pickCard(foe1, 4), B2: pickCard(foe2, 6) };
-  const names = { A1: 'Tu', A2: `Stratega · ${mate}`, B1: foe1, B2: foe2 };
+  const names = { A1: 'Tu', A2: 'PNG Stratega', B1: 'PNG Calcolatore 1', B2: 'PNG Calcolatore 2' };
   const fields = { A1: 0, A2: 1, B1: 2, B2: 3 };
   // Per ogni scenario: chi ha la carta in campo, chi è una proposta, chi mostra il Campo.
   const plans = {

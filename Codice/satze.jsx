@@ -1560,6 +1560,32 @@ export default function SatzeGame() {
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  // Lista dei Campi scorrevole (più di 5 Campi): quanti ne restano sotto, per l'indicatore.
+  const fieldsScrollRef = useRef(null);
+  const [fieldsBelow, setFieldsBelow] = useState(0);
+  // Cambio di mano nei triangoli: animazione via Web Animations sui figli del triangolo, così
+  // non sostituisce le animazioni CSS d'ingresso/respiro/uscita delle mani (riprendono da sole).
+  const playerHandWrapRef = useRef(null);
+  const enemyHandWrapRef = useRef(null);
+  const prevHandViewRef = useRef({ player: 0, enemy: 0 });
+  useEffect(() => {
+    const prev = prevHandViewRef.current;
+    prevHandViewRef.current = multiSeatHandView;
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const play = (el, origin) => {
+      if (!el) return;
+      for (const child of Array.from(el.children)) {
+        child.animate?.([
+          { opacity: 0, transform: 'scale(0.82)', filter: 'brightness(1.9) saturate(1.4)', transformOrigin: origin },
+          { opacity: 1, filter: 'brightness(1.3) saturate(1.2)', offset: 0.55, transformOrigin: origin },
+          { opacity: 1, transform: 'none', filter: 'none', transformOrigin: origin },
+        ], { duration: 600, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.1)' });
+      }
+    };
+    if (prev.player !== multiSeatHandView.player) play(playerHandWrapRef.current, 'bottom right');
+    if (prev.enemy !== multiSeatHandView.enemy) play(enemyHandWrapRef.current, 'top left');
+  }, [multiSeatHandView]);
   // 2v2: versione di prova del tavolo a quattro carte e coppia mostrata in «alternanza».
   // Versioni del tavolo (modificabili in Strumenti dev → TAVOLO 2V2 LAB).
   const teamBoardLayouts = useBoardLayouts();
@@ -4445,10 +4471,18 @@ export default function SatzeGame() {
       setEnemyAgent(eAgent);
       setGamePhase('selectAgent');
       if (multiSeatStageTimerRef.current) clearTimeout(multiSeatStageTimerRef.current);
+      // Come nel duello normale: lo scontro parte solo a ingresso finito (posa degli Agenti e
+      // ingresso d'armata di entrambi i lati) più il secondo di scelta FC. Una nuova proiezione
+      // (resetForProjection) cambia la generazione e annulla l'attesa.
+      const generation = aiThinkGenerationRef.current;
       multiSeatStageTimerRef.current = setTimeout(() => {
         multiSeatStageTimerRef.current = null;
-        presentPrecomputedBattle(result);
-      }, scaleDuelMs(1400));
+        void (async () => {
+          const ok = await holdClashForEnemyDeployRef.current('afterAnimation');
+          if (!ok || generation !== aiThinkGenerationRef.current) return;
+          presentPrecomputedBattle(result);
+        })();
+      }, 0);
     },
     showGameOver: (result) => {
       setGameResult(result);
@@ -4461,6 +4495,24 @@ export default function SatzeGame() {
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
   const multiSeatThreshold = isMultiSeat && multiSeatView?.threshold ? multiSeatView.threshold : null;
+  // Anello centrale durante il ragionamento delle IA nelle modalità a più posti.
+  const multiSeatStatus = (() => {
+    const v = multiSeatView;
+    if (!isMultiSeat || !v || v.stage === 'presenting' || v.stage === 'over') return null;
+    const thinkingIds = Object.entries(v.thinkingSeats || {}).filter(([, st]) => st.status === 'thinking').map(([id]) => id);
+    const names = thinkingIds.map((id) => multiSeatSeatName(id)).filter(Boolean).join(' e ');
+    const task = thinkingIds.length ? v.thinkingSeats[thinkingIds[0]].task : '';
+    if (v.revealing) {
+      return { side: 'enemy', turnLabel: 'Rivelazione', kicker: 'Rivelazione', name: 'Piani scoperti', desc: 'Disposizione e investimenti' };
+    }
+    if (v.pendingConfirm) {
+      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName('A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
+    }
+    if (v.stage === 'aiTurn' && thinkingIds.length) {
+      return { side: 'enemy', turnLabel: 'Turno avversario', name: thinkingIds.length > 1 ? 'Ragionano' : 'Ragiona', desc: names, wait: 'Gli avversari stanno pensando…' };
+    }
+    return null;
+  })();
   // Piano del 2v2 quando risponde la tua squadra: sotto ogni carta, l'avversario del suo fronte.
   const multiSeatOpponentOf = {};
   if (multiSeatView?.fronts && multiSeatView.openingTeam === 'B') {
@@ -4475,6 +4527,37 @@ export default function SatzeGame() {
   const playerHandOverride = isMultiSeat && multiSeatHandView.player > 0
     ? multiSeat.handViewFor(multiSeat.handSeats.player[multiSeatHandView.player], 'player')
     : null;
+  // Campi scelti in questo turno del 2v2 (anche la proposta del compagno), per la lista dei Campi.
+  const multiSeatFieldClaims = {};
+  if (isMultiSeat && multiSeatView?.board) {
+    const b = multiSeatView.board;
+    const add = (idx, claim) => {
+      if (!Number.isInteger(idx)) return;
+      (multiSeatFieldClaims[idx] ||= []).push(claim);
+    };
+    for (const e of b.player) {
+      const idx = e.isHuman ? (e.fieldIndex ?? (b.openingTeam === 'A' ? currentFieldIndex : null)) : e.fieldIndex;
+      add(idx, { key: e.seatId, side: 'ally', label: e.isHuman ? 'Tu' : e.name, tentative: !e.locked && !e.isHuman });
+    }
+    for (const e of b.enemy) add(e.fieldIndex, { key: e.seatId, side: 'foe', label: e.name, tentative: !e.locked });
+  }
+  const fieldsScrollable = battlefields.length > 5;
+  const updateFieldsScrollHint = useCallback(() => {
+    const el = fieldsScrollRef.current;
+    if (!el) return;
+    const rowH = el.firstElementChild?.getBoundingClientRect().height || 52;
+    const hiddenPx = el.scrollHeight - el.clientHeight - el.scrollTop;
+    setFieldsBelow(hiddenPx > 4 ? Math.max(1, Math.round(hiddenPx / (rowH + 2))) : 0);
+  }, []);
+  useEffect(() => {
+    if (!fieldsScrollable) { setFieldsBelow(0); return undefined; }
+    updateFieldsScrollHint();
+    const el = fieldsScrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(updateFieldsScrollHint);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fieldsScrollable, battlefields.length, gamePhase, updateFieldsScrollHint]);
   const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
   const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
@@ -5364,7 +5447,14 @@ export default function SatzeGame() {
     });
     // Modalità a più posti: compagno e altri avversari accanto ai due mazzi principali.
     const duelVersus = duelVersusBase && multiSeat.versus
-      ? { ...duelVersusBase, playerAllies: multiSeat.versus.playerAllies, enemyAllies: multiSeat.versus.enemyAllies }
+      ? {
+          ...duelVersusBase,
+          enemyIdentity: multiSeat.versus.enemyName
+            ? { ...duelVersusBase.enemyIdentity, name: multiSeat.versus.enemyName, sub: duelEnemyArmy || duelVersusBase.enemyIdentity?.sub }
+            : duelVersusBase.enemyIdentity,
+          playerAllies: multiSeat.versus.playerAllies,
+          enemyAllies: multiSeat.versus.enemyAllies,
+        }
       : duelVersusBase;
     return (
       screen('duelLoading', false, <DuelLoadingOverlay
@@ -5495,7 +5585,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -5650,7 +5740,7 @@ export default function SatzeGame() {
             coinsShown={focusLaunch.landed.player}
             duelVfx={duelVfx}
             accentColor={playerIdentityColor}
-            kicker={isOnlinePvP ? mpSelfLabel : 'Tu'}
+            kicker={isOnlinePvP || isMultiSeat ? mpSelfLabel : 'Tu'}
           />
           {/* Passi del duello: riquadro con fonte e stato, fasci verso il bersaglio */}
           <DuelStepFx battleResult={battleResult} duelPhase={duelPhase} duelEffectStep={visualEffectStep} />
@@ -5706,18 +5796,15 @@ export default function SatzeGame() {
               <MultiSeatPanel
                 view={multiSeatView}
                 ownFocus={selectedFocus}
-                onPairing={multiSeat.setPlanPairing}
-                onSubmit={() => {
-                  if (!multiSeat.acceptsHumanConfirm) return;
-                  playGame(GAME_SOUND.LOCK_IN);
-                  multiSeat.submitPlan(selectedFocus);
-                }}
+                onPairing={(pairing) => { playUiClick(); multiSeat.setPlanPairing(pairing); }}
                 onClaim={multiSeat.decideClaim}
                 ownFieldIndex={currentFieldIndex}
                 onAdvise={(kind, value) => { playUiClick(); multiSeat.advise(kind, value); }}
                 onHoverField={setHoveredField}
                 boardVariant={teamBoardVariant}
                 boardVariants={teamBoardLayouts.layouts}
+                allyColor={playerIdentityColor}
+                foeColor={enemyIdentityColor}
                 onBoardVariant={setTeamBoardVariant}
               />
             </div>
@@ -6011,7 +6098,10 @@ export default function SatzeGame() {
           </div>
 
           {/* Lista Campi di Battaglia - 5 righe (10 nel 2v2) */}
+          <div className="imp-fields-wrap">
           <div 
+            ref={fieldsScrollRef}
+            onScroll={fieldsScrollable ? updateFieldsScrollHint : undefined}
             className={`grid grid-cols-1 gap-0.5 flex-1 min-h-0 ${battlefields.length > 5 ? 'imp-fields-scroll' : 'grid-rows-5'} ${
               gamePhase === 'result' ? 'animate-fade-out-panels pointer-events-none' : ''
             }`}
@@ -6076,9 +6166,33 @@ export default function SatzeGame() {
                     curseAccent={slotCurseAccent}
                     curseArriving={preyFlight.arrivingSlot === idx}
                   />
+                  {multiSeatFieldClaims[idx] && !(idx in conqueredFields) ? (
+                    <div className="imp-field-claims">
+                      {multiSeatFieldClaims[idx].map((c) => (
+                        <span
+                          key={c.key}
+                          className={`imp-field-claim is-${c.side}${c.tentative ? ' is-tentative' : ''}`}
+                          style={{ '--claim': c.side === 'ally' ? playerIdentityColor : enemyIdentityColor }}
+                          title={c.tentative ? `${c.label} (proposta)` : c.label}
+                        >
+                          {c.label}{c.tentative ? '?' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
+          </div>
+          {fieldsScrollable && fieldsBelow > 0 ? (
+            <button
+              type="button"
+              className="imp-fields-more"
+              onClick={() => fieldsScrollRef.current?.scrollBy({ top: fieldsScrollRef.current.clientHeight * 0.8, behavior: 'smooth' })}
+            >
+              ▼ {fieldsBelow === 1 ? 'Altro Campo' : `Altri ${fieldsBelow} Campi`}
+            </button>
+          ) : null}
           </div>
         </div>
         
@@ -6189,7 +6303,7 @@ export default function SatzeGame() {
       )}
 
       {/* Modalità a più posti: tasti per guardare le altre mani (solo lettura) */}
-      {isMultiSeat && multiSeat.handSeats.enemy.length > 1 && (
+      {isMultiSeat && gamePhase !== 'result' && multiSeat.handSeats.enemy.length > 1 && (
         <button
           type="button"
           className="msp-hand-toggle msp-hand-toggle--enemy"
@@ -6199,7 +6313,7 @@ export default function SatzeGame() {
           <span aria-hidden>⇄</span> {multiSeatHandView.enemy === 0 ? 'Altre mani' : `${multiSeatHandView.enemy + 1}/${multiSeat.handSeats.enemy.length}`}
         </button>
       )}
-      {isMultiSeat && multiSeat.handSeats.player.length > 1 && (
+      {isMultiSeat && gamePhase !== 'result' && multiSeat.handSeats.player.length > 1 && (
         <button
           type="button"
           className="msp-hand-toggle msp-hand-toggle--player"
@@ -6213,7 +6327,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO IA - Alto Sinistra */}
       {/* ============================================ */}
-      <div className="imp-hand imp-hand-enemy">
+      <div className="imp-hand imp-hand-enemy" ref={enemyHandWrapRef}>
       <Hand
         hand={enemyHandOverride ? enemyHandOverride.hand : enemyHand}
         usedCards={enemyHandOverride ? enemyHandOverride.usedCards : enemyUsedCards}
@@ -6240,9 +6354,9 @@ export default function SatzeGame() {
         hideCards={shouldHideHandsForGuidedSetup}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
-        zoneArmy={shuffleDealSetup?.enemyArmy}
-        zoneColorHand={enemyDeckVisual?.deckCards}
-        zoneArmies={enemyDeckVisual?.armies}
+        zoneArmy={enemyHandOverride ? enemyHandOverride.army : shuffleDealSetup?.enemyArmy}
+        zoneColorHand={enemyHandOverride ? enemyHandOverride.hand : enemyDeckVisual?.deckCards}
+        zoneArmies={enemyHandOverride ? [enemyHandOverride.army] : enemyDeckVisual?.armies}
         elevateCards={revealEnemyHandForPrey}
         resolveEffectiveAbility={resolveEffectiveAbility}
       />
@@ -6251,7 +6365,7 @@ export default function SatzeGame() {
       {/* ============================================ */}
       {/* TRIANGOLO MANO PLAYER - Basso Destra */}
       {/* ============================================ */}
-      <div className="imp-hand imp-hand-player">
+      <div className="imp-hand imp-hand-player" ref={playerHandWrapRef}>
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
         usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
@@ -6290,9 +6404,9 @@ export default function SatzeGame() {
           : (isGuidedIntroCardPickPhase ? guidedIntroTargetCardId : highlightIdForHand('player'))}
         guidedBackgroundGlow={isGuidedIntroHandsPhase}
         showZoneShell={isShuffleDealPhase}
-        zoneArmy={shuffleDealSetup?.playerArmy}
-        zoneColorHand={playerDeckVisual?.deckCards}
-        zoneArmies={playerDeckVisual?.armies}
+        zoneArmy={playerHandOverride ? playerHandOverride.army : shuffleDealSetup?.playerArmy}
+        zoneColorHand={playerHandOverride ? playerHandOverride.hand : playerDeckVisual?.deckCards}
+        zoneArmies={playerHandOverride ? [playerHandOverride.army] : playerDeckVisual?.armies}
         resolveEffectiveAbility={resolveEffectiveAbility}
       />
       </div>
@@ -6495,7 +6609,9 @@ export default function SatzeGame() {
       {/* Campo di Battaglia - Centro */}
       <BattlefieldPanel
         portalFrame
-        turn={turnInfo}
+        turn={multiSeatStatus
+          ? { side: multiSeatStatus.side, label: multiSeatStatus.turnLabel, color: multiSeatStatus.side === 'player' ? playerIdentityColor : enemyIdentityColor }
+          : turnInfo}
         duelTint={portalDuelTint}
         outcomeColor={gameResult?.winner === 'player' ? playerIdentityColor : gameResult?.winner === 'enemy' ? enemyIdentityColor : null}
         commandPhase={forcedEminenceView}
@@ -6509,9 +6625,11 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
-        confirmLabel={isMultiSeat && multiSeat.stage === 'planning' ? 'Conferma piano' : undefined}
+        sideNames={isMultiSeat ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
-        awaitingEnemySelection={playerConfirmedAwaitingAI}
+        awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}
+        waitLabel={multiSeatStatus?.wait || null}
+        statusStep={multiSeatStatus}
         isOnlinePvP={isOnlinePvP}
         duelPhase={duelPhase}
         battleResult={battleResult}

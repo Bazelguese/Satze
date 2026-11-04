@@ -569,6 +569,12 @@ export const BattlefieldPanel = ({
   confirmDisabled = false,
   /** Etichetta del pulsante di conferma (es. «Conferma piano» nel 2v2). */
   confirmLabel = null,
+  /** Testo dell'arco di attesa (es. «Il compagno sta decidendo…»). */
+  waitLabel = null,
+  /** Stato da mostrare nel portale senza chiamare il giocatore: { kicker, name, desc }. */
+  statusStep = null,
+  /** Nomi dei due lati nel riepilogo (modalità a più posti: chi combatte davvero). */
+  sideNames = null,
   awaitingEnemySelection = false,
   /** true = testi "avversario" invece di "IA" (multiplayer online) */
   isOnlinePvP = false,
@@ -617,7 +623,7 @@ export const BattlefieldPanel = ({
   const oppWait = isOnlinePvP
     ? "L'avversario sta scegliendo il campo di battaglia"
     : 'Il nemico sta scegliendo il campo di battaglia';
-  const oppThink = isOnlinePvP ? "In attesa dell'avversario..." : 'Il nemico sta pensando...';
+  const oppThink = waitLabel || (isOnlinePvP ? "In attesa dell'avversario..." : 'Il nemico sta pensando...');
   // Il pannello deve essere sempre visibile, anche quando non c'è un campo selezionato
   // (ad esempio durante la fase selectField)
   const isDuelPhase = gamePhase === 'result' && battleResult;
@@ -633,6 +639,9 @@ export const BattlefieldPanel = ({
     : null;
   if (roundStep && duelEsito && gamePhase === 'result') {
     roundStep = { ...roundStep, key: 'esito', kicker: 'Esito', name: duelEsito.title, desc: duelEsito.desc };
+  }
+  if (portalFrame && statusStep && !decision && !(gamePhase === 'result' && battleResult)) {
+    roundStep = { ...(roundStep || { progress: 0.1 }), key: `status-${statusStep.name}`, kicker: undefined, name: statusStep.name, desc: statusStep.desc };
   }
   if (portalFrame && decision) {
     roundStep = { ...(roundStep || { progress: 0.1 }), key: `decide-${decision.name}`, kicker: decision.kicker, name: decision.name, desc: decision.desc };
@@ -829,7 +838,7 @@ export const BattlefieldPanel = ({
     ].filter(Boolean);
     return (
       <div className="satze-recap-col">
-        <div className="satze-recap-side">{e ? (isOnlinePvP ? 'Avversario' : 'IA') : 'Tu'}</div>
+        <div className="satze-recap-side">{e ? (sideNames?.enemy || (isOnlinePvP ? 'Avversario' : 'IA')) : (sideNames?.player || 'Tu')}</div>
         {rows.map((row) => (
           <div key={row.k} className={`satze-recap-row${row.strong ? ' is-strong' : ''}`}>
             <span className="satze-recap-k">{row.k}</span>

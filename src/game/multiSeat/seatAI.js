@@ -68,6 +68,23 @@ export const SEAT_AI_PROFILES = {
 /** Preset proposti per il compagno IA nel 2v2. */
 export const TEAMMATE_PRESET_IDS = ['equilibrato', 'aggressivo', 'prudente', 'calcolatore'];
 
+/**
+ * Nomi segnaposto dei posti IA: «PNG» + archetipo di personalità. Se più posti della stessa
+ * partita hanno lo stesso archetipo, tutti quelli ripetuti prendono un numero (PNG Stratega 1, 2…).
+ * @param {string[]} profileIds - un id di profilo per posto IA, nell'ordine dei posti
+ */
+export function npcSeatNames(profileIds) {
+  const bases = profileIds.map((id) => `PNG ${getSeatAIProfile(id).name}`);
+  const total = {};
+  for (const n of bases) total[n] = (total[n] || 0) + 1;
+  const seen = {};
+  return bases.map((n) => {
+    if (total[n] === 1) return n;
+    seen[n] = (seen[n] || 0) + 1;
+    return `${n} ${seen[n]}`;
+  });
+}
+
 export function getSeatAIProfile(id) {
   return SEAT_AI_PROFILES[id] || SEAT_AI_PROFILES.equilibrato;
 }

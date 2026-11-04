@@ -56,10 +56,11 @@ export const DEFAULT_TEAM_BOARD_LAYOUTS = {
     name: 'Ventaglio',
     mode: 'all',
     slots: {
-      enemyMate: slot(488, 356, { r: -9, z: 1, dim: 0.62, front: true, tagX: -70, tagY: -26, tagAlign: 'left' }),
+      // Il nome del secondo avversario e del compagno sta centrato sopra la loro carta.
+      enemyMate: slot(488, 356, { r: -9, z: 1, dim: 0.62, front: true, tagY: -24 }),
       enemyMain: slot(588, 390),
       playerMain: slot(1106, 390),
-      playerMate: slot(1206, 356, { r: 9, z: 1, dim: 0.62, front: true, tagX: 60, tagY: -26, tagAlign: 'right' }),
+      playerMate: slot(1206, 356, { r: 9, z: 1, dim: 0.62, front: true, tagY: -24 }),
     },
   },
   alternanza: {
