@@ -1,7 +1,7 @@
 // Layout alternativo P4 (Rework Carte) — galleria + Style Lab.
 // POT stat (potenza): giallo; etichette ★ POTERE / ✠ BONUS: arancio/cielo; box evidenziazione duello solo con highlight*.
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARMY_COLORS, ARMY_BONUSES } from '../../data';
 import { leagueTierColorHex } from '../../data/leagueColors';
 import { getCardSprite } from '../../utils';
@@ -792,7 +792,10 @@ export const CardReworkP4 = React.memo(function CardReworkP4({
   const containerLeft = positioning.containerLeft;
   const containerTop = positioning.containerTop;
 
-  const gradId = `p4-rg-${agent.id}`;
+  // Id unico per copia montata, non per carta: la stessa carta può stare anche in una
+  // schermata in cache (display: none, prima nel DOM) e url(#id) prenderebbe quella copia,
+  // che non si disegna: la fascia resterebbe vuota. useId è stabile, nessun render in più.
+  const gradId = `p4-rg-${useId().replace(/:/g, '')}`;
 
   const { topR, botR } = useMemo(() => {
     const rand = makeRng(hashNameToSeed(`${agent.id}::${agent.name}`));
