@@ -1033,7 +1033,7 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 .cine-lose .cine-portal-rune { animation: cine-rune-dim 5s ease-in forwards; }
 @keyframes cine-rune-dim { 0%, 40% { opacity: 1; } 100% { opacity: .15; } }
 
-/* testi: il carattere resta quello del gioco (Cinzel per i titoli grandi) */
+/* testi: Chakra Petch grassetto corsivo maiuscolo, come le schermate Persona */
 .cine-kicker {
   font-size: 18px;
   font-weight: 800;
@@ -1064,8 +1064,10 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   left: 50%;
   top: 50%;
   transform: translate(-50%, -52%);
-  font-family: 'Cinzel', Georgia, serif;
-  font-weight: 900;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  font-weight: 700;
   font-size: 250px;
   line-height: 1;
   color: transparent;
@@ -1091,9 +1093,11 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   animation: cine-pop .35s ease-out .85s forwards, cine-fade .3s ease-in 2.75s forwards;
 }
 .cine-r5-lead {
-  font-family: 'Cinzel', Georgia, serif;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
   font-size: 52px;
-  font-weight: 900;
+  font-weight: 700;
   color: #f2f5fa;
   text-shadow: 0 0 24px color-mix(in srgb, var(--c) 50%, transparent), 0 4px 0 rgba(0, 0, 0, .55);
 }
@@ -1112,9 +1116,12 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 @keyframes cine-rule { to { width: 560px; } }
 .cine-r5-title {
   margin: 14px 0 4px;
-  font-family: 'Cinzel', Georgia, serif;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
   font-size: 108px;
-  font-weight: 900;
+  font-weight: 700;
+  letter-spacing: .01em;
   line-height: 1;
   color: #f4f7fc;
   text-shadow: 0 0 36px color-mix(in srgb, var(--c) 60%, transparent), 0 6px 0 rgba(0, 0, 0, .6);
@@ -1152,16 +1159,18 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
 .cine-lose .cine-outcome { animation: cine-sink 1.2s ease-in 3.9s forwards; }
 @keyframes cine-sink { to { opacity: 0; transform: translateY(40px); filter: blur(4px); } }
 .cine-word {
-  font-family: 'Cinzel', Georgia, serif;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
   font-size: 124px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: .06em;
+  letter-spacing: .01em;
   color: #f6f8fc;
   text-shadow: 0 0 40px color-mix(in srgb, var(--c) 65%, transparent), 0 0 4px color-mix(in srgb, var(--c) 50%, #fff), 0 8px 0 rgba(0, 0, 0, .55);
 }
 .cine-lose .cine-word {
-  letter-spacing: .16em;
+  letter-spacing: .08em;
   color: rgba(222, 228, 238, .86);
   text-shadow: 0 0 30px color-mix(in srgb, var(--c) 45%, transparent), 0 6px 0 rgba(0, 0, 0, .6);
 }

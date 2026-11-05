@@ -9,7 +9,7 @@ L'app React usa **tre famiglie**. La mappa della campagna (pagina a parte, apert
 | Famiglia | Ruolo | Pesi caricati | Token / costanti |
 |---|---|---|---|
 | **Chakra Petch** | UI principale: testi, bottoni, pannelli, HUD del duello, popup | 300, 400, 500, 600, 700 | `--font-ui`, `HUD_ORATORIO_FONT_UI`, `CAMPAIGN_FONTS.ui`, Tailwind `font-ui` |
-| **Cinzel** | Titoli display: stendardi del menu, overlay cinematici, VS, campagna | 400–900 (variabile) | `--font-display`, `HUD_ORATORIO_FONT_DISPLAY`, Tailwind `font-display` |
+| **Cinzel** | Titoli display: voci del menu principale, nomi su scatole dei mazzi, nomi delle Eminenze negli annunci, campagna | 400–900 (variabile) | `--font-display`, `HUD_ORATORIO_FONT_DISPLAY`, Tailwind `font-display` |
 | **Share Tech Mono** | Numeri, etichette tecniche, contatori, codici | 400 | `--font-mono`, `CAMPAIGN_FONTS.mono`, Tailwind `font-techmono` |
 
 ## 1. Come vengono caricati
@@ -36,15 +36,16 @@ Font presenti in `public/fonts/` ma caricati a parte, solo nei laboratori:
 - **Eminenza**: `src/components/eminence/EminenzaZone.jsx` (costante locale `EM_UI_FONT`), `eminenceUi.js`, `src/styles/satze-eminenza.css`, `src/styles/em-announce-vetro.css`.
 - **Menu cosmic**: `src/components/menu/` (`SatzeMenuPrototype`, `MenuScreenLayout`, `OptionsScreen`, `cosmic/*`: `DifficultySelectPopup`, `DeckSelectCinematic`, `ArmySelectCinematic`, `CosmicScreenLayout`, `CosmicArmyCard`, `slabHandoff`), galleria (`menu/gallery/*`), `src/components/cosmic/*`.
 - **Campagna**: `src/components/campaign/` (Atto 1: `MissionPanel`, `EvolutionPanel`, `StartingArmySelection`, `RewardScreen`, `Rift`, `HudBar`, `MapNode`, `Edge`, `CampaignMapShell`, `EventModal`; `CampaignSaveSlots`), `src/styles/campaign/*`.
-- **Altro**: VS (`src/components/versus/*`), `Glossary.jsx`, `LoadingScreen.jsx`, schermata di caricamento iniziale in `index.html` (`#loading-initial`), `ErrorBoundary.jsx`, `FpsCounter.jsx`, tutorial, lobby multiplayer, dialoghi (`src/dialogue/satzeDialogue.*`), copertine mazzo (`deckCover.css`).
+- **VS e scritte cinematiche del duello** (dal 5 novembre 2026, grassetto corsivo maiuscolo): `src/components/versus/duelVersusScreen.css` (TU/IA, alleati del 2v2, Eminenza, armata, lettere "VS") e `src/components/versus/VersusRoulette.jsx` (sorteggio); `src/styles/satze-duello-cosmo.css` (Round 5, Vittoria, Sconfitta).
+- **Altro**: `Glossary.jsx`, `LoadingScreen.jsx`, schermata di caricamento iniziale in `index.html` (`#loading-initial`), `ErrorBoundary.jsx`, `FpsCounter.jsx`, tutorial, lobby multiplayer, dialoghi (`src/dialogue/satzeDialogue.*`), copertine mazzo (`deckCover.css`).
 
 ### Cinzel (display)
 
 Riservato ai titoli grandi e scenici:
 
 - **Menu cosmic**: stendardi e voci in `SatzeMenuPrototype.jsx` (Cinzel 900, maiuscolo), `CosmicBannerButton.jsx`, `CosmicScreenLayout.jsx`, `CosmicArmyCard.jsx`, `CosmicDeckCarousel.jsx`, `DeckSelectCinematic.jsx`, `DeckConfirmTransition.jsx`, `MenuScreenLayout.jsx`, `MenuCard.jsx`; `src/components/cosmic/DeckSelectCosmic.jsx` e `DeckPreviewCosmic.jsx`.
-- **Overlay cinematici del duello**: `src/styles/satze-duello-cosmo.css` (`.cine-word` per VITTORIA/SCONFITTA) e `src/styles/satze-duello-animazioni.css` (Round 5, vittoria, sconfitta).
-- **Schermata VS**: `src/components/versus/duelVersusScreen.css`.
+- **Vecchia animazione del Round 5**: `src/styles/satze-duello-animazioni.css` (classi `.r5`, `.win`, `.lose`). Oggi serve solo a preparare gli stili all'avvio (`WarmupStage.jsx`, `DuelLoadingOverlay.jsx`) e il giocatore non la vede: le scritte vere del Round 5, della Vittoria e della Sconfitta sono in Chakra Petch (vedi sopra).
+- **Schermata VS**: solo il titolo sulla scatola del mazzo (`deckCover.css`), uguale alla scatola delle altre schermate.
 - **Campagna**: `src/styles/campaign/campaign-scene.css`, `first-act.css`, `colors_and_type.css` e i componenti Atto 1 (`EventModal`, `RewardScreen`, `HudBar`, `EvolutionPanel`, `MissionPanel`, `StartingArmySelection`, `MapNode`, `Rift`).
 - **Altro**: `src/components/cards/CardTagBadges.jsx`, `src/components/tutorial/Tutorial.jsx`, `src/components/layout/ToolPageShell.jsx` (titoli delle pagine strumento), `src/components/deckCover/deckCover.css`, `src/components/shuffle/ShuffleStylePreview.jsx`, `src/styles/satze-eminenza.css`, `src/styles/em-announce-vetro.css`.
 
