@@ -116,11 +116,13 @@
   color: var(--accent);
 }
 .vsx-who-name {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  font-weight: 700;
   font-size: 54px;
   line-height: 1;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
   max-width: 560px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -194,10 +196,12 @@
   filter: drop-shadow(0 0 6px var(--army));
 }
 .vsx-army-name {
-  font-family: 'Cinzel', serif;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
   font-weight: 700;
   font-size: 17px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   color: var(--army);
   white-space: nowrap;
 }
@@ -251,8 +255,10 @@
 .vsx-vs-v,
 .vsx-vs-s {
   position: relative;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  font-weight: 700;
   font-size: 118px;
   line-height: 1;
   letter-spacing: -0.04em;
@@ -393,7 +399,9 @@
   color: rgba(245, 243, 235, 0.5);
 }
 .vsx-em-empty-txt {
-  font-family: 'Cinzel', serif;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
   font-weight: 700;
   font-size: 26px;
   line-height: 1.2;
@@ -458,10 +466,12 @@
 }
 .vsx-em-banner-name {
   max-width: 100%;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  font-weight: 700;
   font-size: 23px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -612,11 +622,13 @@
   z-index: 2;
 }
 .vsx-ally-name {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  font-weight: 700;
   font-size: 26px;
   line-height: 1;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
