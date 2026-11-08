@@ -199,6 +199,8 @@ function teamBoard(session) {
       seatId,
       name: seat.name,
       isHuman: seat.isHuman,
+      // Il posto di questo client (online gli umani al tavolo possono essere più d'uno).
+      isMe: seatId === meOf(session),
       card: cardId != null ? seat.hand.find((c) => c.id === cardId) || null : null,
       fieldIndex: deployed?.fieldIndex ?? proposal?.fieldIndex ?? null,
       locked: Boolean(deployed),
@@ -208,6 +210,7 @@ function teamBoard(session) {
   const foes = match.seats.filter((x) => x.team === foeTeamOf(session)).map((x) => x.id);
   return {
     openingTeam: match.openingTeam,
+    myOpening: match.openingTeam === myTeamOf(session),
     player: [entry(meOf(session)), entry(mateOf(session))],
     enemy: foes.map(entry),
   };
@@ -1358,6 +1361,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       mateReady: Boolean(session.mateReady),
       mateLine: session.mateLine || null,
       revealing: Boolean(session.revealing),
+      // Chi sei al tavolo: offline sempre A1/P1 e squadra A; online il posto del pacchetto.
+      me: meOf(session),
+      mate: session.kind === MULTI_SEAT_KINDS.TEAM ? mateOf(session) : null,
+      myTeam: session.kind === MULTI_SEAT_KINDS.TEAM ? myTeamOf(session) : null,
+      foeTeam: session.kind === MULTI_SEAT_KINDS.TEAM ? foeTeamOf(session) : null,
     };
     if (!match) return base;
     if (session.kind === MULTI_SEAT_KINDS.TEAM) {

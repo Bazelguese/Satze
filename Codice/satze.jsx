@@ -4967,7 +4967,7 @@ export default function SatzeGame() {
       return { side: 'enemy', turnLabel: 'Rivelazione', kicker: 'Rivelazione', name: 'Piani scoperti', desc: 'Disposizione e investimenti' };
     }
     if (v.pendingConfirm) {
-      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName('A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
+      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName(multiSeatView?.mate ?? 'A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
     }
     if (v.stage === 'aiTurn' && thinkingIds.length) {
       return { side: 'enemy', turnLabel: 'Turno avversario', name: thinkingIds.length > 1 ? 'Ragionano' : 'Ragiona', desc: names, wait: 'Gli avversari stanno pensando…' };
@@ -4997,8 +4997,8 @@ export default function SatzeGame() {
       (multiSeatFieldClaims[idx] ||= []).push(claim);
     };
     for (const e of b.player) {
-      const idx = e.isHuman ? (e.fieldIndex ?? (b.openingTeam === 'A' ? currentFieldIndex : null)) : e.fieldIndex;
-      add(idx, { key: e.seatId, side: 'ally', label: e.isHuman ? 'Tu' : e.name, tentative: !e.locked && !e.isHuman });
+      const idx = e.isMe ? (e.fieldIndex ?? (b.myOpening ? currentFieldIndex : null)) : e.fieldIndex;
+      add(idx, { key: e.seatId, side: 'ally', label: e.isMe ? 'Tu' : e.name, tentative: !e.locked && !e.isMe });
     }
     for (const e of b.enemy) add(e.fieldIndex, { key: e.seatId, side: 'foe', label: e.name, tentative: !e.locked });
   }
@@ -5845,12 +5845,14 @@ export default function SatzeGame() {
             members={onlineRoomMembers}
           />
           <p className="text-xs text-slate-500 text-center">
-            {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
+            {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — {isMultiMode
+              ? (multiplayerSession.role === 'host' ? 'quando tutti sono pronti, premi «Avvia partita».' : "premi Pronto: la partita la avvia l'host.")
+              : 'quando entrambi siete pronti parte la partita.'}
           </p>
           <p className="text-[10px] text-slate-600 text-center font-mono break-all">
             Server: {getMultiplayerWsUrl()}
           </p>
-          {onlinePeerDeck && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
+          {onlinePeerDeck && !isMultiMode && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
           <button
             type="button"
             onClick={handleOnlineReady}
@@ -5874,7 +5876,9 @@ export default function SatzeGame() {
               className="w-full px-8 py-3 font-bold rounded-lg disabled:opacity-40 transition-opacity"
               style={{ fontFamily: HUD_ORATORIO_FONT_UI, color: '#e2e8f0', border: `1.5px solid ${MENU_ACCENTS.magenta}`, background: 'rgba(192, 38, 211, 0.18)' }}
             >
-              {tuttiPronti ? `Avvia partita (${membriConnessi.length} giocatori + IA)` : 'Avvia partita (aspetta che tutti siano pronti)'}
+              {tuttiPronti
+                ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
+                : 'Avvia partita (aspetta che tutti siano pronti)'}
             </button>
           )}
           {isMultiMode && multiplayerSession.role !== 'host' && onlineLocalReady && (

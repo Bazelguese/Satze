@@ -68,7 +68,7 @@ function presentingLine(view) {
   const scontri = view.kind === 'teamDuel' ? view.roundResult?.fronts : view.contestResult?.fights;
   const s = scontri?.[view.presentIndex ?? 0];
   if (!s) return 'Scontro in corso: premi Continua alla fine.';
-  const human = view.kind === 'teamDuel' ? 'A1' : 'P1';
+  const human = view.me ?? (view.kind === 'teamDuel' ? 'A1' : 'P1');
   const involved = s.playerSeatId === human || s.enemySeatId === human;
   const who = `${seatName(view, s.playerSeatId)} contro ${seatName(view, s.enemySeatId)}`;
   return involved ? `Scontro: ${who}. Premi Continua alla fine.` : `Assisti: ${who}. Premi Continua alla fine.`;
@@ -76,11 +76,11 @@ function presentingLine(view) {
 
 function overLine(view) {
   const r = view.result;
-  if (view.kind !== 'teamDuel' && view.seats?.find((s) => s.id === 'P1')?.eliminated) return 'Partita conclusa: sei stato eliminato.';
+  if (view.kind !== 'teamDuel' && view.seats?.find((s) => s.id === (view.me ?? 'P1'))?.eliminated) return 'Partita conclusa: sei stato eliminato.';
   if (!r) return 'Partita conclusa.';
   if (view.kind === 'teamDuel') {
     if (r.winner === 'draw') return 'Partita conclusa: pareggio.';
-    return r.winner === 'A' ? 'Partita conclusa: vince la tua squadra!' : 'Partita conclusa: vince la squadra avversaria.';
+    return r.winner === (view.myTeam ?? 'A') ? 'Partita conclusa: vince la tua squadra!' : 'Partita conclusa: vince la squadra avversaria.';
   }
   if (!r.winners?.length) return 'Partita conclusa: nessun sopravvissuto, pareggio.';
   const names = r.winners.map((id) => seatName(view, id)).join(' e ');
@@ -139,7 +139,8 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
   const { seats, deployments, battlefields, plan, openingTeam, board } = view;
   const seat = (id) => seats.find((x) => x.id === id);
   const presenting = view.stage === 'presenting' && view.roundResult;
-  const usResponding = openingTeam === 'B';
+  const myTeam = view.myTeam ?? 'A';
+  const usResponding = openingTeam !== myTeam;
   // Risponde la tua squadra e gli avversari hanno aperto: si sceglie chi attacca chi.
   const choosing = usResponding && Boolean(view.fronts) && Boolean(plan) && ['humanDeploy', 'aiTurn'].includes(view.stage) && !view.revealing;
 
@@ -149,8 +150,8 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
   } else {
     const fieldOf = (id) => {
       if (deployments[id]?.fieldIndex != null) return deployments[id].fieldIndex;
-      if (id === 'A1') return ownFieldIndex ?? null;
-      if (id === 'A2') return board?.player?.[1]?.fieldIndex ?? null;
+      if (id === (view.me ?? 'A1')) return ownFieldIndex ?? null;
+      if (id === (view.mate ?? 'A2')) return board?.player?.[1]?.fieldIndex ?? null;
       return null;
     };
     const responderOf = (id) => (choosing
@@ -164,7 +165,7 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
     const cardId = deployments?.[id]?.cardId ?? entry?.card?.id ?? null;
     return cardId != null ? cardOf(seat(id), cardId) : null;
   };
-  const side = (id) => (seat(id)?.team === 'A' ? 'ally' : 'foe');
+  const side = (id) => (seat(id)?.team === myTeam ? 'ally' : 'foe');
   const hint = presenting
     ? null
     : usResponding
@@ -173,7 +174,7 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
 
   const extra = presenting
     ? `Disposizione ${PAIRING_LABEL[view.roundResult.pairing] || ''}`
-    : `Apre: ${openingTeam === 'A' ? 'la tua squadra' : 'gli avversari'}`;
+    : `Apre: ${openingTeam === myTeam ? 'la tua squadra' : 'gli avversari'}`;
 
   return (
     <Section title="Fronti" extra={extra}>
@@ -230,6 +231,8 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
 
 /** Consigli al compagno IA: carta (dalla sua mano), Campo (quando aprite), investimento. */
 function Advice({ view, ownFieldIndex, onAdvise }) {
+  // Online i consigli al compagno non ci sono (il compagno può essere un altro giocatore).
+  if (view.online) return null;
   const mate = view.seats.find((x) => x.id === 'A2');
   if (!mate || !onAdvise) return null;
   const deploying = view.stage === 'humanDeploy' && !view.deployments?.A2;
@@ -293,18 +296,21 @@ function Advice({ view, ownFieldIndex, onAdvise }) {
 
 function Teams({ view, ownFocus }) {
   const { seats, deployments, teams, plan, openingTeam } = view;
+  const myTeam = view.myTeam ?? 'A';
+  const me = view.me ?? 'A1';
+  const mate = view.mate ?? 'A2';
   const revealed = (view.stage === 'presenting' || view.revealing) && view.roundResult;
   const investment = (s) => {
     if (revealed) return `${view.roundResult.investments[s.id]} FC`;
-    if (s.team === 'A') {
+    if (s.team === myTeam) {
       if (!plan) return null;
-      if (s.id === 'A1') return `${ownFocus} FC`;
+      if (s.id === me) return `${ownFocus} FC`;
       return view.mateReady ? `${plan.investments[s.id]} FC` : '… FC';
     }
     return deployments[s.id] && view.stage !== 'over' ? '? FC' : null;
   };
   const team = (id, label) => (
-    <div className={`mst-team is-${id === 'A' ? 'ally' : 'foe'}`} key={id}>
+    <div className={`mst-team is-${id === myTeam ? 'ally' : 'foe'}`} key={id}>
       <div className="mst-team-head">
         <span className="mst-team-name">{label}</span>
         <span className="mst-team-role">{openingTeam === id ? 'Apertura' : 'Risposta'}</span>
@@ -319,15 +325,15 @@ function Teams({ view, ownFocus }) {
           <span className="mst-seat-name">{s.name}</span>
           <span className="mst-seat-fc">{s.focus} FC{investment(s) ? ` · ${investment(s)}` : ''}</span>
           <ThinkTag view={view} seatId={s.id} />
-          {s.id === 'A2' && view.mateLine && !view.thinkingSeats?.A2 ? <p className="mst-quote">«{view.mateLine}»</p> : null}
+          {s.id === mate && view.mateLine && !view.thinkingSeats?.[mate] ? <p className="mst-quote">«{view.mateLine}»</p> : null}
         </div>
       ))}
     </div>
   );
   return (
     <Section title="Squadre">
-      {team('A', 'La tua squadra')}
-      {team('B', 'Avversari')}
+      {team(myTeam, 'La tua squadra')}
+      {team(view.foeTeam ?? 'B', 'Avversari')}
     </Section>
   );
 }
@@ -363,7 +369,7 @@ function TeamView({ view, ownFocus, ownFieldIndex, onPairing, onClaim, onAdvise,
   return (
     <>
       {showFronts && <Fronts view={view} ownFieldIndex={ownFieldIndex} onPairing={onPairing} onHoverField={onHoverField} />}
-      {view.stage === 'claim' && <Claim count={view.teams.A.fields} onClaim={onClaim} />}
+      {view.stage === 'claim' && <Claim count={view.teams[view.myTeam ?? 'A'].fields} onClaim={onClaim} />}
       <Advice view={view} ownFieldIndex={ownFieldIndex} onAdvise={onAdvise} />
       <Teams view={view} ownFocus={ownFocus} />
       {view.board && <VariantPicker value={boardVariant} variants={boardVariants} onChange={onBoardVariant} />}
@@ -377,6 +383,7 @@ function TeamView({ view, ownFocus, ownFieldIndex, onPairing, onClaim, onAdvise,
 
 function KothView({ view, onClaim }) {
   const { seats, order, commits, battlefields, contestFieldIndex } = view;
+  const me = view.me ?? 'P1';
   const seat = (id) => seats.find((s) => s.id === id);
   const cr = view.stage === 'presenting' ? view.contestResult : null;
   const listed = order.length ? order : seats.map((s) => s.id);
@@ -397,14 +404,14 @@ function KothView({ view, onClaim }) {
           </div>
         )) : null}
       </Section>
-      {view.stage === 'claim' && <Claim count={seat('P1').conquests} onClaim={onClaim} />}
+      {view.stage === 'claim' && <Claim count={seat(view.me ?? 'P1').conquests} onClaim={onClaim} />}
       <Section title="Sulla collina">
         {listed.map((id, i) => {
           const s = seat(id);
           const c = commits[id];
           const card = c ? cardOf(s, c.cardId) : null;
           return (
-            <div className={`mst-team is-${s.isHuman ? 'ally' : 'foe'}`} key={id}>
+            <div className={`mst-team is-${id === me ? 'ally' : 'foe'}`} key={id}>
               <div className="mst-team-head">
                 <span className="mst-team-name">{i === 0 ? '♛ ' : `${i + 1}. `}{s.name}</span>
                 <span className="mst-team-role">{s.conquests} Campi</span>
@@ -416,7 +423,7 @@ function KothView({ view, onClaim }) {
               </div>
               <div className="mst-seat">
                 <CardLine card={card} />
-                {c && view.stage !== 'over' ? <span className="mst-seat-fc">{cr || s.isHuman ? `${c.investment} FC` : '? FC'}</span> : null}
+                {c && view.stage !== 'over' ? <span className="mst-seat-fc">{cr || id === me ? `${c.investment} FC` : '? FC'}</span> : null}
                 <ThinkTag view={view} seatId={id} />
               </div>
             </div>
