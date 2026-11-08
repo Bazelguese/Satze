@@ -7,11 +7,17 @@
 // corsivo, piede chiaro con le azioni.
 //  - ClaimVictoryPopup: il giocatore sceglie se reclamare o continuare.
 //  - OpponentClaimPendingPopup: (PvP) si aspetta la scelta dell'avversario.
+// Escono come il popup "Imposta la partita": la lastra vola via inclinata
+// (CLAIM_EXIT_MS) e solo dopo parte la scelta.
 // Va renderizzato dentro il canvas di gioco (1920×1080).
 // ============================================================
 
 import { playUiClick } from '../../audio/soundBus';
 import { MENU_ACCENTS } from '../../theme/hudOratorioPalette';
+import { useLeaveThen } from '../../hooks/usePresence';
+
+/** Durata dell'uscita (stessa di .mcl.is-leaving). */
+export const CLAIM_EXIT_MS = 300;
 
 export function ClaimVictoryPopup({
   fields = 3,
@@ -19,8 +25,10 @@ export function ClaimVictoryPopup({
   onClaim,
   onContinue,
 }) {
+  // la scelta parte a uscita finita; doppi clic durante l'uscita ignorati
+  const [leaving, leaveThen] = useLeaveThen((action) => action?.(), CLAIM_EXIT_MS);
   return (
-    <div className="mcl" style={{ '--accent': accentColor }}>
+    <div className={`mcl${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }}>
       <div className="mcl-card" role="dialog" aria-modal="true" aria-label="Reclamare la vittoria">
         <div className="mcl-sheet">
           <header className="mcl-head">
@@ -34,14 +42,14 @@ export function ClaimVictoryPopup({
             <button
               type="button"
               className="mcl-alt"
-              onClick={() => { playUiClick(); onContinue?.(); }}
+              onClick={() => { if (leaving) return; playUiClick(); leaveThen(onContinue); }}
             >
               <span>CONTINUA A GIOCARE</span>
             </button>
             <button
               type="button"
               className="mcl-go"
-              onClick={() => { playUiClick(); onClaim?.(); }}
+              onClick={() => { if (leaving) return; playUiClick(); leaveThen(onClaim); }}
             >
               <span>RECLAMA VITTORIA</span>
             </button>
@@ -56,9 +64,10 @@ export function ClaimVictoryPopup({
 export function OpponentClaimPendingPopup({
   opponentName,
   accentColor = MENU_ACCENTS.magenta,
+  leaving = false,
 }) {
   return (
-    <div className="mcl" style={{ '--accent': accentColor }}>
+    <div className={`mcl${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }}>
       <div className="mcl-card" role="dialog" aria-modal="true" aria-label="In attesa dell'avversario">
         <div className="mcl-sheet">
           <header className="mcl-head">
@@ -101,6 +110,10 @@ function ClaimPopupStyles() {
         animation: mcl-in .34s cubic-bezier(.2,1.2,.4,1) both;
       }
       @keyframes mcl-in { from { opacity: 0; transform: rotate(-1.2deg) translateY(60px) skewX(-6deg); } }
+      .mcl.is-leaving { animation: mcl-out-bg .32s ease forwards; }
+      .mcl.is-leaving .mcl-card { animation: mcl-out .3s cubic-bezier(.6,0,.9,.4) forwards; }
+      @keyframes mcl-out { to { opacity: 0; transform: rotate(4deg) translate(140px, -220px) skewX(-10deg) scale(.9); } }
+      @keyframes mcl-out-bg { to { opacity: 0; } }
       .mcl-sheet {
         position: relative; display: flex; flex-direction: column; background: var(--void);
         clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%);

@@ -6,7 +6,8 @@
 // skew con la loro runa, voci a piastra con cursore: la voce aperta diventa
 // crema con ombra del colore del capitolo, sigla in una stella e dettaglio
 // su piastra scura. Sul fondo retino, lama d'accento e la runa del capitolo
-// in filigrana; all'apertura tre lame attraversano il pannello.
+// in filigrana; all'apertura tre lame attraversano il pannello, alla
+// chiusura tornano a coprirlo e il pannello sparisce tagliato via con loro.
 //
 // Tastiera (in cattura: i tasti usati qui non arrivano alla schermata sotto):
 //   ↑/↓  voce            ←/→  capitolo (nella ricerca solo se vuota)
@@ -20,9 +21,12 @@ import { MENU_ACCENTS } from '../theme/hudOratorioPalette';
 import { playSound, playUiClick } from '../audio/soundBus';
 import { UI_SOUND } from '../audio/soundCatalog';
 import { RuneTitle, CARD_RUNES } from './ui/RuneTitle.jsx';
+import { useLeaveThen } from '../hooks/usePresence';
 
 const CATEGORY_ORDER = ['concetti', 'vittoria', 'trigger', 'effetti', 'archetipi'];
 const ALL = 'tutti';
+/** Uscita: le lame coprono il pannello, poi il taglio lo porta via (vedi .sgl-outro). */
+const GLOSSARY_EXIT_MS = 480;
 
 const CATEGORY_COLORS = {
   amber: '#fbbf24',
@@ -72,6 +76,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   const [expandedKey, setExpandedKey] = useState(null);
   const [originRect, setOriginRect] = useState(null);
   const [expanded, setExpanded] = useState(false);
+  const [closing, requestClose] = useLeaveThen(onClose, GLOSSARY_EXIT_MS);
   const listRef = useRef(null);
   const searchRef = useRef(null);
   const rowRefs = useRef([]);
@@ -197,7 +202,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   };
 
   const keyRef = useRef({});
-  keyRef.current = { rows, counts, activeIndex, category: shownCategory, search, onClose, toggleRow, moveTo, selectCategory };
+  keyRef.current = { rows, counts, activeIndex, category: shownCategory, search, closing, requestClose, toggleRow, moveTo, selectCategory };
 
   useEffect(() => {
     const onKey = (e) => {
@@ -208,6 +213,11 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
         e.preventDefault();
         e.stopPropagation();
       };
+      // durante l'uscita i tasti non arrivano né qui né alla schermata sotto
+      if (k.closing) {
+        handled();
+        return;
+      }
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowDown': {
@@ -234,7 +244,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
         case 'Escape': {
           handled();
           if (inInput && k.search) setSearch('');
-          else k.onClose?.();
+          else k.requestClose();
           break;
         }
         default:
@@ -250,7 +260,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   const chapterColor = categoryColor(shownCategory);
 
   const content = (
-    <div className="sgl satze-glossary-backdrop" onClick={onClose} style={{ zIndex, '--accent': accent }}>
+    <div className={`sgl satze-glossary-backdrop${closing ? ' is-closing' : ''}`} onClick={requestClose} style={{ zIndex, '--accent': accent }}>
       <div
         className="sgl-panel"
         onClick={(e) => e.stopPropagation()}
@@ -287,7 +297,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               <span className="sep">/</span>
               <span className="tot">{String(rows.length).padStart(2, '0')}</span>
             </div>
-            <button type="button" className="sgl-close" onClick={onClose} aria-label="Chiudi glossario">
+            <button type="button" className="sgl-close" onClick={requestClose} aria-label="Chiudi glossario">
               <span className="key">ESC</span>
               <span className="lbl">CHIUDI</span>
             </button>
@@ -410,6 +420,14 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
             <span />
           </div>
         </div>
+        {/* fuori da .sgl-in (che scorre): le lame coprono sempre tutto il pannello */}
+        {closing && (
+          <div className="sgl-outro" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
       </div>
       <GlossaryStyles />
     </div>
@@ -699,9 +717,35 @@ function GlossaryStyles() {
       .sgl-intro > span:nth-child(3) { left: 68%; background: ${T}; animation-delay: .22s; }
       @keyframes sgl-blade { to { transform: skewX(-18deg) translateX(260%); } }
 
+      /* ---------- Uscita: le lame tornano, coprono e tagliano via il pannello ---------- */
+      /* lo sfondo entra con glossaryBackdropFade (index.css, base opacity 0): l'uscita
+         dichiara il suo 1 di partenza e lo tiene durante il ritardo (both) */
+      .sgl.is-closing { animation: sgl-bg-out .18s .3s ease-in both; }
+      @keyframes sgl-bg-out { from { opacity: 1; } to { opacity: 0; } }
+      .sgl-outro {
+        position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden;
+        clip-path: polygon(0 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+      }
+      .sgl-outro > span {
+        position: absolute; top: -30%; bottom: -30%; width: 46%;
+        animation: sgl-blade-back .26s cubic-bezier(.7,0,.3,1) both;
+      }
+      /* più larghe delle lame d'ingresso ai bordi: con l'inclinazione coprono anche gli angoli */
+      .sgl-outro > span:nth-child(1) { left: -22%; width: 60%; background: var(--accent); }
+      .sgl-outro > span:nth-child(2) { left: 30%; background: ${V}; animation-delay: .05s; }
+      .sgl-outro > span:nth-child(3) { left: 68%; width: 56%; background: ${T}; animation-delay: .1s; }
+      @keyframes sgl-blade-back {
+        from { transform: skewX(-18deg) translateX(-330%); }
+        to { transform: skewX(-18deg) translateX(0); }
+      }
+      .sgl.is-closing .sgl-in, .sgl-outro { animation: sgl-cut .15s .32s cubic-bezier(.6,0,.9,.4) forwards; }
+      @keyframes sgl-cut {
+        to { clip-path: polygon(100% 0, 100% 0, calc(100% - 24px) 100%, calc(100% - 24px) 100%); }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .sgl *, .sgl *::before, .sgl *::after { animation-duration: 0.001s !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }
-        .sgl-intro { display: none; }
+        .sgl-intro, .sgl-outro { display: none; }
       }
     `}</style>
   );

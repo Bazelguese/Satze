@@ -781,6 +781,18 @@ body.graphics-prova .hud-cosmo .satze-battlefield-panel > .satze-bf-portal-slot,
   transform-origin: 50% 0;
   animation: satze-recap-open .38s cubic-bezier(.2, .9, .25, 1) both;
 }
+/* alla chiusura si riavvolge verso gli archi (Battlefield.jsx, RECAP_EXIT_MS) */
+.satze-recap-leaving { pointer-events: none; }
+.satze-recap-leaving > .satze-recap { animation: satze-recap-close .22s cubic-bezier(.5, 0, .75, 0) forwards; }
+.satze-recap-leaving > .satze-riepilogo-unroll { animation: satze-riepilogo-rollup .22s cubic-bezier(.5, 0, .75, 0) forwards; }
+@keyframes satze-recap-close {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 0, 100% 0, calc(100% - 12px) 0, 12px 0, 0 0, 0 0); transform: translateY(-8px); }
+}
+@keyframes satze-riepilogo-rollup {
+  from { clip-path: inset(0 0 0 0); opacity: 1; }
+  to   { clip-path: inset(0 0 100% 0); opacity: 0; }
+}
 /* si srotola dall'alto, come se scendesse dagli archi */
 @keyframes satze-recap-open {
   from { opacity: 0; clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 0, 100% 0, calc(100% - 12px) 0, 12px 0, 0 0, 0 0); transform: translateY(-8px); }
