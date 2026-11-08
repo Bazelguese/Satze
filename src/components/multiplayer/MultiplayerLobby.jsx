@@ -78,11 +78,14 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
     try {
       const url = await resolveMultiplayerWsUrl();
       await mgr.connect(url);
-      mgr.send({ type: 'create_room', playerName: playerName.trim() });
+      // Fino a 4 posti (2v2, Re della collina). Un server vecchio ignora maxPlayers: capacity assente.
+      mgr.send({ type: 'create_room', playerName: playerName.trim(), maxPlayers: 4 });
       const msg = await waitForMessage(mgr, (m) => m.type === 'room_created');
       onStartGame({
         roomCode: msg.roomCode,
         playerId: msg.playerId || 'host',
+        slot: msg.slot ?? 0,
+        capacity: msg.capacity ?? 2,
         role: 'host',
         playerName: playerName.trim(),
         reconnectSecret: msg.reconnectSecret,
@@ -121,6 +124,8 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
       onStartGame({
         roomCode: msg.roomCode,
         playerId: msg.playerId || 'guest',
+        slot: msg.slot ?? 1,
+        capacity: msg.capacity ?? 2,
         role: 'guest',
         playerName: playerName.trim(),
         reconnectSecret: msg.reconnectSecret,

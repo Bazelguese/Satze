@@ -638,6 +638,7 @@ export function advanceToNextRevealGate(matchState, {
   leagueBySide = null,
   paramContext = null,
   toxinBySide = null,
+  remoteEnemy = false,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: null };
@@ -658,11 +659,17 @@ export function advanceToNextRevealGate(matchState, {
     return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: null };
   }
 
-  const filled = fillMissingAbilityParams(matchState, {
-    agentIdBySide,
-    paramContext,
-    sides: [SIDES.ENEMY],
-  });
+  // Online l'avversario è una persona: i suoi params arrivano via rete, non si inventano.
+  if (remoteEnemy && remoteSideMissingParams(matchState, SIDES.ENEMY, { gate, agentIdBySide, paramContext })) {
+    return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: 'REMOTE_PARAMS_INCOMPLETE' };
+  }
+  const filled = remoteEnemy
+    ? matchState
+    : fillMissingAbilityParams(matchState, {
+      agentIdBySide,
+      paramContext,
+      sides: [SIDES.ENEMY],
+    });
   const opened = completeGate(filled, gate, { initiativeSide });
   const rawBundle = opened.resolutionQueue.length
     ? applyEminenceSegments(opened.resolutionQueue, null, {
@@ -821,6 +828,7 @@ export function prepareEminenceDuel(matchState, {
   deployedIsLowestLeagueBySide = null,
   paramContext = null,
   toxinBySide = null,
+  remoteEnemy = false,
 } = {}) {
   if (!isEminenceSubsystemEnabled(matchState)) {
     return { matchState, bundle: null, events: [], notices: [], blocked: null };
@@ -831,12 +839,17 @@ export function prepareEminenceDuel(matchState, {
     return { matchState: withChoices, bundle: null, events: [], notices: [], blocked: 'SELECTIONS_INCOMPLETE' };
   }
 
-  const filledAgents = fillMissingConfirmedAgentParams(withChoices, agentIdBySide);
-  const filled = fillMissingAbilityParams(filledAgents, {
-    agentIdBySide,
-    paramContext,
-    sides: [SIDES.ENEMY],
-  });
+  if (remoteEnemy && remoteSideMissingParams(withChoices, SIDES.ENEMY, { agentIdBySide, paramContext })) {
+    return { matchState: withChoices, bundle: null, events: [], notices: [], blocked: 'REMOTE_PARAMS_INCOMPLETE' };
+  }
+  const filledAgents = remoteEnemy ? withChoices : fillMissingConfirmedAgentParams(withChoices, agentIdBySide);
+  const filled = remoteEnemy
+    ? filledAgents
+    : fillMissingAbilityParams(filledAgents, {
+      agentIdBySide,
+      paramContext,
+      sides: [SIDES.ENEMY],
+    });
   if (sideMissingConfirmedAgentParam(filled, SIDES.PLAYER)) {
     return {
       matchState: filled,
@@ -928,6 +941,24 @@ function fillMissingConfirmedAgentParams(matchState, agentIdBySide) {
     if (filled.ok) state = filled.matchState;
   }
   return state;
+}
+
+/**
+ * Online: i params dell'avversario li sceglie l'altro giocatore e arrivano via rete.
+ * true se l'abilità scelta dall'avversario (che si rivela a `gate`, o a qualunque gate se
+ * `gate` è null) ha bersagli disponibili ma params non ancora pronti.
+ */
+export function remoteSideMissingParams(matchState, side, { gate = null, agentIdBySide = null, paramContext = null } = {}) {
+  const current = matchState?.[side];
+  if (!current?.selectedAbilityId || current.revealedAbilityId) return false;
+  const ability = getEminenceAbility(current.eminenceId, current.selectedAbilityId);
+  if (!ability?.paramsSchema) return false;
+  if (gate && ability.revealGate !== gate) return false;
+  if (abilityNeedsConfirmedAgent(ability)) return current.selectedParams?.cardId == null;
+  const sideContext = paramContextForSide(side, paramContext, agentIdBySide);
+  const resolved = resolveParamsSchema(ability.paramsSchema, current.persistent, sideContext);
+  if (!schemaTargetsAvailable(resolved, ability.paramsSchema)) return false;
+  return !selectionParamsReady(resolved, current.selectedParams);
 }
 
 /**

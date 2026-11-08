@@ -56,6 +56,9 @@ import {
   submitCommit,
 } from '../game/kingOfHill/kingOfHill.js';
 import { aiCommit } from '../game/kingOfHill/kingOfHillAI.js';
+import {
+  MS, ENTRY, HostSequencer, matchFromPackage, applyEntry, advanceIfResolved, stateHash,
+} from '../game/multiSeat/onlineSession.js';
 
 function pickHandAgain(extra, rng) {
   const cards = [...(extra.deckCards || [])];
@@ -128,6 +131,18 @@ export const MULTI_SEAT_STAGES = {
   CLAIM: 'claim', // reclamo della vittoria ai turni 3–4
   OVER: 'over',
 };
+
+/*
+ * Identità del giocatore locale. In locale è sempre A1 (2v2, squadra A) o P1; online è il
+ * posto assegnato dal pacchetto di partita (session.online).
+ */
+function meOf(s) {
+  return s?.online?.me ?? (s?.kind === MULTI_SEAT_KINDS.TEAM ? HUMAN_TEAM_SEAT : HUMAN_KOTH_SEAT);
+}
+function myTeamOf(s) { return s?.online?.myTeam ?? 'A'; }
+function foeTeamOf(s) { return myTeamOf(s) === 'A' ? 'B' : 'A'; }
+function mateOf(s) { return s?.online?.mate ?? 'A2'; }
+function firstFoeOf(s) { return s?.online?.firstFoe ?? 'B1'; }
 
 function seatOf(session, seatId) {
   if (!session?.match) return null;
@@ -207,7 +222,7 @@ function teamBoard(session) {
   const entry = (seatId) => {
     const seat = getTeamSeat(match, seatId);
     const deployed = match.deployments[seatId];
-    const proposal = seatId === 'A2' && !deployed ? session.teammateProposal : null;
+    const proposal = seatId === mateOf(session) && !deployed ? session.teammateProposal : null;
     const cardId = deployed?.cardId ?? proposal?.cardId ?? null;
     return {
       seatId,
@@ -219,29 +234,31 @@ function teamBoard(session) {
       proposal: Boolean(proposal),
     };
   };
+  const foes = match.seats.filter((x) => x.team === foeTeamOf(session)).map((x) => x.id);
   return {
     openingTeam: match.openingTeam,
-    player: [entry('A1'), entry('A2')],
-    enemy: [entry('B1'), entry('B2')],
+    player: [entry(meOf(session)), entry(mateOf(session))],
+    enemy: foes.map(entry),
   };
 }
 
-function mapTeamResult(match) {
+function mapTeamResult(match, myTeam = 'A') {
   const r = match.result;
-  const winner = r.winner === 'A' ? 'player' : r.winner === 'B' ? 'enemy' : 'draw';
-  return { winner, reason: r.reason, playerFields: r.fields.A, enemyFields: r.fields.B, multiSeat: { kind: MULTI_SEAT_KINDS.TEAM, ...r } };
+  const foe = myTeam === 'A' ? 'B' : 'A';
+  const winner = r.winner === myTeam ? 'player' : r.winner === foe ? 'enemy' : 'draw';
+  return { winner, reason: r.reason, playerFields: r.fields[myTeam], enemyFields: r.fields[foe], multiSeat: { kind: MULTI_SEAT_KINDS.TEAM, ...r } };
 }
 
-function mapKothResult(match, humanEliminated = false) {
+function mapKothResult(match, humanEliminated = false, me = HUMAN_KOTH_SEAT) {
   const r = match.result;
-  const others = match.seats.filter((s) => s.id !== HUMAN_KOTH_SEAT);
+  const others = match.seats.filter((s) => s.id !== me);
   let winner = 'enemy';
-  if (!humanEliminated && r?.winners?.includes(HUMAN_KOTH_SEAT)) winner = r.winners.length === 1 ? 'player' : 'draw';
+  if (!humanEliminated && r?.winners?.includes(me)) winner = r.winners.length === 1 ? 'player' : 'draw';
   if (r?.draw) winner = 'draw';
   return {
     winner,
     reason: humanEliminated ? 'hp' : r?.reason === 'shared' ? 'draw' : r?.reason,
-    playerFields: seatFieldCount(match, HUMAN_KOTH_SEAT),
+    playerFields: seatFieldCount(match, me),
     enemyFields: Math.max(0, ...others.map((s) => seatFieldCount(match, s.id))),
     multiSeat: { kind: MULTI_SEAT_KINDS.KOTH, ...(r || {}), humanEliminated },
   };
@@ -356,17 +373,22 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const over = { ...s, stage: MULTI_SEAT_STAGES.OVER };
     // La scena finale torna sul giocatore: la sua squadra (o lui) contro chi conta di più.
     const match = s.match;
+    const me = meOf(s);
     if (s.kind === MULTI_SEAT_KINDS.TEAM) {
-      project(over, { playerSeatId: HUMAN_TEAM_SEAT, enemySeatId: 'B1', playerHP: match.teams.A.hp, enemyHP: match.teams.B.hp, isPlayerFirst: true });
+      project(over, { playerSeatId: me, enemySeatId: firstFoeOf(s), playerHP: match.teams[myTeamOf(s)].hp, enemyHP: match.teams[foeTeamOf(s)].hp, isPlayerFirst: true });
     } else {
-      const others = match.seats.filter((x) => x.id !== HUMAN_KOTH_SEAT);
-      const winnerId = match.result?.winners?.find((id) => id !== HUMAN_KOTH_SEAT);
+      const others = match.seats.filter((x) => x.id !== me);
+      const winnerId = match.result?.winners?.find((id) => id !== me);
       const enemy = others.find((x) => x.id === winnerId)
         || [...others].sort((a, b) => b.conquests - a.conquests || b.hp - a.hp)[0];
-      const human = getKothSeat(match, HUMAN_KOTH_SEAT);
-      project(over, { playerSeatId: HUMAN_KOTH_SEAT, enemySeatId: enemy.id, playerHP: human.hp, enemyHP: enemy.hp, isPlayerFirst: true });
+      const human = getKothSeat(match, me);
+      project(over, { playerSeatId: me, enemySeatId: enemy.id, playerHP: human.hp, enemyHP: enemy.hp, isPlayerFirst: true });
     }
-    sceneRef.current?.showGameOver?.(gameResult);
+    // Dati per la telemetria del playtest (src/telemetry): storico completo, posti e impostazioni.
+    sceneRef.current?.showGameOver?.({
+      ...gameResult,
+      telemetria: { storico: match.history || [], posti: match.seats || [], opzioni: s.options || {} },
+    });
   }, [clearTimers, project, sceneRef]);
 
   // ------------------------------------------------------------------
@@ -423,6 +445,23 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     };
     let match = s.match;
     const hp = (team) => match.teams[team].hp;
+    if (s.online) {
+      // Online decidono le persone ai loro posti e l'IA dell'host: qui si aspetta il log.
+      const me = meOf(s);
+      const myTeam = myTeamOf(s);
+      const opening = match.openingTeam === myTeam;
+      const next = {
+        ...s, match, role: opening ? 'opening' : 'response', plan: opening ? null : { pairing: PAIRINGS.DIRECT, investments: {} },
+        teammateProposal: null, stage: opening ? MULTI_SEAT_STAGES.HUMAN_DEPLOY : MULTI_SEAT_STAGES.AI_TURN,
+      };
+      log(opening
+        ? `[T${match.roundNumber}] 2v2 · Apre la tua squadra: scegli Campo, Agente e FC.`
+        : `[T${match.roundNumber}] 2v2 · Apre la squadra avversaria: aspetta i loro Agenti.`);
+      project(next, { playerSeatId: me, enemySeatId: firstFoeOf(s), playerHP: hp(myTeam), enemyHP: hp(foeTeamOf(s)), isPlayerFirst: opening });
+      sceneRef.current?.setGamePhase('selectField');
+      onlineDrainRef.current?.();
+      return;
+    }
     // Il compagno pensa mentre scegli tu: la sua proposta (carta, FC e, in risposta, la
     // disposizione che consiglia) arriva dopo qualche istante.
     const mateThinks = (role) => think(['A2'], 'proposal', (cur) => {
@@ -480,6 +519,16 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
 
   const teamHumanConfirm = useCallback((s, choice) => {
     const { agent, focus, fieldIndex } = choice;
+    if (s.online) {
+      const me = meOf(s);
+      const intent = s.role === 'opening'
+        ? { kind: ENTRY.OPEN, round: s.match.roundNumber, deployments: { [me]: { cardId: agent.id, fieldIndex, focus } } }
+        : { kind: ENTRY.RESPOND, round: s.match.roundNumber, deployments: { [me]: { cardId: agent.id, focus } }, pairing: s.plan?.pairing || PAIRINGS.DIRECT };
+      commit({ ...s, stage: MULTI_SEAT_STAGES.AI_TURN, pendingConfirm: null });
+      log(`[T${s.match.roundNumber}] 2v2 · Hai scelto: aspetti gli altri giocatori.`);
+      onlineSendIntentRef.current?.(intent);
+      return;
+    }
     const rng = rngRef.current;
     let match = s.match;
     const proposal = s.teammateProposal;
@@ -582,9 +631,16 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       teamPresentFront(s, s.presentIndex + 1);
       return;
     }
-    log(`[T${rr.roundNumber}] 2v2 · Fine turno: la tua squadra ${rr.hpAfter.A} PV, avversari ${rr.hpAfter.B} PV.`);
+    log(`[T${rr.roundNumber}] 2v2 · Fine turno: la tua squadra ${rr.hpAfter[myTeamOf(s)]} PV, avversari ${rr.hpAfter[foeTeamOf(s)]} PV.`);
     let match = advanceAfterRound(s.match);
     if (match.phase === TEAM_DUEL_PHASES.CLAIM) {
+      if (s.online) {
+        // Decide il capitano della squadra che può reclamare (o l'IA dell'host): si aspetta il log.
+        const capitano = s.online.pkg.seats.find((x) => x.team === match.claim.team && x.controller.type === 'human');
+        commit({ ...s, match, stage: capitano?.id === meOf(s) ? MULTI_SEAT_STAGES.CLAIM : MULTI_SEAT_STAGES.AI_TURN });
+        onlineDrainRef.current?.();
+        return;
+      }
       if (match.claim.team === 'A') {
         commit({ ...s, match, stage: MULTI_SEAT_STAGES.CLAIM });
         return;
@@ -592,7 +648,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       match = resolveTeamClaim(match, 'claim');
     }
     if (match.phase === TEAM_DUEL_PHASES.GAME_OVER) {
-      finishWith({ ...s, match }, mapTeamResult(match));
+      finishWith({ ...s, match }, mapTeamResult(match, myTeamOf(s)));
       return;
     }
     teamBeginTurn({ ...s, match, roundStartMatch: null, presentIndex: 0 });
@@ -668,14 +724,15 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       kothPresentFight({ ...s, match, afterReveal }, 0);
       return;
     }
-    if (committer === HUMAN_KOTH_SEAT) {
+    const me = meOf(s);
+    if (committer === me) {
       const order = contestOrder(match);
-      const isOpener = openerSeatId(match) === HUMAN_KOTH_SEAT;
+      const isOpener = openerSeatId(match) === me;
       const enemyId = isOpener ? order[1] : order[0];
-      const human = getKothSeat(match, HUMAN_KOTH_SEAT);
+      const human = getKothSeat(match, me);
       const enemy = getKothSeat(match, enemyId);
       const next = { ...s, match, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, role: isOpener ? 'opening' : 'challenger' };
-      project(next, { playerSeatId: HUMAN_KOTH_SEAT, enemySeatId: enemyId, playerHP: human.hp, enemyHP: enemy.hp, isPlayerFirst: isOpener });
+      project(next, { playerSeatId: me, enemySeatId: enemyId, playerHP: human.hp, enemyHP: enemy.hp, isPlayerFirst: isOpener });
       if (isOpener) {
         log(`[C${match.roundNumber}] Re della collina · Apri tu: scegli il Campo, l'Agente e i FC.`);
         sceneRef.current?.setGamePhase('selectField');
@@ -684,6 +741,12 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         sceneRef.current?.showOpponentDeploy?.({ agent: openerCard, fieldIndex: match.contestFieldIndex });
         sceneRef.current?.setGamePhase('selectAgent');
       }
+      return;
+    }
+    if (s.online) {
+      // Posa di un altro giocatore o dell'IA dell'host: arriva dal log.
+      commit({ ...s, match, stage: MULTI_SEAT_STAGES.AI_TURN });
+      onlineDrainRef.current?.();
       return;
     }
     commit({ ...s, match, stage: MULTI_SEAT_STAGES.AI_TURN });
@@ -707,13 +770,14 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const order = contestOrder(match);
     log(`[C${match.roundNumber}] Re della collina · Ordine: ${order.map((id) => getKothSeat(match, id).name).join(' → ')}.`);
     // Scena di attesa: il giocatore contro il primo della coda.
-    const enemyId = order.find((id) => id !== HUMAN_KOTH_SEAT) || order[0];
+    const me = meOf(s);
+    const enemyId = order.find((id) => id !== me) || order[0];
     project(next, {
-      playerSeatId: HUMAN_KOTH_SEAT,
+      playerSeatId: me,
       enemySeatId: enemyId,
-      playerHP: getKothSeat(match, HUMAN_KOTH_SEAT).hp,
+      playerHP: getKothSeat(match, me).hp,
       enemyHP: getKothSeat(match, enemyId).hp,
-      isPlayerFirst: openerSeatId(match) === HUMAN_KOTH_SEAT,
+      isPlayerFirst: openerSeatId(match) === me,
     });
     sceneRef.current?.setGamePhase('selectField');
     kothRunCommitsRef.current(sessionRef.current);
@@ -727,20 +791,26 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     }
     const conqueror = cr.conquerorSeatId ? getKothSeat(s.match, cr.conquerorSeatId).name : null;
     log(`[C${cr.roundNumber}] Re della collina · ${conqueror ? `${conqueror} conquista ${s.match.battlefields[cr.fieldIndex].name}.` : 'Il Campo resta senza proprietario.'}`);
-    if (getKothSeat(s.match, HUMAN_KOTH_SEAT).eliminated) {
-      finishWith(s, mapKothResult(s.match, true));
+    const me = meOf(s);
+    if (getKothSeat(s.match, me).eliminated) {
+      finishWith(s, mapKothResult(s.match, true, me));
       return;
     }
     let match = advanceAfterContest(s.match);
     if (match.phase === KOTH_PHASES.CLAIM) {
-      if (match.claim.seatId === HUMAN_KOTH_SEAT) {
+      if (s.online) {
+        commit({ ...s, match, stage: match.claim.seatId === me ? MULTI_SEAT_STAGES.CLAIM : MULTI_SEAT_STAGES.AI_TURN });
+        onlineDrainRef.current?.();
+        return;
+      }
+      if (match.claim.seatId === me) {
         commit({ ...s, match, stage: MULTI_SEAT_STAGES.CLAIM });
         return;
       }
       match = resolveKothClaim(match, 'claim');
     }
     if (match.phase === KOTH_PHASES.GAME_OVER) {
-      finishWith({ ...s, match }, mapKothResult(match));
+      finishWith({ ...s, match }, mapKothResult(match, false, me));
       return;
     }
     kothBeginContest({ ...s, match });
@@ -749,6 +819,16 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   kothAfterScontroRef.current = kothAfterScontro;
 
   const kothHumanConfirm = useCallback((s, { agent, focus, fieldIndex }) => {
+    if (s.online) {
+      const me = meOf(s);
+      commit({ ...s, stage: MULTI_SEAT_STAGES.AI_TURN });
+      log(`[C${s.match.roundNumber}] Hai posato ${agent.name}: aspetti gli altri.`);
+      onlineSendIntentRef.current?.({
+        kind: ENTRY.COMMIT, round: s.match.roundNumber,
+        deployments: { [me]: { cardId: agent.id, investment: focus, fieldIndex: s.role === 'opening' ? fieldIndex : null } },
+      });
+      return;
+    }
     let match;
     try {
       match = submitCommit(s.match, HUMAN_KOTH_SEAT, {
@@ -766,11 +846,198 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   }, [commit, later, log, sceneRef]);
 
   // ------------------------------------------------------------------
+  // Online (2v2 e Re della collina tra più giocatori)
+  // ------------------------------------------------------------------
+  /** Sequencer dell'host (solo sul client host): vive fuori dalla sessione, anche a partita finita. */
+  const sequencerRef = useRef(null);
+  /** Trasporto: invia un messaggio a tutti gli altri giocatori (o solo a `to`). */
+  const netSendRef = useRef(null);
+  const onlineDrainRef = useRef(null);
+  const onlineSendIntentRef = useRef(null);
+  /** Coda delle voci di log e ultima applicata: in ref, così nessun aggiornamento di sessione le perde. */
+  const onlineQueueRef = useRef([]);
+  const onlineSeqRef = useRef(0);
+
+  /** Voci di log: si applicano in ordine, solo quando la scena aspetta (niente scontro in corso). */
+  const onlineDrain = useCallback(() => {
+    for (let guard = 0; guard < 20; guard += 1) {
+      const s = sessionRef.current;
+      if (!s?.online || !s.match || s.pending) return;
+      if (s.stage !== MULTI_SEAT_STAGES.AI_TURN && s.stage !== MULTI_SEAT_STAGES.HUMAN_DEPLOY) return;
+      if (s.revealing) return;
+      const voce = onlineQueueRef.current.find((v) => v.seq === onlineSeqRef.current + 1);
+      if (!voce) return;
+      onlineSeqRef.current = voce.seq;
+      onlineQueueRef.current = onlineQueueRef.current.filter((v) => v.seq > voce.seq);
+      const before = s.match;
+      let after;
+      try {
+        after = applyEntry(before, voce.entry);
+      } catch (err) {
+        console.error('[multi-posto online] voce di log non applicabile', voce, err);
+        return;
+      }
+      const impronta = stateHash(advanceIfResolved(after));
+      if (voce.hash && impronta !== voce.hash) {
+        console.error('[multi-posto online] stato divergente dall\'host', { seq: voce.seq, locale: impronta, host: voce.hash });
+      }
+      const base = s;
+      const e = voce.entry;
+      if (e.type === ENTRY.OPEN) {
+        const myTeam = myTeamOf(s);
+        if (after.openingTeam === myTeam) {
+          log(`[T${after.roundNumber}] 2v2 · La tua squadra si è schierata. Risponde la squadra avversaria…`);
+          commit({ ...base, match: after, stage: MULTI_SEAT_STAGES.AI_TURN });
+          continue;
+        }
+        const me = meOf(s);
+        const foe = firstFoeOf(s);
+        const next = { ...base, match: after, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, role: 'response', plan: { pairing: PAIRINGS.DIRECT, investments: {} } };
+        const d = after.deployments[foe];
+        log(`[T${after.roundNumber}] 2v2 · La squadra avversaria si è schierata: rispondi.`);
+        project(next, { playerSeatId: me, enemySeatId: foe, playerHP: after.teams[myTeam].hp, enemyHP: after.teams[foeTeamOf(s)].hp, isPlayerFirst: false });
+        const foeCard = getTeamSeat(after, foe).hand.find((c) => c.id === d?.cardId);
+        if (foeCard) sceneRef.current?.showOpponentDeploy?.({ agent: foeCard, fieldIndex: d.fieldIndex });
+        sceneRef.current?.setGamePhase('selectAgent');
+        return;
+      }
+      if (e.type === ENTRY.RESPOND) {
+        log(`[T${after.roundNumber}] 2v2 · Schieramenti completi: si rivelano gli investimenti.`);
+        teamReveal(base, after, before);
+        return;
+      }
+      if (e.type === ENTRY.COMMIT) {
+        const seat = getKothSeat(after, e.seatId);
+        const card = seat.hand.find((c) => c.id === e.cardId);
+        if (e.seatId !== meOf(s)) log(`[C${after.roundNumber}] ${seat.name} posa ${card?.name ?? 'un Agente'}.`);
+        kothRunCommitsRef.current({ ...base, match: after });
+        return;
+      }
+      if (e.type === ENTRY.CLAIM) {
+        if (after.phase === TEAM_DUEL_PHASES.GAME_OVER || after.phase === KOTH_PHASES.GAME_OVER) {
+          finishWith({ ...base, match: after }, s.kind === MULTI_SEAT_KINDS.TEAM ? mapTeamResult(after, myTeamOf(s)) : mapKothResult(after, false, meOf(s)));
+          return;
+        }
+        if (s.kind === MULTI_SEAT_KINDS.TEAM) teamBeginTurn({ ...base, match: after, roundStartMatch: null, presentIndex: 0 });
+        else kothBeginContest({ ...base, match: after });
+        return;
+      }
+    }
+  }, [commit, finishWith, kothBeginContest, log, project, sceneRef, teamBeginTurn, teamReveal]);
+  onlineDrainRef.current = onlineDrain;
+
+  /** Voci arrivate dall'host (o prodotte dal sequencer locale, se l'host sei tu). */
+  const onlineReceiveLog = useCallback((voci) => {
+    if (!sessionRef.current?.online || !voci?.length) return;
+    const nuove = voci.filter((v) => v.seq > onlineSeqRef.current && !onlineQueueRef.current.some((q) => q.seq === v.seq));
+    if (!nuove.length) return;
+    onlineQueueRef.current = [...onlineQueueRef.current, ...nuove].sort((a, b) => a.seq - b.seq);
+    onlineDrain();
+  }, [onlineDrain]);
+
+  /** Host: decisione di un giocatore (anche la propria) → sequencer → log a tutti. */
+  const hostHandleIntent = useCallback((fromSlot, intent) => {
+    const seq = sequencerRef.current;
+    if (!seq) return;
+    let voci;
+    try {
+      voci = seq.receive(fromSlot, intent);
+    } catch (err) {
+      const reason = err?.message || String(err);
+      const localSlot = sessionRef.current?.online?.slot ?? 0;
+      if (fromSlot === localSlot) onlineRejectRef.current?.(reason);
+      else netSendRef.current?.({ type: MS.REJECT, reason, round: intent?.round ?? null }, [fromSlot]);
+      return;
+    }
+    for (const v of voci) netSendRef.current?.({ type: MS.LOG, ...v });
+    onlineReceiveLog(voci);
+  }, [onlineReceiveLog]);
+
+  const onlineReject = useCallback((reason) => {
+    const s = sessionRef.current;
+    if (!s?.online) return;
+    sceneRef.current?.hint?.(`Scelta non valida: ${reason}`);
+    log(`[!] Scelta rifiutata dall'host: ${reason}`);
+    commit({ ...s, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY });
+  }, [commit, log, sceneRef]);
+  const onlineRejectRef = useRef(onlineReject);
+  onlineRejectRef.current = onlineReject;
+
+  const onlineSendIntent = useCallback((intent) => {
+    const s = sessionRef.current;
+    if (!s?.online) return;
+    if (s.online.isHost) hostHandleIntent(s.online.slot, intent);
+    else netSendRef.current?.({ type: MS.INTENT, intent }, [0]);
+  }, [hostHandleIntent]);
+  onlineSendIntentRef.current = onlineSendIntent;
+
+  /**
+   * Arma una partita online dal pacchetto dell'host. `send(payload, to?)` invia via relay.
+   * L'host crea il sequencer e pubblica subito le prime decisioni dell'IA (se tocca a lei).
+   */
+  const armOnline = useCallback(({ pkg, localSlot, isHost, send }) => {
+    clearTimers();
+    netSendRef.current = send;
+    const me = pkg.seats.find((x) => x.controller.type === 'human' && x.controller.slot === localSlot)?.id ?? null;
+    const kind = pkg.kind;
+    const meSeat = pkg.seats.find((x) => x.id === me);
+    const myTeam = meSeat?.team ?? null;
+    const mate = kind === MULTI_SEAT_KINDS.TEAM ? pkg.seats.find((x) => x.team === myTeam && x.id !== me)?.id ?? null : null;
+    const firstFoe = kind === MULTI_SEAT_KINDS.TEAM
+      ? pkg.seats.find((x) => x.team !== myTeam)?.id ?? null
+      : pkg.seats.find((x) => x.id !== me)?.id ?? null;
+    const { rng, seed } = createRng(pkg.seed);
+    rngRef.current = rng;
+    const session = {
+      kind,
+      options: { kind, fieldMode: pkg.fieldMode, online: true },
+      pending: true,
+      stage: MULTI_SEAT_STAGES.PENDING,
+      match: null,
+      seed,
+      online: { pkg, me, myTeam, mate, firstFoe, slot: localSlot, isHost },
+    };
+    onlineQueueRef.current = [];
+    onlineSeqRef.current = 0;
+    commit(session);
+    sequencerRef.current = isHost ? new HostSequencer(pkg) : null;
+    if (isHost) {
+      const voci = sequencerRef.current.pump();
+      for (const v of voci) send({ type: MS.LOG, ...v });
+      onlineReceiveLog(voci);
+    }
+    return { me, firstFoe };
+  }, [clearTimers, commit, onlineReceiveLog]);
+
+
+  /** Messaggi multi-posto dal relay (inoltrati dalla scena). */
+  const onNetMessage = useCallback((payload, fromSlot) => {
+    if (!payload?.type) return;
+    if (payload.type === MS.INTENT) {
+      if (sequencerRef.current) hostHandleIntent(fromSlot, payload.intent);
+      return;
+    }
+    if (payload.type === MS.LOG) {
+      onlineReceiveLog([{ seq: payload.seq, entry: payload.entry, hash: payload.hash }]);
+      return;
+    }
+    if (payload.type === MS.REJECT) onlineReject(payload.reason);
+  }, [hostHandleIntent, onlineReceiveLog, onlineReject]);
+
+  // ------------------------------------------------------------------
   // Avvio
   // ------------------------------------------------------------------
   const init = useCallback((s) => {
     const rng = rngRef.current || createRng().rng;
     rngRef.current = rng;
+    if (s.online) {
+      const match = matchFromPackage(s.online.pkg, s.online.me);
+      const nomi = match.seats.map((x) => `${x.name}${x.id === s.online.me ? ' (tu)' : ''}`).join(', ');
+      log(s.kind === MULTI_SEAT_KINDS.TEAM ? `2v2 online · ${nomi}.` : `Re della collina online · ${nomi}.`);
+      if (s.kind === MULTI_SEAT_KINDS.TEAM) teamBeginTurn({ ...s, match, pending: false });
+      else kothBeginContest({ ...s, match, pending: false });
+      return;
+    }
     const seed = s.seed ?? null;
     const humanHand = gameState.playerHand;
     const enemyHand = gameState.enemyHand;
@@ -847,7 +1114,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       return;
     }
     // Rivincita dalla fine partita: nuova partita nella stessa modalità.
-    if (session.stage === MULTI_SEAT_STAGES.OVER && (phase === 'shuffleDeal' || phase === 'duelLoading')) {
+    if (!session.online && session.stage === MULTI_SEAT_STAGES.OVER && (phase === 'shuffleDeal' || phase === 'duelLoading')) {
       clearTimers();
       const next = {
         kind: session.kind,
@@ -950,7 +1217,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
    */
   const advise = useCallback((kind, value) => {
     const s = sessionRef.current;
-    if (!s || s.kind !== MULTI_SEAT_KINDS.TEAM || !s.match) return null;
+    if (!s || s.kind !== MULTI_SEAT_KINDS.TEAM || !s.match || s.online) return null;
     const match = s.match;
     const mate = getTeamSeat(match, 'A2');
     const deployed = Boolean(match.deployments?.A2);
@@ -995,9 +1262,14 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const decideClaim = useCallback((decision) => {
     const s = sessionRef.current;
     if (!s || s.stage !== MULTI_SEAT_STAGES.CLAIM) return;
+    if (s.online) {
+      commit({ ...s, stage: MULTI_SEAT_STAGES.AI_TURN });
+      onlineSendIntentRef.current?.({ kind: ENTRY.CLAIM, round: s.match.roundNumber, decision });
+      return;
+    }
     if (s.kind === MULTI_SEAT_KINDS.TEAM) {
       const match = resolveTeamClaim(s.match, decision);
-      if (match.phase === TEAM_DUEL_PHASES.GAME_OVER) finishWith({ ...s, match }, mapTeamResult(match));
+      if (match.phase === TEAM_DUEL_PHASES.GAME_OVER) finishWith({ ...s, match }, mapTeamResult(match, myTeamOf(s)));
       else teamBeginTurn({ ...s, match, roundStartMatch: null, presentIndex: 0 });
       return;
     }
@@ -1104,7 +1376,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         advice: session.advice || {},
         adviceReplies: session.adviceReplies || {},
         legalFields: legalFieldIndexesTeam(match),
-        mateTrust: getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
+        mateTrust: session.online ? null : getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
+        online: Boolean(session.online),
         // Quando risponde la tua squadra: i fronti con la disposizione che stai scegliendo.
         fronts: match.phase === TEAM_DUEL_PHASES.RESPONSE_DEPLOY && session.role === 'response' && session.plan
           ? buildFronts(match, session.plan.pairing || PAIRINGS.DIRECT)
@@ -1147,5 +1420,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     handViewFor,
     versus,
     advise,
+    armOnline,
+    onNetMessage,
+    isOnline: Boolean(session?.online),
   };
 }

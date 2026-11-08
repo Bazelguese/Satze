@@ -23,8 +23,13 @@ export function countConqueredFields(conqueredFields, playerHand, enemyHand) {
   return { playerFieldsConquered, enemyFieldsConquered };
 }
 
-export function checkImmunity(agent, hasBonus, armyBonus, context) {
-  if (hasBonus && armyBonus && armyBonus.effects) {
+/**
+ * Immune dato dal Bonus Armata o dal Potere dell'Agente.
+ * `disabled` indica le fonti spente in questo scontro (Blocca o Campo): un Potere o un Bonus
+ * spento non concede Immune.
+ */
+export function checkImmunity(agent, hasBonus, armyBonus, context, disabled = {}) {
+  if (hasBonus && !disabled.bonus && armyBonus && armyBonus.effects) {
     const bonusTrigger = armyBonus.trigger;
     const bonusTriggerSatisfied = bonusTrigger ? checkTrigger(bonusTrigger, context) : true;
     if (bonusTriggerSatisfied) {
@@ -33,7 +38,7 @@ export function checkImmunity(agent, hasBonus, armyBonus, context) {
       }
     }
   }
-  if (agent.ability && agent.ability.effect === 'immune') {
+  if (!disabled.ability && agent.ability && agent.ability.effect === 'immune') {
     const abilityTrigger = agent.ability.trigger;
     const abilityTriggerSatisfied = abilityTrigger ? checkTrigger(abilityTrigger, context) : true;
     if (abilityTriggerSatisfied) return true;

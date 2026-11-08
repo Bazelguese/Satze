@@ -51,6 +51,7 @@ import { createApplyBonusEffects } from './duel/duelBonusEffects.js';
 import { createDuelCombatState, pickPostBattleFields } from './duel/duelCombatState.js';
 import { createDuelEffectContext } from './duel/duelEffectContext.js';
 import { applyDuelBlockPrescan } from './duel/duelBlockPrescan.js';
+import { previewDisabledSources } from './duel/duelImmunitySources.js';
 import { applyDuelMainAbilities } from './duel/duelMainAbilities.js';
 import { applyDuelArmyBonusPhases } from './duel/duelArmyBonusPhases.js';
 import { applyInversionFieldFinalization } from './duel/duelInversionFinalization.js';
@@ -313,8 +314,12 @@ export function computeDuelResolution({
       pImmune: false,
       eImmune: false,
     };
-    duel.pImmune = checkImmunity(pAgent, pHasBonus, pArmyBonus, playerContext);
-    duel.eImmune = checkImmunity(eAgent, eHasBonus, eArmyBonus, enemyContext);
+    // Un Potere o un Bonus che verrà bloccato o disattivato non concede Immune.
+    const spenti = previewDisabledSources({
+      field, pAgent, eAgent, playerContext, enemyContext, duelCanTriggerAbility, isPlayerFirst, eminenceBundle,
+    });
+    duel.pImmune = checkImmunity(pAgent, pHasBonus, pArmyBonus, playerContext, spenti.player);
+    duel.eImmune = checkImmunity(eAgent, eHasBonus, eArmyBonus, enemyContext, spenti.enemy);
     const immuneSides = readImmuneSides(eminenceBundle);
     if (immuneSides.includes('player')) duel.pImmune = true;
     if (immuneSides.includes('enemy')) duel.eImmune = true;

@@ -20,7 +20,10 @@ Il test procede a **cicli** di una o due settimane:
 
    ```
    VITE_SATZE_PUBLIC_BUILD=true
+   VITE_SATZE_TELEMETRY_URL=<indirizzo del webhook di #dati-partite>
    ```
+
+   La seconda riga attiva l'invio dei dati di gioco (vedi `TELEMETRIA_PLAYTEST.md`). Il repository è pubblico: questo file non va mai committato.
 
    Senza questo file `npm run build:public` produce una build **di sviluppo**: con gli Strumenti dev, lo Storico playtest e il multiplayer puntato su `127.0.0.1`.
 2. **Alza la versione** in `package.json`:

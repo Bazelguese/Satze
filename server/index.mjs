@@ -1,10 +1,15 @@
 /**
- * Server WebSocket SATZE — stanze a codice, relay tra due client, riconnessione con token.
+ * Server WebSocket SATZE — stanze a codice, relay tra i client, riconnessione con token.
+ *
+ * Stanze da 2 posti (Duello, comportamento storico) o fino a 4 (2v2, Re della collina).
+ * Il posto 0 è l'host (chi crea la stanza). Nelle stanze da 2 i messaggi sono identici a
+ * quelli di sempre, così i client già distribuiti continuano a funzionare.
  *
  * Variabili d'ambiente:
  *   PORT o SATZE_WS_PORT — porta (default 3847).
  *   HOST — bind (default 0.0.0.0).
- *   SATZE_RECONNECT_GRACE_MS — dopo disconnessione host, secondi prima di chiudere la stanza per l'ospite (default 120000).
+ *   SATZE_RECONNECT_GRACE_MS — attesa del ritorno di un giocatore disconnesso (default 300000 = 5 minuti).
+ *   SATZE_ROOMS_DIR — cartella del file stanze persistito (default ./data).
  */
 import http from 'http';
 import { randomBytes } from 'node:crypto';
@@ -17,18 +22,16 @@ const HOST = process.env.HOST || '0.0.0.0';
 const RECONNECT_GRACE_MS = Number(process.env.SATZE_RECONNECT_GRACE_MS || 300000);
 const ROOMS_DIR = process.env.SATZE_ROOMS_DIR || join(process.cwd(), 'data');
 const ROOMS_FILE = join(ROOMS_DIR, 'rooms.json');
+const MAX_CAPACITY = 4;
 
-/** @type {Map<string, {
- *   host: import('ws').WebSocket | null,
- *   guest: import('ws').WebSocket | null,
- *   hostName?: string,
- *   guestName?: string,
- *   hostSecret: string,
- *   guestSecret: string | null,
- *   hostDisconnectTimer: ReturnType<typeof setTimeout> | null,
- *   guestDisconnectTimer: ReturnType<typeof setTimeout> | null,
- * }>} */
+/**
+ * @typedef {{ ws: import('ws').WebSocket | null, name: string, secret: string, timer: ReturnType<typeof setTimeout> | null }} Slot
+ * @type {Map<string, { capacity: number, slots: Array<Slot | null> }>}
+ */
 const rooms = new Map();
+
+const roleOf = (slot) => (slot === 0 ? 'host' : 'guest');
+const isOpen = (ws) => Boolean(ws && ws.readyState === 1);
 
 function persistRooms() {
   try {
@@ -36,10 +39,8 @@ function persistRooms() {
     const data = {};
     for (const [code, room] of rooms) {
       data[code] = {
-        hostName: room.hostName,
-        guestName: room.guestName ?? null,
-        hostSecret: room.hostSecret,
-        guestSecret: room.guestSecret,
+        capacity: room.capacity,
+        slots: room.slots.map((s) => (s ? { name: s.name, secret: s.secret } : null)),
       };
     }
     writeFileSync(ROOMS_FILE, JSON.stringify(data));
@@ -48,22 +49,31 @@ function persistRooms() {
   }
 }
 
+/** Accetta sia il formato a posti sia quello storico { hostSecret, guestSecret }. */
 function loadPersistedRooms() {
   try {
     if (!existsSync(ROOMS_FILE)) return;
     const data = JSON.parse(readFileSync(ROOMS_FILE, 'utf8'));
     for (const [code, snap] of Object.entries(data)) {
-      if (!snap?.hostSecret) continue;
-      rooms.set(code, {
-        host: null,
-        guest: null,
-        hostName: snap.hostName || 'Host',
-        guestName: snap.guestName || undefined,
-        hostSecret: snap.hostSecret,
-        guestSecret: snap.guestSecret ?? null,
-        hostDisconnectTimer: null,
-        guestDisconnectTimer: null,
-      });
+      let capacity;
+      let slots;
+      if (Array.isArray(snap?.slots)) {
+        capacity = Math.min(MAX_CAPACITY, Math.max(2, Number(snap.capacity) || snap.slots.length || 2));
+        slots = Array.from({ length: capacity }, (_, i) => {
+          const s = snap.slots[i];
+          return s?.secret ? { ws: null, name: s.name || (i === 0 ? 'Host' : 'Avversario'), secret: s.secret, timer: null } : null;
+        });
+      } else if (snap?.hostSecret) {
+        capacity = 2;
+        slots = [
+          { ws: null, name: snap.hostName || 'Host', secret: snap.hostSecret, timer: null },
+          snap.guestSecret ? { ws: null, name: snap.guestName || 'Avversario', secret: snap.guestSecret, timer: null } : null,
+        ];
+      } else {
+        continue;
+      }
+      if (!slots[0]) continue;
+      rooms.set(code, { capacity, slots });
     }
     if (rooms.size > 0) {
       console.log(`[SATZE] Ripristinate ${rooms.size} stanze da disco`);
@@ -71,11 +81,6 @@ function loadPersistedRooms() {
   } catch (e) {
     console.warn('[SATZE] load rooms:', e.message);
   }
-}
-
-function deleteRoom(roomCode) {
-  rooms.delete(roomCode);
-  persistRooms();
 }
 
 function genRoomCode() {
@@ -94,13 +99,45 @@ function genReconnectSecret() {
 
 /** @param {import('ws').WebSocket} ws */
 function safeSend(ws, obj) {
-  if (ws && ws.readyState === 1) {
+  if (isOpen(ws)) {
     try {
       ws.send(JSON.stringify(obj));
     } catch (_) {
       /* ignore */
     }
   }
+}
+
+function clearSlotTimer(slot) {
+  if (slot?.timer) {
+    clearTimeout(slot.timer);
+    slot.timer = null;
+  }
+}
+
+/** Invia a tutti i posti connessi tranne `exceptIndex`. */
+function broadcast(room, obj, exceptIndex = -1) {
+  room.slots.forEach((s, i) => {
+    if (i !== exceptIndex && s) safeSend(s.ws, obj);
+  });
+}
+
+/** Solo stanze da più di 2: elenco aggiornato dei posti. */
+function sendMembers(room) {
+  if (room.capacity <= 2) return;
+  const members = room.slots
+    .map((s, slot) => (s ? { slot, name: s.name, connected: isOpen(s.ws) } : null))
+    .filter(Boolean);
+  broadcast(room, { type: 'room_members', capacity: room.capacity, members });
+}
+
+function closeRoom(roomCode, { notify = true } = {}) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+  for (const s of room.slots) clearSlotTimer(s);
+  if (notify) broadcast(room, { type: 'peer_left' }, 0);
+  rooms.delete(roomCode);
+  persistRooms();
 }
 
 const server = http.createServer((_req, res) => {
@@ -134,8 +171,8 @@ wss.on('connection', (ws) => {
   ws.on('pong', () => {
     ws.isAlive = true;
   });
-  /** @type {{ roomCode: string | null, role: 'host' | 'guest' | null }} */
-  const client = { roomCode: null, role: null };
+  /** @type {{ roomCode: string | null, slot: number | null }} */
+  const client = { roomCode: null, slot: null };
 
   ws.on('message', (raw) => {
     let msg;
@@ -149,25 +186,22 @@ wss.on('connection', (ws) => {
     switch (msg.type) {
       case 'create_room': {
         const roomCode = genRoomCode();
-        const hostSecret = genReconnectSecret();
-        rooms.set(roomCode, {
-          host: ws,
-          guest: null,
-          hostName: msg.playerName || 'Host',
-          guestName: undefined,
-          hostSecret,
-          guestSecret: null,
-          hostDisconnectTimer: null,
-          guestDisconnectTimer: null,
-        });
+        const capacity = Math.min(MAX_CAPACITY, Math.max(2, Number(msg.maxPlayers) || 2));
+        const secret = genReconnectSecret();
+        const slots = Array.from({ length: capacity }, () => null);
+        slots[0] = { ws, name: msg.playerName || 'Host', secret, timer: null };
+        rooms.set(roomCode, { capacity, slots });
         client.roomCode = roomCode;
-        client.role = 'host';
+        client.slot = 0;
         safeSend(ws, {
           type: 'room_created',
           roomCode,
           playerId: 'host',
-          reconnectSecret: hostSecret,
+          reconnectSecret: secret,
+          slot: 0,
+          capacity,
         });
+        sendMembers(rooms.get(roomCode));
         persistRooms();
         break;
       }
@@ -179,37 +213,37 @@ wss.on('connection', (ws) => {
           safeSend(ws, { type: 'error', message: 'Stanza non trovata' });
           return;
         }
-        if (room.guest && room.guest.readyState === 1) {
-          safeSend(ws, { type: 'error', message: 'Stanza già piena' });
-          return;
-        }
-        if (room.guestSecret && !room.guest) {
+        const free = room.slots.findIndex((s, i) => i > 0 && !s);
+        if (free < 0) {
+          // Tutti i posti hanno un titolare: connesso (piena) o in attesa del suo ritorno.
+          const waiting = room.slots.some((s, i) => i > 0 && s && !isOpen(s.ws));
           safeSend(ws, {
             type: 'error',
-            message: "Stanza in attesa del ritorno dell'ospite. Riprova più tardi o crea un'altra stanza.",
+            message: waiting && room.capacity === 2
+              ? "Stanza in attesa del ritorno dell'ospite. Riprova più tardi o crea un'altra stanza."
+              : 'Stanza già piena',
           });
           return;
         }
-        if (room.guestDisconnectTimer) {
-          clearTimeout(room.guestDisconnectTimer);
-          room.guestDisconnectTimer = null;
-        }
-        const guestSecret = genReconnectSecret();
-        room.guest = ws;
-        room.guestSecret = guestSecret;
-        room.guestName = msg.playerName || 'Avversario';
+        const secret = genReconnectSecret();
+        const name = msg.playerName || 'Avversario';
+        room.slots[free] = { ws, name, secret, timer: null };
         client.roomCode = roomCode;
-        client.role = 'guest';
+        client.slot = free;
         safeSend(ws, {
           type: 'joined',
           roomCode,
           playerId: 'guest',
-          reconnectSecret: guestSecret,
+          reconnectSecret: secret,
+          slot: free,
+          capacity: room.capacity,
         });
-        safeSend(room.host, {
-          type: 'peer_joined',
-          playerName: room.guestName,
-        });
+        if (room.capacity === 2) {
+          safeSend(room.slots[0]?.ws, { type: 'peer_joined', playerName: name });
+        } else {
+          broadcast(room, { type: 'peer_joined', playerName: name, slot: free }, free);
+          sendMembers(room);
+        }
         persistRooms();
         break;
       }
@@ -221,101 +255,65 @@ wss.on('connection', (ws) => {
           safeSend(ws, { type: 'error', message: 'Stanza non trovata' });
           return;
         }
-        const role = msg.role;
         const secret = msg.secret;
-        if (role === 'host' && secret === room.hostSecret) {
-          if (room.hostDisconnectTimer) {
-            clearTimeout(room.hostDisconnectTimer);
-            room.hostDisconnectTimer = null;
-          }
-          room.host = ws;
-          client.roomCode = roomCode;
-          client.role = 'host';
-          safeSend(ws, { type: 'reconnected', roomCode, role: 'host' });
-          if (room.guest && room.guest.readyState === 1) {
-            safeSend(room.guest, { type: 'peer_rejoined', role: 'host' });
-          }
-          persistRooms();
+        const slot = room.slots.findIndex((s) => s && secret && s.secret === secret);
+        if (slot < 0) {
+          safeSend(ws, { type: 'error', message: 'Riconnessione non valida' });
           break;
         }
-        if (role === 'guest' && room.guestSecret && secret === room.guestSecret) {
-          if (room.guestDisconnectTimer) {
-            clearTimeout(room.guestDisconnectTimer);
-            room.guestDisconnectTimer = null;
-          }
-          room.guest = ws;
-          client.roomCode = roomCode;
-          client.role = 'guest';
-          safeSend(ws, { type: 'reconnected', roomCode, role: 'guest' });
-          if (room.host && room.host.readyState === 1) {
-            safeSend(room.host, { type: 'peer_rejoined', role: 'guest' });
-          }
-          persistRooms();
-          break;
-        }
-        safeSend(ws, { type: 'error', message: 'Riconnessione non valida' });
+        const s = room.slots[slot];
+        clearSlotTimer(s);
+        s.ws = ws;
+        client.roomCode = roomCode;
+        client.slot = slot;
+        safeSend(ws, { type: 'reconnected', roomCode, role: roleOf(slot), slot, capacity: room.capacity });
+        broadcast(room, { type: 'peer_rejoined', role: roleOf(slot), slot }, slot);
+        sendMembers(room);
+        persistRooms();
         break;
       }
 
-      /** Uscita volontaria (menu / fine partita): libera subito lo slot. */
+      /** Uscita volontaria (menu / fine partita): libera subito il posto. */
       case 'leave_room': {
         const roomCode = String(msg.roomCode || client.roomCode || '').toUpperCase().trim();
         const room = rooms.get(roomCode);
-        if (!room || !client.roomCode || client.roomCode !== roomCode) {
+        if (!room || !client.roomCode || client.roomCode !== roomCode || client.slot == null) {
           break;
         }
-        if (client.role === 'host') {
-          if (room.hostDisconnectTimer) {
-            clearTimeout(room.hostDisconnectTimer);
-            room.hostDisconnectTimer = null;
-          }
-          if (room.guestDisconnectTimer) {
-            clearTimeout(room.guestDisconnectTimer);
-            room.guestDisconnectTimer = null;
-          }
-          if (room.guest && room.guest.readyState === 1) {
-            safeSend(room.guest, { type: 'peer_left' });
-          }
-          client.roomCode = null;
-          client.role = null;
-          deleteRoom(roomCode);
+        const slot = client.slot;
+        client.roomCode = null;
+        client.slot = null;
+        if (slot === 0) {
+          closeRoom(roomCode);
           break;
         }
-        if (client.role === 'guest') {
-          if (room.guestDisconnectTimer) {
-            clearTimeout(room.guestDisconnectTimer);
-            room.guestDisconnectTimer = null;
-          }
-          if (room.guest === ws) {
-            room.guest = null;
-          }
-          room.guestSecret = null;
-          room.guestName = undefined;
-          if (room.host && room.host.readyState === 1) {
-            safeSend(room.host, { type: 'peer_left' });
-          }
-          client.roomCode = null;
-          client.role = null;
-          persistRooms();
-          break;
+        clearSlotTimer(room.slots[slot]);
+        room.slots[slot] = null;
+        if (room.capacity === 2) {
+          safeSend(room.slots[0]?.ws, { type: 'peer_left' });
+        } else {
+          // Nelle stanze grandi l'uscita di un ospite non chiude la sessione degli altri.
+          broadcast(room, { type: 'member_left', slot });
+          sendMembers(room);
         }
+        persistRooms();
         break;
       }
 
       case 'relay': {
         const roomCode = String(msg.roomCode || '').toUpperCase().trim();
         const room = rooms.get(roomCode);
-        if (!room) {
+        if (!room || client.roomCode !== roomCode || client.slot == null) {
           safeSend(ws, { type: 'error', message: 'Stanza non valida' });
           return;
         }
-        const peer = ws === room.host ? room.guest : room.host;
-        if (peer && peer.readyState === 1) {
-          safeSend(peer, {
-            type: 'relay',
-            from: client.role,
-            payload: msg.payload,
-          });
+        const out = { type: 'relay', from: roleOf(client.slot), fromSlot: client.slot, payload: msg.payload };
+        if (Array.isArray(msg.to)) {
+          for (const target of msg.to) {
+            if (Number.isInteger(target) && target !== client.slot) safeSend(room.slots[target]?.ws, out);
+          }
+        } else {
+          broadcast(room, out, client.slot);
         }
         break;
       }
@@ -330,58 +328,36 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    if (!client.roomCode) return;
+    if (!client.roomCode || client.slot == null) return;
     const roomCode = client.roomCode;
+    const slot = client.slot;
     const room = rooms.get(roomCode);
     if (!room) return;
-
-    if (client.role === 'host') {
-      if (room.host === ws) {
-        room.host = null;
+    const s = room.slots[slot];
+    if (!s || s.ws !== ws) return; // già sostituito da una riconnessione
+    s.ws = null;
+    broadcast(room, { type: 'peer_disconnected', who: roleOf(slot), slot }, slot);
+    sendMembers(room);
+    clearSlotTimer(s);
+    s.timer = setTimeout(() => {
+      const r = rooms.get(roomCode);
+      const cur = r?.slots[slot];
+      if (!r || !cur || cur.ws) return;
+      cur.timer = null;
+      if (slot === 0) {
+        // L'host non è tornato: la stanza si chiude per tutti.
+        closeRoom(roomCode);
+        return;
       }
-      if (room.guest && room.guest.readyState === 1) {
-        safeSend(room.guest, { type: 'peer_disconnected', who: 'host' });
+      // Dopo l'attesa si libera il posto: altrimenti nessuno può più entrare col codice.
+      r.slots[slot] = null;
+      if (r.capacity > 2) {
+        broadcast(r, { type: 'member_left', slot });
+        sendMembers(r);
       }
-      if (room.hostDisconnectTimer) {
-        clearTimeout(room.hostDisconnectTimer);
-        room.hostDisconnectTimer = null;
-      }
-      room.hostDisconnectTimer = setTimeout(() => {
-        const r = rooms.get(roomCode);
-        if (!r) return;
-        if (!r.host) {
-          if (r.guest && r.guest.readyState === 1) {
-            safeSend(r.guest, { type: 'peer_left' });
-          }
-          deleteRoom(roomCode);
-        }
-      }, RECONNECT_GRACE_MS);
       persistRooms();
-      return;
-    }
-
-    if (client.role === 'guest') {
-      if (room.guest === ws) {
-        room.guest = null;
-      }
-      if (room.host && room.host.readyState === 1) {
-        safeSend(room.host, { type: 'peer_disconnected', who: 'guest' });
-      }
-      // Dopo il grace, libera lo slot ospite: altrimenti nessuno può più entrare col codice.
-      if (room.guestDisconnectTimer) {
-        clearTimeout(room.guestDisconnectTimer);
-        room.guestDisconnectTimer = null;
-      }
-      room.guestDisconnectTimer = setTimeout(() => {
-        const r = rooms.get(roomCode);
-        if (!r || r.guest) return;
-        r.guestSecret = null;
-        r.guestName = undefined;
-        r.guestDisconnectTimer = null;
-        persistRooms();
-      }, RECONNECT_GRACE_MS);
-      persistRooms();
-    }
+    }, RECONNECT_GRACE_MS);
+    persistRooms();
   });
 });
 

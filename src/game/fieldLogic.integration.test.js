@@ -68,3 +68,34 @@ describe('fieldLogic — motore rarità v2', () => {
     expect(tier).not.toBe(BATTLEFIELD_RARITA.SPECIAL);
   });
 });
+
+describe('Mani nude con più di 5 Campi (2v2)', () => {
+  it('ripete i 5 neutri: ognuno compare due volte, come oggetti distinti', async () => {
+    const { selectBattlefields } = await import('./fieldLogic.js');
+    const fields = selectBattlefields('bareHands', ALL_BATTLEFIELDS, { fieldCount: 10 });
+    expect(fields).toHaveLength(10);
+    fields.forEach((f) => expect(f.category).toBe('neutral'));
+    const conta = new Map();
+    for (const f of fields) conta.set(f.id, (conta.get(f.id) || 0) + 1);
+    expect([...conta.values()]).toEqual([2, 2, 2, 2, 2]);
+    expect(new Set(fields).size).toBe(10); // indexOf trova sempre lo slot giusto
+    // Nel primo giro ci sono tutti e 5 i neutri: niente doppioni tra i 6 Campi scoperti all'inizio oltre il necessario.
+    expect(new Set(fields.slice(0, 5).map((f) => f.id)).size).toBe(5);
+  });
+
+  it('una partita 2v2 in Mani nude si crea senza errori', async () => {
+    const { selectBattlefields } = await import('./fieldLogic.js');
+    const { createTeamDuelMatch, TEAM_DUEL_CONFIG } = await import('./teamDuel/teamDuel.js');
+    const { createSeat } = await import('./multiSeat/multiSeatCore.js');
+    const { ALL_AGENTS } = await import('../data/cards.js');
+    const mano = (k) => ALL_AGENTS.slice(k * 5, k * 5 + 5);
+    const seats = [
+      createSeat({ id: 'A1', name: 'A1', team: 'A', army: 'X', focus: 18, hand: mano(0) }),
+      createSeat({ id: 'A2', name: 'A2', team: 'A', army: 'X', focus: 18, hand: mano(1) }),
+      createSeat({ id: 'B1', name: 'B1', team: 'B', army: 'X', focus: 18, hand: mano(2) }),
+      createSeat({ id: 'B2', name: 'B2', team: 'B', army: 'X', focus: 18, hand: mano(3) }),
+    ];
+    const battlefields = selectBattlefields('bareHands', ALL_BATTLEFIELDS, { fieldCount: TEAM_DUEL_CONFIG.fieldCount });
+    expect(() => createTeamDuelMatch({ seats, battlefields, rng: Math.random, mode: 'bareHands' })).not.toThrow();
+  });
+});

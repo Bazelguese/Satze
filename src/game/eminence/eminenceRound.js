@@ -125,11 +125,23 @@ export function beginEminenceRound(matchState, { roundNumber = 1 } = {}) {
   };
 }
 
-/** Un lato è esonerato dalla scelta solo se la sua Eminenza è bloccata (§2.2). */
+/**
+ * Un lato è esonerato dalla scelta se la sua Eminenza è bloccata (§2.2) oppure se non ha
+ * nessuna abilità legale (es. Calibri con Guerra d'Attrito rincarata e Presenza a 0):
+ * senza questa esenzione il round resterebbe in attesa di una scelta impossibile.
+ */
 export function mustChooseThisRound(matchState, side) {
   if (!isEminenceSubsystemEnabled(matchState)) return false;
   const state = matchState[side];
-  return Boolean(state?.eminenceId) && !state.blockedThisRound;
+  if (!state?.eminenceId || state.blockedThisRound) return false;
+  if (state.selectedAbilityId) return true;
+  const legal = getLegalAbilityIds(
+    state.eminenceId,
+    state.selectionCheckpointPresence ?? state.presence ?? 0,
+    state.persistent,
+    { lastSelectedAbilityId: state.lastSelectedAbilityId },
+  );
+  return legal.length > 0;
 }
 
 /**

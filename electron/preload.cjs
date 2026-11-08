@@ -16,4 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   perf: {
     recordTrace: (seconds) => ipcRenderer.invoke('satze:perf:recordTrace', seconds),
   },
+  telemetry: {
+    send: (payload) => ipcRenderer.invoke('satze:telemetry:send', payload),
+  },
 });

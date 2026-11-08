@@ -154,7 +154,7 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
   ));
   const completed = gateProgress?.completedGates || [];
 
-  return eminence.abilities.map((ability) => {
+  const options = eminence.abilities.map((ability) => {
     const gatePassed = completed.includes(ability.revealGate);
     const affordable = legal.has(ability.id);
     const presenceDelta = resolveAbilityPresenceDelta(ability, publicSide.persistent);
@@ -186,6 +186,17 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
       selected: selectedAbilityId === ability.id,
     };
   });
+
+  // Se l'unica cosa che impedisce ogni scelta è la mancanza di bersagli, la scelta resta
+  // obbligatoria per il motore: senza questa eccezione il round resterebbe bloccato (es.
+  // Mounthborn senza Prede possibili e Presenza bassa). L'abilità si rivelerà senza effetto,
+  // come accade già per l'IA.
+  if (!options.some((o) => o.selectable) && options.some((o) => o.blocker === OPTION_BLOCKERS.NO_VALID_TARGETS)) {
+    return options.map((o) => (o.blocker === OPTION_BLOCKERS.NO_VALID_TARGETS
+      ? { ...o, selectable: true, blocker: null, withoutTargets: true }
+      : o));
+  }
+  return options;
 }
 
 /**

@@ -4,18 +4,19 @@ Questo script allestisce sul tuo server Discord tutto lo spazio del playtest: ru
 
 - **Non tocca niente di quello che c'è già.** Crea solo categorie con il prefisso `SATZE ·` e lavora solo lì dentro.
 - **I canali del playtest li vede solo chi ha il ruolo Playtester** (e tu). Gli altri membri del server non si accorgono di niente.
-- **Puoi rilanciarlo quante volte vuoi**: aggiorna testi e impostazioni senza duplicare niente. È così che pubblichi il link del sondaggio o una nuova versione.
+- **Non annulla mai le modifiche fatte a mano.** I canali che esistono già non vengono modificati, e quelli che cancelli non vengono ricreati: lo script si ricorda cosa ha creato in `stato.json` (file locale, escluso da git). Per riapplicare di proposito permessi, descrizioni e tag usa `npm run setup -- --aggiorna-canali`.
+- **Puoi rilanciarlo quante volte vuoi**: aggiorna solo i propri messaggi (istruzioni in #download e post della guida) senza duplicare niente.
 
 ## Cosa crea
 
 ```
 📌 SATZE · INFO          (i playtester leggono, scrivi solo tu)
-   # benvenuto           cosa testare, dove scrivere, regole
-   # annunci             nuove build, sondaggio
-   # download            installer e istruzioni
+   # benvenuto           i messaggi li scrivi tu
+   # annunci             i messaggi li scrivi tu
+   # download            istruzioni tecniche di installazione (il link lo metti tu)
+   🗂 guida              regolamento, un post bloccato per argomento (testi in guida.mjs)
 🐞 SATZE · FEEDBACK      (i playtester aprono post e rispondono)
    🗂 bug                forum, con modello di segnalazione e tag
-   🗂 bilanciamento      forum, un tag per armata + Eminenze, Campi, IA, regole
    🗂 idee               forum
 💬 SATZE · COMMUNITY     (tutti scrivono e parlano)
    # chiacchiere
@@ -27,7 +28,7 @@ Questo script allestisce sul tuo server Discord tutto lo spazio del playtest: ru
 
 Ruoli: **Dev Satze** e **Playtester**. I tag ✅ *risolto* (bug) e 📌 *in programma* (idee) li può mettere solo chi gestisce i thread, cioè tu.
 
-I testi sono in `contenuti.mjs`: modificali lì e rilancia lo script.
+Struttura e testi tecnici sono in `contenuti.mjs`, la guida del gioco in `guida.mjs`: modificali lì e rilancia lo script. I messaggi di presentazione e gli annunci li scrive Davide a mano: lo script non li tocca.
 
 ---
 
