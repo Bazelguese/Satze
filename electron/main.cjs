@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, net } = require('electron');
 const { ipcMain } = require('electron');
 const { join, dirname } = require('path');
 const { existsSync, writeFileSync, readFileSync } = require('fs');
@@ -187,6 +187,38 @@ ipcMain.handle('save-crop-config', async (_event, payload) => {
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
+  }
+});
+
+// Telemetria del playtest: invia il riepilogo di una partita al webhook Discord del playtest.
+// Gira nel processo principale (niente CORS) e accetta solo indirizzi di webhook Discord.
+const TELEMETRY_URL_RE = /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/;
+ipcMain.handle('satze:telemetry:send', async (_event, payload) => {
+  try {
+    const url = String(payload?.url || '').trim();
+    if (!TELEMETRY_URL_RE.test(url)) return { ok: false, error: 'url' };
+    const testo = String(payload?.testo || '').slice(0, 1900);
+    const nomeFile = String(payload?.nomeFile || 'partita.json').replace(/[^\w.-]/g, '_').slice(0, 80);
+    const json = String(payload?.json || '{}');
+    if (json.length > 7_000_000) return { ok: false, error: 'troppo grande' };
+    const boundary = `----satze${Date.now().toString(16)}`;
+    const parti = [
+      `--${boundary}\r\nContent-Disposition: form-data; name="payload_json"\r\nContent-Type: application/json\r\n\r\n`,
+      JSON.stringify({ content: testo, allowed_mentions: { parse: [] } }),
+      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="files[0]"; filename="${nomeFile}"\r\nContent-Type: application/json\r\n\r\n`,
+      json,
+      `\r\n--${boundary}--\r\n`,
+    ];
+    const body = Buffer.from(parti.join(''), 'utf8');
+    const doFetch = typeof net?.fetch === 'function' ? net.fetch.bind(net) : fetch;
+    const res = await doFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+      body,
+    });
+    return { ok: res.ok, status: res.status };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err) };
   }
 });
 

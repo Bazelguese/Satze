@@ -170,6 +170,7 @@ export const STRUTTURA = [
     accesso: 'privato',
     canali: [
       { nome: 'note-dev', tipo: 'testo', descrizione: 'Solo per te: appunti, priorità, cosa sistemare.' },
+      { nome: 'dati-partite', tipo: 'testo', descrizione: 'Dati di gioco inviati automaticamente dal gioco a fine partita (uno per partita). Solo per Davide.' },
     ],
   },
 ];
