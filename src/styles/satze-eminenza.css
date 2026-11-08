@@ -589,14 +589,14 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
 }
 .em-announce-eyebrow{
   position:relative;z-index:2;display:block;margin:0 0 4px;
-  font-family:'Cinzel',Georgia,serif;font-size:13px;font-weight:700;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;font-size:13px;font-weight:700;
   letter-spacing:.28em;text-transform:uppercase;color:#f8f4ea;
   text-shadow:0 0 1px #000, 0 2px 8px #000, 0 0 16px color-mix(in srgb, var(--em-ann-acc,#d5ecf9) 50%, transparent);
 }
 .em-announce-source{
   position:relative;z-index:2;display:block;margin:0 0 10px;
-  font-family:'Cinzel',Georgia,serif;font-size:18px;font-weight:700;
-  letter-spacing:.04em;line-height:1.2;color:#fff8ec;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;font-style:italic;text-transform:uppercase;font-size:18px;font-weight:700;
+  letter-spacing:.02em;line-height:1.2;color:#fff8ec;
   text-shadow:0 0 2px #000, 0 2px 8px #000;
 }
 .em-announce-kind{
@@ -621,8 +621,8 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
 }
 .em-announce-name{
   position:relative;z-index:2;display:block;margin:0 0 10px;
-  font-family:'Cinzel',Georgia,serif;font-size:28px;font-weight:800;
-  letter-spacing:.03em;line-height:1.15;color:#fff8ec;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;font-style:italic;text-transform:uppercase;font-size:28px;font-weight:700;
+  letter-spacing:.01em;line-height:1.15;color:#fff8ec;
   text-shadow:0 0 2px #000, 0 2px 0 #000, 0 3px 10px #000, 0 0 18px color-mix(in srgb, var(--em-ann-acc,#d5ecf9) 40%, transparent);
 }
 .em-announce-cost{
@@ -633,7 +633,7 @@ body.satze-vfx-low .em-zone-enemy .em-stage{
 }
 .em-announce-text{
   position:relative;z-index:2;margin:0 0 14px;
-  font-family:'Segoe UI','Iowan Old Style',Georgia,serif;
+  font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
   font-size:17px;font-weight:600;line-height:1.5;color:#f4efe4;
   text-shadow:0 1px 2px #000, 0 2px 8px rgba(0,0,0,.85);
 }
