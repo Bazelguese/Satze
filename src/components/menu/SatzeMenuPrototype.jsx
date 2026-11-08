@@ -9,6 +9,7 @@ import { getVfxQualityProfile, resolveVfxQualityProfile } from "../../settings/v
 import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
+import { playMenuBrush, playUiBack } from "../../audio/gameSounds";
 import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
 import { SATZE_VERSION, SATZE_BUILD_DATE } from "../../config/buildProfile";
 import { useScreenActiveRef, useScreenState } from "../screenCache/ScreenCache.jsx";
@@ -551,7 +552,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const activateMain = (i) => {
     const item = items[i];
     if (!item || item.disabled || pressLockRef.current) return;
-    playUiClick();
+    playMenuBrush();
     press("main", i, () => {
       if (item.hasChoices) {
         setHit(null);
@@ -598,7 +599,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
 
   const backFromPicker = () => {
     if (pressLockRef.current) return;
-    playUiClick();
+    playUiBack();
     press("back", 0, () => {
       setHit(null);
       if (choicePickerStack.length > 1) closeTopPicker();

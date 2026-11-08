@@ -7,6 +7,7 @@ export const UI_SOUND = {
   CONFIRM: 'ui.confirm',
   BACK: 'ui.back',
   NAVIGATE: 'ui.navigate',
+  BRUSH: 'ui.brush',
 };
 
 export const GAME_SOUND = {
@@ -17,6 +18,7 @@ export const GAME_SOUND = {
   FC_TICK: 'game.fc.tick',
   LOCK_IN: 'game.lock',
   SHUFFLE: 'game.shuffle',
+  CARD_DEAL: 'game.card.deal',
   DUEL_START: 'game.duel.start',
   DUEL_DEPLOY: 'game.duel.deploy',
   DUEL_POWER: 'game.duel.power',
@@ -84,6 +86,11 @@ const MATCH = {
   seal: 'audio/sfx/match/seal.mp3',
 };
 
+/** Set dei menu (ElevenLabs): carta e inchiostro, come la pennellata del menu principale. */
+const MENU = {
+  brush: 'audio/sfx/menu/brush.mp3',
+};
+
 /**
  * Millisecondi dall'inizio del file al colpo udibile: chi sincronizza un suono
  * con un'animazione lo anticipa di questo tanto.
@@ -97,10 +104,12 @@ export const SOUND_HIT_MS = {
 
 /** @type {Record<string, string>} */
 export const SOUND_CATALOG = {
-  [UI_SOUND.CLICK]: FALLBACK.ui,
-  [UI_SOUND.CONFIRM]: FALLBACK.confirm,
-  [UI_SOUND.BACK]: FALLBACK.soft,
-  [UI_SOUND.NAVIGATE]: FALLBACK.soft,
+  [UI_SOUND.CLICK]: FALLBACK.ui, // MENU.click quando generato
+  // le conferme dei menu usano lo stesso sigillo della conferma in partita
+  [UI_SOUND.CONFIRM]: MATCH.confirm,
+  [UI_SOUND.BACK]: FALLBACK.soft, // MENU.back quando generato
+  [UI_SOUND.NAVIGATE]: FALLBACK.soft, // MENU.move quando generato
+  [UI_SOUND.BRUSH]: MENU.brush,
   'ui.soft': FALLBACK.soft,
 
   [GAME_SOUND.CARD_SELECT]: MATCH.cardArrive,
@@ -109,7 +118,8 @@ export const SOUND_CATALOG = {
   [GAME_SOUND.FIELD_SELECT]: FALLBACK.confirm,
   [GAME_SOUND.FC_TICK]: MATCH.coin,
   [GAME_SOUND.LOCK_IN]: MATCH.confirm,
-  [GAME_SOUND.SHUFFLE]: FALLBACK.shuffle,
+  // GAME_SOUND.SHUFFLE: MATCH.shuffleLoop quando generato (il vecchio shuffle.wav in loop sarebbe una raffica)
+  [GAME_SOUND.CARD_DEAL]: FALLBACK.place, // MATCH.cardDeal quando generato
   [GAME_SOUND.DUEL_START]: FALLBACK.launch,
   [GAME_SOUND.DUEL_DEPLOY]: FALLBACK.launch,
   [GAME_SOUND.DUEL_POWER]: FALLBACK.tick,
@@ -127,8 +137,8 @@ export const SOUND_CATALOG = {
   [GAME_SOUND.DUEL_HP_HIT]: MATCH.hpHit,
   [GAME_SOUND.FIELD_SEAL]: MATCH.seal,
   [GAME_SOUND.ROUND_NEXT]: FALLBACK.soft,
-  [GAME_SOUND.ARMY_CONFIRM]: FALLBACK.confirm,
-  [GAME_SOUND.DECK_CONFIRM]: FALLBACK.confirm,
+  [GAME_SOUND.ARMY_CONFIRM]: FALLBACK.confirm, // MENU.armySlab quando generato
+  [GAME_SOUND.DECK_CONFIRM]: FALLBACK.confirm, // MENU.deckTap quando generato
 
   'cinematic.LINK_AGENT.launch': FALLBACK.launch,
   'cinematic.LINK_AGENT.impact': FALLBACK.impact,

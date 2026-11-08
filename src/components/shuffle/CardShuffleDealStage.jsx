@@ -5,6 +5,8 @@ import { ShuffleDealAnimatedCard } from './ShuffleDealAnimatedCard';
 import { useCardShuffleDealAnimation } from './useCardShuffleDealAnimation';
 import { useShuffleKitAnimation } from './useShuffleKitAnimation';
 import { CARD_TRANSITION } from './BattlefieldShuffleKitController';
+import { SHUFFLE_DEAL_TIMING } from './cardShuffleDealLayout';
+import { playCardDeal, startShuffleSound } from '../../audio/gameSounds.js';
 
 /** Riporta quante carte sono già state consegnate in mano (campo `dealt`). */
 function useDealProgress(cards, onDealProgress) {
@@ -12,6 +14,36 @@ function useDealProgress(cards, onDealProgress) {
   cbRef.current = onDealProgress;
   const dealt = cards.reduce((n, c) => n + (c.dealt ? 1 : 0), 0);
   useEffect(() => { cbRef.current?.(dealt); }, [dealt]);
+}
+
+/**
+ * Stile classico (motore senza controller): mischiata in loop dallo scramble alla prima
+ * carta in mano, poi un suono per ogni carta consegnata.
+ */
+function useClassicShuffleSound(cards, sound, startMs) {
+  const dealt = cards.reduce((n, c) => n + (c.dealt ? 1 : 0), 0);
+  const stopRef = useRef(null);
+  const dealtRef = useRef(0);
+  useEffect(() => {
+    if (!sound) return undefined;
+    dealtRef.current = 0;
+    const t = setTimeout(() => { stopRef.current = startShuffleSound(); }, startMs);
+    return () => {
+      clearTimeout(t);
+      stopRef.current?.(300);
+      stopRef.current = null;
+    };
+  }, [sound, startMs]);
+  useEffect(() => {
+    if (!sound || dealt <= dealtRef.current) {
+      dealtRef.current = dealt;
+      return;
+    }
+    stopRef.current?.(300);
+    stopRef.current = null;
+    for (let i = dealtRef.current; i < dealt; i += 1) playCardDeal(i);
+    dealtRef.current = dealt;
+  }, [sound, dealt]);
 }
 
 function ClassicShuffleStage({
@@ -25,6 +57,7 @@ function ClassicShuffleStage({
   showReplayButton,
   deckIntroFadeMs,
   deckIntroBeatMs,
+  sound,
 }) {
   const { cards, showReplay, play } = useCardShuffleDealAnimation(deck, layout, {
     autoPlay,
@@ -34,6 +67,8 @@ function ClassicShuffleStage({
     deckIntroBeatMs,
   });
   useDealProgress(cards, onDealProgress);
+  const introMs = deckIntroFadeMs > 0 ? deckIntroFadeMs + deckIntroBeatMs : 0;
+  useClassicShuffleSound(cards, sound, introMs + SHUFFLE_DEAL_TIMING.scrambleStartMs);
   const deckArmies = useMemo(
     () => getDeckArmies(deck, { fallbackArmy: deck?.[0]?.army }),
     [deck]
@@ -73,6 +108,7 @@ function KitShuffleStage({
   timeScale,
   deckIntroFadeMs,
   deckIntroBeatMs,
+  sound,
 }) {
   const { cards, showReplay, play } = useShuffleKitAnimation(deck, layout, {
     kind: shuffleKind,
@@ -83,6 +119,7 @@ function KitShuffleStage({
     timeScale,
     deckIntroFadeMs,
     deckIntroBeatMs,
+    sound,
   });
   useDealProgress(cards, onDealProgress);
   const deckArmies = useMemo(
@@ -149,6 +186,8 @@ export function CardShuffleDealStage({
   timeScale = 1,
   deckIntroFadeMs = 0,
   deckIntroBeatMs = 0,
+  /** Suoni di mischiata e smazzata (solo la mischiata vera, un mazzo). */
+  sound = false,
 }) {
   const isClassic = shuffleKind === CLASSIC_SHUFFLE_KIND;
   const stageProps = {
@@ -162,6 +201,7 @@ export function CardShuffleDealStage({
     showReplayButton,
     deckIntroFadeMs,
     deckIntroBeatMs,
+    sound,
   };
 
   return (

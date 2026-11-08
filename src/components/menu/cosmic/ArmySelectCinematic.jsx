@@ -30,7 +30,7 @@ import {
 } from '../../../data/armies.js';
 import { ARMY_SETS, ARMY_DECKS } from '../../../data/cards.js';
 import { ARMY_LORE, MIXED_ARMIES_LORE } from './armyLore.js';
-import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
+import { GAME_SOUND, playGameAt, playUiBack, playUiClick, playUiNavigate } from '../../../audio/gameSounds.js';
 import { CardReworkP4 } from '../../cards/CardReworkP4.jsx';
 import { evaluateCardBalance } from '../../cosmic/DeckPreviewCosmic.jsx';
 import { getCardSprite } from '../../../utils';
@@ -217,7 +217,7 @@ export default function ArmySelectCinematic({
     const cur = stateRef.current.idx;
     const next = (i + total) % total;
     if (next === cur) return;
-    playUiClick();
+    playUiNavigate();
     // Offset calcolato qui: l'updater può girare dopo che il render ha già aggiornato stateRef (StrictMode).
     const delta = wrapOffset(next, cur, total);
     stateRef.current.idx = next;
@@ -229,7 +229,8 @@ export default function ArmySelectCinematic({
 
   const confirmArmy = useCallback(() => {
     if (stateRef.current.phase !== 'idle') return;
-    playGame(GAME_SOUND.ARMY_CONFIRM);
+    // il colpo della lastra cade quando copre lo schermo
+    playGameAt(GAME_SOUND.ARMY_CONFIRM, EXIT_MS);
     setDossier(false);
     setPhase('confirming');
     // La lastra inclinata copre lo schermo (EXIT_MS); la scelta esercito riparte da lì.
@@ -306,7 +307,7 @@ export default function ArmySelectCinematic({
         <div className="asx-bg-stripes" />
       </div>
 
-      <button type="button" className="asx-back" onClick={() => { playUiClick(); goBack(); }}>
+      <button type="button" className="asx-back" onClick={() => { playUiBack(); goBack(); }}>
         <span className="key">ESC</span><span className="lbl">MENU</span>
       </button>
 

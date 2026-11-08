@@ -3,7 +3,7 @@
  */
 
 import { GAME_SOUND, SOUND_HIT_MS, UI_SOUND } from './soundCatalog.js';
-import { playSound, scheduleSound } from './soundBus.js';
+import { playLoop, playSound, scheduleSound } from './soundBus.js';
 import {
   DUEL_PHASE4_MIN_MS,
   DUEL_VISUAL_DEFAULTS,
@@ -58,32 +58,52 @@ export function playUiConfirm(opts) {
   return playSound(UI_SOUND.CONFIRM, opts);
 }
 
+export function playUiBack(opts) {
+  return playSound(UI_SOUND.BACK, opts);
+}
+
+/** Spostamento del cursore (voci, ruota delle armate, scorrimento dei mazzi). */
+export function playUiNavigate(opts) {
+  return playSound(UI_SOUND.NAVIGATE, opts);
+}
+
+/** Clic su una voce del menu principale: la pennellata d'inchiostro che attraversa lo schermo. */
+export function playMenuBrush(opts) {
+  return playSound(UI_SOUND.BRUSH, opts);
+}
+
 /**
- * Transizione schermata (menù → armata → deck → …).
+ * Mischiata: in loop finché non si ferma (dura quanto lo stile scelto).
+ * @returns {(fadeMs?: number) => void}
+ */
+export function startShuffleSound() {
+  return playLoop(GAME_SOUND.SHUFFLE);
+}
+
+const DEAL_GAP_MS = 60;
+let lastDealAt = -Infinity;
+
+/**
+ * Carta distribuita in mano: ognuna appena più acuta, come le monete.
+ * @param {number} index 0 = prima carta
+ */
+export function playCardDeal(index) {
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  if (now - lastDealAt < DEAL_GAP_MS) return false;
+  lastDealAt = now;
+  return playSound(GAME_SOUND.CARD_DEAL, { rate: 1 + Math.max(0, index) * 0.04 });
+}
+
+/**
+ * Transizione schermata (menù → armata → deck → …): muta. Ogni cambio parte da un'azione
+ * che ha già il suo suono (pennellata, clic, indietro, conferme) e la mischiata suona dal
+ * suo palco (startShuffleSound): un secondo suono nello stesso istante si sentirebbe doppio.
  * @param {string} nextPhase
  * @param {string} [prevPhase]
  */
 export function playPhaseTransition(nextPhase, prevPhase) {
-  if (!nextPhase || nextPhase === prevPhase) return false;
-  if (nextPhase === 'menu') return playSound(UI_SOUND.BACK);
-  if (nextPhase === 'shuffleDeal' || nextPhase === 'duelLoading') {
-    return playSound(GAME_SOUND.SHUFFLE);
-  }
-  // la conferma ha già il suo suono: niente altro nello stesso istante
-  if (nextPhase === 'battle') return false;
-  if (nextPhase === 'result') return false; // i beat li fa duelPhaseCues
-  if (
-    nextPhase === 'selectArmy' ||
-    nextPhase === 'selectDeck' ||
-    nextPhase === 'selectField' ||
-    nextPhase === 'selectAgent' ||
-    nextPhase === 'options' ||
-    nextPhase === 'gallery' ||
-    nextPhase === 'campaignSlots' ||
-    nextPhase === 'deckManager'
-  ) {
-    return playSound(UI_SOUND.NAVIGATE);
-  }
+  void nextPhase;
+  void prevPhase;
   return false;
 }
 
