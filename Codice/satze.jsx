@@ -182,6 +182,9 @@ import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistor
 import { GAME_MODES } from '../src/data/gameModes';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
+import { registraPartita, nuovoIdPartita, telemetriaAttiva, svuotaCoda, serveNomeGiocatore } from '../src/telemetry/telemetria.js';
+import { roundDuello, partitaDuello, partitaMultiPosto } from '../src/telemetry/recordPartita.js';
+import NomeGiocatoreModal from '../src/components/playtest/NomeGiocatoreModal.jsx';
 import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
 import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
 import { preloadCardImagesForAgents } from '../src/data/images.js';
@@ -1641,6 +1644,9 @@ export default function SatzeGame() {
   const [mpReconnectError, setMpReconnectError] = useState('');
   const onlineMatchStartedRef = useRef(false);
   const playtestAutoSavedRef = useRef(false);
+  // Telemetria del playtest: partita in corso (inizio e round giocati) e invio unico a fine partita.
+  const telemetriaRef = useRef({ inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] });
+  const [chiediNomeGiocatore, setChiediNomeGiocatore] = useState(() => serveNomeGiocatore());
   const multiplayerSessionRef = useRef(multiplayerSession);
   /** Impostato dopo applyOnlineRematch — usato dal relay rematch */
   const applyOnlineRematchRef = useRef(/** @type {null | ((mode: 'same' | 'change') => void)} */ (null));
@@ -2712,6 +2718,75 @@ export default function SatzeGame() {
     playerHP,
     enemyHP,
     roundNumber,
+  ]);
+
+  // Telemetria del playtest (solo build pubblica con webhook configurato): vedi src/telemetry/.
+  useEffect(() => {
+    svuotaCoda(); // partite rimaste in coda da una sessione precedente senza connessione
+  }, []);
+
+  useEffect(() => {
+    const t = telemetriaRef.current;
+    if (gamePhase === 'menu') {
+      // Partita abbandonata o finita: la prossima ripartirà da zero.
+      telemetriaRef.current = { inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] };
+      return;
+    }
+    const inPartita = ['selectField', 'selectAgent', 'battle', 'result'].includes(gamePhase);
+    if (inPartita && (!t.inCorso || t.inviata)) {
+      telemetriaRef.current = { inCorso: true, inviata: false, idPartita: nuovoIdPartita(), inizio: Date.now(), round: [] };
+    }
+  }, [gamePhase, roundNumber]);
+
+  useEffect(() => {
+    if (gamePhase !== 'gameOver' || !gameResult) return;
+    const t = telemetriaRef.current;
+    if (!t.inCorso || t.inviata || !telemetriaAttiva()) return;
+    t.inviata = true;
+    // Fuori dal test: tutorial guidati, campagna, partite di prova.
+    if (guidedMatch?.active || selectedMode === 'campaign' || gameMode === 'campaign' || gameResult.test || devDialogueDuelActive) return;
+    try {
+      const fine = Date.now();
+      if (gameResult.telemetria) {
+        registraPartita(partitaMultiPosto({ idPartita: t.idPartita, inizio: t.inizio, fine, gameResult, telemetria: gameResult.telemetria }));
+        return;
+      }
+      const customId = typeof selectedDeckKey === 'string' && selectedDeckKey.startsWith('custom_')
+        ? selectedDeckKey.replace('custom_', '')
+        : null;
+      const custom = customId ? loadCustomDecks()[customId] : null;
+      registraPartita(partitaDuello({
+        idPartita: t.idPartita,
+        inizio: t.inizio,
+        fine,
+        round: t.round,
+        gameResult,
+        online: isOnlinePvP ? { stanza: multiplayerSession?.roomCode ?? null } : null,
+        aiDifficulty,
+        gameMode,
+        eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
+        giocatore: {
+          armata: selectedArmy || playerHand?.[0]?.army || null,
+          esercito: custom ? `personalizzato: ${custom.name || customId}` : (typeof selectedDeckKey === 'string' ? `${selectedDeckKey} · ${ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.name || ''}`.trim() : null),
+          carteEsercito: custom?.cards ?? null,
+          mano: playerHand,
+          pv: playerHP,
+        },
+        avversario: {
+          nome: isOnlinePvP ? onlinePeerName : null,
+          armata: enemyHand?.[0]?.army || null,
+          esercito: duelDeckKeys?.enemy ?? null,
+          mano: enemyHand,
+          pv: enemyHP,
+        },
+      }));
+    } catch (err) {
+      console.warn('Telemetria: partita non registrata', err);
+    }
+  }, [
+    gamePhase, gameResult, guidedMatch?.active, selectedMode, gameMode, devDialogueDuelActive, selectedDeckKey,
+    isOnlinePvP, multiplayerSession?.roomCode, aiDifficulty, eminenceMatchState, selectedArmy, playerHand, playerHP,
+    onlinePeerName, enemyHand, duelDeckKeys?.enemy, enemyHP,
   ]);
 
   // Rotella mouse sui FC - funziona su panel, sulla carta posizionata e sulla carta in mano
@@ -4146,6 +4221,16 @@ export default function SatzeGame() {
     }
     const newPlayerHP = currentPlayerHP;
     const newEnemyHP = currentEnemyHP;
+    if (telemetriaRef.current.inCorso && battleResult) {
+      telemetriaRef.current.round.push(roundDuello({
+        roundNumber,
+        battleResult,
+        isPlayerFirst,
+        pvTu: newPlayerHP,
+        pvAvversario: newEnemyHP,
+        eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
+      }));
+    }
     if (campaignDuelMod?.firstAct) {
       const outcome = firstActMatchOutcome({ playerHP:newPlayerHP,enemyHP:newEnemyHP,playerFields,enemyFields,
         exhausted:playerAvailable.length===0||enemyAvailable.length===0,round:roundNumber,rule:campaignDuelMod.winRule,conquestEffect:battleResult?.resolvedField?.campaignEffect,duelWinner:battleResult?.winner,conquered:!battleResult?.skipConquest });
@@ -4841,9 +4926,10 @@ export default function SatzeGame() {
           <SatzeMenuPrototype
             menuItems={menuItemsResolved}
             buildLabel={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
-            inputLocked={isTutorialSelectorOpen || tutorial.isActive}
+            inputLocked={isTutorialSelectorOpen || tutorial.isActive || chiediNomeGiocatore}
           />
         )}
+        {chiediNomeGiocatore && <NomeGiocatoreModal onFatto={() => setChiediNomeGiocatore(false)} />}
 
         <TutorialSelector
           isOpen={isTutorialSelectorOpen}

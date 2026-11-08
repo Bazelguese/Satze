@@ -337,7 +337,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       const human = getKothSeat(match, HUMAN_KOTH_SEAT);
       project(over, { playerSeatId: HUMAN_KOTH_SEAT, enemySeatId: enemy.id, playerHP: human.hp, enemyHP: enemy.hp, isPlayerFirst: true });
     }
-    sceneRef.current?.showGameOver?.(gameResult);
+    // Dati per la telemetria del playtest (src/telemetry): storico completo, posti e impostazioni.
+    sceneRef.current?.showGameOver?.({
+      ...gameResult,
+      telemetria: { storico: match.history || [], posti: match.seats || [], opzioni: s.options || {} },
+    });
   }, [clearTimers, project, sceneRef]);
 
   // ------------------------------------------------------------------

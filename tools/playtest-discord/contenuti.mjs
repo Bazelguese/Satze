@@ -59,6 +59,9 @@ In basso a sinistra nel menu principale: \`PLAYTEST · SATZE · LA GRANDE GUERRA
 2. Al messaggio *"SATZE Playtest è già installato"* scegli **Sì** (= aggiorna). **No** disinstalla, **Annulla** esce.
 3. Mazzi e impostazioni restano: l'aggiornamento svuota solo la cache grafica.
 
+**Dati di gioco**
+Al primo avvio il gioco chiede un nome. A fine partita invia automaticamente a Davide i dati della partita: nome, modalità e formato, armate, carte giocate, FC investiti, Campi, esito e durata. Servono per bilanciare il gioco; non vengono raccolti altri dati dal PC.
+
 **Disinstallazione**
 Impostazioni di Windows → App → **SATZE Playtest** → Disinstalla.
 
