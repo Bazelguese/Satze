@@ -5,7 +5,8 @@
 - gioco in **italiano e inglese**;
 - **a pagamento**, con prezzo unico di **6,99 €** (vedi §4.5 per il prezzo in dollari);
 - **budget di marketing zero**: solo tempo;
-- **nessun pubblico esistente**.
+- **nessun pubblico esistente**;
+- **niente social, publisher o eventi dal vivo**; sì alle note di sviluppo scritte (§5).
 
 **Come leggere i numeri.** Ogni dato ha accanto la fonte e il tipo di verifica:
 - **[letto]**: ho letto la pagina originale;
@@ -51,7 +52,7 @@ SATZE si colloca tra i **card battler strategici** (tag Steam "Card Battler", "S
 - **Giocatori di card battler e deckbuilding su PC.** Cercano profondità, molte combinazioni e rigiocabilità. Per loro 360 carte, 12 armate e mazzi misti sono un argomento forte.
 - **Chi ama leggere l'avversario.** Giochi come Yomi 2 si presentano proprio sul "leggere l'avversario" (dalla pagina Steam). La puntata segreta dei Focus Coin è il punto di contatto.
 - **Appassionati di lore dark fantasy e cosmica.** Gli piacciono i Giocatori cosmici, la Grande Guerra e le Eminenze.
-- **Pubblico italiano.** È piccolo (circa 0,6% di Steam), ma raggiungibile più facilmente tramite stampa, eventi e creator italiani, perché "sviluppatore italiano solista" è una storia che la stampa locale racconta volentieri.
+- **Pubblico italiano.** È piccolo (circa 0,6% di Steam), ma raggiungibile più facilmente tramite stampa e creator italiani, perché "sviluppatore italiano solista" è una storia che la stampa locale racconta volentieri.
 
 ### 2.2 Gancio e àncora
 
@@ -134,13 +135,13 @@ Prendo il calendario di §5 come riferimento:
 | Apertura della pagina | ~20 | 30 | 150 | 400 |
 | Organiche (a settimana × 37 settimane) | 2/sett → ~70 | 10/sett → 370 | 40/sett → 1.500 | 100/sett → 3.700 |
 | Next Fest | ~150 | 180 | 450 | 1.500 |
-| Creator, Reddit, festival terzi | 0 | 100 | 900 | 2.500 |
+| Creator, festival digitali, stampa | 0 | 100 | 900 | 2.500 |
 | **Totale al lancio** | **~250** | **~700** | **~3.000** | **~8.000** |
 
 Cosa distingue gli scenari:
 - **Mediana Steam:** la pagina esce tardi, nessuna attività costante e nessun festival.
 - **Prudente:** il piano viene seguito, ma il gancio non colpisce.
-- **Intermedio:** il piano è costante e qualche video o post funziona.
+- **Intermedio:** il piano è costante e qualche creator o festival funziona.
 - **Ottimistico:** il gancio funziona con creator e festival. Con 8.000 liste desideri potresti entrare nel **Calendario personale** (soglia stimata 8.000-30.000), che porta altre migliaia di liste desideri prima del lancio.
 
 ### 4.4 Copie, recensioni e ricavi nel primo anno [stima]
@@ -197,23 +198,71 @@ Steam non vende pubblicità: la visibilità dipende da quanto il gioco viene com
 - *"we don't sell marketing space at all"* ([tools](https://partner.steamgames.com/doc/marketing/tools))
 - *"Can I pay for my game to show up to more customers? Nope."* ([visibility](https://partner.steamgames.com/doc/marketing/visibility))
 
-Il piano punta quindi tutto su tre cose: **pagina presto, Next Fest e creator**.
+### 5.1 Approccio scelto
+
+**Scelte di Davide:**
+- nessun social, video promozionale o "contenuto virale";
+- nessun publisher;
+- nessun evento dal vivo;
+- **sì alle note di sviluppo scritte** sulla pagina Steam.
+
+Il piano si basa quindi su canali in cui **sono altri a parlare del gioco**. Il lavoro di Davide è preparare bene il materiale e fare i contatti, come farebbe un ufficio stampa.
+
+Canali, in ordine di efficacia secondo un sondaggio di Zukowski su oltre 100 giochi **[riassunto]** ([HTMAG, 2023](https://howtomarketagame.com/2023/09/11/three-inspiring-marketing-success-stories/)):
+
+**festival > TikTok > streamer > Reddit > stampa > Twitter.**
+
+Dei sei, il piano tiene **festival, streamer/creator e stampa**. TikTok, Reddit e Twitter sono esclusi per scelta.
+
+| Canale | Cosa fa Davide | Note |
+|---|---|---|
+| **Steam Next Fest** (giugno 2027) | Demo, iscrizione, pagina curata | Il canale più importante. Steam mette in evidenza le demo in base all'interesse dei giocatori, non all'attività social ([nextfest](https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest)). |
+| **Festival digitali di terzi** | Candidature con pagina Steam, trailer e demo | Molti sono gratuiti. Elenco aggiornato su [howtomarketagame.com/festivals](https://howtomarketagame.com/festivals). Le scadenze 2027 sono da verificare festival per festival. |
+| **Creator tramite chiavi** | Distribuisce chiavi; i video li fanno i creator | **Curator Connect** di Steam ([curators](https://partner.steamgames.com/doc/marketing/curators)) **[letto]**. Piattaforme come Keymailer, Woovit e Lurkit **[riassunto]**: costi e limiti dei piani gratuiti da verificare. Meglio molti creator piccoli del genere che uno grande. Circa metà delle richieste di chiavi da sconosciuti sono false **[riassunto]** ([presskit.gg](https://presskit.gg/field-guides/managing-game-key-requests)). |
+| **Stampa** | Press kit e comunicati nei momenti chiave | In Italia: Multiplayer.it, Everyeye (sezione indie), SpazioGames **[riassunto]**. Porta meno liste desideri di festival e creator, ma dà credibilità e intercetta i giornalisti che provano le demo dei festival. |
+| **Note di sviluppo su Steam** | Un aggiornamento scritto al mese | Arrivano a chi segue il gioco e restano sulla pagina; possono essere tradotte ([event tools](https://partner.steamgames.com/doc/marketing/event_tools)). |
+
+**Il trailer resta necessario**, ma non è un contenuto social: è un materiale della pagina Steam. Serve per essere considerati nel trailer ufficiale della Next Fest ([nextfest](https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest)) e per stampa e festival. Basta un trailer di gioco pulito di 60-90 secondi, registrato dal gioco.
+
+**Effetto sulle previsioni.** Togliere social e Reddit riduce soprattutto le liste desideri organiche. Le previsioni di §4 restano valide **solo se festival e creator vengono curati bene**; altrimenti lo scenario realistico è quello prudente.
+
+### 5.2 Press kit
+
+Va preparato una volta sola e aggiornato a ogni tappa. Molto materiale è già in [STEAM_PAGINA.md](STEAM_PAGINA.md).
+
+- descrizione breve e lunga, in italiano e inglese;
+- scheda tecnica: genere, piattaforma (Windows), lingue, prezzo, data di uscita, sviluppatore;
+- 6-10 screenshot a 1920×1080 e il trailer;
+- logo su fondo trasparente e key art;
+- un paragrafo su chi sei ("sviluppatore italiano solista");
+- contatto email;
+- **dichiarazione sull'uso dell'IA**, coerente con quella della pagina Steam.
+
+### 5.3 Note di sviluppo scritte
+
+Una al mese, brevi (300-600 parole), con 1-3 immagini senza testo sovrapposto, così non vanno rifatte per ogni lingua. Possibili argomenti:
+- un'armata e la sua Eminenza, con lore e stile di gioco;
+- come funziona la puntata segreta e perché il bluff conta;
+- la nascita di una carta o di un campo di battaglia;
+- cosa è cambiato grazie al playtest;
+- avanzamento della traduzione e della Campagna.
+
+Ogni nota va pubblicata in italiano e in inglese; l'inglese è la lingua di riserva ([event tools](https://partner.steamgames.com/doc/marketing/event_tools)).
+
+### 5.4 Calendario
 
 | Quando | Cosa |
 |---|---|
-| **Nov-dic 2026** | Account Steamworks, quota e pratiche fiscali (fino a 30 giorni). Scelta del gancio. Registrazione di 2-3 clip di gioco (puntata coperta → rivelazione). Apertura di **uno o due** canali social, non di più. Avvio della traduzione in inglese. |
-| **Gen 2027** | **Pagina "Prossimamente" online**: va inviata in revisione almeno 7 giorni lavorativi prima ([review](https://partner.steamgames.com/doc/store/review_process)). Annuncio su Reddit (nei subreddit indie e di giochi di carte digitali, rispettando le regole di ciascuno). Comunicato alla stampa italiana. |
-| **Feb-apr 2027** | Un aggiornamento al mese come annuncio Steam ([event tools](https://partner.steamgames.com/doc/marketing/event_tools)). Preparazione della demo: Duello Standard contro l'IA più il tutorial. Candidature ai festival digitali gratuiti (elenco su [howtomarketagame.com/festivals](https://howtomarketagame.com/festivals)). Controllo dei bandi di Svilupparty (Bologna, a maggio) e dell'area indie della Milan Games Week. **Trailer pubblico sulla pagina prima del 25 aprile**: serve per essere considerati nel trailer ufficiale della Next Fest. |
+| **Nov-dic 2026** | Account Steamworks, quota e pratiche fiscali (fino a 30 giorni). Scelta del gancio. Avvio della traduzione in inglese. Prima bozza del press kit. |
+| **Gen 2027** | **Pagina "Prossimamente" online**: va inviata in revisione almeno 7 giorni lavorativi prima ([review](https://partner.steamgames.com/doc/store/review_process)). Prima nota di sviluppo (presentazione del gioco). **Comunicato alla stampa italiana.** |
+| **Feb-apr 2027** | Una nota di sviluppo al mese. Preparazione della demo: Duello Standard contro l'IA più il tutorial. **Candidature ai festival digitali gratuiti.** Account sulle piattaforme di chiavi per creator. **Trailer pubblico sulla pagina prima del 25 aprile.** |
 | **Entro il 25 apr** | **Iscrizione alla Next Fest di giugno 2027** ([june_2027](https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/june_2027)). |
 | **Entro il 10 mag** | Demo inviata in revisione, per averla attiva all'anteprima per la stampa (3 giugno). |
-| **Giugno** | **Next Fest, 14-21 giugno.** Diretta sulla pagina dello store, link per i commenti nel menu della demo, sotto-forum dedicato alla demo. **L'email "demo disponibile" alle liste desideri si può mandare una sola volta**: usala vicino al festival, non mesi prima ([wishlist](https://partner.steamgames.com/doc/marketing/wishlist), [nextfest](https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest)). |
-| **Lug-ago** | Demo sempre disponibile. Contatti con i creator tramite **Curator Connect** di Steam ([curators](https://partner.steamgames.com/doc/marketing/curators)). Meglio molti creator piccoli e adatti al genere che uno grande. Attenzione: circa metà delle richieste di chiavi da sconosciuti sono false **[riassunto]** ([presskit.gg](https://presskit.gg/field-guides/managing-game-key-requests)). |
-| **Set-ott** | **Uscita**, evitando settimane con grandi uscite ([best practices](https://partner.steamgames.com/doc/marketing/bestpractices)). Sconto di lancio facoltativo: Steam suggerisce il 10-15%, con un massimo del 40% ([discounts](https://partner.steamgames.com/doc/marketing/discounts)). Uscendo almeno 30 giorni prima dei saldi d'autunno potresti partecipare anche a quelli. La data dei saldi d'autunno 2027 non è ancora pubblicata. |
-| **Dopo l'uscita** | Aggiornamenti importanti, come la Campagna, come "Update Visibility Round" ([visibility](https://partner.steamgames.com/doc/marketing/visibility)). Partecipazione ai saldi stagionali. |
-
-**Canali, in ordine di efficacia** secondo un sondaggio di Zukowski su oltre 100 giochi **[riassunto]** ([HTMAG, 2023](https://howtomarketagame.com/2023/09/11/three-inspiring-marketing-success-stories/)):
-
-**festival > TikTok (solo se il gioco "rende" in video) > streamer > Reddit > stampa > Twitter.**
+| **Inizio giugno** | Comunicato alla stampa, italiana e internazionale di settore, con il link alla demo. Chiavi della demo e del gioco ai creator del genere. |
+| **Giugno** | **Next Fest, 14-21 giugno.** Link per i commenti nel menu della demo e sotto-forum dedicato. La diretta sulla pagina dello store è facoltativa e si può saltare. **L'email "demo disponibile" alle liste desideri si può mandare una sola volta**: usala vicino al festival, non mesi prima ([wishlist](https://partner.steamgames.com/doc/marketing/wishlist), [nextfest](https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest)). |
+| **Lug-ago** | Demo sempre disponibile. Nota di sviluppo con i risultati del festival e le modifiche fatte. Seconda ondata di chiavi ai creator tramite **Curator Connect**. Altre candidature ai festival. |
+| **Set-ott** | **Uscita**, evitando settimane con grandi uscite ([best practices](https://partner.steamgames.com/doc/marketing/bestpractices)). Comunicato di lancio. Chiavi del gioco completo ai creator. Sconto di lancio facoltativo: Steam suggerisce il 10-15%, con un massimo del 40% ([discounts](https://partner.steamgames.com/doc/marketing/discounts)). Uscendo almeno 30 giorni prima dei saldi d'autunno potresti partecipare anche a quelli. La data dei saldi d'autunno 2027 non è ancora pubblicata. |
+| **Dopo l'uscita** | Aggiornamenti importanti, come la Campagna, come "Update Visibility Round" ([visibility](https://partner.steamgames.com/doc/marketing/visibility)), ciascuno con nota di sviluppo e comunicato. Partecipazione ai saldi stagionali. |
 
 **Festival tematici di Steam:** fino a giugno 2027 nessuno riguarda strategia, carte o giochi a turni ([upcoming events](https://partner.steamgames.com/doc/marketing/upcoming_events)). Steam invita i giochi in automatico in base ai tag, quindi conviene tenere d'occhio i prossimi annunci.
 
@@ -240,4 +289,5 @@ Il piano punta quindi tutto su tre cose: **pagina presto, Next Fest e creator**.
 - Le scadenze dei singoli festival tematici di Steam (servono le credenziali di Steamworks) e le date della Next Fest di ottobre 2027.
 - Il numero di giocatori connessi ai giochi di confronto (API non raggiungibile).
 - La quota base di Steam del 30% in un documento pubblico.
-- I bandi 2027 di Milan Games Week, Svilupparty e Lucca.
+- Le scadenze 2027 dei festival digitali di terzi.
+- Costi e limiti dei piani gratuiti di Keymailer, Woovit e Lurkit.
