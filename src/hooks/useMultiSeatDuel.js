@@ -228,6 +228,8 @@ function teamBoard(session) {
       seatId,
       name: seat.name,
       isHuman: seat.isHuman,
+      // Il posto di questo client (online gli umani al tavolo possono essere più d'uno).
+      isMe: seatId === meOf(session),
       card: cardId != null ? seat.hand.find((c) => c.id === cardId) || null : null,
       fieldIndex: deployed?.fieldIndex ?? proposal?.fieldIndex ?? null,
       locked: Boolean(deployed),
@@ -237,6 +239,7 @@ function teamBoard(session) {
   const foes = match.seats.filter((x) => x.team === foeTeamOf(session)).map((x) => x.id);
   return {
     openingTeam: match.openingTeam,
+    myOpening: match.openingTeam === myTeamOf(session),
     player: [entry(meOf(session)), entry(mateOf(session))],
     enemy: foes.map(entry),
   };
@@ -857,6 +860,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   /** Coda delle voci di log e ultima applicata: in ref, così nessun aggiornamento di sessione le perde. */
   const onlineQueueRef = useRef([]);
   const onlineSeqRef = useRef(0);
+  const lastIntentRef = useRef(null);
 
   /** Voci di log: si applicano in ordine, solo quando la scena aspetta (niente scontro in corso). */
   const onlineDrain = useCallback(() => {
@@ -939,26 +943,43 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const hostHandleIntent = useCallback((fromSlot, intent) => {
     const seq = sequencerRef.current;
     if (!seq) return;
+    // Decisioni ripetute dopo una riconnessione: turno passato o già ricevute → si ignorano.
+    if (intent?.round != null && intent.round < seq.match.roundNumber) return;
+    const giaRicevuta = intent?.kind === ENTRY.CLAIM
+      ? seq.pending?.claim != null && seq.pending.claim === intent.decision
+      : Object.keys(intent?.deployments || {}).length > 0 && Object.entries(intent.deployments)
+        .every(([id, d]) => JSON.stringify(seq.pending?.deployments?.[id]) === JSON.stringify(d));
+    if (giaRicevuta) return;
     let voci;
     try {
       voci = seq.receive(fromSlot, intent);
     } catch (err) {
       const reason = err?.message || String(err);
       const localSlot = sessionRef.current?.online?.slot ?? 0;
-      if (fromSlot === localSlot) onlineRejectRef.current?.(reason);
-      else netSendRef.current?.({ type: MS.REJECT, reason, round: intent?.round ?? null }, [fromSlot]);
+      // Campi già presi dagli altri posti in questo turno: il mittente li esclude e sceglie di nuovo.
+      const takenFields = Object.entries(seq.pending?.deployments || {})
+        .filter(([id, d]) => d?.fieldIndex != null && seq.slotOf(id) !== fromSlot)
+        .map(([, d]) => d.fieldIndex);
+      const round = intent?.round ?? null;
+      if (fromSlot === localSlot) onlineRejectRef.current?.(reason, takenFields, round);
+      else netSendRef.current?.({ type: MS.REJECT, reason, round, takenFields }, [fromSlot]);
       return;
     }
     for (const v of voci) netSendRef.current?.({ type: MS.LOG, ...v });
     onlineReceiveLog(voci);
   }, [onlineReceiveLog]);
 
-  const onlineReject = useCallback((reason) => {
+  const onlineReject = useCallback((reason, takenFields = [], round = null) => {
     const s = sessionRef.current;
     if (!s?.online) return;
     sceneRef.current?.hint?.(`Scelta non valida: ${reason}`);
     log(`[!] Scelta rifiutata dall'host: ${reason}`);
-    commit({ ...s, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY });
+    const r = round ?? s.match?.roundNumber ?? null;
+    const prima = s.blockedFields?.round === r ? s.blockedFields.fields : [];
+    const fields = [...new Set([...prima, ...(takenFields || [])])];
+    commit({ ...s, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, pendingConfirm: null, blockedFields: { round: r, fields } });
+    const sceglieCampo = s.role === 'opening' && s.kind === MULTI_SEAT_KINDS.TEAM;
+    sceneRef.current?.clearSelection?.(sceglieCampo ? 'selectField' : 'selectAgent');
   }, [commit, log, sceneRef]);
   const onlineRejectRef = useRef(onlineReject);
   onlineRejectRef.current = onlineReject;
@@ -966,8 +987,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const onlineSendIntent = useCallback((intent) => {
     const s = sessionRef.current;
     if (!s?.online) return;
-    if (s.online.isHost) hostHandleIntent(s.online.slot, intent);
-    else netSendRef.current?.({ type: MS.INTENT, intent }, [0]);
+    if (s.online.isHost) {
+      hostHandleIntent(s.online.slot, intent);
+      return;
+    }
+    // Ricordata finché non arriva una nuova voce di log: se la connessione cade, si reinvia.
+    lastIntentRef.current = { intent, seq: onlineSeqRef.current };
+    netSendRef.current?.({ type: MS.INTENT, intent }, [0]);
   }, [hostHandleIntent]);
   onlineSendIntentRef.current = onlineSendIntent;
 
@@ -978,6 +1004,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const armOnline = useCallback(({ pkg, localSlot, isHost, send }) => {
     clearTimers();
     netSendRef.current = send;
+    lastIntentRef.current = null;
     const me = pkg.seats.find((x) => x.controller.type === 'human' && x.controller.slot === localSlot)?.id ?? null;
     const kind = pkg.kind;
     const meSeat = pkg.seats.find((x) => x.id === me);
@@ -1011,6 +1038,28 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
 
 
   /** Messaggi multi-posto dal relay (inoltrati dalla scena). */
+  /**
+   * Dopo una riconnessione (propria o di un altro): l'host rimanda il log a chi è tornato,
+   * un ospite chiede le voci perse e reinvia la propria decisione se nessuna voce è arrivata dopo.
+   * `slot` è il posto di chi si è riconnesso (null = questo client).
+   */
+  const onReconnect = useCallback((slot = null) => {
+    const s = sessionRef.current;
+    if (!s?.online) return;
+    if (s.online.isHost) {
+      const seq = sequencerRef.current;
+      if (!seq) return;
+      const msg = { type: MS.RESYNC, entries: seq.log };
+      if (slot == null) netSendRef.current?.(msg);
+      else netSendRef.current?.(msg, [slot]);
+      return;
+    }
+    if (slot != null && slot !== 0) return;
+    if (slot == null) netSendRef.current?.({ type: MS.RESYNC_REQ }, [0]);
+    const last = lastIntentRef.current;
+    if (last && last.seq === onlineSeqRef.current) netSendRef.current?.({ type: MS.INTENT, intent: last.intent }, [0]);
+  }, []);
+
   const onNetMessage = useCallback((payload, fromSlot) => {
     if (!payload?.type) return;
     if (payload.type === MS.INTENT) {
@@ -1021,7 +1070,15 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       onlineReceiveLog([{ seq: payload.seq, entry: payload.entry, hash: payload.hash }]);
       return;
     }
-    if (payload.type === MS.REJECT) onlineReject(payload.reason);
+    if (payload.type === MS.RESYNC_REQ) {
+      if (sequencerRef.current) netSendRef.current?.({ type: MS.RESYNC, entries: sequencerRef.current.log }, [fromSlot]);
+      return;
+    }
+    if (payload.type === MS.RESYNC) {
+      onlineReceiveLog(payload.entries || []);
+      return;
+    }
+    if (payload.type === MS.REJECT) onlineReject(payload.reason, payload.takenFields, payload.round);
   }, [hostHandleIntent, onlineReceiveLog, onlineReject]);
 
   // ------------------------------------------------------------------
@@ -1353,6 +1410,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       mateLine: session.mateLine || null,
       revealing: Boolean(session.revealing),
       scontroQueue: presentQueue(session),
+      // Chi sei al tavolo: offline sempre A1/P1 e squadra A; online il posto del pacchetto.
+      me: meOf(session),
+      mate: session.kind === MULTI_SEAT_KINDS.TEAM ? mateOf(session) : null,
+      myTeam: session.kind === MULTI_SEAT_KINDS.TEAM ? myTeamOf(session) : null,
+      foeTeam: session.kind === MULTI_SEAT_KINDS.TEAM ? foeTeamOf(session) : null,
     };
     if (!match) return base;
     if (session.kind === MULTI_SEAT_KINDS.TEAM) {
@@ -1375,7 +1437,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         board: teamBoard(session),
         advice: session.advice || {},
         adviceReplies: session.adviceReplies || {},
-        legalFields: legalFieldIndexesTeam(match),
+        legalFields: legalFieldIndexesTeam(match).filter((i) => !(
+          session.blockedFields?.round === match.roundNumber && session.blockedFields.fields.includes(i)
+        )),
+        // Online, con due umani nella stessa squadra, la direzione degli attacchi la sceglie il primo.
+        pairingCaptain: session.online
+          ? session.online.pkg.seats.find((x) => x.team === myTeamOf(session) && x.controller.type === 'human')?.id ?? meOf(session)
+          : meOf(session),
         mateTrust: session.online ? null : getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
         online: Boolean(session.online),
         // Quando risponde la tua squadra: i fronti con la disposizione che stai scegliendo.
@@ -1422,6 +1490,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     advise,
     armOnline,
     onNetMessage,
+    onReconnect,
     isOnline: Boolean(session?.online),
   };
 }

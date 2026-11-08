@@ -349,7 +349,7 @@ export function MultiplayerLobby({ onStartGame, onClose }) {
   );
 }
 
-function LobbyStyles() {
+export function LobbyStyles() {
   return (
     <style>{`
       .mpl {
