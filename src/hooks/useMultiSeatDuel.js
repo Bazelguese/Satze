@@ -1391,6 +1391,10 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         legalFields: legalFieldIndexesTeam(match).filter((i) => !(
           session.blockedFields?.round === match.roundNumber && session.blockedFields.fields.includes(i)
         )),
+        // Online, con due umani nella stessa squadra, la direzione degli attacchi la sceglie il primo.
+        pairingCaptain: session.online
+          ? session.online.pkg.seats.find((x) => x.team === myTeamOf(session) && x.controller.type === 'human')?.id ?? meOf(session)
+          : meOf(session),
         mateTrust: session.online ? null : getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
         online: Boolean(session.online),
         // Quando risponde la tua squadra: i fronti con la disposizione che stai scegliendo.

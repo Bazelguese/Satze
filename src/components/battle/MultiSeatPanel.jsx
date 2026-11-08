@@ -218,7 +218,9 @@ function Fronts({ view, ownFieldIndex, onPairing, onHoverField }) {
           </div>
         );
       })}
-      {choosing && view.stage === 'humanDeploy' ? (
+      {choosing && view.stage === 'humanDeploy' && view.pairingCaptain && view.pairingCaptain !== view.me ? (
+        <p className="mst-hint">La direzione degli attacchi la sceglie {seat(view.pairingCaptain)?.name}.</p>
+      ) : choosing && view.stage === 'humanDeploy' ? (
         <button type="button" className="mst-btn is-wide" onClick={() => onPairing(plan.pairing === 'crossed' ? 'direct' : 'crossed')}>
           ⇄ Inverti direzione
           <small>{PAIRING_LABEL[plan.pairing]}{plan.suggestedPairing === plan.pairing ? ' · consigliata dal compagno' : ''}</small>
