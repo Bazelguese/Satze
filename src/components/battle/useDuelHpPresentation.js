@@ -131,8 +131,9 @@ export function useDuelHpPresentation({
   if (key && startRef.current.key !== key) {
     startRef.current = {
       key,
-      hp: { ...beforeRef.current.hp },
-      toxin: { ...beforeRef.current.toxin },
+      // presentStart: partenza esplicita (multiplayer, scontro dopo senza lasciare il risultato)
+      hp: { ...(battleResult.presentStart?.hp || beforeRef.current.hp) },
+      toxin: { ...(battleResult.presentStart?.toxin || beforeRef.current.toxin) },
       fc: fcBeforeGains(battleResult, { player: battleResult.finalPlayerFC, enemy: battleResult.finalEnemyFC }),
     };
   }
@@ -201,8 +202,16 @@ export function useDuelHpPresentation({
   }, [key, duelPhase, duelEffectStep, stepTicks, burstHoldMs, burstLeaveMs]);
 
   // t0 (performance.now) dei proiettili del DAN, verso la fine della fase 4; «Salta» = tutto subito
-  const [t0, setT0] = useState(null);
-  const [elapsed, setElapsed] = useState(-1);
+  // Valori legati al duello (key): cambiando duello senza uscire dal risultato (scontri in fila
+  // del multiplayer) non devono valere nemmeno per il primo render del duello nuovo.
+  const keyRef = useRef(key);
+  keyRef.current = key;
+  const [t0Raw, setT0Raw] = useState({ key: null, v: null });
+  const [elapsedRaw, setElapsedRaw] = useState({ key: null, v: -1 });
+  const t0 = t0Raw.key === key ? t0Raw.v : null;
+  const elapsed = elapsedRaw.key === key ? elapsedRaw.v : -1;
+  const setT0 = (v) => setT0Raw({ key: keyRef.current, v });
+  const setElapsed = (v) => setElapsedRaw({ key: keyRef.current, v });
   const sawClashRef = useRef(false);
   useEffect(() => {
     setT0(null);

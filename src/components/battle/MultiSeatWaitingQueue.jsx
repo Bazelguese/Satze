@@ -14,8 +14,8 @@ import '../../styles/satze-multi-seat.css';
 /** Posizione in coda (0 = il prossimo): spostamento verso l'esterno e in alto, scala, sfocatura. */
 export function waitDepth(k) {
   return {
-    dx: 150 + 74 * k,
-    dy: -58 - 40 * k,
+    dx: 128 + 70 * k,
+    dy: -122 - 44 * k,
     scale: 0.8 - 0.09 * k,
     blur: 3 + 2 * k,
     opacity: Math.max(0.3, 0.72 - 0.16 * k),

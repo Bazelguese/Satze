@@ -554,6 +554,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       ...result,
       finalPlayerHP: Math.min(max, Math.max(0, result.finalPlayerHP)),
       finalEnemyHP: Math.min(max, Math.max(0, result.finalEnemyHP)),
+      // PV e Tossine di partenza a schermo (lo scontro dopo parte senza lasciare il risultato)
+      presentStart: {
+        hp: { player: rr.hpBefore[pSeat.team], enemy: rr.hpBefore[eSeat.team] },
+        toxin: { player: pSeat.toxin || null, enemy: eSeat.toxin || null },
+      },
     };
     const pCard = pSeat.hand.find((c) => c.id === (front.playerSeatId === front.firstSeatId ? front.firstCardId : front.secondCardId));
     const eCard = eSeat.hand.find((c) => c.id === (front.playerSeatId === front.firstSeatId ? front.secondCardId : front.firstCardId));
@@ -621,7 +626,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const pCard = pSeat.hand.find((c) => c.id === (pIsFirst ? fight.firstCardId : fight.secondCardId));
     const eCard = eSeat.hand.find((c) => c.id === (pIsFirst ? fight.secondCardId : fight.firstCardId));
     sceneRef.current?.stageBattle({
-      result: fight.battleResult,
+      result: {
+        ...fight.battleResult,
+        presentStart: {
+          hp: { player: fight.hpBefore[pSeat.id], enemy: fight.hpBefore[eSeat.id] },
+          toxin: { player: viewMatch.seats.find((x) => x.id === pSeat.id)?.toxin || null, enemy: viewMatch.seats.find((x) => x.id === eSeat.id)?.toxin || null },
+        },
+      },
       playerAgent: pCard,
       enemyAgent: eCard,
       playerFocus: pIsFirst ? fight.firstFocus : fight.secondFocus,
