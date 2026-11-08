@@ -196,3 +196,22 @@ test('collegaCanali lascia stare i canali che non conosce', () => {
   const ids = new Map([['bug', '42']]);
   assert.equal(collegaCanali('vai in <#bug> o <#boh>', ids), 'vai in <#42> o <#boh>');
 });
+
+test('inFormatoApi converte permessi, tag e reazione nel formato di Discord', async () => {
+  const { inFormatoApi } = await import('./discordRest.mjs');
+  const api = inFormatoApi({
+    name: 'bug',
+    type: ChannelType.GuildForum,
+    parent: { id: '9' },
+    permissionOverwrites: [{ id: 'e', deny: [P.ViewChannel] }, { id: 'p', allow: [P.ViewChannel, P.SendMessages] }],
+    availableTags: [{ id: '5', name: 'crash', emoji: { id: null, name: '💥' }, moderated: false }, { name: 'nuovo', emoji: null }],
+    defaultReactionEmoji: { id: null, name: '👍' },
+  });
+  assert.equal(api.parent_id, '9');
+  assert.deepEqual(api.permission_overwrites[0], { id: 'e', type: 0, allow: '0', deny: P.ViewChannel.toString() });
+  assert.equal(api.permission_overwrites[1].allow, (P.ViewChannel | P.SendMessages).toString());
+  assert.deepEqual(api.available_tags[0], { id: '5', name: 'crash', moderated: false, emoji_id: null, emoji_name: '💥' });
+  assert.equal(api.available_tags[1].id, undefined);
+  assert.deepEqual(api.default_reaction_emoji, { emoji_id: null, emoji_name: '👍' });
+  assert.equal('topic' in inFormatoApi({ name: 'x' }), false, 'i campi assenti non vengono mandati');
+});

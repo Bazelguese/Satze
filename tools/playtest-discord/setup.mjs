@@ -62,42 +62,29 @@ if (anteprima) {
 if (!cfg.token || cfg.token.startsWith('INCOLLA')) esci('In config.json manca il token del bot.');
 if (!cfg.idServer || cfg.idServer.startsWith('INCOLLA')) esci("In config.json manca l'id del server (idServer).");
 
-const { Client, GatewayIntentBits, PermissionFlagsBits } = await import('discord.js');
+const { creaClient, creaGuild, botEAmministratore } = await import('./discordRest.mjs');
 const { allestisci } = await import('./lib.mjs');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-const pronto = new Promise((ok) => client.once('clientReady', ok));
+const client = creaClient(cfg.token);
 
+let verifica;
 try {
-  await client.login(cfg.token);
+  verifica = await botEAmministratore(client, cfg.idServer);
 } catch (e) {
-  esci(`Accesso del bot non riuscito: ${e.message}\nControlla il token in config.json.`);
+  if (e.status === 401) esci('Discord non accetta il token: controllalo in config.json.');
+  if (e.status === 403 || e.status === 404) esci("Il bot non vede il server indicato in idServer. L'hai invitato con il link del README?");
+  esci(`Non riesco a parlare con Discord: ${e.message}`);
 }
-await pronto;
+if (!verifica.ok) esci('Il bot non ha il permesso Amministratore su questo server. Reinvitalo con il link del README (permissions=8).');
 
-let guild;
+console.log(`Server: ${verifica.server.name}\n`);
 try {
-  guild = await client.guilds.fetch(cfg.idServer);
-} catch {
-  client.destroy();
-  esci("Il bot non vede il server indicato in idServer. L'hai invitato con il link del README?");
-}
-
-const io = await guild.members.fetchMe();
-if (!io.permissions.has(PermissionFlagsBits.Administrator)) {
-  client.destroy();
-  esci('Il bot non ha il permesso Amministratore su questo server. Reinvitalo con il link del README (permissions=8).');
-}
-
-console.log(`Server: ${guild.name}\n`);
-try {
-  const { avvisi } = await allestisci(guild, client.user.id, cfg);
+  const guild = creaGuild(client, cfg.idServer);
+  const { avvisi } = await allestisci(guild, verifica.io.id, cfg);
   console.log('\n✔ Fatto.');
   if (avvisi.length) console.log(`\nAvvisi:\n  - ${avvisi.join('\n  - ')}`);
   console.log('\nOra puoi togliere il bot dal server (vedi README, ultimo passo).\n');
 } catch (e) {
   console.error(e);
   esci(`Qualcosa è andato storto: ${e.message}\nPuoi rilanciare lo script: riprende da dove si è fermato senza duplicare niente.`);
-} finally {
-  client.destroy();
 }

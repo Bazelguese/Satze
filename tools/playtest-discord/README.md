@@ -58,7 +58,7 @@ In Discord: **Impostazioni utente → Avanzate → Modalità sviluppatore** (att
 
 ## Passo 3 · Configura e lancia
 
-Ti serve [Node.js](https://nodejs.org) 18 o più recente (lo hai già, lo usi per il gioco). Dalla cartella `tools/playtest-discord`:
+Ti serve [Node.js](https://nodejs.org) 18 o più recente (lo hai già, lo usi per il gioco). Lo script parla con Discord tramite le sue API web: non resta collegato e non serve tenerlo acceso. Dalla cartella `tools/playtest-discord`:
 
 ```bash
 npm install
