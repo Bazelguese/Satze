@@ -180,7 +180,7 @@ test('i messaggi scritti da altri restano dove sono', async () => {
 test('se i forum non si possono creare ripiega su canali di testo e avvisa', async () => {
   const { guild, canali } = serverFinto({ forumVietati: true });
   const { avvisi } = await allestisci(guild, BOT, CFG, muto);
-  assert.equal(avvisi.length, 4);
+  assert.equal(avvisi.length, 3);
   const bug = canaleDiNome(canali, 'bug');
   assert.equal(bug.type, ChannelType.GuildText);
   assert.ok([...bug.messaggi.values()][0].content.includes('Versione:'));
@@ -202,6 +202,7 @@ test('permessi: info in sola lettura, dev privato, tutto nascosto a chi non è n
   const pt = lettura.find((o) => o.id === 'p');
   assert.ok(pt.allow.includes(P.ViewChannel) && pt.deny.includes(P.SendMessages));
   assert.ok(permessiPer('feedback', ids).find((o) => o.id === 'p').allow.includes(P.SendMessages));
+  assert.ok(permessiPer('feedback', ids).find((o) => o.id === 'e').deny.includes(P.SendMessages), '@everyone non scrive nei forum di feedback');
   assert.equal(permessiPer('privato', ids).find((o) => o.id === 'p'), undefined);
 });
 
@@ -257,4 +258,31 @@ test('guida: post bloccati, in ordine di lettura, senza duplicati e aggiornabili
   await allestisci(guild, BOT, CFG, muto);
   assert.equal(conteggi.postCreati, creati, 'secondo avvio: nessun post nuovo');
   assert.equal(conteggi.postCancellati, 0);
+});
+
+test('un canale cancellato a mano non viene ricreato', async () => {
+  const { guild, conteggi, canali } = serverFinto();
+  const { stato } = await allestisci(guild, BOT, CFG, muto);
+  const idee = canaleDiNome(canali, 'idee');
+  canali.delete(idee.id); // Davide lo cancella da Discord
+  const creati = conteggi.canaliCreati;
+  const { avvisi } = await allestisci(guild, BOT, CFG, muto, { stato });
+  assert.equal(conteggi.canaliCreati, creati);
+  assert.equal(canaleDiNome(canali, 'idee'), undefined);
+  assert.ok(avvisi.some((a) => a.includes('idee') && a.includes('non lo ricreo')));
+});
+
+test('i canali esistenti non vengono toccati, salvo aggiornaCanali', async () => {
+  const { guild, canali } = serverFinto();
+  const { stato } = await allestisci(guild, BOT, CFG, muto);
+  const bug = canaleDiNome(canali, 'bug');
+  const mie = [{ id: 'e', deny: ['personalizzato'] }];
+  bug.permissionOverwrites = mie; // Davide cambia i permessi a mano
+  bug.topic = 'scritto da Davide';
+  await allestisci(guild, BOT, CFG, muto, { stato });
+  assert.equal(bug.permissionOverwrites, mie);
+  assert.equal(bug.topic, 'scritto da Davide');
+  await allestisci(guild, BOT, CFG, muto, { stato, aggiornaCanali: true });
+  assert.notEqual(bug.permissionOverwrites, mie);
+  assert.ok(bug.topic.includes('Versione:'));
 });

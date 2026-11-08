@@ -22,11 +22,6 @@ export const ARMATE = [
   'Mascarada',
 ];
 
-/** Discord accetta nomi di tag lunghi al massimo 20 caratteri. */
-const TAG_ARMATA = {
-  "L'Enclave delle Scaglie": 'Enclave Scaglie',
-};
-
 export const RUOLI = {
   dev: { nome: 'Dev Satze', colore: 0xe0457b },
   playtester: { nome: 'Playtester', colore: 0x8b5cf6 },
@@ -96,15 +91,6 @@ Copiate questo modello nel post:
 
 Scegliete uno o più tag. Il tag ✅ risolto lo metto io quando è sistemato.`,
 
-    bilanciamento: `Qui va tutto quello che vi sembra troppo forte, troppo debole, inutile o frustrante: carte, armate, Eminenze, Campi.
-
-Per aiutarmi davvero scrivete:
-- **cosa** (nome della carta, dell'Eminenza o dell'armata)
-- **in che partita** (modalità, formato, armate in gioco)
-- **perché** vi sembra sbilanciato: cosa è successo in partita, quante volte
-
-Mettete il tag dell'armata (o 🌟 Eminenze) così le discussioni restano in ordine.`,
-
     guida: `Regolamento e riferimento tecnico di SATZE v${cfg.versione}, un post per argomento. Sola lettura: domande e dubbi sulle regole vanno in #chiacchiere, errori nella guida in #bug con il tag regole / effetti.`,
 
     idee: `Suggerimenti, desideri, "sarebbe bello se…": tutto quello che non è un bug né un problema di bilanciamento. Un post per idea, così si può commentare e votare con 👍.`,
@@ -153,14 +139,7 @@ export const STRUTTURA = [
           { nome: 'risolto', emoji: '✅', soloDev: true },
         ],
       },
-      {
-        nome: 'bilanciamento',
-        tipo: 'forum',
-        lineeGuida: 'bilanciamento',
-        reazione: '👍',
-        // Discord permette al massimo 20 tag per forum: 12 armate + 4 = 16.
-        tag: [...ARMATE.map((nome) => ({ nome: TAG_ARMATA[nome] ?? nome })), { nome: 'Eminenze', emoji: '🌟' }, { nome: 'Campi', emoji: '🗺️' }, { nome: 'IA', emoji: '🤖' }, { nome: 'regole', emoji: '📜' }],
-      },
+      // #bilanciamento: tolto da Davide il 2026-11-08 (cancellato a mano).
       {
         nome: 'idee',
         tipo: 'forum',

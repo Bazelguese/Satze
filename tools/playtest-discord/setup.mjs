@@ -2,11 +2,15 @@
 // Allestisce il server Discord del playtest di SATZE.
 //
 //   npm run anteprima   → controlla testi e limiti, senza collegarsi a Discord
-//   npm run setup       → crea o aggiorna ruoli, canali e messaggi sul server
+//   npm run setup       → crea ciò che manca e aggiorna i messaggi dello script
+//   npm run setup -- --aggiorna-canali  → riapplica anche permessi, descrizioni e tag dei canali esistenti
+//
+// Lo script non annulla le modifiche fatte a mano: non modifica i canali che esistono già
+// e non ricrea quelli cancellati (li ricorda in stato.json).
 //
 // Istruzioni complete nel README.md di questa cartella.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { STRUTTURA } from './contenuti.mjs';
@@ -15,6 +19,8 @@ import { verificaContenuti, nomeDiscord } from './lib.mjs';
 const qui = dirname(fileURLToPath(import.meta.url));
 const percorsoConfig = join(qui, 'config.json');
 const anteprima = process.argv.includes('--anteprima');
+const aggiornaCanali = process.argv.includes('--aggiorna-canali');
+const percorsoStato = join(qui, 'stato.json');
 
 function esci(messaggio) {
   console.error(`\n✖ ${messaggio}\n`);
@@ -80,7 +86,14 @@ if (!verifica.ok) esci('Il bot non ha il permesso Amministratore su questo serve
 console.log(`Server: ${verifica.server.name}\n`);
 try {
   const guild = creaGuild(client, cfg.idServer);
-  const { avvisi } = await allestisci(guild, verifica.io.id, cfg);
+  // Registro di ciò che lo script ha creato su questo server: serve a non ricreare ciò che è stato cancellato a mano.
+  const archivio = existsSync(percorsoStato) ? JSON.parse(readFileSync(percorsoStato, 'utf8')) : {};
+  const { avvisi, stato } = await allestisci(guild, verifica.io.id, cfg, console.log, {
+    stato: archivio[cfg.idServer],
+    aggiornaCanali,
+  });
+  archivio[cfg.idServer] = stato;
+  writeFileSync(percorsoStato, JSON.stringify(archivio, null, 2));
   console.log('\n✔ Fatto.');
   if (avvisi.length) console.log(`\nAvvisi:\n  - ${avvisi.join('\n  - ')}`);
   console.log('\nOra puoi togliere il bot dal server (vedi README, ultimo passo).\n');

@@ -28,8 +28,9 @@ const PARLARE = [P.Connect, P.Speak, P.Stream, P.UseVAD];
 
 /** Permessi della categoria (e dei suoi canali) in base al tipo di accesso. */
 export function permessiPer(accesso, { everyoneId, devId, playtesterId }) {
+  // @everyone non vede né scrive (Davide ha tolto anche la scrittura nei forum di feedback, 2026-11-08).
   const permessi = [
-    { id: everyoneId, deny: [P.ViewChannel] },
+    { id: everyoneId, deny: accesso === 'feedback' ? [P.ViewChannel, P.SendMessages] : [P.ViewChannel] },
     { id: devId, allow: [...LEGGERE, ...SCRIVERE, ...PARLARE, P.ManageMessages, P.ManageThreads, P.MentionEveryone] },
   ];
   if (accesso === 'lettura') {
@@ -123,25 +124,50 @@ export function verificaContenuti(cfg) {
   return errori;
 }
 
-async function trovaOCreaRuolo(guild, { nome, colore }, opzioni, log) {
+/*
+ * Regola d'oro: lo script non annulla mai le modifiche fatte a mano su Discord.
+ * - Ciò che esiste già non viene modificato (salvo opzione aggiornaCanali).
+ * - Ciò che lo script ha creato e poi è sparito è stato cancellato a mano: non viene ricreato.
+ *   Per saperlo lo script tiene un registro locale (`stato`, salvato in stato.json).
+ */
+async function trovaOCreaRuolo(guild, { nome, colore }, opzioni, ctx) {
   const esistente = guild.roles.cache.find((r) => r.name === nome);
   if (esistente) {
-    log(`  = ruolo ${nome} (già presente)`);
+    ctx.stato.ruoli[nome] = esistente.id;
+    ctx.log(`  = ruolo ${nome} (già presente)`);
     return esistente;
   }
+  if (ctx.stato.ruoli[nome]) {
+    const avviso = `ruolo ${nome}: era stato creato e poi cancellato a mano, non lo ricreo.`;
+    ctx.avvisi.push(avviso);
+    ctx.log(`  ! ${avviso}`);
+    return null;
+  }
   const ruolo = await guild.roles.create({ name: nome, colors: { primaryColor: colore }, ...opzioni, reason: 'Playtest SATZE' });
-  log(`  + ruolo ${nome}`);
+  ctx.stato.ruoli[nome] = ruolo.id;
+  ctx.log(`  + ruolo ${nome}`);
   return ruolo;
 }
 
-async function trovaOCreaCanale(guild, { nome, tipo, parent, permessi, extra }, log) {
+async function trovaOCreaCanale(guild, { chiave, nome, tipo, parent, permessi, extra }, ctx) {
   const esistente = guild.channels.cache.find(
     (c) => c.name === nome && c.type === tipo && (parent ? c.parentId === parent.id : true),
   );
   if (esistente) {
-    await esistente.edit({ ...extra, permissionOverwrites: permessi, reason: 'Playtest SATZE' });
-    log(`  = ${etichetta(tipo)} ${nome} (aggiornato)`);
+    ctx.stato.canali[chiave] = esistente.id;
+    if (ctx.aggiornaCanali) {
+      await esistente.edit({ ...extra, permissionOverwrites: permessi, reason: 'Playtest SATZE' });
+      ctx.log(`  ✎ ${etichetta(tipo)} ${nome} (impostazioni riapplicate)`);
+    } else {
+      ctx.log(`  = ${etichetta(tipo)} ${nome} (già presente, non toccato)`);
+    }
     return esistente;
+  }
+  if (ctx.stato.canali[chiave]) {
+    const avviso = `${etichetta(tipo)} ${nome}: era stato creato e poi cancellato a mano, non lo ricreo.`;
+    ctx.avvisi.push(avviso);
+    ctx.log(`  ! ${avviso}`);
+    return null;
   }
   const creato = await guild.channels.create({
     name: nome,
@@ -151,7 +177,8 @@ async function trovaOCreaCanale(guild, { nome, tipo, parent, permessi, extra }, 
     ...extra,
     reason: 'Playtest SATZE',
   });
-  log(`  + ${etichetta(tipo)} ${nome}`);
+  ctx.stato.canali[chiave] = creato.id;
+  ctx.log(`  + ${etichetta(tipo)} ${nome}`);
   return creato;
 }
 
@@ -253,17 +280,27 @@ async function assegnaRuolo(guild, userId, ruolo, log) {
 }
 
 /**
- * Allestisce il server. `guild` è la Guild di discord.js, `botId` l'id del bot.
- * @returns {Promise<{ canali: Map<string, string>, avvisi: string[] }>}
+ * Allestisce il server. `guild` ha la forma di una Guild di discord.js (vedi discordRest.mjs), `botId` è l'id del bot.
+ * `opzioni.stato`: registro di ciò che lo script ha creato (viene aggiornato e restituito).
+ * `opzioni.aggiornaCanali`: riapplica permessi, descrizioni e tag anche ai canali che esistono già.
+ * @returns {Promise<{ canali: Map<string, string>, avvisi: string[], stato: object }>}
  */
-export async function allestisci(guild, botId, cfg, log = console.log) {
+export async function allestisci(guild, botId, cfg, log = console.log, opzioni = {}) {
   const avvisi = [];
+  const stato = { ruoli: {}, canali: {}, ...(opzioni.stato ?? {}) };
+  stato.ruoli = { ...stato.ruoli };
+  stato.canali = { ...stato.canali };
+  const ctx = { log, avvisi, stato, aggiornaCanali: Boolean(opzioni.aggiornaCanali) };
   await guild.roles.fetch();
   await guild.channels.fetch();
 
   log('Ruoli');
-  const dev = await trovaOCreaRuolo(guild, RUOLI.dev, { hoist: true, mentionable: false }, log);
-  const playtester = await trovaOCreaRuolo(guild, RUOLI.playtester, { hoist: true, mentionable: true }, log);
+  const dev = await trovaOCreaRuolo(guild, RUOLI.dev, { hoist: true, mentionable: false }, ctx);
+  const playtester = await trovaOCreaRuolo(guild, RUOLI.playtester, { hoist: true, mentionable: true }, ctx);
+  if (!dev || !playtester) {
+    avvisi.push('Senza i ruoli Dev Satze e Playtester non posso impostare i permessi: mi fermo qui.');
+    return { canali: new Map(), avvisi, stato };
+  }
   const ids = { everyoneId: guild.roles.everyone.id, devId: dev.id, playtesterId: playtester.id };
 
   const guide = lineeGuida(cfg);
@@ -275,10 +312,12 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
   for (const gruppo of STRUTTURA) {
     log(`\n${gruppo.categoria}`);
     const permessi = permessiPer(gruppo.accesso, ids);
-    const categoria = await trovaOCreaCanale(guild, { nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, log);
+    const categoria = await trovaOCreaCanale(guild, { chiave: gruppo.categoria, nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, ctx);
+    if (!categoria) continue;
 
     for (const c of gruppo.canali) {
       const nome = nomeDiscord(c.nome, c.tipo);
+      const chiave = `${gruppo.categoria}/${nome}`;
       let canale;
       if (c.tipo === 'forum') {
         const esistente = guild.channels.cache.find((x) => x.name === nome && x.type === ChannelType.GuildForum && x.parentId === categoria.id);
@@ -290,25 +329,27 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
           defaultForumLayout: ForumLayoutType.ListView,
         };
         try {
-          canale = await trovaOCreaCanale(guild, { nome, tipo: ChannelType.GuildForum, parent: categoria, permessi, extra }, log);
+          canale = await trovaOCreaCanale(guild, { chiave, nome, tipo: ChannelType.GuildForum, parent: categoria, permessi, extra }, ctx);
         } catch (e) {
           // Alcuni server non possono creare forum: ripiego su un canale di testo.
           const avviso = `#${nome}: non sono riuscito a creare un forum (${e.message}); creo un canale di testo normale.`;
           avvisi.push(avviso);
           log(`  ! ${avviso}`);
           canale = await trovaOCreaCanale(guild, {
+            chiave,
             nome,
             tipo: ChannelType.GuildText,
             parent: categoria,
             permessi,
             extra: { topic: guide[c.lineeGuida].slice(0, LIMITI.descrizioneTesto) },
-          }, log);
-          conMessaggi.push({ canale, testi: [guide[c.lineeGuida]] });
+          }, ctx);
+          if (canale) conMessaggi.push({ canale, testi: [guide[c.lineeGuida]] });
         }
       } else {
         const extra = c.tipo === 'testo' && c.descrizione ? { topic: c.descrizione } : {};
-        canale = await trovaOCreaCanale(guild, { nome, tipo: TIPI[c.tipo], parent: categoria, permessi, extra }, log);
+        canale = await trovaOCreaCanale(guild, { chiave, nome, tipo: TIPI[c.tipo], parent: categoria, permessi, extra }, ctx);
       }
+      if (!canale) continue;
       idPerNome.set(nome, canale.id);
       if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi] });
       if (c.post) {
@@ -336,5 +377,5 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
     for (const id of idPlaytester) await assegnaRuolo(guild, id, playtester, log);
   }
 
-  return { canali: idPerNome, avvisi };
+  return { canali: idPerNome, avvisi, stato };
 }
