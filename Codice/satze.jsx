@@ -812,6 +812,7 @@ export default function SatzeGame() {
         console.warn('[eminenze online] scelta non valida, non inviata:', prova.reason, abilityId);
         return;
       }
+      if (import.meta.env.DEV) console.info('[eminenze online] invio scelta', { round: eminenceMatchState?.roundNumber, roundGioco: roundNumber, aperto: eminenceMatchState?.roundOpenedAt, abilityId });
       getMultiplayerManager().sendRelay(
         multiplayerSession.roomCode,
         eminenceChoiceMessage(eminenceMatchState?.roundNumber ?? roundNumber, abilityId, stamped ?? null),
@@ -1194,6 +1195,7 @@ export default function SatzeGame() {
           continue;
         }
         const r = applyRemoteChoice(state, msg);
+        if (import.meta.env.DEV) console.info('[eminenze online] applico scelta remota', { msgRound: msg.roundNumber, roundGioco: roundNumber, aperto: state.roundOpenedAt, abilityId: msg.abilityId, ok: r.ok, reason: r.reason });
         if (r.ok) { state = r.matchState; passi.push({ msg }); }
         else console.warn('[eminenze online] scelta remota non applicata:', r.reason, msg);
       } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
