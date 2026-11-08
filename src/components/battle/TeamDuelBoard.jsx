@@ -128,7 +128,7 @@ function Slot({ slotKey, side, cfg, entry, card, fieldName, note, onClick, onHov
           )}
         </div>
       ) : (
-        <div className="tdb-empty"><span>{entry?.isHuman ? 'Trascina un Agente' : 'In attesa…'}</span></div>
+        <div className="tdb-empty"><span>{entry?.isMe ? 'Trascina un Agente' : 'In attesa…'}</span></div>
       )}
       <div className="tdb-tag" style={tagStyle(cfg)}>
         {/* Solo il nome: Campi e direzione degli attacchi stanno nel pannello Tavolo. */}
@@ -176,12 +176,12 @@ export function TeamDuelBoard({
   onPairsPointerDown,
 }) {
   if (!board || !layout) return null;
-  const fieldIndexOf = (e) => (e?.isHuman && !e.locked && board.openingTeam === 'A' ? humanFieldIndex : e?.fieldIndex);
+  const fieldIndexOf = (e) => (e?.isMe && !e.locked && board.myOpening ? humanFieldIndex : e?.fieldIndex);
   const fieldName = (e) => {
     const i = fieldIndexOf(e);
     return i != null ? battlefields?.[i]?.name : null;
   };
-  const cardOf = (e) => (e?.isHuman && !e.locked ? humanCard : e?.card) || null;
+  const cardOf = (e) => (e?.isMe && !e.locked ? humanCard : e?.card) || null;
   const [b1, b2] = board.enemy;
   const [a1, a2] = board.player;
   const humanClick = !editable && !a1.locked && humanCard ? onHumanCardClick : undefined;

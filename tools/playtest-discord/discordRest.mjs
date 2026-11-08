@@ -66,6 +66,8 @@ export function inFormatoApi(o) {
   }
   if (o.defaultSortOrder !== undefined) api.default_sort_order = o.defaultSortOrder;
   if (o.defaultForumLayout !== undefined) api.default_forum_layout = o.defaultForumLayout;
+  if (o.archived !== undefined) api.archived = o.archived;
+  if (o.locked !== undefined) api.locked = o.locked;
   return api;
 }
 
@@ -92,6 +94,8 @@ export function creaGuild({ chiama }, guildId) {
           name: dati.name,
           type: dati.type,
           parentId: dati.parent_id ?? null,
+          ownerId: dati.owner_id ?? null,
+          archived: Boolean(dati.thread_metadata?.archived),
           topic: dati.topic ?? null,
           availableTags: (dati.available_tags ?? []).map((t) => ({
             id: t.id,
@@ -113,6 +117,29 @@ export function creaGuild({ chiama }, guildId) {
       },
       async send({ content }) {
         return messaggio(oggetto.id, await chiama('POST', `/channels/${oggetto.id}/messages`, { content, allowed_mentions: { parse: [] } }));
+      },
+      delete: () => chiama('DELETE', `/channels/${oggetto.id}`),
+      threads: {
+        /** Post del forum, attivi e archiviati. */
+        async fetchAll() {
+          const attivi = (await chiama('GET', `/guilds/${guildId}/threads/active`)).threads.filter((t) => t.parent_id === oggetto.id);
+          const archiviati = [];
+          let prima;
+          for (;;) {
+            const pagina = await chiama('GET', `/channels/${oggetto.id}/threads/archived/public?limit=100${prima ? `&before=${encodeURIComponent(prima)}` : ''}`);
+            archiviati.push(...pagina.threads);
+            if (!pagina.has_more || !pagina.threads.length) break;
+            prima = pagina.threads.at(-1).thread_metadata.archive_timestamp;
+          }
+          return [...attivi, ...archiviati].map(canale);
+        },
+        async create({ name, content }) {
+          return canale(await chiama('POST', `/channels/${oggetto.id}/threads`, {
+            name,
+            auto_archive_duration: 10080,
+            message: { content, allowed_mentions: { parse: [] } },
+          }, 'Playtest SATZE'));
+        },
       },
     };
     oggetto.aggiorna(c);

@@ -2,14 +2,14 @@
 // LOGICA CAMPI DI BATTAGLIA — motore rarità v2
 // ============================================
 
-import { ALL_BATTLEFIELDS } from '../data/battlefields';
+import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import {
   BATTLEFIELD_RARITA,
   BATTLEFIELD_SELECTION_DEFAULTS,
   declassRarita,
   getFieldRarita,
-} from '../data/battlefieldMeta';
-import { shuffleArray } from '../utils/shuffle';
+} from '../data/battlefieldMeta.js';
+import { shuffleArray } from '../utils/shuffle.js';
 
 const CLASSIC_FIELD_COUNT = 5;
 
@@ -74,7 +74,18 @@ export function pickBattlefieldsByRarity(
 
   if (mode === 'bareHands') {
     const neutral = allBattlefields.filter((b) => b.category === 'neutral');
-    return shuffleArray(neutral).slice(0, count);
+    if (!neutral.length) return [];
+    // I Campi neutri sono 5: le modalità che ne chiedono di più (2v2: 10) li ripetono,
+    // un giro completo mescolato alla volta. Ogni ripetizione è un oggetto distinto,
+    // così le ricerche per riferimento (indexOf) restano univoche per slot.
+    const selected = [];
+    while (selected.length < count) {
+      for (const field of shuffleArray(neutral)) {
+        if (selected.length >= count) break;
+        selected.push(selected.some((f) => f.id === field.id) ? { ...field } : field);
+      }
+    }
+    return selected;
   }
 
   const pool = allBattlefields.filter((b) => b.category !== 'neutral');

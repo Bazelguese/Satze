@@ -59,8 +59,9 @@ import {
 
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
-import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal } from '../src/game/eminence/eminenceDuelGate.js';
+import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
 import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
+import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setupMessage as eminenceSetupMessage, dealMessage as eminenceDealMessage, applyRemoteChoice, applyRemoteSetup, dealNeedsRemoteResponse, forcedDealResponse } from '../src/game/eminence/eminenceOnline.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { getEminenceAbility } from '../src/data/eminences.js';
@@ -148,7 +149,7 @@ import { DIFFICULTY_NAMES } from '../src/utils';
 import { abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby, MULTIPLAYER_ACCENT } from '../src/components/multiplayer/MultiplayerLobby';
-import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
+import { SatzeMenuPrototype, MenuCard, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase, useCurtain } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
 import { scaleDuelMs, scaleDuelVisualConfig } from '../src/settings/duelPlayback.js';
@@ -168,6 +169,9 @@ import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCaro
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
+import OnlineRoomPanel, { ONLINE_MODES } from '../src/components/multiplayer/OnlineRoomPanel.jsx';
+import { OnlineRoomScreen } from '../src/components/multiplayer/OnlineRoomScreen.jsx';
+import { buildMatchPackage, MS as MULTI_MS } from '../src/game/multiSeat/onlineSession.js';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
 import { TeamDuelBoard, useBoardLayouts } from '../src/components/battle/TeamDuelBoard';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
@@ -180,14 +184,19 @@ import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDe
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
-import { GAME_MODES } from '../src/data/gameModes';
+import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
+import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
+import { registraPartita, nuovoIdPartita, telemetriaAttiva, svuotaCoda, serveNomeGiocatore } from '../src/telemetry/telemetria.js';
+import { roundDuello, partitaDuello, partitaMultiPosto } from '../src/telemetry/recordPartita.js';
+import NomeGiocatoreModal from '../src/components/playtest/NomeGiocatoreModal.jsx';
 import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
 import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
 import { preloadCardImagesForAgents } from '../src/data/images.js';
 import { getCardSprite } from '../src/utils/cardUtils.js';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
+import { mulberry32 } from '../src/utils/seededRandom.js';
 import { clearMpSession, persistMpSession, reconnectToRoom } from '../src/utils/multiplayerReconnect';
 import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
 import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
@@ -379,6 +388,14 @@ export default function SatzeGame() {
   const awaitingRevealParamsRef = useRef(false);
   const pendingDuelAfterRevealRef = useRef(false);
   const revealHpCommittedRef = useRef({ player: 0, enemy: 0 });
+  // Eminenze online (eminenceOnline.js): messaggi dell'altro giocatore in attesa di essere
+  // applicati, Affari proposti da noi che aspettano la sua risposta, risposte arrivate in anticipo.
+  const [remoteEminenceQueue, setRemoteEminenceQueue] = useState([]);
+  const remoteEminenceDealsRef = useRef([]);
+  const [remoteEminenceDealsWaiting, setRemoteEminenceDealsWaiting] = useState(0);
+  const earlyEminenceDealResponsesRef = useRef([]);
+  /** Ultima scelta ricevuta dall'altro giocatore per ogni round: serve a ripararla se va persa. */
+  const remoteChoiceByRoundRef = useRef(new Map());
   const openedEminenceGatesRef = useRef(new Set());
   const agentsLockedThisRoundRef = useRef(false);
 
@@ -436,9 +453,12 @@ export default function SatzeGame() {
     setEminenceNotices(noticesFromRoundStart(next, appliedEffects));
 
     if (!bundle?.fieldOperations.length) return;
+    // Generatore con seme ricavato dal tabellone: online i due client sostituiscono lo stesso Campo.
+    const semeCampi = (battlefields || []).reduce((h, f, i) => ((h * 31) + (f?.id || 0) + i) >>> 0, (roundNumber * 7919) >>> 0);
     const replaced = applyFieldOperations(bundle.fieldOperations, {
       battlefields,
       conqueredFields,
+      rng: mulberry32(semeCampi),
     });
     if (replaced.changes.length) setBattlefields(replaced.battlefields);
   }, [
@@ -778,13 +798,33 @@ export default function SatzeGame() {
   }, [forcedEminenceView]);
 
   const confirmEminenceAbility = useCallback((abilityId, params = null) => {
+    const online = aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode;
+    // Online la scelta, una volta inviata, non si cambia: l'altro client potrebbe averla già
+    // usata per aprire un gate. Restano ammessi i params della stessa abilità (reveal).
+    const giaScelta = eminenceMatchState?.player?.selectedAbilityId;
+    if (online && giaScelta && giaScelta !== abilityId) return;
     playGame(GAME_SOUND.LOCK_IN);
-    setEminenceMatchState((prev) => {
-      const stamped = stampComposeParams(params);
-      if (stamped?.cardId != null && !stamped.targetSide) {
-        if (selectedAgent?.id === stamped.cardId) stamped.targetSide = 'player';
-        else if (enemyAgent?.id === stamped.cardId) stamped.targetSide = 'enemy';
+    const stamped = stampComposeParams(params);
+    if (stamped?.cardId != null && !stamped.targetSide) {
+      if (selectedAgent?.id === stamped.cardId) stamped.targetSide = 'player';
+      else if (enemyAgent?.id === stamped.cardId) stamped.targetSide = 'enemy';
+    }
+    if (online) {
+      // Si invia solo una scelta che qui è valida: altrimenti i due client divergerebbero.
+      const prova = eminenceMatchState?.player?.selectedAbilityId === abilityId
+        ? setEminenceAbilityParams(eminenceMatchState, 'player', stamped)
+        : selectEminenceAbility(eminenceMatchState, 'player', abilityId, stamped);
+      if (!prova.ok) {
+        console.warn('[eminenze online] scelta non valida, non inviata:', prova.reason, abilityId);
+        return;
       }
+      if (import.meta.env.DEV) console.info('[eminenze online] invio scelta', { round: eminenceMatchState?.roundNumber, roundGioco: roundNumber, aperto: eminenceMatchState?.roundOpenedAt, abilityId });
+      getMultiplayerManager().sendRelay(
+        multiplayerSession.roomCode,
+        eminenceChoiceMessage(eminenceMatchState?.roundNumber ?? roundNumber, abilityId, stamped ?? null),
+      );
+    }
+    setEminenceMatchState((prev) => {
       if (prev?.player?.selectedAbilityId === abilityId && !prev.player.revealedAbilityId) {
         const updated = setEminenceAbilityParams(prev, 'player', stamped);
         return updated.ok ? updated.matchState : prev;
@@ -792,15 +832,18 @@ export default function SatzeGame() {
       const attempt = selectEminenceAbility(prev, 'player', abilityId, stamped);
       return attempt.ok ? attempt.matchState : prev;
     });
-  }, [setEminenceMatchState, selectedAgent, enemyAgent]);
+  }, [setEminenceMatchState, selectedAgent, enemyAgent, aiDifficulty, multiplayerSession?.roomCode, eminenceMatchState, roundNumber]);
 
   const confirmEminenceSetup = useCallback((params) => {
     playGame(GAME_SOUND.LOCK_IN);
+    if (aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode) {
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, eminenceSetupMessage(params));
+    }
     setEminenceMatchState((prev) => {
       const attempt = commitEminenceSetupChoice(prev, 'player', params);
       return attempt.ok ? attempt.matchState : prev;
     });
-  }, [setEminenceMatchState]);
+  }, [setEminenceMatchState, aiDifficulty, multiplayerSession?.roomCode]);
 
   const focusMarkToken = useCallback((cardId, sourceSide, kind = 'prey') => {
     setFocusedMark((prev) => {
@@ -987,8 +1030,17 @@ export default function SatzeGame() {
         : null,
       paramContext: eminenceParamContext,
       toxinBySide: { player: playerToxin, enemy: enemyToxin },
+      remoteEnemy: aiDifficulty === 'multiplayer',
     });
-    if (result.blocked) return result;
+    if (import.meta.env.DEV && aiDifficulty === 'multiplayer') {
+      console.info('[eminenze online] gate', { gate: nextGate, round: roundNumber, blocked: result.blocked, rivelate: (result.events || []).filter((e) => e?.type === 'REVEAL').map((e) => `${e.side}:${e.abilityId}`) });
+    }
+    if (result.blocked) {
+      // Gate non aperto (online: manca una scelta dell'altro giocatore). Va ritentato quando arriva.
+      if (nextGate) openedEminenceGatesRef.current.delete(`${matchState.roundOpenedAt || 0}:${nextGate}`);
+      eminenceChoiceFlushedRoundRef.current = null;
+      return result;
+    }
 
     let nextMatch = result.matchState;
     let notices = [...(result.notices || [])];
@@ -997,11 +1049,20 @@ export default function SatzeGame() {
     let enemyHp = readHpDelta(result.bundle, 'enemy');
 
     // Affari verso l'IA: risposta automatica (niente default silenzioso sul motore).
+    // Online risponde l'altro giocatore: si aspetta il suo messaggio, salvo le scelte forzate.
     for (const deal of pending.filter((entry) => entry.recipientSide === 'enemy')) {
+      let response;
+      if (aiDifficulty !== 'multiplayer') response = autoResponseForPendingDeal(deal, nextMatch);
+      else if (!dealNeedsRemoteResponse(deal, nextMatch)) response = forcedDealResponse(deal, nextMatch);
+      else if (earlyEminenceDealResponsesRef.current.length) response = earlyEminenceDealResponsesRef.current.shift().response || {};
+      else {
+        remoteEminenceDealsRef.current.push(deal);
+        continue;
+      }
       const resolved = resolvePendingDeal(
         nextMatch,
         deal,
-        autoResponseForPendingDeal(deal, nextMatch),
+        response,
         { initiativeSide },
       );
       nextMatch = resolved.matchState;
@@ -1037,6 +1098,8 @@ export default function SatzeGame() {
 
     setEminenceMatchState(nextMatch);
     setPendingEminenceDeals(playerDeals);
+    setRemoteEminenceDealsWaiting(remoteEminenceDealsRef.current.length);
+    const waitingRemoteDeals = remoteEminenceDealsRef.current.length;
     if (playerHp || enemyHp) {
       if (playerHp) setPlayerHP((hp) => Math.max(0, hp + playerHp));
       if (enemyHp) setEnemyHP((hp) => Math.max(0, hp + enemyHp));
@@ -1049,7 +1112,7 @@ export default function SatzeGame() {
     if (notices.length) {
       setEminenceNotices(notices);
       if (phase) setPendingEminencePhase(phase);
-    } else if (phase && playerDeals.length === 0) {
+    } else if (phase && playerDeals.length === 0 && waitingRemoteDeals === 0) {
       setGamePhase(phase);
     } else if (phase) {
       // Affare in sospeso: memorizza la fase ma non avviare il Duello.
@@ -1057,6 +1120,7 @@ export default function SatzeGame() {
     }
     return { ...result, matchState: nextMatch, notices };
   }, [
+    aiDifficulty,
     isPlayerFirst,
     selectedAgent,
     enemyAgent,
@@ -1077,6 +1141,9 @@ export default function SatzeGame() {
   const confirmPendingEminenceDeal = useCallback((response) => {
     const deal = pendingEminenceDeals[0];
     if (!deal || !eminenceMatchState) return;
+    if (aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode) {
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, eminenceDealMessage(roundNumber, response));
+    }
     const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
     const resolved = resolvePendingDeal(eminenceMatchState, deal, response, { initiativeSide });
     setEminenceMatchState(resolved.matchState);
@@ -1095,6 +1162,9 @@ export default function SatzeGame() {
     }
     setPendingEminenceDeals((prev) => prev.slice(1));
   }, [
+    aiDifficulty,
+    multiplayerSession?.roomCode,
+    roundNumber,
     pendingEminenceDeals,
     eminenceMatchState,
     isPlayerFirst,
@@ -1102,6 +1172,118 @@ export default function SatzeGame() {
     setPlayerHP,
     setEnemyHP,
   ]);
+
+  /**
+   * Eminenze online: applica in ordine i messaggi dell'altro giocatore.
+   * Una scelta di round aspetta che qui quel round sia aperto; una risposta a un Affare
+   * risolve il primo Affare in attesa, oppure resta da parte finché l'Affare non nasce qui.
+   */
+  useEffect(() => {
+    if (!remoteEminenceQueue.length || !eminenceMatchState) return;
+    // Primo passaggio sullo stato di questo render: decide quali messaggi si applicano ora
+    // (e a quali Affari), e raccoglie PV e annunci. Lo stato vero si aggiorna poi con un
+    // updater funzionale che riapplica gli stessi passi sullo stato più recente: così una
+    // scelta locale fatta nel frattempo non viene sovrascritta.
+    let state = eminenceMatchState;
+    const passi = [];
+    let playerHp = 0;
+    let enemyHp = 0;
+    let notices = [];
+    const rimasti = [];
+    const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
+    for (let i = 0; i < remoteEminenceQueue.length; i++) {
+      const msg = remoteEminenceQueue[i];
+      if (msg.type === EMINENCE_ONLINE_MESSAGES.CHOICE) {
+        const roundAperto = !needsEminenceRoundOpen(state, roundNumber) && state.roundNumber === roundNumber;
+        if (msg.roundNumber > roundNumber || (msg.roundNumber === roundNumber && !roundAperto)) {
+          rimasti.push(...remoteEminenceQueue.slice(i)); // round non ancora aperto qui: si riprova dopo
+          break;
+        }
+        if (msg.roundNumber < roundNumber) {
+          console.warn('[eminenze online] scelta remota scartata (round già chiuso):', msg.roundNumber, roundNumber);
+          continue;
+        }
+        const r = applyRemoteChoice(state, msg);
+        if (import.meta.env.DEV) console.info('[eminenze online] applico scelta remota', { msgRound: msg.roundNumber, roundGioco: roundNumber, aperto: state.roundOpenedAt, abilityId: msg.abilityId, ok: r.ok, reason: r.reason });
+        if (r.ok) {
+          state = r.matchState;
+          passi.push({ msg });
+          const prima = remoteChoiceByRoundRef.current.get(msg.roundNumber);
+          // Si conserva l'ultima versione (con i params, se arrivano dopo la scelta).
+          remoteChoiceByRoundRef.current.set(msg.roundNumber, prima && prima.abilityId === msg.abilityId && !msg.params ? prima : msg);
+        }
+        else console.warn('[eminenze online] scelta remota non applicata:', r.reason, msg);
+      } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
+        if (!isEminenceSetupPending(state, 'enemy')) continue; // già registrata (o non prevista)
+        const r = applyRemoteSetup(state, msg);
+        if (r.ok) { state = r.matchState; passi.push({ msg }); }
+      } else if (msg.type === EMINENCE_ONLINE_MESSAGES.DEAL) {
+        const deal = remoteEminenceDealsRef.current.shift();
+        if (!deal) { earlyEminenceDealResponsesRef.current.push(msg); continue; }
+        const resolved = resolvePendingDeal(state, deal, msg.response || {}, { initiativeSide });
+        state = resolved.matchState;
+        passi.push({ msg, deal });
+        playerHp += readHpDelta(resolved.bundle, 'player');
+        enemyHp += readHpDelta(resolved.bundle, 'enemy');
+        notices = [...notices, ...(resolved.notices || [])];
+      }
+    }
+    // Aggiornare la coda solo se è cambiata: riscriverla identica rilancerebbe l'effetto all'infinito.
+    if (rimasti.length !== remoteEminenceQueue.length) setRemoteEminenceQueue(rimasti);
+    setRemoteEminenceDealsWaiting(remoteEminenceDealsRef.current.length);
+    if (!passi.length) return;
+    setEminenceMatchState((prev) => {
+      let st = prev;
+      for (const { msg, deal } of passi) {
+        if (msg.type === EMINENCE_ONLINE_MESSAGES.CHOICE) {
+          const r = applyRemoteChoice(st, msg);
+          if (r.ok) st = r.matchState;
+        } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
+          const r = applyRemoteSetup(st, msg);
+          if (r.ok) st = r.matchState;
+        } else if (deal) {
+          st = resolvePendingDeal(st, deal, msg.response || {}, { initiativeSide }).matchState;
+        }
+      }
+      return st;
+    });
+    if (playerHp || enemyHp) {
+      if (playerHp) setPlayerHP((hp) => Math.max(0, hp + playerHp));
+      if (enemyHp) setEnemyHP((hp) => Math.max(0, hp + enemyHp));
+      revealHpCommittedRef.current = {
+        player: (revealHpCommittedRef.current.player || 0) + playerHp,
+        enemy: (revealHpCommittedRef.current.enemy || 0) + enemyHp,
+      };
+    }
+    if (notices.length) setEminenceNotices((prev) => [...prev, ...notices]);
+  }, [remoteEminenceQueue, eminenceMatchState, roundNumber, isPlayerFirst, setEminenceMatchState, setPlayerHP, setEnemyHP]);
+
+  // Autoriparazione: se una scelta dell'altro giocatore già applicata sparisce dallo stato
+  // (riscritto altrove da una copia precedente), la si riapplica. Senza, il round resterebbe
+  // in attesa di una scelta che l'altro client considera già fatta.
+  useEffect(() => {
+    if (aiDifficulty !== 'multiplayer' || !eminenceMatchState?.enemy) return;
+    if (needsEminenceRoundOpen(eminenceMatchState, roundNumber)) return;
+    const msg = remoteChoiceByRoundRef.current.get(roundNumber);
+    const e = eminenceMatchState.enemy;
+    if (!msg || e.revealedAbilityId) return;
+    const persa = !e.selectedAbilityId || (msg.params && !e.selectedParams);
+    if (!persa) return;
+    console.warn('[eminenze online] scelta remota persa, la riapplico', { round: roundNumber, abilityId: msg.abilityId });
+    setEminenceMatchState((prev) => {
+      const r = applyRemoteChoice(prev, msg);
+      return r.ok ? r.matchState : prev;
+    });
+  }, [aiDifficulty, eminenceMatchState, roundNumber, setEminenceMatchState]);
+
+  // Nuova partita online: niente residui della precedente.
+  useEffect(() => {
+    if (roundNumber !== 1 || gamePhase !== 'shuffleDeal') return;
+    remoteChoiceByRoundRef.current = new Map();
+    remoteEminenceDealsRef.current = [];
+    earlyEminenceDealResponsesRef.current = [];
+    setRemoteEminenceDealsWaiting(0);
+  }, [roundNumber, gamePhase]);
 
   const afterFieldLocked = useCallback(() => {
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) {
@@ -1140,11 +1322,12 @@ export default function SatzeGame() {
   useLayoutEffect(() => {
     if (eminenceNotices.length > 0) return;
     if (pendingEminenceDeals.length > 0) return;
+    if (remoteEminenceDealsWaiting > 0) return;
     if (!pendingEminencePhase) return;
     const nextPhase = pendingEminencePhase;
     setPendingEminencePhase(null);
     setGamePhase(nextPhase);
-  }, [eminenceNotices, pendingEminenceDeals, pendingEminencePhase, setGamePhase]);
+  }, [eminenceNotices, pendingEminenceDeals, remoteEminenceDealsWaiting, pendingEminencePhase, setGamePhase]);
 
   useLayoutEffect(() => {
     if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
@@ -1173,6 +1356,25 @@ export default function SatzeGame() {
     commitEminenceAdvance,
   ]);
 
+  // Online la scelta dell'avversario può arrivare DOPO che il Campo è stato fissato: in quel
+  // momento il gate era bloccato e nessuno lo ritenterebbe. Appena le scelte sono complete,
+  // si riprova ad aprire il gate pre-Agente/pre-Campo (la dedup per gate evita doppioni).
+  useLayoutEffect(() => {
+    if (aiDifficulty !== 'multiplayer') return;
+    if (gamePhase !== 'selectField' || currentFieldIndex == null) return;
+    if (r5Cinematic || eminenceAnnounceHold || awaitingEminenceChoice || awaitingRevealParams) return;
+    if (pendingEminenceDeals.length > 0 || remoteEminenceDealsWaiting > 0) return;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState) || !areSelectionsComplete(eminenceMatchState)) return;
+    const gate = getNextGate(eminenceMatchState.gateProgress);
+    if (gate !== REVEAL_GATES.PRE_AGENT && gate !== REVEAL_GATES.PRE_FIELD) return;
+    if (import.meta.env.DEV) console.info('[eminenze online] ritento il gate dopo il Campo', { gate, round: roundNumber });
+    commitEminenceAdvance(eminenceMatchState);
+  }, [
+    aiDifficulty, gamePhase, currentFieldIndex, r5Cinematic, eminenceAnnounceHold, awaitingEminenceChoice,
+    awaitingRevealParams, pendingEminenceDeals, remoteEminenceDealsWaiting, eminenceMatchState, roundNumber,
+    commitEminenceAdvance,
+  ]);
+
   useLayoutEffect(() => {
     if (!canAdvanceEminenceGeneralGate({
       agentsLocked: agentsLockedThisRoundRef.current,
@@ -1181,6 +1383,7 @@ export default function SatzeGame() {
     if (r5Cinematic) return;
     if (eminenceAnnounceHold) return;
     if (pendingEminenceDeals.length > 0) return;
+    if (remoteEminenceDealsWaiting > 0) return;
     if (awaitingEminenceChoice || awaitingRevealParams) return;
     if (!selectedAgent || !enemyAgent) return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
@@ -1190,6 +1393,7 @@ export default function SatzeGame() {
     r5Cinematic,
     eminenceAnnounceHold,
     pendingEminenceDeals,
+    remoteEminenceDealsWaiting,
     awaitingEminenceChoice,
     awaitingRevealParams,
     selectedAgent,
@@ -1615,6 +1819,21 @@ export default function SatzeGame() {
   /** true dopo un rematch nella stessa stanza (solo UI) */
   const [onlineRematchActive, setOnlineRematchActive] = useState(false);
   const [pendingGuestMatch, setPendingGuestMatch] = useState(null);
+  /** Formato della partita online: lo sceglie l'host nella schermata d'attesa, l'ospite lo vede. */
+  const [onlineFormatId, setOnlineFormatId] = useState(MATCH_FORMATS.standard.id);
+  /** Stanza online: modalità, giocatori del Re della collina, difficoltà delle IA (le sceglie l'host). */
+  const [onlineMode, setOnlineMode] = useState('duel');
+  const [onlinePlayers, setOnlinePlayers] = useState(4);
+  const [onlineDifficulty, setOnlineDifficulty] = useState('medium');
+  /** Posti della stanza (server a 4 posti) e giocatori pronti per posto. */
+  const [onlineMembers, setOnlineMembers] = useState([]);
+  const [onlineReadies, setOnlineReadies] = useState({});
+  const onlineModeRef = useRef('duel');
+  onlineModeRef.current = onlineMode;
+  const multiSeatNetRef = useRef(null);
+  const multiSeatReconnectRef = useRef(null);
+  const multiSeatOnlineRef = useRef(false);
+  const startMultiOnlineRef = useRef(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
@@ -1644,6 +1863,9 @@ export default function SatzeGame() {
   const [mpReconnectError, setMpReconnectError] = useState('');
   const onlineMatchStartedRef = useRef(false);
   const playtestAutoSavedRef = useRef(false);
+  // Telemetria del playtest: partita in corso (inizio e round giocati) e invio unico a fine partita.
+  const telemetriaRef = useRef({ inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] });
+  const [chiediNomeGiocatore, setChiediNomeGiocatore] = useState(() => serveNomeGiocatore());
   const multiplayerSessionRef = useRef(multiplayerSession);
   /** Impostato dopo applyOnlineRematch — usato dal relay rematch */
   const applyOnlineRematchRef = useRef(/** @type {null | ((mode: 'same' | 'change') => void)} */ (null));
@@ -1655,6 +1877,25 @@ export default function SatzeGame() {
     if (!multiplayerSession?.roomCode) return;
     const mgr = getMultiplayerManager();
     return mgr.onMessage((msg) => {
+      if (msg.type === 'room_members' && Array.isArray(msg.members)) {
+        setOnlineMembers(msg.members);
+        return;
+      }
+      if (msg.type === 'member_left') {
+        setOnlineReadies((prev) => {
+          const next = { ...prev };
+          delete next[msg.slot];
+          return next;
+        });
+        // Nel Duello l'unico altro giocatore è l'avversario: come se avesse lasciato la stanza.
+        if (onlineModeRef.current === 'duel') {
+          setOnlineOpponentLeft(true);
+          setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato la stanza."]);
+        } else if (multiSeatOnlineRef.current) {
+          setLogs((prev) => [...prev.slice(-200), `[!] Il giocatore del posto ${Number(msg.slot) + 1} ha lasciato la stanza: la partita non può proseguire.`]);
+        }
+        return;
+      }
       if (msg.type === 'peer_left') {
         clearMpSession();
         setMpOpponentAway(false);
@@ -1669,11 +1910,13 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'peer_rejoined') {
+        multiSeatReconnectRef.current?.(msg.slot ?? null);
         setMpOpponentAway(false);
         setLogs((prev) => [...prev.slice(-200), "[+] L'avversario si è riconnesso."]);
         return;
       }
       if (msg.type === 'reconnected') {
+        multiSeatReconnectRef.current?.(null);
         setMpConnectionLost(false);
         setMpReconnectError('');
         setLogs((prev) => [...prev.slice(-200), '[+] Riconnesso al server multiplayer.']);
@@ -1691,6 +1934,7 @@ export default function SatzeGame() {
       if (msg.type !== 'relay' || !msg.payload) return;
       const p = msg.payload;
       if (p.type === 'deck_ready') {
+        setOnlineReadies((prev) => ({ ...prev, [msg.fromSlot ?? 1]: { ...p, slot: msg.fromSlot ?? 1 } }));
         setOnlinePeerDeck({
           army: p.army,
           deckKey: p.deckKey,
@@ -1703,6 +1947,19 @@ export default function SatzeGame() {
       }
       if (p.type === 'match_start' && p.match) {
         setPendingGuestMatch(p.match);
+      }
+      if ((p.type === 'room_format' || p.type === 'room_config') && MATCH_FORMATS[p.formatId]) {
+        setOnlineFormatId(p.formatId);
+        if (ONLINE_MODES[p.mode]) setOnlineMode(p.mode);
+        if (p.players === 3 || p.players === 4) setOnlinePlayers(p.players);
+        if (p.difficulty) setOnlineDifficulty(p.difficulty);
+      }
+      if (typeof p.type === 'string' && p.type.startsWith('ms_')) {
+        if (p.type === MULTI_MS.START && p.pkg) startMultiOnlineRef.current?.(p.pkg);
+        else multiSeatNetRef.current?.(p, msg.fromSlot);
+      }
+      if (Object.values(EMINENCE_ONLINE_MESSAGES).includes(p.type)) {
+        setRemoteEminenceQueue((prev) => [...prev.slice(-99), p]);
       }
       if (p.type === 'rematch') {
         applyOnlineRematchRef.current?.(p.mode === 'change' ? 'change' : 'same');
@@ -1882,6 +2139,7 @@ export default function SatzeGame() {
 
   useEffect(() => {
     if (gamePhase !== 'onlineDeckReady' || multiplayerSession?.role !== 'host') return;
+    if (onlineMode !== 'duel') return;
     if (!onlineLocalReady || !onlinePeerDeck) return;
     if (onlineMatchStartedRef.current) return;
     if (!getMultiplayerManager().isConnected()) {
@@ -1896,15 +2154,19 @@ export default function SatzeGame() {
         Array.isArray(onlinePeerDeck.deckCardIds) && onlinePeerDeck.deckCardIds.length
           ? onlinePeerDeck.deckCardIds
           : onlinePeerDeck.deckKey;
+      const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.standard;
       const match = buildOnlineMatchPayload(
         selectedArmy,
         selectedDeckKey,
         onlinePeerDeck.army,
         guestDeckSource,
-        selectedMode,
+        formato.mode === 'bareHands' ? 'bareHands' : selectedMode,
         seed,
         ALL_BATTLEFIELDS
       );
+      // Le Eminenze si deducono dal mazzo su entrambi i client: basta concordare il formato.
+      match.eminence = { format: formato.eminenceFormat ?? EMINENCE_FORMAT.DISABLED };
+      match.formatId = formato.id;
       startOnlineMatch('host', match);
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: 'match_start', match });
     } catch (e) {
@@ -1922,9 +2184,56 @@ export default function SatzeGame() {
     selectedArmy,
     selectedDeckKey,
     selectedMode,
+    onlineFormatId,
+    onlineMode,
     startOnlineMatch,
     setGamePhase,
   ]);
+
+  // L'host comunica il formato all'ospite: all'ingresso nella schermata d'attesa, a ogni cambio
+  // e quando l'ospite conferma l'esercito (così lo vede anche chi è entrato dopo).
+  useEffect(() => {
+    if (gamePhase !== 'onlineDeckReady' || multiplayerSession?.role !== 'host' || !multiplayerSession?.roomCode) return;
+    if (!getMultiplayerManager().isConnected()) return;
+    getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
+      type: 'room_config', formatId: onlineFormatId, mode: onlineMode, players: onlinePlayers, difficulty: onlineDifficulty,
+    });
+  }, [gamePhase, multiplayerSession?.role, multiplayerSession?.roomCode, onlineFormatId, onlineMode, onlinePlayers, onlineDifficulty, onlinePeerDeck, onlineMembers.length]);
+
+  /**
+   * 2v2 / Re della collina online: dal pacchetto dell'host. Ogni client arma la sessione con il
+   * proprio posto e avvia la distribuzione con la propria mano e quella del primo avversario.
+   */
+  const startMultiOnline = useCallback((pkg) => {
+    const session = multiplayerSessionRef.current;
+    if (!session?.roomCode || !pkg?.seats) return;
+    const mySlot = session.slot ?? (session.role === 'host' ? 0 : 1);
+    const send = (payload, to) => getMultiplayerManager().sendRelay(session.roomCode, payload, to);
+    const { me, firstFoe } = multiSeat.armOnline({ pkg, localSlot: mySlot, isHost: session.role === 'host', send });
+    if (!me) {
+      setLogs((prev) => [...prev.slice(-200), '[!] Partita avviata senza un posto per te: sei spettatore.']);
+      return;
+    }
+    const seatMe = pkg.seats.find((x) => x.id === me);
+    const seatFoe = pkg.seats.find((x) => x.id === firstFoe);
+    setSelectedMode(pkg.fieldMode === 'bareHands' ? 'bareHands' : 'classic');
+    startOnlineMatch('host', {
+      seed: pkg.seed,
+      mode: pkg.fieldMode === 'bareHands' ? 'bareHands' : 'classic',
+      battlefields: pkg.battlefieldIds.slice(0, 5),
+      hostPlayerHand: seatMe.handIds.map((id) => ({ id, army: seatMe.army })),
+      hostEnemyHand: seatFoe.handIds.map((id) => ({ id, army: seatFoe.army })),
+      hostIsPlayerFirst: true,
+      hostPlayerArmy: seatMe.army,
+      hostEnemyArmy: seatFoe.army,
+      hostPlayerSet: [],
+      hostEnemySet: [],
+    }, { aiDifficulty: onlineDifficulty || 'medium' });
+  }, [multiSeat, startOnlineMatch, onlineDifficulty, setSelectedMode, setLogs]);
+  startMultiOnlineRef.current = startMultiOnline;
+  multiSeatNetRef.current = multiSeat.onNetMessage;
+  multiSeatReconnectRef.current = multiSeat.onReconnect;
+  multiSeatOnlineRef.current = multiSeat.isActive && multiSeat.isOnline;
   
   // Hook per il tutorial
   const tutorial = useTutorial();
@@ -2715,6 +3024,75 @@ export default function SatzeGame() {
     playerHP,
     enemyHP,
     roundNumber,
+  ]);
+
+  // Telemetria del playtest (solo build pubblica con webhook configurato): vedi src/telemetry/.
+  useEffect(() => {
+    svuotaCoda(); // partite rimaste in coda da una sessione precedente senza connessione
+  }, []);
+
+  useEffect(() => {
+    const t = telemetriaRef.current;
+    if (gamePhase === 'menu') {
+      // Partita abbandonata o finita: la prossima ripartirà da zero.
+      telemetriaRef.current = { inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] };
+      return;
+    }
+    const inPartita = ['selectField', 'selectAgent', 'battle', 'result'].includes(gamePhase);
+    if (inPartita && (!t.inCorso || t.inviata)) {
+      telemetriaRef.current = { inCorso: true, inviata: false, idPartita: nuovoIdPartita(), inizio: Date.now(), round: [] };
+    }
+  }, [gamePhase, roundNumber]);
+
+  useEffect(() => {
+    if (gamePhase !== 'gameOver' || !gameResult) return;
+    const t = telemetriaRef.current;
+    if (!t.inCorso || t.inviata || !telemetriaAttiva()) return;
+    t.inviata = true;
+    // Fuori dal test: tutorial guidati, campagna, partite di prova.
+    if (guidedMatch?.active || selectedMode === 'campaign' || gameMode === 'campaign' || gameResult.test || devDialogueDuelActive) return;
+    try {
+      const fine = Date.now();
+      if (gameResult.telemetria) {
+        registraPartita(partitaMultiPosto({ idPartita: t.idPartita, inizio: t.inizio, fine, gameResult, telemetria: gameResult.telemetria }));
+        return;
+      }
+      const customId = typeof selectedDeckKey === 'string' && selectedDeckKey.startsWith('custom_')
+        ? selectedDeckKey.replace('custom_', '')
+        : null;
+      const custom = customId ? loadCustomDecks()[customId] : null;
+      registraPartita(partitaDuello({
+        idPartita: t.idPartita,
+        inizio: t.inizio,
+        fine,
+        round: t.round,
+        gameResult,
+        online: isOnlinePvP ? { stanza: multiplayerSession?.roomCode ?? null } : null,
+        aiDifficulty,
+        gameMode,
+        eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
+        giocatore: {
+          armata: selectedArmy || playerHand?.[0]?.army || null,
+          esercito: custom ? `personalizzato: ${custom.name || customId}` : (typeof selectedDeckKey === 'string' ? `${selectedDeckKey} · ${ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.name || ''}`.trim() : null),
+          carteEsercito: custom?.cards ?? null,
+          mano: playerHand,
+          pv: playerHP,
+        },
+        avversario: {
+          nome: isOnlinePvP ? onlinePeerName : null,
+          armata: enemyHand?.[0]?.army || null,
+          esercito: duelDeckKeys?.enemy ?? null,
+          mano: enemyHand,
+          pv: enemyHP,
+        },
+      }));
+    } catch (err) {
+      console.warn('Telemetria: partita non registrata', err);
+    }
+  }, [
+    gamePhase, gameResult, guidedMatch?.active, selectedMode, gameMode, devDialogueDuelActive, selectedDeckKey,
+    isOnlinePvP, multiplayerSession?.roomCode, aiDifficulty, eminenceMatchState, selectedArmy, playerHand, playerHP,
+    onlinePeerName, enemyHand, duelDeckKeys?.enemy, enemyHP,
   ]);
 
   // Rotella mouse sui FC - funziona su panel, sulla carta posizionata e sulla carta in mano
@@ -3582,6 +3960,10 @@ export default function SatzeGame() {
       return;
     }
     setGuidedHint('');
+    if (isMultiSeat && Array.isArray(multiSeat.view?.legalFields) && !multiSeat.view.legalFields.includes(idx)) {
+      addLog('Campo non disponibile: scegline un altro.');
+      return;
+    }
     // Scelta campo locale: già visibile in scena — nessun log.
     playGame(GAME_SOUND.FIELD_SELECT);
     setCurrentFieldIndex(idx);
@@ -4149,6 +4531,16 @@ export default function SatzeGame() {
     }
     const newPlayerHP = currentPlayerHP;
     const newEnemyHP = currentEnemyHP;
+    if (telemetriaRef.current.inCorso && battleResult) {
+      telemetriaRef.current.round.push(roundDuello({
+        roundNumber,
+        battleResult,
+        isPlayerFirst,
+        pvTu: newPlayerHP,
+        pvAvversario: newEnemyHP,
+        eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
+      }));
+    }
     if (campaignDuelMod?.firstAct) {
       const outcome = firstActMatchOutcome({ playerHP:newPlayerHP,enemyHP:newEnemyHP,playerFields,enemyFields,
         exhausted:playerAvailable.length===0||enemyAvailable.length===0,round:roundNumber,rule:campaignDuelMod.winRule,conquestEffect:battleResult?.resolvedField?.campaignEffect,duelWinner:battleResult?.winner,conquered:!battleResult?.skipConquest });
@@ -4360,6 +4752,59 @@ export default function SatzeGame() {
     advanceGuidedRoundState(playerFields, enemyFields);
   };
 
+  // Solo con il server di sviluppo (mai nella build): comandi per i test automatici end-to-end
+  // (es. due browser in multiplayer). Si aggiorna a ogni render, così le azioni non sono mai vecchie.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    const lato = (st) => st && {
+      eminenceId: st.eminenceId, presence: st.presence, selectedAbilityId: st.selectedAbilityId,
+      revealedAbilityId: st.revealedAbilityId, selectedParams: st.selectedParams, setupCommitted: st.setupCommitted,
+    };
+    window.__satzeTest = {
+      stato: () => ({
+        gamePhase, roundNumber, isPlayerFirst, currentFieldIndex, revealedFields,
+        playerHP, enemyHP, playerFocus, enemyFocus, selectedFocus,
+        selectedAgent: selectedAgent?.id ?? null, enemyAgent: enemyAgent?.id ?? null,
+        mano: (playerHand || []).filter((c) => !playerUsedCards.includes(c.id)).map((c) => c.id),
+        campi: (battlefields || []).map((f) => f?.id ?? null), conquistati: conqueredFields,
+        eminenze: eminenceMatchState?.enabled === false || !eminenceMatchState ? null : {
+          player: lato(eminenceMatchState.player), enemy: lato(eminenceMatchState.enemy),
+          gate: getNextGate(eminenceMatchState.gateProgress),
+        },
+        sceltaEminenza: {
+          attesa: awaitingEminenceChoice, attesaParams: awaitingRevealParams,
+          setup: Boolean(eminenceChoiceView.self?.setup?.pending),
+          opzioni: (eminenceChoiceView.self?.options || []).map((o) => ({ id: o.id, selectable: o.selectable, paramsSchema: o.paramsSchema, timing: o.choiceParamsTiming })),
+          setupSchema: eminenceChoiceView.self?.setup?.paramsSchema ?? null,
+          selezionata: eminenceChoiceView.self?.selectedAbilityId ?? null,
+        },
+        affari: pendingEminenceDeals, affariRemoti: remoteEminenceDealsWaiting,
+        reclamo: showClaimVictoryChoice, risultato: gameResult, log: (logs || []).slice(-6),
+        codaEminenzeRemote: remoteEminenceQueue.map((m) => `${m.type}:r${m.roundNumber ?? '-'}:${m.abilityId ?? ''}`),
+        roundEminenze: eminenceMatchState?.roundNumber ?? null,
+        multi: multiSeat.isActive ? {
+          stage: multiSeat.stage, kind: multiSeat.kind, online: multiSeat.isOnline,
+          role: multiSeat.view?.role ?? null, round: multiSeat.view?.roundNumber ?? null,
+          legalFields: multiSeat.view?.legalFields ?? null, claim: multiSeat.view?.claim ?? null,
+          contestFieldIndex: multiSeat.view?.contestFieldIndex ?? null, result: multiSeat.view?.result ?? null,
+        } : null,
+        confermatoInAttesa: playerConfirmedAwaitingAI, annunci: eminenceNotices.length,
+        guardiaAnnunci: Boolean(announcePointerGuard), bloccoEminenze: Boolean(eminenceBlocksMatch),
+      }),
+      campo: (idx) => handleFieldSelect(battlefields[idx]),
+      agente: (id) => handleAgentSelect((playerHand || []).find((c) => c.id === id)),
+      fc: (n) => setSelectedFocus(n),
+      conferma: () => confirmPlayerChoice(),
+      eminenza: (id, params) => confirmEminenceAbility(id, params ?? null),
+      setup: (params) => confirmEminenceSetup(params),
+      affare: (risposta) => confirmPendingEminenceDeal(risposta),
+      prossimoRound: () => nextRound(),
+      decidiReclamo: (d) => multiSeat.decideClaim(d),
+      // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
+      cadiConnessione: () => getMultiplayerManager().ws?.close(),
+    };
+  });
+
   const sendClaimDecisionRelay = useCallback(
     (decision, playerFields, enemyFields) => {
       if (!isOnlinePvP || !multiplayerSession?.roomCode) return;
@@ -4369,9 +4814,12 @@ export default function SatzeGame() {
         roundNumber,
         playerFields,
         enemyFields,
+        // PV dopo il round appena chiuso: chi riceve può essere ancora indietro di un round.
+        playerHP,
+        enemyHP,
       });
     },
-    [isOnlinePvP, multiplayerSession?.roomCode, roundNumber]
+    [isOnlinePvP, multiplayerSession?.roomCode, roundNumber, playerHP, enemyHP]
   );
 
   useEffect(() => {
@@ -4400,9 +4848,15 @@ export default function SatzeGame() {
     };
 
     if (p.decision === 'victory') {
-      const { pf, ef } = countLocalFields();
+      const locali = countLocalFields();
+      // Chi reclama ha già chiuso il round: i suoi conteggi (invertiti) sono quelli giusti,
+      // quelli locali possono essere indietro di un round.
+      const pf = typeof p.enemyFields === 'number' ? p.enemyFields : locali.pf;
+      const ef = typeof p.playerFields === 'number' ? p.playerFields : locali.ef;
       setOpponentClaimPending(null);
       setShowClaimVictoryChoice(null);
+      if (typeof p.enemyHP === 'number') setPlayerHP(p.enemyHP);
+      if (typeof p.playerHP === 'number') setEnemyHP(p.playerHP);
       setGameResult({ winner: 'enemy', reason: 'fields', playerFields: pf, enemyFields: ef });
       setGamePhase('gameOver');
       setIncomingClaimDecision(null);
@@ -4492,6 +4946,14 @@ export default function SatzeGame() {
       setGamePhase('gameOver');
     },
     hint: (message) => addLog(message),
+    // Online: l'host ha rifiutato la scelta (es. Campo già preso dal compagno) → si sceglie di nuovo.
+    clearSelection: (phase) => {
+      setSelectedAgent(null);
+      setSelectedFocus(1);
+      setPlayerConfirmedAwaitingAI(false);
+      if (phase === 'selectField') setCurrentFieldIndex(null);
+      if (phase) setGamePhase(phase);
+    },
   };
   const multiSeatView = multiSeat.view;
   const multiSeatSeatName = (seatId) => multiSeatView?.seats?.find((s) => s.id === seatId)?.name || null;
@@ -4509,7 +4971,7 @@ export default function SatzeGame() {
       return { side: 'enemy', turnLabel: 'Rivelazione', kicker: 'Rivelazione', name: 'Piani scoperti', desc: 'Disposizione e investimenti' };
     }
     if (v.pendingConfirm) {
-      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName('A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
+      return { side: 'player', turnLabel: 'Il compagno pensa', kicker: 'Compagno', name: 'Sta decidendo', desc: `${multiSeatSeatName(multiSeatView?.mate ?? 'A2')} sceglie la sua carta`, wait: 'Il compagno sta decidendo…' };
     }
     if (v.stage === 'aiTurn' && thinkingIds.length) {
       return { side: 'enemy', turnLabel: 'Turno avversario', name: thinkingIds.length > 1 ? 'Ragionano' : 'Ragiona', desc: names, wait: 'Gli avversari stanno pensando…' };
@@ -4539,8 +5001,8 @@ export default function SatzeGame() {
       (multiSeatFieldClaims[idx] ||= []).push(claim);
     };
     for (const e of b.player) {
-      const idx = e.isHuman ? (e.fieldIndex ?? (b.openingTeam === 'A' ? currentFieldIndex : null)) : e.fieldIndex;
-      add(idx, { key: e.seatId, side: 'ally', label: e.isHuman ? 'Tu' : e.name, tentative: !e.locked && !e.isHuman });
+      const idx = e.isMe ? (e.fieldIndex ?? (b.myOpening ? currentFieldIndex : null)) : e.fieldIndex;
+      add(idx, { key: e.seatId, side: 'ally', label: e.isMe ? 'Tu' : e.name, tentative: !e.locked && !e.isMe });
     }
     for (const e of b.enemy) add(e.fieldIndex, { key: e.seatId, side: 'foe', label: e.name, tentative: !e.locked });
   }
@@ -4844,9 +5306,10 @@ export default function SatzeGame() {
           <SatzeMenuPrototype
             menuItems={menuItemsResolved}
             buildLabel={IS_PUBLIC_PLAYTEST_BUILD ? PUBLIC_BUILD_MARQUEE : undefined}
-            inputLocked={isTutorialSelectorOpen || tutorial.isActive}
+            inputLocked={isTutorialSelectorOpen || tutorial.isActive || chiediNomeGiocatore}
           />
         )}
+        {chiediNomeGiocatore && <NomeGiocatoreModal onFatto={() => setChiediNomeGiocatore(false)} />}
 
         <TutorialSelector
           isOpen={isTutorialSelectorOpen}
@@ -4969,8 +5432,12 @@ export default function SatzeGame() {
           setOpponentClaimPending(null);
           setIncomingClaimDecision(null);
           forceContinueAfterClaimRef.current = false;
+          setOnlineReadies({});
+          setOnlineMembers([]);
           setMultiplayerSession({
             roomCode: gameData.roomCode,
+            slot: gameData.slot ?? (gameData.role === 'host' ? 0 : 1),
+            capacity: gameData.capacity ?? 2,
             role: gameData.role,
             playerName: gameData.playerName,
             playerId: gameData.playerId,
@@ -5317,59 +5784,95 @@ export default function SatzeGame() {
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, relayPayload);
     };
 
+    const mySlot = multiplayerSession.slot ?? (multiplayerSession.role === 'host' ? 0 : 1);
+    const onlineRoomMembers = (onlineMembers.length ? onlineMembers : [{ slot: mySlot, name: multiplayerSession.playerName, connected: true }])
+      .map((m) => {
+        const pronto = m.slot === mySlot ? (onlineLocalReady ? { deckName: deck.name } : null) : onlineReadies[m.slot];
+        return { ...m, ready: Boolean(pronto), deckName: pronto?.deckName ?? null };
+      });
+    const isMultiMode = onlineMode !== 'duel';
+    const membriConnessi = onlineRoomMembers.filter((m) => m.connected !== false);
+    const tuttiPronti = membriConnessi.length >= 2 && membriConnessi.every((m) => m.ready);
+    const avviaMultiOnline = () => {
+      if (!tuttiPronti || multiplayerSession.role !== 'host') return;
+      const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.noEminence;
+      const resolved = resolveDeckCardsForArmy(selectedArmy, selectedDeckKey);
+      const readies = [
+        { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckCardIds: resolved.map((c) => c.id) },
+        ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
+          const r = onlineReadies[m.slot] || {};
+          return { slot: m.slot, name: r.playerName || m.name, army: r.army, deckKey: r.deckKey, deckCardIds: r.deckCardIds || [] };
+        }),
+      ];
+      const seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+      const pkg = buildMatchPackage({
+        kind: onlineMode,
+        fieldMode: formato.mode === 'bareHands' ? 'bareHands' : 'classic',
+        players: onlinePlayers,
+        difficulty: onlineDifficulty,
+        teammatePreset: 'equilibrato',
+      }, readies, seed);
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: MULTI_MS.START, pkg });
+      startMultiOnline(pkg);
+    };
+
     /** Entrambi hanno inviato deck_ready: non siamo "in attesa dell'avversario" ma in sincronizzazione avvio. */
     const bothOnlineDeckReady = onlineLocalReady && !!onlinePeerDeck;
     const onlineReadyButtonLabel = !onlineLocalReady
       ? 'Pronto'
-      : bothOnlineDeckReady
-        ? 'Avvio partita…'
-        : "In attesa dell'avversario…";
+      : onlineMode !== 'duel'
+        ? 'Pronto ✓'
+        : bothOnlineDeckReady
+          ? 'Avvio partita…'
+          : "In attesa dell'avversario…";
 
     return (
-      screen('onlineDeckReady', false, <MenuScreenLayout
+      screen('onlineDeckReady', false, <OnlineRoomScreen
         title={onlineRematchActive ? 'Rematch online' : 'Partita online'}
-        subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
+        roomCode={multiplayerSession.roomCode}
+        deckName={deck.name}
+        roleLabel={multiplayerSession.role === 'host' ? 'HOST' : 'OSPITE'}
+        hint={isMultiMode
+          ? (multiplayerSession.role === 'host' ? 'Quando tutti sono pronti, premi «Avvia partita».' : "Premi Pronto: la partita la avvia l'host.")
+          : 'Quando entrambi siete pronti parte la partita.'}
+        serverUrl={getMultiplayerWsUrl()}
+        peerConfirmed={Boolean(onlinePeerDeck) && !isMultiMode}
+        ready={{ label: onlineReadyButtonLabel, disabled: onlineLocalReady, onClick: handleOnlineReady }}
+        start={isMultiMode && multiplayerSession.role === 'host'
+          ? {
+              label: tuttiPronti
+                ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
+                : 'Avvia partita (aspetta che tutti siano pronti)',
+              disabled: !tuttiPronti,
+              onClick: avviaMultiOnline,
+            }
+          : null}
+        waitingNote={isMultiMode && multiplayerSession.role !== 'host' && onlineLocalReady
+          ? "Sei pronto: la partita parte quando l'host la avvia."
+          : null}
+        onBack={() => {
+          setSelectedDeckKey(null);
+          setOnlineLocalReady(false);
+          setOnlinePeerDeck(null);
+          setOnlinePeerName(null);
+          onlineMatchStartedRef.current = false;
+          setGamePhase('selectDeck');
+        }}
       >
-        <div className="flex flex-col items-center gap-4 max-w-md w-full px-4">
-          <p className="text-slate-300 text-center text-sm">
-            Esercito: <span className="text-white font-bold">{deck.name}</span>
-          </p>
-          <p className="text-xs text-slate-500 text-center">
-            {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
-          </p>
-          <p className="text-[10px] text-slate-600 text-center font-mono break-all">
-            Server: {getMultiplayerWsUrl()}
-          </p>
-          {onlinePeerDeck && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
-          <button
-            type="button"
-            onClick={handleOnlineReady}
-            disabled={onlineLocalReady}
-            className="w-full px-8 py-4 font-bold rounded-lg disabled:opacity-50 transition-opacity"
-            style={{
-              fontFamily: HUD_ORATORIO_FONT_UI,
-              color: MENU_ACCENTS.void,
-              border: `1.5px solid ${MENU_ACCENTS.magenta}`,
-              background: `linear-gradient(90deg, ${MENU_ACCENTS.magenta} 0%, #a855f7 55%, ${MENU_ACCENTS.pink} 100%)`,
-              boxShadow: '0 0 24px rgba(192, 38, 211, 0.35)',
-            }}
-          >
-            {onlineReadyButtonLabel}
-          </button>
-          <MenuBackButton
-            onClick={() => {
-              setSelectedDeckKey(null);
-              setOnlineLocalReady(false);
-              setOnlinePeerDeck(null);
-              setOnlinePeerName(null);
-              onlineMatchStartedRef.current = false;
-              setGamePhase('selectDeck');
-            }}
-          >
-            Cambia esercito
-          </MenuBackButton>
-        </div>
-      </MenuScreenLayout>)
+        <OnlineRoomPanel
+          isHost={multiplayerSession.role === 'host'}
+          locked={onlineMode === 'duel' ? (onlineLocalReady && !!onlinePeerDeck) : false}
+          multiDisponibile={(multiplayerSession.capacity ?? 2) > 2}
+          config={{ mode: onlineMode, formatId: onlineFormatId, players: onlinePlayers, difficulty: onlineDifficulty }}
+          onConfig={(patch) => {
+            if (patch.mode) setOnlineMode(patch.mode);
+            if (patch.formatId) setOnlineFormatId(patch.formatId);
+            if (patch.players) setOnlinePlayers(patch.players);
+            if (patch.difficulty) setOnlineDifficulty(patch.difficulty);
+          }}
+          members={onlineRoomMembers}
+        />
+      </OnlineRoomScreen>)
     );
   }
 

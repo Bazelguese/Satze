@@ -5,7 +5,7 @@
 // ============================================
 
 import { ChannelType, PermissionFlagsBits as P, SortOrderType, ForumLayoutType } from 'discord.js';
-import { STRUTTURA, RUOLI, messaggi, lineeGuida } from './contenuti.mjs';
+import { STRUTTURA, RUOLI, messaggi, lineeGuida, post as postDelForum } from './contenuti.mjs';
 
 export const LIMITI = {
   messaggio: 2000,
@@ -13,6 +13,7 @@ export const LIMITI = {
   lineeGuidaForum: 4096,
   nomeTag: 20,
   tagPerForum: 20,
+  titoloPost: 100,
 };
 
 const TIPI = {
@@ -27,8 +28,9 @@ const PARLARE = [P.Connect, P.Speak, P.Stream, P.UseVAD];
 
 /** Permessi della categoria (e dei suoi canali) in base al tipo di accesso. */
 export function permessiPer(accesso, { everyoneId, devId, playtesterId }) {
+  // @everyone non vede né scrive (Davide ha tolto anche la scrittura nei forum di feedback, 2026-11-08).
   const permessi = [
-    { id: everyoneId, deny: [P.ViewChannel] },
+    { id: everyoneId, deny: accesso === 'feedback' ? [P.ViewChannel, P.SendMessages] : [P.ViewChannel] },
     { id: devId, allow: [...LEGGERE, ...SCRIVERE, ...PARLARE, P.ManageMessages, P.ManageThreads, P.MentionEveryone] },
   ];
   if (accesso === 'lettura') {
@@ -98,6 +100,16 @@ export function verificaContenuti(cfg) {
           if (m.length > LIMITI.messaggio) errori.push(`${dove}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
         });
       }
+      if (c.post) {
+        const lista = postDelForum(cfg)[c.post];
+        if (!lista?.length) errori.push(`${dove}: post "${c.post}" non trovati`);
+        else lista.forEach((p) => {
+          if (!p.titolo || p.titolo.length > LIMITI.titoloPost) errori.push(`${dove}: titolo del post "${p.titolo}" vuoto o oltre ${LIMITI.titoloPost} caratteri`);
+          p.messaggi.forEach((m, i) => {
+            if (m.length > LIMITI.messaggio) errori.push(`${dove} › ${p.titolo}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
+          });
+        });
+      }
       if (c.tipo === 'forum') {
         const guida = guide[c.lineeGuida];
         if (!guida) errori.push(`${dove}: linee guida "${c.lineeGuida}" non trovate`);
@@ -112,25 +124,50 @@ export function verificaContenuti(cfg) {
   return errori;
 }
 
-async function trovaOCreaRuolo(guild, { nome, colore }, opzioni, log) {
+/*
+ * Regola d'oro: lo script non annulla mai le modifiche fatte a mano su Discord.
+ * - Ciò che esiste già non viene modificato (salvo opzione aggiornaCanali).
+ * - Ciò che lo script ha creato e poi è sparito è stato cancellato a mano: non viene ricreato.
+ *   Per saperlo lo script tiene un registro locale (`stato`, salvato in stato.json).
+ */
+async function trovaOCreaRuolo(guild, { nome, colore }, opzioni, ctx) {
   const esistente = guild.roles.cache.find((r) => r.name === nome);
   if (esistente) {
-    log(`  = ruolo ${nome} (già presente)`);
+    ctx.stato.ruoli[nome] = esistente.id;
+    ctx.log(`  = ruolo ${nome} (già presente)`);
     return esistente;
   }
+  if (ctx.stato.ruoli[nome]) {
+    const avviso = `ruolo ${nome}: era stato creato e poi cancellato a mano, non lo ricreo.`;
+    ctx.avvisi.push(avviso);
+    ctx.log(`  ! ${avviso}`);
+    return null;
+  }
   const ruolo = await guild.roles.create({ name: nome, colors: { primaryColor: colore }, ...opzioni, reason: 'Playtest SATZE' });
-  log(`  + ruolo ${nome}`);
+  ctx.stato.ruoli[nome] = ruolo.id;
+  ctx.log(`  + ruolo ${nome}`);
   return ruolo;
 }
 
-async function trovaOCreaCanale(guild, { nome, tipo, parent, permessi, extra }, log) {
+async function trovaOCreaCanale(guild, { chiave, nome, tipo, parent, permessi, extra }, ctx) {
   const esistente = guild.channels.cache.find(
     (c) => c.name === nome && c.type === tipo && (parent ? c.parentId === parent.id : true),
   );
   if (esistente) {
-    await esistente.edit({ ...extra, permissionOverwrites: permessi, reason: 'Playtest SATZE' });
-    log(`  = ${etichetta(tipo)} ${nome} (aggiornato)`);
+    ctx.stato.canali[chiave] = esistente.id;
+    if (ctx.aggiornaCanali) {
+      await esistente.edit({ ...extra, permissionOverwrites: permessi, reason: 'Playtest SATZE' });
+      ctx.log(`  ✎ ${etichetta(tipo)} ${nome} (impostazioni riapplicate)`);
+    } else {
+      ctx.log(`  = ${etichetta(tipo)} ${nome} (già presente, non toccato)`);
+    }
     return esistente;
+  }
+  if (ctx.stato.canali[chiave]) {
+    const avviso = `${etichetta(tipo)} ${nome}: era stato creato e poi cancellato a mano, non lo ricreo.`;
+    ctx.avvisi.push(avviso);
+    ctx.log(`  ! ${avviso}`);
+    return null;
   }
   const creato = await guild.channels.create({
     name: nome,
@@ -140,7 +177,8 @@ async function trovaOCreaCanale(guild, { nome, tipo, parent, permessi, extra }, 
     ...extra,
     reason: 'Playtest SATZE',
   });
-  log(`  + ${etichetta(tipo)} ${nome}`);
+  ctx.stato.canali[chiave] = creato.id;
+  ctx.log(`  + ${etichetta(tipo)} ${nome}`);
   return creato;
 }
 
@@ -179,6 +217,54 @@ async function sincronizzaMessaggi(canale, testi, botId, log) {
   log(`    ✉ ${testi.length} messaggi pubblicati in #${canale.name}`);
 }
 
+/**
+ * Allinea i post del bot in un forum di sola lettura (es. la guida).
+ * Stessi titoli nello stesso ordine e stesso numero di messaggi → modifica i testi.
+ * Qualsiasi cambio di struttura → cancella i post del bot e li ricrea, così l'ordine resta quello di lettura.
+ * I post sono creati dall'ultimo al primo: il forum li ordina per data di creazione, dal più recente.
+ */
+async function sincronizzaPost(forum, posts, botId, collega, log) {
+  const esistenti = (await forum.threads.fetchAll()).filter((t) => t.ownerId === botId);
+  const perTitolo = new Map(esistenti.map((t) => [t.name, t]));
+
+  let strutturaUguale = esistenti.length === posts.length && posts.every((p) => perTitolo.has(p.titolo));
+  const messaggiPerPost = new Map();
+  if (strutturaUguale) {
+    for (const p of posts) {
+      const t = perTitolo.get(p.titolo);
+      if (t.archived) await t.edit({ archived: false });
+      const miei = [...(await t.messages.fetch({ limit: 100 })).values()]
+        .filter((m) => m.author?.id === botId)
+        .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      if (miei.length !== p.messaggi.length) { strutturaUguale = false; break; }
+      messaggiPerPost.set(p.titolo, miei);
+    }
+  }
+
+  if (strutturaUguale) {
+    let cambiati = 0;
+    for (const p of posts) {
+      const miei = messaggiPerPost.get(p.titolo);
+      for (let i = 0; i < p.messaggi.length; i++) {
+        const testo = collega(p.messaggi[i]);
+        if (miei[i].content !== testo) { await miei[i].edit({ content: testo }); cambiati++; }
+      }
+      await perTitolo.get(p.titolo).edit({ locked: true });
+    }
+    log(`    ${cambiati ? `✎ ${cambiati} messaggi aggiornati` : '= post già aggiornati'} in #${forum.name}`);
+    return;
+  }
+
+  for (const t of esistenti) await t.delete();
+  for (const p of [...posts].reverse()) {
+    const [primo, ...altri] = p.messaggi.map(collega);
+    const t = await forum.threads.create({ name: p.titolo, content: primo });
+    for (const testo of altri) await t.send({ content: testo });
+    await t.edit({ locked: true });
+  }
+  log(`    ✉ ${posts.length} post pubblicati in #${forum.name}`);
+}
+
 async function assegnaRuolo(guild, userId, ruolo, log) {
   try {
     const membro = await guild.members.fetch(userId);
@@ -194,31 +280,44 @@ async function assegnaRuolo(guild, userId, ruolo, log) {
 }
 
 /**
- * Allestisce il server. `guild` è la Guild di discord.js, `botId` l'id del bot.
- * @returns {Promise<{ canali: Map<string, string>, avvisi: string[] }>}
+ * Allestisce il server. `guild` ha la forma di una Guild di discord.js (vedi discordRest.mjs), `botId` è l'id del bot.
+ * `opzioni.stato`: registro di ciò che lo script ha creato (viene aggiornato e restituito).
+ * `opzioni.aggiornaCanali`: riapplica permessi, descrizioni e tag anche ai canali che esistono già.
+ * @returns {Promise<{ canali: Map<string, string>, avvisi: string[], stato: object }>}
  */
-export async function allestisci(guild, botId, cfg, log = console.log) {
+export async function allestisci(guild, botId, cfg, log = console.log, opzioni = {}) {
   const avvisi = [];
+  const stato = { ruoli: {}, canali: {}, ...(opzioni.stato ?? {}) };
+  stato.ruoli = { ...stato.ruoli };
+  stato.canali = { ...stato.canali };
+  const ctx = { log, avvisi, stato, aggiornaCanali: Boolean(opzioni.aggiornaCanali) };
   await guild.roles.fetch();
   await guild.channels.fetch();
 
   log('Ruoli');
-  const dev = await trovaOCreaRuolo(guild, RUOLI.dev, { hoist: true, mentionable: false }, log);
-  const playtester = await trovaOCreaRuolo(guild, RUOLI.playtester, { hoist: true, mentionable: true }, log);
+  const dev = await trovaOCreaRuolo(guild, RUOLI.dev, { hoist: true, mentionable: false }, ctx);
+  const playtester = await trovaOCreaRuolo(guild, RUOLI.playtester, { hoist: true, mentionable: true }, ctx);
+  if (!dev || !playtester) {
+    avvisi.push('Senza i ruoli Dev Satze e Playtester non posso impostare i permessi: mi fermo qui.');
+    return { canali: new Map(), avvisi, stato };
+  }
   const ids = { everyoneId: guild.roles.everyone.id, devId: dev.id, playtesterId: playtester.id };
 
   const guide = lineeGuida(cfg);
   const testi = messaggi(cfg);
   const idPerNome = new Map();
   const conMessaggi = [];
+  const conPost = [];
 
   for (const gruppo of STRUTTURA) {
     log(`\n${gruppo.categoria}`);
     const permessi = permessiPer(gruppo.accesso, ids);
-    const categoria = await trovaOCreaCanale(guild, { nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, log);
+    const categoria = await trovaOCreaCanale(guild, { chiave: gruppo.categoria, nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, ctx);
+    if (!categoria) continue;
 
     for (const c of gruppo.canali) {
       const nome = nomeDiscord(c.nome, c.tipo);
+      const chiave = `${gruppo.categoria}/${nome}`;
       let canale;
       if (c.tipo === 'forum') {
         const esistente = guild.channels.cache.find((x) => x.name === nome && x.type === ChannelType.GuildForum && x.parentId === categoria.id);
@@ -226,37 +325,48 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
           topic: guide[c.lineeGuida],
           availableTags: unisciTag(esistente?.availableTags, tagDesiderati(c)),
           defaultReactionEmoji: c.reazione ? { id: null, name: c.reazione } : null,
-          defaultSortOrder: SortOrderType.LatestActivity,
+          defaultSortOrder: c.ordinaPerCreazione ? SortOrderType.CreationDate : SortOrderType.LatestActivity,
           defaultForumLayout: ForumLayoutType.ListView,
         };
         try {
-          canale = await trovaOCreaCanale(guild, { nome, tipo: ChannelType.GuildForum, parent: categoria, permessi, extra }, log);
+          canale = await trovaOCreaCanale(guild, { chiave, nome, tipo: ChannelType.GuildForum, parent: categoria, permessi, extra }, ctx);
         } catch (e) {
           // Alcuni server non possono creare forum: ripiego su un canale di testo.
           const avviso = `#${nome}: non sono riuscito a creare un forum (${e.message}); creo un canale di testo normale.`;
           avvisi.push(avviso);
           log(`  ! ${avviso}`);
           canale = await trovaOCreaCanale(guild, {
+            chiave,
             nome,
             tipo: ChannelType.GuildText,
             parent: categoria,
             permessi,
             extra: { topic: guide[c.lineeGuida].slice(0, LIMITI.descrizioneTesto) },
-          }, log);
-          conMessaggi.push({ canale, testi: [guide[c.lineeGuida]] });
+          }, ctx);
+          if (canale) conMessaggi.push({ canale, testi: [guide[c.lineeGuida]] });
         }
       } else {
         const extra = c.tipo === 'testo' && c.descrizione ? { topic: c.descrizione } : {};
-        canale = await trovaOCreaCanale(guild, { nome, tipo: TIPI[c.tipo], parent: categoria, permessi, extra }, log);
+        canale = await trovaOCreaCanale(guild, { chiave, nome, tipo: TIPI[c.tipo], parent: categoria, permessi, extra }, ctx);
       }
+      if (!canale) continue;
       idPerNome.set(nome, canale.id);
       if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi] });
+      if (c.post) {
+        const lista = postDelForum(cfg)[c.post];
+        if (canale.type === ChannelType.GuildForum) conPost.push({ canale, posts: lista });
+        // Senza forum: un messaggio per post, in ordine, con il titolo in testa.
+        else conMessaggi.push({ canale, testi: lista.flatMap((p) => p.messaggi.map((m, i) => (i === 0 ? `# ${p.titolo}\n${m}` : m))) });
+      }
     }
   }
 
   log('\nMessaggi');
   for (const { canale, testi: lista } of conMessaggi) {
     await sincronizzaMessaggi(canale, lista.map((t) => collegaCanali(t, idPerNome)), botId, log);
+  }
+  for (const { canale, posts } of conPost) {
+    await sincronizzaPost(canale, posts, botId, (t) => collegaCanali(t, idPerNome), log);
   }
 
   const idDev = cfg.idDev?.trim();
@@ -267,5 +377,5 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
     for (const id of idPlaytester) await assegnaRuolo(guild, id, playtester, log);
   }
 
-  return { canali: idPerNome, avvisi };
+  return { canali: idPerNome, avvisi, stato };
 }

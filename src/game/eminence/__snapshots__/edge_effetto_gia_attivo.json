@@ -7,22 +7,22 @@
     "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
   },
   "bilance": {
-    "cinematicCues": 3,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       1,
       1
     ],
-    "noticesEmitted": 2,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       2,
-      5
+      4
     ],
     "segmentsWithoutCue": 1,
-    "segmentsWithoutNotice": 0
+    "segmentsWithoutNotice": 1
   },
   "choice": {
     "alwaysLegalOption": true,
@@ -111,42 +111,6 @@
       "presenceDelta": 1,
       "side": "player",
       "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
-    },
-    {
-      "badgeText": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-      "kind": "effect",
-      "name": "Ricomposizione",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "+1 Presenza."
     }
   ],
   "scenario": {
@@ -304,66 +268,13 @@
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "cues": [],
       "gate": null,
       "kind": "settle",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Dopo il Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-          "kind": "effect",
-          "name": "Ricomposizione",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "+1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 5
+        "player": 4
       },
       "segments": [
         {

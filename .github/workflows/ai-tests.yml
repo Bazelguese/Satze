@@ -26,6 +26,7 @@ jobs:
         with:
           sparse-checkout: |
             src
+            tools
             package.json
           sparse-checkout-cone-mode: true
 

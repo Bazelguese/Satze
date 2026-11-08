@@ -35,3 +35,7 @@ npm-debug.log*
 
 # Config del bot Discord del playtest (contiene il token)
 tools/playtest-discord/config.json
+tools/playtest-discord/stato.json
+
+# Stanze del server multiplayer: le scrive il server mentre gira (contengono i segreti di riconnessione)
+data/rooms.json

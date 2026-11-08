@@ -142,8 +142,9 @@ export class MultiplayerManager {
    * @param {string} roomCode
    * @param {Record<string, unknown>} payload
    */
-  sendRelay(roomCode, payload) {
-    this.send({ type: 'relay', roomCode, payload });
+  sendRelay(roomCode, payload, to = null) {
+    // `to`: elenco di posti destinatari (stanze a più posti); senza, a tutti gli altri.
+    this.send({ type: 'relay', roomCode, payload, ...(Array.isArray(to) ? { to } : {}) });
   }
 
   isConnected() {

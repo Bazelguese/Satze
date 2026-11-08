@@ -69,6 +69,7 @@ function buildBoard(scenario) {
     seatId,
     name: names[seatId],
     isHuman: seatId === 'A1',
+    isMe: seatId === 'A1',
     card: plan.shown.includes(seatId) ? cards[seatId] : null,
     fieldIndex: plan.field.includes(seatId) ? fields[seatId] : null,
     locked: plan.shown.includes(seatId) && !plan.proposal.includes(seatId),
@@ -77,6 +78,7 @@ function buildBoard(scenario) {
   return {
     board: {
       openingTeam: scenario.startsWith('open') ? 'A' : 'B',
+      myOpening: scenario.startsWith('open'),
       player: [entry('A1'), entry('A2')],
       enemy: [entry('B1'), entry('B2')],
     },

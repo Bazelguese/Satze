@@ -20,7 +20,10 @@ Il test procede a **cicli** di una o due settimane:
 
    ```
    VITE_SATZE_PUBLIC_BUILD=true
+   VITE_SATZE_TELEMETRY_URL=<indirizzo del webhook di #dati-partite>
    ```
+
+   La seconda riga attiva l'invio dei dati di gioco (vedi `TELEMETRIA_PLAYTEST.md`). Il repository è pubblico: questo file non va mai committato.
 
    Senza questo file `npm run build:public` produce una build **di sviluppo**: con gli Strumenti dev, lo Storico playtest e il multiplayer puntato su `127.0.0.1`.
 2. **Alza la versione** in `package.json`:
@@ -47,15 +50,17 @@ Il test procede a **cicli** di una o due settimane:
 3. Menziona @Playtester in #annunci per avvisarli.
 4. Lascia 3-4 giorni per rispondere, poi leggi le risposte prima di decidere le priorità.
 
-## Cosa c'è nella build 0.1.0
+## Cosa c'è nella build 0.1.1
 
 - Partita locale contro l'IA:
   - **Duello**, nei formati Standard (con le Eminenze), No Eminenza e Mani nude
   - **2v2** ad abbinamenti segreti
   - **Re della collina** a 3-4 giocatori
-- **Multiplayer online** 1v1 (beta), sul server `wss://satze-ws.fly.dev`
+- **Multiplayer online** (beta), sul server `wss://satze-ws.fly.dev`: Duello in tutti i formati, 2v2 e Re della collina fino a 4 persone (i posti vuoti li gioca l'IA)
 - Gestione eserciti, Tutorial, Galleria
 - La **Campagna** resta visibile nel menu come anteprima, ma **non fa parte del test**.
 - Focus del test: le **Eminenze**, che ci sono solo nel Duello Standard.
 
 Prima di distribuire la build, controlla che il server del multiplayer sia acceso (`fly status`).
+
+Se è cambiato `server/index.mjs` (ad esempio le stanze fino a 4 posti), ripubblica il server dalla **cartella principale del repository**, quella che contiene `fly.toml`, con `fly deploy`. Le stanze 1 contro 1 restano compatibili con le build già distribuite.
