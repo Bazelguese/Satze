@@ -19,6 +19,7 @@ import { battleOutcomeKey } from '../game/duel/duelHelpers.js';
 import { createRng, createSeat, legalFocusRange } from '../game/multiSeat/multiSeatCore.js';
 import { getSeatAIProfile, investmentForLevel, npcSeatNames, profileForDifficulty } from '../game/multiSeat/seatAI.js';
 import { pickAiArmyDeck } from '../game/multiSeat/seatSetup.js';
+import { kothScontri, scontroTransition, teamScontri, waitingAgents } from '../game/multiSeat/scontroQueue.js';
 import {
   PAIRINGS,
   TEAM_DUEL_CONFIG,
@@ -170,6 +171,34 @@ function projectConquered(conquered, ownerSide) {
  * proiettato nella scena) e il compagno. La carta del giocatore umano mentre schiera la
  * fornisce la scena (è ancora solo una scelta locale).
  */
+/**
+ * Coda degli scontri del turno mentre se ne presenta uno: chi aspetta dietro (sfocato) per
+ * lato, se c'è un altro scontro e come si passa al successivo.
+ */
+function presentQueue(session) {
+  const i = session.presentIndex;
+  if (session.stage !== MULTI_SEAT_STAGES.PRESENTING || i == null || i < 0 || !session.match) return null;
+  const isTeam = session.kind === MULTI_SEAT_KINDS.TEAM;
+  const scontri = isTeam ? teamScontri(session.match.roundResult) : kothScontri(session.match.contestResult);
+  const before = isTeam ? session.roundStartMatch : session.contestStartMatch;
+  if (!before || i >= scontri.length) return null;
+  const withCard = (e) => {
+    const seat = before.seats.find((x) => x.id === e.seatId);
+    return { ...e, name: seat?.name || null, agent: seat?.hand.find((c) => c.id === e.cardId) || null };
+  };
+  const w = waitingAgents(scontri, i);
+  return {
+    index: i,
+    total: scontri.length,
+    hasNext: i + 1 < scontri.length,
+    waiting: {
+      player: w.player.map(withCard).filter((e) => e.agent),
+      enemy: w.enemy.map(withCard).filter((e) => e.agent),
+    },
+    transition: scontroTransition(scontri, i),
+  };
+}
+
 function teamBoard(session) {
   const match = session?.match;
   if (!match || session.kind !== MULTI_SEAT_KINDS.TEAM) return null;
@@ -291,12 +320,12 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   // ------------------------------------------------------------------
   // Proiezione di una coppia di posti nello stato 1v1 della scena
   // ------------------------------------------------------------------
-  const project = useCallback((s, { playerSeatId, enemySeatId, playerHP, enemyHP, isPlayerFirst, conquered = null }) => {
+  const project = useCallback((s, { playerSeatId, enemySeatId, playerHP, enemyHP, isPlayerFirst, conquered = null, keepDuel = false }) => {
     const gs = gameState;
     const match = s.match;
     const pSeat = seatOf(s, playerSeatId);
     const eSeat = seatOf(s, enemySeatId);
-    sceneRef.current?.resetForProjection?.();
+    sceneRef.current?.resetForProjection?.({ keepDuel });
     gs.setPlayerHand(pSeat.hand);
     gs.setEnemyHand(eSeat.hand);
     gs.setPlayerUsedCards(pSeat.usedCardIds);
@@ -515,6 +544,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       playerHP: rr.hpBefore[pSeat.team],
       enemyHP: rr.hpBefore[eSeat.team],
       isPlayerFirst: front.playerSeatId === front.firstSeatId,
+      // dal secondo scontro del turno si resta nella vista del duello
+      keepDuel: index > 0,
     });
     commit({ ...sessionRef.current, match: s.match });
     const result = front.battleResult;
@@ -523,6 +554,11 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       ...result,
       finalPlayerHP: Math.min(max, Math.max(0, result.finalPlayerHP)),
       finalEnemyHP: Math.min(max, Math.max(0, result.finalEnemyHP)),
+      // PV e Tossine di partenza a schermo (lo scontro dopo parte senza lasciare il risultato)
+      presentStart: {
+        hp: { player: rr.hpBefore[pSeat.team], enemy: rr.hpBefore[eSeat.team] },
+        toxin: { player: pSeat.toxin || null, enemy: eSeat.toxin || null },
+      },
     };
     const pCard = pSeat.hand.find((c) => c.id === (front.playerSeatId === front.firstSeatId ? front.firstCardId : front.secondCardId));
     const eCard = eSeat.hand.find((c) => c.id === (front.playerSeatId === front.firstSeatId ? front.secondCardId : front.firstCardId));
@@ -533,6 +569,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       playerFocus: rr.investments[pSeat.id],
       enemyFocus: rr.investments[eSeat.id],
       fieldIndex: front.fieldIndex,
+      // Dal secondo scontro gli Agenti arrivano dalla coda sfocata (o restano in campo).
+      entry: index > 0 ? scontroTransition(teamScontri(rr), index - 1)?.enter ?? null : null,
     });
   }, [commit, project, sceneRef]);
   const teamPresentFrontRef = useRef(teamPresentFront);
@@ -581,18 +619,26 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       playerHP: fight.hpBefore[pSeat.id],
       enemyHP: fight.hpBefore[eSeat.id],
       isPlayerFirst: fight.playerSeatId === fight.firstSeatId,
+      keepDuel: index > 0,
     });
     commit({ ...sessionRef.current, match: s.match });
     const pIsFirst = fight.playerSeatId === fight.firstSeatId;
     const pCard = pSeat.hand.find((c) => c.id === (pIsFirst ? fight.firstCardId : fight.secondCardId));
     const eCard = eSeat.hand.find((c) => c.id === (pIsFirst ? fight.secondCardId : fight.firstCardId));
     sceneRef.current?.stageBattle({
-      result: fight.battleResult,
+      result: {
+        ...fight.battleResult,
+        presentStart: {
+          hp: { player: fight.hpBefore[pSeat.id], enemy: fight.hpBefore[eSeat.id] },
+          toxin: { player: viewMatch.seats.find((x) => x.id === pSeat.id)?.toxin || null, enemy: viewMatch.seats.find((x) => x.id === eSeat.id)?.toxin || null },
+        },
+      },
       playerAgent: pCard,
       enemyAgent: eCard,
       playerFocus: pIsFirst ? fight.firstFocus : fight.secondFocus,
       enemyFocus: pIsFirst ? fight.secondFocus : fight.firstFocus,
       fieldIndex: cr.fieldIndex,
+      entry: index > 0 ? scontroTransition(kothScontri(cr), index - 1)?.enter ?? null : null,
     });
     // Stato intermedio della catena per lo scontro successivo.
     const afterReveal = { ...reveal };
@@ -812,6 +858,8 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         seed: session.seed,
         firstEnemy: session.firstEnemy,
         extras: (session.extras || []).map((x) => ({ ...x, hand: pickHandAgain(x, rngRef.current) })),
+        // stessi PNG della partita appena finita (servono già alla schermata VS)
+        npcNames: session.npcNames,
       };
       sessionRef.current = next;
       setSession(next);
@@ -1032,6 +1080,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       mateReady: Boolean(session.mateReady),
       mateLine: session.mateLine || null,
       revealing: Boolean(session.revealing),
+      scontroQueue: presentQueue(session),
     };
     if (!match) return base;
     if (session.kind === MULTI_SEAT_KINDS.TEAM) {

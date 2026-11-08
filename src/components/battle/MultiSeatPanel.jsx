@@ -67,11 +67,12 @@ function ThinkTag({ view, seatId }) {
 function presentingLine(view) {
   const scontri = view.kind === 'teamDuel' ? view.roundResult?.fronts : view.contestResult?.fights;
   const s = scontri?.[view.presentIndex ?? 0];
-  if (!s) return 'Scontro in corso: premi Continua alla fine.';
+  const tasto = view.scontroQueue?.hasNext ? 'Prossimo duello' : 'Continua';
+  if (!s) return `Scontro in corso: premi ${tasto} alla fine.`;
   const human = view.kind === 'teamDuel' ? 'A1' : 'P1';
   const involved = s.playerSeatId === human || s.enemySeatId === human;
   const who = `${seatName(view, s.playerSeatId)} contro ${seatName(view, s.enemySeatId)}`;
-  return involved ? `Scontro: ${who}. Premi Continua alla fine.` : `Assisti: ${who}. Premi Continua alla fine.`;
+  return involved ? `Scontro: ${who}. Premi ${tasto} alla fine.` : `Assisti: ${who}. Premi ${tasto} alla fine.`;
 }
 
 function overLine(view) {

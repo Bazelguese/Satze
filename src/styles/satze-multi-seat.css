@@ -470,3 +470,47 @@
   box-shadow: 1px 1px 0 #000;
 }
 .imp-field-claim.is-tentative { border-style: dashed; background: rgba(10, 14, 26, 0.85); color: color-mix(in srgb, var(--claim) 50%, #fff); }
+
+/* ------------------------------------------------------------
+   Scena del duello: Agenti in attesa e passaggio fra scontri
+   (src/components/battle/MultiSeatWaitingQueue.jsx)
+   ------------------------------------------------------------ */
+.ms-queue {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.ms-queue-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  transition: transform 0.5s ease, filter 0.5s ease, opacity 0.5s ease;
+  animation: ms-queue-in 0.7s ease-out both;
+}
+@keyframes ms-queue-in { from { opacity: 0; } }
+
+/* Arrivo nello scontro dopo: lo fa playMultiSeatArrival; si spegne l'ingresso standard. */
+.ms-arrive [data-duel-card] { animation: none; }
+
+/* Chi non c'è nello scontro dopo esce di scena verso l'esterno, durante la pausa del tasto.
+   Si anima il figlio: la carta stessa ha già trasformazioni e animazioni proprie. */
+.ms-leave-enemy [data-duel-card="enemy"] > *,
+.ms-leave-player [data-duel-card="player"] > * {
+  animation: ms-leave 0.45s ease-in forwards;
+}
+.ms-leave-enemy [data-duel-card="enemy"] > * { --ms-leave-x: -70px; }
+.ms-leave-player [data-duel-card="player"] > * { --ms-leave-x: 70px; }
+@keyframes ms-leave {
+  to { transform: translate(var(--ms-leave-x), 34px) scale(0.9); filter: blur(4px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-leave-enemy [data-duel-card="enemy"] > *,
+  .ms-leave-player [data-duel-card="player"] > *,
+  .ms-queue-card { animation: none; }
+}
