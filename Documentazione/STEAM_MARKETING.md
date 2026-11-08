@@ -3,7 +3,7 @@
 **Stato:** bozza di lavoro, 8 novembre 2026
 **Ipotesi di partenza** (decise da Davide):
 - gioco in **italiano e inglese**;
-- **a pagamento**, con prezzo unico;
+- **a pagamento**, con prezzo unico di **6,99 €** (vedi §4.5 per il prezzo in dollari);
 - **budget di marketing zero**: solo tempo;
 - **nessun pubblico esistente**.
 
@@ -36,7 +36,7 @@ Documento collegato: [STEAM_PAGINA.md](STEAM_PAGINA.md) (checklist, testi, grafi
 **Previsione del primo anno, scenario intermedio [stima]:**
 - circa **3.000 liste desideri** al lancio;
 - **600-1.500 copie** vendute;
-- circa **3.000-9.000 $** netti per te, a un prezzo di 9,99 $.
+- circa **1.900-6.300 $** netti per te, a un prezzo di 6,99.
 
 Lo scenario più probabile se il piano non viene seguito con costanza è quello prudente (§4).
 
@@ -148,7 +148,7 @@ Cosa distingue gli scenari:
 **Formule:**
 - **Copie nel primo anno:** liste desideri al lancio × **0,2-0,5**. È un intervallo prudente: coerente con i tier di HTMAG (5.000 liste desideri corrispondono a un gioco Bronze, sotto i 10.000 $ lordi a vita) e più basso del ~0,7 del sondaggio di Zukowski, che tende a includere giochi migliori della media.
 - **Recensioni:** copie ÷ 30.
-- **Ricavo netto per copia** a 9,99 $ di prezzo di listino: circa **4,5-6 $**. Il calcolo tiene conto di:
+- **Ricavo netto per copia** a 6,99 di prezzo di listino: circa **3-4 $**, cioè il 45-60% del prezzo. Il calcolo tiene conto di:
   - IVA, inclusa nei prezzi UE;
   - prezzi regionali più bassi;
   - sconti;
@@ -163,17 +163,31 @@ Cosa distingue gli scenari:
 | Copie nella prima settimana (10-15%) | 25-40 | 70-100 | 300-450 | 800-1.200 |
 | **Copie nel primo anno** | **50-125** | **150-350** | **600-1.500** | **1.600-4.000** |
 | Recensioni | 2-4 | 5-12 | 20-50 | 50-130 |
-| **Ricavo netto per te nel primo anno** | **< 750 $** | **~700-2.000 $** | **~3.000-9.000 $** | **~7.000-24.000 $** |
+| **Ricavo netto per te nel primo anno** | **< 500 $** | **~450-1.500 $** | **~1.900-6.300 $** | **~5.000-17.000 $** |
+
+Le copie sono le stesse calcolate a 9,99 $. Un prezzo più basso potrebbe aumentarle un po', ma non ho trovato dati verificati per quantificare l'effetto, quindi non l'ho incluso.
 
 Due conseguenze pratiche:
-- **I 100 $ di Steam Direct** si recuperano solo dopo 1.000 $ di ricavi lordi rettificati ([appfee](https://partner.steamgames.com/doc/gettingstarted/appfee)). Nello scenario "mediana" potrebbero non rientrare.
+- **I 100 $ di Steam Direct** si recuperano solo dopo 1.000 $ di ricavi lordi rettificati ([appfee](https://partner.steamgames.com/doc/gettingstarted/appfee)). A 6,99 servono circa **150-200 copie** [stima]. Nello scenario "mediana" non rientrano; nel prudente sono al limite.
 - **Le tasse in Italia** non sono incluse: vanno chieste a un commercialista.
 
 ### 4.5 Correzioni per i rischi specifici di SATZE
 
 - **Arte generata con IA.** Uno studio di giugno 2026 trova circa **il 53% di recensioni in meno** per i giochi che dichiarano l'IA, a parità di altri fattori. È però solo una correlazione **[riassunto]** ([TechPowerUp](https://www.techpowerup.com/350230/games-made-with-gen-ai-suffer-up-to-53-worse-sales-on-steam)). Se l'arte resta così com'è, conviene considerare **più probabile la metà inferiore** di ogni intervallo.
 - **Solo Windows.** È la norma per un indie e non cambia le stime, ma esclude chi gioca su Mac, Linux o Steam Deck finché non è verificato.
-- **Prezzo.** A 12,99 $ le copie scenderebbero un po' ma il ricavo per copia salirebbe. Steam non permette di cambiare prezzo nei primi 30 giorni dall'uscita ([pricing](https://partner.steamgames.com/doc/store/pricing)), quindi va deciso prima.
+- **Prezzo scelto: 6,99 €.**
+  - **Come si imposta.** Su Steam si sceglie un prezzo base in dollari e Steam propone i prezzi nelle altre valute. Per **6,99 $** lo strumento di Steam suggerisce **6,79 €** (metodo multi-variabile; dati di ottobre 2026) **[letto]** ([pricing explorer](https://partner.steamgames.com/pricing/explorer)). I prezzi si possono però fissare a mano valuta per valuta: *"Many developers choose to determine their own pricing in each currency, and that's just fine"* **[letto]** ([pricing](https://partner.steamgames.com/doc/store/pricing)). Quindi 6,99 € esatti si possono impostare.
+  - **Pro:**
+    - è una cifra da acquisto d'impulso per chi non ti conosce;
+    - ridimensiona le aspettative legate all'arte con IA;
+    - è in linea con la fascia bassa del genere: Cheater's Table 6,89 €, Duelists of Eden 4,99 €, Cardburners 9,99 €.
+  - **Contro:**
+    - circa il 30% in meno per copia rispetto a 9,99;
+    - meno margine per gli sconti futuri;
+    - 360 carte e 5 modalità potrebbero "valere" di più agli occhi di chi compra.
+
+    Steam ricorda che il prezzo *"It's not about trying to undercut competition"* ([pricing](https://partner.steamgames.com/doc/store/pricing)).
+  - **Quando decidere.** Nei primi 30 giorni dall'uscita il prezzo non si può cambiare, e dopo ogni aumento non si possono fare sconti per 30 giorni ([pricing](https://partner.steamgames.com/doc/store/pricing)). Alzare il prezzo più avanti, per esempio all'arrivo della Campagna, è possibile ma va pianificato.
 
 ---
 
