@@ -22,11 +22,22 @@ const DEAL_LEAD_MS = 280;
  * ShuffleController: coreografia kit in zona locale + deal/restack sul campo reale.
  */
 export class BattlefieldShuffleKitController extends ShuffleController {
-  constructor({ layout, ...opts }) {
+  constructor({ layout, onDeal = null, ...opts }) {
     super(opts);
     this.baseLayout = layout;
     this.layout = layout;
     this.zoneTransform = createShuffleZoneTransform(layout, this.g);
+    /** (indice) => void: ogni carta che arriva in mano, per il suono della smazzata. */
+    this.onDeal = onDeal;
+    this.dealtIds = new Set();
+  }
+
+  setCard(id, patch) {
+    if (patch?.dealt && this.onDeal && !this.dealtIds.has(id)) {
+      this.dealtIds.add(id);
+      this.onDeal(this.dealtIds.size - 1);
+    }
+    super.setCard(id, patch);
   }
 
   /** Coreografie kit: coordinate locali → campo (speculare per nemico). */
@@ -88,6 +99,7 @@ export class BattlefieldShuffleKitController extends ShuffleController {
     this.zoneTransform = createShuffleZoneTransform(this.layout, this.g);
 
     this.resetDeckStack();
+    this.dealtIds = new Set();
     const ord = order ?? this._freshOrder();
     const ctx = {
       after: this.after.bind(this),
@@ -106,7 +118,8 @@ export class BattlefieldShuffleKitController extends ShuffleController {
       : this.deal(ord, tEnd + DEAL_LEAD_MS);
 
     if (onDone) this.after(dealEnd, onDone);
-    return { order: ord, duration: dealEnd };
+    // shuffleEnd: fine della mischiata (prima della smazzata), nella scala di after()
+    return { order: ord, duration: dealEnd, shuffleEnd: tEnd };
   }
 
   _freshOrder() {

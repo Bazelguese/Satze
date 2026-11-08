@@ -127,6 +127,7 @@ export function BattlefieldShuffleDealOverlay({
             onDealProgress={handlePlayerDealt}
             battlefield
             autoPlay
+            sound
             deckIntroFadeMs={DUEL_DECK_INTRO_FADE_MS}
             deckIntroBeatMs={DUEL_DECK_INTRO_BEAT_MS}
           />

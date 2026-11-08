@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BattlefieldShuffleKitController } from './BattlefieldShuffleKitController';
+import { playCardDeal, startShuffleSound } from '../../audio/gameSounds.js';
 import { applyDeckStackPosition } from './battlefieldDealMotion';
 import { buildShuffleKitGeometry } from './shuffleKitGeometry';
 import { rollShuffleFieldJitter, withShuffleJitter } from './shuffleFieldJitter';
@@ -56,6 +57,8 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
     timeScale = 1,
     onComplete,
     loop = false,
+    /** Suoni di mischiata e smazzata: solo per la mischiata vera sul campo, non per le anteprime. */
+    sound = false,
   } = options;
 
   const geometry = useMemo(() => buildShuffleKitGeometry(layout), [layout]);
@@ -68,6 +71,7 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
   const [showReplay, setShowReplay] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const ctlRef = useRef(null);
+  const stopSoundRef = useRef(() => {});
   const onCompleteRef = useRef(onComplete);
   const completedRef = useRef(false);
   onCompleteRef.current = onComplete;
@@ -109,6 +113,15 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
       setShowReplay(false);
       setIsPlaying(true);
 
+      // mischiata in loop finché le carte non partono verso la mano (o finisce la coreografia)
+      stopSoundRef.current();
+      let stopLoop = sound ? startShuffleSound() : null;
+      const stopShuffleSound = () => {
+        stopLoop?.(300);
+        stopLoop = null;
+      };
+      stopSoundRef.current = stopShuffleSound;
+
       const ctl = new BattlefieldShuffleKitController({
         setCard: setCardByDeckIndex,
         geometry,
@@ -116,6 +129,12 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
         handCount: handSize,
         timeScale,
         layout: jitteredLayout,
+        onDeal: sound
+          ? (index) => {
+              stopShuffleSound();
+              playCardDeal(index);
+            }
+          : null,
       });
       ctlRef.current = ctl;
 
@@ -128,6 +147,7 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
         order,
         onDone: () => finish(result.order),
       });
+      if (sound) ctl.after(result.shuffleEnd, stopShuffleSound);
     };
 
     if (hiddenIntro) {
@@ -158,6 +178,7 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
     deckIntroFadeMs,
     deckIntroBeatMs,
     timeScale,
+    sound,
     setCardByDeckIndex,
     finish,
   ]);
@@ -167,6 +188,7 @@ export function useShuffleKitAnimation(deck, layout, options = {}) {
     play();
     return () => {
       ctlRef.current?.cancel();
+      stopSoundRef.current();
       completedRef.current = false;
     };
     // Avvia una sola volta per combinazione stabile (evita cancel loop su re-render HUD).
