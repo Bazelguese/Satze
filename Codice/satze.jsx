@@ -148,7 +148,7 @@ import { DIFFICULTY_NAMES } from '../src/utils';
 import { abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
 import { CampaignSaveSlots } from '../src/components/campaign/CampaignSaveSlots';
 import { MultiplayerLobby, MULTIPLAYER_ACCENT } from '../src/components/multiplayer/MultiplayerLobby';
-import { SatzeMenuPrototype, MenuScreenLayout, MenuCard, MenuBackButton, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
+import { SatzeMenuPrototype, MenuCard, OptionsScreen, PALETTE, MENU_ACCENTS, HUD_ORATORIO_FONT_UI } from '../src/components/menu';
 import { useTransitionedSetGamePhase, useCurtain } from '../src/components/cosmic/ScreenTransition';
 import { applyVfxQualityToDuelConfig, getVfxQualityProfile } from '../src/settings/vfxQualityProfile';
 import { scaleDuelMs, scaleDuelVisualConfig } from '../src/settings/duelPlayback.js';
@@ -169,6 +169,7 @@ import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerBu
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
 import OnlineRoomPanel, { ONLINE_MODES } from '../src/components/multiplayer/OnlineRoomPanel.jsx';
+import { OnlineRoomScreen } from '../src/components/multiplayer/OnlineRoomScreen.jsx';
 import { buildMatchPackage, MS as MULTI_MS } from '../src/game/multiSeat/onlineSession.js';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
 import { TeamDuelBoard, useBoardLayouts } from '../src/components/battle/TeamDuelBoard';
@@ -5823,81 +5824,52 @@ export default function SatzeGame() {
           : "In attesa dell'avversario…";
 
     return (
-      screen('onlineDeckReady', false, <MenuScreenLayout
+      screen('onlineDeckReady', false, <OnlineRoomScreen
         title={onlineRematchActive ? 'Rematch online' : 'Partita online'}
-        subtitle={`Codice stanza: ${multiplayerSession.roomCode}`}
-      >
-        <div className="flex flex-col items-center gap-4 max-w-md w-full px-4">
-          <p className="text-slate-300 text-center text-sm">
-            Esercito: <span className="text-white font-bold">{deck.name}</span>
-          </p>
-          <OnlineRoomPanel
-            isHost={multiplayerSession.role === 'host'}
-            locked={onlineMode === 'duel' ? (onlineLocalReady && !!onlinePeerDeck) : false}
-            multiDisponibile={(multiplayerSession.capacity ?? 2) > 2}
-            config={{ mode: onlineMode, formatId: onlineFormatId, players: onlinePlayers, difficulty: onlineDifficulty }}
-            onConfig={(patch) => {
-              if (patch.mode) setOnlineMode(patch.mode);
-              if (patch.formatId) setOnlineFormatId(patch.formatId);
-              if (patch.players) setOnlinePlayers(patch.players);
-              if (patch.difficulty) setOnlineDifficulty(patch.difficulty);
-            }}
-            members={onlineRoomMembers}
-          />
-          <p className="text-xs text-slate-500 text-center">
-            {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — {isMultiMode
-              ? (multiplayerSession.role === 'host' ? 'quando tutti sono pronti, premi «Avvia partita».' : "premi Pronto: la partita la avvia l'host.")
-              : 'quando entrambi siete pronti parte la partita.'}
-          </p>
-          <p className="text-[10px] text-slate-600 text-center font-mono break-all">
-            Server: {getMultiplayerWsUrl()}
-          </p>
-          {onlinePeerDeck && !isMultiMode && <p className="text-emerald-400 text-sm">L&apos;avversario ha confermato l&apos;esercito</p>}
-          <button
-            type="button"
-            onClick={handleOnlineReady}
-            disabled={onlineLocalReady}
-            className="w-full px-8 py-4 font-bold rounded-lg disabled:opacity-50 transition-opacity"
-            style={{
-              fontFamily: HUD_ORATORIO_FONT_UI,
-              color: MENU_ACCENTS.void,
-              border: `1.5px solid ${MENU_ACCENTS.magenta}`,
-              background: `linear-gradient(90deg, ${MENU_ACCENTS.magenta} 0%, #a855f7 55%, ${MENU_ACCENTS.pink} 100%)`,
-              boxShadow: '0 0 24px rgba(192, 38, 211, 0.35)',
-            }}
-          >
-            {onlineReadyButtonLabel}
-          </button>
-          {isMultiMode && multiplayerSession.role === 'host' && (
-            <button
-              type="button"
-              onClick={avviaMultiOnline}
-              disabled={!tuttiPronti}
-              className="w-full px-8 py-3 font-bold rounded-lg disabled:opacity-40 transition-opacity"
-              style={{ fontFamily: HUD_ORATORIO_FONT_UI, color: '#e2e8f0', border: `1.5px solid ${MENU_ACCENTS.magenta}`, background: 'rgba(192, 38, 211, 0.18)' }}
-            >
-              {tuttiPronti
+        roomCode={multiplayerSession.roomCode}
+        deckName={deck.name}
+        roleLabel={multiplayerSession.role === 'host' ? 'HOST' : 'OSPITE'}
+        hint={isMultiMode
+          ? (multiplayerSession.role === 'host' ? 'Quando tutti sono pronti, premi «Avvia partita».' : "Premi Pronto: la partita la avvia l'host.")
+          : 'Quando entrambi siete pronti parte la partita.'}
+        serverUrl={getMultiplayerWsUrl()}
+        peerConfirmed={Boolean(onlinePeerDeck) && !isMultiMode}
+        ready={{ label: onlineReadyButtonLabel, disabled: onlineLocalReady, onClick: handleOnlineReady }}
+        start={isMultiMode && multiplayerSession.role === 'host'
+          ? {
+              label: tuttiPronti
                 ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
-                : 'Avvia partita (aspetta che tutti siano pronti)'}
-            </button>
-          )}
-          {isMultiMode && multiplayerSession.role !== 'host' && onlineLocalReady && (
-            <p className="text-xs text-slate-400 text-center">Sei pronto: la partita parte quando l'host la avvia.</p>
-          )}
-          <MenuBackButton
-            onClick={() => {
-              setSelectedDeckKey(null);
-              setOnlineLocalReady(false);
-              setOnlinePeerDeck(null);
-              setOnlinePeerName(null);
-              onlineMatchStartedRef.current = false;
-              setGamePhase('selectDeck');
-            }}
-          >
-            Cambia esercito
-          </MenuBackButton>
-        </div>
-      </MenuScreenLayout>)
+                : 'Avvia partita (aspetta che tutti siano pronti)',
+              disabled: !tuttiPronti,
+              onClick: avviaMultiOnline,
+            }
+          : null}
+        waitingNote={isMultiMode && multiplayerSession.role !== 'host' && onlineLocalReady
+          ? "Sei pronto: la partita parte quando l'host la avvia."
+          : null}
+        onBack={() => {
+          setSelectedDeckKey(null);
+          setOnlineLocalReady(false);
+          setOnlinePeerDeck(null);
+          setOnlinePeerName(null);
+          onlineMatchStartedRef.current = false;
+          setGamePhase('selectDeck');
+        }}
+      >
+        <OnlineRoomPanel
+          isHost={multiplayerSession.role === 'host'}
+          locked={onlineMode === 'duel' ? (onlineLocalReady && !!onlinePeerDeck) : false}
+          multiDisponibile={(multiplayerSession.capacity ?? 2) > 2}
+          config={{ mode: onlineMode, formatId: onlineFormatId, players: onlinePlayers, difficulty: onlineDifficulty }}
+          onConfig={(patch) => {
+            if (patch.mode) setOnlineMode(patch.mode);
+            if (patch.formatId) setOnlineFormatId(patch.formatId);
+            if (patch.players) setOnlinePlayers(patch.players);
+            if (patch.difficulty) setOnlineDifficulty(patch.difficulty);
+          }}
+          members={onlineRoomMembers}
+        />
+      </OnlineRoomScreen>)
     );
   }
 
