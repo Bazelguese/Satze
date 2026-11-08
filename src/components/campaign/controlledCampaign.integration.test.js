@@ -99,6 +99,7 @@ it('Il bivio sulla mappa seleziona l’armata speciale e tiene bloccati élite e
 });
 
 it('Ricognizione mostra le carte reali e restituisce il focus con Escape', () => {
+  vi.useFakeTimers();
   saveCampaignRun(createControlledRun(CONTROLLED_CAMPAIGN), 0);
   render(React.createElement(ControlledCampaignHub, { onStartMission: vi.fn(), onBack: vi.fn() }));
   const inspect = [...host.querySelectorAll('button')].find(b => b.textContent.includes('Esamina l’armata'));
@@ -110,6 +111,9 @@ it('Ricognizione mostra le carte reali e restituisce il focus con Escape', () =>
   act(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })));
   expect(dialog.contains(document.activeElement)).toBe(true);
   act(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  // la finestra esce animata e solo dopo si smonta
+  expect(host.querySelector('.cs-dialog-shade.is-leaving')).toBeTruthy();
+  act(() => vi.advanceTimersByTime(220));
   expect(host.querySelector('[role="dialog"]')).toBeNull();
   expect(document.activeElement).toBe(inspect);
 });

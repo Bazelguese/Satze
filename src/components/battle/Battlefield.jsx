@@ -6,6 +6,10 @@ import { DUEL_PHASE_META, computeDuelProgressPercent } from '../../config/duelVi
 import { getDuelOutcomeSubtitle } from './DuelCinematicOverlays';
 import { FieldCurseOverlay } from './FieldCurseOverlay.jsx';
 import { RuneTitle } from '../ui/RuneTitle.jsx';
+import { usePresence } from '../../hooks/usePresence.js';
+
+/** Riepilogo e ragionamenti IA: durata del riavvolgimento (satze-recap-close). */
+const RECAP_EXIT_MS = 220;
 
 /** semiassi dell'ellisse del portale (px): più alta che larga. La cornice la disegna DuelCosmicHud */
 const PORTAL_RX = 58;
@@ -929,6 +933,18 @@ export const BattlefieldPanel = ({
     </div>
   ) : null;
 
+  // Riepilogo e ragionamenti IA restano in scena il tempo di riavvolgersi
+  // (anche se alla chiusura il risultato del round non c'è già più).
+  const riepilogoNode = portalFrame ? riepilogoHud : riepilogoContent;
+  const riepilogoShown = usePresence(
+    riepilogoOpen && riepilogoRect && riepilogoNode ? { node: riepilogoNode, rect: riepilogoRect } : null,
+    RECAP_EXIT_MS
+  );
+  const aiLogShown = usePresence(
+    aiLogOpen && aiLogRect && aiLogHud ? { node: aiLogHud, rect: aiLogRect } : null,
+    RECAP_EXIT_MS
+  );
+
   return (
     <>
     <div
@@ -1372,30 +1388,30 @@ export const BattlefieldPanel = ({
         </div>
       )}
     </div>
-    {riepilogoOpen && riepilogoRect && riepilogoContent && typeof document !== 'undefined'
+    {riepilogoShown.present && typeof document !== 'undefined'
       ? createPortal(
           <div
-            className="pointer-events-auto text-[10px]"
+            className={`pointer-events-auto text-[10px]${riepilogoShown.leaving ? ' satze-recap-leaving' : ''}`}
             style={{
               position: 'fixed',
-              left: riepilogoRect.left,
-              top: riepilogoRect.top,
-              width: riepilogoRect.width,
+              left: riepilogoShown.value.rect.left,
+              top: riepilogoShown.value.rect.top,
+              width: riepilogoShown.value.rect.width,
               zIndex: 9999,
             }}
           >
-            {portalFrame ? riepilogoHud : riepilogoContent}
+            {riepilogoShown.value.node}
           </div>,
           document.body
         )
       : null}
-    {aiLogOpen && aiLogRect && aiLogHud && typeof document !== 'undefined'
+    {aiLogShown.present && typeof document !== 'undefined'
       ? createPortal(
           <div
-            className="pointer-events-auto text-[10px]"
-            style={{ position: 'fixed', left: aiLogRect.left, top: aiLogRect.top, width: aiLogRect.width, zIndex: 9999 }}
+            className={`pointer-events-auto text-[10px]${aiLogShown.leaving ? ' satze-recap-leaving' : ''}`}
+            style={{ position: 'fixed', left: aiLogShown.value.rect.left, top: aiLogShown.value.rect.top, width: aiLogShown.value.rect.width, zIndex: 9999 }}
           >
-            {aiLogHud}
+            {aiLogShown.value.node}
           </div>,
           document.body
         )

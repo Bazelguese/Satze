@@ -153,12 +153,17 @@ it('previews the consumed copy and confirms exactly one random transformation',(
  expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Conferma trasformazione casuale')).toBe(false);
 });
 it('does not lose the selected-copy focus on dialog rerenders',()=>{
+ vi.useFakeTimers();
+ try {
  let r=atEvent();r=reduce(r,{type:'CHOICE',choice:'conserva'});saveCampaignRun(r,0);
  render(React.createElement(FirstActHub,{onBack:()=>{}}));click('Esercito e riserva');click('Riserva e trasformazione');
  const button=host.querySelector('.cs-reserve-list button');button.focus();act(()=>button.click());
  expect(document.activeElement).toBe(button);
  act(()=>button.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
+ expect(host.querySelector('.cs-dialog-shade.is-leaving')).toBeTruthy();
+ act(()=>vi.advanceTimersByTime(220));
  expect(host.querySelector('[role="dialog"]')).toBeNull();
+ } finally {vi.useRealTimers();}
 });
 it('preloads every random battlefield background before the first duel',()=>{
  const assets=campaignDuelAssets(createLegacyFirstActRun({seed:2}));

@@ -16,6 +16,7 @@ import { EMINENCE_ARMY_ORDER } from '../../../data/eminences.js';
 import { MATCH_FORMATS, getMatchFormat, matchFormatIdFromMode } from '../../../data/gameModes.js';
 import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { playUiClick } from '../../../audio/soundBus';
+import { useLeaveThen } from '../../../hooks/usePresence';
 import { SEAT_AI_PROFILES, TEAMMATE_PRESET_IDS } from '../../../game/multiSeat/seatAI.js';
 
 const ENEMY_PICK = {
@@ -141,7 +142,10 @@ export function DifficultySelectPopup({
     else if (key === 'difficulty') setDifficultyId((x) => cycle(difficulties.map((y) => y.id), x, d));
   };
 
-  const [leaving, setLeaving] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // Esc, X e clic sullo sfondo: stessa uscita della conferma, poi si chiude
+  const [closing, requestClose] = useLeaveThen(onClose, 320);
+  const leaving = starting || closing;
   const start = () => {
     if (!canConfirm || leaving) return;
     const format = getMatchFormat(effectiveFormatId);
@@ -156,7 +160,7 @@ export function DifficultySelectPopup({
       players: playerCount,
     });
     // il riquadro vola via, poi parte il passaggio al VS
-    setLeaving(true);
+    setStarting(true);
     window.setTimeout(() => onSelect({
       difficulty: difficultyId,
       mode: format.mode,
@@ -170,7 +174,7 @@ export function DifficultySelectPopup({
   };
 
   const stateRef = useRef({});
-  stateRef.current = { stepRow, start, onClose, leaving };
+  stateRef.current = { stepRow, start, requestClose, leaving };
   live.current.matchMode = matchModeId;
   const screenActiveRef = useScreenActiveRef();
 
@@ -183,7 +187,7 @@ export function DifficultySelectPopup({
       e.stopImmediatePropagation();
       const k = stateRef.current;
       if (k.leaving) return;
-      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.onClose?.(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.requestClose(); return; }
       if (e.key === 'Enter') { e.preventDefault(); k.start(); return; }
       const rs = rowsFor(live.current.enemyPick);
       const cur = Math.min(live.current.focus, rs.length - 1);
@@ -237,7 +241,7 @@ export function DifficultySelectPopup({
   const rowNumber = (key) => String(rows.indexOf(key) + 1).padStart(2, '0');
 
   return (
-    <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : onClose}>
+    <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : requestClose}>
       <div className="mst-card" role="dialog" aria-modal="true" aria-label="Imposta la partita" onClick={(e) => e.stopPropagation()}>
         <div className="mst-sheet">
           <header className="mst-head">
@@ -247,7 +251,7 @@ export function DifficultySelectPopup({
               <span className="army">{armyName}</span>
               {deckName ? <span className="deck">{deckName}</span> : null}
             </div>
-            <button type="button" className="mst-x" onClick={onClose} aria-label="Chiudi impostazioni partita">
+            <button type="button" className="mst-x" onClick={requestClose} aria-label="Chiudi impostazioni partita">
               <kbd>ESC</kbd><span>INDIETRO</span>
             </button>
           </header>

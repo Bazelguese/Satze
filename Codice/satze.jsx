@@ -41,7 +41,8 @@ import {
   DUEL_R5_VICTORY_FLIP_MS,
 } from '../src/components/battle/DuelCinematicOverlays';
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
-import { ClaimVictoryPopup, OpponentClaimPendingPopup } from '../src/components/battle/ClaimVictoryPopup';
+import { ClaimVictoryPopup, OpponentClaimPendingPopup, CLAIM_EXIT_MS } from '../src/components/battle/ClaimVictoryPopup';
+import { usePresence } from '../src/hooks/usePresence';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, ARMY_ICONS } from '../src/data';
 import { ACT as CAMPAIGN_ACT } from '../src/campaign/data/atto1.js';
 import { buildDuelConfig as buildCampaignDuelConfig, restartCampaignEncounter } from '../src/campaign/logic/missionAdapter.js';
@@ -1618,6 +1619,8 @@ export default function SatzeGame() {
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
   const [opponentClaimPending, setOpponentClaimPending] = useState(null);
+  // l'attesa resta in scena per la sua uscita quando l'avversario ha deciso
+  const opponentClaimPresence = usePresence(opponentClaimPending, CLAIM_EXIT_MS);
   const [incomingClaimDecision, setIncomingClaimDecision] = useState(null);
   const forceContinueAfterClaimRef = useRef(false);
   /** Evita doppio advance (double-click / doppio timeout) che ribaltava l'iniziativa. */
@@ -7185,8 +7188,12 @@ export default function SatzeGame() {
       )}
 
       {/* Attesa decisione reclamazione avversario (multiplayer, round 3–4) */}
-      {opponentClaimPending && isOnlinePvP && (
-        <OpponentClaimPendingPopup opponentName={onlinePeerName} accentColor={enemyIdentityColor} />
+      {opponentClaimPresence.present && isOnlinePvP && (
+        <OpponentClaimPendingPopup
+          opponentName={onlinePeerName}
+          accentColor={enemyIdentityColor}
+          leaving={opponentClaimPresence.leaving}
+        />
       )}
 
       {/* Carta trascinata: cresce dalla mano, si inclina col moto, si aggancia allo slot.

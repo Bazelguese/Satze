@@ -2,7 +2,7 @@ import { CaelArmyDialog } from './CaelArmyDialog.jsx';
 import { isCaelRun } from '../../campaign/state/firstActState.js';
 import React, { useRef, useState } from 'react';
 import { CampaignTransformation } from './CampaignTransformation.jsx';
-import { CampaignDialog } from './CampaignDialog.jsx';
+import { CampaignDialog, CampaignDialogClose } from './CampaignDialog.jsx';
 import { CampaignSigil } from './CampaignScenery.jsx';
 import { CardReworkP4Scaled } from '../cards/CardReworkP4.jsx';
 import { NASCENTE, firstActCard } from '../../campaign/data/firstAct.js';
@@ -48,7 +48,7 @@ function LegacyFirstActArmyDialog({ run, draft, setDraft, commit, error, onClose
           <span>{draft.includes(id)?'Schierato nell’esercito':'In riserva'}</span>
         </label>)}
       </div></div>
-      <button className="cs-primary" disabled={!!run.active||!!run.pendingReward} onClick={()=>{if(commit({type:'SET_DECK',deck:draft}))onClose();}}>Salva esercito</button>
+      <CampaignDialogClose>{close=><button className="cs-primary" disabled={!!run.active||!!run.pendingReward} onClick={()=>{if(commit({type:'SET_DECK',deck:draft}))close();}}>Salva esercito</button>}</CampaignDialogClose>
     </> : <div className="cs-transform-layout">
       <div className="cs-reserve-list" role="group" aria-label="Copie da trasformare">
         <p className="cs-kicker">SCEGLI LA COPIA DA CONSUMARE</p>
