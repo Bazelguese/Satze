@@ -10,7 +10,7 @@ import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
 import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
-import { IS_PUBLIC_PLAYTEST_BUILD, SATZE_VERSION, SATZE_BUILD_DATE } from "../../config/buildProfile";
+import { SATZE_VERSION, SATZE_BUILD_DATE } from "../../config/buildProfile";
 import { useScreenActiveRef, useScreenState } from "../screenCache/ScreenCache.jsx";
 
 /**
@@ -121,31 +121,13 @@ function Splash({ splash, className = "", hitKey = 0 }) {
 }
 
 /**
- * Animazioni di clic in prova. Su ogni voce scelta la vernice sbatte e
- * schizza (Schizzi); le varianti con `scene` aggiungono una scena a tutto
- * schermo. L'azione parte dopo `commitMs`, poi arriva la cortina.
+ * Clic su una voce principale: la vernice sbatte e schizza sulla voce, poi una
+ * pennellata d'inchiostro attraversa lo schermo; l'azione (e la cortina)
+ * parte dopo SCENE_COMMIT_MS. Pannello sotto-scelte ed ESC: solo l'effetto
+ * contenuto, con PANEL_COMMIT_MS.
  */
-const PRESS_VARIANTS = [
-  { id: "invade", tag: "1", name: "VERNICE CHE INVADE", commitMs: 500, scene: true },
-  { id: "cutin", tag: "2", name: "CUT-IN GIGANTE", commitMs: 500, scene: true },
-  { id: "pennellata", tag: "3", name: "PENNELLATA", commitMs: 500, scene: true },
-  { id: "scossa", tag: "4", name: "SCOSSA", commitMs: 500, scene: true },
-  { id: "schizzi", tag: "5", name: "SCHIZZI", commitMs: 200, scene: false },
-];
-const PRESS_STORAGE_KEY = "satze.menuPressVariant";
-/** Pannello sotto-scelte e ESC: sempre l'effetto contenuto. */
+const SCENE_COMMIT_MS = 500;
 const PANEL_COMMIT_MS = 200;
-/** Anteprima dal selettore: dopo quanto la scena si toglie e il menu torna com'era. */
-const PREVIEW_CLEAR_MS = 1300;
-
-function readPressVariant() {
-  try {
-    const id = window.localStorage.getItem(PRESS_STORAGE_KEY);
-    return PRESS_VARIANTS.find((v) => v.id === id) ?? PRESS_VARIANTS[0];
-  } catch {
-    return PRESS_VARIANTS[0];
-  }
-}
 
 function prefersReducedMotion() {
   try {
@@ -190,16 +172,15 @@ function PressFx({ seed, half }) {
   );
 }
 
-/** Gocce grandi che partono dal punto del clic e volano per lo schermo. */
-function SceneDrops({ seed, count, minFly, maxFly, minSize, maxSize, white = 4, ink = 0 }) {
+/** Gocce d'inchiostro (una su due bordata del colore) che partono dalla voce cliccata. */
+function InkDrops({ seed, count, minFly, maxFly, minSize, maxSize }) {
   return Array.from({ length: count }, (_, k) => {
     const a = (k / count) * Math.PI * 2 + rnd(seed + k) * 0.5;
     const fly = minFly + rnd(seed + 50 + k) * (maxFly - minFly);
-    const kind = ink && k % ink === 0 ? "k" : white && k % white === 0 ? "w" : "";
     return (
       <span
         key={k}
-        className={`msc-drop ${kind}`}
+        className={`msc-drop ${k % 2 === 0 ? "k" : ""}`}
         style={{
           "--a": `${((a * 180) / Math.PI).toFixed(0)}deg`,
           "--x1": px(Math.cos(a) * fly),
@@ -245,120 +226,42 @@ function Brush({ strands, className }) {
   );
 }
 
-/** Misura della parola gigante delle scene perché stia in `maxW` px. */
+/** Misura della parola sulla pennellata perché stia in `maxW` px. */
 function sceneWordSize(label, maxW, cap) {
   return Math.min(cap, Math.floor(maxW / (Math.max(1, label.length) * 0.82)));
 }
 
 /**
- * Scena a tutto schermo sopra il menu per le varianti sceniche, rimontata a
- * ogni clic. `ox`/`oy` (in %) sono il centro della voce cliccata.
+ * Pennellata alla Metaphor sopra il menu, rimontata a ogni clic: inchiostro
+ * bordato del colore della voce che attraversa lo schermo portando la parola,
+ * filetti che si disegnano e due gemme. `oy` (in %) è l'altezza della voce.
  */
-function MenuScene({ variant, n, label, accent, ox, oy }) {
+function BrushScene({ n, label, accent, ox, oy }) {
   const seed = n * 53;
-  const style = { "--c": accent, "--ox": `${ox}%`, "--oy": `${oy}%` };
-  const blobs = useMemo(() => [makeSplash(seed + 1), makeSplash(seed + 2), makeSplash(seed + 3)], [seed]);
   const brush = useMemo(() => [makeBrush(seed + 4, 14), makeBrush(seed + 5, 26)], [seed]);
-
-  if (variant === "invade") {
-    return (
-      <div className="msc msc-invade" style={style} aria-hidden="true">
-        {blobs.map((b, k) => (
-          <svg key={k} className={`msc-blob msc-blob-${k}`} viewBox="0 0 300 180" preserveAspectRatio="none" style={{ "--sr": `${(b.rot * 3 + k * 40).toFixed(0)}deg` }}>
-            <path d={b.d} />
-            {b.drops.map((dr, j) => (
-              <circle key={j} cx={dr.cx.toFixed(1)} cy={dr.cy.toFixed(1)} r={(dr.r * 2).toFixed(1)} />
-            ))}
-          </svg>
-        ))}
-        <span className="msc-origin">
-          <SceneDrops seed={seed} count={16} minFly={380} maxFly={1100} minSize={22} maxSize={70} />
-        </span>
-        <div className="msc-word" style={{ "--wfs": px(sceneWordSize(label, 1250, 170)) }}>
-          {label}
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "cutin") {
-    return (
-      <div className="msc msc-cutin" style={{ ...style, "--wfs": px(sceneWordSize(label, 1500, 280)) }} aria-hidden="true">
-        <div className="msc-back" />
-        <div className="msc-band" />
-        <div className="msc-lines">
-          {Array.from({ length: 16 }, (_, k) => (
-            <span
-              key={k}
-              className={`msc-streak ${k % 5 === 0 ? "k" : ""}`}
-              style={{
-                top: `${(4 + rnd(seed + 300 + k) * 92).toFixed(1)}%`,
-                "--w": px(180 + rnd(seed + 320 + k) * 620),
-                "--h": px(2 + rnd(seed + 340 + k) * 5),
-                "--dur": `${(0.32 + rnd(seed + 360 + k) * 0.3).toFixed(2)}s`,
-                "--dl": `${(0.1 + rnd(seed + 380 + k) * 0.25).toFixed(2)}s`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="msc-word msc-ghost">{label}</div>
+  return (
+    <div
+      className="msc"
+      style={{ "--c": accent, "--ox": `${ox}%`, "--oy": `${oy}%`, "--wfs": px(sceneWordSize(label, 1250, 190)) }}
+      aria-hidden="true"
+    >
+      <div className="msc-dim" />
+      <div className="msc-stroke">
+        <Brush strands={brush[0]} className="msc-bristles msc-bristles-c" />
+        <Brush strands={brush[1]} className="msc-bristles msc-bristles-k" />
+        <svg className="msc-orn" viewBox="0 0 2400 300" preserveAspectRatio="none">
+          <line x1="2300" y1="-26" x2="160" y2="-26" pathLength="1" />
+          <line x1="2240" y1="326" x2="300" y2="326" pathLength="1" />
+        </svg>
+        <span className="msc-gem" style={{ left: "6.6%", top: "-8.7%" }} />
+        <span className="msc-gem" style={{ left: "12.5%", top: "108.7%" }} />
         <div className="msc-word">{label}</div>
-        <div className="msc-flash" />
       </div>
-    );
-  }
-
-  if (variant === "pennellata") {
-    return (
-      <div className="msc msc-brush" style={{ ...style, "--wfs": px(sceneWordSize(label, 1250, 190)) }} aria-hidden="true">
-        <div className="msc-dim" />
-        <div className="msc-stroke">
-          <Brush strands={brush[0]} className="msc-bristles msc-bristles-c" />
-          <Brush strands={brush[1]} className="msc-bristles msc-bristles-k" />
-          <svg className="msc-orn" viewBox="0 0 2400 300" preserveAspectRatio="none">
-            <line x1="2300" y1="-26" x2="160" y2="-26" pathLength="1" />
-            <line x1="2240" y1="326" x2="300" y2="326" pathLength="1" />
-          </svg>
-          <span className="msc-gem" style={{ left: "6.6%", top: "-8.7%" }} />
-          <span className="msc-gem" style={{ left: "12.5%", top: "108.7%" }} />
-          <div className="msc-word">{label}</div>
-        </div>
-        <span className="msc-origin">
-          <SceneDrops seed={seed} count={12} minFly={160} maxFly={520} minSize={10} maxSize={34} white={0} ink={2} />
-        </span>
-      </div>
-    );
-  }
-
-  if (variant === "scossa") {
-    return (
-      <div className="msc msc-shake" style={style} aria-hidden="true">
-        <div className="msc-flash" />
-        <div className="msc-radial" />
-        <div className="msc-radial msc-radial-c" />
-        <span className="msc-origin">
-          {Array.from({ length: 10 }, (_, k) => {
-            const a = (k / 10) * Math.PI * 2 + rnd(seed + 200 + k) * 0.6;
-            const fly = 420 + rnd(seed + 220 + k) * 700;
-            return (
-              <span
-                key={k}
-                className={`msc-shard s${k % 3}`}
-                style={{
-                  "--x1": px(Math.cos(a) * fly),
-                  "--y1": px(Math.sin(a) * fly * 0.7),
-                  "--r1": `${(rnd(seed + 240 + k) * 540 - 270).toFixed(0)}deg`,
-                  "--s": px(50 + rnd(seed + 260 + k) * 110),
-                }}
-              />
-            );
-          })}
-          <SceneDrops seed={seed} count={10} minFly={300} maxFly={800} minSize={16} maxSize={46} />
-        </span>
-      </div>
-    );
-  }
-  return null;
+      <span className="msc-origin">
+        <InkDrops seed={seed} count={12} minFly={160} maxFly={520} minSize={10} maxSize={34} />
+      </span>
+    </div>
+  );
 }
 
 /** Misura di una scritta in Cinzel maiuscolo perché stia in `maxW` px, al massimo `cap`. */
@@ -425,11 +328,6 @@ function StackMenu({ rows, active, buttonRefs, onHover, onPick, hit }) {
                 "--x": `${[0, 34, 12, 46, 20, 40, 6, 28, 16][i % 9]}px`,
                 "--o": on ? 1 : Math.max(0.32, 1 - 0.2 * d),
                 "--d": `${0.15 + i * 0.05}s`,
-                // dispersione della variante "scossa": ogni voce vola via a modo suo
-                "--fx": `${(260 + rnd(i * 7 + 1) * 700).toFixed(0)}px`,
-                "--fy": `${((i - active) * 90 + (rnd(i * 7 + 2) - 0.5) * 260).toFixed(0)}px`,
-                "--fr": `${((rnd(i * 7 + 3) - 0.5) * 70).toFixed(0)}deg`,
-                "--fd": `${(d * 0.03).toFixed(2)}s`,
               }}
             >
               {on && <Splash splash={splash} className="mi-splash" hitKey={isHit ? hit.n : 0} />}
@@ -545,7 +443,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   const pickerListRef = useRef(null);
   /** Scorre il pannello solo dopo un passo da tastiera, non al passaggio del mouse. */
   const keyNavRef = useRef(false);
-  const [pressVariant, setPressVariant] = useState(readPressVariant);
   /**
    * Voce appena cliccata: `n` cambia a ogni clic e fa ripartire l'animazione;
    * `ox`/`oy` (in %) sono il centro della voce, da dove parte la scena.
@@ -556,15 +453,8 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
   /** Tra il clic e l'azione: niente altri clic né cambi di voce. */
   const pressLockRef = useRef(false);
   const pressTimerRef = useRef(0);
-  const previewTimerRef = useRef(0);
 
-  useEffect(
-    () => () => {
-      window.clearTimeout(pressTimerRef.current);
-      window.clearTimeout(previewTimerRef.current);
-    },
-    [],
-  );
+  useEffect(() => () => window.clearTimeout(pressTimerRef.current), []);
 
   /** Centro della voce `i` del menu principale, in % della radice. */
   const originOf = (i) => {
@@ -577,12 +467,10 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     };
   };
 
-  /** Anima la voce e, se c'è, esegue `run` dopo il tempo della variante. */
+  /** Anima la voce ed esegue `run` quando l'animazione ha fatto il suo effetto. */
   const press = (scope, index, run) => {
-    window.clearTimeout(previewTimerRef.current);
     hitCountRef.current += 1;
     setHit({ scope, index, n: hitCountRef.current, ...(scope === "main" ? originOf(index) : null) });
-    if (!run) return;
     pressLockRef.current = true;
     window.clearTimeout(pressTimerRef.current);
     pressTimerRef.current = window.setTimeout(
@@ -590,7 +478,7 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
         pressLockRef.current = false;
         run();
       },
-      prefersReducedMotion() ? 0 : scope === "main" ? pressVariant.commitMs : PANEL_COMMIT_MS,
+      prefersReducedMotion() ? 0 : scope === "main" ? SCENE_COMMIT_MS : PANEL_COMMIT_MS,
     );
   };
 
@@ -718,27 +606,10 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     });
   };
 
-  /** Selettore delle varianti di clic (solo build interne): cambia e mostra subito. */
-  const cyclePressVariant = () => {
-    const i = PRESS_VARIANTS.findIndex((v) => v.id === pressVariant.id);
-    const next = PRESS_VARIANTS[(i + 1) % PRESS_VARIANTS.length];
-    setPressVariant(next);
-    try {
-      window.localStorage.setItem(PRESS_STORAGE_KEY, next.id);
-    } catch {
-      // senza storage la scelta vale solo per questa sessione
-    }
-    playUiClick();
-    press("main", mainActive, null);
-    // anteprima: dopo la scena il menu torna com'era
-    previewTimerRef.current = window.setTimeout(() => setHit(null), PREVIEW_CLEAR_MS);
-  };
-
   const scene =
-    pressVariant.scene && hit?.scope === "main" && items[hit.index] ? (
-      <MenuScene
+    hit?.scope === "main" && items[hit.index] ? (
+      <BrushScene
         key={hit.n}
-        variant={pressVariant.id}
         n={hit.n}
         label={items[hit.index].label}
         accent={items[hit.index].accent}
@@ -868,8 +739,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     <div
       ref={rootRef}
       className="satze-menu-v5-root smp"
-      data-press={pressVariant.id}
-      data-scene={scene ? pressVariant.id : undefined}
       style={{
         zoom: uiScale,
         overflow: uiScale > 1 ? "auto" : "hidden",
@@ -947,21 +816,6 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
 
       <footer className="smp-hints">
         <span className="smp-build">{buildTag}</span>
-        {!IS_PUBLIC_PLAYTEST_BUILD && (
-          <button
-            type="button"
-            className="smp-press-pick"
-            style={{ "--active": activeAccent }}
-            title="Cambia l'animazione di clic delle voci (prova)"
-            onClick={cyclePressVariant}
-          >
-            <span className="k">CLIC</span>
-            <span className="v">
-              {pressVariant.tag} · {pressVariant.name}
-            </span>
-            <span className="n">{PRESS_VARIANTS.findIndex((v) => v.id === pressVariant.id) + 1}/{PRESS_VARIANTS.length} ▸</span>
-          </button>
-        )}
         <span className="smp-hints-keys">
           {hints.map((h) => (
             <span key={h.label} className="smp-hint">
@@ -1120,7 +974,7 @@ function SatzeMenuStyles() {
         100% { transform: translate(-50%, -50%) translate(var(--x1), var(--y1)) rotate(var(--a)) scale(0.25); opacity: 0; }
       }
 
-      /* ========== Scene a tutto schermo (varianti sceniche, in prova) ========== */
+      /* ========== Pennellata sopra il menu (clic su una voce principale) ========== */
       .msc { position: absolute; inset: 0; z-index: 150; pointer-events: none; overflow: hidden; }
       .msc-origin { position: absolute; left: var(--ox); top: var(--oy); width: 0; height: 0; }
       .msc-drop {
@@ -1128,94 +982,12 @@ function SatzeMenuStyles() {
         background: var(--c); opacity: 0;
         animation: msc-drop .55s var(--dl) cubic-bezier(.12,.75,.3,1) both;
       }
-      .msc-drop.w { background: ${T}; }
       .msc-drop.k { background: #0a0710; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 70%, transparent); }
       @keyframes msc-drop {
         0% { transform: translate(-50%, -50%) rotate(var(--a)) scale(1.5); opacity: 1; }
         75% { opacity: 1; }
         100% { transform: translate(-50%, -50%) translate(var(--x1), var(--y1)) rotate(var(--a)) scale(0.35); opacity: 0; }
       }
-      .msc-flash { position: absolute; inset: 0; background: ${T}; opacity: 0; }
-      @keyframes msc-flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
-      .msc-word {
-        position: absolute; font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase;
-        font-size: var(--wfs); line-height: 1; letter-spacing: -0.02em; white-space: nowrap;
-      }
-
-      /* 1 · Vernice che invade: la macchia esplode e copre lo schermo, poi il nero al centro */
-      .msc-blob {
-        position: absolute; left: var(--ox); top: var(--oy); width: 640px; height: 384px; overflow: visible;
-        transform: translate(-50%, -50%) rotate(var(--sr)) scale(0);
-        animation: msc-invade .52s forwards;
-      }
-      .msc-blob path, .msc-blob circle { fill: var(--c); }
-      .msc-blob-1 { --to: 5.6; animation-delay: .07s; }
-      .msc-blob-1 path, .msc-blob-1 circle { fill: color-mix(in srgb, var(--c) 55%, #000); }
-      .msc-blob-2 { --to: 4.2; animation-delay: .25s; }
-      .msc-blob-2 path, .msc-blob-2 circle { fill: #09080d; }
-      @keyframes msc-invade {
-        0% { transform: translate(-50%, -50%) rotate(var(--sr)) scale(0.12); animation-timing-function: cubic-bezier(.2,1.4,.4,1); }
-        24% { transform: translate(-50%, -50%) rotate(var(--sr)) scale(1.4); animation-timing-function: cubic-bezier(.6,0,.4,1); }
-        100% { transform: translate(-50%, -50%) rotate(calc(var(--sr) + 12deg)) scale(var(--to, 7.5)); }
-      }
-      .msc-invade .msc-word {
-        left: var(--ox); top: var(--oy); color: ${V}; text-shadow: 6px 6px 0 ${T};
-        animation: msc-word-invade .6s .06s cubic-bezier(.2,.9,.3,1) both;
-      }
-      @keyframes msc-word-invade {
-        0% { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(0.7); }
-        22% { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) scale(1.14); }
-        36% { transform: translate(-50%, -50%) rotate(-7deg) scale(0.98); }
-        100% { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) translateX(-60px) scale(1.16); }
-      }
-
-      /* 2 · Cut-in gigante: fondo che cala di traverso, fascia di colore, parola enorme che sbatte */
-      .msc-back {
-        position: absolute; inset: -10% -30%;
-        background: radial-gradient(circle, color-mix(in srgb, var(--c) 45%, transparent) 1.5px, transparent 2px) 0 0 / 12px 12px, #07050b;
-        transform: skewX(-14deg) translateX(110%);
-        animation: msc-wipe .2s cubic-bezier(.7,0,.3,1) forwards;
-      }
-      @keyframes msc-wipe { to { transform: skewX(-14deg) translateX(0); } }
-      .msc-band, .msc-lines { position: absolute; left: -30%; right: -30%; top: 50%; height: 360px; margin-top: -180px; }
-      .msc-band {
-        background: var(--c); box-shadow: 0 -16px 0 #050507, 0 -26px 0 ${T}, 0 16px 0 #050507, 0 26px 0 ${T};
-        transform: rotate(-12deg) scaleY(0);
-        animation: msc-band .22s .08s cubic-bezier(.2,1.3,.4,1) forwards;
-      }
-      @keyframes msc-band { to { transform: rotate(-12deg) scaleY(1); } }
-      /* linee di velocità: strisce che attraversano la fascia da destra a sinistra */
-      .msc-lines { transform: rotate(-12deg); overflow: hidden; }
-      .msc-streak {
-        position: absolute; left: 100%; width: var(--w); height: var(--h); border-radius: 2px;
-        background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
-        animation: msc-streak var(--dur) var(--dl) linear infinite backwards;
-      }
-      .msc-streak.k { background: linear-gradient(90deg, rgba(5,5,7,0.7), rgba(5,5,7,0)); }
-      @keyframes msc-streak { from { transform: translateX(0); } to { transform: translateX(-3600px); } }
-      .msc-cutin .msc-word {
-        left: 50%; top: 50%; color: ${T};
-        text-shadow: 8px 8px 0 #050507, 16px 16px 0 color-mix(in srgb, var(--c) 45%, #000);
-        animation: msc-slam .65s .1s cubic-bezier(.2,.9,.3,1) both;
-      }
-      @keyframes msc-slam {
-        0% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) translateX(280px) scale(2.6); }
-        28% { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) translateX(-12px) scale(0.93); }
-        42% { transform: translate(-50%, -50%) rotate(-12deg) translateX(0) scale(1.04); }
-        100% { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) translateX(-70px) scale(1); }
-      }
-      .msc-cutin .msc-ghost {
-        color: transparent; -webkit-text-stroke: 3px ${T}; text-shadow: none;
-        animation: msc-ghost .75s .16s ease-out both;
-      }
-      @keyframes msc-ghost {
-        0% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) translateX(320px) scale(1.7); }
-        30% { opacity: 0.4; }
-        100% { opacity: 0.3; transform: translate(-50%, -50%) rotate(-12deg) translateX(140px) scale(1.3); }
-      }
-      .msc-cutin .msc-flash { animation: msc-flash .24s .17s ease-out; }
-
-      /* 3 · Pennellata: inchiostro che attraversa lo schermo, filetti e gemme alla Metaphor */
       .msc-dim { position: absolute; inset: 0; background: rgba(5,4,8,0.62); opacity: 0; animation: msc-fadein .25s forwards; }
       @keyframes msc-fadein { to { opacity: 1; } }
       .msc-stroke { position: absolute; left: -12%; width: 124%; top: var(--oy); height: 330px; transform: translateY(-50%) rotate(-7deg); }
@@ -1238,7 +1010,9 @@ function SatzeMenuStyles() {
         animation: msc-gem .2s .4s cubic-bezier(.2,1.6,.4,1) forwards;
       }
       @keyframes msc-gem { to { transform: rotate(45deg) scale(1); } }
-      .msc-brush .msc-word {
+      .msc-word {
+        position: absolute; font-family: 'Cinzel', Georgia, serif; font-weight: 900; text-transform: uppercase;
+        font-size: var(--wfs); line-height: 1; white-space: nowrap;
         right: 17%; top: 50%; color: #f3ecdc; letter-spacing: 0.04em;
         text-shadow: 0 5px 0 color-mix(in srgb, var(--c) 70%, #000);
         animation: msc-brush-word .6s .12s cubic-bezier(.2,.9,.3,1) both;
@@ -1247,55 +1021,6 @@ function SatzeMenuStyles() {
         0% { opacity: 0; transform: translate(260px, -50%) skewX(-10deg); }
         40% { opacity: 1; transform: translate(-14px, -50%) skewX(-10deg); }
         100% { opacity: 1; transform: translate(-60px, -50%) skewX(-10deg); }
-      }
-
-      /* 4 · Scossa: lampo, linee di velocità dal clic, schegge, la colonna si spezza */
-      .smp[data-scene="scossa"] .mi,
-      .smp[data-scene="scossa"] .smp-bg { animation: msc-quake .42s linear; }
-      @keyframes msc-quake {
-        0% { transform: translate(14px, -10px); }
-        10% { transform: translate(-16px, 8px); }
-        20% { transform: translate(12px, 10px); }
-        30% { transform: translate(-10px, -8px); }
-        45% { transform: translate(6px, 4px); }
-        60% { transform: translate(-4px, -2px); }
-        80% { transform: translate(2px, 1px); }
-      }
-      .smp[data-scene="scossa"] .mi-item:not(.on) { animation: msc-scatter .45s var(--fd) cubic-bezier(.55,0,.8,.3) forwards; }
-      @keyframes msc-scatter { to { transform: translate(var(--fx), var(--fy)) rotate(var(--fr)); opacity: 0; } }
-      .smp[data-scene="scossa"] .mi-item.on { animation: msc-push .55s cubic-bezier(.2,.9,.3,1) forwards; }
-      @keyframes msc-push {
-        25% { transform: translateX(-20px) scale(1.1); }
-        100% { transform: translateX(-40px) scale(1.15); }
-      }
-      .msc-shake .msc-flash { animation: msc-flash .18s ease-out; }
-      .msc-radial {
-        position: absolute; inset: 0; transform-origin: var(--ox) var(--oy); opacity: 0;
-        background: repeating-conic-gradient(from 0deg at var(--ox) var(--oy), rgba(245,243,235,0.9) 0deg 1.4deg, transparent 1.4deg 9deg);
-        -webkit-mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent 0 160px, #000 440px);
-        mask-image: radial-gradient(circle at var(--ox) var(--oy), transparent 0 160px, #000 440px);
-        animation: msc-radial .55s ease-out forwards;
-      }
-      .msc-radial-c {
-        background: repeating-conic-gradient(from 4deg at var(--ox) var(--oy), var(--c) 0deg 2.5deg, transparent 2.5deg 13deg);
-        animation-delay: .05s;
-      }
-      @keyframes msc-radial {
-        0% { opacity: 0; transform: scale(1.35) rotate(-4deg); }
-        12% { opacity: 1; }
-        100% { opacity: 0.35; transform: scale(1) rotate(0deg); }
-      }
-      .msc-shard {
-        position: absolute; left: 0; top: 0; width: var(--s); height: calc(var(--s) * 0.6);
-        clip-path: polygon(0 40%, 100% 0, 70% 100%); background: var(--c);
-        animation: msc-shard .5s cubic-bezier(.1,.7,.3,1) both;
-      }
-      .msc-shard.s1 { background: ${T}; }
-      .msc-shard.s2 { background: color-mix(in srgb, var(--c) 50%, #fff); }
-      @keyframes msc-shard {
-        0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.3); opacity: 1; }
-        80% { opacity: 1; }
-        100% { transform: translate(-50%, -50%) translate(var(--x1), var(--y1)) rotate(var(--r1)) scale(1); opacity: 0; }
       }
 
       .mi-more { display: grid; place-items: center; width: 0.5em; height: 0.5em; min-width: 22px; min-height: 22px; font-size: 0.4em; background: var(--c); color: ${V}; clip-path: ${STAR_CLIP}; }
@@ -1375,18 +1100,6 @@ function SatzeMenuStyles() {
         background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.6) 70%, transparent);
       }
       .smp-build { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.28em; color: rgba(245,243,235,0.55); white-space: nowrap; }
-      .smp-press-pick {
-        display: inline-flex; align-items: center; gap: 8px; margin-right: auto; padding: 4px 12px 4px 4px;
-        background: transparent; color: rgba(245,243,235,0.75); border: 1px solid color-mix(in srgb, var(--active) 55%, transparent);
-        cursor: pointer; font-size: 12px; letter-spacing: 0.16em; white-space: nowrap; transform: skewX(-12deg);
-        transition: transform .12s cubic-bezier(.3,1.6,.5,1), border-color .15s, color .15s;
-      }
-      .smp-press-pick > * { transform: skewX(12deg); }
-      .smp-press-pick:hover, .smp-press-pick:focus-visible { outline: none; color: ${T}; border-color: var(--active); }
-      .smp-press-pick:active { transform: skewX(-12deg) translate(2px,2px) scale(0.96); transition-duration: .05s; }
-      .smp-press-pick .k { background: var(--active); color: ${V}; font-weight: 700; padding: 2px 7px; }
-      .smp-press-pick .v { font-weight: 700; font-style: italic; }
-      .smp-press-pick .n { font-family: 'Share Tech Mono', monospace; opacity: 0.6; }
       .smp-hints-keys { display: inline-flex; align-items: center; gap: 26px; }
       .smp-hint { display: inline-flex; align-items: center; gap: 5px; }
       .smp-hint .lbl { margin-left: 6px; font-weight: 700; font-size: 14px; letter-spacing: 0.16em; font-style: italic; }
