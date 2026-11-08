@@ -2,14 +2,14 @@
 // LOGICA CAMPI DI BATTAGLIA — motore rarità v2
 // ============================================
 
-import { ALL_BATTLEFIELDS } from '../data/battlefields';
+import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import {
   BATTLEFIELD_RARITA,
   BATTLEFIELD_SELECTION_DEFAULTS,
   declassRarita,
   getFieldRarita,
-} from '../data/battlefieldMeta';
-import { shuffleArray } from '../utils/shuffle';
+} from '../data/battlefieldMeta.js';
+import { shuffleArray } from '../utils/shuffle.js';
 
 const CLASSIC_FIELD_COUNT = 5;
 
