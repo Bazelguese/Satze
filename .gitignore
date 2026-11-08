@@ -32,3 +32,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Config del bot Discord del playtest (contiene il token)
+tools/playtest-discord/config.json

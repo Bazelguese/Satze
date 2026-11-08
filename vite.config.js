@@ -7,6 +7,10 @@ import { cpSync, existsSync, readFileSync, statSync } from 'fs'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+/** Versione e data della build, mostrate nel menu: ogni segnalazione dei playtester si lega a una build precisa. */
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
+const BUILD_DATE = new Date().toISOString().slice(0, 10)
+
 /**
  * La campagna verso Cael è la pagina in prototipi/campagna-cael, aperta dal gioco in un frame:
  * in sviluppo Vite la serve dalla radice, nella build va copiata accanto all'app.
@@ -37,6 +41,10 @@ const campaignPrototype = {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), campaignPrototype],
+  define: {
+    __SATZE_VERSION__: JSON.stringify(pkg.version),
+    __SATZE_BUILD_DATE__: JSON.stringify(BUILD_DATE),
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')

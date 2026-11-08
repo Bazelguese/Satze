@@ -10,7 +10,7 @@ import { useUiScale } from "../../hooks/useUiScale";
 import { playSound, playUiClick } from "../../audio/soundBus";
 import { UI_SOUND } from "../../audio/soundCatalog";
 import { armTransitionFrom, useArrivedByCurtain } from "../cosmic/ScreenTransition";
-import { IS_PUBLIC_PLAYTEST_BUILD } from "../../config/buildProfile";
+import { IS_PUBLIC_PLAYTEST_BUILD, SATZE_VERSION, SATZE_BUILD_DATE } from "../../config/buildProfile";
 import { useScreenActiveRef, useScreenState } from "../screenCache/ScreenCache.jsx";
 
 /**
@@ -647,10 +647,13 @@ export default function SatzeMenuPrototype({ menuItems, buildLabel, inputLocked 
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const buildTag = `${(buildLabel ?? "v0.1 ALPHA · NON DISTRIBUIRE").replace(/[\s·]+$/, "")} · BUILD ${new Date()
-    .toISOString()
-    .slice(0, 10)
-    .replace(/-/g, ".")}`;
+  const buildTag = [
+    (buildLabel ?? "ALPHA · NON DISTRIBUIRE").replace(/[\s·]+$/, ""),
+    `v${SATZE_VERSION}`,
+    SATZE_BUILD_DATE ? `BUILD ${SATZE_BUILD_DATE.replace(/-/g, ".")}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const hints = [
     { keys: ["↑", "↓"], label: "VOCE" },
