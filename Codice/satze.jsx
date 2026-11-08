@@ -168,6 +168,8 @@ import { CosmicDeckCarousel } from '../src/components/menu/cosmic/CosmicDeckCaro
 import { CosmicBannerButton } from '../src/components/menu/cosmic/CosmicBannerButton';
 import { DifficultySelectPopup } from '../src/components/menu/cosmic/DifficultySelectPopup';
 import { useMultiSeatDuel, MULTI_SEAT_KINDS } from '../src/hooks/useMultiSeatDuel';
+import OnlineRoomPanel, { ONLINE_MODES } from '../src/components/multiplayer/OnlineRoomPanel.jsx';
+import { buildMatchPackage, MS as MULTI_MS } from '../src/game/multiSeat/onlineSession.js';
 import { MultiSeatPanel } from '../src/components/battle/MultiSeatPanel';
 import { TeamDuelBoard, useBoardLayouts } from '../src/components/battle/TeamDuelBoard';
 import { DeckConfirmTransition, LAUNCH_TRANSITION } from '../src/components/menu/cosmic/DeckConfirmTransition';
@@ -1817,6 +1819,17 @@ export default function SatzeGame() {
   const [pendingGuestMatch, setPendingGuestMatch] = useState(null);
   /** Formato della partita online: lo sceglie l'host nella schermata d'attesa, l'ospite lo vede. */
   const [onlineFormatId, setOnlineFormatId] = useState(MATCH_FORMATS.standard.id);
+  /** Stanza online: modalità, giocatori del Re della collina, difficoltà delle IA (le sceglie l'host). */
+  const [onlineMode, setOnlineMode] = useState('duel');
+  const [onlinePlayers, setOnlinePlayers] = useState(4);
+  const [onlineDifficulty, setOnlineDifficulty] = useState('medium');
+  /** Posti della stanza (server a 4 posti) e giocatori pronti per posto. */
+  const [onlineMembers, setOnlineMembers] = useState([]);
+  const [onlineReadies, setOnlineReadies] = useState({});
+  const onlineModeRef = useRef('duel');
+  onlineModeRef.current = onlineMode;
+  const multiSeatNetRef = useRef(null);
+  const startMultiOnlineRef = useRef(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
@@ -1858,6 +1871,23 @@ export default function SatzeGame() {
     if (!multiplayerSession?.roomCode) return;
     const mgr = getMultiplayerManager();
     return mgr.onMessage((msg) => {
+      if (msg.type === 'room_members' && Array.isArray(msg.members)) {
+        setOnlineMembers(msg.members);
+        return;
+      }
+      if (msg.type === 'member_left') {
+        setOnlineReadies((prev) => {
+          const next = { ...prev };
+          delete next[msg.slot];
+          return next;
+        });
+        // Nel Duello l'unico altro giocatore è l'avversario: come se avesse lasciato la stanza.
+        if (onlineModeRef.current === 'duel') {
+          setOnlineOpponentLeft(true);
+          setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato la stanza."]);
+        }
+        return;
+      }
       if (msg.type === 'peer_left') {
         clearMpSession();
         setMpOpponentAway(false);
@@ -1894,6 +1924,7 @@ export default function SatzeGame() {
       if (msg.type !== 'relay' || !msg.payload) return;
       const p = msg.payload;
       if (p.type === 'deck_ready') {
+        setOnlineReadies((prev) => ({ ...prev, [msg.fromSlot ?? 1]: { ...p, slot: msg.fromSlot ?? 1 } }));
         setOnlinePeerDeck({
           army: p.army,
           deckKey: p.deckKey,
@@ -1907,8 +1938,15 @@ export default function SatzeGame() {
       if (p.type === 'match_start' && p.match) {
         setPendingGuestMatch(p.match);
       }
-      if (p.type === 'room_format' && MATCH_FORMATS[p.formatId]) {
+      if ((p.type === 'room_format' || p.type === 'room_config') && MATCH_FORMATS[p.formatId]) {
         setOnlineFormatId(p.formatId);
+        if (ONLINE_MODES[p.mode]) setOnlineMode(p.mode);
+        if (p.players === 3 || p.players === 4) setOnlinePlayers(p.players);
+        if (p.difficulty) setOnlineDifficulty(p.difficulty);
+      }
+      if (typeof p.type === 'string' && p.type.startsWith('ms_')) {
+        if (p.type === MULTI_MS.START && p.pkg) startMultiOnlineRef.current?.(p.pkg);
+        else multiSeatNetRef.current?.(p, msg.fromSlot);
       }
       if (Object.values(EMINENCE_ONLINE_MESSAGES).includes(p.type)) {
         setRemoteEminenceQueue((prev) => [...prev.slice(-99), p]);
@@ -2091,6 +2129,7 @@ export default function SatzeGame() {
 
   useEffect(() => {
     if (gamePhase !== 'onlineDeckReady' || multiplayerSession?.role !== 'host') return;
+    if (onlineMode !== 'duel') return;
     if (!onlineLocalReady || !onlinePeerDeck) return;
     if (onlineMatchStartedRef.current) return;
     if (!getMultiplayerManager().isConnected()) {
@@ -2136,6 +2175,7 @@ export default function SatzeGame() {
     selectedDeckKey,
     selectedMode,
     onlineFormatId,
+    onlineMode,
     startOnlineMatch,
     setGamePhase,
   ]);
@@ -2145,8 +2185,43 @@ export default function SatzeGame() {
   useEffect(() => {
     if (gamePhase !== 'onlineDeckReady' || multiplayerSession?.role !== 'host' || !multiplayerSession?.roomCode) return;
     if (!getMultiplayerManager().isConnected()) return;
-    getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: 'room_format', formatId: onlineFormatId });
-  }, [gamePhase, multiplayerSession?.role, multiplayerSession?.roomCode, onlineFormatId, onlinePeerDeck]);
+    getMultiplayerManager().sendRelay(multiplayerSession.roomCode, {
+      type: 'room_config', formatId: onlineFormatId, mode: onlineMode, players: onlinePlayers, difficulty: onlineDifficulty,
+    });
+  }, [gamePhase, multiplayerSession?.role, multiplayerSession?.roomCode, onlineFormatId, onlineMode, onlinePlayers, onlineDifficulty, onlinePeerDeck, onlineMembers.length]);
+
+  /**
+   * 2v2 / Re della collina online: dal pacchetto dell'host. Ogni client arma la sessione con il
+   * proprio posto e avvia la distribuzione con la propria mano e quella del primo avversario.
+   */
+  const startMultiOnline = useCallback((pkg) => {
+    const session = multiplayerSessionRef.current;
+    if (!session?.roomCode || !pkg?.seats) return;
+    const mySlot = session.slot ?? (session.role === 'host' ? 0 : 1);
+    const send = (payload, to) => getMultiplayerManager().sendRelay(session.roomCode, payload, to);
+    const { me, firstFoe } = multiSeat.armOnline({ pkg, localSlot: mySlot, isHost: session.role === 'host', send });
+    if (!me) {
+      setLogs((prev) => [...prev.slice(-200), '[!] Partita avviata senza un posto per te: sei spettatore.']);
+      return;
+    }
+    const seatMe = pkg.seats.find((x) => x.id === me);
+    const seatFoe = pkg.seats.find((x) => x.id === firstFoe);
+    setSelectedMode(pkg.fieldMode === 'bareHands' ? 'bareHands' : 'classic');
+    startOnlineMatch('host', {
+      seed: pkg.seed,
+      mode: pkg.fieldMode === 'bareHands' ? 'bareHands' : 'classic',
+      battlefields: pkg.battlefieldIds.slice(0, 5),
+      hostPlayerHand: seatMe.handIds.map((id) => ({ id, army: seatMe.army })),
+      hostEnemyHand: seatFoe.handIds.map((id) => ({ id, army: seatFoe.army })),
+      hostIsPlayerFirst: true,
+      hostPlayerArmy: seatMe.army,
+      hostEnemyArmy: seatFoe.army,
+      hostPlayerSet: [],
+      hostEnemySet: [],
+    }, { aiDifficulty: onlineDifficulty || 'medium' });
+  }, [multiSeat, startOnlineMatch, onlineDifficulty, setSelectedMode, setLogs]);
+  startMultiOnlineRef.current = startMultiOnline;
+  multiSeatNetRef.current = multiSeat.onNetMessage;
   
   // Hook per il tutorial
   const tutorial = useTutorial();
@@ -4691,6 +4766,12 @@ export default function SatzeGame() {
         reclamo: showClaimVictoryChoice, risultato: gameResult, log: (logs || []).slice(-6),
         codaEminenzeRemote: remoteEminenceQueue.map((m) => `${m.type}:r${m.roundNumber ?? '-'}:${m.abilityId ?? ''}`),
         roundEminenze: eminenceMatchState?.roundNumber ?? null,
+        multi: multiSeat.isActive ? {
+          stage: multiSeat.stage, kind: multiSeat.kind, online: multiSeat.isOnline,
+          role: multiSeat.view?.role ?? null, round: multiSeat.view?.roundNumber ?? null,
+          legalFields: multiSeat.view?.legalFields ?? null, claim: multiSeat.view?.claim ?? null,
+          contestFieldIndex: multiSeat.view?.contestFieldIndex ?? null, result: multiSeat.view?.result ?? null,
+        } : null,
         confermatoInAttesa: playerConfirmedAwaitingAI, annunci: eminenceNotices.length,
         guardiaAnnunci: Boolean(announcePointerGuard), bloccoEminenze: Boolean(eminenceBlocksMatch),
       }),
@@ -4702,6 +4783,7 @@ export default function SatzeGame() {
       setup: (params) => confirmEminenceSetup(params),
       affare: (risposta) => confirmPendingEminenceDeal(risposta),
       prossimoRound: () => nextRound(),
+      decidiReclamo: (d) => multiSeat.decideClaim(d),
     };
   });
 
@@ -4714,9 +4796,12 @@ export default function SatzeGame() {
         roundNumber,
         playerFields,
         enemyFields,
+        // PV dopo il round appena chiuso: chi riceve può essere ancora indietro di un round.
+        playerHP,
+        enemyHP,
       });
     },
-    [isOnlinePvP, multiplayerSession?.roomCode, roundNumber]
+    [isOnlinePvP, multiplayerSession?.roomCode, roundNumber, playerHP, enemyHP]
   );
 
   useEffect(() => {
@@ -4752,6 +4837,8 @@ export default function SatzeGame() {
       const ef = typeof p.playerFields === 'number' ? p.playerFields : locali.ef;
       setOpponentClaimPending(null);
       setShowClaimVictoryChoice(null);
+      if (typeof p.enemyHP === 'number') setPlayerHP(p.enemyHP);
+      if (typeof p.playerHP === 'number') setEnemyHP(p.playerHP);
       setGameResult({ winner: 'enemy', reason: 'fields', playerFields: pf, enemyFields: ef });
       setGamePhase('gameOver');
       setIncomingClaimDecision(null);
@@ -5319,8 +5406,12 @@ export default function SatzeGame() {
           setOpponentClaimPending(null);
           setIncomingClaimDecision(null);
           forceContinueAfterClaimRef.current = false;
+          setOnlineReadies({});
+          setOnlineMembers([]);
           setMultiplayerSession({
             roomCode: gameData.roomCode,
+            slot: gameData.slot ?? (gameData.role === 'host' ? 0 : 1),
+            capacity: gameData.capacity ?? 2,
             role: gameData.role,
             playerName: gameData.playerName,
             playerId: gameData.playerId,
@@ -5667,13 +5758,47 @@ export default function SatzeGame() {
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, relayPayload);
     };
 
+    const mySlot = multiplayerSession.slot ?? (multiplayerSession.role === 'host' ? 0 : 1);
+    const onlineRoomMembers = (onlineMembers.length ? onlineMembers : [{ slot: mySlot, name: multiplayerSession.playerName, connected: true }])
+      .map((m) => {
+        const pronto = m.slot === mySlot ? (onlineLocalReady ? { deckName: deck.name } : null) : onlineReadies[m.slot];
+        return { ...m, ready: Boolean(pronto), deckName: pronto?.deckName ?? null };
+      });
+    const isMultiMode = onlineMode !== 'duel';
+    const membriConnessi = onlineRoomMembers.filter((m) => m.connected !== false);
+    const tuttiPronti = membriConnessi.length >= 2 && membriConnessi.every((m) => m.ready);
+    const avviaMultiOnline = () => {
+      if (!tuttiPronti || multiplayerSession.role !== 'host') return;
+      const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.noEminence;
+      const resolved = resolveDeckCardsForArmy(selectedArmy, selectedDeckKey);
+      const readies = [
+        { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckCardIds: resolved.map((c) => c.id) },
+        ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
+          const r = onlineReadies[m.slot] || {};
+          return { slot: m.slot, name: r.playerName || m.name, army: r.army, deckKey: r.deckKey, deckCardIds: r.deckCardIds || [] };
+        }),
+      ];
+      const seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+      const pkg = buildMatchPackage({
+        kind: onlineMode,
+        fieldMode: formato.mode === 'bareHands' ? 'bareHands' : 'classic',
+        players: onlinePlayers,
+        difficulty: onlineDifficulty,
+        teammatePreset: 'equilibrato',
+      }, readies, seed);
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: MULTI_MS.START, pkg });
+      startMultiOnline(pkg);
+    };
+
     /** Entrambi hanno inviato deck_ready: non siamo "in attesa dell'avversario" ma in sincronizzazione avvio. */
     const bothOnlineDeckReady = onlineLocalReady && !!onlinePeerDeck;
     const onlineReadyButtonLabel = !onlineLocalReady
       ? 'Pronto'
-      : bothOnlineDeckReady
-        ? 'Avvio partita…'
-        : "In attesa dell'avversario…";
+      : onlineMode !== 'duel'
+        ? 'Pronto ✓'
+        : bothOnlineDeckReady
+          ? 'Avvio partita…'
+          : "In attesa dell'avversario…";
 
     return (
       screen('onlineDeckReady', false, <MenuScreenLayout
@@ -5684,38 +5809,19 @@ export default function SatzeGame() {
           <p className="text-slate-300 text-center text-sm">
             Esercito: <span className="text-white font-bold">{deck.name}</span>
           </p>
-          <div className="w-full">
-            <p className="text-xs text-slate-400 text-center mb-2 uppercase tracking-widest">Formato</p>
-            <div className="grid grid-cols-3 gap-2">
-              {Object.values(MATCH_FORMATS).map((f) => {
-                const attivo = f.id === onlineFormatId;
-                const isHost = multiplayerSession.role === 'host';
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    disabled={!isHost || (onlineLocalReady && !!onlinePeerDeck)}
-                    onClick={() => { if (isHost) { playUiClick(); setOnlineFormatId(f.id); } }}
-                    title={f.description}
-                    className="px-2 py-2 rounded text-xs font-bold transition-opacity disabled:cursor-default"
-                    style={{
-                      fontFamily: HUD_ORATORIO_FONT_UI,
-                      color: attivo ? MENU_ACCENTS.void : '#e2e8f0',
-                      background: attivo ? MENU_ACCENTS.magenta : 'rgba(255,255,255,0.06)',
-                      border: `1px solid ${attivo ? MENU_ACCENTS.magenta : 'rgba(255,255,255,0.18)'}`,
-                      opacity: !isHost && !attivo ? 0.45 : 1,
-                    }}
-                  >
-                    {f.name}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-[11px] text-slate-500 text-center mt-2">
-              {(MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.standard).description}
-              {multiplayerSession.role === 'host' ? ' · lo scegli tu' : " · lo sceglie l'host"}
-            </p>
-          </div>
+          <OnlineRoomPanel
+            isHost={multiplayerSession.role === 'host'}
+            locked={onlineMode === 'duel' ? (onlineLocalReady && !!onlinePeerDeck) : false}
+            multiDisponibile={(multiplayerSession.capacity ?? 2) > 2}
+            config={{ mode: onlineMode, formatId: onlineFormatId, players: onlinePlayers, difficulty: onlineDifficulty }}
+            onConfig={(patch) => {
+              if (patch.mode) setOnlineMode(patch.mode);
+              if (patch.formatId) setOnlineFormatId(patch.formatId);
+              if (patch.players) setOnlinePlayers(patch.players);
+              if (patch.difficulty) setOnlineDifficulty(patch.difficulty);
+            }}
+            members={onlineRoomMembers}
+          />
           <p className="text-xs text-slate-500 text-center">
             {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
           </p>
@@ -5738,6 +5844,20 @@ export default function SatzeGame() {
           >
             {onlineReadyButtonLabel}
           </button>
+          {isMultiMode && multiplayerSession.role === 'host' && (
+            <button
+              type="button"
+              onClick={avviaMultiOnline}
+              disabled={!tuttiPronti}
+              className="w-full px-8 py-3 font-bold rounded-lg disabled:opacity-40 transition-opacity"
+              style={{ fontFamily: HUD_ORATORIO_FONT_UI, color: '#e2e8f0', border: `1.5px solid ${MENU_ACCENTS.magenta}`, background: 'rgba(192, 38, 211, 0.18)' }}
+            >
+              {tuttiPronti ? `Avvia partita (${membriConnessi.length} giocatori + IA)` : 'Avvia partita (aspetta che tutti siano pronti)'}
+            </button>
+          )}
+          {isMultiMode && multiplayerSession.role !== 'host' && onlineLocalReady && (
+            <p className="text-xs text-slate-400 text-center">Sei pronto: la partita parte quando l'host la avvia.</p>
+          )}
           <MenuBackButton
             onClick={() => {
               setSelectedDeckKey(null);

@@ -399,7 +399,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
    * @param {Object} payload - output di buildOnlineMatchPayload
    */
   const startOnlineMatch = useCallback(
-    (perspective, rawPayload) => {
+    (perspective, rawPayload, opts = {}) => {
       const payload = normalizeOnlineMatchPayload(rawPayload, ALL_BATTLEFIELDS);
       const {
         mode,
@@ -421,7 +421,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setShowClaimVictoryChoice(null);
       setCampaignDuelMod(null);
       setGameMode(mode);
-      setAiDifficulty('multiplayer');
+      // Il multi-posto online usa la scena con le IA dei posti: niente percorsi del Duello online.
+      setAiDifficulty(opts.aiDifficulty ?? 'multiplayer');
 
       const shuffleSetup = buildShuffleDealSetupFromMatch(perspective, payload);
       const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
