@@ -4694,7 +4694,11 @@ export default function SatzeGame() {
     };
 
     if (p.decision === 'victory') {
-      const { pf, ef } = countLocalFields();
+      const locali = countLocalFields();
+      // Chi reclama ha già chiuso il round: i suoi conteggi (invertiti) sono quelli giusti,
+      // quelli locali possono essere indietro di un round.
+      const pf = typeof p.enemyFields === 'number' ? p.enemyFields : locali.pf;
+      const ef = typeof p.playerFields === 'number' ? p.playerFields : locali.ef;
       setOpponentClaimPending(null);
       setShowClaimVictoryChoice(null);
       setGameResult({ winner: 'enemy', reason: 'fields', playerFields: pf, enemyFields: ef });
