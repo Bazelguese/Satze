@@ -811,6 +811,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   /** Coda delle voci di log e ultima applicata: in ref, così nessun aggiornamento di sessione le perde. */
   const onlineQueueRef = useRef([]);
   const onlineSeqRef = useRef(0);
+  const lastIntentRef = useRef(null);
 
   /** Voci di log: si applicano in ordine, solo quando la scena aspetta (niente scontro in corso). */
   const onlineDrain = useCallback(() => {
@@ -893,6 +894,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const hostHandleIntent = useCallback((fromSlot, intent) => {
     const seq = sequencerRef.current;
     if (!seq) return;
+    // Decisioni ripetute dopo una riconnessione: turno passato o già ricevute → si ignorano.
+    if (intent?.round != null && intent.round < seq.match.roundNumber) return;
+    const giaRicevuta = intent?.kind === ENTRY.CLAIM
+      ? seq.pending?.claim != null && seq.pending.claim === intent.decision
+      : Object.keys(intent?.deployments || {}).length > 0 && Object.entries(intent.deployments)
+        .every(([id, d]) => JSON.stringify(seq.pending?.deployments?.[id]) === JSON.stringify(d));
+    if (giaRicevuta) return;
     let voci;
     try {
       voci = seq.receive(fromSlot, intent);
@@ -930,8 +938,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const onlineSendIntent = useCallback((intent) => {
     const s = sessionRef.current;
     if (!s?.online) return;
-    if (s.online.isHost) hostHandleIntent(s.online.slot, intent);
-    else netSendRef.current?.({ type: MS.INTENT, intent }, [0]);
+    if (s.online.isHost) {
+      hostHandleIntent(s.online.slot, intent);
+      return;
+    }
+    // Ricordata finché non arriva una nuova voce di log: se la connessione cade, si reinvia.
+    lastIntentRef.current = { intent, seq: onlineSeqRef.current };
+    netSendRef.current?.({ type: MS.INTENT, intent }, [0]);
   }, [hostHandleIntent]);
   onlineSendIntentRef.current = onlineSendIntent;
 
@@ -942,6 +955,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   const armOnline = useCallback(({ pkg, localSlot, isHost, send }) => {
     clearTimers();
     netSendRef.current = send;
+    lastIntentRef.current = null;
     const me = pkg.seats.find((x) => x.controller.type === 'human' && x.controller.slot === localSlot)?.id ?? null;
     const kind = pkg.kind;
     const meSeat = pkg.seats.find((x) => x.id === me);
@@ -975,6 +989,28 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
 
 
   /** Messaggi multi-posto dal relay (inoltrati dalla scena). */
+  /**
+   * Dopo una riconnessione (propria o di un altro): l'host rimanda il log a chi è tornato,
+   * un ospite chiede le voci perse e reinvia la propria decisione se nessuna voce è arrivata dopo.
+   * `slot` è il posto di chi si è riconnesso (null = questo client).
+   */
+  const onReconnect = useCallback((slot = null) => {
+    const s = sessionRef.current;
+    if (!s?.online) return;
+    if (s.online.isHost) {
+      const seq = sequencerRef.current;
+      if (!seq) return;
+      const msg = { type: MS.RESYNC, entries: seq.log };
+      if (slot == null) netSendRef.current?.(msg);
+      else netSendRef.current?.(msg, [slot]);
+      return;
+    }
+    if (slot != null && slot !== 0) return;
+    if (slot == null) netSendRef.current?.({ type: MS.RESYNC_REQ }, [0]);
+    const last = lastIntentRef.current;
+    if (last && last.seq === onlineSeqRef.current) netSendRef.current?.({ type: MS.INTENT, intent: last.intent }, [0]);
+  }, []);
+
   const onNetMessage = useCallback((payload, fromSlot) => {
     if (!payload?.type) return;
     if (payload.type === MS.INTENT) {
@@ -983,6 +1019,14 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     }
     if (payload.type === MS.LOG) {
       onlineReceiveLog([{ seq: payload.seq, entry: payload.entry, hash: payload.hash }]);
+      return;
+    }
+    if (payload.type === MS.RESYNC_REQ) {
+      if (sequencerRef.current) netSendRef.current?.({ type: MS.RESYNC, entries: sequencerRef.current.log }, [fromSlot]);
+      return;
+    }
+    if (payload.type === MS.RESYNC) {
+      onlineReceiveLog(payload.entries || []);
       return;
     }
     if (payload.type === MS.REJECT) onlineReject(payload.reason, payload.takenFields, payload.round);
@@ -1385,6 +1429,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     advise,
     armOnline,
     onNetMessage,
+    onReconnect,
     isOnline: Boolean(session?.online),
   };
 }

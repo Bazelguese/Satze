@@ -1829,6 +1829,8 @@ export default function SatzeGame() {
   const onlineModeRef = useRef('duel');
   onlineModeRef.current = onlineMode;
   const multiSeatNetRef = useRef(null);
+  const multiSeatReconnectRef = useRef(null);
+  const multiSeatOnlineRef = useRef(false);
   const startMultiOnlineRef = useRef(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
@@ -1885,6 +1887,8 @@ export default function SatzeGame() {
         if (onlineModeRef.current === 'duel') {
           setOnlineOpponentLeft(true);
           setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato la stanza."]);
+        } else if (multiSeatOnlineRef.current) {
+          setLogs((prev) => [...prev.slice(-200), `[!] Il giocatore del posto ${Number(msg.slot) + 1} ha lasciato la stanza: la partita non può proseguire.`]);
         }
         return;
       }
@@ -1902,11 +1906,13 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'peer_rejoined') {
+        multiSeatReconnectRef.current?.(msg.slot ?? null);
         setMpOpponentAway(false);
         setLogs((prev) => [...prev.slice(-200), "[+] L'avversario si è riconnesso."]);
         return;
       }
       if (msg.type === 'reconnected') {
+        multiSeatReconnectRef.current?.(null);
         setMpConnectionLost(false);
         setMpReconnectError('');
         setLogs((prev) => [...prev.slice(-200), '[+] Riconnesso al server multiplayer.']);
@@ -2222,6 +2228,8 @@ export default function SatzeGame() {
   }, [multiSeat, startOnlineMatch, onlineDifficulty, setSelectedMode, setLogs]);
   startMultiOnlineRef.current = startMultiOnline;
   multiSeatNetRef.current = multiSeat.onNetMessage;
+  multiSeatReconnectRef.current = multiSeat.onReconnect;
+  multiSeatOnlineRef.current = multiSeat.isActive && multiSeat.isOnline;
   
   // Hook per il tutorial
   const tutorial = useTutorial();
@@ -4788,6 +4796,8 @@ export default function SatzeGame() {
       affare: (risposta) => confirmPendingEminenceDeal(risposta),
       prossimoRound: () => nextRound(),
       decidiReclamo: (d) => multiSeat.decideClaim(d),
+      // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
+      cadiConnessione: () => getMultiplayerManager().ws?.close(),
     };
   });
 
