@@ -73,6 +73,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
   const [originRect, setOriginRect] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const listRef = useRef(null);
+  const searchRef = useRef(null);
   const rowRefs = useRef([]);
   /** Scorre la lista solo per tastiera o apertura dettaglio, non al passaggio del mouse. */
   const scrollToActiveRef = useRef(false);
@@ -91,6 +92,15 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
       const id = requestAnimationFrame(() => requestAnimationFrame(() => setExpanded(true)));
       return () => cancelAnimationFrame(id);
     }
+  }, [originRect]);
+
+  // Fuoco alla ricerca senza scorrimento. Con autoFocus il browser poteva scorrere .sgl-in
+  // (overflow: hidden, quindi scorribile da codice) per mostrare il campo mentre il pannello
+  // è ancora a scale(0.12): se il contenuto sborda (es. rune del titolo senza il CSS di
+  // RuneTitle) il pannello restava spostato in su, titolo tagliato e vuoto sul fondo.
+  // Il pannello compare quando originRect è pronto: prima l'input non esiste.
+  useEffect(() => {
+    if (originRect) searchRef.current?.focus({ preventScroll: true });
   }, [originRect]);
 
   // Blocca scroll body per evitare layout shift
@@ -291,7 +301,7 @@ export function Glossary({ onClose, originButtonRef, zIndex = 50, variant = 'due
               onChange={(e) => setSearch(e.target.value)}
               placeholder="POT, Campione, Vorace…"
               aria-label="Cerca nel glossario"
-              autoFocus
+              ref={searchRef}
             />
             {search && (
               <span className="sgl-search-count">
@@ -451,7 +461,9 @@ function GlossaryStyles() {
       }
 
       /* ---------- Fondo del pannello ---------- */
-      .sgl-deco { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+      /* overflow: hidden: la runa in filigrana sborda (right/bottom negativi, ruotata) e
+         altrimenti rende scorrevole .sgl-in; il taglio è lo stesso del pannello */
+      .sgl-deco { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
       .sgl-deco-blade {
         position: absolute; top: -6%; right: 90px; width: 26px; height: 24%;
         background: var(--chapter); transform: skewX(-24deg);
