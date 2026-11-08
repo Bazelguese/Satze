@@ -123,7 +123,7 @@ export const getAbilityExplanation = (ability) => {
       effectText = `fa guadagnare ${ability.value} Focus Coin a fine scontro. Avrai più risorse per i prossimi turni.`;
       break;
     case 'heal':
-      effectText = `cura ${ability.value} PV a fine scontro. Recupererai punti vita.`;
+      effectText = `cura ${ability.value} PV (mai oltre 25), prima del danno dello scontro.`;
       break;
     case 'selfDamage':
       effectText = `ti infligge ${ability.value} danno ai tuoi PV a fine scontro. Un prezzo da pagare per il potere.`;
@@ -154,10 +154,12 @@ export const getAbilityExplanation = (ability) => {
             ? 'POT'
             : ability.stat === 'damage'
               ? 'DAN'
+              : ability.stat === 'directDamage'
+                ? 'danni diretti'
               : ability.stat === 'assaultValue'
                 ? 'VA'
                 : ability.stat;
-      effectText = `aumenta la tua ${attritionStat} di ${ability.value} per ogni carta che hai già giocato in questa partita. Diventa più forte man mano che la partita procede.`;
+      effectText = `aggiunge ${ability.value} ${attritionStat} per ogni carta che hai già giocato in questa partita (esclusa questa). Al turno 1 vale 0 e cresce man mano che la partita procede.`;
       break;
     }
     case 'inversion':
