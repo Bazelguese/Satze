@@ -6,6 +6,15 @@ export const IS_PUBLIC_PLAYTEST_BUILD =
   typeof import.meta !== 'undefined' &&
   import.meta.env?.VITE_SATZE_PUBLIC_BUILD === 'true';
 
+/* global __SATZE_VERSION__, __SATZE_BUILD_DATE__ */
+/** Versione del gioco (da package.json), iniettata da Vite in fase di build. */
+export const SATZE_VERSION =
+  typeof __SATZE_VERSION__ !== 'undefined' ? __SATZE_VERSION__ : 'dev';
+
+/** Data della build (AAAA-MM-GG), fissata quando Vite compila: non quella di avvio del gioco. */
+export const SATZE_BUILD_DATE =
+  typeof __SATZE_BUILD_DATE__ !== 'undefined' ? __SATZE_BUILD_DATE__ : null;
+
 /** Voci menu principale nascoste nella build pubblica. */
 export const PUBLIC_BUILD_HIDDEN_MENU_LABELS = new Set([
   'STORICO PLAYTEST',

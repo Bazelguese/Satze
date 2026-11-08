@@ -1,0 +1,17 @@
+{
+  "name": "satze-playtest-discord",
+  "private": true,
+  "type": "module",
+  "description": "Allestisce il server Discord del playtest di SATZE (ruoli, canali, forum, messaggi).",
+  "scripts": {
+    "anteprima": "node setup.mjs --anteprima",
+    "setup": "node setup.mjs",
+    "test": "node --test lib.test.mjs"
+  },
+  "dependencies": {
+    "discord.js": "^14.28.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
