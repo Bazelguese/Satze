@@ -50,7 +50,7 @@ Il test procede a **cicli** di una o due settimane:
 3. Menziona @Playtester in #annunci per avvisarli.
 4. Lascia 3-4 giorni per rispondere, poi leggi le risposte prima di decidere le priorità.
 
-## Cosa c'è nella build 0.1.0
+## Cosa c'è nella build 0.1.1
 
 - Partita locale contro l'IA:
   - **Duello**, nei formati Standard (con le Eminenze), No Eminenza e Mani nude
