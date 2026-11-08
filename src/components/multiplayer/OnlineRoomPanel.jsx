@@ -5,9 +5,9 @@ import { playUiClick } from '../../audio/soundBus';
 
 /** Modalità online e formati ammessi (il 2v2 e il Re della collina sono senza Eminenze). */
 export const ONLINE_MODES = {
-  duel: { id: 'duel', name: 'Duello', description: '1 contro 1', minPlayers: 2, maxPlayers: 2, formats: ['standard', 'noEminenza', 'bareHands'] },
-  teamDuel: { id: 'teamDuel', name: '2v2', description: 'Abbinamenti segreti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminenza', 'bareHands'] },
-  kingOfHill: { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminenza', 'bareHands'] },
+  duel: { id: 'duel', name: 'Duello', description: '1 contro 1', minPlayers: 2, maxPlayers: 2, formats: ['standard', 'noEminence', 'bareHands'] },
+  teamDuel: { id: 'teamDuel', name: '2v2', description: 'Abbinamenti segreti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminence', 'bareHands'] },
+  kingOfHill: { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminence', 'bareHands'] },
 };
 
 export const DIFFICOLTA_IA = [

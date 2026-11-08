@@ -899,20 +899,30 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     } catch (err) {
       const reason = err?.message || String(err);
       const localSlot = sessionRef.current?.online?.slot ?? 0;
-      if (fromSlot === localSlot) onlineRejectRef.current?.(reason);
-      else netSendRef.current?.({ type: MS.REJECT, reason, round: intent?.round ?? null }, [fromSlot]);
+      // Campi già presi dagli altri posti in questo turno: il mittente li esclude e sceglie di nuovo.
+      const takenFields = Object.entries(seq.pending?.deployments || {})
+        .filter(([id, d]) => d?.fieldIndex != null && seq.slotOf(id) !== fromSlot)
+        .map(([, d]) => d.fieldIndex);
+      const round = intent?.round ?? null;
+      if (fromSlot === localSlot) onlineRejectRef.current?.(reason, takenFields, round);
+      else netSendRef.current?.({ type: MS.REJECT, reason, round, takenFields }, [fromSlot]);
       return;
     }
     for (const v of voci) netSendRef.current?.({ type: MS.LOG, ...v });
     onlineReceiveLog(voci);
   }, [onlineReceiveLog]);
 
-  const onlineReject = useCallback((reason) => {
+  const onlineReject = useCallback((reason, takenFields = [], round = null) => {
     const s = sessionRef.current;
     if (!s?.online) return;
     sceneRef.current?.hint?.(`Scelta non valida: ${reason}`);
     log(`[!] Scelta rifiutata dall'host: ${reason}`);
-    commit({ ...s, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY });
+    const r = round ?? s.match?.roundNumber ?? null;
+    const prima = s.blockedFields?.round === r ? s.blockedFields.fields : [];
+    const fields = [...new Set([...prima, ...(takenFields || [])])];
+    commit({ ...s, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, pendingConfirm: null, blockedFields: { round: r, fields } });
+    const sceglieCampo = s.role === 'opening' && s.kind === MULTI_SEAT_KINDS.TEAM;
+    sceneRef.current?.clearSelection?.(sceglieCampo ? 'selectField' : 'selectAgent');
   }, [commit, log, sceneRef]);
   const onlineRejectRef = useRef(onlineReject);
   onlineRejectRef.current = onlineReject;
@@ -975,7 +985,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       onlineReceiveLog([{ seq: payload.seq, entry: payload.entry, hash: payload.hash }]);
       return;
     }
-    if (payload.type === MS.REJECT) onlineReject(payload.reason);
+    if (payload.type === MS.REJECT) onlineReject(payload.reason, payload.takenFields, payload.round);
   }, [hostHandleIntent, onlineReceiveLog, onlineReject]);
 
   // ------------------------------------------------------------------
@@ -1326,7 +1336,9 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         board: teamBoard(session),
         advice: session.advice || {},
         adviceReplies: session.adviceReplies || {},
-        legalFields: legalFieldIndexesTeam(match),
+        legalFields: legalFieldIndexesTeam(match).filter((i) => !(
+          session.blockedFields?.round === match.roundNumber && session.blockedFields.fields.includes(i)
+        )),
         mateTrust: session.online ? null : getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
         online: Boolean(session.online),
         // Quando risponde la tua squadra: i fronti con la disposizione che stai scegliendo.

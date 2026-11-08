@@ -3948,6 +3948,10 @@ export default function SatzeGame() {
       return;
     }
     setGuidedHint('');
+    if (isMultiSeat && Array.isArray(multiSeat.view?.legalFields) && !multiSeat.view.legalFields.includes(idx)) {
+      addLog('Campo non disponibile: scegline un altro.');
+      return;
+    }
     // Scelta campo locale: già visibile in scena — nessun log.
     playGame(GAME_SOUND.FIELD_SELECT);
     setCurrentFieldIndex(idx);
@@ -4928,6 +4932,14 @@ export default function SatzeGame() {
       setGamePhase('gameOver');
     },
     hint: (message) => addLog(message),
+    // Online: l'host ha rifiutato la scelta (es. Campo già preso dal compagno) → si sceglie di nuovo.
+    clearSelection: (phase) => {
+      setSelectedAgent(null);
+      setSelectedFocus(1);
+      setPlayerConfirmedAwaitingAI(false);
+      if (phase === 'selectField') setCurrentFieldIndex(null);
+      if (phase) setGamePhase(phase);
+    },
   };
   const multiSeatView = multiSeat.view;
   const multiSeatSeatName = (seatId) => multiSeatView?.seats?.find((s) => s.id === seatId)?.name || null;
