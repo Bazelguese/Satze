@@ -390,6 +390,8 @@ export default function SatzeGame() {
   const remoteEminenceDealsRef = useRef([]);
   const [remoteEminenceDealsWaiting, setRemoteEminenceDealsWaiting] = useState(0);
   const earlyEminenceDealResponsesRef = useRef([]);
+  /** Ultima scelta ricevuta dall'altro giocatore per ogni round: serve a ripararla se va persa. */
+  const remoteChoiceByRoundRef = useRef(new Map());
   const openedEminenceGatesRef = useRef(new Set());
   const agentsLockedThisRoundRef = useRef(false);
 
@@ -1026,6 +1028,9 @@ export default function SatzeGame() {
       toxinBySide: { player: playerToxin, enemy: enemyToxin },
       remoteEnemy: aiDifficulty === 'multiplayer',
     });
+    if (import.meta.env.DEV && aiDifficulty === 'multiplayer') {
+      console.info('[eminenze online] gate', { gate: nextGate, round: roundNumber, blocked: result.blocked, rivelate: (result.events || []).filter((e) => e?.type === 'REVEAL').map((e) => `${e.side}:${e.abilityId}`) });
+    }
     if (result.blocked) {
       // Gate non aperto (online: manca una scelta dell'altro giocatore). Va ritentato quando arriva.
       if (nextGate) openedEminenceGatesRef.current.delete(`${matchState.roundOpenedAt || 0}:${nextGate}`);
@@ -1196,7 +1201,13 @@ export default function SatzeGame() {
         }
         const r = applyRemoteChoice(state, msg);
         if (import.meta.env.DEV) console.info('[eminenze online] applico scelta remota', { msgRound: msg.roundNumber, roundGioco: roundNumber, aperto: state.roundOpenedAt, abilityId: msg.abilityId, ok: r.ok, reason: r.reason });
-        if (r.ok) { state = r.matchState; passi.push({ msg }); }
+        if (r.ok) {
+          state = r.matchState;
+          passi.push({ msg });
+          const prima = remoteChoiceByRoundRef.current.get(msg.roundNumber);
+          // Si conserva l'ultima versione (con i params, se arrivano dopo la scelta).
+          remoteChoiceByRoundRef.current.set(msg.roundNumber, prima && prima.abilityId === msg.abilityId && !msg.params ? prima : msg);
+        }
         else console.warn('[eminenze online] scelta remota non applicata:', r.reason, msg);
       } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
         if (!isEminenceSetupPending(state, 'enemy')) continue; // già registrata (o non prevista)
@@ -1243,9 +1254,28 @@ export default function SatzeGame() {
     if (notices.length) setEminenceNotices((prev) => [...prev, ...notices]);
   }, [remoteEminenceQueue, eminenceMatchState, roundNumber, isPlayerFirst, setEminenceMatchState, setPlayerHP, setEnemyHP]);
 
+  // Autoriparazione: se una scelta dell'altro giocatore già applicata sparisce dallo stato
+  // (riscritto altrove da una copia precedente), la si riapplica. Senza, il round resterebbe
+  // in attesa di una scelta che l'altro client considera già fatta.
+  useEffect(() => {
+    if (aiDifficulty !== 'multiplayer' || !eminenceMatchState?.enemy) return;
+    if (needsEminenceRoundOpen(eminenceMatchState, roundNumber)) return;
+    const msg = remoteChoiceByRoundRef.current.get(roundNumber);
+    const e = eminenceMatchState.enemy;
+    if (!msg || e.revealedAbilityId) return;
+    const persa = !e.selectedAbilityId || (msg.params && !e.selectedParams);
+    if (!persa) return;
+    console.warn('[eminenze online] scelta remota persa, la riapplico', { round: roundNumber, abilityId: msg.abilityId });
+    setEminenceMatchState((prev) => {
+      const r = applyRemoteChoice(prev, msg);
+      return r.ok ? r.matchState : prev;
+    });
+  }, [aiDifficulty, eminenceMatchState, roundNumber, setEminenceMatchState]);
+
   // Nuova partita online: niente residui della precedente.
   useEffect(() => {
     if (roundNumber !== 1 || gamePhase !== 'shuffleDeal') return;
+    remoteChoiceByRoundRef.current = new Map();
     remoteEminenceDealsRef.current = [];
     earlyEminenceDealResponsesRef.current = [];
     setRemoteEminenceDealsWaiting(0);
@@ -1319,6 +1349,25 @@ export default function SatzeGame() {
     awaitingRevealParams,
     eminenceMatchState,
     roundNumber,
+    commitEminenceAdvance,
+  ]);
+
+  // Online la scelta dell'avversario può arrivare DOPO che il Campo è stato fissato: in quel
+  // momento il gate era bloccato e nessuno lo ritenterebbe. Appena le scelte sono complete,
+  // si riprova ad aprire il gate pre-Agente/pre-Campo (la dedup per gate evita doppioni).
+  useLayoutEffect(() => {
+    if (aiDifficulty !== 'multiplayer') return;
+    if (gamePhase !== 'selectField' || currentFieldIndex == null) return;
+    if (r5Cinematic || eminenceAnnounceHold || awaitingEminenceChoice || awaitingRevealParams) return;
+    if (pendingEminenceDeals.length > 0 || remoteEminenceDealsWaiting > 0) return;
+    if (!isEminenceSubsystemEnabled(eminenceMatchState) || !areSelectionsComplete(eminenceMatchState)) return;
+    const gate = getNextGate(eminenceMatchState.gateProgress);
+    if (gate !== REVEAL_GATES.PRE_AGENT && gate !== REVEAL_GATES.PRE_FIELD) return;
+    if (import.meta.env.DEV) console.info('[eminenze online] ritento il gate dopo il Campo', { gate, round: roundNumber });
+    commitEminenceAdvance(eminenceMatchState);
+  }, [
+    aiDifficulty, gamePhase, currentFieldIndex, r5Cinematic, eminenceAnnounceHold, awaitingEminenceChoice,
+    awaitingRevealParams, pendingEminenceDeals, remoteEminenceDealsWaiting, eminenceMatchState, roundNumber,
     commitEminenceAdvance,
   ]);
 
