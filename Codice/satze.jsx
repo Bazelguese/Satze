@@ -58,8 +58,9 @@ import {
 
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
-import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal } from '../src/game/eminence/eminenceDuelGate.js';
+import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
 import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
+import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setupMessage as eminenceSetupMessage, dealMessage as eminenceDealMessage, applyRemoteChoice, applyRemoteSetup, dealNeedsRemoteResponse, forcedDealResponse } from '../src/game/eminence/eminenceOnline.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { getEminenceAbility } from '../src/data/eminences.js';
@@ -179,7 +180,8 @@ import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDe
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
-import { GAME_MODES } from '../src/data/gameModes';
+import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
+import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
 import { appendPlaytestRecord } from '../src/utils/playtestHistory';
 import { registraPartita, nuovoIdPartita, telemetriaAttiva, svuotaCoda, serveNomeGiocatore } from '../src/telemetry/telemetria.js';
@@ -190,6 +192,7 @@ import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
 import { preloadCardImagesForAgents } from '../src/data/images.js';
 import { getCardSprite } from '../src/utils/cardUtils.js';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
+import { mulberry32 } from '../src/utils/seededRandom.js';
 import { clearMpSession, persistMpSession, reconnectToRoom } from '../src/utils/multiplayerReconnect';
 import { buildOnlineMatchPayload } from '../src/utils/onlineMatch';
 import { resolveDeckCardsForArmy } from '../src/utils/deckResolve';
@@ -381,6 +384,12 @@ export default function SatzeGame() {
   const awaitingRevealParamsRef = useRef(false);
   const pendingDuelAfterRevealRef = useRef(false);
   const revealHpCommittedRef = useRef({ player: 0, enemy: 0 });
+  // Eminenze online (eminenceOnline.js): messaggi dell'altro giocatore in attesa di essere
+  // applicati, Affari proposti da noi che aspettano la sua risposta, risposte arrivate in anticipo.
+  const [remoteEminenceQueue, setRemoteEminenceQueue] = useState([]);
+  const remoteEminenceDealsRef = useRef([]);
+  const [remoteEminenceDealsWaiting, setRemoteEminenceDealsWaiting] = useState(0);
+  const earlyEminenceDealResponsesRef = useRef([]);
   const openedEminenceGatesRef = useRef(new Set());
   const agentsLockedThisRoundRef = useRef(false);
 
@@ -438,9 +447,12 @@ export default function SatzeGame() {
     setEminenceNotices(noticesFromRoundStart(next, appliedEffects));
 
     if (!bundle?.fieldOperations.length) return;
+    // Generatore con seme ricavato dal tabellone: online i due client sostituiscono lo stesso Campo.
+    const semeCampi = (battlefields || []).reduce((h, f, i) => ((h * 31) + (f?.id || 0) + i) >>> 0, (roundNumber * 7919) >>> 0);
     const replaced = applyFieldOperations(bundle.fieldOperations, {
       battlefields,
       conqueredFields,
+      rng: mulberry32(semeCampi),
     });
     if (replaced.changes.length) setBattlefields(replaced.battlefields);
   }, [
@@ -780,13 +792,32 @@ export default function SatzeGame() {
   }, [forcedEminenceView]);
 
   const confirmEminenceAbility = useCallback((abilityId, params = null) => {
+    const online = aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode;
+    // Online la scelta, una volta inviata, non si cambia: l'altro client potrebbe averla già
+    // usata per aprire un gate. Restano ammessi i params della stessa abilità (reveal).
+    const giaScelta = eminenceMatchState?.player?.selectedAbilityId;
+    if (online && giaScelta && giaScelta !== abilityId) return;
     playGame(GAME_SOUND.LOCK_IN);
-    setEminenceMatchState((prev) => {
-      const stamped = stampComposeParams(params);
-      if (stamped?.cardId != null && !stamped.targetSide) {
-        if (selectedAgent?.id === stamped.cardId) stamped.targetSide = 'player';
-        else if (enemyAgent?.id === stamped.cardId) stamped.targetSide = 'enemy';
+    const stamped = stampComposeParams(params);
+    if (stamped?.cardId != null && !stamped.targetSide) {
+      if (selectedAgent?.id === stamped.cardId) stamped.targetSide = 'player';
+      else if (enemyAgent?.id === stamped.cardId) stamped.targetSide = 'enemy';
+    }
+    if (online) {
+      // Si invia solo una scelta che qui è valida: altrimenti i due client divergerebbero.
+      const prova = eminenceMatchState?.player?.selectedAbilityId === abilityId
+        ? setEminenceAbilityParams(eminenceMatchState, 'player', stamped)
+        : selectEminenceAbility(eminenceMatchState, 'player', abilityId, stamped);
+      if (!prova.ok) {
+        console.warn('[eminenze online] scelta non valida, non inviata:', prova.reason, abilityId);
+        return;
       }
+      getMultiplayerManager().sendRelay(
+        multiplayerSession.roomCode,
+        eminenceChoiceMessage(eminenceMatchState?.roundNumber ?? roundNumber, abilityId, stamped ?? null),
+      );
+    }
+    setEminenceMatchState((prev) => {
       if (prev?.player?.selectedAbilityId === abilityId && !prev.player.revealedAbilityId) {
         const updated = setEminenceAbilityParams(prev, 'player', stamped);
         return updated.ok ? updated.matchState : prev;
@@ -794,15 +825,18 @@ export default function SatzeGame() {
       const attempt = selectEminenceAbility(prev, 'player', abilityId, stamped);
       return attempt.ok ? attempt.matchState : prev;
     });
-  }, [setEminenceMatchState, selectedAgent, enemyAgent]);
+  }, [setEminenceMatchState, selectedAgent, enemyAgent, aiDifficulty, multiplayerSession?.roomCode, eminenceMatchState, roundNumber]);
 
   const confirmEminenceSetup = useCallback((params) => {
     playGame(GAME_SOUND.LOCK_IN);
+    if (aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode) {
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, eminenceSetupMessage(params));
+    }
     setEminenceMatchState((prev) => {
       const attempt = commitEminenceSetupChoice(prev, 'player', params);
       return attempt.ok ? attempt.matchState : prev;
     });
-  }, [setEminenceMatchState]);
+  }, [setEminenceMatchState, aiDifficulty, multiplayerSession?.roomCode]);
 
   const focusMarkToken = useCallback((cardId, sourceSide, kind = 'prey') => {
     setFocusedMark((prev) => {
@@ -989,8 +1023,14 @@ export default function SatzeGame() {
         : null,
       paramContext: eminenceParamContext,
       toxinBySide: { player: playerToxin, enemy: enemyToxin },
+      remoteEnemy: aiDifficulty === 'multiplayer',
     });
-    if (result.blocked) return result;
+    if (result.blocked) {
+      // Gate non aperto (online: manca una scelta dell'altro giocatore). Va ritentato quando arriva.
+      if (nextGate) openedEminenceGatesRef.current.delete(`${matchState.roundOpenedAt || 0}:${nextGate}`);
+      eminenceChoiceFlushedRoundRef.current = null;
+      return result;
+    }
 
     let nextMatch = result.matchState;
     let notices = [...(result.notices || [])];
@@ -999,11 +1039,20 @@ export default function SatzeGame() {
     let enemyHp = readHpDelta(result.bundle, 'enemy');
 
     // Affari verso l'IA: risposta automatica (niente default silenzioso sul motore).
+    // Online risponde l'altro giocatore: si aspetta il suo messaggio, salvo le scelte forzate.
     for (const deal of pending.filter((entry) => entry.recipientSide === 'enemy')) {
+      let response;
+      if (aiDifficulty !== 'multiplayer') response = autoResponseForPendingDeal(deal, nextMatch);
+      else if (!dealNeedsRemoteResponse(deal, nextMatch)) response = forcedDealResponse(deal, nextMatch);
+      else if (earlyEminenceDealResponsesRef.current.length) response = earlyEminenceDealResponsesRef.current.shift().response || {};
+      else {
+        remoteEminenceDealsRef.current.push(deal);
+        continue;
+      }
       const resolved = resolvePendingDeal(
         nextMatch,
         deal,
-        autoResponseForPendingDeal(deal, nextMatch),
+        response,
         { initiativeSide },
       );
       nextMatch = resolved.matchState;
@@ -1039,6 +1088,8 @@ export default function SatzeGame() {
 
     setEminenceMatchState(nextMatch);
     setPendingEminenceDeals(playerDeals);
+    setRemoteEminenceDealsWaiting(remoteEminenceDealsRef.current.length);
+    const waitingRemoteDeals = remoteEminenceDealsRef.current.length;
     if (playerHp || enemyHp) {
       if (playerHp) setPlayerHP((hp) => Math.max(0, hp + playerHp));
       if (enemyHp) setEnemyHP((hp) => Math.max(0, hp + enemyHp));
@@ -1051,7 +1102,7 @@ export default function SatzeGame() {
     if (notices.length) {
       setEminenceNotices(notices);
       if (phase) setPendingEminencePhase(phase);
-    } else if (phase && playerDeals.length === 0) {
+    } else if (phase && playerDeals.length === 0 && waitingRemoteDeals === 0) {
       setGamePhase(phase);
     } else if (phase) {
       // Affare in sospeso: memorizza la fase ma non avviare il Duello.
@@ -1059,6 +1110,7 @@ export default function SatzeGame() {
     }
     return { ...result, matchState: nextMatch, notices };
   }, [
+    aiDifficulty,
     isPlayerFirst,
     selectedAgent,
     enemyAgent,
@@ -1079,6 +1131,9 @@ export default function SatzeGame() {
   const confirmPendingEminenceDeal = useCallback((response) => {
     const deal = pendingEminenceDeals[0];
     if (!deal || !eminenceMatchState) return;
+    if (aiDifficulty === 'multiplayer' && multiplayerSession?.roomCode) {
+      getMultiplayerManager().sendRelay(multiplayerSession.roomCode, eminenceDealMessage(roundNumber, response));
+    }
     const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
     const resolved = resolvePendingDeal(eminenceMatchState, deal, response, { initiativeSide });
     setEminenceMatchState(resolved.matchState);
@@ -1097,6 +1152,9 @@ export default function SatzeGame() {
     }
     setPendingEminenceDeals((prev) => prev.slice(1));
   }, [
+    aiDifficulty,
+    multiplayerSession?.roomCode,
+    roundNumber,
     pendingEminenceDeals,
     eminenceMatchState,
     isPlayerFirst,
@@ -1104,6 +1162,92 @@ export default function SatzeGame() {
     setPlayerHP,
     setEnemyHP,
   ]);
+
+  /**
+   * Eminenze online: applica in ordine i messaggi dell'altro giocatore.
+   * Una scelta di round aspetta che qui quel round sia aperto; una risposta a un Affare
+   * risolve il primo Affare in attesa, oppure resta da parte finché l'Affare non nasce qui.
+   */
+  useEffect(() => {
+    if (!remoteEminenceQueue.length || !eminenceMatchState) return;
+    // Primo passaggio sullo stato di questo render: decide quali messaggi si applicano ora
+    // (e a quali Affari), e raccoglie PV e annunci. Lo stato vero si aggiorna poi con un
+    // updater funzionale che riapplica gli stessi passi sullo stato più recente: così una
+    // scelta locale fatta nel frattempo non viene sovrascritta.
+    let state = eminenceMatchState;
+    const passi = [];
+    let playerHp = 0;
+    let enemyHp = 0;
+    let notices = [];
+    const rimasti = [];
+    const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
+    for (let i = 0; i < remoteEminenceQueue.length; i++) {
+      const msg = remoteEminenceQueue[i];
+      if (msg.type === EMINENCE_ONLINE_MESSAGES.CHOICE) {
+        const roundAperto = !needsEminenceRoundOpen(state, roundNumber) && state.roundNumber === roundNumber;
+        if (msg.roundNumber > roundNumber || (msg.roundNumber === roundNumber && !roundAperto)) {
+          rimasti.push(...remoteEminenceQueue.slice(i)); // round non ancora aperto qui: si riprova dopo
+          break;
+        }
+        if (msg.roundNumber < roundNumber) {
+          console.warn('[eminenze online] scelta remota scartata (round già chiuso):', msg.roundNumber, roundNumber);
+          continue;
+        }
+        const r = applyRemoteChoice(state, msg);
+        if (r.ok) { state = r.matchState; passi.push({ msg }); }
+        else console.warn('[eminenze online] scelta remota non applicata:', r.reason, msg);
+      } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
+        if (!isEminenceSetupPending(state, 'enemy')) continue; // già registrata (o non prevista)
+        const r = applyRemoteSetup(state, msg);
+        if (r.ok) { state = r.matchState; passi.push({ msg }); }
+      } else if (msg.type === EMINENCE_ONLINE_MESSAGES.DEAL) {
+        const deal = remoteEminenceDealsRef.current.shift();
+        if (!deal) { earlyEminenceDealResponsesRef.current.push(msg); continue; }
+        const resolved = resolvePendingDeal(state, deal, msg.response || {}, { initiativeSide });
+        state = resolved.matchState;
+        passi.push({ msg, deal });
+        playerHp += readHpDelta(resolved.bundle, 'player');
+        enemyHp += readHpDelta(resolved.bundle, 'enemy');
+        notices = [...notices, ...(resolved.notices || [])];
+      }
+    }
+    // Aggiornare la coda solo se è cambiata: riscriverla identica rilancerebbe l'effetto all'infinito.
+    if (rimasti.length !== remoteEminenceQueue.length) setRemoteEminenceQueue(rimasti);
+    setRemoteEminenceDealsWaiting(remoteEminenceDealsRef.current.length);
+    if (!passi.length) return;
+    setEminenceMatchState((prev) => {
+      let st = prev;
+      for (const { msg, deal } of passi) {
+        if (msg.type === EMINENCE_ONLINE_MESSAGES.CHOICE) {
+          const r = applyRemoteChoice(st, msg);
+          if (r.ok) st = r.matchState;
+        } else if (msg.type === EMINENCE_ONLINE_MESSAGES.SETUP) {
+          const r = applyRemoteSetup(st, msg);
+          if (r.ok) st = r.matchState;
+        } else if (deal) {
+          st = resolvePendingDeal(st, deal, msg.response || {}, { initiativeSide }).matchState;
+        }
+      }
+      return st;
+    });
+    if (playerHp || enemyHp) {
+      if (playerHp) setPlayerHP((hp) => Math.max(0, hp + playerHp));
+      if (enemyHp) setEnemyHP((hp) => Math.max(0, hp + enemyHp));
+      revealHpCommittedRef.current = {
+        player: (revealHpCommittedRef.current.player || 0) + playerHp,
+        enemy: (revealHpCommittedRef.current.enemy || 0) + enemyHp,
+      };
+    }
+    if (notices.length) setEminenceNotices((prev) => [...prev, ...notices]);
+  }, [remoteEminenceQueue, eminenceMatchState, roundNumber, isPlayerFirst, setEminenceMatchState, setPlayerHP, setEnemyHP]);
+
+  // Nuova partita online: niente residui della precedente.
+  useEffect(() => {
+    if (roundNumber !== 1 || gamePhase !== 'shuffleDeal') return;
+    remoteEminenceDealsRef.current = [];
+    earlyEminenceDealResponsesRef.current = [];
+    setRemoteEminenceDealsWaiting(0);
+  }, [roundNumber, gamePhase]);
 
   const afterFieldLocked = useCallback(() => {
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) {
@@ -1142,11 +1286,12 @@ export default function SatzeGame() {
   useLayoutEffect(() => {
     if (eminenceNotices.length > 0) return;
     if (pendingEminenceDeals.length > 0) return;
+    if (remoteEminenceDealsWaiting > 0) return;
     if (!pendingEminencePhase) return;
     const nextPhase = pendingEminencePhase;
     setPendingEminencePhase(null);
     setGamePhase(nextPhase);
-  }, [eminenceNotices, pendingEminenceDeals, pendingEminencePhase, setGamePhase]);
+  }, [eminenceNotices, pendingEminenceDeals, remoteEminenceDealsWaiting, pendingEminencePhase, setGamePhase]);
 
   useLayoutEffect(() => {
     if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
@@ -1183,6 +1328,7 @@ export default function SatzeGame() {
     if (r5Cinematic) return;
     if (eminenceAnnounceHold) return;
     if (pendingEminenceDeals.length > 0) return;
+    if (remoteEminenceDealsWaiting > 0) return;
     if (awaitingEminenceChoice || awaitingRevealParams) return;
     if (!selectedAgent || !enemyAgent) return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
@@ -1192,6 +1338,7 @@ export default function SatzeGame() {
     r5Cinematic,
     eminenceAnnounceHold,
     pendingEminenceDeals,
+    remoteEminenceDealsWaiting,
     awaitingEminenceChoice,
     awaitingRevealParams,
     selectedAgent,
@@ -1617,6 +1764,8 @@ export default function SatzeGame() {
   /** true dopo un rematch nella stessa stanza (solo UI) */
   const [onlineRematchActive, setOnlineRematchActive] = useState(false);
   const [pendingGuestMatch, setPendingGuestMatch] = useState(null);
+  /** Formato della partita online: lo sceglie l'host nella schermata d'attesa, l'ospite lo vede. */
+  const [onlineFormatId, setOnlineFormatId] = useState(MATCH_FORMATS.standard.id);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
@@ -1706,6 +1855,12 @@ export default function SatzeGame() {
       }
       if (p.type === 'match_start' && p.match) {
         setPendingGuestMatch(p.match);
+      }
+      if (p.type === 'room_format' && MATCH_FORMATS[p.formatId]) {
+        setOnlineFormatId(p.formatId);
+      }
+      if (Object.values(EMINENCE_ONLINE_MESSAGES).includes(p.type)) {
+        setRemoteEminenceQueue((prev) => [...prev.slice(-99), p]);
       }
       if (p.type === 'rematch') {
         applyOnlineRematchRef.current?.(p.mode === 'change' ? 'change' : 'same');
@@ -1899,15 +2054,19 @@ export default function SatzeGame() {
         Array.isArray(onlinePeerDeck.deckCardIds) && onlinePeerDeck.deckCardIds.length
           ? onlinePeerDeck.deckCardIds
           : onlinePeerDeck.deckKey;
+      const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.standard;
       const match = buildOnlineMatchPayload(
         selectedArmy,
         selectedDeckKey,
         onlinePeerDeck.army,
         guestDeckSource,
-        selectedMode,
+        formato.mode === 'bareHands' ? 'bareHands' : selectedMode,
         seed,
         ALL_BATTLEFIELDS
       );
+      // Le Eminenze si deducono dal mazzo su entrambi i client: basta concordare il formato.
+      match.eminence = { format: formato.eminenceFormat ?? EMINENCE_FORMAT.DISABLED };
+      match.formatId = formato.id;
       startOnlineMatch('host', match);
       getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: 'match_start', match });
     } catch (e) {
@@ -1925,9 +2084,18 @@ export default function SatzeGame() {
     selectedArmy,
     selectedDeckKey,
     selectedMode,
+    onlineFormatId,
     startOnlineMatch,
     setGamePhase,
   ]);
+
+  // L'host comunica il formato all'ospite: all'ingresso nella schermata d'attesa, a ogni cambio
+  // e quando l'ospite conferma l'esercito (così lo vede anche chi è entrato dopo).
+  useEffect(() => {
+    if (gamePhase !== 'onlineDeckReady' || multiplayerSession?.role !== 'host' || !multiplayerSession?.roomCode) return;
+    if (!getMultiplayerManager().isConnected()) return;
+    getMultiplayerManager().sendRelay(multiplayerSession.roomCode, { type: 'room_format', formatId: onlineFormatId });
+  }, [gamePhase, multiplayerSession?.role, multiplayerSession?.roomCode, onlineFormatId, onlinePeerDeck]);
   
   // Hook per il tutorial
   const tutorial = useTutorial();
@@ -4442,6 +4610,50 @@ export default function SatzeGame() {
     advanceGuidedRoundState(playerFields, enemyFields);
   };
 
+  // Solo con il server di sviluppo (mai nella build): comandi per i test automatici end-to-end
+  // (es. due browser in multiplayer). Si aggiorna a ogni render, così le azioni non sono mai vecchie.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    const lato = (st) => st && {
+      eminenceId: st.eminenceId, presence: st.presence, selectedAbilityId: st.selectedAbilityId,
+      revealedAbilityId: st.revealedAbilityId, selectedParams: st.selectedParams, setupCommitted: st.setupCommitted,
+    };
+    window.__satzeTest = {
+      stato: () => ({
+        gamePhase, roundNumber, isPlayerFirst, currentFieldIndex, revealedFields,
+        playerHP, enemyHP, playerFocus, enemyFocus, selectedFocus,
+        selectedAgent: selectedAgent?.id ?? null, enemyAgent: enemyAgent?.id ?? null,
+        mano: (playerHand || []).filter((c) => !playerUsedCards.includes(c.id)).map((c) => c.id),
+        campi: (battlefields || []).map((f) => f?.id ?? null), conquistati: conqueredFields,
+        eminenze: eminenceMatchState?.enabled === false || !eminenceMatchState ? null : {
+          player: lato(eminenceMatchState.player), enemy: lato(eminenceMatchState.enemy),
+          gate: getNextGate(eminenceMatchState.gateProgress),
+        },
+        sceltaEminenza: {
+          attesa: awaitingEminenceChoice, attesaParams: awaitingRevealParams,
+          setup: Boolean(eminenceChoiceView.self?.setup?.pending),
+          opzioni: (eminenceChoiceView.self?.options || []).map((o) => ({ id: o.id, selectable: o.selectable, paramsSchema: o.paramsSchema, timing: o.choiceParamsTiming })),
+          setupSchema: eminenceChoiceView.self?.setup?.paramsSchema ?? null,
+          selezionata: eminenceChoiceView.self?.selectedAbilityId ?? null,
+        },
+        affari: pendingEminenceDeals, affariRemoti: remoteEminenceDealsWaiting,
+        reclamo: showClaimVictoryChoice, risultato: gameResult, log: (logs || []).slice(-6),
+        codaEminenzeRemote: remoteEminenceQueue.map((m) => `${m.type}:r${m.roundNumber ?? '-'}:${m.abilityId ?? ''}`),
+        roundEminenze: eminenceMatchState?.roundNumber ?? null,
+        confermatoInAttesa: playerConfirmedAwaitingAI, annunci: eminenceNotices.length,
+        guardiaAnnunci: Boolean(announcePointerGuard), bloccoEminenze: Boolean(eminenceBlocksMatch),
+      }),
+      campo: (idx) => handleFieldSelect(battlefields[idx]),
+      agente: (id) => handleAgentSelect((playerHand || []).find((c) => c.id === id)),
+      fc: (n) => setSelectedFocus(n),
+      conferma: () => confirmPlayerChoice(),
+      eminenza: (id, params) => confirmEminenceAbility(id, params ?? null),
+      setup: (params) => confirmEminenceSetup(params),
+      affare: (risposta) => confirmPendingEminenceDeal(risposta),
+      prossimoRound: () => nextRound(),
+    };
+  });
+
   const sendClaimDecisionRelay = useCallback(
     (decision, playerFields, enemyFields) => {
       if (!isOnlinePvP || !multiplayerSession?.roomCode) return;
@@ -5417,6 +5629,38 @@ export default function SatzeGame() {
           <p className="text-slate-300 text-center text-sm">
             Esercito: <span className="text-white font-bold">{deck.name}</span>
           </p>
+          <div className="w-full">
+            <p className="text-xs text-slate-400 text-center mb-2 uppercase tracking-widest">Formato</p>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.values(MATCH_FORMATS).map((f) => {
+                const attivo = f.id === onlineFormatId;
+                const isHost = multiplayerSession.role === 'host';
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    disabled={!isHost || (onlineLocalReady && !!onlinePeerDeck)}
+                    onClick={() => { if (isHost) { playUiClick(); setOnlineFormatId(f.id); } }}
+                    title={f.description}
+                    className="px-2 py-2 rounded text-xs font-bold transition-opacity disabled:cursor-default"
+                    style={{
+                      fontFamily: HUD_ORATORIO_FONT_UI,
+                      color: attivo ? MENU_ACCENTS.void : '#e2e8f0',
+                      background: attivo ? MENU_ACCENTS.magenta : 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${attivo ? MENU_ACCENTS.magenta : 'rgba(255,255,255,0.18)'}`,
+                      opacity: !isHost && !attivo ? 0.45 : 1,
+                    }}
+                  >
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-500 text-center mt-2">
+              {(MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.standard).description}
+              {multiplayerSession.role === 'host' ? ' · lo scegli tu' : " · lo sceglie l'host"}
+            </p>
+          </div>
           <p className="text-xs text-slate-500 text-center">
             {multiplayerSession.role === 'host' ? 'Host' : 'Ospite'} — quando entrambi siete pronti parte la partita.
           </p>

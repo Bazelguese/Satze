@@ -100,6 +100,8 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
       },
       deployedIsLowestLeagueBySide,
       toxinBySide: { player: playerToxin, enemy: enemyToxin },
+      // Online l'avversario è una persona: i suoi params arrivano via rete (eminenceOnline.js).
+      remoteEnemy: gameState.aiDifficulty === 'multiplayer',
       paramContext: {
         ownUndeployedCardIds: (playerHand || [])
           .filter((card) => !playerUsedCards.includes(card.id) && card.id !== pAgent.id)
