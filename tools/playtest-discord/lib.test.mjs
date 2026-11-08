@@ -19,7 +19,7 @@ function serverFinto({ forumVietati = false } = {}) {
   let prossimoId = 100;
   let orologio = 0;
   const nuovoId = () => String(prossimoId++);
-  const conteggi = { ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0 };
+  const conteggi = { postCreati: 0, postCancellati: 0, ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0 };
 
   const ruoli = new Cache();
   const canali = new Cache();
@@ -41,6 +41,21 @@ function serverFinto({ forumVietati = false } = {}) {
         return canale;
       },
       messages: { fetch: async () => messaggi },
+      thread: [],
+      threads: {
+        fetchAll: async () => canale.thread.filter((t) => !t.cancellato),
+        async create({ name, content }) {
+          conteggi.postCreati++;
+          const t = canaleFinto({ name, type: ChannelType.PublicThread, parent: canale });
+          t.ownerId = BOT;
+          t.archived = false;
+          t.locked = false;
+          await t.send({ content });
+          canale.thread.push(t);
+          return t;
+        },
+      },
+      async delete() { canale.cancellato = true; conteggi.postCancellati++; },
       async send({ content }) {
         conteggi.messaggiInviati++;
         const m = {
@@ -114,11 +129,13 @@ test('primo avvio: crea ruoli, categorie, canali e messaggi con i link ai canali
   assert.equal(conteggi.canaliCreati, totaleCanali);
   assert.deepEqual(avvisi, []);
 
-  const benvenuto = canaleDiNome(canali, 'benvenuto');
   const download = canaleDiNome(canali, 'download');
-  const testo = [...benvenuto.messaggi.values()].map((m) => m.content).join('\n');
-  assert.ok(testo.includes(`<#${download.id}>`), 'il link a #download punta al canale vero');
+  const bugId = canaleDiNome(canali, 'bug').id;
+  const testo = [...download.messaggi.values()].map((m) => m.content).join('\n');
+  assert.ok(testo.includes(`<#${bugId}>`), 'il link a #bug punta al canale vero');
   assert.ok(!/<#[a-z]/.test(testo), 'nessun <#nome> rimasto senza id');
+  assert.equal(canaleDiNome(canali, 'benvenuto').messaggi.size, 0, 'benvenuto resta a Davide');
+  assert.equal(canaleDiNome(canali, 'annunci').messaggi.size, 0, 'annunci resta a Davide');
 
   const bug = canaleDiNome(canali, 'bug');
   assert.equal(bug.type, ChannelType.GuildForum);
@@ -137,21 +154,23 @@ test('secondo avvio: non duplica niente', async () => {
   assert.equal(conteggi.messaggiModificati, 0);
 });
 
-test('aggiungere il link del sondaggio modifica solo quel messaggio', async () => {
+test('cambiare la versione modifica i messaggi senza ripubblicarli', async () => {
   const { guild, conteggi, canali } = serverFinto();
   await allestisci(guild, BOT, CFG, muto);
   const inviati = conteggi.messaggiInviati;
-  await allestisci(guild, BOT, { ...CFG, linkSondaggio: 'https://forms.gle/prova' }, muto);
+  const postCreati = conteggi.postCreati;
+  await allestisci(guild, BOT, { ...CFG, versione: '0.2.0' }, muto);
   assert.equal(conteggi.messaggiInviati, inviati);
-  assert.equal(conteggi.messaggiModificati, 1);
-  const annunci = [...canaleDiNome(canali, 'annunci').messaggi.values()];
-  assert.ok(annunci.at(-1).content.includes('https://forms.gle/prova'));
+  assert.equal(conteggi.postCreati, postCreati);
+  assert.ok(conteggi.messaggiModificati >= 1);
+  const download = [...canaleDiNome(canali, 'download').messaggi.values()];
+  assert.ok(download[0].content.includes('SATZE-Playtest-Setup-0.2.0.exe'));
 });
 
 test('i messaggi scritti da altri restano dove sono', async () => {
   const { guild, conteggi, canali } = serverFinto();
   await allestisci(guild, BOT, CFG, muto);
-  const benvenuto = canaleDiNome(canali, 'benvenuto');
+  const benvenuto = canaleDiNome(canali, 'download');
   benvenuto.messaggi.set('altrui', { id: 'altrui', author: { id: 'davide' }, content: 'ciao', createdTimestamp: 999 });
   await allestisci(guild, BOT, CFG, muto);
   assert.ok(benvenuto.messaggi.has('altrui'));
@@ -161,7 +180,7 @@ test('i messaggi scritti da altri restano dove sono', async () => {
 test('se i forum non si possono creare ripiega su canali di testo e avvisa', async () => {
   const { guild, canali } = serverFinto({ forumVietati: true });
   const { avvisi } = await allestisci(guild, BOT, CFG, muto);
-  assert.equal(avvisi.length, 3);
+  assert.equal(avvisi.length, 4);
   const bug = canaleDiNome(canali, 'bug');
   assert.equal(bug.type, ChannelType.GuildText);
   assert.ok([...bug.messaggi.values()][0].content.includes('Versione:'));
@@ -214,4 +233,28 @@ test('inFormatoApi converte permessi, tag e reazione nel formato di Discord', as
   assert.equal(api.available_tags[1].id, undefined);
   assert.deepEqual(api.default_reaction_emoji, { emoji_id: null, emoji_name: '👍' });
   assert.equal('topic' in inFormatoApi({ name: 'x' }), false, 'i campi assenti non vengono mandati');
+});
+
+test('guida: post bloccati, in ordine di lettura, senza duplicati e aggiornabili', async () => {
+  const { post } = await import('./contenuti.mjs');
+  const attesi = post(CFG).guida.map((p) => p.titolo);
+  const { guild, conteggi, canali } = serverFinto();
+  await allestisci(guild, BOT, CFG, muto);
+  const guida = canaleDiNome(canali, 'guida');
+  assert.equal(guida.type, ChannelType.GuildForum);
+  const vivi = () => guida.thread.filter((t) => !t.cancellato);
+  // Creati dall'ultimo al primo: il forum mostra prima il più recente, cioè il primo da leggere.
+  assert.deepEqual(vivi().map((t) => t.name).reverse(), attesi);
+  assert.ok(vivi().every((t) => t.locked), 'nessuno può rispondere ai post della guida');
+  for (const t of vivi()) {
+    const titolo = t.name;
+    const voluto = post(CFG).guida.find((p) => p.titolo === titolo).messaggi.length;
+    assert.equal(t.messaggi.size, voluto, `${titolo}: tutti i messaggi pubblicati`);
+  }
+
+  const creati = conteggi.postCreati;
+  vivi()[0].archived = true; // dopo una settimana Discord archivia i post
+  await allestisci(guild, BOT, CFG, muto);
+  assert.equal(conteggi.postCreati, creati, 'secondo avvio: nessun post nuovo');
+  assert.equal(conteggi.postCancellati, 0);
 });

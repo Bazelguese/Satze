@@ -5,7 +5,7 @@
 // ============================================
 
 import { ChannelType, PermissionFlagsBits as P, SortOrderType, ForumLayoutType } from 'discord.js';
-import { STRUTTURA, RUOLI, messaggi, lineeGuida } from './contenuti.mjs';
+import { STRUTTURA, RUOLI, messaggi, lineeGuida, post as postDelForum } from './contenuti.mjs';
 
 export const LIMITI = {
   messaggio: 2000,
@@ -13,6 +13,7 @@ export const LIMITI = {
   lineeGuidaForum: 4096,
   nomeTag: 20,
   tagPerForum: 20,
+  titoloPost: 100,
 };
 
 const TIPI = {
@@ -98,6 +99,16 @@ export function verificaContenuti(cfg) {
           if (m.length > LIMITI.messaggio) errori.push(`${dove}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
         });
       }
+      if (c.post) {
+        const lista = postDelForum(cfg)[c.post];
+        if (!lista?.length) errori.push(`${dove}: post "${c.post}" non trovati`);
+        else lista.forEach((p) => {
+          if (!p.titolo || p.titolo.length > LIMITI.titoloPost) errori.push(`${dove}: titolo del post "${p.titolo}" vuoto o oltre ${LIMITI.titoloPost} caratteri`);
+          p.messaggi.forEach((m, i) => {
+            if (m.length > LIMITI.messaggio) errori.push(`${dove} › ${p.titolo}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
+          });
+        });
+      }
       if (c.tipo === 'forum') {
         const guida = guide[c.lineeGuida];
         if (!guida) errori.push(`${dove}: linee guida "${c.lineeGuida}" non trovate`);
@@ -179,6 +190,54 @@ async function sincronizzaMessaggi(canale, testi, botId, log) {
   log(`    ✉ ${testi.length} messaggi pubblicati in #${canale.name}`);
 }
 
+/**
+ * Allinea i post del bot in un forum di sola lettura (es. la guida).
+ * Stessi titoli nello stesso ordine e stesso numero di messaggi → modifica i testi.
+ * Qualsiasi cambio di struttura → cancella i post del bot e li ricrea, così l'ordine resta quello di lettura.
+ * I post sono creati dall'ultimo al primo: il forum li ordina per data di creazione, dal più recente.
+ */
+async function sincronizzaPost(forum, posts, botId, collega, log) {
+  const esistenti = (await forum.threads.fetchAll()).filter((t) => t.ownerId === botId);
+  const perTitolo = new Map(esistenti.map((t) => [t.name, t]));
+
+  let strutturaUguale = esistenti.length === posts.length && posts.every((p) => perTitolo.has(p.titolo));
+  const messaggiPerPost = new Map();
+  if (strutturaUguale) {
+    for (const p of posts) {
+      const t = perTitolo.get(p.titolo);
+      if (t.archived) await t.edit({ archived: false });
+      const miei = [...(await t.messages.fetch({ limit: 100 })).values()]
+        .filter((m) => m.author?.id === botId)
+        .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      if (miei.length !== p.messaggi.length) { strutturaUguale = false; break; }
+      messaggiPerPost.set(p.titolo, miei);
+    }
+  }
+
+  if (strutturaUguale) {
+    let cambiati = 0;
+    for (const p of posts) {
+      const miei = messaggiPerPost.get(p.titolo);
+      for (let i = 0; i < p.messaggi.length; i++) {
+        const testo = collega(p.messaggi[i]);
+        if (miei[i].content !== testo) { await miei[i].edit({ content: testo }); cambiati++; }
+      }
+      await perTitolo.get(p.titolo).edit({ locked: true });
+    }
+    log(`    ${cambiati ? `✎ ${cambiati} messaggi aggiornati` : '= post già aggiornati'} in #${forum.name}`);
+    return;
+  }
+
+  for (const t of esistenti) await t.delete();
+  for (const p of [...posts].reverse()) {
+    const [primo, ...altri] = p.messaggi.map(collega);
+    const t = await forum.threads.create({ name: p.titolo, content: primo });
+    for (const testo of altri) await t.send({ content: testo });
+    await t.edit({ locked: true });
+  }
+  log(`    ✉ ${posts.length} post pubblicati in #${forum.name}`);
+}
+
 async function assegnaRuolo(guild, userId, ruolo, log) {
   try {
     const membro = await guild.members.fetch(userId);
@@ -211,6 +270,7 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
   const testi = messaggi(cfg);
   const idPerNome = new Map();
   const conMessaggi = [];
+  const conPost = [];
 
   for (const gruppo of STRUTTURA) {
     log(`\n${gruppo.categoria}`);
@@ -226,7 +286,7 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
           topic: guide[c.lineeGuida],
           availableTags: unisciTag(esistente?.availableTags, tagDesiderati(c)),
           defaultReactionEmoji: c.reazione ? { id: null, name: c.reazione } : null,
-          defaultSortOrder: SortOrderType.LatestActivity,
+          defaultSortOrder: c.ordinaPerCreazione ? SortOrderType.CreationDate : SortOrderType.LatestActivity,
           defaultForumLayout: ForumLayoutType.ListView,
         };
         try {
@@ -251,12 +311,21 @@ export async function allestisci(guild, botId, cfg, log = console.log) {
       }
       idPerNome.set(nome, canale.id);
       if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi] });
+      if (c.post) {
+        const lista = postDelForum(cfg)[c.post];
+        if (canale.type === ChannelType.GuildForum) conPost.push({ canale, posts: lista });
+        // Senza forum: un messaggio per post, in ordine, con il titolo in testa.
+        else conMessaggi.push({ canale, testi: lista.flatMap((p) => p.messaggi.map((m, i) => (i === 0 ? `# ${p.titolo}\n${m}` : m))) });
+      }
     }
   }
 
   log('\nMessaggi');
   for (const { canale, testi: lista } of conMessaggi) {
     await sincronizzaMessaggi(canale, lista.map((t) => collegaCanali(t, idPerNome)), botId, log);
+  }
+  for (const { canale, posts } of conPost) {
+    await sincronizzaPost(canale, posts, botId, (t) => collegaCanali(t, idPerNome), log);
   }
 
   const idDev = cfg.idDev?.trim();

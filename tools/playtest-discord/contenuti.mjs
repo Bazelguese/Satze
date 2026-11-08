@@ -4,6 +4,8 @@
 // Lo script aggiorna i canali esistenti invece di duplicarli.
 // ============================================
 
+import { guida } from './guida.mjs';
+
 /** Le 12 armate giocabili (da src/data/cards.js → ARMY_SETS). */
 export const ARMATE = [
   "Figli dell'Orizzonte",
@@ -31,91 +33,49 @@ export const RUOLI = {
 };
 
 /**
- * Testi dei messaggi. `cfg` è config.json: versione, link al download e al sondaggio.
+ * Messaggi tecnici nei canali di testo. `cfg` è config.json.
+ * I messaggi di presentazione, gli annunci e i link li scrive Davide a mano: lo script non li tocca.
  * Ogni voce di un array è un messaggio Discord separato (massimo 2000 caratteri).
  * `<#nome-canale>` diventa un link cliccabile al canale con quel nome (lo sostituisce lo script).
  */
 export function messaggi(cfg) {
   const v = cfg.versione;
-  const download = cfg.linkDownload?.trim()
-    ? cfg.linkDownload.trim()
-    : '_(link in arrivo: ve lo segnalo appena è caricato)_';
-  const sondaggio = cfg.linkSondaggio?.trim()
-    ? `📝 **Sondaggio anonimo:** ${cfg.linkSondaggio.trim()}\nCi vogliono 5-10 minuti e non chiede né nome né email: siate sinceri, anche brutalmente. È l'unico posto dove non so chi ha scritto cosa.`
-    : `📝 **Sondaggio anonimo:** arriva verso la fine del ciclo di test, ve lo segnalo qui.`;
-
   return {
-    benvenuto: [
-      `# Benvenuti nel playtest di SATZE ⚔️
-
-Grazie di essere qui. SATZE è il mio gioco di carte strategico e voi siete i primi a metterci le mani sopra fuori da casa mia. Quello che mi serve è semplice: **giocate come vi viene e ditemi cosa non va**. Bug, regole poco chiare, carte rotte, momenti noiosi, cose che vi sono piaciute: tutto è utile.
-
-## Cosa c'è in questa build (v${v})
-- **Partita locale contro l'IA**, in tre modalità:
-  - **Duello** 1 contro 1, con tre formati: *Standard* (Eminenze e Campi attivi), *No Eminenza* (solo Campi) e *Mani nude* (niente Eminenze né effetti dei Campi)
-  - **2v2** ad abbinamenti segreti
-  - **Re della collina**: tutti contro tutti, a 3 o 4 giocatori
-- **Multiplayer online** 1 contro 1 (beta): uno crea la stanza e manda il codice di 6 caratteri all'altro
-- **Gestione eserciti** per costruirvi i mazzi, **Tutorial** (3 percorsi) e **Galleria** (carte, Eminenze, Campi)
-- **12 armate**: ${ARMATE.join(', ')}
-
-⭐ **Le Eminenze sono la novità grossa** e quella su cui mi serve più aiuto. Le trovate nel Duello in formato *Standard* (2v2 e Re della collina si giocano senza). Ditemi se si capisce cosa fanno, se sono divertenti e se qualcuna vi sembra troppo forte o inutile.
-
-🔒 **La Campagna** la vedete nel menu ma **non fa parte di questo test**: è un assaggio di quello che arriverà. Dateci pure un'occhiata, ma non serve segnalarmi niente su quella.`,
-
-      `## Dove scrivere cosa
-- <#download>: l'installer e come installarlo
-- <#annunci>: nuove build e cosa è cambiato (ve lo segnalo io)
-- <#bug>: **un post per ogni bug**, con il modello che trovate lì
-- <#bilanciamento>: carte, armate o Eminenze troppo forti o troppo deboli
-- <#idee>: suggerimenti e tutto quello che non è un bug
-- <#cerco-partita>: per organizzarvi su multiplayer e partite insieme
-- <#chiacchiere>: tutto il resto
-
-## 🔢 La versione conta
-In basso a sinistra nel menu principale c'è la versione del gioco (ad esempio *v${v} · BUILD …*). **Mettetela in ogni segnalazione**: così so se un bug è già stato sistemato.
-
-## Due regole
-1. **L'exe resta nel gruppo**: per favore non giratelo e non pubblicate niente in giro senza chiedermelo.
-2. **Siate sinceri.** Un "questa cosa non mi è piaciuta" mi serve più di dieci complimenti. Se qualcosa non vi va di dirlo qui, c'è il sondaggio anonimo.
-
-Buon divertimento! 🃏`,
-    ],
-
     download: [
-      `# 📥 Download · SATZE Playtest v${v}
+      `## Installazione · SATZE Playtest v${v}
 
-**Installer per Windows (64 bit):** ${download}
+**Requisiti**
+- Windows 10 o 11, 64 bit
+- Connessione a internet: necessaria per il Multiplayer
 
-## Come installarlo
-1. Scaricate **SATZE-Playtest-Setup-${v}.exe** e apritelo.
-2. Windows probabilmente mostrerà **"Windows ha protetto il PC"**: è normale, l'exe non è firmato perché è una build di test. Cliccate su **Ulteriori informazioni** e poi su **Esegui comunque**.
-3. Scegliete la cartella di installazione e completate. Vi troverete il collegamento **SATZE Playtest** sul desktop.
-4. Avviate il gioco e controllate in basso a sinistra nel menu che la versione sia **v${v}**.
+**File:** \`SATZE-Playtest-Setup-${v}.exe\` (installer, in italiano)
 
-## Aggiornamenti
-Quando esce una nuova build la trovate qui e in <#annunci>: scaricate il nuovo installer e installatelo sopra il vecchio.
+**Installazione**
+1. Avvia \`SATZE-Playtest-Setup-${v}.exe\`.
+2. Avviso **"Windows ha protetto il PC"** (SmartScreen): l'installer non è firmato digitalmente. **Ulteriori informazioni** → **Esegui comunque**.
+3. Scegli la cartella di installazione e conferma. Vengono creati i collegamenti **SATZE Playtest** sul desktop e nel menu Start.
+4. Se Google Drive mostra *"impossibile eseguire la scansione antivirus"*: **Scarica comunque** (Drive non analizza i file oltre una certa dimensione).
 
-## Problemi?
-Se l'installazione non va o il gioco non parte, aprite un post in <#bug> con il tag **crash** e scrivete cosa vedete (uno screenshot aiuta tantissimo). Se il vostro antivirus blocca l'exe, ditemelo.`,
-    ],
+**Verifica della versione**
+In basso a sinistra nel menu principale: \`PLAYTEST · SATZE · LA GRANDE GUERRA · v${v} · BUILD <data>\`. Indica la versione in ogni segnalazione in <#bug>.
 
-    annunci: [
-      `# 🚀 Playtest 1 · v${v}
+**Aggiornamento a una nuova build**
+1. Avvia il nuovo installer.
+2. Al messaggio *"SATZE Playtest è già installato"* scegli **Sì** (= aggiorna). **No** disinstalla, **Annulla** esce.
+3. Mazzi e impostazioni restano: l'aggiornamento svuota solo la cache grafica.
 
-Si parte! In questo primo giro il test è **libero**: giocate quello che vi incuriosisce, quanto vi va.
+**Disinstallazione**
+Impostazioni di Windows → App → **SATZE Playtest** → Disinstalla.
 
-Se non sapete da dove cominciare:
-- fate il **Tutorial** e ditemi se dopo vi è chiaro come si gioca
-- provate un **Duello Standard** per vedere le **Eminenze** in azione
-- provate almeno una partita **2v2** o **Re della collina**
-- sfidate qualcuno del gruppo in **Multiplayer** (organizzatevi in <#cerco-partita>)
-
-L'installer e le istruzioni sono in <#download>.`,
-      // Messaggio a parte: rilanciando lo script con il link compilato si aggiorna da solo.
-      sondaggio,
+**Problemi di installazione o di avvio**
+Post in <#bug> con il tag **installazione** o **crash**: versione di Windows, messaggio di errore, screenshot.`,
     ],
   };
+}
+
+/** Post dei forum di sola lettura (oggi solo la guida del gioco). */
+export function post(cfg) {
+  return { guida: guida(cfg) };
 }
 
 /** Linee guida dei forum (Discord le mostra in cima al canale; massimo 4096 caratteri). */
@@ -145,6 +105,8 @@ Per aiutarmi davvero scrivete:
 
 Mettete il tag dell'armata (o 🌟 Eminenze) così le discussioni restano in ordine.`,
 
+    guida: `Regolamento e riferimento tecnico di SATZE v${cfg.versione}, un post per argomento. Sola lettura: domande e dubbi sulle regole vanno in #chiacchiere, errori nella guida in #bug con il tag regole / effetti.`,
+
     idee: `Suggerimenti, desideri, "sarebbe bello se…": tutto quello che non è un bug né un problema di bilanciamento. Un post per idea, così si può commentare e votare con 👍.`,
   };
 }
@@ -164,9 +126,10 @@ export const STRUTTURA = [
     categoria: '📌 SATZE · INFO',
     accesso: 'lettura',
     canali: [
-      { nome: 'benvenuto', tipo: 'testo', descrizione: 'Leggi qui prima di tutto: cosa testare e dove scrivere.', messaggi: 'benvenuto' },
-      { nome: 'annunci', tipo: 'testo', descrizione: 'Nuove build, note di patch e sondaggio.', messaggi: 'annunci' },
+      { nome: 'benvenuto', tipo: 'testo', descrizione: 'Leggi qui prima di tutto: cosa testare e dove scrivere.' },
+      { nome: 'annunci', tipo: 'testo', descrizione: 'Nuove build, note di patch e sondaggio.' },
       { nome: 'download', tipo: 'testo', descrizione: 'Installer della build attuale e istruzioni.', messaggi: 'download' },
+      { nome: 'guida', tipo: 'forum', lineeGuida: 'guida', post: 'guida', ordinaPerCreazione: true },
     ],
   },
   {
