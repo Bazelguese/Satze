@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../src/utils';
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
+import { MultiSeatWaitingQueue, playMultiSeatArrival, readMultiSeatRects } from '../src/components/battle/MultiSeatWaitingQueue.jsx';
 import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
 import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS, DROP_IMPACT_MS } from '../src/components/battle/placeHandoff.js';
@@ -1560,6 +1561,15 @@ export default function SatzeGame() {
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  /**
+   * Multiplayer, dal secondo scontro del turno: come entra l'Agente di ogni lato ('advance' dalla
+   * coda sfocata, 'stay' resta in campo, 'swap' arriva dall'altro lato; null = ingresso normale).
+   */
+  const [multiSeatEntry, setMultiSeatEntry] = useState({ player: null, enemy: null });
+  /** Lati il cui Agente esce di scena dopo «Prossimo duello». */
+  const [multiSeatLeaving, setMultiSeatLeaving] = useState(null);
+  /** Rettangoli delle carte (in campo e prime in coda) al clic di «Prossimo duello». */
+  const multiSeatRectsRef = useRef(null);
   // Lista dei Campi scorrevole (più di 5 Campi): quanti ne restano sotto, per l'indicatore.
   const fieldsScrollRef = useRef(null);
   const [fieldsBelow, setFieldsBelow] = useState(0);
@@ -4000,6 +4010,12 @@ export default function SatzeGame() {
     // Se siamo in fase risultato e c'è un battleResult, attiva l'animazione clash delle carte
     if (gamePhase === 'result' && battleResult && duelPhase >= 4) {
       setShowClashAnimation(true);
+      // Multiplayer: chi non c'è nello scontro dopo esce di scena durante la pausa.
+      if (isMultiSeat && multiSeatQueue?.hasNext) {
+        // posizioni di partenza per l'arrivo dello scontro dopo, prima che chi esce si muova
+        multiSeatRectsRef.current = readMultiSeatRects();
+        setMultiSeatLeaving(multiSeatQueue.transition?.leaves || null);
+      }
       
       // Dopo l'animazione (1 secondo), procedi con il reset
       setTimeout(() => {
@@ -4015,7 +4031,8 @@ export default function SatzeGame() {
   
   const proceedToNextRound = () => {
     if (isMultiSeat) {
-      setIsZoomed(false);
+      // con un altro scontro nel turno si resta nella vista del duello
+      if (!multiSeatQueue?.hasNext) setIsZoomed(false);
       nextRoundInFlightRef.current = false;
       multiSeat.onScontroDone();
       return;
@@ -4433,7 +4450,8 @@ export default function SatzeGame() {
 
   // Azioni della scena usate dal controllore delle modalità a più posti.
   multiSeatSceneRef.current = {
-    resetForProjection: () => {
+    // keepDuel: lo scontro dopo nello stesso turno, senza uscire dalla vista del duello.
+    resetForProjection: ({ keepDuel = false } = {}) => {
       if (multiSeatStageTimerRef.current) {
         clearTimeout(multiSeatStageTimerRef.current);
         multiSeatStageTimerRef.current = null;
@@ -4442,10 +4460,12 @@ export default function SatzeGame() {
       setSelectedFocus(1);
       setEnemyAgent(null);
       setEnemySelectedFocus(1);
-      setCurrentFieldIndex(null);
-      setBattleResult(null);
       setShowClashAnimation(false);
-      setIsZoomed(false);
+      if (!keepDuel) {
+        setCurrentFieldIndex(null);
+        setBattleResult(null);
+        setIsZoomed(false);
+      }
       ai.clearPendingDecision();
       aiThinkGenerationRef.current += 1;
       aiHasSelectedAgent.current = false;
@@ -4455,6 +4475,8 @@ export default function SatzeGame() {
       }
       setPlayerConfirmedAwaitingAI(false);
       nextRoundInFlightRef.current = false;
+      setMultiSeatEntry({ player: null, enemy: null });
+      setMultiSeatLeaving(null);
     },
     setGamePhase: (phase) => setGamePhase(phase),
     showOpponentDeploy: ({ agent, fieldIndex }) => {
@@ -4463,12 +4485,19 @@ export default function SatzeGame() {
       setEnemyAgent(agent);
     },
     // Uno scontro deciso dall'orchestratore: gli Agenti entrano in campo, poi la risoluzione.
-    stageBattle: ({ result, playerAgent, enemyAgent: eAgent, playerFocus: pFocus, enemyFocus: eFocus, fieldIndex }) => {
+    stageBattle: ({ result, playerAgent, enemyAgent: eAgent, playerFocus: pFocus, enemyFocus: eFocus, fieldIndex, entry = null }) => {
       setCurrentFieldIndex(fieldIndex);
       setSelectedFocus(pFocus);
       setEnemySelectedFocus(eFocus);
       setSelectedAgent(playerAgent);
       setEnemyAgent(eAgent);
+      if (entry) {
+        // Scontro dopo nello stesso turno: si resta nella vista del duello. Gli Agenti arrivano
+        // dalla coda sfocata, restano o cambiano lato (playMultiSeatArrival), poi il duello.
+        setMultiSeatEntry({ player: entry.player || null, enemy: entry.enemy || null });
+        presentPrecomputedBattle(result);
+        return;
+      }
       setGamePhase('selectAgent');
       if (multiSeatStageTimerRef.current) clearTimeout(multiSeatStageTimerRef.current);
       // Come nel duello normale: lo scontro parte solo a ingresso finito (posa degli Agenti e
@@ -4491,6 +4520,24 @@ export default function SatzeGame() {
     hint: (message) => addLog(message),
   };
   const multiSeatView = multiSeat.view;
+  // Tasto a fine scontro: «Prossimo duello» se nel turno ne segue un altro.
+  const multiSeatQueue = isMultiSeat ? multiSeatView?.scontroQueue || null : null;
+  // Arrivo degli Agenti nello scontro dopo (vista del duello): dalle posizioni lette al clic.
+  useLayoutEffect(() => {
+    if (!isMultiSeat || gamePhase !== 'result' || !battleResult) return;
+    if (!multiSeatEntry.player && !multiSeatEntry.enemy) return;
+    const rects = multiSeatRectsRef.current;
+    multiSeatRectsRef.current = null;
+    playMultiSeatArrival(multiSeatEntry, rects);
+  }, [isMultiSeat, gamePhase, battleResult, multiSeatEntry]);
+  // Agenti in attesa visibili durante lo scontro (schieramento proiettato e risultato).
+  const multiSeatWaitingShown = Boolean(multiSeatQueue) && (gamePhase === 'selectAgent' || gamePhase === 'result');
+  const multiSeatContinue = (() => {
+    if (!multiSeatQueue?.hasNext) return { label: 'Continua', note: null };
+    const leaves = multiSeatQueue.transition?.leaves;
+    const one = leaves && leaves.player !== leaves.enemy;
+    return { label: 'Prossimo duello', note: one ? 'Premi Prossimo duello per scartare l’Agente sconfitto' : null };
+  })();
   const multiSeatSeatName = (seatId) => multiSeatView?.seats?.find((s) => s.id === seatId)?.name || null;
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
@@ -6634,6 +6681,8 @@ export default function SatzeGame() {
         duelPhase={duelPhase}
         battleResult={battleResult}
         onContinue={nextRound}
+        continueLabel={multiSeatContinue.label}
+        continueNote={multiSeatContinue.note}
         gameResult={gameResult}
         aiDecisionLog={isOnlinePvP ? null : ai.aiDecisionLog}
         onCopyAiDecisionLog={
@@ -6771,7 +6820,7 @@ export default function SatzeGame() {
       
       {/* Zona Duello IA - Sinistra del centro */}
       <div 
-        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''} ${
+        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''}${multiSeatLeaving?.enemy ? ' ms-leave-enemy' : ''}${multiSeatEntry.enemy ? ' ms-arrive' : ''} ms-zone-enemy ${
           isZoomed ? '' : ''
         }`}
         style={{
@@ -6791,6 +6840,9 @@ export default function SatzeGame() {
       >
         {gamePhase !== 'result' && (
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+        )}
+        {multiSeatWaitingShown && (
+          <MultiSeatWaitingQueue side="enemy" entries={multiSeatQueue.waiting.enemy} cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout} />
         )}
           {showDeployedEnemyAgent && (
           <div className={`relative flex items-center justify-center flex-shrink-0${holdForConfirmedAgentPick ? ' pointer-events-auto' : ''}`} data-field-agent="enemy" style={{ transformStyle: 'flat', '--acc-en': getArmyAccent(enemyAgent, enemyIdentityColor), '--acc': getArmyAccent(enemyAgent, enemyIdentityColor) }}>
@@ -6876,7 +6928,7 @@ export default function SatzeGame() {
       
       {/* Zona Duello Player - Destra del centro */}
       <div 
-        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''} ${
+        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''}${multiSeatLeaving?.player ? ' ms-leave-player' : ''}${multiSeatEntry.player ? ' ms-arrive' : ''} ms-zone-player ${
           isZoomed ? '' : ''
         }`}
         style={{
@@ -6896,6 +6948,9 @@ export default function SatzeGame() {
       >
         {gamePhase !== 'result' && (
           <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
+        )}
+        {multiSeatWaitingShown && (
+          <MultiSeatWaitingQueue side="player" entries={multiSeatQueue.waiting.player} cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout} />
         )}
         {showDeployedPlayerAgent && (
           <div
@@ -7010,6 +7065,10 @@ export default function SatzeGame() {
       </div>
 
       {gamePhase === 'result' && battleResult && duelPhase >= 4 && vfxProfile.clashVfxEnabled && (
+        <div
+          style={{ display: 'contents' }}
+          className={`${multiSeatLeaving?.enemy ? 'ms-leave-enemy' : ''}${multiSeatLeaving?.player ? ' ms-leave-player' : ''}`}
+        >
         <DuelClashAuroraSequence
           battleResult={battleResult}
           duelPhase={duelPhase}
@@ -7022,6 +7081,7 @@ export default function SatzeGame() {
           playerOverdrive={duelOverdriveOn('player')}
           enemyOverdrive={duelOverdriveOn('enemy')}
         />
+        </div>
       )}
 
       {devDialogueDuelActive && gamePhase === 'result' && battleResult && (

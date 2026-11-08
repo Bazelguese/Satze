@@ -581,6 +581,10 @@ export const BattlefieldPanel = ({
   duelPhase, 
   battleResult,
   onContinue,
+  /** Etichetta del tasto a fine duello (nel multiplayer «Prossimo duello» se ne segue un altro). */
+  continueLabel = 'Continua',
+  /** Nota sotto il portale accanto al tasto; senza, «Premi <etichetta> per scartare gli Agenti». */
+  continueNote = null,
   gameResult,
   onMenu,
   isCampaign = false,
@@ -668,7 +672,7 @@ export const BattlefieldPanel = ({
         key: 'recap', label: 'Riepilogo', variant: 'secondary', dL: 156, dR: 96,
         onClick: () => setRiepilogoOpen((o) => !o), expanded: riepilogoOpen, pressed: riepilogoOpen, keyHint: 'R',
       });
-      portalActions.push({ key: 'continue', label: 'Continua', variant: 'primary', dL: 84, dR: 24, onClick: onContinue, waiting: true, keyHint: '↵' });
+      portalActions.push({ key: 'continue', label: continueLabel, variant: 'primary', dL: 84, dR: 24, onClick: onContinue, waiting: true, keyHint: '↵' });
     }
     if (decision?.options?.length) {
       portalActions.length = 0;
@@ -718,7 +722,7 @@ export const BattlefieldPanel = ({
   // nota sotto il portale: cosa fare adesso
   const continueShown = portalActions.some((a) => a.key === 'continue');
   const portalNote = !portalFrame ? null
-    : decision?.note || (continueShown && !riepilogoOpen ? 'Premi Continua per scartare gli Agenti' : null);
+    : decision?.note || (continueShown && !riepilogoOpen ? (continueNote || `Premi ${continueLabel} per scartare gli Agenti`) : null);
   const aiLogAnchorRef = useRef(null);
   const [aiLogRect, setAiLogRect] = useState(null);
 
@@ -1247,7 +1251,7 @@ export const BattlefieldPanel = ({
                     <div className="w-full" style={riepilogoOpen ? { transform: 'translateY(132px)' } : undefined}>
                       {portalFrame ? (
                         <button type="button" onClick={onContinue} className="satze-bf-cta">
-                          <span className="satze-bf-cta-label">Continua</span>
+                          <span className="satze-bf-cta-label">{continueLabel}</span>
                           <svg className="satze-bf-cta-chev" viewBox="0 0 16 12" width="14" height="11" aria-hidden>
                             <path d="M2 2 L6 6 L2 10 M8 2 L12 6 L8 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" />
                           </svg>
@@ -1258,7 +1262,7 @@ export const BattlefieldPanel = ({
                         className="w-full py-2 px-4 bg-white/15 hover:bg-white/25 text-white text-xs font-medium rounded-lg
                                  border border-white/20 transition-all flex items-center justify-center gap-2"
                       >
-                        <Icon name="check" type="cardIcon" size={12} color="#fff" /> Continua
+                        <Icon name="check" type="cardIcon" size={12} color="#fff" /> {continueLabel}
                       </button>
                       )}
                     </div>
