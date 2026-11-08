@@ -1,6 +1,6 @@
 # Piano: 2v2 e Re della collina online (con IA nei posti vuoti)
 
-Stato: piano di lavoro (2026-11-08). Riferimenti `file:riga` al momento della stesura.
+Stato: **implementato** (2026-11-08). Codice: `src/game/multiSeat/onlineSession.js` (pacchetto, log, sequencer dell'host), `src/hooks/useMultiSeatDuel.js` (rami online), `src/components/multiplayer/OnlineRoomPanel.jsx` (stanza), `server/index.mjs` (stanze a posti). Differenze dal piano: le IA, compreso il compagno di un umano, le gioca il sequencer dell'host; online non ci sono i consigli al compagno; nessuna rivincita né ripresa dopo la chiusura del gioco. I riferimenti `file:riga` sotto sono quelli del momento della stesura.
 
 ## 0. Vincoli emersi dal codice
 - **Server = relay a 2 posti** (`server/index.mjs:21-31` host/guest; `:312` inoltra "all'altro"; `:338-384` disconnessioni). Il Dockerfile copia solo `server/index.mjs`: il server resta un file solo.

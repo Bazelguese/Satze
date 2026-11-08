@@ -56,9 +56,11 @@ Il test procede a **cicli** di una o due settimane:
   - **Duello**, nei formati Standard (con le Eminenze), No Eminenza e Mani nude
   - **2v2** ad abbinamenti segreti
   - **Re della collina** a 3-4 giocatori
-- **Multiplayer online** 1v1 (beta), sul server `wss://satze-ws.fly.dev`
+- **Multiplayer online** (beta), sul server `wss://satze-ws.fly.dev`: Duello in tutti i formati, 2v2 e Re della collina fino a 4 persone (i posti vuoti li gioca l'IA)
 - Gestione eserciti, Tutorial, Galleria
 - La **Campagna** resta visibile nel menu come anteprima, ma **non fa parte del test**.
 - Focus del test: le **Eminenze**, che ci sono solo nel Duello Standard.
 
 Prima di distribuire la build, controlla che il server del multiplayer sia acceso (`fly status`).
+
+Se è cambiato `server/index.mjs` (ad esempio le stanze fino a 4 posti), ripubblica il server dalla **cartella principale del repository**, quella che contiene `fly.toml`, con `fly deploy`. Le stanze 1 contro 1 restano compatibili con le build già distribuite.

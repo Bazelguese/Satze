@@ -615,14 +615,16 @@ Non disponibili in 2v2, Re della collina e Multiplayer online.`,
 **Partita locale** → armata → esercito → popup **Imposta la partita**. Il popup ricorda le ultime scelte. Da tastiera: ↑↓ cambia voce, ←→ cambia valore, Invio inizia, Esc chiude.
 
 ## Modalità
-- **Duello**: 1 contro 1 contro l'IA. È il gioco base descritto nei post 1-5.
-- **2v2**: ad abbinamenti segreti, tu e un compagno IA contro due IA (post 14).
+- **Duello**: 1 contro 1. È il gioco base descritto nei post 1-5.
+- **2v2**: ad abbinamenti segreti, due squadre da due (post 14).
 - **Re della collina**: tutti contro tutti, 3 o 4 giocatori (post 15).
 
+In locale gli altri posti sono IA. Online tutte e tre le modalità si giocano con altre persone (post 16).
+
 ## Formati
-- **Standard**: Eminenze e Campi attivi. Solo nel Duello.
+- **Standard**: Eminenze e Campi attivi. Solo nel Duello, anche online.
 - **No Eminenza**: Campi attivi, senza Eminenze.
-- **Mani nude**: niente Eminenze ed effetti dei Campi; si usano i 5 Campi neutri, tutti scoperti.
+- **Mani nude**: niente Eminenze ed effetti dei Campi; si usano i 5 Campi neutri, tutti scoperti. Nel 2v2, che ha 10 Campi, ogni Campo neutro compare due volte.
 
 ## Avversario (Duello)
 - **Casuale**: armata diversa dalla tua, esercito precostruito a caso.
@@ -641,7 +643,7 @@ L'IA del Duello non vede i FC che investi. Nel 2v2 e nel Re della collina le IA 
       titolo: '14 · 2v2 ad abbinamenti segreti',
       messaggi: [
         `# 2v2 ad abbinamenti segreti
-Tu e un compagno IA contro due IA. Formati disponibili: No Eminenza e Mani nude (vedi Limiti noti).
+In locale: tu e un compagno IA contro due IA. Online anche con altre persone (post 16). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **50 PV di squadra**, condivisi (massimo 50).
@@ -649,26 +651,23 @@ Tu e un compagno IA contro due IA. Formati disponibili: No Eminenza e Mani nude 
 - **10 Campi**: 6 scoperti all'inizio, 2 in più a ogni turno.
 
 ## Turno
-- **Chi apre**: al turno 1 la squadra con la somma delle Leghe più bassa nelle due mani (a parità, sorteggio). Poi si alterna.
+- **Chi apre**: al turno 1 la squadra con meno Lega totale nelle due mani (a parità, sorteggio). Poi si alterna.
 - **Apertura**: ognuno dei due sceglie Campo (diversi tra loro), Agente e FC. Agenti e Campi diventano pubblici, i FC no.
-- **Risposta**, il "segreto": la squadra che risponde vede gli Agenti avversari ma non i FC, e sceglie Agenti, FC e **disposizione**:
+- **Risposta**, il "segreto": chi risponde vede gli Agenti avversari ma non i FC, e sceglie Agenti, FC e **disposizione**:
   - **Diretta**: il primo contro il primo, il secondo contro il secondo.
   - **Incrociata**: il primo contro il secondo, il secondo contro il primo.
 - Poi si rivela tutto insieme.
 
 ## Risoluzione
 - Ogni fronte è un Duello 1v1 sul proprio Campo; l'Agente di chi apre ha l'iniziativa.
-- I due fronti leggono i PV di inizio turno; le variazioni si sommano alla fine.
+- I fronti leggono i PV di inizio turno; le variazioni si sommano alla fine.
 - Le Tossine colpiscono i PV di squadra con soglia raddoppiata.
 
 ## Il compagno IA
-- Propone carta, FC e Campo. Sul tavolo la sua scelta appare come **proposta**, con una frase che la spiega.
-- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li accetta secondo il suo carattere:
-  - **Stratega** 70%;
-  - **Assaltatore** 50%;
-  - **Custode** 80%;
-  - **Calcolatore** 60%.
+- Propone carta, FC e Campo: sul tavolo appare come **proposta**, con una frase che la spiega.
+- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li accetta secondo il suo carattere: **Stratega** 70%, **Assaltatore** 50%, **Custode** 80%, **Calcolatore** 60%.
 - In risposta la disposizione la decidi tu, nel pannello Fronti.
+- **Online** niente consigli. In due persone ognuno sceglie la sua carta; se aprite sullo stesso Campo, il secondo lo cambia. Disposizione e reclamo li decide il primo della squadra.
 
 ## Fine partita
 - **Turni 1-4**: vince la squadra con **5 Campi**. Ai turni 3-4 puoi reclamare o continuare; la squadra avversaria reclama sempre.
@@ -681,7 +680,7 @@ Tu e un compagno IA contro due IA. Formati disponibili: No Eminenza e Mani nude 
       titolo: '15 · Re della collina',
       messaggi: [
         `# Re della collina
-Tutti contro tutti, **3 o 4 giocatori** (tu più 2 o 3 IA). Formati: No Eminenza e Mani nude.
+Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; online gli altri posti possono essere persone (post 16). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **25 PV** e **18 FC** a testa.
@@ -707,22 +706,25 @@ Tutti contro tutti, **3 o 4 giocatori** (tu più 2 o 3 IA). Formati: No Eminenza
       titolo: '16 · Multiplayer online (beta)',
       messaggi: [
         `# Multiplayer online · beta
-- Solo **Duello 1 contro 1** tra due persone. Niente 2v2 o Re della collina.
-- **Campi attivi, senza Eminenze.** Il formato non si sceglie.
-- Sono ammessi anche gli eserciti personalizzati.
-- Serve la connessione a internet.
+Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
 
-## Come si gioca
+## Stanza
 1. **Multiplayer** → inserisci un nome (massimo 20 caratteri).
-2. **Crea stanza**: ricevi un codice di **6 caratteri** da mandare all'altro giocatore, ad esempio in <#cerco-partita>.
-3. Oppure **Entra con codice**. Errori possibili: "Stanza non trovata" e "Stanza già piena".
-4. Entrambi scelgono armata ed esercito e si dichiarano pronti.
-5. A fine partita: **rivincita** con lo stesso esercito, oppure cambio di esercito.
+2. **Crea stanza**: ricevi un codice di **6 caratteri** da mandare agli altri, ad esempio in <#cerco-partita>.
+3. Oppure **Entra con codice**. Errori possibili: "Stanza non trovata" e "Stanza già piena". Una stanza ospita fino a **4 persone**.
+4. Ognuno sceglie armata ed esercito. L'host sceglie modalità, formato e difficoltà dell'IA; gli altri le vedono.
+
+## Modalità
+- **Duello**: 2 persone. Formati Standard (con Eminenze 🧪), No Eminenza o Mani nude. La partita parte quando entrambi siete pronti. A fine partita: **rivincita** con lo stesso esercito, oppure cambio di esercito.
+- **2v2**: da 2 a 4 persone; i posti vuoti li gioca l'IA. Squadre in ordine di ingresso: host e terzo contro secondo e quarto.
+- **Re della collina**: da 2 a 4 persone, tavolo da 3 o 4; i posti vuoti li gioca l'IA.
+
+2v2 e Re della collina: No Eminenza o Mani nude. Quando tutti sono pronti l'host preme **Avvia partita**. A fine partita si torna al menu: per giocarne un'altra serve una nuova stanza.
 
 ## Disconnessioni
-- **Se cade la tua connessione**: c'è un tentativo automatico di riconnessione, poi il riquadro "Connessione persa" con **Riconnetti** o **Abbandona**.
-- **Se cade quella dell'avversario**: vedi "In attesa dell'avversario". Il server aspetta fino a **5 minuti**, poi chiude la stanza.
-- Dopo un crash, la lobby può proporre **"Partita in sospeso"**.`,
+- **Se cade la tua connessione**: c'è un tentativo automatico di riconnessione, poi il riquadro "Connessione persa" con **Riconnetti** o **Abbandona**. Al rientro la partita riprende da dove era.
+- **Se cade quella di un altro**: vedi "In attesa". Il server aspetta fino a **5 minuti**; se l'host non torna la stanza si chiude.
+- Nel Duello, dopo un crash, la lobby può proporre **"Partita in sospeso"**. Nel 2v2 e nel Re della collina no: se qualcuno chiude il gioco o esce dalla stanza, la partita non può continuare.`,
       ],
     },
 
@@ -768,15 +770,10 @@ Tutti contro tutti, **3 o 4 giocatori** (tu più 2 o 3 IA). Formati: No Eminenza
         `# Limiti noti · v${v}
 Già noti, non serve segnalarli di nuovo.
 
-- **2v2 in formato Mani nude non parte**: servono 10 Campi neutri e ce ne sono 5. Usa il formato No Eminenza.
 - **Eminenze** 🧪: in test e non bilanciate. Alcuni testi possono non corrispondere esattamente all'effetto. In questo caso segnalalo, citando l'Eminenza e cosa è successo.
-- **Multiplayer**: senza Eminenze e senza 2v2 o Re della collina.
+- **Multiplayer**: 2v2 e Re della collina online sono senza Eminenze e senza rivincita; se qualcuno lascia la partita, non si può continuare.
 - **Eserciti personalizzati**: dall'interfaccia non si possono eliminare.
-- **Glossario e Tutorial in gioco**:
-  - alcune voci non sono aggiornate, ad esempio sulla Tossina e sul limite di Lega;
-  - il Tutorial breve usa carte d'esempio che non esistono nel gioco.
-
-  Vale questa guida.
+- **Tutorial breve**: usa carte d'esempio che non esistono nel gioco. Se qualcosa nel gioco non torna con questa guida, segnalalo: vale la guida.
 - **Testi provvisori** 📝: i testi descrittivi delle carte (flavour text) e le informazioni nelle schermate delle armate sono segnaposto. Alcune descrizioni lì non sono corrette: ad esempio Rimonta e Resa dei conti (quelle giuste sono nel post 6) e "nessun bonus armata" per gli eserciti personalizzati, che invece il Bonus ce l'hanno.
 - **Campagna** 🚧 e **stili Eldritch / Arcana** ✏️: in bozza, fuori dal test.
 - Non serve segnalare refusi o incongruenze nei testi provvisori.`,
