@@ -11,6 +11,7 @@
  *   npx vite-node scripts/ai-train-policy.mjs collect --games 60 --seed-base 5000 --out <dir>
  *   npx vite-node scripts/ai-train-policy.mjs train --in <dir> [--tau 0.05] [--epochs 40]
  *   opzioni di collect: --policy learned (usa i pesi attuali nelle simulazioni: secondo giro)
+ *   opzioni di train: --weights-json <file> (scrive i pesi lì invece di installarli)
  */
 
 import fs from 'node:fs';
@@ -44,6 +45,7 @@ function parseArgs(argv) {
     else if (k === '--mode') args.mode = v();
     else if (k === '--policy') args.policy = v();
     else if (k === '--rollouts') args.rollouts = Number(v());
+    else if (k === '--weights-json') args.weightsJson = v();
     else throw new Error(`Argomento sconosciuto: ${k}`);
   }
   return args;
@@ -218,6 +220,15 @@ export const LEARNED_POLICY = ${JSON.stringify(
     2
   )};
 `;
+  if (args.weightsJson) {
+    // Solo per confronti al banco di prova (agente "mc-hard@weightsFile=<percorso>").
+    fs.writeFileSync(
+      args.weightsJson,
+      JSON.stringify({ features: MC_FEATURE_NAMES, tau: args.tau, decisions: decisions.length, weights: w })
+    );
+    console.log(`Scritto ${args.weightsJson} (pesi non installati)`);
+    return;
+  }
   fs.writeFileSync(WEIGHTS_FILE, body);
   console.log('Pesi:', Object.fromEntries(MC_FEATURE_NAMES.map((n, i) => [n, +w[i].toFixed(3)])));
   console.log(`Scritto ${path.relative(ROOT, WEIGHTS_FILE)}`);

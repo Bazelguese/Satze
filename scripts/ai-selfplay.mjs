@@ -152,7 +152,8 @@ function timingFor(records, agent) {
 // ------------------------------------------------------------------
 
 function fileNameFor(mode, pairing) {
-  return `${mode}__${pairing.replace(':', '-vs-')}.json`;
+  // Le varianti possono contenere percorsi (weightsFile): solo caratteri sicuri nel nome.
+  return `${mode}__${pairing.replace(':', '-vs-')}`.replace(/[^\w@=;.,-]+/g, '_') + '.json';
 }
 
 function runAll(args) {

@@ -15,6 +15,8 @@ import { mulberry32 } from '../../utils/seededRandom.js';
 import { availableCards, legalFieldIndexes, legalFocusRange } from './headlessMatch.js';
 import { chooseMonteCarloAction } from '../ai/mc/mcSearch.js';
 import { getMcProfile } from '../ai/mc/mcProfiles.js';
+import { getLearnedWeights } from '../ai/mc/learnedPolicy.js';
+import fs from 'node:fs';
 
 function pick(list, rng) {
   return list[Math.floor(rng() * list.length)];
@@ -117,6 +119,13 @@ export function createGreedyAgent({ label = 'avido' } = {}) {
 export function createMonteCarloEngineAgent(difficulty, { seed = 1, label, overrides = null } = {}) {
   const rng = mulberry32(seed >>> 0);
   const params = { ...getMcProfile(difficulty), ...(overrides || {}) };
+  if (params.weightsFile) {
+    // Esperimenti: pesi alternativi da file JSON (scripts/ai-train-policy.mjs --weights-json).
+    const weights = getLearnedWeights(JSON.parse(fs.readFileSync(params.weightsFile, 'utf8')));
+    if (!weights) throw new Error(`Pesi non validi: ${params.weightsFile}`);
+    params.policy = 'learned';
+    params.learnedWeights = weights;
+  }
   const decide = (view) => {
     const decision = chooseMonteCarloAction(view, params, rng);
     return decision
