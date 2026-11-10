@@ -118,7 +118,7 @@ export function DifficultySelectPopup({
   const canConfirm = isMultiSeat || enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
   const rowsFor = (pick, mode = live.current.matchMode) => {
     if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty', 'personality'];
-    if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty'];
+    if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty', 'personality'];
     return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty', 'personality'];
   };
   const setMatchModeId = (id) => {
@@ -183,8 +183,7 @@ export function DifficultySelectPopup({
       matchMode: matchModeId,
       teammatePreset,
       players: playerCount,
-      // Duello e 2v2; il Re della collina usa ancora i profili precedenti.
-      personality: matchModeId === 'kingOfHill' ? 'neutral' : personalityId,
+      personality: personalityId,
     }), 280);
   };
 
@@ -248,14 +247,14 @@ export function DifficultySelectPopup({
     enemy: enemyPick === ENEMY_PICK.random ? 'Armata ed esercito dell’IA scelti a caso.' : 'Scegli tu l’armata avversaria.',
     army: chosenEnemyArmy ? `Affronterai ${chosenEnemyArmy}.` : 'Scegli l’armata che affronterai.',
     difficulty: difficulty?.longDescription,
-    personality: matchModeId === 'teamDuel' && personalityId === 'random'
+    personality: isMultiSeat && personalityId === 'random'
       ? 'Casuale: ogni avversario estrae il suo tratto, svelato nella schermata VS.'
-      : `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}${matchModeId === 'teamDuel' ? ' (entrambi gli avversari)' : ''}`,
+      : `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}${isMultiSeat ? ' (tutti gli avversari)' : ''}`,
   }[focusKey];
   const helpLabel = {
     mode: 'MODALITÀ', teammate: 'COMPAGNO', players: 'GIOCATORI',
     format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ',
-    personality: matchModeId === 'teamDuel' ? 'AVVERSARI' : 'PERSONALITÀ',
+    personality: isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ',
   }[focusKey];
   const rowNumber = (key) => String(rows.indexOf(key) + 1).padStart(2, '0');
 
@@ -433,9 +432,8 @@ export function DifficultySelectPopup({
               </div>
             </section>
 
-            {matchModeId !== 'kingOfHill' && (
               <section {...focusProps('personality')}>
-                <h3><span className="n">{rowNumber('personality')}</span>{matchModeId === 'teamDuel' ? 'AVVERSARI' : 'PERSONALITÀ'}</h3>
+                <h3><span className="n">{rowNumber('personality')}</span>{isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ'}</h3>
                 <div className="mst-chips mst-stepper">
                   <button
                     type="button"
@@ -451,7 +449,7 @@ export function DifficultySelectPopup({
                       {personalityId === 'neutral'
                         ? 'Predefinita'
                         : personalityId === 'random'
-                          ? (matchModeId === 'teamDuel' ? 'Un tratto a testa' : 'Tratto a sorpresa')
+                          ? (isMultiSeat ? 'Un tratto a testa' : 'Tratto a sorpresa')
                           : 'Tratto IA'}
                       {` · ${PERSONALITY_IDS.indexOf(personalityId) + 1}/${PERSONALITY_IDS.length}`}
                     </span>
@@ -466,7 +464,6 @@ export function DifficultySelectPopup({
                   </button>
                 </div>
               </section>
-            )}
           </div>
 
           <footer className="mst-foot">

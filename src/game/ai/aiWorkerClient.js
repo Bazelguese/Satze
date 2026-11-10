@@ -130,7 +130,9 @@ export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed, 
 }
 
 /**
- * Decisione di squadra del 2v2 (motore a simulazione) nel worker.
+ * Decisione delle modalità a più posti (motore a simulazione) nel worker:
+ * 'team-opening' | 'team-response' (2v2) e 'koth-commit' (Re della collina).
+ * Per il 2v2 la si chiama anche "decisione di squadra".
  * Timeout o errore → reject: il chiamante ricade sull'IA precedente.
  *
  * @param {'team-opening'|'team-response'} kind
@@ -138,7 +140,7 @@ export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed, 
  *   fixedPairing?: string|null, traits?: Record<string, string>, difficulty: string,
  *   maxMs: number, seed?: number }} payload
  */
-export function runTeamMcInWorker(kind, payload) {
+export function runMultiSeatMcInWorker(kind, payload) {
   const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(payload.maxMs) || 0) + 4000);
   return new Promise((resolve, reject) => {
     let w;
@@ -164,6 +166,9 @@ export function runTeamMcInWorker(kind, payload) {
     }
   });
 }
+
+/** Nome storico usato dal 2v2. */
+export const runTeamMcInWorker = runMultiSeatMcInWorker;
 
 export function isAiWorkerSupported() {
   return typeof Worker !== 'undefined';

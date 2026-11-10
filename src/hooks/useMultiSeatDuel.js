@@ -17,7 +17,7 @@ import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import { selectBattlefields } from '../game/fieldLogic.js';
 import { battleOutcomeKey } from '../game/duel/duelHelpers.js';
 import { createRng, createSeat, legalFocusRange } from '../game/multiSeat/multiSeatCore.js';
-import { getSeatAIProfile, investmentForLevel, npcSeatNames, profileForDifficulty } from '../game/multiSeat/seatAI.js';
+import { getSeatAIProfile, investmentForLevel, profileForDifficulty } from '../game/multiSeat/seatAI.js';
 import { pickAiArmyDeck } from '../game/multiSeat/seatSetup.js';
 import { kothScontri, scontroTransition, teamScontri, waitingAgents } from '../game/multiSeat/scontroQueue.js';
 import {
@@ -56,8 +56,9 @@ import {
   submitCommit,
 } from '../game/kingOfHill/kingOfHill.js';
 import { aiCommit } from '../game/kingOfHill/kingOfHillAI.js';
-import { isAiWorkerSupported, runTeamMcInWorker } from '../game/ai/aiWorkerClient.js';
+import { isAiWorkerSupported, runMultiSeatMcInWorker, runTeamMcInWorker } from '../game/ai/aiWorkerClient.js';
 import { getTeamMcProfile } from '../game/ai/mcTeam/teamProfiles.js';
+import { getKothMcProfile } from '../game/ai/mcKoth/kothProfiles.js';
 import {
   legacyProfileForTrait,
   npcTraitNames,
@@ -436,6 +437,24 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       maxMs: getTeamMcProfile(difficulty).maxMs,
       seed: Math.floor((rngRef.current || Math.random)() * 2 ** 32),
       ...extra,
+    }).catch(() => null);
+  }, []);
+
+  /**
+   * Posa di un posto IA del Re della collina con l'IA nuova (worker). Null se non disponibile:
+   * il chiamante usa l'IA precedente.
+   */
+  const decideKothMc = useCallback((s, match, seatId) => {
+    if (s.online || !isAiWorkerSupported()) return Promise.resolve(null);
+    const difficulty = s.options?.difficulty || 'medium';
+    const seat = match.seats.find((x) => x.id === seatId);
+    return runMultiSeatMcInWorker('koth-commit', {
+      match,
+      seatId,
+      difficulty,
+      trait: seat?.aiTrait || 'neutral',
+      maxMs: getKothMcProfile(difficulty).maxMs,
+      seed: Math.floor((rngRef.current || Math.random)() * 2 ** 32),
     }).catch(() => null);
   }, []);
 
@@ -825,17 +844,25 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       return;
     }
     commit({ ...s, match, stage: MULTI_SEAT_STAGES.AI_TURN });
-    think([committer], 'commit', (cur) => {
+    think([committer], 'commit', (cur, mc) => {
       if (!cur || cur.stage === MULTI_SEAT_STAGES.OVER) return;
-      const choice = aiCommit(cur.match, committer, rng);
-      const m2 = submitCommit(cur.match, committer, choice);
+      let choice;
+      let m2;
+      try {
+        if (!mc?.choice) throw new Error('IA nuova non disponibile');
+        choice = mc.choice;
+        m2 = submitCommit(cur.match, committer, choice);
+      } catch {
+        choice = aiCommit(cur.match, committer, rng);
+        m2 = submitCommit(cur.match, committer, choice);
+      }
       const seat = getKothSeat(m2, committer);
       const card = seat.hand.find((c) => c.id === choice.cardId);
       const fieldName = m2.battlefields[m2.contestFieldIndex]?.name;
       log(`[C${m2.roundNumber}] ${seat.name} posa ${card?.name}${choice.fieldIndex != null ? ` su ${fieldName}` : ''}.`);
       kothRunCommitsRef.current({ ...cur, match: m2 });
-    });
-  }, [commit, kothPresentFight, log, project, sceneRef, think]);
+    }, decideKothMc(s, match, committer));
+  }, [commit, decideKothMc, kothPresentFight, log, project, sceneRef, think]);
   const kothRunCommitsRef = useRef(kothRunCommits);
   kothRunCommitsRef.current = kothRunCommits;
 
@@ -1214,13 +1241,18 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       return;
     }
     const players = s.options.players === 4 ? 4 : 3;
+    // Personalità degli avversari (IA nuova): decise all'avvio, una per posto IA.
+    const kothTraits = s.traits?.opponents ?? opponentTraits(s.options.personality, players - 1, rng);
     const seats = [
       createSeat({ id: 'P1', name: 'Tu', isHuman: true, army: humanArmy, hand: humanHand, focus: KOTH_CONFIG.startFocus }),
-      createSeat({ id: 'P2', name: firstEnemyName, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }),
+      { ...createSeat({ id: 'P2', name: firstEnemyName, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }), aiTrait: kothTraits[0] },
     ];
     for (let i = 3; i <= players; i += 1) {
       const pick = extra();
-      seats.push(createSeat({ id: `P${i}`, name: npcName(pick.army), army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }));
+      seats.push({
+        ...createSeat({ id: `P${i}`, name: npcName(pick.army), army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }),
+        aiTrait: kothTraits[i - 2],
+      });
     }
     const battlefields = selectBattlefields(s.options.fieldMode, ALL_BATTLEFIELDS, { rng });
     const match = createKothMatch({ seats, battlefields, rng, seed, mode: s.options.fieldMode, perspectiveSeatId: HUMAN_KOTH_SEAT });
@@ -1295,16 +1327,16 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     // Nomi PNG decisi subito: servono già alla schermata VS. Ordine: [compagno,] primo avversario, altri.
     const enemyProfile = profileForDifficulty(options.difficulty);
     const isTeam = options.kind === MULTI_SEAT_KINDS.TEAM;
-    // 2v2: personalità decise subito (servono ai nomi della schermata VS).
+    // Personalità decise subito (servono ai nomi della schermata VS).
     const traits = isTeam
       ? {
         mate: teammateTraitFromChoice(options.teammatePreset),
         opponents: opponentTraits(options.personality, 2, rng),
       }
-      : null;
+      : { mate: null, opponents: opponentTraits(options.personality, 1 + extraCount, rng) };
     const names = isTeam
       ? npcTraitNames([traits.mate, ...traits.opponents])
-      : npcSeatNames(Array.from({ length: 1 + extraCount }, () => enemyProfile));
+      : npcTraitNames(traits.opponents);
     const npcNames = isTeam
       ? { mate: names[0], firstEnemy: names[1], extras: [names[0], names[2]] }
       : { mate: null, firstEnemy: names[0], extras: names.slice(1) };
