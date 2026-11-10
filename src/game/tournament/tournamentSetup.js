@@ -134,7 +134,7 @@ export async function playAiSeries(tournament, matchId, { rng = Math.random, onG
  * Conclude il turno: gioca, una dopo l'altra, le serie tra IA pronte del turno più arretrato.
  * Le serie del turno successivo che così diventano note restano da giocare.
  */
-export async function playPendingAiSeries(tournament, { rng = Math.random, onProgress = null } = {}) {
+export async function playPendingAiSeries(tournament, { rng = Math.random, onProgress = null, onSeriesDone = null } = {}) {
   const pending = getPendingAiMatches(tournament);
   if (pending.length === 0) return tournament;
   const round = Math.min(...pending.map((m) => m.round));
@@ -146,6 +146,8 @@ export async function playPendingAiSeries(tournament, { rng = Math.random, onPro
       rng,
       onGame: (gameNumber) => onProgress?.({ match, gameNumber, done: i, remaining: matches.length - i }),
     });
+    // chi guarda il tabellone vede arrivare i risultati una serie alla volta
+    await onSeriesDone?.(current);
   }
   return current;
 }

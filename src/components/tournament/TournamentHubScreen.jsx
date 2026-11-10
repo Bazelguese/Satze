@@ -11,9 +11,17 @@
 // il proprio, guardare una serie tra IA sul tavolo, leggerne il riepilogo
 // a turni, oppure concludere il turno senza guardare.
 // Tastiera: Invio azione principale, Esc indietro.
+//
+// Movimento (solo trasformazioni e opacità, niente filtri animati):
+//  - ingresso a cascata di testata, colonne, incontri e barra;
+//  - linee del tabellone che si disegnano e prendono il colore di chi passa;
+//  - risultati nuovi che "timbrano" la riga del vincitore e fanno arrivare
+//    l'esercito nel turno dopo, anche tornando da una partita;
+//  - la serie che le IA stanno giocando è percorsa da una scansione.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLeaveThen } from '../../hooks/usePresence';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
 import { playUiClick } from '../../audio/soundBus';
 import { getDeckVisualMeta } from '../../utils/deckManager';
@@ -36,6 +44,77 @@ const HAND_RULE_TEXT = {
 const HAND_RULE_SHORT = ['5 carte a caso', 'Le 5 carte rimaste', 'Spareggio rimischiato'];
 const REASON_TEXT = { fields: 'per Conquista', hp: 'per Punti Vita', draw: '' };
 
+/**
+ * Ultimo stato del tabellone mostrato in questa sessione, per riconoscere i risultati
+ * nuovi anche quando la schermata viene rimontata (ritorno da una partita).
+ */
+const seenBoard = { key: null, matches: new Map() };
+
+function boardKey(tournament) {
+  return tournament.rounds[0].map((m) => `${m.a}-${m.b}`).join('|');
+}
+
+/**
+ * Novità rispetto all'ultima volta: incontri appena decisi e posti appena assegnati.
+ * Restano marcati finché la schermata è montata, così l'animazione non viene troncata.
+ */
+function useBoardNews(tournament) {
+  const newsRef = useRef({ decided: new Map(), arrived: new Map() });
+  const key = boardKey(tournament);
+  if (seenBoard.key !== key) {
+    seenBoard.key = key;
+    seenBoard.matches = new Map();
+    newsRef.current = { decided: new Map(), arrived: new Map() };
+  } else {
+    const news = newsRef.current;
+    for (const m of tournament.rounds.flat()) {
+      const prev = seenBoard.matches.get(m.id);
+      if (!prev) continue;
+      if (m.winnerId && !prev.winnerId && !news.decided.has(m.id)) news.decided.set(m.id, news.decided.size);
+      for (const side of ['a', 'b']) {
+        const slot = `${m.id}:${side}`;
+        if (m[side] && !prev[side] && !news.arrived.has(slot)) news.arrived.set(slot, news.arrived.size);
+      }
+    }
+  }
+  useEffect(() => {
+    for (const m of tournament.rounds.flat()) {
+      seenBoard.matches.set(m.id, { winnerId: m.winnerId, a: m.a, b: m.b });
+    }
+  }, [tournament]);
+  return newsRef.current;
+}
+
+/** Linee tra un turno e il successivo, misurate sulla disposizione reale degli incontri. */
+function useConnectors(bracketRef, tournament) {
+  const [lines, setLines] = useState([]);
+  useLayoutEffect(() => {
+    const root = bracketRef.current;
+    if (!root) return;
+    const box = (id) => {
+      const el = root.querySelector(`[data-mid="${id}"]`);
+      return el ? { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight } : null;
+    };
+    const next = [];
+    tournament.rounds.slice(0, -1).forEach((round, r) => {
+      round.forEach((m, i) => {
+        const from = box(m.id);
+        const to = box(tournament.rounds[r + 1][Math.floor(i / 2)].id);
+        if (!from || !to) return;
+        const x1 = from.x + from.w - 4;
+        const y1 = from.y + from.h / 2;
+        const x2 = to.x + 8;
+        const y2 = to.y + to.h * (i % 2 === 0 ? 0.3 : 0.7);
+        const xm = (x1 + x2) / 2;
+        // gomito inclinato, come le lastre
+        next.push({ id: m.id, round: r, winnerId: m.winnerId, d: `M${x1} ${y1} L${xm + 5} ${y1} L${xm - 5} ${y2} L${x2} ${y2}` });
+      });
+    });
+    setLines(next);
+  }, [bracketRef, tournament]);
+  return lines;
+}
+
 /** Colore e armate di ogni esercito iscritto, calcolati sulle sue 10 carte. */
 function useParticipantVisuals(tournament) {
   return useMemo(() => {
@@ -49,12 +128,12 @@ function useParticipantVisuals(tournament) {
   }, [tournament.participants]);
 }
 
-function Side({ participant, visual, wins, state, showScore }) {
+function Side({ participant, visual, wins, state, showScore, fresh = null, order = 0 }) {
   const armies = visual?.armies || [];
   return (
     <div
-      className={`trn-side is-${state}${participant ? '' : ' is-empty'}`}
-      style={{ '--c': visual?.accent || 'rgba(245,243,235,0.18)' }}
+      className={`trn-side is-${state}${participant ? '' : ' is-empty'}${fresh ? ` is-fresh-${fresh}` : ''}`}
+      style={{ '--c': visual?.accent || 'rgba(245,243,235,0.18)', '--d': `${order * 140}ms` }}
       title={participant ? `${participant.deckName} — ${armies.join(' · ') || participant.army}` : undefined}
     >
       <span className="ic">
@@ -67,33 +146,44 @@ function Side({ participant, visual, wins, state, showScore }) {
   );
 }
 
-function Match({ match, participants, visuals, current, selected, selectable, watchable, onSelect }) {
+function Match({ match, participants, visuals, current, selected, selectable, watchable, playing, champion, index, news, onSelect }) {
   const a = match.a ? participants[match.a] : null;
   const b = match.b ? participants[match.b] : null;
   const done = Boolean(match.winnerId);
   const started = match.series.games.some((g) => g.winner);
   const stateOf = (id) => (!done || !id ? 'open' : match.winnerId === id ? 'won' : 'lost');
   const showScore = !match.bye && (done || started);
-  const cls = `trn-match${current ? ' is-current' : ''}${selected ? ' is-selected' : ''}${match.bye ? ' is-bye' : ''}${selectable ? ' is-selectable' : ''}`;
+  const cls = `trn-match${current ? ' is-current' : ''}${selected ? ' is-selected' : ''}${match.bye ? ' is-bye' : ''}${selectable ? ' is-selectable' : ''}${playing ? ' is-playing' : ''}${champion ? ' is-champion' : ''}`;
+  const decidedOrder = news.decided.get(match.id);
+  const freshOf = (side) => {
+    if (decidedOrder != null && !match.bye) return match.winnerId === match[side] ? 'win' : 'lose';
+    return news.arrived.has(`${match.id}:${side}`) ? 'arrive' : null;
+  };
+  const orderOf = (side) => decidedOrder ?? news.arrived.get(`${match.id}:${side}`) ?? 0;
+  const style = { '--i': index };
   const body = (
     <>
-      <Side participant={a} visual={visuals[match.a]} wins={match.series.winsA} state={match.bye ? 'open' : stateOf(match.a)} showScore={showScore} />
+      <Side participant={a} visual={visuals[match.a]} wins={match.series.winsA} state={match.bye ? 'open' : stateOf(match.a)} showScore={showScore} fresh={freshOf('a')} order={orderOf('a')} />
       {match.bye
         ? <div className="trn-bye">PASSA IL TURNO</div>
-        : <Side participant={b} visual={visuals[match.b]} wins={match.series.winsB} state={stateOf(match.b)} showScore={showScore} />}
-      {watchable ? <span className="trn-tag">DA GIOCARE</span> : null}
+        : <Side participant={b} visual={visuals[match.b]} wins={match.series.winsB} state={stateOf(match.b)} showScore={showScore} fresh={freshOf('b')} order={orderOf('b')} />}
+      {watchable && !playing ? <span className="trn-tag">DA GIOCARE</span> : null}
+      {playing ? <span className="trn-tag is-live">IN CORSO</span> : null}
     </>
   );
-  if (!selectable) return <div className={cls}>{body}</div>;
+  if (!selectable) return <div className={cls} data-mid={match.id} style={style}>{body}</div>;
   return (
-    <button type="button" className={cls} aria-pressed={selected} onClick={() => { playUiClick(); onSelect(match.id); }}>
+    <button type="button" className={cls} data-mid={match.id} style={style} aria-pressed={selected} onClick={() => { playUiClick(); onSelect(match.id); }}>
       {body}
     </button>
   );
 }
 
 /** Riepilogo a turni di una serie tra IA già giocata. */
-function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch, onClose }) {
+function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch, onClose, closeRef }) {
+  const [closing, requestClose] = useLeaveThen(onClose, 240);
+  // Esc sul tabellone chiude il riepilogo con la stessa uscita del tasto
+  if (closeRef) closeRef.current = requestClose;
   const a = tournament.participants[match.a];
   const b = tournament.participants[match.b];
   const games = match.series.games;
@@ -101,7 +191,7 @@ function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch,
   const cardName = (side, id) => visuals[match[side]]?.cards[id]?.name || `#${id}`;
   const winnerName = game.winner === 'a' ? a.deckName : game.winner === 'b' ? b.deckName : null;
   return (
-    <div className="trn-sum" onClick={onClose}>
+    <div className={`trn-sum${closing ? ' is-leaving' : ''}`} onClick={requestClose}>
       <div className="trn-sum-card" role="dialog" aria-modal="true" aria-label="Riepilogo della serie" onClick={(e) => e.stopPropagation()}>
         <div className="trn-sum-sheet">
           <header className="trn-sum-head">
@@ -111,7 +201,7 @@ function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch,
               <span className="score">{match.series.winsA}–{match.series.winsB}</span>
               <span style={{ color: visuals[match.b].accent }}>{b.deckName}</span>
             </h2>
-            <button type="button" className="trn-sum-x" onClick={onClose} aria-label="Chiudi riepilogo">
+            <button type="button" className="trn-sum-x" onClick={requestClose} aria-label="Chiudi riepilogo">
               <kbd>ESC</kbd><span>INDIETRO</span>
             </button>
           </header>
@@ -132,14 +222,14 @@ function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch,
           </div>
 
           {hasGameLog(game) ? (
-            <div className="trn-sum-rows">
+            <div className="trn-sum-rows" key={gameIndex}>
               <div className="trn-sum-row is-head">
                 <span>TURNO</span><span>CAMPO</span><span>{a.deckName}</span><span>{b.deckName}</span><span>PV</span><span>CAMPI</span>
               </div>
-              {game.rounds.map((r) => {
+              {game.rounds.map((r, ri) => {
                 const field = getTournamentField(game.fields[r.fieldIndex]);
                 return (
-                  <div key={r.round} className="trn-sum-row">
+                  <div key={r.round} className="trn-sum-row" style={{ '--i': ri }}>
                     <span className="n">{String(r.round).padStart(2, '0')}</span>
                     <span className="fld">{field?.name || '—'}{r.conquered ? '' : ' · non conquistato'}</span>
                     {['a', 'b'].map((side) => (
@@ -179,6 +269,9 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
   const status = getTournamentStatus(tournament);
   const info = describeHumanMatch(tournament);
   const visuals = useParticipantVisuals(tournament);
+  const news = useBoardNews(tournament);
+  const bracketRef = useRef(null);
+  const lines = useConnectors(bracketRef, tournament);
   const human = tournament.participants[tournament.humanId];
   const champion = tournament.championId ? tournament.participants[tournament.championId] : null;
   const accent = visuals[human.id]?.accent || DEFAULT_ACCENT;
@@ -245,14 +338,23 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
   }
 
   const locked = Boolean(busy);
+  if (busy) {
+    // mentre le IA giocano la barra racconta la serie in corso; il tabellone resta in vista
+    const live = allMatches.find((m) => m.id === busy.matchId);
+    label = `LE IA GIOCANO${busy.total ? ` · SERIE ${busy.step}/${busy.total}` : ''}`;
+    headline = live ? `${nameOf(live.a)} – ${nameOf(live.b)}` : 'Serie in corso';
+    hint = busy.label;
+  }
+  const championFresh = Boolean(champion) && news.decided.has(tournament.rounds[tournament.rounds.length - 1][0].id);
   const go = () => { if (locked) return; playUiClick(); primary.run?.(); };
   const back = () => {
     if (locked) return;
     playUiClick();
-    if (summary) setSummary(null);
+    if (summary) summaryCloseRef.current?.();
     else onMenu?.();
   };
 
+  const summaryCloseRef = useRef(null);
   const keysRef = useRef({});
   keysRef.current = { go, back, summaryOpen: Boolean(summary) };
   useEffect(() => {
@@ -293,15 +395,30 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
         </div>
       </header>
 
-      <main className="trn-bracket">
+      <main className="trn-bracket" ref={bracketRef}>
+        <svg className="trn-lines" aria-hidden="true">
+          {lines.map((l) => (
+            <path
+              key={`${l.id}-${l.winnerId || 'open'}`}
+              d={l.d}
+              pathLength="1"
+              className={l.winnerId ? 'is-done' : ''}
+              style={{ '--c': l.winnerId ? visuals[l.winnerId]?.accent : undefined, '--r': l.round, '--d': `${(news.decided.get(l.id) ?? 0) * 140}ms` }}
+            />
+          ))}
+        </svg>
         {tournament.rounds.map((round, r) => (
-          <section key={ROUND_NAMES[r]} className={`trn-col${info?.match.round === r ? ' is-live' : ''}`}>
+          <section key={ROUND_NAMES[r]} className={`trn-col${info?.match.round === r ? ' is-live' : ''}`} style={{ '--r': r }}>
             <h2><span className="n">{String(r + 1).padStart(2, '0')}</span>{ROUND_NAMES[r].toUpperCase()}</h2>
             <div className="trn-col-body">
-              {round.map((match) => (
+              {round.map((match, mi) => (
                 <Match
                   key={match.id}
                   match={match}
+                  index={mi}
+                  news={news}
+                  playing={busy?.matchId === match.id}
+                  champion={Boolean(champion) && r === tournament.rounds.length - 1}
                   participants={tournament.participants}
                   visuals={visuals}
                   current={info?.match.id === match.id}
@@ -319,10 +436,11 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
       <footer className="trn-foot">
         <div className="trn-next">
           <span className="lbl">{label}</span>
-          <div className="txt">
+          <div className="txt" key={`${label}|${headline}`}>
             <span className="head">{headline}</span>
             <span className="hint">{hint}</span>
           </div>
+          {busy ? <span className="bar" aria-hidden="true"><i /></span> : null}
         </div>
         {secondary.map((s) => (
           <button key={s.label} type="button" className="trn-ghost-btn" onClick={() => { if (!locked) { playUiClick(); s.run?.(); } }}>
@@ -341,18 +459,16 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
           visuals={visuals}
           gameIndex={Math.min(summary.gameIndex, summaryMatch.series.games.length - 1)}
           onGame={(i) => setSummary({ matchId: summaryMatch.id, gameIndex: i })}
+          closeRef={summaryCloseRef}
           onWatch={(id, i) => { setSummary(null); onWatch?.(id, i); }}
-          onClose={() => { playUiClick(); setSummary(null); }}
+          onClose={() => setSummary(null)}
         />
       ) : null}
 
-      {busy ? (
-        <div className="trn-busy" role="status" aria-live="polite">
-          <div className="trn-busy-plate">
-            <span className="eye">LE IA STANNO GIOCANDO{busy.total ? ` · SERIE ${busy.step}/${busy.total}` : ''}</span>
-            <span className="what">{busy.label}</span>
-            <span className="bar"><i /></span>
-          </div>
+      {championFresh ? (
+        <div className="trn-crown" aria-hidden="true">
+          {Array.from({ length: 14 }, (_, i) => <i key={i} style={{ '--i': i }} />)}
+          <span style={{ '--c': visuals[champion.id]?.accent }}>CAMPIONE</span>
         </div>
       ) : null}
       <TournamentStyles />
@@ -373,6 +489,14 @@ function TournamentStyles() {
       }
       @keyframes trn-fade { from { opacity: 0; } }
       .trn * { box-sizing: border-box; }
+      /* Ingresso a cascata: testata, colonne, incontri, barra */
+      @keyframes trn-drop { from { opacity: 0; transform: translateY(-34px) rotate(-2deg); } }
+      @keyframes trn-rise { from { opacity: 0; transform: translateY(46px); } }
+      @keyframes trn-slide { from { opacity: 0; transform: translateX(-34px); } }
+      .trn-top { animation: trn-drop .45s cubic-bezier(.2,1.1,.4,1) both; }
+      .trn-foot { animation: trn-rise .45s cubic-bezier(.2,1.1,.4,1) .28s both; }
+      .trn-col h2 { animation: trn-slide .4s cubic-bezier(.2,.9,.3,1) calc(var(--r) * 90ms + 80ms) both; }
+      .trn-match { animation: trn-slide .42s cubic-bezier(.2,.9,.3,1) calc(var(--r) * 90ms + var(--i) * 34ms + 140ms) both; }
       .trn kbd {
         display: inline-grid; place-items: center; min-width: 30px; height: 28px; padding: 0 6px;
         background: var(--void); color: var(--ink); border: 0;
@@ -386,7 +510,9 @@ function TournamentStyles() {
           radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 1.4px, transparent 1.8px) 0 0 / 11px 11px,
           radial-gradient(ellipse 70% 60% at 60% 45%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
       }
+      @keyframes trn-drift { from { transform: translate(-52%, -50%) rotate(-8deg) skewX(-10deg); } to { transform: translate(-48%, -51%) rotate(-7deg) skewX(-10deg); } }
       .trn-ghost {
+        will-change: transform; animation: trn-drift 26s ease-in-out infinite alternate;
         position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%) rotate(-8deg) skewX(-10deg);
         font-weight: 700; font-style: italic; font-size: 430px; line-height: 0.8; letter-spacing: -0.02em; white-space: nowrap;
         color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 26%, transparent);
@@ -432,7 +558,15 @@ function TournamentStyles() {
       .trn-who .deck { font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; }
 
       /* Tabellone */
-      .trn-bracket { display: grid; grid-template-columns: repeat(4, 410px); justify-content: center; gap: 34px; padding: 18px 48px 22px; min-height: 0; }
+      /* Linee del tabellone: si disegnano, e a serie decisa prendono il colore di chi passa */
+      .trn-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+      .trn-lines path {
+        fill: none; stroke: rgba(245,243,235,0.2); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 0;
+        animation: trn-draw .5s ease-out calc(var(--r) * 90ms + 420ms) both;
+      }
+      .trn-lines path.is-done { stroke: var(--c); stroke-width: 3; animation: trn-draw .45s ease-out calc(var(--d) + 380ms) both; }
+      @keyframes trn-draw { from { stroke-dashoffset: 1; } }
+      .trn-bracket { position: relative; display: grid; grid-template-columns: repeat(4, 410px); justify-content: center; gap: 34px; padding: 18px 48px 22px; min-height: 0; }
       .trn-col { display: flex; flex-direction: column; min-height: 0; }
       .trn-col h2 {
         margin: 0 0 12px; display: flex; align-items: baseline; gap: 12px;
@@ -455,7 +589,34 @@ function TournamentStyles() {
       }
       .trn-match.is-selectable { cursor: pointer; }
       .trn-match.is-selectable:hover, .trn-match.is-selectable:focus-visible { background: #1c1c23; }
-      .trn-match.is-current::before { background: var(--accent); }
+      .trn-match.is-current::before { background: var(--accent); animation: trn-pulse 1.6s ease-in-out infinite; }
+      @keyframes trn-pulse { 50% { opacity: 0.35; } }
+      /* serie che le IA stanno giocando: una scansione la percorre */
+      .trn-match.is-playing { background: #1c1c23; }
+      .trn-match.is-playing::after {
+        content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%;
+        background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 38%, transparent), transparent);
+        animation: trn-scan 1s linear infinite; pointer-events: none;
+      }
+      @keyframes trn-scan { from { transform: translateX(-110%); } to { transform: translateX(290%); } }
+      .trn-tag.is-live { background: var(--accent); animation: trn-pulse 1s ease-in-out infinite; }
+      /* risultato nuovo: la riga di chi vince si riempie da sinistra, chi perde si spegne dopo */
+      .trn-side.is-fresh-win { animation: trn-stamp .5s cubic-bezier(.2,.9,.3,1) var(--d) both; }
+      @keyframes trn-stamp { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+      .trn-side.is-fresh-win .sc { animation: trn-pop .45s cubic-bezier(.3,1.6,.5,1) calc(var(--d) + 260ms) both; }
+      @keyframes trn-pop { from { opacity: 0; transform: skewX(14deg) scale(2.2); } }
+      .trn-side.is-fresh-lose { animation: trn-dim .5s ease calc(var(--d) + 200ms) both; }
+      @keyframes trn-dim { from { opacity: 1; } }
+      /* l'esercito che passa il turno arriva nel suo nuovo posto */
+      .trn-side.is-fresh-arrive { animation: trn-arrive .5s cubic-bezier(.2,1.2,.4,1) calc(var(--d) + 520ms) both; }
+      @keyframes trn-arrive { from { opacity: 0; transform: skewX(-14deg) translateX(-46px); } }
+      /* finale decisa: un riflesso passa sulla riga del campione */
+      .trn-match.is-champion .trn-side.is-won { position: relative; overflow: hidden; }
+      .trn-match.is-champion .trn-side.is-won::after {
+        content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 30%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+        animation: trn-scan 2.6s ease-in-out infinite; pointer-events: none;
+      }
       .trn-match.is-selected { background: #1c1c23; box-shadow: inset 0 0 0 2px var(--ink); filter: drop-shadow(7px 7px 0 var(--accent)); transform: translateX(-8px); }
       .trn-match.is-selected::before { background: var(--ink); }
       .trn-tag {
@@ -495,6 +656,12 @@ function TournamentStyles() {
       .trn-next .txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
       .trn-next .head { font-weight: 700; font-style: italic; font-size: 30px; line-height: 1.05; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .trn-next .hint { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      /* il testo cambia con la selezione: entra scivolando, senza scatti */
+      .trn-next .txt { animation: trn-swap .28s cubic-bezier(.2,.9,.3,1) both; }
+      @keyframes trn-swap { from { opacity: 0; transform: skewX(14deg) translateX(-22px); } }
+      .trn-next .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; overflow: hidden; transform: none; }
+      .trn-next .bar i { display: block; width: 30%; height: 100%; background: var(--accent); animation: trn-scan 1.1s linear infinite; }
+      .trn-next { position: relative; }
       .trn-ghost-btn {
         height: 60px; padding: 0 22px; border: 0; cursor: pointer; background: var(--void); color: var(--dim);
         font: 700 16px/1 'Chakra Petch', sans-serif; letter-spacing: 0.12em; white-space: nowrap;
@@ -514,7 +681,9 @@ function TournamentStyles() {
       .trn-go:hover, .trn-go:focus-visible { transform: skewX(-14deg) translate(-3px,-3px) rotate(-1deg); box-shadow: 12px 12px 0 var(--ink); }
       .trn-go.is-small { height: 62px; font-size: 26px; padding: 0 28px; box-shadow: 6px 6px 0 var(--void); }
       .trn-go.is-small:hover { box-shadow: 10px 10px 0 var(--void); }
-      .trn.is-busy .trn-go, .trn.is-busy .trn-ghost-btn, .trn.is-busy .trn-match, .trn.is-busy .trn-back, .trn.is-busy .trn-quit { pointer-events: none; opacity: 0.45; }
+      .trn.is-busy .trn-go, .trn.is-busy .trn-ghost-btn, .trn.is-busy .trn-back, .trn.is-busy .trn-quit { pointer-events: none; opacity: 0.4; transition: opacity .25s; }
+      .trn.is-busy .trn-match { pointer-events: none; }
+      .trn-go, .trn-ghost-btn { transition: transform .15s, box-shadow .15s, opacity .25s; }
 
       /* Riepilogo a turni: riquadro come "Imposta la partita" */
       .trn-sum {
@@ -524,6 +693,11 @@ function TournamentStyles() {
           rgba(5,5,7,0.86);
         animation: trn-fade .2s ease both;
       }
+      .trn-sum.is-leaving { animation: trn-sum-bg-out .24s ease forwards; }
+      .trn-sum.is-leaving .trn-sum-card { animation: trn-sum-out .24s cubic-bezier(.6,0,.9,.4) forwards; }
+      @keyframes trn-sum-out { to { opacity: 0; transform: rotate(3deg) translate(120px, -160px) skewX(-8deg) scale(.94); } }
+      @keyframes trn-sum-bg-out { to { opacity: 0; } }
+      .trn-sum-row:not(.is-head) { animation: trn-slide .32s cubic-bezier(.2,.9,.3,1) calc(var(--i) * 55ms + 120ms) both; }
       .trn-sum-card { width: 1560px; transform: rotate(-1deg); filter: drop-shadow(16px 16px 0 var(--accent)); animation: trn-sum-in .34s cubic-bezier(.2,1.2,.4,1) both; }
       @keyframes trn-sum-in { from { opacity: 0; transform: rotate(-1deg) translateY(60px) skewX(-6deg); } }
       .trn-sum-sheet { position: relative; display: flex; flex-direction: column; background: var(--void); clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%); }
@@ -572,20 +746,34 @@ function TournamentStyles() {
       .trn-sum-foot .lbl { flex: none; background: var(--void); color: var(--ink); font-weight: 700; font-size: 14px; letter-spacing: 0.14em; padding: 4px 14px; transform: skewX(-14deg); box-shadow: 4px 4px 0 var(--accent); }
       .trn-sum-foot .txt { font-weight: 700; font-style: italic; font-size: 24px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-      /* Le IA stanno giocando */
-      .trn-busy { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(5,5,7,0.72); animation: trn-fade .2s ease both; }
-      .trn-busy-plate {
-        display: flex; flex-direction: column; gap: 10px; min-width: 760px; padding: 26px 46px 28px;
-        background: var(--ink); color: var(--void); transform: skewX(-14deg) rotate(-1deg); box-shadow: 12px 12px 0 var(--accent);
+      /* Torneo deciso: schegge e timbro, una volta sola */
+      .trn-crown { position: absolute; inset: 0; z-index: 15; pointer-events: none; display: grid; place-items: center; }
+      .trn-crown span {
+        font-weight: 700; font-style: italic; font-size: 190px; letter-spacing: -0.02em; color: var(--c, var(--accent));
+        text-shadow: 8px 8px 0 var(--void), 14px 14px 0 var(--ink);
+        animation: trn-crown 2.2s cubic-bezier(.2,1.1,.4,1) .9s both;
       }
-      .trn-busy-plate > * { transform: skewX(14deg); }
-      .trn-busy-plate .eye { align-self: flex-start; background: var(--void); color: var(--ink); font-weight: 700; font-size: 14px; letter-spacing: 0.2em; padding: 3px 14px; }
-      .trn-busy-plate .what { font-weight: 700; font-style: italic; font-size: 34px; text-transform: uppercase; white-space: nowrap; }
-      .trn-busy-plate .bar { height: 8px; background: rgba(5,5,7,0.18); overflow: hidden; }
-      .trn-busy-plate .bar i { display: block; width: 34%; height: 100%; background: var(--void); animation: trn-bar 1.1s linear infinite; }
-      @keyframes trn-bar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+      @keyframes trn-crown {
+        0% { opacity: 0; transform: rotate(-8deg) scale(2.4); }
+        14% { opacity: 1; transform: rotate(-8deg) scale(1); }
+        78% { opacity: 1; transform: rotate(-8deg) scale(1.04); }
+        100% { opacity: 0; transform: rotate(-8deg) scale(1.08) translateY(-30px); }
+      }
+      .trn-crown i {
+        position: absolute; left: 50%; top: 50%; width: 46px; height: 12px;
+        background: var(--ink);
+        animation: trn-shard 1.3s cubic-bezier(.1,.8,.3,1) calc(1s + var(--i) * 18ms) both;
+      }
+      .trn-crown i:nth-child(odd) { background: var(--accent); }
+      @keyframes trn-shard {
+        from { opacity: 1; transform: rotate(calc(var(--i) * 25.7deg)) translateX(60px) skewX(-30deg); }
+        to { opacity: 0; transform: rotate(calc(var(--i) * 25.7deg)) translateX(620px) skewX(-30deg) scaleX(0.4); }
+      }
 
-      @media (prefers-reduced-motion: reduce) { .trn, .trn-sum, .trn-sum-card, .trn-busy { animation: none; } .trn-busy-plate .bar i { animation: none; width: 100%; } }
+      @media (prefers-reduced-motion: reduce) {
+        .trn, .trn *, .trn *::before, .trn *::after { animation: none !important; transition: none !important; }
+        .trn-crown { display: none; }
+      }
     `}</style>
   );
 }

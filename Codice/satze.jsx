@@ -186,7 +186,8 @@ import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
 import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
-import { describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
+import { SpectatorHud } from '../src/components/tournament/SpectatorHud';
+import { ROUND_NAMES, describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
 import {
   createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards,
   hasGameLog, playAiSeries, playPendingAiSeries, replaySavedAiGame,
@@ -2408,6 +2409,8 @@ export default function SatzeGame() {
     setSelectedArmy(human.army);
     setSelectedDeckKey(human.deckKey);
     setVsChosenEnemyArmy(info.opponent.army);
+    // cortina sul tabellone, poi il VS: niente stacco netto verso il tavolo
+    runCurtain({ label: info.opponent.deckName, kicker: `${info.roundName.toUpperCase()} · PARTITA ${info.gameNumber}`, accent: ARMY_COLORS[human.army]?.accent }, () => {
     tournamentResultPendingRef.current = true;
     setTournamentGameActive(true);
     startStandardGame(
@@ -2427,20 +2430,26 @@ export default function SatzeGame() {
         },
       }
     );
-  }, [tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
+    });
+  }, [runCurtain, tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
 
   /** Dal tavolo al tabellone (fine partita o abbandono: la partita non conclusa si rigioca con la stessa mano). */
   const returnToTournamentHub = useCallback(() => {
     stopAiThinking();
-    ai.resetAiSession();
-    setVictoryCondFx(null);
-    setShowFinalRoundAnimation(false);
-    tournamentResultPendingRef.current = false;
-    setTournamentGameActive(false);
-    setSpectate(null);
-    resetToMenu();
-    setGamePhaseRaw('tournamentHub');
-  }, [stopAiThinking, ai, resetToMenu, setShowFinalRoundAnimation, setGamePhaseRaw]);
+    runCurtain({ label: 'TORNEO', kicker: 'TABELLONE', dir: 'back' }, () => {
+      ai.resetAiSession();
+      setVictoryCondFx(null);
+      setShowFinalRoundAnimation(false);
+      tournamentResultPendingRef.current = false;
+      setTournamentGameActive(false);
+      setSpectate(null);
+      resetToMenu();
+      setGamePhaseRaw('tournamentHub');
+    });
+  }, [runCurtain, stopAiThinking, ai, resetToMenu, setShowFinalRoundAnimation, setGamePhaseRaw]);
+
+  /** Spettatore: i duelli proseguono da soli dopo l'esito (si può spegnere dalla fascia). */
+  const [spectateAuto, setSpectateAuto] = useState(true);
 
   /** Lavoro in corso sul tabellone (serie tra IA che si stanno giocando): { label }. */
   const [tournamentBusy, setTournamentBusy] = useState(null);
@@ -2449,14 +2458,17 @@ export default function SatzeGame() {
    * Mostra sul tavolo una partita tra IA già giocata: il motore la rigioca identica e ogni
    * duello entra in scena già risolto, come gli scontri delle modalità a più posti.
    */
-  const startSpectate = useCallback((t, matchId, gameIndex) => {
+  const startSpectate = useCallback((t, matchId, gameIndex, onCovered = null) => {
     const match = getMatch(t, matchId);
     const saved = match?.series.games[gameIndex];
     if (!hasGameLog(saved)) return;
     const { handA, handB, battlefields, game } = replaySavedAiGame(t, saved);
     const sideA = t.participants[match.a];
     const sideB = t.participants[match.b];
+    const earlier = match.series.games.slice(0, gameIndex);
     stopAiThinking();
+    runCurtain({ label: `${sideA.deckName} – ${sideB.deckName}`, kicker: `SPETTATORE · PARTITA ${gameIndex + 1}` }, () => {
+    onCovered?.();
     setVictoryCondFx(null);
     setShowFinalRoundAnimation(false);
     ai.resetAiSession();
@@ -2473,6 +2485,8 @@ export default function SatzeGame() {
       matchId,
       gameIndex,
       gamesTotal: match.series.games.length,
+      roundName: ROUND_NAMES[match.round],
+      seriesBefore: { a: earlier.filter((g) => g.winner === 'a').length, b: earlier.filter((g) => g.winner === 'b').length },
       frames: game.frames,
       index: 0,
       staged: -1,
@@ -2495,28 +2509,32 @@ export default function SatzeGame() {
         fixedHands: { playerHand: handA, enemyHand: handB },
       }
     );
-  }, [stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
+    });
+  }, [runCurtain, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
 
   /** Guarda una serie tra IA: se non è ancora stata giocata la gioca prima per intero. */
   const watchTournamentSeries = useCallback(async (matchId, gameIndex = 0) => {
     if (!tournament || tournamentBusy) return;
     let current = tournament;
     if (!getMatch(current, matchId)?.winnerId) {
-      setTournamentBusy({ label: 'Partita 1' });
+      setTournamentBusy({ matchId, label: 'Partita 1' });
       try {
         current = await playAiSeries(current, matchId, {
-          onGame: (n) => setTournamentBusy({ label: `Partita ${n}` }),
+          onGame: (n) => setTournamentBusy({ matchId, label: `Partita ${n}` }),
         });
       } catch (err) {
         console.error('[Torneo] serie IA fallita:', err);
         setTournamentBusy(null);
         return;
       }
-      storeTournament(current);
-      setTournamentBusy(null);
+      // L'esito è già salvato, ma il tabellone lo mostra solo al ritorno: prima si guarda la serie.
+      saveTournament(current);
+      const played = current;
+      startSpectate(played, matchId, gameIndex, () => { setTournament(played); setTournamentBusy(null); });
+      return;
     }
     startSpectate(current, matchId, gameIndex);
-  }, [tournament, tournamentBusy, storeTournament, startSpectate]);
+  }, [tournament, tournamentBusy, startSpectate]);
 
   /** Aspetta la fine: gioca subito tutte le serie tra IA pronte, senza guardarle. */
   const concludeTournamentRound = useCallback(async () => {
@@ -2525,10 +2543,16 @@ export default function SatzeGame() {
     try {
       const next = await playPendingAiSeries(tournament, {
         onProgress: ({ match, gameNumber, done, remaining }) => setTournamentBusy({
-          label: `${tournament.participants[match.a].deckName} – ${tournament.participants[match.b].deckName} · Partita ${gameNumber}`,
+          matchId: match.id,
+          label: `Partita ${gameNumber}`,
           step: done + 1,
           total: done + remaining,
         }),
+        // ogni serie finita entra subito nel tabellone, con una pausa per vederla arrivare
+        onSeriesDone: (current) => {
+          storeTournament(current);
+          return new Promise((resolve) => { setTimeout(resolve, 650); });
+        },
       });
       storeTournament(next);
     } catch (err) {
@@ -2585,13 +2609,19 @@ export default function SatzeGame() {
   }, [spectate, gamePhase, applySpectateTable, setRoundNumber, setIsPlayerFirst, setLastWinner]);
 
   /** Spettatore, dopo «Continua»: turno successivo oppure esito della partita. */
-  const advanceSpectate = useCallback(() => {
+  const advanceSpectate = useCallback((toEnd = false) => {
     const s = spectateRef.current;
     if (!s) return;
-    const frame = s.frames[s.index];
+    const lastIndex = toEnd ? s.frames.length - 1 : s.index;
+    const frame = s.frames[lastIndex];
     multiSeatSceneRef.current.resetForProjection();
-    applySpectateTable(frame.after, s.frames, s.index + 1);
-    if (s.index + 1 < s.frames.length) {
+    applySpectateTable(frame.after, s.frames, lastIndex + 1);
+    if (toEnd) {
+      setIsZoomed(false);
+      setRoundNumber(frame.before.roundNumber);
+      setSpectate({ ...s, index: lastIndex, staged: lastIndex });
+    }
+    if (lastIndex + 1 < s.frames.length) {
       setSpectate({ ...s, index: s.index + 1 });
       setGamePhaseRaw('selectField');
       return;
@@ -2607,7 +2637,7 @@ export default function SatzeGame() {
       spectate: true,
     });
     setGamePhaseRaw('gameOver');
-  }, [applySpectateTable, setGameResult, setGamePhaseRaw]);
+  }, [applySpectateTable, setGameResult, setGamePhaseRaw, setIsZoomed, setRoundNumber]);
 
   // Uscita dal tavolo per un'altra via (es. menù): la partita non è più del torneo.
   useEffect(() => {
@@ -4945,6 +4975,15 @@ export default function SatzeGame() {
     }
   };
 
+  // Spettatore con AUTO: a esito mostrato il duello successivo parte da solo.
+  const nextRoundRef = useRef(nextRound);
+  nextRoundRef.current = nextRound;
+  useEffect(() => {
+    if (!spectating || !spectateAuto || gamePhase !== 'result' || !battleResult || duelPhase < 4 || !duelHp.settled) return undefined;
+    const t = setTimeout(() => nextRoundRef.current(), 2200);
+    return () => clearTimeout(t);
+  }, [spectating, spectateAuto, gamePhase, battleResult, duelPhase, duelHp.settled]);
+
   const advanceGuidedRoundState = (playerFields, enemyFields) => {
     const nextRoundNum = roundNumber + 1;
     if (roundAdvanceLockRef.current === nextRoundNum) {
@@ -5724,7 +5763,7 @@ export default function SatzeGame() {
       setSelectedMode('classic');
       setIsMultiplayer(false);
       setCampaignLevel(null);
-      setGamePhase('selectArmy');
+      runCurtain({ label: 'NUOVO TORNEO', kicker: 'FASE I · SCHIERAMENTO' }, () => setGamePhase('selectArmy'));
     };
     return (
       screen('tournamentHub', false, <TournamentHubScreen
@@ -5932,7 +5971,7 @@ export default function SatzeGame() {
                 }
                 setTournamentSetup(false);
                 setSelectedMode(choice.mode);
-                setGamePhase('tournamentHub');
+                runCurtain({ label: 'TORNEO', kicker: 'TABELLONE', accent: colors.accent }, () => setGamePhase('tournamentHub'));
                 return;
               }
               // INIZIA: si passa subito al VS; la scatola dell'esercito scelto vola da qui
@@ -7672,6 +7711,38 @@ export default function SatzeGame() {
         duelEsito={portalDuelEsito}
         decision={portalDecision}
       />
+
+      {spectating && (() => {
+        const frame = spectate.frames[Math.min(spectate.index, spectate.frames.length - 1)];
+        const shown = gamePhase === 'result' && battleResult && duelPhase >= 4 && duelHp.settled;
+        const field = battlefields[frame.fieldIndex];
+        let line = `Turno ${frame.before.roundNumber} · ${field?.name || 'Campo'} · apre ${frame.before.isPlayerFirst ? spectate.names.a : spectate.names.b}`;
+        if (gamePhase === 'gameOver' && gameResult) {
+          line = gameResult.winner === 'draw'
+            ? 'Partita finita in pareggio'
+            : `${gameResult.winner === 'player' ? spectate.names.a : spectate.names.b} vince la partita ${gameResult.reason === 'fields' ? 'per Conquista' : 'per Punti Vita'}`;
+        } else if (shown) {
+          const aWon = frame.battleResult.winner === 'player';
+          const [w, l] = aWon ? [frame.cardA, frame.cardB] : [frame.cardB, frame.cardA];
+          const [vw, vl] = aWon ? [frame.battleResult.playerAssault, frame.battleResult.enemyAssault] : [frame.battleResult.enemyAssault, frame.battleResult.playerAssault];
+          line = `${w.name} batte ${l.name} · VA ${vw} a ${vl}`;
+        }
+        return (
+          <SpectatorHud
+            roundName={spectate.roundName}
+            gameNumber={spectate.gameIndex + 1}
+            names={spectate.names}
+            colors={{ a: playerIdentityColor, b: enemyIdentityColor }}
+            series={spectate.seriesBefore}
+            hp={{ a: playerHP, b: enemyHP }}
+            line={line}
+            over={gamePhase === 'gameOver'}
+            auto={spectateAuto}
+            onToggleAuto={() => setSpectateAuto((v) => !v)}
+            onSkip={() => advanceSpectate(true)}
+          />
+        );
+      })()}
 
       <GuidedTutorialOverlay
         isActive={guidedMatch.active}
