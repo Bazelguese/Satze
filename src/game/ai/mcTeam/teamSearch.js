@@ -226,10 +226,16 @@ export function chooseTeamOpening(match, teamId, params, rng, { aiSeatIds, fixed
     perSeat[seatId] = res.ranked;
   }
 
+  // Mosse di riserva per posto (es. il compagno umano prende lo stesso Campo).
+  const alternatives = Object.fromEntries(
+    aiSeatIds.map((id) => [id, perSeat[id].slice(0, 6).map((c) => c.choice)])
+  );
+
   if (aiSeatIds.length === 1) {
     const chosen = pickFinal(perSeat[aiSeatIds[0]], params.noise, rng);
     return {
       choices: { [aiSeatIds[0]]: chosen.choice },
+      alternatives,
       stats: { rollouts: spent, ms: nowMs() - started, estimate: chosen.mean },
     };
   }
@@ -254,6 +260,7 @@ export function chooseTeamOpening(match, teamId, params, rng, { aiSeatIds, fixed
   const chosen = pickFinal(res.ranked, params.noise, rng) || combos[0];
   return {
     choices: chosen.choices,
+    alternatives,
     stats: { rollouts: spent + res.spent, ms: nowMs() - started, estimate: chosen.mean },
   };
 }
@@ -291,6 +298,8 @@ export function chooseTeamResponse(match, teamId, params, rng, { aiSeatIds, fixe
 
   const pairings = fixedPairing ? [fixedPairing] : [PAIRINGS.DIRECT, PAIRINGS.CROSSED];
   const combos = [];
+  // Miglior mossa di ogni posto per ciascuna disposizione (se il giocatore la cambia).
+  const byPairing = {};
   let spent = 0;
   for (const pairing of pairings) {
     const fronts = buildFronts(visible, pairing);
@@ -318,6 +327,7 @@ export function chooseTeamResponse(match, teamId, params, rng, { aiSeatIds, fixe
       spent += res.spent;
       perSeat[seatId] = res.ranked;
     }
+    byPairing[pairing] = Object.fromEntries(aiSeatIds.map((id) => [id, perSeat[id][0]?.choice ?? null]));
     const top = params.topPerSeat ?? 3;
     if (aiSeatIds.length === 1) {
       for (const a of perSeat[aiSeatIds[0]].slice(0, top)) {
@@ -342,6 +352,7 @@ export function chooseTeamResponse(match, teamId, params, rng, { aiSeatIds, fixe
   return {
     deployments: chosen.deployments,
     pairing: chosen.pairing,
+    byPairing,
     stats: { rollouts: spent + res.spent, ms: nowMs() - started, estimate: chosen.mean },
   };
 }

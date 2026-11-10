@@ -129,6 +129,42 @@ export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed, 
   }).then((stripped) => hydrateAiDecision(stripped, context));
 }
 
+/**
+ * Decisione di squadra del 2v2 (motore a simulazione) nel worker.
+ * Timeout o errore → reject: il chiamante ricade sull'IA precedente.
+ *
+ * @param {'team-opening'|'team-response'} kind
+ * @param {{ match: object, teamId: string, aiSeatIds: string[], fixedSeats?: object,
+ *   fixedPairing?: string|null, traits?: Record<string, string>, difficulty: string,
+ *   maxMs: number, seed?: number }} payload
+ */
+export function runTeamMcInWorker(kind, payload) {
+  const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(payload.maxMs) || 0) + 4000);
+  return new Promise((resolve, reject) => {
+    let w;
+    try {
+      w = getAiWorker();
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const id = ++nextRequestId;
+    const timer = setTimeout(() => {
+      if (!pending.has(id)) return;
+      pending.delete(id);
+      reject(new Error(`AI worker (2v2) timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+    pending.set(id, { resolve, reject, timer });
+    try {
+      w.postMessage({ id, kind, ...payload, match: cloneContextForWorker(payload.match) });
+    } catch (err) {
+      pending.delete(id);
+      clearTimeout(timer);
+      reject(err);
+    }
+  });
+}
+
 export function isAiWorkerSupported() {
   return typeof Worker !== 'undefined';
 }

@@ -5587,6 +5587,7 @@ export default function SatzeGame() {
                 multiSeatEnemy = multiSeat.arm({
                   kind: choice.matchMode,
                   teammatePreset: choice.teammatePreset,
+                  personality: choice.personality,
                   players: choice.players,
                   difficulty: choice.difficulty,
                   fieldMode: choice.mode,

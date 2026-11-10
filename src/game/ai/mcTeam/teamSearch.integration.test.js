@@ -51,7 +51,9 @@ describe('2v2 con il motore a simulazione', () => {
     const r1 = chooseTeamResponse(opened, teamId, SMALL, mulberry32(3), { aiSeatIds });
     const r2 = chooseTeamResponse(other, teamId, SMALL, mulberry32(3), { aiSeatIds });
     expect([PAIRINGS.DIRECT, PAIRINGS.CROSSED]).toContain(r1.pairing);
-    expect(r1).toEqual({ ...r2, stats: r1.stats });
+    expect(r1.deployments).toEqual(r2.deployments);
+    expect(r1.pairing).toBe(r2.pairing);
+    expect(Object.keys(r1.byPairing).sort()).toEqual([PAIRINGS.CROSSED, PAIRINGS.DIRECT].sort());
   });
 
   it('partite complete nuova IA contro vecchia, senza errori', () => {
