@@ -428,7 +428,14 @@ export function chooseMonteCarloAction(view, inputParams, rng) {
         c.cardId === chosen.cardId &&
         c.score >= chosen.score - trait.focusWindow
     );
-    if (near.length) chosen = near[Math.floor(rng() * near.length)];
+    if (near.length) {
+      const byFocus = [...near].sort((a, b) => a.focus - b.focus);
+      const roll = rng();
+      const extremes = trait.focusExtremes || 0;
+      if (roll < extremes / 2) chosen = byFocus[0];
+      else if (roll < extremes) chosen = byFocus[byFocus.length - 1];
+      else chosen = near[Math.floor(rng() * near.length)];
+    }
   }
   return {
     fieldIndex: chosen.fieldIndex,

@@ -66,10 +66,10 @@ export const MC_TRAITS = {
     id: 'spietato',
     name: 'Spietato',
     description: 'Vuole i tuoi PV: danni e colpi diretti, poco interesse per i Campi.',
-    bias: (view, card) => 0.06 * ((card.damage || 0) / 6),
+    bias: (view, card) => 0.12 * ((card.damage || 0) / 6),
     // Conta i PV tolti all'avversario, non il saldo: gli interessa ferire.
     objective: (end, state) =>
-      0.025 * (25 - (Number(state.playerHP) || 0)) +
+      0.06 * (25 - (Number(state.playerHP) || 0)) +
       (end.winner === 'enemy' && end.reason === 'hp' ? 0.1 : 0),
   },
   avaro: {
@@ -82,23 +82,25 @@ export const MC_TRAITS = {
     id: 'temerario',
     name: 'Temerario',
     description: 'Ama il rischio: mosse tutto-o-niente e puntate audaci.',
-    risk: -0.5,
-    bias: (view, card, focus, ctx) => 0.04 * Math.max(0, focusAboveFair(focus, ctx)),
+    risk: -1,
+    bias: (view, card, focus, ctx) => 0.08 * Math.max(0, focusAboveFair(focus, ctx)),
   },
   cauto: {
     id: 'cauto',
     name: 'Cauto',
     description: 'Odia il rischio e protegge i propri PV, anche cedendo un Campo.',
-    risk: 0.5,
+    risk: 1,
     // Conta i propri PV rimasti: subire danni gli pesa anche quando vince.
-    objective: (end, state) => 0.02 * (Number(state.enemyHP) || 0),
+    objective: (end, state) => 0.05 * (Number(state.enemyHP) || 0),
   },
   imprevedibile: {
     id: 'imprevedibile',
     name: 'Imprevedibile',
     description: 'I suoi FC sono illeggibili: alterna puntate minime e altissime.',
-    // FC estratti a caso fra quelli "quasi buoni" per la carta scelta (entro questa soglia).
-    focusWindow: 0.08,
+    // Fra i FC "accettabili" per la carta scelta (entro questa soglia dalla stima migliore)
+    // va spesso agli estremi: la puntata più bassa o la più alta.
+    focusWindow: 0.15,
+    focusExtremes: 0.7,
   },
 };
 
