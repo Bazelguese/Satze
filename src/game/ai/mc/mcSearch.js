@@ -24,12 +24,13 @@ import {
   resolveMatchEnd,
 } from '../../sim/headlessMatch.js';
 import { resolveRoundInitiative } from '../../duel/resolveRoundInitiative.js';
+import { getLearnedWeights } from './learnedPolicy.js';
 import {
   clampFocusFor,
   createFastPolicyAgent,
-  estimateVisibleAssault,
   fairShareFor,
   focusNeededToBeat,
+  focusOptionsFor,
   sampleOpponentFocus,
 } from './mcPolicy.js';
 
@@ -93,13 +94,17 @@ function firstResponseBy(first, policy) {
  */
 function rollout(view, candidate, seed, params, opponentReply = null) {
   const rng = mulberry32(seed);
+  const learnedWeights =
+    params.policy === 'learned' ? params.learnedWeights || getLearnedWeights() : null;
   const policy = createFastPolicyAgent(rng, {
     quality: params.policyQuality,
     responder: params.responder,
+    learnedWeights,
   });
   const opponentPolicy = createFastPolicyAgent(rng, {
     quality: params.opponentQuality,
     responder: params.responder,
+    learnedWeights,
   });
   const opponentLeads = view.isPlayerFirst === true;
   let opponent = opponentPolicy;
@@ -149,15 +154,7 @@ function rollout(view, candidate, seed, params, opponentReply = null) {
   return 0.5;
 }
 
-function focusOptions(view, card) {
-  const fair = fairShareFor(view, 'enemy');
-  const values = [1, fair - 1, fair, fair + 1, fair + 3];
-  if (view.selectedAgent) {
-    const need = focusNeededToBeat(card, estimateVisibleAssault(view));
-    values.push(need, need + 1);
-  }
-  return [...new Set(values.map((v) => clampFocusFor(view, 'enemy', v)))];
-}
+const focusOptions = focusOptionsFor;
 
 /**
  * Azioni candidate: Campo × Agente × FC. Se il Campo è già fissato (in risposta, o con
@@ -308,6 +305,8 @@ function pickWithNoise(ranked, noise, rng) {
  *   maxMs?: number,            tempo massimo (anytime): oltre, si sceglie con i dati raccolti
  *   rootResponder?, rootOpponentQuality?: politica della prima risposta avversaria
  *   leadMode?: 'matrix', matrixCombos?, matrixRollouts?: apertura come gioco simultaneo
+ *   policy?: 'learned', learnedWeights?: politica addestrata nelle simulazioni
+ *   onCandidates?: (view, ranked) => void, per raccogliere dati di addestramento
  * }} params
  * @param {() => number} rng
  * @returns {{ fieldIndex: number, cardId: number, focus: number, mean: number, stats: object }|null}
@@ -355,6 +354,8 @@ export function chooseMonteCarloAction(view, params, rng) {
   // delle simulazioni del più misurato), così una stima fortunata su pochi dati non vince.
   const maxN = ranked.reduce((m, c) => Math.max(m, c.n), 0);
   const reliable = ranked.filter((c) => c.n >= maxN * 0.6);
+  // Raccolta dati per l'addestramento della politica (scripts/ai-train-policy.mjs).
+  params.onCandidates?.(view, ranked);
 
   // Con l'iniziativa: eventuale stadio a gioco simultaneo sui FC.
   if (params.leadMode === 'matrix' && view.isPlayerFirst !== true && !timedOut) {

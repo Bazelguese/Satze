@@ -16,6 +16,7 @@ import {
   legalFocusRange,
   resolveHeadlessDuel,
 } from '../../sim/headlessMatch.js';
+import { buildFeatureContext, dot, moveFeatures } from './mcFeatures.js';
 
 export function clampFocusFor(view, side, focus) {
   const { maxFocus } = legalFocusRange(view, side);
@@ -118,14 +119,70 @@ function simulatedRespondChoice(view, rng, quality) {
   return best ? { card: best.card, focus: best.focus } : respondChoice(view, rng, quality);
 }
 
+/** Valori di FC da considerare per una carta (comuni a motore e politica addestrata). */
+export function focusOptionsFor(view, card) {
+  const fair = fairShareFor(view, 'enemy');
+  const values = [1, fair - 1, fair, fair + 1, fair + 3];
+  if (view.selectedAgent) {
+    const need = focusNeededToBeat(card, estimateVisibleAssault(view));
+    values.push(need, need + 1);
+  }
+  return [...new Set(values.map((v) => clampFocusFor(view, 'enemy', v)))];
+}
+
+/**
+ * Politica addestrata: punteggio lineare sulle caratteristiche di ogni mossa
+ * (Agente × FC), scelta con softmax. Il Campo, con l'iniziativa, resta a caso.
+ */
+function learnedChoice(view, rng, weights) {
+  const ctx = buildFeatureContext(view);
+  const moves = [];
+  let best = -Infinity;
+  for (const card of ctx.cards) {
+    for (const focus of focusOptionsFor(view, card)) {
+      const logit = dot(weights, moveFeatures(view, card, focus, ctx));
+      moves.push({ card, focus, logit });
+      if (logit > best) best = logit;
+    }
+  }
+  let total = 0;
+  for (const m of moves) {
+    m.w = Math.exp(m.logit - best);
+    total += m.w;
+  }
+  let roll = rng() * total;
+  for (const m of moves) {
+    roll -= m.w;
+    if (roll <= 0) return m;
+  }
+  return moves[moves.length - 1];
+}
+
 /**
  * Agente veloce per le simulazioni.
  * @param {() => number} rng
- * @param {{ quality?: number, responder?: 'heuristic'|'simulate' }} [options]
+ * @param {{ quality?: number, responder?: 'heuristic'|'simulate', learnedWeights?: number[] }} [options]
  *   quality: 0 = quasi casuale, 1 = sempre la scelta euristica;
- *   responder: come risponde a un Agente visibile (stima POT × FC o duello calcolato)
+ *   responder: come risponde a un Agente visibile (stima POT × FC o duello calcolato);
+ *   learnedWeights: se presenti, Agente e FC li sceglie la politica addestrata
  */
-export function createFastPolicyAgent(rng, { quality = 0.7, responder = 'heuristic' } = {}) {
+export function createFastPolicyAgent(
+  rng,
+  { quality = 0.7, responder = 'heuristic', learnedWeights = null } = {}
+) {
+  if (learnedWeights) {
+    return {
+      lead(view) {
+        const fields = legalFieldIndexes(view);
+        const { card, focus } = learnedChoice(view, rng, learnedWeights);
+        return { fieldIndex: fields[Math.floor(rng() * fields.length)], cardId: card.id, focus };
+      },
+      respond(view) {
+        const { card, focus } = learnedChoice(view, rng, learnedWeights);
+        return { cardId: card.id, focus };
+      },
+    };
+  }
   const respondWith = responder === 'simulate' ? simulatedRespondChoice : respondChoice;
   return {
     lead(view) {
