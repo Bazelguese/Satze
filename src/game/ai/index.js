@@ -84,7 +84,7 @@ export { chooseJointAIAction, chooseJointAIActionAsync } from './chooseJointAIAc
 export { buildStrategicState, deriveOpeningPlayerFirst, findCardInState } from './strategicState.js';
 export {
   projectPostDuelState,
-  resolveNextInitiativeFromWinner,
+  resolveProjectedInitiative,
 } from './projectPostDuelState.js';
 export { evaluateStrategicState, strategicEvalWeight } from './evaluateStrategicState.js';
 export { scoreActionWithStrategicProjection } from './strategicScore.js';

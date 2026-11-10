@@ -4,6 +4,8 @@
 
 import { revealedAt, firstActMatchOutcome } from '../../campaign/logic/firstActBattle.js';
 import { AI_FIELDS_TO_WIN, AI_SUPREMACY_ROUND } from './aiConstants.js';
+import { resolveRoundInitiative } from '../duel/resolveRoundInitiative.js';
+import { deriveOpeningPlayerFirst } from './strategicState.js';
 
 function usedList(ids) {
   return Array.isArray(ids) ? ids.map((id) => id) : [];
@@ -43,24 +45,27 @@ function resolveTerminalFromProjected(state, simulation) {
 }
 
 /**
- * Iniziativa del round successivo: il perdente del duello inizia.
- * Non usa alternanza fissa su opening/round.
+ * Iniziativa del round proiettato: stessa regola del gioco (resolveRoundInitiative),
+ * cioè alternanza da openingPlayerFirst più i profili campagna assault/defense,
+ * e alwaysPlayerFirst se la battaglia di campagna lo impone.
+ * Non dipende da chi ha vinto il duello.
  *
- * @param {'player'|'enemy'|null|undefined} winner
- * @param {boolean} currentIsPlayerFirst
- * @returns {boolean}
+ * @param {object} strategicState
+ * @param {number} roundNumber - round di cui si vuole l'iniziativa
+ * @returns {boolean} true se sceglie per primo il giocatore
  */
-export function resolveNextInitiativeFromWinner(winner, currentIsPlayerFirst = true) {
-  if (winner === 'player') {
-    // IA ha perso → IA inizia
-    return false;
-  }
-  if (winner === 'enemy') {
-    // giocatore ha perso → giocatore inizia
-    return true;
-  }
-  // Pareggio / sconosciuto: invertire l'iniziativa corrente
-  return !currentIsPlayerFirst;
+export function resolveProjectedInitiative(strategicState, roundNumber) {
+  if (strategicState._refs?.campaignDuelMod?.alwaysPlayerFirst) return true;
+  const initiativeProfile = strategicState.initiativeProfile ?? null;
+  const openingPlayerFirst =
+    strategicState.openingPlayerFirst != null
+      ? Boolean(strategicState.openingPlayerFirst)
+      : deriveOpeningPlayerFirst(
+          strategicState.roundNumber || 1,
+          strategicState.isPlayerFirst !== false,
+          initiativeProfile
+        );
+  return resolveRoundInitiative({ roundNumber, openingPlayerFirst, initiativeProfile });
 }
 
 /**
@@ -114,10 +119,7 @@ export function projectPostDuelState(strategicState, simulation, aiAction, playe
   if (simulation?.winner === 'enemy') enemyFieldsConquered += 1;
 
   const nextRound = (strategicState.roundNumber || 1) + 1;
-  const nextIsPlayerFirst = strategicState._refs?.campaignDuelMod?.alwaysPlayerFirst || resolveNextInitiativeFromWinner(
-    simulation?.winner,
-    strategicState.isPlayerFirst !== false
-  );
+  const nextIsPlayerFirst = resolveProjectedInitiative(strategicState, nextRound);
 
   const battlefields = strategicState._refs?.battlefields || [];
   const prevRevealed =
