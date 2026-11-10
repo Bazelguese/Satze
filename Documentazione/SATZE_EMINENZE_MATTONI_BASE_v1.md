@@ -666,3 +666,23 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Frenesia: sostituzione del Potere (come Opera Composita) e rimborso di 2 Presenza se l'Agente nemico è una Preda.
 - Caccia: obbligo di schierare una carta precisa; selezionabile solo con un bersaglio valido.
 - Tolte Cannibalismo e la vecchia Frenesia.
+
+### 10.8 L'Enclave delle Scaglie — L'Enclave dell'Ascensione (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 4 abilità attive, firma a costo variabile.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Accumulo *(invariato)* | Quando investi almeno 3 FC reali sul tuo Agente in un Duello, +1 Presenza. Gli FC temporanei non contano. | — | circa 3 Presenza/Scontro |
+| +1 | Rinuncia al Privilegio *(invariata)* | Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello. | −0.75 | circa −0.84 ✅ |
+| −1 | Ascesa / Declassamento *(invariata)* | **Reveal: prima degli Agenti.** Scegli pubblicamente un tuo Agente non schierato e aumenta oppure diminuisci la sua Lega di 1 per questo round. | 0.75 | circa 0.6 ✅ |
+| −2 | Furto di Reliquie | Se vinci il Duello, l'avversario perde 2 Presenza e tu ne ottieni 1. | 1.50 | circa 1.35 ✅ (se l'avversario ha almeno 2 Presenza) |
+| −X | Ascensione | Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa. | 0.75 × X | circa 0.75 × X ✅ |
+
+**Motore:** 0.75 + circa 2.25 = circa 3.0 FC (limite alto).
+
+**Da osservare in playtest:** quanto spesso Ascensione al round 5 decide la partita; impatto di Furto di Reliquie sulle Eminenze che accumulano Presenza.
+
+**Lavoro di implementazione:**
+- Furto di Reliquie: trasferimento di Presenza condizionato alla vittoria.
+- Ascensione: costo variabile (tutta la Presenza, minimo 3) e bonus di POT pari alla Presenza spesa.
