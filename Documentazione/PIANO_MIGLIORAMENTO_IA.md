@@ -167,7 +167,16 @@ Il prototipo è ancora grezzo: la politica di simulazione è semplice e non ci s
 | Normale | 1500 | 0,06 | |
 | Difficile | 6000 | 0 | apertura simultanea (5 Agenti, 16 simulazioni per casella) |
 
-La verifica della scala provvisoria in Classico e Mani nude è in corso.
+Verifica della scala provvisoria (100 partite ciascuna):
+
+| Accoppiamento | Classico | Mani nude |
+|---|---|---|
+| Difficile – Normale | 58% | 58% |
+| Normale – Facile | 63% | 61% |
+| Facile – Casuale | 77% | 70% |
+| Nuova Normale – Normale precedente | 58% | 49% |
+
+La scala è ordinata e coerente fra le due modalità, ma i gradini sono di circa il 60%: l'obiettivo era 70-80%.
 
 ### Fase 2 — Avversario e Focus
 
