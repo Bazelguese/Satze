@@ -1,6 +1,6 @@
 # Piano di miglioramento dell'IA di SATZE
 
-Stato: approvato. Fase 0 completata. Fase 1 in corso: 1.1 e 1.2 fatte; in attesa di decidere se passare a un motore a simulazione (vedi "Risultati della Fase 1 finora").
+Stato: Fase 0 completata. Deciso il passaggio a un motore a simulazione (opzione A), già collegato al gioco per Classico e Mani nude con una scala dei livelli provvisoria. Da decidere: obiettivi di distanza fra i livelli realistici (vedi "Motore a simulazione").
 Ultimo aggiornamento: 2026-11-10.
 
 ## Obiettivi
@@ -127,7 +127,47 @@ Il limite non sta nei parametri, ma nella valutazione: pesi fissati a mano e un 
 
 Il prototipo è ancora grezzo: la politica di simulazione è semplice e non ci sono strategie miste sui FC. Ha però già la distanza voluta tra Difficile e Normale, e la sua forza si regola con un solo parametro, il numero di simulazioni, cioè il tempo. Questo si adatta bene anche alla coerenza fra le modalità: lo stesso metodo funziona in ogni modalità che il motore di partita sa giocare.
 
-**Proposta, da decidere con l'utente:** portare l'IA su un motore a simulazione, con i livelli regolati da budget, qualità della politica e "rumore" controllato. I punti 1.3 e 1.4, che riguardano il motore attuale, restano in sospeso fino alla decisione.
+**Decisione dell'utente: opzione A.** Tutti i livelli passano a un motore a simulazione. I punti 1.3 e 1.4, che riguardavano il motore precedente, sono abbandonati.
+
+### Motore a simulazione (in corso)
+
+**Codice** (`src/game/ai/mc/`):
+
+- `mcPolicy.js`: politica veloce per le simulazioni. In risposta stima il VA (POT × FC) o calcola il duello vero.
+- `mcSearch.js`: candidati Campo × Agente × FC, simulazioni con gli stessi semi per tutti i candidati, eliminazione progressiva, limite di tempo, rumore nella scelta finale. Con l'iniziativa c'è anche un'apertura come gioco simultaneo: tabella FC dell'IA × risposte avversarie, risolta a somma zero, con strategia mista sui FC.
+- `mcProfiles.js`: i livelli.
+- `mcGameAdapter.js`: lo stato del gioco convertito in vista pubblica, senza i FC del giocatore.
+
+**Nel gioco** (`useAI`): Classico e Mani nude usano il nuovo motore nel Web Worker, anche nel formato Standard, ignorando le Eminenze (decisione dell'utente). Campagna e online restano sul motore precedente, che è anche il ripiego se il worker fallisce. La build e il worker compilato sono stati provati in Chromium: una decisione della Difficile richiede 2,3 s.
+
+**Misure** (Classico, 100 partite ciascuna, punteggio del primo):
+
+| Esperimento | Risultato | Cosa dice |
+|---|---|---|
+| Nuova Normale (1500 sim.) – Normale precedente | 61% | il motore a simulazione è più forte |
+| Nuova Difficile (6000 sim.) – Normale precedente | 64% | |
+| Nuova Difficile – nuova Normale | 45% | oltre ~1500 simulazioni la forza **satura** |
+| Difficile con risposta calcolata – nuova Normale | 56% | entro il margine di errore |
+| Difficile con prima risposta avversaria calcolata | 36% | peggiora |
+| Difficile con apertura simultanea (5 Agenti) – nuova Normale | 58% | la migliore variante, e meno prevedibile |
+| Difficile B – Casuale | **92%** | ampiezza totale della scala |
+| Difficile B – Facile (rumore 0,06) | 67% | |
+| Facile (rumore 0,06) – Casuale | 85% | |
+| Difficile B – Normale con rumore 0,2 | 71% | il rumore separa bene i livelli |
+| Normale con rumore 0,2 – Casuale | 76% | |
+| Normale con rumore 0,2 – Facile con rumore 0,06 | 43% | il rumore pesa più del budget |
+
+**Conclusione: gli obiettivi confermati non sono raggiungibili tutti insieme.** In SATZE le mani (5 carte su 10, e apre chi ha la mano più debole) pesano molto, e fra giocatori competenti le differenze si comprimono. Dal Casuale alla Difficile più forte trovata (92%) c'è spazio per circa due gradini da 70-80%, non per tre (Casuale→Facile ≥80%, Facile→Normale 70-80%, Normale→Difficile 70-80%). Va scelto quale obiettivo rilassare.
+
+**Scala provvisoria nel codice:**
+
+| Livello | Simulazioni | Rumore | Note |
+|---|---|---|---|
+| Facile | 300 | 0,2 | |
+| Normale | 1500 | 0,06 | |
+| Difficile | 6000 | 0 | apertura simultanea (5 Agenti, 16 simulazioni per casella) |
+
+La verifica della scala provvisoria in Classico e Mani nude è in corso.
 
 ### Fase 2 — Avversario e Focus
 
