@@ -18,6 +18,7 @@
     "validate:campagna": "node tools/validate-campagna.mjs src/campaign/data/atto1.js --cards src/data/cards.js",
     "bench:ai": "vite-node scripts/ai-planner-benchmark.mjs",
     "selfplay:ai": "vite-node scripts/ai-selfplay.mjs",
+    "selfplay:team": "vite-node scripts/ai-selfplay-team.mjs",
     "preview": "vite preview",
     "update-images": "node scripts/update-card-images.js",
     "icons-nobg": "node scripts/remove-icon-backgrounds.js",
