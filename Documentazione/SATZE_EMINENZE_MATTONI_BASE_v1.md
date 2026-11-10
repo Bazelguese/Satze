@@ -723,3 +723,26 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 **Lavoro di implementazione:**
 - Verde: +1 Presenza (max una per Duello) se si attiva un Potere o Bonus con trigger Turbo o Intervento.
 - Giallo: costo da 0 a −2.
+
+### 10.11 Khemet — Il Castello degli Arcanisti Nefasti (approvata, nuovo nome)
+
+**Nome:** era "Il Castello dei Sigillatori". **Presenza iniziale:** 1 (era 2). **Eccezione allo schema:** 4 abilità attive, nessuna ricarica a +1. **Reveal delle attive:** prima del Campo.
+
+**Chiarimento di regola usato per il rework:** il Campo lo sceglie chi sceglie per primo nel round; ogni slot si combatte una sola volta, quindi una Maledizione su uno slot riguarda un solo Duello (quello combattuto lì) e resta finché lo slot non viene combattuto, anche se il Campo nello slot viene sostituito.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Cattura-Energia *(invariato)* | Quando il tuo Agente attiva Overdrive, +2 Presenza. | — | circa 3 Presenza/Scontro |
+| 0 | Devozione al cervello *(era +2)* | Il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus. | 0 | circa 0–0.3 ✅ |
+| −1 | Maledizione della Fama *(era −2)* | Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega. | 0.75 | circa 0.8 ✅ 〰️ |
+| −2 | Maledizione del Cosmo *(era −3)* | Scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA. | 1.50 | circa 1.1 ✅ (al limite) 〰️ |
+| −3 | Maledizione Inversa | Scegli uno slot: nel Duello combattuto lì, tutti i modificatori di POT, DAN e VA si invertono, per entrambi gli Agenti. I + diventano −, i − diventano +, e i minimi non si applicano. | 2.25 | circa 1.5–2.5 ✅ 〰️ |
+
+**Regole di Maledizione Inversa:** non si invertono FC, Danni diretti, Cura, Tossina, Blocca, Immune, Copia; Immune ignora le riduzioni prodotte dall'inversione; una carta con Inversione sullo stesso slot non inverte di nuovo. Fama o Cosmo sullo stesso slot, invertite, diventano un vantaggio per entrambi.
+
+**Motore:** 0.75 + circa 2.25 = circa 3.0 FC (limite alto).
+
+**Lavoro di implementazione:**
+- Rinomina dell'Eminenza.
+- Costi aggiornati di Devozione, Fama, Cosmo.
+- Maledizione Inversa: estendere `src/game/duel/duelInversionFinalization.js` a tutti i modificatori di POT/DAN/VA, per entrambi i lati, nello slot maledetto.
