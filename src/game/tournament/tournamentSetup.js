@@ -6,6 +6,7 @@ import { ARMY_SETS, ARMY_DECKS } from '../../data/cards.js';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
 import { selectBattlefields } from '../fieldLogic.js';
 import { playAiGame, playAiGameAsync } from './aiMatchEngine.js';
+import { createTournamentMcDecider, tournamentAiTrait } from './tournamentAi.js';
 import { mulberry32 } from '../../utils/seededRandom.js';
 import { serializeHandForRelay } from '../../utils/onlineMatch.js';
 import { pickDistinctCardBackPairSeeded } from '../../utils/cardBackPicker.js';
@@ -78,6 +79,8 @@ export function createTournamentForPlayer({ playerArmy, playerDeckKey, playerDec
         deckName: deck.name,
         cardIds: [...deck.cards],
         isHuman: false,
+        // Personalità per tutto il torneo (menu: Neutrale, un tratto, o Casuale per ciascuna).
+        aiTrait: tournamentAiTrait(settings?.personality, rng),
       };
     }),
   ];
@@ -114,7 +117,16 @@ export function createOnlineTournament({ humans, settings, roomCode, rng = Math.
     ...aiArmies.map((army, i) => {
       const deckKey = pickRandom(Object.keys(ARMY_DECKS[army]), rng);
       const deck = ARMY_DECKS[army][deckKey];
-      return { id: `ai${i + 1}`, name: army, army, deckKey, deckName: deck.name, cardIds: [...deck.cards], isHuman: false };
+      return {
+        id: `ai${i + 1}`,
+        name: army,
+        army,
+        deckKey,
+        deckName: deck.name,
+        cardIds: [...deck.cards],
+        isHuman: false,
+        aiTrait: tournamentAiTrait(settings?.personality, rng),
+      };
     }),
   ];
   const tournament = createTournament({ participants, settings, rng });
@@ -221,6 +233,16 @@ export async function playAiSeries(tournament, matchId, { rng = Math.random, onG
     const hands = heldHands || dealAiSeriesHands(tournament, match, games, rng);
     heldHands = null;
     const battlefields = selectBattlefields(mode, ALL_BATTLEFIELDS, { rng });
+    // IA a simulazione nel worker al livello del torneo, con il tratto di ciascun lato;
+    // senza worker si usa il pianificatore precedente.
+    const decide = createTournamentMcDecider({
+      difficulty,
+      traits: {
+        a: tournament.participants[match.a]?.aiTrait,
+        b: tournament.participants[match.b]?.aiTrait,
+      },
+      rng,
+    });
     const game = await playAiGameAsync({
       handA: resolveTournamentCards(hands.a),
       handB: resolveTournamentCards(hands.b),
@@ -228,7 +250,7 @@ export async function playAiSeries(tournament, matchId, { rng = Math.random, onG
       mode,
       difficulty,
       rng,
-    }, nextTick);
+    }, nextTick, decide);
     games.push({
       hands,
       winner: game.winner,

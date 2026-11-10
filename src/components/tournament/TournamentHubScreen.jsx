@@ -20,6 +20,7 @@
 //  - la serie che le IA stanno giocando è percorsa da una scansione.
 // ============================================================
 
+import { getMcTrait } from '../../game/ai/mc/mcTraits.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLeaveThen } from '../../hooks/usePresence';
 import { ARMY_COLORS, ARMY_ICONS } from '../../data/armies.js';
@@ -134,12 +135,15 @@ function Side({ participant, visual, wins, state, showScore, fresh = null, order
     <div
       className={`trn-side is-${state}${participant ? '' : ' is-empty'}${fresh ? ` is-fresh-${fresh}` : ''}`}
       style={{ '--c': visual?.accent || 'rgba(245,243,235,0.18)', '--d': `${order * 140}ms` }}
-      title={participant ? `${participant.deckName} — ${armies.join(' · ') || participant.army}` : undefined}
+      title={participant ? `${participant.deckName} — ${armies.join(' · ') || participant.army}${participant.aiTrait && participant.aiTrait !== 'neutral' ? ` · ${getMcTrait(participant.aiTrait).name}` : ''}` : undefined}
     >
       <span className="ic">
         {armies.slice(0, 2).map((army) => (ARMY_ICONS[army] ? <img key={army} src={ARMY_ICONS[army]} alt="" /> : null))}
       </span>
       <span className="nm">{participant ? participant.deckName : 'Da definire'}</span>
+      {participant && !participant.isHuman && participant.aiTrait && participant.aiTrait !== 'neutral'
+        ? <span className="tr" title={getMcTrait(participant.aiTrait).description}>{getMcTrait(participant.aiTrait).name}</span>
+        : null}
       {participant && participant.id === viewerId ? <span className="you">TU</span> : null}
       {participant && participant.id !== viewerId && participant.isHuman ? <span className="you is-other">{participant.playerName || 'GIOCATORE'}</span> : null}
       {participant?.takenOver ? <span className="you is-ai">IA</span> : null}
@@ -653,7 +657,9 @@ function TournamentStyles() {
       .trn-side > * { transform: skewX(14deg); }
       .trn-side .ic { min-width: 26px; height: 26px; display: flex; align-items: center; gap: 2px; }
       .trn-side .ic img { width: 22px; height: 22px; object-fit: contain; }
-      .trn-side .ic, .trn-side .you, .trn-side .sc { flex: none; }
+      .trn-side .ic, .trn-side .you, .trn-side .sc, .trn-side .tr { flex: none; }
+      .trn-side .tr { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); max-width: 124px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .trn-side.is-won .tr { color: var(--void); }
       .trn-side .nm { flex: 1; min-width: 0; font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
       .trn-side .you { background: var(--ink); color: var(--void); font-weight: 700; font-size: 11px; letter-spacing: 0.18em; padding: 1px 7px; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
       .trn-side .you.is-other { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }

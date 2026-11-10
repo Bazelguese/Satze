@@ -101,6 +101,8 @@ export function useGameState() {
   // Selezione deck e difficoltà
   const [selectedDeckKey, setSelectedDeckKey] = useState(null);
   const [aiDifficulty, setAiDifficulty] = useState(null); // 'easy' | 'medium' | 'hard' (legacy 'chaos' → medium)
+  // Personalità dell'IA (src/game/ai/mc/mcTraits.js): già estratta se il menu ha scelto "Casuale".
+  const [aiPersonality, setAiPersonality] = useState('neutral');
   
   // UI states aggiuntivi
   const [showDeckManager, setShowDeckManager] = useState(false);
@@ -261,6 +263,8 @@ export function useGameState() {
     setSelectedDeckKey,
     aiDifficulty,
     setAiDifficulty,
+    aiPersonality,
+    setAiPersonality,
     
     // Multiplayer locale / online
     isMultiplayer,

@@ -4,6 +4,7 @@
 // ============================================
 
 import { useCallback } from 'react';
+import { getMcTrait, resolveTraitChoice } from '../game/ai/mc/mcTraits.js';
 import { ARMY_SETS, ARMY_DECKS, ARMY_COLORS, ALL_BATTLEFIELDS } from '../data';
 import { selectBattlefields } from '../game/fieldLogic';
 import { DIFFICULTY_NAMES, shuffleArray } from '../utils';
@@ -53,6 +54,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setGameResult,
     setShowClaimVictoryChoice,
     setAiDifficulty,
+    setAiPersonality,
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
@@ -134,6 +136,9 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setGameMode(mode);
     // Imposta la difficoltà dell'IA
     setAiDifficulty(difficulty);
+    // Personalità scelta nel menu ("random" estrae qui il tratto, così il VS lo mostra già).
+    const aiPersonality = resolveTraitChoice(startOptions?.aiPersonality);
+    setAiPersonality?.(aiPersonality);
     
     // Seleziona le armate
     const armyNames = Object.keys(ARMY_SETS);
@@ -314,6 +319,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       `🎖️ Tu comandi: ${playerArmy}`,
       `🎖️ IA comanda: ${enemyArmySelected}`,
       `🎯 Difficoltà IA: ${DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES['medium']}`,
+      aiPersonality !== 'neutral' ? `🎭 Personalità IA: ${getMcTrait(aiPersonality).name}` : '',
       formatLog,
     ].filter(Boolean));
     
@@ -376,6 +382,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setEnemyToxin,
     setGameResult,
     setAiDifficulty,
+    setAiPersonality,
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
@@ -423,6 +430,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setGameMode(mode);
       // Il multi-posto online usa la scena con le IA dei posti: niente percorsi del Duello online.
       setAiDifficulty(opts.aiDifficulty ?? 'multiplayer');
+      setAiPersonality?.('neutral');
 
       const shuffleSetup = buildShuffleDealSetupFromMatch(perspective, payload);
       const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
@@ -534,6 +542,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setShowClaimVictoryChoice,
       setGameMode,
       setAiDifficulty,
+      setAiPersonality,
       setPlayerArmyBonuses,
       setEnemyArmyBonuses,
       setPlayerHand,
