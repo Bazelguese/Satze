@@ -7,6 +7,7 @@ export const ONLINE_MODES = {
   duel: { id: 'duel', name: 'Duello', description: '1 contro 1', minPlayers: 2, maxPlayers: 2, formats: ['standard', 'noEminence', 'bareHands'] },
   teamDuel: { id: 'teamDuel', name: '2v2', description: 'Abbinamenti segreti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminence', 'bareHands'] },
   kingOfHill: { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['noEminence', 'bareHands'] },
+  tournament: { id: 'tournament', name: 'Torneo', description: '12 eserciti · al meglio delle 3 · IA nei posti vuoti', minPlayers: 2, maxPlayers: 4, formats: ['standard', 'noEminence', 'bareHands'] },
 };
 
 export const DIFFICOLTA_IA = [
@@ -67,7 +68,7 @@ export default function OnlineRoomPanel({ isHost, config, onConfig, members = []
       key="mode"
       titolo="MODALITÀ"
       nota={!multiDisponibile
-        ? '2v2 e Re della collina richiedono il server aggiornato.'
+        ? '2v2, Re della collina e Torneo richiedono il server aggiornato.'
         : `${modo.description}${isHost ? '' : " · la sceglie l'host"}`}
     >
       {Object.values(ONLINE_MODES).map((m) => (
