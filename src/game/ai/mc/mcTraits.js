@@ -82,25 +82,28 @@ export const MC_TRAITS = {
     id: 'temerario',
     name: 'Temerario',
     description: 'Ama il rischio: mosse tutto-o-niente e puntate audaci.',
-    risk: -1,
-    bias: (view, card, focus, ctx) => 0.08 * Math.max(0, focusAboveFair(focus, ctx)),
+    // Misurato: rischio −1 e preferenza 0,08 lo indeboliscono troppo (33% contro il Neutrale).
+    risk: -0.5,
+    bias: (view, card, focus, ctx) => 0.04 * Math.max(0, focusAboveFair(focus, ctx)),
   },
   cauto: {
     id: 'cauto',
     name: 'Cauto',
     description: 'Odia il rischio e protegge i propri PV, anche cedendo un Campo.',
-    risk: 1,
+    // Misurato: rischio 1 e obiettivo 0,05 lo indeboliscono troppo (41%). Stile ancora poco
+    // riconoscibile con questi valori: da rivedere.
+    risk: 0.5,
     // Conta i propri PV rimasti: subire danni gli pesa anche quando vince.
-    objective: (end, state) => 0.05 * (Number(state.enemyHP) || 0),
+    objective: (end, state) => 0.02 * (Number(state.enemyHP) || 0),
   },
   imprevedibile: {
     id: 'imprevedibile',
     name: 'Imprevedibile',
     description: 'I suoi FC sono illeggibili: alterna puntate minime e altissime.',
     // Fra i FC "accettabili" per la carta scelta (entro questa soglia dalla stima migliore)
-    // va spesso agli estremi: la puntata più bassa o la più alta.
-    focusWindow: 0.15,
-    focusExtremes: 0.7,
+    // ne estrae uno a caso. Misurato: le puntate per una stessa carta raramente sono vicine,
+    // quindi l'effetto è piccolo; da rivedere.
+    focusWindow: 0.08,
   },
 };
 

@@ -222,6 +222,38 @@ Tempi per decisione con 4 processi in parallelo:
 
 Gli obiettivi originali sono quasi raggiunti. Resta da allargare il gradino Normale–Facile, soprattutto in Mani nude, senza far scendere la Facile sotto l'80% contro il Casuale.
 
+### Personalità dell'IA (in corso)
+
+Richiesta dell'utente: stili di gioco indipendenti dalla difficoltà, scelti nel selettore della partita. La predefinita è Neutrale; c'è anche la voce "Casuale", e il tratto si mostra nella schermata VS. Per ora valgono nel Duello; il 2v2 verrà dopo.
+
+**Codice:**
+
+- `src/game/ai/mc/mcTraits.js`: i tratti, con preferenza sulle mosse, obiettivo a fine partita simulata, rischio e variabilità dei FC.
+- Integrazione in `mcSearch.js`.
+- Riga PERSONALITÀ nel selettore (`DifficultySelectPopup.jsx`).
+- Stato `aiPersonality` e passaggio a `useAI` e al worker.
+- Schermata VS: «Difficoltà · Tratto».
+
+**Vincolo concordato:** ogni tratto resta entro circa 5 punti dal Neutrale dello stesso livello.
+
+**Taratura** (Difficile con tratto contro Difficile Neutrale, entrambe a 2000 simulazioni, 100 partite in Classico, semi 7000-7049). I valori di stile sono del tratto, tra parentesi quelli del Neutrale:
+
+| Tratto | Forza | Stile misurato | Stato |
+|---|---|---|---|
+| Impetuoso | 49% | FC nei primi due turni 5,9 (5,0), dal quarto 1,8 (2,5) | ✔ riconoscibile |
+| Paziente | 48% | FC all'inizio 3,6 (4,7), alla fine 4,0 (3,0); vince sui Campi solo nel 33% dei casi | ✔ riconoscibile |
+| Avaro | 48% | FC all'inizio 4,1 (4,8) | ✔ riconoscibile |
+| Conquistatore | 51% | il 67% delle sue vittorie arriva dai Campi | ✔ riconoscibile |
+| Spietato | 49% | danni fatti 8,2 (8,0) | appena percettibile |
+| Temerario | 53% | FC all'inizio 5,3 (4,9) | poco riconoscibile |
+| Cauto | 50% | nessuna differenza | ✗ da rivedere |
+| Imprevedibile | 49% | nessuna differenza | ✗ da rivedere |
+
+**Cosa ho imparato tarando:**
+
+- Il "rischio" (media ± deviazione) indebolisce molto senza dare uno stile visibile: il Temerario estremo scende al 33%, il Cauto estremo al 41%.
+- Per una stessa carta le puntate di FC hanno stime molto diverse, quindi rendere i FC imprevedibili costa forza.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.
