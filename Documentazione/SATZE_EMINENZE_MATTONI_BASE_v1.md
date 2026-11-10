@@ -555,3 +555,24 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 **Lavoro di implementazione:**
 - La Domanda si diffonde richiede il controllo di Ancorato anche per il lato avversario.
 - Serve un'interfaccia che mostri all'avversario la soglia di Ancorato del proprio Agente mentre sceglie Agente e FC.
+
+### 10.3 Kethran — L'Altare della Ricomposizione (approvata)
+
+**Presenza iniziale:** 1 (era 2). **Eccezione allo schema:** 4 abilità attive, firma a −3.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Ricomposizione | Quando il tuo Agente perde un Duello, diventa un Frammento per il resto dello Scontro. Quando ottieni un Frammento, +1 Presenza. I Frammenti non vengono consumati. | — | circa 2.5 Presenza/Scontro |
+| +1 | Sacrificio | Perdi 2 PV. | −0.75 | −1.0 ✅ (perdere PV aiuta Rimonta) |
+| −1 | Elogio al trionfo *(invariato)* | Se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro. | 0.75 | circa 0.5 ✅ |
+| −2 | Innesto | Selezionabile solo se hai almeno 1 Frammento. Scegli un tuo Frammento: in questo Duello il suo Potere, con il suo trigger e il suo effetto, sostituisce a tua scelta il Potere oppure il Bonus del tuo Agente schierato. Se sostituisce il Bonus, è trattato come Bonus. | 1.50 | circa 1.0–1.4 ✅ 〰️ |
+| −3 | Opera Composita | Selezionabile solo se hai almeno 2 Frammenti. Scegli due tuoi Frammenti: in questo Duello il Potere del tuo Agente schierato è sostituito da un Potere composto dal trigger di uno e dall'effetto dell'altro. | 2.25 | circa 2.0–2.5 ✅ 〰️ |
+
+**Motore:** 0.75 + circa 1.9 = circa 2.65 FC.
+
+**Lavoro di implementazione:**
+- Sacrificio: togliere il segmento di Presenza e l'escalation.
+- Frammenti: togliere il consumo da Innesto.
+- Innesto nel Bonus: usare l'override del Bonus (come Ratti Spezzacuore).
+- Innesto nel Potere e Opera Composita: usare la composizione da Frammenti (`src/game/eminence/composeAbilityParams.js`).
+- Condizioni di selezionabilità: almeno 1 / 2 Frammenti.
