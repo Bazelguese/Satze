@@ -159,6 +159,31 @@ function pickFinal(ranked, noise, rng) {
   return ranked[0];
 }
 
+/**
+ * Candidati di un posto che passano alla seconda fase: i migliori, oppure (con `seatNoise`)
+ * un'estrazione pesata softmax senza ripetizioni — errori credibili già nella scelta del posto.
+ */
+function seatShortlist(ranked, top, seatNoise, rng) {
+  if (!seatNoise || ranked.length <= top) return ranked.slice(0, top);
+  const pool = [...ranked];
+  const out = [];
+  while (out.length < top && pool.length) {
+    const best = pool[0].score;
+    const weights = pool.map((c) => Math.exp((c.score - best) / seatNoise));
+    let roll = rng() * weights.reduce((s, w) => s + w, 0);
+    let index = pool.length - 1;
+    for (let i = 0; i < pool.length; i += 1) {
+      roll -= weights[i];
+      if (roll <= 0) {
+        index = i;
+        break;
+      }
+    }
+    out.push(pool.splice(index, 1)[0]);
+  }
+  return out;
+}
+
 function focusOptions(seat, extra = []) {
   const fair = seatFair(seat);
   return [...new Set([1, fair - 1, fair, fair + 1, fair + 3, ...extra].map((f) => clampSeatFocus(seat, f)))];
@@ -185,8 +210,9 @@ function hideOpeningInvestments(match) {
 /**
  * Scelte d'apertura dei posti IA di una squadra.
  * @param {object} match - fase di apertura, squadra `teamId` in apertura
- * @param {{ rollouts: number, noise?: number, quality?: number, maxMs?: number, topPerSeat?: number,
- *   traits?: Record<string, string> }} params
+ * @param {{ rollouts: number, noise?: number, seatNoise?: number, quality?: number, maxMs?: number,
+ *   topPerSeat?: number, traits?: Record<string, string> }} params
+ *   noise: rumore nella scelta finale; seatNoise: rumore nella scelta dei candidati di ogni posto
  * @param {() => number} rng
  * @param {{ aiSeatIds: string[], fixedSeats?: Record<string, { cardId, fieldIndex, focus }> }} opts
  * @returns {{ choices: Record<string, { cardId, fieldIndex, focus }>, stats: object }}
@@ -232,7 +258,10 @@ export function chooseTeamOpening(match, teamId, params, rng, { aiSeatIds, fixed
   );
 
   if (aiSeatIds.length === 1) {
-    const chosen = pickFinal(perSeat[aiSeatIds[0]], params.noise, rng);
+    const pool = params.seatNoise
+      ? seatShortlist(perSeat[aiSeatIds[0]], params.topPerSeat ?? 3, params.seatNoise, rng)
+      : perSeat[aiSeatIds[0]];
+    const chosen = pickFinal(pool, params.noise, rng);
     return {
       choices: { [aiSeatIds[0]]: chosen.choice },
       alternatives,
@@ -244,8 +273,9 @@ export function chooseTeamOpening(match, teamId, params, rng, { aiSeatIds, fixed
   const top = params.topPerSeat ?? 3;
   const [s1, s2] = aiSeatIds;
   const combos = [];
-  for (const a of perSeat[s1].slice(0, top)) {
-    for (const b of perSeat[s2].slice(0, top)) {
+  const shortB = seatShortlist(perSeat[s2], top, params.seatNoise, rng);
+  for (const a of seatShortlist(perSeat[s1], top, params.seatNoise, rng)) {
+    for (const b of shortB) {
       if (a.choice.fieldIndex === b.choice.fieldIndex) continue;
       combos.push({ choices: { [s1]: a.choice, [s2]: b.choice }, fixed: { [s1]: a.choice, [s2]: b.choice }, bias: a.bias + b.bias });
     }
@@ -330,13 +360,14 @@ export function chooseTeamResponse(match, teamId, params, rng, { aiSeatIds, fixe
     byPairing[pairing] = Object.fromEntries(aiSeatIds.map((id) => [id, perSeat[id][0]?.choice ?? null]));
     const top = params.topPerSeat ?? 3;
     if (aiSeatIds.length === 1) {
-      for (const a of perSeat[aiSeatIds[0]].slice(0, top)) {
+      for (const a of seatShortlist(perSeat[aiSeatIds[0]], top, params.seatNoise, rng)) {
         combos.push({ pairing, deployments: { [aiSeatIds[0]]: a.choice }, fixed: a.fixed, bias: a.bias });
       }
     } else {
       const [s1, s2] = aiSeatIds;
-      for (const a of perSeat[s1].slice(0, top)) {
-        for (const b of perSeat[s2].slice(0, top)) {
+      const shortB = seatShortlist(perSeat[s2], top, params.seatNoise, rng);
+      for (const a of seatShortlist(perSeat[s1], top, params.seatNoise, rng)) {
+        for (const b of shortB) {
           combos.push({
             pairing,
             deployments: { [s1]: a.choice, [s2]: b.choice },
