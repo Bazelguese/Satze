@@ -5428,6 +5428,8 @@ export default function SatzeGame() {
       // chiude subito la partita con l'esito dato (prove del torneo senza giocare ogni duello)
       concludi: (winner) => { setGameResult({ winner, reason: 'hp' }); setGamePhaseRaw('gameOver'); },
       torneo: () => tournament,
+      // host di un torneo online: sostituisce il tabellone (prove con accoppiamenti scelti)
+      torneoImposta: (t) => tnHostCommit(t),
       decidiReclamo: (d) => multiSeat.decideClaim(d),
       // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
       cadiConnessione: () => getMultiplayerManager().ws?.close(),
