@@ -686,3 +686,23 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 **Lavoro di implementazione:**
 - Furto di Reliquie: trasferimento di Presenza condizionato alla vittoria.
 - Ascensione: costo variabile (tutta la Presenza, minimo 3) e bonus di POT pari alla Presenza spesa.
+
+### 10.9 Ratti della Megera — Bella Malelabbra (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 3 abilità attive, base a −1. La Tossina resta solo nel Bonus d'Armata.
+
+**Chiarimento di regola usato per il rework:** gli Agenti restano sempre in mano; un Agente già usato non può essere schierato di nuovo.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Male Crescente *(invariato)* | Quando schieri un Agente con la Lega effettiva più bassa tra quelli che non hai ancora usato, +1 Presenza. In caso di parità, la condizione è soddisfatta. | — | fino a 5 Presenza/Scontro (l'ordine crescente costa Duelli) |
+| +1 | Dono della Megera | In questo Duello l'Agente nemico riceve 1 FC temporaneo. | −0.75 | circa −1.0 ✅ |
+| −1 | Seduzione | **Reveal: prima degli Agenti.** Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello. | 0.75 | circa 0.75 ✅ |
+| −3 | Vendetta oltre la Morte | **Si rivela quando schieri l'Agente.** Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo. | 2.25 | circa 2.0 ✅ 〰️ |
+
+**Motore:** 0.75 + 2.25–3.75 = circa 3.0–4.5 FC. **Da osservare in playtest:** Presenza reale generata da Male Crescente.
+
+**Lavoro di implementazione:**
+- Tolte Sussurro, Veleno e Spezzacuore.
+- Seduzione: divieto di usare un Agente preciso per un Duello, se non è l'unico disponibile.
+- Vendetta: permettere di schierare un Agente già usato e sconfitto; reveal al momento dello schieramento.
