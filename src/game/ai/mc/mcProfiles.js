@@ -8,24 +8,35 @@
 // Documentazione/PIANO_MIGLIORAMENTO_IA.md.
 
 export const MC_PROFILES = {
-  // Scala provvisoria (Classico, 100 partite per misura): una sola IA, la forza scende con il
-  // rumore. Difficile ~92% contro Casuale; il rumore alto riduce la forza più del budget.
+  // Scala tarata al banco di prova (100 partite per misura, semi 6000-6049, lati scambiati):
+  //                       Classico   Mani nude   obiettivo
+  //   Difficile–Normale     70%        76%        70-80%
+  //   Normale–Facile        68%        62%        70-80%
+  //   Facile–Casuale        85%        79%        ≥80%
+  //   Difficile–Casuale     95%
+  // Vedi Documentazione/PIANO_MIGLIORAMENTO_IA.md.
   easy: {
     id: 'easy',
     rollouts: 300,
     policyQuality: 0.7,
     opponentQuality: 0.7,
-    noise: 0.2,
+    // Errori credibili: a volte sceglie una mossa vicina alla migliore, non una a caso.
+    noise: 0.08,
     /** Tetto di tempo nel gioco (ms). Il worker aggiunge 4 s di margine: totale < 12 s di useAI. */
     maxMs: 2000,
   },
   medium: {
     id: 'medium',
-    rollouts: 1500,
+    // La Difficile della prima versione: politica scritta a mano, apertura come gioco
+    // simultaneo (strategia mista sui FC).
+    rollouts: 6000,
     policyQuality: 0.7,
     opponentQuality: 0.7,
-    noise: 0.06,
-    maxMs: 4000,
+    noise: 0,
+    leadMode: 'matrix',
+    matrixCombos: 5,
+    matrixRollouts: 16,
+    maxMs: 7000,
   },
   hard: {
     id: 'hard',
@@ -33,9 +44,8 @@ export const MC_PROFILES = {
     policyQuality: 0.7,
     opponentQuality: 0.7,
     noise: 0,
-    // Simulazioni con la politica addestrata (learnedPolicyWeights.js): contro la Difficile
-    // precedente (apertura simultanea, politica euristica) vince il 72,5% (200 partite, Classico).
-    // L'apertura simultanea non va combinata con la politica addestrata (53,5%).
+    // Simulazioni con la politica addestrata (learnedPolicyWeights.js). L'apertura simultanea
+    // non va combinata con la politica addestrata (misurato: nessun guadagno).
     policy: 'learned',
     maxMs: 7000,
   },

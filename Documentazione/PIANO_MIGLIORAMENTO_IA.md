@@ -1,6 +1,6 @@
 # Piano di miglioramento dell'IA di SATZE
 
-Stato: Fase 0 completata. Deciso il passaggio a un motore a simulazione (opzione A), già collegato al gioco per Classico e Mani nude con una scala dei livelli provvisoria. Da decidere: obiettivi di distanza fra i livelli realistici (vedi "Motore a simulazione").
+Stato: Fase 0 completata. Motore a simulazione in gioco (Classico e Mani nude) con politica addestrata per la Difficile e scala dei livelli tarata (vedi "Strada B"). Prossimi passi: rifinitura del gradino Normale–Facile, Campagna e Multiposto.
 Ultimo aggiornamento: 2026-11-10.
 
 ## Obiettivi
@@ -177,6 +177,50 @@ Verifica della scala provvisoria (100 partite ciascuna):
 | Nuova Normale – Normale precedente | 58% | 49% |
 
 La scala è ordinata e coerente fra le due modalità, ma i gradini sono di circa il 60%: l'obiettivo era 70-80%.
+
+### Strada B — politica di simulazione addestrata (completata)
+
+Decisione dell'utente: provare a rafforzare la Difficile prima di fissare la scala. L'IA non deve barare.
+
+**Metodo.**
+
+1. La Difficile gioca contro sé stessa: 400 partite, 300 in Classico e 100 in Mani nude.
+2. A ogni decisione si registrano le caratteristiche di ogni mossa (`src/game/ai/mc/mcFeatures.js`) e la stima di vittoria che ne danno le simulazioni.
+3. Una politica lineare impara a imitare quelle stime (`scripts/ai-train-policy.mjs`). I pesi sono in `src/game/ai/mc/learnedPolicyWeights.js`.
+4. La politica addestrata diventa il modo in cui l'IA gioca le partite "immaginate".
+
+**Misure** (Classico):
+
+| Confronto | Partite | Risultato |
+|---|---|---|
+| Politica addestrata, senza apertura simultanea – Difficile precedente | 200 | **72,5%** |
+| Politica addestrata, con apertura simultanea – Difficile precedente | 200 | 53,5% |
+| Secondo giro di addestramento – primo giro | 200 | 49,5% (nessun guadagno) |
+| Pesi addestrati su entrambi i giri – primo giro | 200 | 40,5% |
+
+Restano i pesi del primo giro. Con le caratteristiche attuali, altri giri non aggiungono forza.
+
+**Scala installata** (`mcProfiles.js`):
+
+- **Difficile:** politica addestrata, 6000 simulazioni.
+- **Normale:** la Difficile precedente (politica scritta a mano, apertura come gioco simultaneo).
+- **Facile:** 300 simulazioni, rumore 0,08.
+
+Misure: 100 partite per accoppiamento, semi 6000-6049.
+
+| Accoppiamento | Classico | Mani nude | Obiettivo |
+|---|---|---|---|
+| Difficile – Normale | 70% | 76% | 70-80% ✔ |
+| Normale – Facile | 68% | 62% | 70-80% (poco sotto) |
+| Facile – Casuale | 85% | 79% | ≥80% (al limite in Mani nude) |
+| Difficile – Casuale | 95% | — | |
+
+Tempi per decisione con 4 processi in parallelo:
+
+- **Difficile:** media 1,2-1,3 s, massimo 3,1 s;
+- **Normale:** media 1,5-1,6 s, massimo circa 7 s, che è anche il tetto `maxMs`: oltre, decide con le simulazioni già fatte.
+
+Gli obiettivi originali sono quasi raggiunti. Resta da allargare il gradino Normale–Facile, soprattutto in Mani nude, senza far scendere la Facile sotto l'80% contro il Casuale.
 
 ### Fase 2 — Avversario e Focus
 
