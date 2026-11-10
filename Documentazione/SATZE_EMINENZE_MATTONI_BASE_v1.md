@@ -706,3 +706,20 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Tolte Sussurro, Veleno e Spezzacuore.
 - Seduzione: divieto di usare un Agente preciso per un Duello, se non è l'unico disponibile.
 - Vendetta: permettere di schierare un Agente già usato e sconfitto; reveal al momento dello schieramento.
+
+### 10.10 Patto degli Indocili — Il Grande Semaforo (approvata)
+
+**Presenza iniziale:** 0. **Eccezione allo schema:** 3 abilità attive, nessuna ricarica a +1, nessuna firma −3/−4 (la firma è il Semaforo stesso).
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Multa per eccesso di Caos *(invariato)* | Se alla fine del Duello sono stati giocati almeno 8 FC, +2 Presenza. | — | circa 3.5 Presenza/Scontro |
+| 0 | Verde | Se in questo Duello un Agente attiva un Potere o un Bonus con trigger Turbo o Intervento, +1 Presenza (una sola volta per Duello). | 0 | circa +0.5 (lieve ⬆️) |
+| −2 | Giallo | Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori. | 1.50 | circa 1.6 ✅ 〰️ |
+| −2 | Rosso *(invariato)* | Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori. | 1.50 | circa 1.6–2.0 ✅ 〰️ |
+
+**Motore:** circa 3.0 FC (limite alto). **Da osservare in playtest:** Multa alimentata dal Patto stesso; frequenza di Verde.
+
+**Lavoro di implementazione:**
+- Verde: +1 Presenza (max una per Duello) se si attiva un Potere o Bonus con trigger Turbo o Intervento.
+- Giallo: costo da 0 a −2.
