@@ -339,7 +339,7 @@ export function TournamentHubScreen({ tournament, busy = null, online = null, on
     primary = { label: online ? 'ESCI DAL TORNEO' : 'NUOVO TORNEO', run: onNewTournament };
   } else if (champion) {
     label = 'ELIMINATO';
-    headline = `Il torneo va a ${champion.deckName}`;
+    headline = `Campione: ${champion.deckName}`;
     hint = 'Seleziona un incontro per leggerne il riepilogo o rivederlo.';
     primary = { label: online ? 'ESCI DAL TORNEO' : 'NUOVO TORNEO', run: onNewTournament };
   } else {
