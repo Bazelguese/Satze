@@ -186,8 +186,11 @@ import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
 import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
-import { describeHumanMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
-import { createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards } from '../src/game/tournament/tournamentSetup.js';
+import { describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
+import {
+  createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards,
+  hasGameLog, playAiSeries, playPendingAiSeries, replaySavedAiGame,
+} from '../src/game/tournament/tournamentSetup.js';
 import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
 import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
@@ -924,7 +927,8 @@ export default function SatzeGame() {
       ?? getHandAccentColor(enemyHand, ARMY_COLORS, '#D946EF'),
     [enemyHand, enemyDeckVisual?.accent],
   );
-  const outcomeOverlayKind = useDuelOutcomeOverlay(gamePhase, gameResult);
+  // Da spettatore (torneo) l'esito non è né vittoria né sconfitta del giocatore: niente sipario.
+  const outcomeOverlayKind = useDuelOutcomeOverlay(gamePhase, gameResult?.spectate ? null : gameResult);
   /** Sigilli esito: fino a 2 armate del mazzo giocatore (doppia armata). */
   const playerArmySealSrcs = useMemo(() => {
     const armies = playerDeckVisual?.armies?.length
@@ -1761,8 +1765,14 @@ export default function SatzeGame() {
   const multiSeatSceneRef = useRef({});
   const multiSeat = useMultiSeatDuel({ gameState, sceneRef: multiSeatSceneRef });
   const isMultiSeat = multiSeat.isActive;
+  /** Torneo: partita tra IA mostrata sul tavolo (turni già giocati dal motore, vedi startSpectate). */
+  const [spectate, setSpectate] = useState(null);
+  const spectateRef = useRef(null);
+  spectateRef.current = spectate;
+  const spectating = Boolean(spectate);
   const multiSeatActiveRef = useRef(false);
-  multiSeatActiveRef.current = isMultiSeat;
+  // Anche da spettatore il tavolo è guidato da fuori: niente IA di base né input del giocatore.
+  multiSeatActiveRef.current = isMultiSeat || spectating;
   const multiSeatDeployRef = useRef(false);
   multiSeatDeployRef.current = multiSeat.acceptsHumanDeploy;
   const multiSeatStageTimerRef = useRef(null);
@@ -2427,13 +2437,184 @@ export default function SatzeGame() {
     setShowFinalRoundAnimation(false);
     tournamentResultPendingRef.current = false;
     setTournamentGameActive(false);
+    setSpectate(null);
     resetToMenu();
     setGamePhaseRaw('tournamentHub');
   }, [stopAiThinking, ai, resetToMenu, setShowFinalRoundAnimation, setGamePhaseRaw]);
 
+  /** Lavoro in corso sul tabellone (serie tra IA che si stanno giocando): { label }. */
+  const [tournamentBusy, setTournamentBusy] = useState(null);
+
+  /**
+   * Mostra sul tavolo una partita tra IA già giocata: il motore la rigioca identica e ogni
+   * duello entra in scena già risolto, come gli scontri delle modalità a più posti.
+   */
+  const startSpectate = useCallback((t, matchId, gameIndex) => {
+    const match = getMatch(t, matchId);
+    const saved = match?.series.games[gameIndex];
+    if (!hasGameLog(saved)) return;
+    const { handA, handB, battlefields, game } = replaySavedAiGame(t, saved);
+    const sideA = t.participants[match.a];
+    const sideB = t.participants[match.b];
+    stopAiThinking();
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    ai.resetAiSession();
+    multiSeat.cancel();
+    clearCardPreview();
+    setDevDialogueDuelActive(false);
+    setIsMultiplayer(false);
+    setCampaignLevel(null);
+    setSelectedMode(t.settings.mode || 'classic');
+    setVsChosenEnemyArmy(sideB.army);
+    tournamentResultPendingRef.current = false;
+    setTournamentGameActive(false);
+    setSpectate({
+      matchId,
+      gameIndex,
+      gamesTotal: match.series.games.length,
+      frames: game.frames,
+      index: 0,
+      staged: -1,
+      winner: game.winner,
+      reason: game.reason,
+      names: { a: sideA.deckName, b: sideB.deckName },
+    });
+    startStandardGame(
+      sideA.army,
+      sideA.cardIds,
+      t.settings.mode || 'classic',
+      t.settings.difficulty || 'medium',
+      ALL_BATTLEFIELDS,
+      sideB.army,
+      sideB.cardIds,
+      { fixedFields: battlefields, openingPlayerFirst: saved.aFirst },
+      {
+        eminenceFormat: EMINENCE_FORMAT.DISABLED,
+        skipShuffleDeal: true,
+        fixedHands: { playerHand: handA, enemyHand: handB },
+      }
+    );
+  }, [stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
+
+  /** Guarda una serie tra IA: se non è ancora stata giocata la gioca prima per intero. */
+  const watchTournamentSeries = useCallback(async (matchId, gameIndex = 0) => {
+    if (!tournament || tournamentBusy) return;
+    let current = tournament;
+    if (!getMatch(current, matchId)?.winnerId) {
+      setTournamentBusy({ label: 'Partita 1' });
+      try {
+        current = await playAiSeries(current, matchId, {
+          onGame: (n) => setTournamentBusy({ label: `Partita ${n}` }),
+        });
+      } catch (err) {
+        console.error('[Torneo] serie IA fallita:', err);
+        setTournamentBusy(null);
+        return;
+      }
+      storeTournament(current);
+      setTournamentBusy(null);
+    }
+    startSpectate(current, matchId, gameIndex);
+  }, [tournament, tournamentBusy, storeTournament, startSpectate]);
+
+  /** Aspetta la fine: gioca subito tutte le serie tra IA pronte, senza guardarle. */
+  const concludeTournamentRound = useCallback(async () => {
+    if (!tournament || tournamentBusy) return;
+    setTournamentBusy({ label: 'Serie in corso' });
+    try {
+      const next = await playPendingAiSeries(tournament, {
+        onProgress: ({ match, gameNumber, done, remaining }) => setTournamentBusy({
+          label: `${tournament.participants[match.a].deckName} – ${tournament.participants[match.b].deckName} · Partita ${gameNumber}`,
+          step: done + 1,
+          total: done + remaining,
+        }),
+      });
+      storeTournament(next);
+    } catch (err) {
+      console.error('[Torneo] conclusione turno fallita:', err);
+    }
+    setTournamentBusy(null);
+  }, [tournament, tournamentBusy, storeTournament]);
+
+  /** Stato del tavolo da spettatore: lato 'a' sul lato player, lato 'b' sul lato enemy. */
+  const applySpectateTable = useCallback((snap, frames, uptoIndex) => {
+    setPlayerUsedCards(snap.used.a);
+    setEnemyUsedCards(snap.used.b);
+    setPlayerFocus(snap.focus.a);
+    setEnemyFocus(snap.focus.b);
+    setPlayerHP(snap.hp.a);
+    setEnemyHP(snap.hp.b);
+    setPlayerToxin(snap.toxin.a || null);
+    setEnemyToxin(snap.toxin.b || null);
+    setConqueredFields(snap.conqueredFields);
+    setRevealedFields(snap.revealedFields);
+    const outcomes = {};
+    frames.slice(0, uptoIndex).forEach((f) => {
+      outcomes[battleOutcomeKey('player', f.cardA.id)] = f.battleResult.winner === 'player' ? 'winner' : 'loser';
+      outcomes[battleOutcomeKey('enemy', f.cardB.id)] = f.battleResult.winner === 'enemy' ? 'winner' : 'loser';
+    });
+    setCardBattleOutcomes(outcomes);
+  }, [setPlayerUsedCards, setEnemyUsedCards, setPlayerFocus, setEnemyFocus, setPlayerHP, setEnemyHP, setPlayerToxin, setEnemyToxin, setConqueredFields, setRevealedFields, setCardBattleOutcomes]);
+
+  // Spettatore: a ogni turno il duello già risolto entra in scena.
+  useEffect(() => {
+    if (!spectate || gamePhase !== 'selectField' || spectate.staged === spectate.index) return;
+    const frame = spectate.frames[spectate.index];
+    const scene = multiSeatSceneRef.current;
+    setSpectate((prev) => (prev ? { ...prev, staged: prev.index } : prev));
+    scene.resetForProjection();
+    applySpectateTable(frame.before, spectate.frames, spectate.index);
+    setRoundNumber(frame.before.roundNumber);
+    setIsPlayerFirst(frame.before.isPlayerFirst);
+    setLastWinner(null);
+    scene.stageBattle({
+      result: {
+        ...frame.battleResult,
+        presentStart: {
+          hp: { player: frame.before.hp.a, enemy: frame.before.hp.b },
+          toxin: { player: frame.before.toxin.a || null, enemy: frame.before.toxin.b || null },
+        },
+      },
+      playerAgent: frame.cardA,
+      enemyAgent: frame.cardB,
+      playerFocus: frame.focusA,
+      enemyFocus: frame.focusB,
+      fieldIndex: frame.fieldIndex,
+    });
+  }, [spectate, gamePhase, applySpectateTable, setRoundNumber, setIsPlayerFirst, setLastWinner]);
+
+  /** Spettatore, dopo «Continua»: turno successivo oppure esito della partita. */
+  const advanceSpectate = useCallback(() => {
+    const s = spectateRef.current;
+    if (!s) return;
+    const frame = s.frames[s.index];
+    multiSeatSceneRef.current.resetForProjection();
+    applySpectateTable(frame.after, s.frames, s.index + 1);
+    if (s.index + 1 < s.frames.length) {
+      setSpectate({ ...s, index: s.index + 1 });
+      setGamePhaseRaw('selectField');
+      return;
+    }
+    const fields = Object.values(frame.after.conqueredFields);
+    setGameResult({
+      winner: s.winner === 'a' ? 'player' : s.winner === 'b' ? 'enemy' : 'draw',
+      reason: s.reason,
+      playerFields: fields.filter((f) => f?.winner === 'player').length,
+      enemyFields: fields.filter((f) => f?.winner === 'enemy').length,
+      // partita di sola visione: fuori da storico playtest e telemetria
+      test: true,
+      spectate: true,
+    });
+    setGamePhaseRaw('gameOver');
+  }, [applySpectateTable, setGameResult, setGamePhaseRaw]);
+
   // Uscita dal tavolo per un'altra via (es. menù): la partita non è più del torneo.
   useEffect(() => {
-    if (gamePhase === 'menu') setTournamentGameActive(false);
+    if (gamePhase === 'menu') {
+      setTournamentGameActive(false);
+      setSpectate(null);
+    }
   }, [gamePhase]);
 
   // Fine partita di torneo: l'esito entra nella serie una volta sola.
@@ -3099,7 +3280,7 @@ export default function SatzeGame() {
       playtestAutoSavedRef.current = false;
       return;
     }
-    if (playtestAutoSavedRef.current || !gameResult) return;
+    if (playtestAutoSavedRef.current || !gameResult || gameResult.spectate) return;
 
     const playerDeckLabel = Array.isArray(selectedDeckKey)
       ? 'campaign_inline'
@@ -4195,6 +4376,7 @@ export default function SatzeGame() {
 
   // Conferma scelta giocatore
   const confirmPlayerChoice = () => {
+    if (spectateRef.current) return;
     if (eminenceAnnounceHold || announcePointerGuard) return;
     if (eminenceBlocksMatch) return;
     if (isMultiSeat) {
@@ -4518,6 +4700,12 @@ export default function SatzeGame() {
   };
   
   const proceedToNextRound = () => {
+    if (spectateRef.current) {
+      setIsZoomed(false);
+      nextRoundInFlightRef.current = false;
+      advanceSpectate();
+      return;
+    }
     if (isMultiSeat) {
       // con un altro scontro nel turno si resta nella vista del duello
       if (!multiSeatQueue?.hasNext) setIsZoomed(false);
@@ -5173,8 +5361,8 @@ export default function SatzeGame() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [fieldsScrollable, battlefields.length, gamePhase, updateFieldsScrollHint]);
-  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
-  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
+  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : spectating ? spectate.names.a : (multiSeatPlayerName || 'TU');
+  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : spectating ? spectate.names.b : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
   const mpEnemyHandLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'Mano Avversario';
 
@@ -5541,7 +5729,10 @@ export default function SatzeGame() {
     return (
       screen('tournamentHub', false, <TournamentHubScreen
         tournament={tournament}
+        busy={tournamentBusy}
         onPlay={playTournamentGame}
+        onWatch={watchTournamentSeries}
+        onConcludeRound={concludeTournamentRound}
         onMenu={() => setGamePhase('menu')}
         onNewTournament={startNewTournament}
         onAbandon={() => {
@@ -6467,7 +6658,7 @@ export default function SatzeGame() {
             coinsShown={focusLaunch.landed.player}
             duelVfx={duelVfx}
             accentColor={playerIdentityColor}
-            kicker={isOnlinePvP || isMultiSeat ? mpSelfLabel : 'Tu'}
+            kicker={isOnlinePvP || isMultiSeat || spectating ? mpSelfLabel : 'Tu'}
           />
           {/* Passi del duello: riquadro con fonte e stato, fasci verso il bersaglio */}
           <DuelStepFx battleResult={battleResult} duelPhase={duelPhase} duelEffectStep={visualEffectStep} />
@@ -7352,7 +7543,7 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
-        sideNames={isMultiSeat ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
+        sideNames={isMultiSeat || spectating ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}
         waitLabel={multiSeatStatus?.wait || null}
@@ -7408,7 +7599,21 @@ export default function SatzeGame() {
         }}
         isCampaign={selectedMode === 'campaign'}
         onCampaignRetry={retryCampaignMission}
-        onTournamentContinue={tournamentGameActive ? returnToTournamentHub : undefined}
+        onTournamentContinue={
+          spectating && spectate.gameIndex + 1 < spectate.gamesTotal
+            ? () => startSpectate(tournament, spectate.matchId, spectate.gameIndex + 1)
+            : tournamentGameActive || spectating ? returnToTournamentHub : undefined
+        }
+        tournamentContinueLabel={spectating && spectate.gameIndex + 1 < spectate.gamesTotal ? `Partita ${spectate.gameIndex + 2}` : 'Torna al torneo'}
+        onTournamentSecondary={spectating && spectate.gameIndex + 1 < spectate.gamesTotal ? returnToTournamentHub : undefined}
+        outcomeOverride={spectating && gameResult ? {
+          // il portale è stretto: titolo corto, il nome dell'esercito va nella riga sotto
+          title: `Partita ${spectate.gameIndex + 1}`,
+          desc: gameResult.winner === 'draw'
+            ? 'Pareggio'
+            : `Vince ${gameResult.winner === 'player' ? spectate.names.a : spectate.names.b} · ${gameResult.reason === 'fields' ? 'Conquista' : 'Punti Vita'}`,
+          color: gameResult.winner === 'player' ? playerIdentityColor : gameResult.winner === 'enemy' ? enemyIdentityColor : null,
+        } : null}
         onRematch={
           isOnlinePvP && multiplayerSession && !onlineOpponentLeft
             ? () => requestOnlineRematch('same')
@@ -7458,7 +7663,7 @@ export default function SatzeGame() {
         rematchLabel={isOnlinePvP ? 'Rematch (stesso mazzo)' : 'Rematch'}
         rematchChangeDeckLabel="Rematch (cambia mazzo)"
         endGameActionsReady={!outcomeOverlayKind}
-        onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD ? undefined : () => {
+        onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD || spectating ? undefined : () => {
           setGamePhase('playtestHistory');
         }}
         onReplayDuel={replayDuelAnimation}
@@ -7674,7 +7879,7 @@ export default function SatzeGame() {
                           onHover={handlePlayerPreviewClick}
                           onClick={holdForConfirmedAgentPick
                             ? () => tryPickEminenceCard(selectedAgent.id)
-                            : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                            : gamePhase === 'selectAgent' && !spectating ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                           onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                           isDragging={draggingCard?.id === selectedAgent?.id}
                         />
@@ -7704,7 +7909,7 @@ export default function SatzeGame() {
                       onHover={handlePlayerPreviewClick}
                       onClick={holdForConfirmedAgentPick
                         ? () => tryPickEminenceCard(selectedAgent.id)
-                        : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                        : gamePhase === 'selectAgent' && !spectating ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                       onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                       isDragging={draggingCard?.id === selectedAgent?.id}
                     />
@@ -7824,6 +8029,7 @@ export default function SatzeGame() {
           }`}
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
           onClick={() => {
+            if (spectating) { returnToTournamentHub(); return; }
             if (tournamentGameActive) {
               if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
               return;
@@ -7837,6 +8043,7 @@ export default function SatzeGame() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
+              if (spectating) { returnToTournamentHub(); return; }
               if (tournamentGameActive) {
                 if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
                 return;

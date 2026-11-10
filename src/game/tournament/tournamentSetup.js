@@ -3,7 +3,18 @@
 // ============================================
 
 import { ARMY_SETS, ARMY_DECKS } from '../../data/cards.js';
-import { createTournament, TOURNAMENT_SIZE } from './tournamentLogic.js';
+import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
+import { selectBattlefields } from '../fieldLogic.js';
+import { playAiGame, playAiGameAsync } from './aiMatchEngine.js';
+import {
+  createTournament,
+  dealAiSeriesHands,
+  getMatch,
+  getPendingAiMatches,
+  recordAiSeries,
+  tallySeries,
+  TOURNAMENT_SIZE,
+} from './tournamentLogic.js';
 
 const STORAGE_KEY = 'satze_tournament';
 export const TOURNAMENT_HUMAN_ID = 'human';
@@ -65,6 +76,106 @@ export function createTournamentForPlayer({ playerArmy, playerDeckKey, playerDec
     }),
   ];
   return createTournament({ participants, settings, rng });
+}
+
+/** Campi di una partita salvata: per id quando esistono nel catalogo, altrimenti per intero. */
+function packFields(fields) {
+  return fields.map((f) => (ALL_BATTLEFIELDS.some((x) => x.id === f.id && x.name === f.name) ? f.id : f));
+}
+
+function unpackFields(packed) {
+  return packed.map((f) => (typeof f === 'object' ? f : ALL_BATTLEFIELDS.find((x) => x.id === f)));
+}
+
+const nextTick = () => new Promise((resolve) => { setTimeout(resolve, 0); });
+
+/**
+ * Gioca per intero una serie tra IA (motore vero, senza Eminenze) e la registra.
+ * Le mani seguono la regola del torneo; i Campi si rigenerano a ogni partita.
+ * @param {object} tournament
+ * @param {string} matchId
+ * @param {{ rng?: () => number, onGame?: (gameNumber: number) => void }} [options]
+ * @returns {Promise<object>} il torneo aggiornato
+ */
+export async function playAiSeries(tournament, matchId, { rng = Math.random, onGame = null } = {}) {
+  const match = getMatch(tournament, matchId);
+  if (!match || match.winnerId) return tournament;
+  const mode = tournament.settings?.mode || 'classic';
+  const difficulty = tournament.settings?.difficulty || 'medium';
+  const games = [];
+  while (!tallySeries(games).winner) {
+    onGame?.(games.length + 1);
+    await nextTick();
+    const hands = dealAiSeriesHands(tournament, match, games, rng);
+    const battlefields = selectBattlefields(mode, ALL_BATTLEFIELDS, { rng });
+    const game = await playAiGameAsync({
+      handA: resolveTournamentCards(hands.a),
+      handB: resolveTournamentCards(hands.b),
+      battlefields,
+      mode,
+      difficulty,
+      rng,
+    }, nextTick);
+    games.push({
+      hands,
+      winner: game.winner,
+      reason: game.reason,
+      simulated: true,
+      aFirst: game.aFirst,
+      fields: packFields(battlefields),
+      rounds: game.rounds,
+      final: game.final,
+    });
+  }
+  return recordAiSeries(tournament, matchId, games);
+}
+
+/**
+ * Conclude il turno: gioca, una dopo l'altra, le serie tra IA pronte del turno più arretrato.
+ * Le serie del turno successivo che così diventano note restano da giocare.
+ */
+export async function playPendingAiSeries(tournament, { rng = Math.random, onProgress = null } = {}) {
+  const pending = getPendingAiMatches(tournament);
+  if (pending.length === 0) return tournament;
+  const round = Math.min(...pending.map((m) => m.round));
+  const matches = pending.filter((m) => m.round === round);
+  let current = tournament;
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    current = await playAiSeries(current, match.id, {
+      rng,
+      onGame: (gameNumber) => onProgress?.({ match, gameNumber, done: i, remaining: matches.length - i }),
+    });
+  }
+  return current;
+}
+
+/** Una partita IA salvata ha il registro dei turni (si può riguardare e riassumere). */
+export function hasGameLog(game) {
+  return Boolean(game?.simulated && Array.isArray(game.rounds) && Array.isArray(game.fields));
+}
+
+/**
+ * Rigioca una partita IA salvata, identica, per mostrarla sul tavolo.
+ * @returns {{ handA: object[], handB: object[], battlefields: object[], game: object }}
+ */
+export function replaySavedAiGame(tournament, savedGame) {
+  const handA = resolveTournamentCards(savedGame.hands.a);
+  const handB = resolveTournamentCards(savedGame.hands.b);
+  const battlefields = unpackFields(savedGame.fields);
+  const game = playAiGame({
+    handA,
+    handB,
+    battlefields,
+    mode: tournament.settings?.mode || 'classic',
+    difficulty: tournament.settings?.difficulty || 'medium',
+    script: { aFirst: savedGame.aFirst, rounds: savedGame.rounds },
+  });
+  return { handA, handB, battlefields, game };
+}
+
+export function getTournamentField(packed) {
+  return unpackFields([packed])[0] || null;
 }
 
 export function loadTournament() {

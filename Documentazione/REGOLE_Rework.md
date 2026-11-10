@@ -337,6 +337,7 @@ In caso di VA identico:
 - **PV e FC** ripartono da 25 e 18 a ogni partita; i Campi di Battaglia vengono rigenerati a ogni partita.
 - **Primo giocatore:** sempre chi ha la Lega totale piu bassa in mano (parita: casuale).
 - **Pareggio:** una partita pareggiata non assegna vittorie; se dopo 3 partite la serie e pari si continua con altri spareggi a Deck rimischiato.
+- **Serie tra IA:** vengono giocate davvero con le stesse regole (stesse mani, Campi, PV e FC), **senza Eminenze**. Dal tabellone si possono guardare sul tavolo, rileggere nel riepilogo a turni, oppure far concludere subito con "Concludi il turno".
 
 ---
 

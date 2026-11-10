@@ -7,6 +7,7 @@
 //   partita 2 → le 5 carte NON pescate nella partita 1
 //   partita 3 → mazzo rimischiato, 5 carte a caso (spareggio)
 // PV e FC ripartono da capo a ogni partita (lo fa l'avvio partita standard).
+// Le serie tra IA si giocano davvero (aiMatchEngine.js) e si registrano qui.
 // ============================================
 
 export const TOURNAMENT_SIZE = 12;
@@ -111,7 +112,7 @@ export function createTournament({ participants, settings = {}, rng = Math.rando
     rounds,
     championId: null,
   };
-  return advanceTournament(tournament, rng);
+  return advanceTournament(tournament);
 }
 
 function clone(tournament) {
@@ -137,40 +138,14 @@ export function isHumanEliminated(tournament) {
   );
 }
 
-/** Serie tra due IA: non viene giocata, ogni partita è un 50/50. */
-function simulateAiSeries(tournament, match, rng) {
-  const deckA = tournament.participants[match.a].cardIds;
-  const deckB = tournament.participants[match.b].cardIds;
-  const series = match.series;
-  while (!seriesWinnerSide(series)) {
-    const winner = rng() < 0.5 ? 'a' : 'b';
-    series.games.push({
-      hands: {
-        a: dealSeriesHand(deckA, series.games.map((g) => g.hands.a), rng),
-        b: dealSeriesHand(deckB, series.games.map((g) => g.hands.b), rng),
-      },
-      winner,
-      simulated: true,
-    });
-    if (winner === 'a') series.winsA += 1; else series.winsB += 1;
-  }
-  series.winner = seriesWinnerSide(series);
-  match.winnerId = series.winner === 'a' ? match.a : match.b;
-}
-
 /**
- * Porta avanti il tabellone: promuove i vincitori al turno successivo e risolve le serie
- * tra IA. Le serie IA di un turno si risolvono solo quando il giocatore ha chiuso la sua
- * (o non gioca in quel turno), così i risultati del turno arrivano insieme.
+ * Porta avanti il tabellone: quando tutti gli incontri di un turno hanno un vincitore, li
+ * promuove al turno successivo. Le serie tra IA non si risolvono da sole: vanno giocate
+ * (guardandole o concludendo il turno) e registrate con `recordAiSeries`.
  */
-function advanceInPlace(tournament, rng) {
+function advanceInPlace(tournament) {
   for (let r = 0; r < tournament.rounds.length; r++) {
     const round = tournament.rounds[r];
-    const humanPending = round.some((m) => !m.winnerId && involvesHuman(tournament, m));
-    if (humanPending) return tournament;
-    for (const m of round) {
-      if (!m.winnerId && m.a && m.b) simulateAiSeries(tournament, m, rng);
-    }
     if (round.some((m) => !m.winnerId)) return tournament;
     const next = tournament.rounds[r + 1];
     if (!next) {
@@ -185,8 +160,56 @@ function advanceInPlace(tournament, rng) {
   return tournament;
 }
 
-export function advanceTournament(tournament, rng = Math.random) {
-  return advanceInPlace(clone(tournament), rng);
+export function advanceTournament(tournament) {
+  return advanceInPlace(clone(tournament));
+}
+
+/** Incontri tra IA pronti da giocare (entrambi i partecipanti noti, nessun vincitore). */
+export function getPendingAiMatches(tournament) {
+  return tournament.rounds.flatMap((round) =>
+    round.filter((m) => !m.winnerId && m.a && m.b && !involvesHuman(tournament, m))
+  );
+}
+
+export function getMatch(tournament, matchId) {
+  return findMatch(tournament, matchId);
+}
+
+/**
+ * Mani della prossima partita di una serie tra IA, con la stessa regola del giocatore.
+ * @returns {{ a: number[], b: number[] }}
+ */
+export function dealAiSeriesHands(tournament, match, games, rng = Math.random) {
+  return {
+    a: dealSeriesHand(tournament.participants[match.a].cardIds, games.map((g) => g.hands.a), rng),
+    b: dealSeriesHand(tournament.participants[match.b].cardIds, games.map((g) => g.hands.b), rng),
+  };
+}
+
+/** Punteggio e vincitore di una serie a partire dalle sue partite concluse. */
+export function tallySeries(games) {
+  const series = { games, winsA: 0, winsB: 0, winner: null };
+  for (const g of games) {
+    if (g.winner === 'a') series.winsA += 1;
+    if (g.winner === 'b') series.winsB += 1;
+  }
+  series.winner = seriesWinnerSide(series);
+  return series;
+}
+
+/**
+ * Registra una serie tra IA giocata per intero.
+ * @param {object[]} games - partite concluse { hands, winner, ... } in ordine
+ */
+export function recordAiSeries(tournament, matchId, games) {
+  const next = clone(tournament);
+  const match = findMatch(next, matchId);
+  if (!match || match.winnerId || involvesHuman(next, match)) return next;
+  const series = tallySeries(games);
+  if (!series.winner) throw new Error('Serie incompleta: nessun vincitore.');
+  match.series = series;
+  match.winnerId = series.winner === 'a' ? match.a : match.b;
+  return advanceInPlace(next);
 }
 
 /** L'incontro che il giocatore deve giocare adesso, o null (eliminato / torneo finito). */
@@ -249,7 +272,7 @@ export function recordHumanGameResult(tournament, outcome, rng = Math.random) {
     match.series.winner = winnerSide;
     match.winnerId = winnerSide === 'a' ? match.a : match.b;
   }
-  return advanceInPlace(next, rng);
+  return advanceInPlace(next);
 }
 
 /** Stato del giocatore nel torneo. */

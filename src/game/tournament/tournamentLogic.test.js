@@ -4,14 +4,18 @@ import {
   createTournament,
   dealSeriesHand,
   describeHumanMatch,
+  dealAiSeriesHands,
   getHumanMatch,
+  getPendingAiMatches,
   getPendingGame,
   getTournamentStatus,
   handRuleForGame,
   humanSide,
   prepareHumanGame,
+  recordAiSeries,
   recordHumanGameResult,
   seriesWinnerSide,
+  tallySeries,
 } from './tournamentLogic.js';
 
 /** Generatore deterministico (mulberry32) per test ripetibili. */
@@ -39,6 +43,22 @@ function makeParticipants() {
 }
 
 const DECK = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+/** Chiude tutte le serie tra IA pronte, con esiti decisi dal generatore (come farebbe il motore). */
+function resolveAiMatches(tournament, rng) {
+  let t = tournament;
+  let pending = getPendingAiMatches(t);
+  while (pending.length > 0) {
+    const match = pending[0];
+    const games = [];
+    while (!tallySeries(games).winner) {
+      games.push({ hands: dealAiSeriesHands(t, match, games, rng), winner: rng() < 0.5 ? 'a' : 'b', simulated: true });
+    }
+    t = recordAiSeries(t, match.id, games);
+    pending = getPendingAiMatches(t);
+  }
+  return t;
+}
 
 test('regola delle mani: pesca, carte rimaste, rimischia', () => {
   assert.equal(handRuleForGame(1), 'draw');
@@ -106,25 +126,56 @@ test('validazione: numero partecipanti e mazzi da 10', () => {
   assert.throws(() => createTournament({ participants: bad }));
 });
 
-test('le serie IA del turno si risolvono solo quando il giocatore ha chiuso la sua', () => {
+test('le serie tra IA non si risolvono da sole: restano da giocare', () => {
   for (let seed = 1; seed <= 30; seed++) {
     const rng = seeded(seed);
-    let t = createTournament({ participants: makeParticipants(), rng });
-    const match = getHumanMatch(t);
-    assert.ok(match, 'il giocatore ha sempre un incontro da giocare');
-    const round = t.rounds[match.round];
-    assert.ok(round.filter((m) => m.id !== match.id && !m.bye).every((m) => !m.winnerId));
-    t = prepareHumanGame(t, rng);
-    t = recordHumanGameResult(t, 'human', rng);
-    t = prepareHumanGame(t, rng);
-    t = recordHumanGameResult(t, 'human', rng);
-    assert.ok(t.rounds[match.round].every((m) => m.winnerId), 'turno chiuso dopo la serie del giocatore');
+    const t = createTournament({ participants: makeParticipants(), rng });
+    const played = t.rounds[0].filter((m) => !m.bye);
+    const aiMatches = played.filter((m) => m.a !== 'human' && m.b !== 'human');
+    assert.ok(aiMatches.every((m) => !m.winnerId));
+    assert.deepEqual(getPendingAiMatches(t).map((m) => m.id).sort(), aiMatches.map((m) => m.id).sort());
+    assert.equal(t.rounds[1].filter((m) => m.a && m.b).length, 0, 'i Quarti aspettano la fine degli Ottavi');
   }
+});
+
+test('serie IA registrata: punteggio, vincitore e avanzamento a turno completo', () => {
+  const rng = seeded(4);
+  let t = createTournament({ participants: makeParticipants(), rng });
+  const match = getPendingAiMatches(t)[0];
+  const first = dealAiSeriesHands(t, match, [], rng);
+  const games = [{ hands: first, winner: 'b', simulated: true }];
+  assert.throws(() => recordAiSeries(t, match.id, games), /incompleta/);
+  const second = dealAiSeriesHands(t, match, games, rng);
+  assert.deepEqual([...first.a, ...second.a].sort((x, y) => x - y), [...t.participants[match.a].cardIds].sort((x, y) => x - y));
+  games.push({ hands: second, winner: 'b', simulated: true });
+  t = recordAiSeries(t, match.id, games);
+  const saved = t.rounds[0].find((m) => m.id === match.id);
+  assert.equal(saved.winnerId, match.b);
+  assert.equal(saved.series.winsB, 2);
+  assert.equal(saved.series.winsA, 0);
+  // registrarla due volte non cambia nulla
+  assert.deepEqual(recordAiSeries(t, match.id, games), t);
+});
+
+test('il giocatore con passaggio diretto aspetta che gli Ottavi siano conclusi', () => {
+  let found = false;
+  for (let seed = 1; seed <= 60 && !found; seed++) {
+    const rng = seeded(seed);
+    let t = createTournament({ participants: makeParticipants(), rng });
+    if (!t.rounds[0].some((m) => m.bye && m.a === 'human')) continue;
+    found = true;
+    assert.equal(getHumanMatch(t), null);
+    assert.equal(getTournamentStatus(t), 'active');
+    t = resolveAiMatches(t, rng);
+    const match = getHumanMatch(t);
+    assert.equal(match.round, 1);
+  }
+  assert.ok(found, 'almeno un seme assegna il passaggio diretto al giocatore');
 });
 
 test('le mani in attesa non cambiano se si ripete la preparazione (niente ripesca)', () => {
   const rng = seeded(3);
-  let t = prepareHumanGame(createTournament({ participants: makeParticipants(), rng }), rng);
+  let t = prepareHumanGame(resolveAiMatches(createTournament({ participants: makeParticipants(), rng }), rng), rng);
   const before = getPendingGame(getHumanMatch(t)).hands;
   t = prepareHumanGame(t, rng);
   t = prepareHumanGame(t, rng);
@@ -134,7 +185,7 @@ test('le mani in attesa non cambiano se si ripete la preparazione (niente ripesc
 
 test('serie del giocatore: partita 2 con le carte rimaste, anche per l\'avversario', () => {
   const rng = seeded(11);
-  let t = prepareHumanGame(createTournament({ participants: makeParticipants(), rng }), rng);
+  let t = prepareHumanGame(resolveAiMatches(createTournament({ participants: makeParticipants(), rng }), rng), rng);
   const first = getPendingGame(getHumanMatch(t)).hands;
   t = recordHumanGameResult(t, 'opponent', rng);
   assert.equal(describeHumanMatch(t).gameNumber, 2);
@@ -154,6 +205,7 @@ test('vincere tutte le serie porta al titolo; il mazzo resta quello iniziale', (
   let t = createTournament({ participants, rng });
   let guard = 0;
   while (getTournamentStatus(t) === 'active' && guard++ < 50) {
+    t = resolveAiMatches(t, rng);
     t = prepareHumanGame(t, rng);
     t = recordHumanGameResult(t, 'human', rng);
   }
@@ -164,18 +216,20 @@ test('vincere tutte le serie porta al titolo; il mazzo resta quello iniziale', (
 
 test('perdere una serie elimina il giocatore e il torneo arriva comunque a un campione', () => {
   const rng = seeded(5);
-  let t = createTournament({ participants: makeParticipants(), rng });
+  let t = resolveAiMatches(createTournament({ participants: makeParticipants(), rng }), rng);
   t = recordHumanGameResult(prepareHumanGame(t, rng), 'opponent', rng);
   assert.equal(getTournamentStatus(t), 'active');
   t = recordHumanGameResult(prepareHumanGame(t, rng), 'opponent', rng);
   assert.equal(getTournamentStatus(t), 'eliminated');
   assert.equal(getHumanMatch(t), null);
+  assert.equal(t.championId, null, 'il torneo prosegue tra le IA');
+  t = resolveAiMatches(t, rng);
   assert.ok(t.championId && t.championId !== 'human');
 });
 
 test('1-1 porta allo spareggio con mazzo rimischiato', () => {
   const rng = seeded(9);
-  let t = createTournament({ participants: makeParticipants(), rng });
+  let t = resolveAiMatches(createTournament({ participants: makeParticipants(), rng }), rng);
   t = recordHumanGameResult(prepareHumanGame(t, rng), 'human', rng);
   t = recordHumanGameResult(prepareHumanGame(t, rng), 'opponent', rng);
   const info = describeHumanMatch(t);
