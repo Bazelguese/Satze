@@ -342,6 +342,7 @@ export default function SatzeGame() {
     isOverDropZone, setIsOverDropZone,
     selectedDeckKey, setSelectedDeckKey,
     aiDifficulty, setAiDifficulty,
+    aiPersonality,
     isMultiplayer, setIsMultiplayer,
     multiplayerSession, setMultiplayerSession,
     campaignLevel, setCampaignLevel,
@@ -6292,6 +6293,7 @@ export default function SatzeGame() {
                 multiSeatEnemy = multiSeat.arm({
                   kind: choice.matchMode,
                   teammatePreset: choice.teammatePreset,
+                  personality: choice.personality,
                   players: choice.players,
                   difficulty: choice.difficulty,
                   fieldMode: choice.mode,
@@ -6309,7 +6311,7 @@ export default function SatzeGame() {
                 multiSeatEnemy?.enemyArmy ?? choice.enemyArmy ?? null,
                 multiSeatEnemy?.enemyDeckKey ?? null,
                 null,
-                { eminenceFormat: choice.eminenceFormat }
+                { eminenceFormat: choice.eminenceFormat, aiPersonality: choice.personality }
               );
               window.setTimeout(() => {
                 start();
@@ -6717,6 +6719,7 @@ export default function SatzeGame() {
       gameMode,
       isOnline: isOnlinePvP,
       difficulty: aiDifficulty,
+      personality: aiPersonality,
       selfName: multiplayerSession?.playerName,
       peerName: onlinePeerName,
       playerArmy: duelPlayerArmy,

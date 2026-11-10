@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildStrategicState, deriveOpeningPlayerFirst } from './strategicState.js';
 import {
   projectPostDuelState,
-  resolveNextInitiativeFromWinner,
+  resolveProjectedInitiative,
 } from './projectPostDuelState.js';
 import { evaluateStrategicState } from './evaluateStrategicState.js';
 import { makeAIContext, makeCard, neutralField } from './aiTestFixtures.js';
@@ -85,18 +85,87 @@ test('projectPostDuelState: aggiorna PV, FC, carte, Campo, lastWinner, iniziativ
   assert.equal(projected.lastWinner, 'enemy');
   assert.equal(projected.conqueredFields[0].winner, 'enemy');
   assert.equal(projected.enemyFieldsConquered, 1);
-  // Perdente (giocatore) inizia il round successivo
-  assert.equal(projected.isPlayerFirst, true);
-  assert.equal(projected.initiativeSide, 'player');
+  // Alternanza da openingPlayerFirst (R1 giocatore → R2 IA), indipendente da chi vince
+  assert.equal(projected.isPlayerFirst, false);
+  assert.equal(projected.initiativeSide, 'ai');
   assert.equal(projected.currentFieldIndex, null);
 });
 
-test('iniziativa: perde il giocatore → inizia il giocatore', () => {
-  assert.equal(resolveNextInitiativeFromWinner('enemy', false), true);
+test('iniziativa proiettata: core alterna da openingPlayerFirst', () => {
+  const opening = buildStrategicState(makeAIContext({ roundNumber: 1, openingPlayerFirst: true }));
+  assert.deepEqual(
+    [2, 3, 4, 5].map((r) => resolveProjectedInitiative(opening, r)),
+    [false, true, false, true]
+  );
+  const notOpening = buildStrategicState(
+    makeAIContext({ roundNumber: 1, isPlayerFirst: false, openingPlayerFirst: false })
+  );
+  assert.deepEqual(
+    [2, 3, 4, 5].map((r) => resolveProjectedInitiative(notOpening, r)),
+    [true, false, true, false]
+  );
 });
 
-test('iniziativa: perde l’IA → inizia l’IA', () => {
-  assert.equal(resolveNextInitiativeFromWinner('player', true), false);
+test('iniziativa proiettata: profili campagna assault/defense', () => {
+  const assault = buildStrategicState(
+    makeAIContext({ roundNumber: 1, openingPlayerFirst: true, initiativeProfile: 'assault' })
+  );
+  assert.deepEqual(
+    [2, 3, 4, 5].map((r) => resolveProjectedInitiative(assault, r)),
+    [true, false, true, false]
+  );
+  const defense = buildStrategicState(
+    makeAIContext({
+      roundNumber: 1,
+      isPlayerFirst: false,
+      openingPlayerFirst: false,
+      initiativeProfile: 'defense',
+    })
+  );
+  assert.deepEqual(
+    [2, 3, 4, 5].map((r) => resolveProjectedInitiative(defense, r)),
+    [false, true, false, true]
+  );
+});
+
+test('iniziativa proiettata: alwaysPlayerFirst forza il giocatore', () => {
+  const ctx = makeAIContext({ roundNumber: 1, isPlayerFirst: true, openingPlayerFirst: true });
+  const state = buildStrategicState({ ...ctx, campaignDuelMod: { alwaysPlayerFirst: true } });
+  assert.deepEqual(
+    [2, 3, 4].map((r) => resolveProjectedInitiative(state, r)),
+    [true, true, true]
+  );
+});
+
+test('projectPostDuelState: il vincitore del duello non cambia l’iniziativa', () => {
+  const playerCard = makeCard({ id: 100 });
+  const aiCard = makeCard({ id: 200 });
+  const root = buildStrategicState(
+    makeAIContext({ roundNumber: 2, isPlayerFirst: true, openingPlayerFirst: false })
+  );
+  const sim = (winner) => ({
+    winner,
+    playerHpAfter: 18,
+    aiHpAfter: 18,
+    playerFocusAfter: 5,
+    aiFocusAfter: 5,
+    terminalStatus: null,
+    battleResult: {},
+  });
+  const project = (winner) =>
+    projectPostDuelState(
+      root,
+      sim(winner),
+      { card: aiCard, cardId: 200, focus: 2, fieldIndex: 0 },
+      { card: playerCard, cardId: 100, focus: 2 }
+    );
+  // R3 con opening IA → sceglie prima l'IA, chiunque vinca
+  for (const winner of ['player', 'enemy', null]) {
+    const projected = project(winner);
+    assert.equal(projected.roundNumber, 3);
+    assert.equal(projected.isPlayerFirst, false);
+    assert.equal(projected.initiativeSide, 'ai');
+  }
 });
 
 test('projectPostDuelState: rivela un Campo aggiuntivo e aggiorna disponibili', () => {

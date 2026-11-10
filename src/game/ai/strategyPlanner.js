@@ -3,6 +3,7 @@
 // ============================================
 
 import { getFieldModifiers } from '../battlefieldEffects.js';
+import { countFuturePositionWindows } from './initiativeCalendar.js';
 
 const CONTROL_EFFECTS = new Set([
   'enemyPower',
@@ -207,6 +208,22 @@ export function estimateAbilityImpact(card, source = null, side = 'ai') {
 /**
  * Legge la finestra temporale del trigger dal punto di vista del lato indicato.
  */
+/**
+ * Quanto conviene tenere una carta Imboscata/Intervento non attiva in questo turno.
+ * L'iniziativa si alterna in modo noto: si contano i turni futuri nella posizione giusta
+ * e le altre carte della mano che li vogliono. Nessun turno utile → nessun motivo di tenerla.
+ * (Il Campo futuro non è noto: lo scambio Imboscata/Intervento di un Campo non si considera.)
+ */
+function positionalPreserve(card, source, side, trigger, wantFirst) {
+  const remaining = remainingCards(source, side);
+  const windows = countFuturePositionWindows(source, side, wantFirst, remaining.length);
+  if (windows <= 0) return 0;
+  const competitors = remaining.filter(
+    (c) => c?.id !== card?.id && c?.ability?.trigger === trigger
+  ).length;
+  return 0.75 * Math.min(1, windows / (1 + competitors));
+}
+
 export function evaluateTriggerWindow(card, source, side = 'ai', action = null) {
   const trigger = card?.ability?.trigger;
   const p = perspective(source, side, action);
@@ -303,16 +320,24 @@ export function evaluateTriggerWindow(card, source, side = 'ai', action = null) 
       const swapped = mods.swapImboscataIntervento === true;
       ready = swapped ? p.actorIsFirst : !p.actorIsFirst;
       urgency = ready ? 1.05 : 0;
-      preserve = ready ? 0 : 0.75;
-      reason = ready ? 'intervento-pronto' : 'serve-giocare-secondi';
+      preserve = ready ? 0 : positionalPreserve(card, source, side, trigger, false);
+      reason = ready
+        ? 'intervento-pronto'
+        : preserve > 0
+          ? 'serve-giocare-secondi'
+          : 'nessun-turno-futuro-da-secondi';
       break;
     }
     case 'imboscata': {
       const swapped = mods.swapImboscataIntervento === true;
       ready = swapped ? !p.actorIsFirst : p.actorIsFirst;
       urgency = ready ? 1.05 : 0;
-      preserve = ready ? 0 : 0.75;
-      reason = ready ? 'imboscata-pronta' : 'serve-giocare-primi';
+      preserve = ready ? 0 : positionalPreserve(card, source, side, trigger, true);
+      reason = ready
+        ? 'imboscata-pronta'
+        : preserve > 0
+          ? 'serve-giocare-primi'
+          : 'nessun-turno-futuro-da-primi';
       break;
     }
     case 'invasione':
@@ -501,8 +526,8 @@ export function evaluateRemainingHandPlan(state, profile = {}) {
   for (const plan of aiPlans) triggerScore += readinessScore(plan) * 18;
   for (const plan of playerPlans) triggerScore -= readinessScore(plan) * 14;
 
-  // La sconfitta prepara Vendetta e dà iniziativa/Imboscata; la vittoria prepara
-  // Gloria e normalmente lascia l'IA seconda, quindi Intervento.
+  // La sconfitta prepara Vendetta, la vittoria Gloria. La posizione del turno proiettato
+  // non dipende dall'esito: l'iniziativa si alterna (vedi initiativeCalendar.js).
   const aiPerspective = perspective(state, 'ai');
   let initiativeScore = 0;
   if (aiPerspective.actorLostPrevious) {

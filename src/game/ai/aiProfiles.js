@@ -43,6 +43,8 @@ export const AI_PROFILES = {
     searchDepth: 0,
     beamWidth: 6,
     solveEndgameAtCardsRemaining: 1,
+    /** Campi ricalcolati con il profilo completo quando l'IA apre (0 = solo passata ridotta). */
+    jointRefineFields: 0,
   },
 
   medium: {
@@ -87,6 +89,7 @@ export const AI_PROFILES = {
     searchDepth: 1,
     beamWidth: 12,
     solveEndgameAtCardsRemaining: 2,
+    jointRefineFields: 1,
   },
 
   hard: {
@@ -132,6 +135,7 @@ export const AI_PROFILES = {
     searchDepth: 2,
     beamWidth: 16,
     solveEndgameAtCardsRemaining: 2,
+    jointRefineFields: 2,
   },
 };
 
