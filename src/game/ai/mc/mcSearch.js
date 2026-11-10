@@ -419,12 +419,16 @@ export function chooseMonteCarloAction(view, inputParams, rng) {
   }
 
   let chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
-  if (trait?.focusSpread) {
-    // FC meno leggibili: stessa scelta di Campo e Agente, FC estratti fra quelli vicini al migliore.
-    const sameMove = ranked.filter(
-      (c) => c.fieldIndex === chosen.fieldIndex && c.cardId === chosen.cardId
+  if (trait?.focusWindow) {
+    // FC meno leggibili: stessa scelta di Campo e Agente, FC estratti a caso fra quelli
+    // con stima vicina alla migliore per quella carta.
+    const near = ranked.filter(
+      (c) =>
+        c.fieldIndex === chosen.fieldIndex &&
+        c.cardId === chosen.cardId &&
+        c.score >= chosen.score - trait.focusWindow
     );
-    chosen = pickWithNoise(sameMove, trait.focusSpread, rng) || chosen;
+    if (near.length) chosen = near[Math.floor(rng() * near.length)];
   }
   return {
     fieldIndex: chosen.fieldIndex,

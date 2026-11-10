@@ -8,7 +8,8 @@
 // - objective(end, state): premio a fine partita simulata (es. Campi, PV), dal lato IA (`enemy`);
 // - risk: avversione al rischio. >0 penalizza le mosse dall'esito variabile (Cauto),
 //   <0 le cerca (Temerario). Punteggio = media − risk × deviazione standard;
-// - focusSpread: rende i FC meno prevedibili (scelta softmax fra i FC dello stesso Agente).
+// - focusWindow: rende i FC meno prevedibili: estrazione uniforme fra i FC dello stesso Agente
+//   con stima entro questa distanza dalla migliore.
 //
 // Le intensità sono tarate al banco di prova: ogni tratto resta entro ~5 punti dal Neutrale
 // dello stesso livello (vedi Documentazione/PIANO_MIGLIORAMENTO_IA.md).
@@ -41,15 +42,15 @@ export const MC_TRAITS = {
     name: 'Impetuoso',
     description: 'Parte fortissimo: tanti FC e carte forti nei primi turni.',
     bias: (view, card, focus, ctx) =>
-      early(ctx) ? 0.04 * focusAboveFair(focus, ctx) + 0.03 * strongness(card, ctx) : 0,
+      early(ctx) ? 0.1 * focusAboveFair(focus, ctx) + 0.06 * strongness(card, ctx) : 0,
   },
   paziente: {
     id: 'paziente',
     name: 'Paziente',
     description: 'Cede volentieri i primi scontri e conserva FC e carte migliori per il finale.',
     bias: (view, card, focus, ctx) => {
-      if (early(ctx)) return -0.04 * focusAboveFair(focus, ctx) - 0.03 * strongness(card, ctx);
-      return late(ctx) ? 0.02 * focusAboveFair(focus, ctx) : 0;
+      if (early(ctx)) return -0.08 * focusAboveFair(focus, ctx) - 0.05 * strongness(card, ctx);
+      return late(ctx) ? 0.04 * focusAboveFair(focus, ctx) : 0;
     },
   },
   conquistatore: {
@@ -58,43 +59,46 @@ export const MC_TRAITS = {
     description: 'Vuole i Campi: punta a vincerne la maggioranza prima della Supremazia.',
     objective: (end, state) => {
       const { own, opp } = fieldsOf(state);
-      return 0.03 * (own - opp) + (end.winner === 'enemy' && end.reason === 'fields' ? 0.05 : 0);
+      return 0.06 * (own - opp) + (end.winner === 'enemy' && end.reason === 'fields' ? 0.1 : 0);
     },
   },
   spietato: {
     id: 'spietato',
     name: 'Spietato',
     description: 'Vuole i tuoi PV: danni e colpi diretti, poco interesse per i Campi.',
-    bias: (view, card) => 0.02 * ((card.damage || 0) / 6),
+    bias: (view, card) => 0.06 * ((card.damage || 0) / 6),
+    // Conta i PV tolti all'avversario, non il saldo: gli interessa ferire.
     objective: (end, state) =>
-      0.01 * ((Number(state.enemyHP) || 0) - (Number(state.playerHP) || 0)) +
-      (end.winner === 'enemy' && end.reason === 'hp' ? 0.05 : 0),
+      0.025 * (25 - (Number(state.playerHP) || 0)) +
+      (end.winner === 'enemy' && end.reason === 'hp' ? 0.1 : 0),
   },
   avaro: {
     id: 'avaro',
     name: 'Avaro',
     description: 'Spende il minimo indispensabile e odia sprecare FC.',
-    bias: (view, card, focus, ctx) => -0.04 * Math.max(0, focusAboveFair(focus, ctx)),
+    bias: (view, card, focus, ctx) => -0.08 * Math.max(0, focusAboveFair(focus, ctx)),
   },
   temerario: {
     id: 'temerario',
     name: 'Temerario',
     description: 'Ama il rischio: mosse tutto-o-niente e puntate audaci.',
-    risk: -0.15,
-    bias: (view, card, focus, ctx) => 0.015 * Math.max(0, focusAboveFair(focus, ctx)),
+    risk: -0.5,
+    bias: (view, card, focus, ctx) => 0.04 * Math.max(0, focusAboveFair(focus, ctx)),
   },
   cauto: {
     id: 'cauto',
     name: 'Cauto',
     description: 'Odia il rischio e protegge i propri PV, anche cedendo un Campo.',
-    risk: 0.15,
-    objective: (end, state) => 0.006 * (Number(state.enemyHP) || 0),
+    risk: 0.5,
+    // Conta i propri PV rimasti: subire danni gli pesa anche quando vince.
+    objective: (end, state) => 0.02 * (Number(state.enemyHP) || 0),
   },
   imprevedibile: {
     id: 'imprevedibile',
     name: 'Imprevedibile',
     description: 'I suoi FC sono illeggibili: alterna puntate minime e altissime.',
-    focusSpread: 0.05,
+    // FC estratti a caso fra quelli "quasi buoni" per la carta scelta (entro questa soglia).
+    focusWindow: 0.08,
   },
 };
 
