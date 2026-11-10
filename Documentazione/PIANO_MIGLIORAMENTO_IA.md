@@ -298,6 +298,36 @@ Non ancora fatto:
 - tratti misurati nel 2v2;
 - 2v2 online e Re della Collina.
 
+### Re della Collina con l'IA nuova (fatto)
+
+Richiesta dell'utente: portare l'IA nuova nel Re della Collina. Le personalità degli avversari funzionano come nel 2v2: riga AVVERSARI nel menu, e "Casuale" estrae un tratto per ciascuno. L'online resta con l'IA vecchia.
+
+**Codice:**
+
+- `src/game/ai/mcKoth/kothSearch.js`: la posa di un posto IA. Chi apre sceglie Campo, Agente e FC, gli sfidanti Agente e FC. Ogni mossa si valuta giocando il resto della contesa e della partita. I FC di chi ha già posato non si leggono mai: si estraggono in ogni simulazione.
+- `src/game/ai/mcKoth/kothProfiles.js`: i livelli.
+- Banco di prova: `src/game/sim/kothSelfPlay.js` e `npm run selfplay:koth`. L'agente in esame occupa a turno ogni posto; il suo punteggio si confronta con la quota alla pari, cioè 1 diviso il numero dei giocatori.
+- Gioco: posa nel worker (`koth-commit`) con ripiego sull'IA vecchia; nomi «PNG <tratto>».
+
+**Misure** (3 giocatori, 90 partite per accoppiamento; l'agente gioca contro due avversari, quota alla pari 33%):
+
+| Agente | Contro | Vince |
+|---|---|---|
+| Nuova Difficile | 2 vecchie Difficili | 95,6% |
+| Vecchia Difficile | 2 vecchie Facili | 40,6% |
+| Difficile, prima della taratura | 2 Normali | 32,2% |
+| **Difficile** (installata) | 2 Normali | 62% |
+| **Normale** (installata, rumore 0,2) | 2 Facili | 48% |
+| **Facile** (installata, rumore 0,5) | 2 vecchie Facili | 46% |
+
+Nel tutti-contro-tutti i vantaggi si diluiscono, quindi i numeri non si confrontano uno a uno con l'1v1 e il 2v2: conta che i livelli siano ordinati e distanziati. Tempi per posa: Difficile in media circa 1,4 s; nel browser, con 4 giocatori, circa 4 s.
+
+Non ancora fatto:
+
+- misure con 4 giocatori e in Mani nude;
+- tratti misurati nel Re della Collina;
+- online.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.
