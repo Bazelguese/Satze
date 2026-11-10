@@ -13,6 +13,7 @@ import { chooseJointAIAction } from '../ai/chooseJointAIAction.js';
 import { getAIProfile } from '../ai/aiProfiles.js';
 import { mulberry32 } from '../../utils/seededRandom.js';
 import { availableCards, legalFieldIndexes, legalFocusRange } from './headlessMatch.js';
+import { createMonteCarloAgent } from './mcAgent.js';
 
 function pick(list, rng) {
   return list[Math.floor(rng() * list.length)];
@@ -139,6 +140,9 @@ export function createAgentFromSpec(spec, { seed = 1 } = {}) {
   const { base, overrides } = parseAgentSpec(spec);
   if (base === 'random') return createRandomAgent({ seed });
   if (base === 'greedy') return createGreedyAgent();
+  if (base === 'mc') {
+    return createMonteCarloAgent({ seed, label: spec, rollouts: overrides?.rollouts ?? 40 });
+  }
   if (base === 'easy' || base === 'medium' || base === 'hard') {
     return createEngineAgent(base, { seed, label: spec, overrides });
   }
