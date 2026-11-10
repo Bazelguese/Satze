@@ -1,6 +1,6 @@
 # Piano di miglioramento dell'IA di SATZE
 
-Stato: approvato. Fase 0 completata; Fase 1 da avviare.
+Stato: approvato. Fase 0 completata. Fase 1 in corso: 1.1 e 1.2 fatte; in attesa di decidere se passare a un motore a simulazione (vedi "Risultati della Fase 1 finora").
 Ultimo aggiornamento: 2026-11-10.
 
 ## Obiettivi
@@ -88,6 +88,46 @@ Limiti della misura: è una partita IA contro IA, non contro persone. I riferime
 3. Una sola scala di valutazione invece della somma di due punteggi diversi.
 4. Il filtro sulle sconfitte diventa una soglia di probabilità, solo se la misura conferma che serve.
 5. Correzione del commento con la vecchia regola.
+
+Obiettivi di distanza confermati (Classico e Mani nude):
+
+| Accoppiamento | Obiettivo |
+|---|---|
+| Normale contro Facile | 70-80% |
+| Difficile contro Normale | 70-80% |
+| Facile contro Casuale | almeno 80% |
+
+#### Risultati della Fase 1 finora (Classico, 100 partite per misura)
+
+Fatto (commit sul ramo `claude/cool-hopper-d5ddlw`):
+
+- **1.1 Ricerca in apertura** (`jointRefineFields`: Facile 0, Normale 1, Difficile 2). Normale contro Avido passa dall'85,5% al 92%. La Difficile non migliora (87% contro Avido) e resta alla pari della Normale (la Normale fa il 55%).
+- **1.2 Calendario dell'iniziativa** (`src/game/ai/initiativeCalendar.js`). È corretto ed è testato, ma l'effetto misurato è nullo: Normale contro Avido fa il 93%.
+- Il commento con la vecchia regola è corretto.
+
+**Scoperta 1: nessun parametro rende la Difficile più forte della Normale.** Ho fatto varianti della Difficile contro la Normale, misurando il punteggio della Normale:
+
+| Variante | Normale fa |
+|---|---|
+| profilo attuale | 54% |
+| senza scenario a FC massimi | 52% |
+| aggregazione carte pesata | 55% |
+| rischio 0,2 | 52% |
+| profondità 1 | 59% |
+
+Il limite non sta nei parametri, ma nella valutazione: pesi fissati a mano e un modello dell'avversario fisso. Più ricerca con una valutazione imprecisa non dà più forza.
+
+**Scoperta 2: una valutazione per simulazione è molto più forte e cresce con il tempo.** Il prototipo `src/game/sim/mcAgent.js`, solo banco di prova, prova ogni Campo, Agente e FC giocando molte volte il resto della partita con una politica veloce. Nel Classico le mani sono visibili e l'unica incognita sono le scelte dell'avversario.
+
+| Accoppiamento | Punteggio del prototipo |
+|---|---|
+| Prototipo (40 simulazioni, ~0,5 s) – Normale | 63% (IC 53–72) |
+| Prototipo (200 simulazioni) – Normale | 70% (IC 60–78) |
+| Prototipo (40 simulazioni) – Avido | 100% |
+
+Il prototipo è ancora grezzo: la politica di simulazione è semplice e non ci sono strategie miste sui FC. Ha però già la distanza voluta tra Difficile e Normale, e la sua forza si regola con un solo parametro, il numero di simulazioni, cioè il tempo. Questo si adatta bene anche alla coerenza fra le modalità: lo stesso metodo funziona in ogni modalità che il motore di partita sa giocare.
+
+**Proposta, da decidere con l'utente:** portare l'IA su un motore a simulazione, con i livelli regolati da budget, qualità della politica e "rumore" controllato. I punti 1.3 e 1.4, che riguardano il motore attuale, restano in sospeso fino alla decisione.
 
 ### Fase 2 — Avversario e Focus
 
