@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseMonteCarloAction, generateMcCandidates } from './mcSearch.js';
+import { chooseMonteCarloAction, generateMcCandidates, solveZeroSumGame } from './mcSearch.js';
 import { getMcProfile } from './mcProfiles.js';
 import {
   viewForSide,
@@ -62,5 +62,34 @@ describe('motore a simulazione', () => {
     expect(decision.stats.timedOut).toBe(true);
     expect(decision.stats.ms).toBeLessThan(2000);
     expect(legalFieldIndexes(view)).toContain(decision.fieldIndex);
+  });
+
+  it('gioco a somma zero: sasso-carta-forbici e strategia dominante', () => {
+    const rps = solveZeroSumGame([
+      [0, -1, 1],
+      [1, 0, -1],
+      [-1, 1, 0],
+    ]);
+    expect(Math.abs(rps.value)).toBeLessThan(0.02);
+    for (const p of rps.rowStrategy) expect(Math.abs(p - 1 / 3)).toBeLessThan(0.05);
+    const dominant = solveZeroSumGame([
+      [0.8, 0.7],
+      [0.2, 0.3],
+    ]);
+    expect(dominant.rowStrategy[0]).toBeGreaterThan(0.95);
+    expect(dominant.value).toBeGreaterThan(0.65);
+  });
+
+  it('apertura come gioco simultaneo: mossa legale e FC fra le opzioni', () => {
+    const view = viewForSide({ ...startState(12), isPlayerFirst: false }, 'enemy');
+    const decision = chooseMonteCarloAction(
+      view,
+      { ...SMALL, leadMode: 'matrix', matrixCombos: 2, matrixRollouts: 2 },
+      mulberry32(8)
+    );
+    expect(decision.stats.leadMode).toBe('matrix');
+    expect(legalFieldIndexes(view)).toContain(decision.fieldIndex);
+    expect(availableCards(view, 'enemy').map((c) => c.id)).toContain(decision.cardId);
+    expect(decision.focus).toBeGreaterThanOrEqual(1);
   });
 });

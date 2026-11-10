@@ -73,8 +73,25 @@ function outcomeValue(end, state) {
   return base + (state.enemyHP - state.playerHP) * 0.002;
 }
 
-/** Una simulazione completa a partire dalla scelta `candidate`. */
-function rollout(view, candidate, seed, params) {
+/** La prima risposta dell'avversario segue `first` (scelta o agente), poi la politica. */
+function firstResponseBy(first, policy) {
+  let used = false;
+  return {
+    lead: (state) => policy.lead(state),
+    respond(state) {
+      if (used) return policy.respond(state);
+      used = true;
+      return typeof first.respond === 'function' ? first.respond(state) : first;
+    },
+  };
+}
+
+/**
+ * Una simulazione completa a partire dalla scelta `candidate`.
+ * @param {object|null} [opponentReply] - risposta avversaria fissata al primo turno (solo se
+ *   l'IA ha l'iniziativa): { cardId, focus }
+ */
+function rollout(view, candidate, seed, params, opponentReply = null) {
   const rng = mulberry32(seed);
   const policy = createFastPolicyAgent(rng, {
     quality: params.policyQuality,
@@ -110,6 +127,15 @@ function rollout(view, candidate, seed, params) {
       },
       respond: (state) => opponentPolicy.respond(state),
     };
+  } else if (!opponentLeads && opponentReply) {
+    opponent = firstResponseBy(opponentReply, opponentPolicy);
+  } else if (!opponentLeads && params.rootResponder) {
+    // Prima risposta avversaria più accurata della politica generica.
+    const rootPolicy = createFastPolicyAgent(rng, {
+      quality: params.rootOpponentQuality ?? 1,
+      responder: params.rootResponder,
+    });
+    opponent = firstResponseBy(rootPolicy, opponentPolicy);
   }
   const agents = { enemy: scripted(candidate, policy), player: opponent };
 
@@ -151,6 +177,114 @@ export function generateMcCandidates(view) {
   return out;
 }
 
+/**
+ * Gioco a somma zero (righe: IA massimizza, colonne: avversario minimizza), risolto con
+ * regret matching+. Restituisce le strategie medie e il valore del gioco.
+ * @param {number[][]} matrix
+ */
+export function solveZeroSumGame(matrix, iterations = 2000) {
+  const m = matrix.length;
+  const n = matrix[0]?.length || 0;
+  const regretRow = new Array(m).fill(0);
+  const regretCol = new Array(n).fill(0);
+  const sumRow = new Array(m).fill(0);
+  const sumCol = new Array(n).fill(0);
+  const normalize = (regrets) => {
+    const total = regrets.reduce((acc, r) => acc + Math.max(0, r), 0);
+    return total > 0
+      ? regrets.map((r) => Math.max(0, r) / total)
+      : regrets.map(() => 1 / regrets.length);
+  };
+  for (let t = 0; t < iterations; t += 1) {
+    const x = normalize(regretRow);
+    const y = normalize(regretCol);
+    const rowPayoff = matrix.map((row) => row.reduce((acc, a, j) => acc + a * y[j], 0));
+    const colPayoff = new Array(n).fill(0);
+    for (let i = 0; i < m; i += 1) {
+      for (let j = 0; j < n; j += 1) colPayoff[j] += x[i] * matrix[i][j];
+    }
+    const value = x.reduce((acc, xi, i) => acc + xi * rowPayoff[i], 0);
+    for (let i = 0; i < m; i += 1) regretRow[i] = Math.max(0, regretRow[i] + rowPayoff[i] - value);
+    for (let j = 0; j < n; j += 1) regretCol[j] = Math.max(0, regretCol[j] + value - colPayoff[j]);
+    for (let i = 0; i < m; i += 1) sumRow[i] += x[i];
+    for (let j = 0; j < n; j += 1) sumCol[j] += y[j];
+  }
+  const rowStrategy = sumRow.map((v) => v / iterations);
+  const colStrategy = sumCol.map((v) => v / iterations);
+  let value = 0;
+  for (let i = 0; i < m; i += 1) {
+    for (let j = 0; j < n; j += 1) value += rowStrategy[i] * matrix[i][j] * colStrategy[j];
+  }
+  return { rowStrategy, colStrategy, value };
+}
+
+/** Risposte plausibili dell'avversario a un nostro Agente visibile (FC nostri ignoti). */
+function opponentReplies(view, ourCard) {
+  const ourAssault = (ourCard.power || 0) * fairShareFor(view, 'enemy');
+  const fair = fairShareFor(view, 'player');
+  const replies = [];
+  for (const card of availableCards(view, 'player')) {
+    const need = focusNeededToBeat(card, ourAssault);
+    const focuses = new Set(
+      [1, fair, need, need + 2].map((f) => clampFocusFor(view, 'player', f))
+    );
+    for (const focus of focuses) replies.push({ cardId: card.id, focus });
+  }
+  return replies;
+}
+
+function sampleIndex(weights, rng) {
+  let roll = rng() * weights.reduce((acc, w) => acc + w, 0);
+  for (let i = 0; i < weights.length; i += 1) {
+    roll -= weights[i];
+    if (roll <= 0) return i;
+  }
+  return weights.length - 1;
+}
+
+/**
+ * Apertura come gioco simultaneo: per i migliori (Campo, Agente) dello stadio precedente,
+ * tabella FC dell'IA × risposte avversarie riempita con simulazioni, risolta a somma zero.
+ */
+function matrixLeadStage(view, ranked, params, rng, seeds, deadline) {
+  const combos = [];
+  const seen = new Set();
+  for (const c of ranked) {
+    const key = `${c.fieldIndex}:${c.cardId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    combos.push({ fieldIndex: c.fieldIndex, cardId: c.cardId });
+    if (combos.length >= (params.matrixCombos || 3)) break;
+  }
+  const perCell = Math.max(1, params.matrixRollouts || 8);
+  while (seeds.length < perCell) seeds.push((rng() * 2 ** 32) >>> 0);
+  let spent = 0;
+  let best = null;
+  for (const combo of combos) {
+    const ourCard = availableCards(view, 'enemy').find((c) => c.id === combo.cardId);
+    const rows = focusOptions(view, ourCard);
+    const cols = opponentReplies(view, ourCard);
+    const matrix = rows.map(() => new Array(cols.length).fill(0));
+    for (let i = 0; i < rows.length; i += 1) {
+      for (let j = 0; j < cols.length; j += 1) {
+        let total = 0;
+        for (let k = 0; k < perCell; k += 1) {
+          total += rollout(view, { ...combo, focus: rows[i] }, seeds[k], params, cols[j]);
+        }
+        matrix[i][j] = total / perCell;
+        spent += perCell;
+      }
+      if (deadline && nowMs() > deadline) break;
+    }
+    const game = solveZeroSumGame(matrix);
+    if (!best || game.value > best.value) best = { ...combo, rows, game, value: game.value };
+    if (deadline && nowMs() > deadline) break;
+  }
+  if (!best) return null;
+  const focus = best.rows[sampleIndex(best.game.rowStrategy, rng)];
+  return { fieldIndex: best.fieldIndex, cardId: best.cardId, focus, mean: best.value, spent };
+}
+
 function pickWithNoise(ranked, noise, rng) {
   if (!noise || ranked.length === 1) return ranked[0];
   const best = ranked[0].mean;
@@ -172,6 +306,8 @@ function pickWithNoise(ranked, noise, rng) {
  *   noise?: number,            temperatura della scelta finale (0 = migliore)
  *   responder?: 'heuristic'|'simulate', come rispondono le politiche veloci
  *   maxMs?: number,            tempo massimo (anytime): oltre, si sceglie con i dati raccolti
+ *   rootResponder?, rootOpponentQuality?: politica della prima risposta avversaria
+ *   leadMode?: 'matrix', matrixCombos?, matrixRollouts?: apertura come gioco simultaneo
  * }} params
  * @param {() => number} rng
  * @returns {{ fieldIndex: number, cardId: number, focus: number, mean: number, stats: object }|null}
@@ -219,6 +355,28 @@ export function chooseMonteCarloAction(view, params, rng) {
   // delle simulazioni del più misurato), così una stima fortunata su pochi dati non vince.
   const maxN = ranked.reduce((m, c) => Math.max(m, c.n), 0);
   const reliable = ranked.filter((c) => c.n >= maxN * 0.6);
+
+  // Con l'iniziativa: eventuale stadio a gioco simultaneo sui FC.
+  if (params.leadMode === 'matrix' && view.isPlayerFirst !== true && !timedOut) {
+    const deadline = params.maxMs ? started + params.maxMs : null;
+    const lead = matrixLeadStage(view, reliable.concat(ranked), params, rng, seeds, deadline);
+    if (lead) {
+      return {
+        fieldIndex: lead.fieldIndex,
+        cardId: lead.cardId,
+        focus: lead.focus,
+        mean: lead.mean,
+        stats: {
+          rollouts: spent + lead.spent,
+          candidates: candidates.length,
+          ms: nowMs() - started,
+          timedOut: Boolean(deadline && nowMs() > deadline),
+          leadMode: 'matrix',
+        },
+      };
+    }
+  }
+
   const chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
   return {
     fieldIndex: chosen.fieldIndex,
