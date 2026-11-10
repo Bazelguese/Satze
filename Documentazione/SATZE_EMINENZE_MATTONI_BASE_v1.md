@@ -625,3 +625,23 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Guerra d'Attrito: costo fisso, quantità condizionata alle vittorie.
 - Logoramento: bonus di VA scalato sui Duelli persi.
 - Terra Bruciata: Campo distrutto escluso dal conteggio della vittoria territoriale.
+
+### 10.6 Orathai — Il Primo Canto (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Risonanza *(invariato)* | Se entrambi gli Agenti soddisfano il requisito di attivazione del proprio Potere nello stesso Duello, +1 Presenza. | — | circa 1.75 Presenza/Scontro |
+| +1 | Il Prezzo del Canto | In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV. | −0.75 | circa −0.55 ✅ |
+| −1 | Contrappunto | Se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell'Agente nemico. | 0.75 | circa 0.75 ✅ |
+| −2 | Eco | In questo Duello, se il Potere dell'Agente nemico si attiva, si attiva anche per il tuo Agente. | 1.50 | circa 1.1 ✅ (al limite) 〰️ |
+| −3 | Silenzio *(invariata)* | Il trigger Potere di entrambi gli Agenti schierati diventa Magnanimo. | 2.25 | circa 2.0 se in vantaggio di PV ✅ 〰️ |
+
+**Motore:** 0.75 + circa 1.3 = circa 2.05 FC.
+
+**Lavoro di implementazione:**
+- Tolta Tacet.
+- Il Prezzo del Canto: perdita di PV per ogni Potere attivato nel Duello.
+- Contrappunto: solo lo specchio, senza immunità ai Blocca.
+- Eco: Copia Potere condizionata all'attivazione del Potere nemico.
