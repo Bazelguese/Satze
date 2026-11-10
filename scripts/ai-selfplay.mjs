@@ -217,8 +217,14 @@ function reasonText(reasons) {
 }
 
 function buildReport(records) {
-  const modes = [...new Set(records.map((r) => r.mode))];
-  const pairings = [...new Set(records.map((r) => `${r.a}:${r.b}`))];
+  const order = (list, reference) =>
+    [...list].sort((x, y) => {
+      const ix = reference.indexOf(x);
+      const iy = reference.indexOf(y);
+      return (ix < 0 ? 999 : ix) - (iy < 0 ? 999 : iy);
+    });
+  const modes = order(new Set(records.map((r) => r.mode)), DEFAULT_MODES);
+  const pairings = order(new Set(records.map((r) => `${r.a}:${r.b}`)), DEFAULT_PAIRINGS);
   const seeds = new Set(records.map((r) => r.seed));
   const lines = [];
   lines.push('# Banco di prova IA — partite IA contro IA');
@@ -262,6 +268,7 @@ function buildReport(records) {
   lines.push('## Tempi di decisione dell’IA (ms)');
   lines.push('');
   lines.push('Con l’iniziativa la decisione è congiunta (Campo + Agente + FC); in risposta il Campo è già fissato.');
+  lines.push('I tempi dipendono dalla macchina e dal suo carico (le partite possono girare in più processi paralleli): vanno confrontati solo fra misure fatte nelle stesse condizioni.');
   lines.push('');
   lines.push('| Livello | Modalità | Con iniziativa: media / p95 / max | In risposta: media / p95 / max |');
   lines.push('|---|---|---|---|');

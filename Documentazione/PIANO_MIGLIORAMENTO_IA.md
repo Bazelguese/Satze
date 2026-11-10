@@ -1,6 +1,6 @@
 # Piano di miglioramento dell'IA di SATZE
 
-Stato: approvato, in corso (Fase 0).
+Stato: approvato. Fase 0 completata; Fase 1 da avviare.
 Ultimo aggiornamento: 2026-11-10.
 
 ## Obiettivi
@@ -38,7 +38,7 @@ Fuori ambito per ora, ma da ricordare: le scelte delle Eminenze sono automatiche
 
 Ogni fase si chiude con una misura della Fase 0 confrontata con quella precedente. Una modifica che non migliora le misure non entra.
 
-### Fase 0 — Misurare (in corso)
+### Fase 0 — Misurare (completata)
 
 Serve un banco di prova che giochi partite intere senza interfaccia.
 
@@ -55,9 +55,35 @@ Serve un banco di prova che giochi partite intere senza interfaccia.
   - misura: percentuale di vittorie con intervallo di confidenza, motivo di vittoria, Focus spesi, durata delle partite, tempo per decisione.
 - **Report** in `Documentazione/AI_SELFPLAY_LATEST.md`, con la misura di partenza prima di qualsiasi modifica.
 
+#### Risultati della Fase 0
+
+Realizzazione: `src/game/sim/` (motore di partita, agenti, tornei, con test) e `npm run selfplay:ai`.
+Misura di partenza: `Documentazione/AI_SELFPLAY_FASE0_BASELINE.md` (e `.json`), commit `1888636`. Sono 100 semi per accoppiamento, cioè 200 partite a lati scambiati, in Classico e Mani nude.
+
+Punteggio del primo agente (tra parentesi l’intervallo di confidenza al 95%):
+
+| Accoppiamento | Classico | Mani nude |
+|---|---|---|
+| Facile – Normale | 8,5% (5,4–13,2) | 12,0% (8,2–17,2) |
+| Normale – Difficile | 50,5% (43,6–57,4) | 55,0% (48,1–61,7) |
+| Facile – Avido | 48,0% (41,2–54,9) | 54,5% (47,6–61,3) |
+| Facile – Casuale | 62,5% (55,6–68,9) | 65,0% (58,2–71,3) |
+| Normale – Avido | 85,5% (80,0–89,7) | 84,5% (78,8–88,9) |
+| Difficile – Avido | 87,0% (81,6–91,0) | 83,5% (77,7–88,0) |
+
+Cosa ne segue:
+
+1. **La Difficile non è più forte della Normale.** Le due si equivalgono in entrambe le modalità e contro i riferimenti fanno lo stesso punteggio.
+2. **Con l'iniziativa tutti i livelli giocano allo stesso modo.** La decisione congiunta richiede in media 13-17 ms per tutti e tre i livelli: è la versione ridotta, senza ricerca (problema 1). La differenza fra livelli c'è solo in risposta, che richiede in media 0,5-0,7 s e al massimo 3,4 s.
+3. **L'IA rende peggio quando apre.** Normale contro Avido fa 73% quando apre la Normale e 98% quando apre l'Avido. In parte dipende dal gioco, perché chi risponde vede l'Agente avversario, ma lo scarto indica una decisione d'apertura debole.
+4. **La Facile vale quanto l'Avido** (Agente più forte, quota equa di FC) e batte il Casuale solo nel 62,5% delle partite. Il salto fra Facile e Normale è enorme (8,5%).
+5. **C'è molto margine di tempo.** Il p95 in risposta è di circa 2 s, contro i 15 s disponibili.
+
+Limiti della misura: è una partita IA contro IA, non contro persone. I riferimenti sono semplici. La rivendicazione della vittoria ai turni 3-4 viene sempre accettata. I tempi sono stati misurati con 4 processi in parallelo.
+
 ### Fase 1 — Correzioni al motore comune
 
-1. La Difficile (e, in misura minore, la Normale) usa la ricerca anche quando apre. Prima la versione ridotta sceglie i Campi migliori, poi carta e Focus vengono decisi con il profilo completo.
+1. **Priorità confermata dalla Fase 0:** la Difficile (e, in misura minore, la Normale) usa la ricerca anche quando apre. Prima la versione ridotta sceglie i Campi migliori, poi carta e Focus vengono decisi con il profilo completo.
 2. Pianificazione della mano sul calendario dell'iniziativa: Imboscata quando apre l'IA, Intervento quando risponde, Turbo nei turni 1-2, Ultima Chance dal turno 5, Resa dei conti dal terzo scontro.
 3. Una sola scala di valutazione invece della somma di due punteggi diversi.
 4. Il filtro sulle sconfitte diventa una soglia di probabilità, solo se la misura conferma che serve.

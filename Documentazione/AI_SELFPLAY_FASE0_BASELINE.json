@@ -1,0 +1,522 @@
+{
+  "generated": "2026-11-10T09:19:49.758Z",
+  "commit": "1888636",
+  "pairings": {
+    "bareHands|easy:greedy": {
+      "n": 200,
+      "wins": 109,
+      "losses": 91,
+      "draws": 0,
+      "score": 0.545,
+      "ci": [
+        0.47578485036961143,
+        0.6125190090977397
+      ],
+      "reasons": {
+        "win:supremacy": 55,
+        "win:fields_tiebreak": 7,
+        "loss:fields": 66,
+        "win:fields": 47,
+        "loss:fields_tiebreak": 2,
+        "loss:supremacy": 23
+      },
+      "rounds": 4.275,
+      "focusA": 3.6608187134502925,
+      "focusB": 3.794152046783626,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.47,
+      "scoreWhenBOpens": 0.62
+    },
+    "bareHands|easy:hard": {
+      "n": 200,
+      "wins": 37,
+      "losses": 163,
+      "draws": 0,
+      "score": 0.185,
+      "ci": [
+        0.1373011632273606,
+        0.2445718205011816
+      ],
+      "reasons": {
+        "loss:fields": 119,
+        "loss:supremacy": 44,
+        "win:supremacy": 34,
+        "win:fields_tiebreak": 2,
+        "win:fields": 1
+      },
+      "rounds": 4.195,
+      "focusA": 3.600715137067938,
+      "focusB": 3.9904648390941597,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.15,
+      "scoreWhenBOpens": 0.22
+    },
+    "bareHands|easy:medium": {
+      "n": 200,
+      "wins": 24,
+      "losses": 176,
+      "draws": 0,
+      "score": 0.12,
+      "ci": [
+        0.08197935023887544,
+        0.17234361425904846
+      ],
+      "reasons": {
+        "loss:fields": 142,
+        "loss:supremacy": 32,
+        "win:fields_tiebreak": 4,
+        "win:fields": 1,
+        "win:supremacy": 19,
+        "loss:fields_tiebreak": 2
+      },
+      "rounds": 3.915,
+      "focusA": 3.5938697318007664,
+      "focusB": 4.118773946360153,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.05,
+      "scoreWhenBOpens": 0.19
+    },
+    "bareHands|easy:random": {
+      "n": 200,
+      "wins": 130,
+      "losses": 70,
+      "draws": 0,
+      "score": 0.65,
+      "ci": [
+        0.5816333576186576,
+        0.7127128406058462
+      ],
+      "reasons": {
+        "win:fields": 68,
+        "loss:supremacy": 32,
+        "loss:fields": 38,
+        "win:fields_tiebreak": 9,
+        "win:supremacy": 53
+      },
+      "rounds": 4.315,
+      "focusA": 3.6106604866743917,
+      "focusB": 3.6581691772885283,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.68,
+      "scoreWhenBOpens": 0.62
+    },
+    "bareHands|greedy:random": {
+      "n": 200,
+      "wins": 129,
+      "losses": 71,
+      "draws": 0,
+      "score": 0.645,
+      "ci": [
+        0.5765198448160798,
+        0.7080148134676073
+      ],
+      "reasons": {
+        "win:fields": 84,
+        "loss:supremacy": 39,
+        "loss:fields": 30,
+        "win:supremacy": 40,
+        "win:fields_tiebreak": 5,
+        "loss:fields_tiebreak": 2
+      },
+      "rounds": 4.265,
+      "focusA": 3.82063305978898,
+      "focusB": 3.660023446658851,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.62,
+      "scoreWhenBOpens": 0.67
+    },
+    "bareHands|hard:greedy": {
+      "n": 200,
+      "wins": 167,
+      "losses": 33,
+      "draws": 0,
+      "score": 0.835,
+      "ci": [
+        0.7773410172613647,
+        0.8800321587733603
+      ],
+      "reasons": {
+        "win:fields": 122,
+        "win:supremacy": 41,
+        "loss:supremacy": 20,
+        "loss:fields_tiebreak": 6,
+        "loss:fields": 7,
+        "win:fields_tiebreak": 4
+      },
+      "rounds": 4.15,
+      "focusA": 4.032530120481928,
+      "focusB": 3.797590361445783,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.78,
+      "scoreWhenBOpens": 0.89
+    },
+    "bareHands|hard:random": {
+      "n": 200,
+      "wins": 175,
+      "losses": 25,
+      "draws": 0,
+      "score": 0.875,
+      "ci": [
+        0.8219846471534161,
+        0.9138808484078432
+      ],
+      "reasons": {
+        "win:fields": 116,
+        "loss:fields": 5,
+        "loss:supremacy": 17,
+        "win:fields_tiebreak": 4,
+        "win:supremacy": 55,
+        "loss:fields_tiebreak": 3
+      },
+      "rounds": 4.13,
+      "focusA": 3.956416464891041,
+      "focusB": 3.761501210653753,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.84,
+      "scoreWhenBOpens": 0.91
+    },
+    "bareHands|medium:greedy": {
+      "n": 200,
+      "wins": 169,
+      "losses": 31,
+      "draws": 0,
+      "score": 0.845,
+      "ci": [
+        0.788391941062744,
+        0.8886043148536146
+      ],
+      "reasons": {
+        "win:fields": 134,
+        "win:supremacy": 35,
+        "loss:supremacy": 19,
+        "loss:fields_tiebreak": 2,
+        "loss:fields": 10
+      },
+      "rounds": 3.89,
+      "focusA": 4.181233933161954,
+      "focusB": 3.7750642673521853,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.72,
+      "scoreWhenBOpens": 0.97
+    },
+    "bareHands|medium:hard": {
+      "n": 200,
+      "wins": 110,
+      "losses": 90,
+      "draws": 0,
+      "score": 0.55,
+      "ci": [
+        0.48075488574571107,
+        0.6173605136624569
+      ],
+      "reasons": {
+        "loss:fields": 26,
+        "win:fields": 51,
+        "loss:supremacy": 58,
+        "win:supremacy": 52,
+        "loss:fields_tiebreak": 6,
+        "win:fields_tiebreak": 7
+      },
+      "rounds": 4.545,
+      "focusA": 3.8404840484048406,
+      "focusB": 3.7755775577557755,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.53,
+      "scoreWhenBOpens": 0.57
+    },
+    "bareHands|medium:random": {
+      "n": 200,
+      "wins": 173,
+      "losses": 27,
+      "draws": 0,
+      "score": 0.865,
+      "ci": [
+        0.8107074954488286,
+        0.9055349202307972
+      ],
+      "reasons": {
+        "win:fields": 131,
+        "loss:fields": 7,
+        "loss:supremacy": 18,
+        "win:fields_tiebreak": 2,
+        "win:supremacy": 40,
+        "loss:fields_tiebreak": 2
+      },
+      "rounds": 3.97,
+      "focusA": 4.030226700251889,
+      "focusB": 3.770780856423174,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.83,
+      "scoreWhenBOpens": 0.9
+    },
+    "classic|easy:greedy": {
+      "n": 200,
+      "wins": 96,
+      "losses": 104,
+      "draws": 0,
+      "score": 0.48,
+      "ci": [
+        0.4117904407948983,
+        0.5489633994418346
+      ],
+      "reasons": {
+        "win:supremacy": 39,
+        "loss:supremacy": 40,
+        "loss:fields": 60,
+        "win:fields": 51,
+        "loss:fields_tiebreak": 4,
+        "win:fields_tiebreak": 6
+      },
+      "rounds": 4.265,
+      "focusA": 3.6025791324736227,
+      "focusB": 3.82883939038687,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.41,
+      "scoreWhenBOpens": 0.55
+    },
+    "classic|easy:hard": {
+      "n": 200,
+      "wins": 19,
+      "losses": 181,
+      "draws": 0,
+      "score": 0.095,
+      "ci": [
+        0.0616626136498636,
+        0.14360265114397636
+      ],
+      "reasons": {
+        "loss:fields": 138,
+        "loss:supremacy": 38,
+        "win:supremacy": 16,
+        "loss:fields_tiebreak": 5,
+        "win:fields_tiebreak": 2,
+        "win:fields": 1
+      },
+      "rounds": 4.015,
+      "focusA": 3.5255292652552925,
+      "focusB": 4.139476961394769,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.07,
+      "scoreWhenBOpens": 0.12
+    },
+    "classic|easy:medium": {
+      "n": 200,
+      "wins": 17,
+      "losses": 183,
+      "draws": 0,
+      "score": 0.085,
+      "ci": [
+        0.05374529946985246,
+        0.13189688544235392
+      ],
+      "reasons": {
+        "loss:fields": 154,
+        "loss:supremacy": 29,
+        "win:supremacy": 13,
+        "win:fields_tiebreak": 3,
+        "win:fields": 1
+      },
+      "rounds": 3.815,
+      "focusA": 3.543905635648755,
+      "focusB": 4.182175622542595,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.03,
+      "scoreWhenBOpens": 0.14
+    },
+    "classic|easy:random": {
+      "n": 200,
+      "wins": 125,
+      "losses": 75,
+      "draws": 0,
+      "score": 0.625,
+      "ci": [
+        0.5561417515728713,
+        0.6891467469475485
+      ],
+      "reasons": {
+        "win:fields": 69,
+        "loss:supremacy": 34,
+        "loss:fields": 38,
+        "win:supremacy": 49,
+        "win:fields_tiebreak": 7,
+        "loss:fields_tiebreak": 3
+      },
+      "rounds": 4.34,
+      "focusA": 3.589861751152074,
+      "focusB": 3.6877880184331797,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.61,
+      "scoreWhenBOpens": 0.64
+    },
+    "classic|greedy:random": {
+      "n": 200,
+      "wins": 135,
+      "losses": 65,
+      "draws": 0,
+      "score": 0.675,
+      "ci": [
+        0.6073185684304498,
+        0.7360853294981379
+      ],
+      "reasons": {
+        "win:fields": 86,
+        "loss:supremacy": 32,
+        "win:supremacy": 47,
+        "loss:fields": 28,
+        "win:fields_tiebreak": 2,
+        "loss:fields_tiebreak": 5
+      },
+      "rounds": 4.265,
+      "focusA": 3.8264947245017584,
+      "focusB": 3.6670574443141852,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.59,
+      "scoreWhenBOpens": 0.76
+    },
+    "classic|hard:greedy": {
+      "n": 200,
+      "wins": 174,
+      "losses": 26,
+      "draws": 0,
+      "score": 0.87,
+      "ci": [
+        0.8163353692726988,
+        0.9097185863477438
+      ],
+      "reasons": {
+        "win:fields": 132,
+        "loss:fields_tiebreak": 2,
+        "loss:supremacy": 18,
+        "win:supremacy": 41,
+        "loss:fields": 6,
+        "win:fields_tiebreak": 1
+      },
+      "rounds": 4.065,
+      "focusA": 4.065190651906519,
+      "focusB": 3.7896678966789668,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.84,
+      "scoreWhenBOpens": 0.9
+    },
+    "classic|hard:random": {
+      "n": 200,
+      "wins": 178,
+      "losses": 22,
+      "draws": 0,
+      "score": 0.89,
+      "ci": [
+        0.8390720169908703,
+        0.9262280983928396
+      ],
+      "reasons": {
+        "win:fields": 131,
+        "loss:fields": 6,
+        "win:supremacy": 45,
+        "win:fields_tiebreak": 2,
+        "loss:supremacy": 14,
+        "loss:fields_tiebreak": 2
+      },
+      "rounds": 4.02,
+      "focusA": 3.982587064676617,
+      "focusB": 3.794776119402985,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.86,
+      "scoreWhenBOpens": 0.92
+    },
+    "classic|medium:greedy": {
+      "n": 200,
+      "wins": 171,
+      "losses": 29,
+      "draws": 0,
+      "score": 0.855,
+      "ci": [
+        0.7995121871510563,
+        0.897107148646936
+      ],
+      "reasons": {
+        "win:fields": 136,
+        "loss:fields_tiebreak": 3,
+        "loss:fields": 13,
+        "win:supremacy": 33,
+        "loss:supremacy": 13,
+        "win:fields_tiebreak": 2
+      },
+      "rounds": 3.83,
+      "focusA": 4.177545691906006,
+      "focusB": 3.789817232375979,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.73,
+      "scoreWhenBOpens": 0.98
+    },
+    "classic|medium:hard": {
+      "n": 200,
+      "wins": 101,
+      "losses": 99,
+      "draws": 0,
+      "score": 0.505,
+      "ci": [
+        0.4362687594824017,
+        0.5735427804584151
+      ],
+      "reasons": {
+        "loss:fields": 32,
+        "win:fields": 43,
+        "win:supremacy": 56,
+        "loss:supremacy": 58,
+        "loss:fields_tiebreak": 9,
+        "win:fields_tiebreak": 2
+      },
+      "rounds": 4.555,
+      "focusA": 3.8430296377607025,
+      "focusB": 3.7793633369923163,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.41,
+      "scoreWhenBOpens": 0.6
+    },
+    "classic|medium:random": {
+      "n": 200,
+      "wins": 175,
+      "losses": 25,
+      "draws": 0,
+      "score": 0.875,
+      "ci": [
+        0.8219846471534161,
+        0.9138808484078432
+      ],
+      "reasons": {
+        "win:fields": 138,
+        "loss:fields": 7,
+        "loss:fields_tiebreak": 2,
+        "win:fields_tiebreak": 1,
+        "loss:supremacy": 16,
+        "win:supremacy": 36
+      },
+      "rounds": 3.96,
+      "focusA": 4.032828282828283,
+      "focusB": 3.7613636363636362,
+      "fixesA": 0,
+      "fixesB": 0,
+      "scoreWhenAOpens": 0.84,
+      "scoreWhenBOpens": 0.91
+    }
+  }
+}
