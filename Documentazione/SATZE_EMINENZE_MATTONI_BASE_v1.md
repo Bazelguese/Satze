@@ -746,3 +746,29 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Rinomina dell'Eminenza.
 - Costi aggiornati di Devozione, Fama, Cosmo.
 - Maledizione Inversa: estendere `src/game/duel/duelInversionFinalization.js` a tutti i modificatori di POT/DAN/VA, per entrambi i lati, nello slot maledetto.
+
+### 10.12 Apex — Il Sole Verde (approvata)
+
+**Presenza iniziale:** 1 (era 3). **3 abilità attive.**
+
+**Principio di design emerso (vale per tutto il rework):** un'Eminenza deve aggiungere scelte e interazioni nuove; i potenziamenti di statistiche come effetto principale vanno evitati perché accorciano la strada verso la vittoria senza ampliare il gioco. **Correzione di valore:** per le Eminenze +1 POT vale circa 0.75 (il giocatore lo conosce prima di investire gli FC), non 0.50.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Cataclisma Verde | All'inizio del round 5, lo slot aperto subisce Terraformare: L'Ora Verde. Quando il tuo Bonus d'Armata si attiva, +1 Presenza. | — | circa 3 Presenza/Scontro |
+| +1 | Cielo Smeraldino | In questo Duello il tuo Agente schierato ha −1 DAN. | −0.75 | circa −0.35 ✅ (al limite) |
+| −2 | Disprezzo *(originale)* | Il tuo Agente schierato ignora gli effetti del Campo in questo Duello. | 1.50 | circa 1.5–2.0 quando usato contro Campi pesanti ✅ 〰️ |
+| −3 | Preghiera Ululata | Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA». | 2.25 | circa 2.0–2.5 ✅ 〰️ |
+
+**Nuovo Campo richiesto — «L'Ora Verde» (nome provvisorio):**
+- id: nuovo (il catalogo arriva oggi a 121);
+- tema: Apex;
+- effetto: «In scontro · Entrambi · +2 POT, +2 DAN»;
+- esclusivo del Cataclisma Verde: non entra nella pesca casuale dei Campi;
+- il Meridiano del Sole Verde (id 89) resta invariato nel catalogo.
+
+**Lavoro di implementazione:**
+- Aggiungere il Campo a `Documentazione/CAMPI_MASTER.md` e rigenerare `src/data/battlefieldsData.js` con `scripts/gen-battlefields-data.mjs`; escluderlo dalla pesca casuale.
+- Statico: `REPLACE_FIELD` verso il nuovo id al round 5; +1 Presenza all'attivazione del Bonus.
+- Preghiera Ululata: override permanente del Bonus con Attrizione su VA (`assaultValue`, già supportata).
+- Tolte Furia e Ora Verde (abilità).
