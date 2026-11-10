@@ -527,3 +527,31 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 | 8 | **Kethran Sacrificio:** la doppia Presenza del catalogo è voluta? | da verificare |
 | 9 | **Terraformare per le Eminenze:** serve collegare `src/game/duel/terraform.js` al motore delle Eminenze per l'uso durante il Duello. | lavoro di motore |
 | 10 | **Staffetta:** stimare `m` per inserirla nella tabella §3.5.2. | da fare |
+
+---
+
+## 10. Decisioni e rework approvati
+
+### 10.1 Decisioni generali (10 novembre 2026)
+
+- **Struttura:** schema comune — Statico (1.5–2.5 Presenza/Scontro), ricarica +1, abilità base −2, firma −3/−4 — con eccezioni ammesse quando servono all'identità.
+- **Valore del PV per le Eminenze:** 0.5 FC in ogni direzione (danno inflitto, PV persi come costo, Cura). La Cura conta solo sui PV effettivamente mancanti. La tabella delle carte resta invariata. Questo valore sostituisce quello usato nell'audit §3.3 e §5 (ricalcolato nella versione HTML della pagina).
+- **Ordine del rework:** ordine delle armate di `src/data/armies.js`.
+
+### 10.2 Figli dell'Orizzonte — La Domanda Senza Fine (approvata)
+
+**Presenza iniziale:** 1 (era 2). **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Ancorato *(invariato)* | Un Agente è Ancorato se ha investito almeno 6 − Lega effettiva + aumenti cumulativi del requisito. Ai fini di Ancorato contano gli FC reali investiti; gli FC temporanei non contano. Alla fine del Duello, se il tuo Agente era Ancorato, +1 Presenza. | — | circa 3 Presenza/Scontro |
+| +1 | Deriva *(invariata)* | Aumenta di 1 il requisito di Ancorato, cumulativamente per il resto dello Scontro, già da questo round. | −0.75 | circa −0.5 ✅ |
+| −1 | Condensazione | Se il tuo Agente schierato è Ancorato, riceve 1 FC temporaneo in questo Duello. Gli FC temporanei non contano per Ancorato. | 0.75 | circa 0.8 ✅ |
+| −2 | La Domanda si diffonde | **Reveal: prima della scelta degli Agenti.** In questo Duello, il Potere dell'Agente nemico si attiva solo se è Ancorato. Per l'Agente nemico vale il tuo requisito di Ancorato, aumenti di Deriva compresi. | 1.50 | 0.4 / 0.75 / 1.1 / 1.4 con 0 / 1 / 2 / 3+ Derive |
+| −4 | Risposta | Se il tuo Agente schierato è Ancorato, è Immune e il suo trigger Potere è considerato soddisfatto. | 3.00 | circa 2.7 ✅ |
+
+**Motore:** 0.75 + circa 2.25 = circa 3.0 FC (limite alto della fascia).
+
+**Lavoro di implementazione:**
+- La Domanda si diffonde richiede il controllo di Ancorato anche per il lato avversario.
+- Serve un'interfaccia che mostri all'avversario la soglia di Ancorato del proprio Agente mentre sceglie Agente e FC.
