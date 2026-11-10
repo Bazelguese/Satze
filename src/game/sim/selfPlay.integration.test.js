@@ -22,3 +22,14 @@ describe('torneo IA contro IA', () => {
     for (const r of records) expect(['win', 'loss', 'draw']).toContain(r.outcome);
   });
 });
+
+describe('varianti di profilo per esperimenti', () => {
+  it('legge “livello@chiave=valore;…” con numeri, booleani e testo', async () => {
+    const { parseAgentSpec } = await import('./simAgents.js');
+    expect(parseAgentSpec('hard')).toEqual({ base: 'hard', overrides: null });
+    expect(parseAgentSpec('hard@riskWeight=0.2;allowMaxFocusScenario=false;cardAggregation=weighted')).toEqual({
+      base: 'hard',
+      overrides: { riskWeight: 0.2, allowMaxFocusScenario: false, cardAggregation: 'weighted' },
+    });
+  });
+});

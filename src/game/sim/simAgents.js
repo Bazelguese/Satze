@@ -10,6 +10,7 @@
 import { buildAIInformationSet } from '../ai/buildAIInformationSet.js';
 import { chooseAIAction } from '../ai/chooseAIAction.js';
 import { chooseJointAIAction } from '../ai/chooseJointAIAction.js';
+import { getAIProfile } from '../ai/aiProfiles.js';
 import { mulberry32 } from '../../utils/seededRandom.js';
 import { availableCards, legalFieldIndexes, legalFocusRange } from './headlessMatch.js';
 
@@ -31,10 +32,12 @@ function fairFocus(view) {
  * - in risposta: chooseAIAction con il Campo fissato e l'Agente avversario visibile.
  *
  * @param {'easy'|'medium'|'hard'} difficulty
- * @param {{ seed?: number, label?: string }} [options]
+ * @param {{ seed?: number, label?: string, overrides?: object }} [options]
+ *   overrides: parametri di profilo da sostituire (esperimenti), es. { riskWeight: 0.2 }
  */
-export function createEngineAgent(difficulty, { seed = 1, label } = {}) {
+export function createEngineAgent(difficulty, { seed = 1, label, overrides = null } = {}) {
   const rng = mulberry32(seed >>> 0);
+  const profile = overrides ? { ...getAIProfile(difficulty), ...overrides } : undefined;
   const withDifficulty = (view) => ({ ...view, aiDifficulty: difficulty });
   return {
     id: label || `ia-${difficulty}`,
@@ -42,14 +45,14 @@ export function createEngineAgent(difficulty, { seed = 1, label } = {}) {
     difficulty,
     lead(view) {
       const context = buildAIInformationSet(withDifficulty({ ...view, currentFieldIndex: null }));
-      const decision = chooseJointAIAction(context, difficulty, { rng });
+      const decision = chooseJointAIAction(context, difficulty, { rng, profile });
       return decision?.card
         ? { fieldIndex: decision.fieldIndex, cardId: decision.card.id, focus: decision.focus }
         : null;
     },
     respond(view) {
       const context = buildAIInformationSet(withDifficulty(view));
-      const decision = chooseAIAction(context, difficulty, { rng });
+      const decision = chooseAIAction(context, difficulty, { rng, profile });
       return decision?.card ? { cardId: decision.card.id, focus: decision.focus } : null;
     },
   };
@@ -105,14 +108,39 @@ export function createGreedyAgent({ label = 'avido' } = {}) {
   };
 }
 
+function parseOverrideValue(raw) {
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  if (raw === 'null') return null;
+  if (raw !== '' && !Number.isNaN(Number(raw))) return Number(raw);
+  return raw;
+}
+
 /**
- * @param {string} spec - 'easy' | 'medium' | 'hard' | 'random' | 'greedy'
+ * Varianti di profilo per esperimenti: 'hard@riskWeight=0.2;searchDepth=1'.
+ * @returns {{ base: string, overrides: object|null }}
+ */
+export function parseAgentSpec(spec) {
+  const [base, rest] = String(spec).split('@');
+  if (!rest) return { base, overrides: null };
+  const overrides = {};
+  for (const pair of rest.split(';').filter(Boolean)) {
+    const [key, value] = pair.split('=');
+    overrides[key] = parseOverrideValue(value ?? '');
+  }
+  return { base, overrides };
+}
+
+/**
+ * @param {string} spec - 'easy' | 'medium' | 'hard' | 'random' | 'greedy',
+ *   con varianti di profilo opzionali: 'hard@riskWeight=0.2;searchDepth=1'
  */
 export function createAgentFromSpec(spec, { seed = 1 } = {}) {
-  if (spec === 'random') return createRandomAgent({ seed });
-  if (spec === 'greedy') return createGreedyAgent();
-  if (spec === 'easy' || spec === 'medium' || spec === 'hard') {
-    return createEngineAgent(spec, { seed, label: spec });
+  const { base, overrides } = parseAgentSpec(spec);
+  if (base === 'random') return createRandomAgent({ seed });
+  if (base === 'greedy') return createGreedyAgent();
+  if (base === 'easy' || base === 'medium' || base === 'hard') {
+    return createEngineAgent(base, { seed, label: spec, overrides });
   }
   throw new Error(`Agente sconosciuto: ${spec}`);
 }
