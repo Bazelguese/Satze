@@ -33,10 +33,10 @@ export const MC_PROFILES = {
     policyQuality: 0.7,
     opponentQuality: 0.7,
     noise: 0,
-    // Con l'iniziativa: FC come gioco simultaneo (strategia mista), meno prevedibile.
-    leadMode: 'matrix',
-    matrixCombos: 5,
-    matrixRollouts: 16,
+    // Simulazioni con la politica addestrata (learnedPolicyWeights.js): contro la Difficile
+    // precedente (apertura simultanea, politica euristica) vince il 72,5% (200 partite, Classico).
+    // L'apertura simultanea non va combinata con la politica addestrata (53,5%).
+    policy: 'learned',
     maxMs: 7000,
   },
 };
