@@ -256,6 +256,48 @@ Richiesta dell'utente: stili di gioco indipendenti dalla difficoltà, scelti nel
 
 **Decisione dell'utente:** Cauto e Imprevedibile sono tolti. Restano Neutrale e sei tratti: Impetuoso, Paziente, Conquistatore, Spietato, Avaro e Temerario. Una scelta salvata da una versione precedente del menu ("cauto", "imprevedibile") torna a Neutrale.
 
+### 2v2 con l'IA nuova (fatto)
+
+Decisioni dell'utente:
+
+- il compagno si sceglie fra le personalità nuove e gioca alla difficoltà del menu;
+- la riga del menu vale anche per gli avversari del 2v2, e con "Casuale" ognuno estrae il suo tratto;
+- l'online resta per ora con l'IA vecchia.
+
+**Codice:**
+
+- `src/game/ai/mcTeam/teamPolicy.js`: politica veloce e partita simulata con le regole vere di `teamDuel.js`.
+- `src/game/ai/mcTeam/teamSearch.js`: apertura e risposta in due fasi. Prima ogni posto prova le sue mosse da solo, poi si provano le combinazioni migliori e le due disposizioni. I FC dell'apertura avversaria non si leggono mai: si estraggono in ogni simulazione.
+- `src/game/ai/mcTeam/teamTraits.js`: tratti, fiducia nei consigli e nomi dei posti.
+- `src/game/ai/mcTeam/teamProfiles.js`: i livelli.
+- Banco di prova: `src/game/sim/teamSelfPlay.js` e `npm run selfplay:team`.
+- Gioco: in `useMultiSeatDuel` le decisioni passano dal worker, con ripiego sull'IA vecchia; nel menu ci sono le righe COMPAGNO e AVVERSARI.
+
+**Misure** (100 partite per accoppiamento, Classico):
+
+| Accoppiamento | Risultato |
+|---|---|
+| Nuova Difficile, Normale e Facile – vecchia Difficile, prima della taratura | 99% / 98% / 96,5% |
+| Vecchia Difficile – vecchia Facile ("Casuale") | 67,5% |
+
+Livelli installati e confronto con l'1v1:
+
+| Accoppiamento | 2v2 | 1v1 (Classico / Mani nude) |
+|---|---|---|
+| Difficile – Normale | 69,5% | 70% / 76% |
+| Normale – Facile | 62,5% | 68% / 62% |
+| Facile – vecchia "Casuale" (nel 1v1: Casuale) | 73% | 85% / 79% |
+
+Tempi per decisione di squadra: Difficile in media 1,6-2,0 s (massimo circa 8 s, il tetto); Normale circa 0,75 s; Facile circa 0,2 s. Nel browser, dal worker compilato, apertura circa 2,9 s e risposta circa 2 s (Difficile).
+
+Il rumore applicato solo alla scelta finale si ferma presto. Per indebolire Facile e Normale serve anche il rumore nella scelta dei candidati di ogni posto (`seatNoise`).
+
+Non ancora fatto:
+
+- misura del 2v2 in Mani nude;
+- tratti misurati nel 2v2;
+- 2v2 online e Re della Collina.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.
