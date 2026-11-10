@@ -604,3 +604,24 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Parola chiave Debito X.
 - Registro: voci di debito di Fine Scontro, pagate prima della determinazione del vincitore.
 - Interfaccia: Registro visibile a entrambi (voci e totale) e indicatore "rifiuto disponibile".
+
+### 10.5 Calibri Pesanti — Il Comando dei Quattro Fronti (approvata)
+
+**Presenza iniziale:** 1 (era 2). **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Tenere la Linea | Quando perdi un Duello, se il DAN nemico ti ha tolto 2 PV o meno, +1 Presenza. | — | circa 2.1 Presenza/Scontro |
+| +1 | Fermo Macchine | Il Potere del tuo Agente non si attiva in questo Duello. | −0.75 | circa −1.1 ✅ |
+| −1 | Guerra d'Attrito | Ottieni 1 FC. Se hai vinto meno Duelli dell'avversario, ottieni invece 2 FC. | 0.75 | circa 1.0 ✅ |
+| −2 | Logoramento | Il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro. | 1.50 | circa 1.3 ✅ 〰️ (0.85 / 1.7 / 2.5 con 1 / 2 / 3 persi) |
+| −4 | Protocollo Terra Bruciata | Se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale. | 3.00 | fuori scala 〰️ |
+
+**Motore:** 0.75 + circa 1.6 = circa 2.35 FC.
+
+**Lavoro di implementazione:**
+- Statico: condizione "sconfitta con PV persi per DAN ≤ 2".
+- Fermo Macchine: blocco del proprio Potere.
+- Guerra d'Attrito: costo fisso, quantità condizionata alle vittorie.
+- Logoramento: bonus di VA scalato sui Duelli persi.
+- Terra Bruciata: Campo distrutto escluso dal conteggio della vittoria territoriale.
