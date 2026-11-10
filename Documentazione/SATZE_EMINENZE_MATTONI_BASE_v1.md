@@ -584,7 +584,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 **Regola di design aggiunta alla scala (vale per tutte le Eminenze):** una ricarica (+1) non può infliggere danni all'avversario. Un danno che si ripete e a cui l'avversario non può opporsi va prezzato sull'accumulo, non sul singolo uso.
 
 **Statico — Il Registro**
-> Ogni abilità della Corte è un'Offerta all'avversario. L'Offerta viene rivelata dopo la scelta degli Agenti e prima della scelta degli FC, e l'avversario la accetta o la rifiuta. Se ha rifiutato l'Offerta del round precedente, deve accettare. Quando l'avversario accetta un'Offerta, +1 Presenza.
+> Ogni abilità della Corte è un'Offerta all'avversario. L'Offerta viene rivelata all'inizio del round, subito dopo la scelta delle Eminenze e prima di ogni altra decisione, e l'avversario la accetta o la rifiuta. Se ha rifiutato l'Offerta del round precedente, deve accettare. Quando l'avversario accetta un'Offerta, +1 Presenza.
 > I PV che l'avversario deve pagare alla Fine dello Scontro sono scritti nel suo Registro, una voce per ogni Offerta, e si pagano prima di determinare il vincitore.
 
 | Slot | Nome | Offerta | Budget | Stima (se accettata) |
@@ -599,7 +599,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 **Motore:** circa 3.5 firme a Scontro → circa 2.6 FC.
 
 **Lavoro di implementazione:**
-- Nuovo momento di reveal tra il blocco degli Agenti e quello degli FC.
+- Reveal dell'Offerta al primo gate del round (`PRE_FIELD`, oppure `PRE_AGENT` con lo Statico di Mascarada): nessun gate nuovo.
 - Offerta accetta/rifiuta con blocco del secondo rifiuto consecutivo.
 - Parola chiave Debito X.
 - Registro: voci di debito di Fine Scontro, pagate prima della determinazione del vincitore.
