@@ -191,6 +191,7 @@ export function useAI(gameState) {
             {
               maxMs: getMcProfile(state.aiDifficulty).maxMs,
               seed: Math.floor(rng() * 2 ** 32),
+              trait: state.aiPersonality || 'neutral',
             }
           );
         } catch {

@@ -77,4 +77,13 @@ describe('buildVersusIdentity', () => {
     expect(id.player.name).toBe('Giocatore');
     expect(id.enemy.name).toBe('Avversario');
   });
+
+  it('contro l’IA mostra la personalità accanto alla difficoltà, non il Neutrale', async () => {
+    const { buildVersusIdentity } = await import('./versusMatchData.js');
+    const { DIFFICULTY_NAMES } = await import('../../utils/aiConstants.js');
+    expect(buildVersusIdentity({ difficulty: 'hard', personality: 'impetuoso' }).enemy.sub).toBe(
+      `${DIFFICULTY_NAMES.hard} · Impetuoso`
+    );
+    expect(buildVersusIdentity({ difficulty: 'hard', personality: 'neutral' }).enemy.sub).toBe(DIFFICULTY_NAMES.hard);
+  });
 });

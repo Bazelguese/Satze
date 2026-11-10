@@ -18,6 +18,7 @@ import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { playUiClick } from '../../../audio/soundBus';
 import { useLeaveThen } from '../../../hooks/usePresence';
 import { SEAT_AI_PROFILES, TEAMMATE_PRESET_IDS } from '../../../game/multiSeat/seatAI.js';
+import { MC_TRAITS, MC_TRAIT_IDS } from '../../../game/ai/mc/mcTraits.js';
 
 const ENEMY_PICK = {
   random: 'random',
@@ -33,6 +34,14 @@ const MATCH_MODES = [
   { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti' },
 ];
 const PLAYER_COUNTS = [3, 4];
+/** Personalità dell'IA nel Duello: Neutrale (predefinita), Casuale, poi i tratti. */
+const PERSONALITY_IDS = ['neutral', 'random', ...MC_TRAIT_IDS.filter((id) => id !== 'neutral')];
+function personalityInfo(id) {
+  if (id === 'random') {
+    return { name: 'Casuale', description: 'Un tratto a sorpresa, svelato nella schermata VS.' };
+  }
+  return MC_TRAITS[id] || MC_TRAITS.neutral;
+}
 /** Le modalità a più posti non usano le Eminenze. */
 const MULTI_SEAT_FORMAT_IDS = ['noEminence', 'bareHands'];
 
@@ -92,6 +101,9 @@ export function DifficultySelectPopup({
     TEAMMATE_PRESET_IDS.includes(saved?.teammatePreset) ? saved.teammatePreset : TEAMMATE_PRESET_IDS[0]
   );
   const [playerCount, setPlayerCount] = useState(() => (PLAYER_COUNTS.includes(saved?.players) ? saved.players : 3));
+  const [personalityId, setPersonalityId] = useState(() =>
+    PERSONALITY_IDS.includes(saved?.personality) ? saved.personality : 'neutral'
+  );
   const [focus, setFocusState] = useState(0);
   /** Valori correnti anche tra un tasto e l'altro, prima del nuovo render. */
   const live = useRef({ focus: 0, enemyPick, matchMode: matchModeId });
@@ -108,7 +120,7 @@ export function DifficultySelectPopup({
   const rowsFor = (pick, mode = live.current.matchMode) => {
     if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty'];
     if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty'];
-    return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty'];
+    return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty', 'personality'];
   };
   const setMatchModeId = (id) => {
     live.current.matchMode = id;
@@ -140,6 +152,7 @@ export function DifficultySelectPopup({
     else if (key === 'enemy') pickEnemy(live.current.enemyPick === ENEMY_PICK.random ? ENEMY_PICK.chosen : ENEMY_PICK.random);
     else if (key === 'army') setChosenEnemyArmy((a) => cycle(armyOptions, a ?? armyOptions[d > 0 ? armyOptions.length - 1 : 0], d));
     else if (key === 'difficulty') setDifficultyId((x) => cycle(difficulties.map((y) => y.id), x, d));
+    else if (key === 'personality') setPersonalityId((x) => cycle(PERSONALITY_IDS, x, d));
   };
 
   const [starting, setStarting] = useState(false);
@@ -158,6 +171,7 @@ export function DifficultySelectPopup({
       matchMode: matchModeId,
       teammatePreset,
       players: playerCount,
+      personality: personalityId,
     });
     // il riquadro vola via, poi parte il passaggio al VS
     setStarting(true);
@@ -170,6 +184,8 @@ export function DifficultySelectPopup({
       matchMode: matchModeId,
       teammatePreset,
       players: playerCount,
+      // Le modalità a più posti hanno i loro profili: per ora la personalità vale nel Duello.
+      personality: isMultiSeat ? 'neutral' : personalityId,
     }), 280);
   };
 
@@ -233,10 +249,12 @@ export function DifficultySelectPopup({
     enemy: enemyPick === ENEMY_PICK.random ? 'Armata ed esercito dell’IA scelti a caso.' : 'Scegli tu l’armata avversaria.',
     army: chosenEnemyArmy ? `Affronterai ${chosenEnemyArmy}.` : 'Scegli l’armata che affronterai.',
     difficulty: difficulty?.longDescription,
+    personality: `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}`,
   }[focusKey];
   const helpLabel = {
     mode: 'MODALITÀ', teammate: 'COMPAGNO', players: 'GIOCATORI',
     format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ',
+    personality: 'PERSONALITÀ',
   }[focusKey];
   const rowNumber = (key) => String(rows.indexOf(key) + 1).padStart(2, '0');
 
@@ -403,6 +421,41 @@ export function DifficultySelectPopup({
                 ))}
               </div>
             </section>
+
+            {!isMultiSeat && (
+              <section {...focusProps('personality')}>
+                <h3><span className="n">{rowNumber('personality')}</span>PERSONALITÀ</h3>
+                <div className="mst-chips mst-stepper">
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Personalità precedente"
+                    onClick={() => stepRow('personality', -1)}
+                  >
+                    <span className="t">‹</span>
+                  </button>
+                  <div className="mst-chip sel mst-step-value" aria-live="polite">
+                    <span className="t">{personalityInfo(personalityId).name}</span>
+                    <span className="d">
+                      {personalityId === 'neutral'
+                        ? 'Predefinita'
+                        : personalityId === 'random'
+                          ? 'Tratto a sorpresa'
+                          : 'Tratto IA'}
+                      {` · ${PERSONALITY_IDS.indexOf(personalityId) + 1}/${PERSONALITY_IDS.length}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Personalità successiva"
+                    onClick={() => stepRow('personality', 1)}
+                  >
+                    <span className="t">›</span>
+                  </button>
+                </div>
+              </section>
+            )}
           </div>
 
           <footer className="mst-foot">
@@ -515,6 +568,10 @@ function MatchSetupStyles() {
       .mst-chip.sel { background: var(--accent); color: var(--void); box-shadow: 5px 5px 0 var(--ink); transform: skewX(-14deg) translateY(-3px); }
       .mst-chip.sel .t { font-style: italic; }
 
+      .mst-stepper { align-items: stretch; }
+      .mst-step { flex: 0 0 64px; align-items: center; padding: 6px 0; }
+      .mst-step .t { font-size: 30px; }
+      .mst-step-value { flex: 1 1 auto; min-width: 0; cursor: default; }
       .mst-diff { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 14px; }
       .mst-diff .ic { grid-row: 1 / span 2; display: grid; place-items: center; width: 42px; height: 42px; background: color-mix(in srgb, var(--c) 22%, transparent); }
       .mst-diff .t { color: var(--c); }

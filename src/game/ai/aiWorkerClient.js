@@ -100,9 +100,9 @@ export function runAiDecisionInWorker(context, difficulty, needsJoint) {
  * @param {object} view - da buildMcViewFromGameState (già serializzabile)
  * @param {object} context - information set, per idratare la carta scelta
  * @param {string} difficulty
- * @param {{ maxMs: number, seed?: number }} options
+ * @param {{ maxMs: number, seed?: number, trait?: string }} options
  */
-export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed } = {}) {
+export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed, trait } = {}) {
   const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(maxMs) || 0) + 4000);
   return new Promise((resolve, reject) => {
     let w;
@@ -120,7 +120,7 @@ export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed }
     }, timeoutMs);
     pending.set(id, { resolve, reject, timer });
     try {
-      w.postMessage({ id, kind: 'montecarlo', difficulty, view, maxMs, seed });
+      w.postMessage({ id, kind: 'montecarlo', difficulty, view, maxMs, seed, trait });
     } catch (err) {
       pending.delete(id);
       clearTimeout(timer);

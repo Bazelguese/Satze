@@ -52,4 +52,10 @@ describe('adattatore motore a simulazione', () => {
     expect(decision.focus).toBeGreaterThanOrEqual(1);
     expect(decision.debug.engine).toBe('montecarlo');
   });
+
+  it('la personalità arriva al motore e compare nel debug', () => {
+    const view = serializeMcView(buildMcViewFromGameState({ ...gameState(), isPlayerFirst: false }));
+    const decision = chooseMonteCarloDecision(view, 'easy', { seed: 5, maxMs: 3000, trait: 'avaro' });
+    expect(decision.debug.trait).toBe('avaro');
+  });
 });

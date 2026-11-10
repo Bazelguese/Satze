@@ -84,11 +84,15 @@ export function serializeMcView(view) {
  *
  * @param {object} view - da buildMcViewFromGameState
  * @param {string} difficulty
- * @param {{ seed?: number, maxMs?: number }} [options]
+ * @param {{ seed?: number, maxMs?: number, trait?: string }} [options] - trait: personalità (mcTraits.js)
  */
 export function chooseMonteCarloDecision(view, difficulty, options = {}) {
   const profile = getMcProfile(difficulty);
-  const params = { ...profile, maxMs: options.maxMs ?? profile.maxMs };
+  const params = {
+    ...profile,
+    maxMs: options.maxMs ?? profile.maxMs,
+    trait: options.trait || 'neutral',
+  };
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 32);
   const decision = chooseMonteCarloAction(view, params, mulberry32(seed >>> 0));
   if (!decision) return null;
@@ -102,6 +106,7 @@ export function chooseMonteCarloDecision(view, difficulty, options = {}) {
     debug: {
       engine: 'montecarlo',
       difficulty: profile.id,
+      trait: options.trait || 'neutral',
       winEstimate: Number(decision.mean.toFixed(3)),
       ...decision.stats,
     },

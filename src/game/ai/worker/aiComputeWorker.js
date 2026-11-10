@@ -3,12 +3,12 @@ import { chooseMonteCarloDecision } from '../mc/mcGameAdapter.js';
 import { stripDecisionForTransfer } from './serializeAiDecision.js';
 
 self.onmessage = (event) => {
-  const { id, kind, needsJoint, difficulty, context, view, maxMs, seed } = event.data || {};
+  const { id, kind, needsJoint, difficulty, context, view, maxMs, seed, trait } = event.data || {};
   try {
     const cache = new Map();
     const raw =
       kind === 'montecarlo'
-        ? chooseMonteCarloDecision(view, difficulty, { maxMs, seed })
+        ? chooseMonteCarloDecision(view, difficulty, { maxMs, seed, trait })
         : needsJoint
           ? chooseJointAIAction(context, difficulty, { cache })
           : chooseAIAction(context, difficulty, { cache });
