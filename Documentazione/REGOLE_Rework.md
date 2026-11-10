@@ -325,6 +325,21 @@ In caso di VA identico:
 
 ---
 
+## MODALITA TORNEO
+
+- **Formato:** eliminazione diretta a **12 partecipanti** (tu + 11 IA, una per armata). Agli Ottavi 4 partecipanti a sorte passano il turno; poi Quarti, Semifinali e Finale.
+- **Incontri al meglio delle 3:** passa chi vince 2 partite.
+- **Esercito bloccato:** il Deck di 10 carte scelto all'iscrizione resta lo stesso per tutto il torneo.
+- **Mani nella serie:**
+  - **Partita 1:** ogni giocatore pesca 5 carte a caso dal proprio Deck.
+  - **Partita 2:** ogni giocatore gioca le **5 carte non pescate** nella partita 1.
+  - **Partita 3 (spareggio):** il Deck viene rimischiato e si pescano 5 carte a caso.
+- **PV e FC** ripartono da 25 e 18 a ogni partita; i Campi di Battaglia vengono rigenerati a ogni partita.
+- **Primo giocatore:** sempre chi ha la Lega totale piu bassa in mano (parita: casuale).
+- **Pareggio:** una partita pareggiata non assegna vittorie; se dopo 3 partite la serie e pari si continua con altri spareggi a Deck rimischiato.
+
+---
+
 ## RIASSUNTO RAPIDO
 
 ```

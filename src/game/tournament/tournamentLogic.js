@@ -1,0 +1,281 @@
+// ============================================
+// TORNEO — logica pura (nessuna dipendenza da React o dai dati carte)
+// ============================================
+// Eliminazione diretta a 12 partecipanti, ogni incontro al meglio delle 3.
+// Regola delle mani dentro una serie (mazzo da 10 bloccato):
+//   partita 1 → 5 carte pescate a caso
+//   partita 2 → le 5 carte NON pescate nella partita 1
+//   partita 3 → mazzo rimischiato, 5 carte a caso (spareggio)
+// PV e FC ripartono da capo a ogni partita (lo fa l'avvio partita standard).
+// ============================================
+
+export const TOURNAMENT_SIZE = 12;
+export const TOURNAMENT_HAND_SIZE = 5;
+export const TOURNAMENT_DECK_SIZE = 10;
+/** Al meglio delle 3: servono 2 vittorie. */
+export const SERIES_WINS_NEEDED = 2;
+export const SERIES_MAX_GAMES = 3;
+
+export const ROUND_NAMES = ['Ottavi', 'Quarti', 'Semifinali', 'Finale'];
+
+function shuffled(list, rng) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function emptySeries() {
+  return { games: [], winsA: 0, winsB: 0, winner: null };
+}
+
+function makeMatch(round, index, a = null, b = null) {
+  return { id: `r${round}m${index}`, round, index, a, b, bye: false, series: emptySeries(), winnerId: null };
+}
+
+/** Regola di pesca della partita numero `gameNumber` (1-based) di una serie. */
+export function handRuleForGame(gameNumber) {
+  if (gameNumber === 1) return 'draw';
+  if (gameNumber === 2) return 'remainder';
+  return 'reshuffle';
+}
+
+/**
+ * Mano della prossima partita per un mazzo, date le mani già giocate nella serie.
+ * @param {number[]} deckIds - le 10 carte del mazzo bloccato
+ * @param {number[][]} previousHands - mani delle partite precedenti, in ordine
+ */
+export function dealSeriesHand(deckIds, previousHands, rng = Math.random) {
+  const rule = handRuleForGame(previousHands.length + 1);
+  if (rule === 'remainder') {
+    const first = new Set(previousHands[0]);
+    return deckIds.filter((id) => !first.has(id));
+  }
+  return shuffled(deckIds, rng).slice(0, TOURNAMENT_HAND_SIZE);
+}
+
+/** Una serie è chiusa a 2 vittorie; dopo 3 partite vince chi è avanti (i pareggi non contano). */
+export function seriesWinnerSide(series) {
+  if (series.winsA >= SERIES_WINS_NEEDED) return 'a';
+  if (series.winsB >= SERIES_WINS_NEEDED) return 'b';
+  const played = series.games.filter((g) => g.winner).length;
+  if (played >= SERIES_MAX_GAMES && series.winsA !== series.winsB) {
+    return series.winsA > series.winsB ? 'a' : 'b';
+  }
+  return null;
+}
+
+/**
+ * Crea il torneo. Tabellone a 16 posti con 4 passaggi diretti: agli Ottavi 8 partecipanti
+ * giocano e 4 passano il turno; ogni Quarto oppone chi è passato a chi ha vinto.
+ * @param {{ participants: object[], settings?: object, rng?: () => number }} cfg
+ *   participants: 12 voci { id, name, army, deckKey, deckName, cardIds, isHuman }
+ */
+export function createTournament({ participants, settings = {}, rng = Math.random }) {
+  if (!Array.isArray(participants) || participants.length !== TOURNAMENT_SIZE) {
+    throw new Error(`Il torneo richiede ${TOURNAMENT_SIZE} partecipanti.`);
+  }
+  if (participants.filter((p) => p.isHuman).length !== 1) {
+    throw new Error('Il torneo richiede esattamente un giocatore umano.');
+  }
+  for (const p of participants) {
+    if (!Array.isArray(p.cardIds) || p.cardIds.length !== TOURNAMENT_DECK_SIZE || new Set(p.cardIds).size !== TOURNAMENT_DECK_SIZE) {
+      throw new Error(`Mazzo non valido per ${p.name}: servono ${TOURNAMENT_DECK_SIZE} carte diverse.`);
+    }
+  }
+
+  const order = shuffled(participants.map((p) => p.id), rng);
+  const byes = order.slice(0, 4);
+  const playing = order.slice(4);
+
+  const round0 = [];
+  for (let i = 0; i < 4; i++) {
+    const byeMatch = makeMatch(0, i * 2, byes[i], null);
+    byeMatch.bye = true;
+    byeMatch.winnerId = byes[i];
+    round0.push(byeMatch);
+    round0.push(makeMatch(0, i * 2 + 1, playing[i * 2], playing[i * 2 + 1]));
+  }
+  const rounds = [round0];
+  for (let r = 1, size = 4; size >= 1; r++, size /= 2) {
+    rounds.push(Array.from({ length: size }, (_, i) => makeMatch(r, i)));
+  }
+
+  const tournament = {
+    version: 1,
+    settings,
+    participants: Object.fromEntries(participants.map((p) => [p.id, { ...p, cardIds: [...p.cardIds] }])),
+    humanId: participants.find((p) => p.isHuman).id,
+    rounds,
+    championId: null,
+  };
+  return advanceTournament(tournament, rng);
+}
+
+function clone(tournament) {
+  return JSON.parse(JSON.stringify(tournament));
+}
+
+function findMatch(tournament, matchId) {
+  for (const round of tournament.rounds) {
+    const m = round.find((x) => x.id === matchId);
+    if (m) return m;
+  }
+  return null;
+}
+
+function involvesHuman(tournament, match) {
+  return match.a === tournament.humanId || match.b === tournament.humanId;
+}
+
+/** Il giocatore è ancora in corsa finché non perde una serie. */
+export function isHumanEliminated(tournament) {
+  return tournament.rounds.some((round) =>
+    round.some((m) => m.winnerId && involvesHuman(tournament, m) && m.winnerId !== tournament.humanId)
+  );
+}
+
+/** Serie tra due IA: non viene giocata, ogni partita è un 50/50. */
+function simulateAiSeries(tournament, match, rng) {
+  const deckA = tournament.participants[match.a].cardIds;
+  const deckB = tournament.participants[match.b].cardIds;
+  const series = match.series;
+  while (!seriesWinnerSide(series)) {
+    const winner = rng() < 0.5 ? 'a' : 'b';
+    series.games.push({
+      hands: {
+        a: dealSeriesHand(deckA, series.games.map((g) => g.hands.a), rng),
+        b: dealSeriesHand(deckB, series.games.map((g) => g.hands.b), rng),
+      },
+      winner,
+      simulated: true,
+    });
+    if (winner === 'a') series.winsA += 1; else series.winsB += 1;
+  }
+  series.winner = seriesWinnerSide(series);
+  match.winnerId = series.winner === 'a' ? match.a : match.b;
+}
+
+/**
+ * Porta avanti il tabellone: promuove i vincitori al turno successivo e risolve le serie
+ * tra IA. Le serie IA di un turno si risolvono solo quando il giocatore ha chiuso la sua
+ * (o non gioca in quel turno), così i risultati del turno arrivano insieme.
+ */
+function advanceInPlace(tournament, rng) {
+  for (let r = 0; r < tournament.rounds.length; r++) {
+    const round = tournament.rounds[r];
+    const humanPending = round.some((m) => !m.winnerId && involvesHuman(tournament, m));
+    if (humanPending) return tournament;
+    for (const m of round) {
+      if (!m.winnerId && m.a && m.b) simulateAiSeries(tournament, m, rng);
+    }
+    if (round.some((m) => !m.winnerId)) return tournament;
+    const next = tournament.rounds[r + 1];
+    if (!next) {
+      tournament.championId = round[0].winnerId;
+      return tournament;
+    }
+    next.forEach((m, i) => {
+      m.a = round[i * 2].winnerId;
+      m.b = round[i * 2 + 1].winnerId;
+    });
+  }
+  return tournament;
+}
+
+export function advanceTournament(tournament, rng = Math.random) {
+  return advanceInPlace(clone(tournament), rng);
+}
+
+/** L'incontro che il giocatore deve giocare adesso, o null (eliminato / torneo finito). */
+export function getHumanMatch(tournament) {
+  for (const round of tournament.rounds) {
+    const m = round.find((x) => !x.winnerId && x.a && x.b && involvesHuman(tournament, x));
+    if (m) return m;
+  }
+  return null;
+}
+
+/** Lato ('a' | 'b') del giocatore in un incontro. */
+export function humanSide(tournament, match) {
+  return match.a === tournament.humanId ? 'a' : 'b';
+}
+
+/** Partita in attesa di esito nell'incontro (mani già assegnate), o null. */
+export function getPendingGame(match) {
+  const last = match.series.games[match.series.games.length - 1];
+  return last && !last.winner ? last : null;
+}
+
+/**
+ * Assegna le mani della prossima partita dell'incontro del giocatore. Idempotente: se una
+ * partita è già in attesa di esito le sue mani restano quelle (anche dopo un abbandono o
+ * un ricaricamento), così non si può ripescare.
+ */
+export function prepareHumanGame(tournament, rng = Math.random) {
+  const next = clone(tournament);
+  const match = getHumanMatch(next);
+  if (!match) return next;
+  if (getPendingGame(match)) return next;
+  const { games } = match.series;
+  games.push({
+    hands: {
+      a: dealSeriesHand(next.participants[match.a].cardIds, games.map((g) => g.hands.a), rng),
+      b: dealSeriesHand(next.participants[match.b].cardIds, games.map((g) => g.hands.b), rng),
+    },
+    winner: null,
+  });
+  return next;
+}
+
+/**
+ * Registra l'esito della partita in attesa nell'incontro del giocatore.
+ * @param {'human'|'opponent'|'draw'} outcome
+ */
+export function recordHumanGameResult(tournament, outcome, rng = Math.random) {
+  const next = clone(tournament);
+  const match = getHumanMatch(next);
+  const game = match ? getPendingGame(match) : null;
+  if (!game) return next;
+  const side = humanSide(next, match);
+  const other = side === 'a' ? 'b' : 'a';
+  game.winner = outcome === 'human' ? side : outcome === 'opponent' ? other : 'draw';
+  if (game.winner === 'a') match.series.winsA += 1;
+  if (game.winner === 'b') match.series.winsB += 1;
+  const winnerSide = seriesWinnerSide(match.series);
+  if (winnerSide) {
+    match.series.winner = winnerSide;
+    match.winnerId = winnerSide === 'a' ? match.a : match.b;
+  }
+  return advanceInPlace(next, rng);
+}
+
+/** Stato del giocatore nel torneo. */
+export function getTournamentStatus(tournament) {
+  if (tournament.championId === tournament.humanId) return 'champion';
+  if (isHumanEliminated(tournament)) return 'eliminated';
+  return 'active';
+}
+
+/** Riassunto dell'incontro del giocatore per l'interfaccia. */
+export function describeHumanMatch(tournament) {
+  const match = getHumanMatch(tournament);
+  if (!match) return null;
+  const side = humanSide(tournament, match);
+  const opponentId = side === 'a' ? match.b : match.a;
+  const pending = getPendingGame(match);
+  const gameNumber = match.series.games.length + (pending ? 0 : 1);
+  return {
+    match,
+    side,
+    opponent: tournament.participants[opponentId],
+    roundName: ROUND_NAMES[match.round],
+    gameNumber,
+    handRule: handRuleForGame(gameNumber),
+    humanWins: side === 'a' ? match.series.winsA : match.series.winsB,
+    opponentWins: side === 'a' ? match.series.winsB : match.series.winsA,
+    resuming: Boolean(pending),
+  };
+}

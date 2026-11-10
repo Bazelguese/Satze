@@ -185,6 +185,9 @@ import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDe
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
+import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
+import { describeHumanMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
+import { createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards } from '../src/game/tournament/tournamentSetup.js';
 import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
 import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
@@ -2342,6 +2345,106 @@ export default function SatzeGame() {
   const startStandardGameRef = useRef(startStandardGame);
   startStandardGameRef.current = startStandardGame;
 
+  // ── Torneo (vs IA): tabellone salvato in locale, una partita alla volta ──
+  const [tournament, setTournament] = useState(() => loadTournament());
+  /** Scelta armata/esercito avviata dalla voce TORNEO del menù. */
+  const [tournamentSetup, setTournamentSetup] = useState(false);
+  /** La partita in corso (o appena finita) appartiene al torneo. */
+  const [tournamentGameActive, setTournamentGameActive] = useState(false);
+  /** Esito della partita di torneo ancora da registrare. */
+  const tournamentResultPendingRef = useRef(false);
+
+  const storeTournament = useCallback((next) => {
+    setTournament(next);
+    saveTournament(next);
+  }, []);
+
+  const stopAiThinking = useCallback(() => {
+    aiThinkGenerationRef.current += 1;
+    if (aiAgentThinkTimerRef.current) {
+      clearTimeout(aiAgentThinkTimerRef.current);
+      aiAgentThinkTimerRef.current = null;
+    }
+    aiHasSelectedAgent.current = false;
+    setPlayerConfirmedAwaitingAI(false);
+  }, []);
+
+  /** Avvia la prossima partita della serie del giocatore, con le mani decise dal torneo. */
+  const playTournamentGame = useCallback(() => {
+    if (!tournament) return;
+    const prepared = prepareHumanGame(tournament);
+    const info = describeHumanMatch(prepared);
+    const game = info ? getPendingGame(info.match) : null;
+    if (!game) return;
+    const human = prepared.participants[prepared.humanId];
+    const otherSide = info.side === 'a' ? 'b' : 'a';
+    // Esercito bloccato: se quello salvato è stato modificato nel frattempo, valgono le carte iscritte.
+    const customId = typeof human.deckKey === 'string' && human.deckKey.startsWith('custom_') ? human.deckKey.replace('custom_', '') : null;
+    const currentIds = customId ? loadCustomDecks()[customId]?.cards : ARMY_DECKS[human.army]?.[human.deckKey]?.cards;
+    const sameDeck = Array.isArray(currentIds)
+      && currentIds.length === human.cardIds.length
+      && currentIds.every((id) => human.cardIds.includes(id));
+    storeTournament(prepared);
+    stopAiThinking();
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    ai.resetAiSession();
+    multiSeat.cancel();
+    clearCardPreview();
+    setDevDialogueDuelActive(false);
+    setIsMultiplayer(false);
+    setCampaignLevel(null);
+    setSelectedMode(prepared.settings.mode || 'classic');
+    setSelectedArmy(human.army);
+    setSelectedDeckKey(human.deckKey);
+    setVsChosenEnemyArmy(info.opponent.army);
+    tournamentResultPendingRef.current = true;
+    setTournamentGameActive(true);
+    startStandardGame(
+      human.army,
+      sameDeck ? human.deckKey : human.cardIds,
+      prepared.settings.mode || 'classic',
+      prepared.settings.difficulty || 'medium',
+      ALL_BATTLEFIELDS,
+      info.opponent.army,
+      info.opponent.deckKey,
+      null,
+      {
+        eminenceFormat: prepared.settings.eminenceFormat,
+        fixedHands: {
+          playerHand: resolveTournamentCards(game.hands[info.side]),
+          enemyHand: resolveTournamentCards(game.hands[otherSide]),
+        },
+      }
+    );
+  }, [tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
+
+  /** Dal tavolo al tabellone (fine partita o abbandono: la partita non conclusa si rigioca con la stessa mano). */
+  const returnToTournamentHub = useCallback(() => {
+    stopAiThinking();
+    ai.resetAiSession();
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    tournamentResultPendingRef.current = false;
+    setTournamentGameActive(false);
+    resetToMenu();
+    setGamePhaseRaw('tournamentHub');
+  }, [stopAiThinking, ai, resetToMenu, setShowFinalRoundAnimation, setGamePhaseRaw]);
+
+  // Uscita dal tavolo per un'altra via (es. menù): la partita non è più del torneo.
+  useEffect(() => {
+    if (gamePhase === 'menu') setTournamentGameActive(false);
+  }, [gamePhase]);
+
+  // Fine partita di torneo: l'esito entra nella serie una volta sola.
+  useEffect(() => {
+    if (!tournamentGameActive || gamePhase !== 'gameOver' || !gameResult || !tournament) return;
+    if (!tournamentResultPendingRef.current) return;
+    tournamentResultPendingRef.current = false;
+    const outcome = gameResult.winner === 'player' ? 'human' : gameResult.winner === 'enemy' ? 'opponent' : 'draw';
+    storeTournament(recordHumanGameResult(tournament, outcome));
+  }, [tournamentGameActive, gamePhase, gameResult, tournament, storeTournament]);
+
   const launchDialogueDuelTest = useCallback((playerArmy, shuffleKind) => {
     setDevDialogueDuelActive(true);
     setShuffleStyle(shuffleKind);
@@ -3043,7 +3146,7 @@ export default function SatzeGame() {
 
   useEffect(() => {
     const t = telemetriaRef.current;
-    if (gamePhase === 'menu') {
+    if (gamePhase === 'menu' || gamePhase === 'tournamentHub') {
       // Partita abbandonata o finita: la prossima ripartirà da zero.
       telemetriaRef.current = { inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] };
       return;
@@ -5263,10 +5366,28 @@ export default function SatzeGame() {
         sub: 'AVVIO',
         meta: 'VS IA · FORMATO IN SEGUITO',
         accent: MENU_ACCENTS.pink,
-        onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
+        onClick: () => { setTournamentSetup(false); setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
       },
-      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', accent: MENU_ACCENTS.magenta, onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
-      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', accent: MULTIPLAYER_ACCENT, onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
+      {
+        label: 'TORNEO',
+        sub: tournament ? 'IN CORSO' : 'NUOVO',
+        meta: '12 ARMATE · VS IA · AL MEGLIO DELLE 3',
+        accent: MENU_ACCENTS.pink,
+        onClick: () => {
+          setSelectedMode('classic');
+          setIsMultiplayer(false);
+          setCampaignLevel(null);
+          if (tournament) {
+            setTournamentSetup(false);
+            setGamePhaseFromMainMenu('tournamentHub');
+          } else {
+            setTournamentSetup(true);
+            setGamePhaseFromMainMenu('selectArmy');
+          }
+        },
+      },
+      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', accent: MENU_ACCENTS.magenta, onClick: () => { setTournamentSetup(false); setGamePhaseFromMainMenu('campaignSlots'); } },
+      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', accent: MULTIPLAYER_ACCENT, onClick: () => { setTournamentSetup(false); setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
       { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
@@ -5402,6 +5523,33 @@ export default function SatzeGame() {
           )}
         
       </div>)
+    );
+  }
+
+  if (gamePhase === 'tournamentHub') {
+    if (!tournament) {
+      return screen('tournamentHub', false, <div style={{ padding: 32, color: 'white' }}><button type="button" onClick={() => setGamePhase('menu')}>Nessun torneo in corso — torna al menù</button></div>);
+    }
+    const startNewTournament = () => {
+      storeTournament(null);
+      setTournamentSetup(true);
+      setSelectedMode('classic');
+      setIsMultiplayer(false);
+      setCampaignLevel(null);
+      setGamePhase('selectArmy');
+    };
+    return (
+      screen('tournamentHub', false, <TournamentHubScreen
+        tournament={tournament}
+        onPlay={playTournamentGame}
+        onMenu={() => setGamePhase('menu')}
+        onNewTournament={startNewTournament}
+        onAbandon={() => {
+          if (!window.confirm('Vuoi davvero abbandonare il torneo? Il tabellone andrà perso.')) return;
+          storeTournament(null);
+          setGamePhase('menu');
+        }}
+      />)
     );
   }
 
@@ -5568,8 +5716,34 @@ export default function SatzeGame() {
             accentColor={colors.accent}
             initialMode={selectedMode}
             excludeArmy={isMixedMode ? null : selectedArmy}
+            tournament={tournamentSetup}
             onClose={() => setShowDifficultyPopup(false)}
             onSelect={(choice) => {
+              if (tournamentSetup) {
+                // Torneo: l'esercito scelto resta bloccato, si passa al tabellone.
+                const customId = typeof selectedDeckKey === 'string' && selectedDeckKey.startsWith('custom_') ? selectedDeckKey.replace('custom_', '') : null;
+                const playerCardIds = customId ? loadCustomDecks()[customId]?.cards : ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.cards;
+                setShowDifficultyPopup(false);
+                clearCardPreview();
+                multiSeat.cancel();
+                try {
+                  storeTournament(createTournamentForPlayer({
+                    playerArmy: selectedArmy,
+                    playerDeckKey: selectedDeckKey,
+                    playerDeckName: resolveSelectedDeckName(),
+                    playerCardIds: playerCardIds || [],
+                    settings: { difficulty: choice.difficulty, mode: choice.mode, eminenceFormat: choice.eminenceFormat, formatId: choice.formatId },
+                  }));
+                } catch (err) {
+                  console.error('[Torneo] iscrizione fallita:', err);
+                  window.alert(`Impossibile avviare il torneo: ${err.message}`);
+                  return;
+                }
+                setTournamentSetup(false);
+                setSelectedMode(choice.mode);
+                setGamePhase('tournamentHub');
+                return;
+              }
               // INIZIA: si passa subito al VS; la scatola dell'esercito scelto vola da qui
               // al suo posto e la ruota sorteggia l'avversario mentre il duello si carica.
               armVersusHandoff(document.querySelector('.dsk .dsk-tk.is-center')?.getBoundingClientRect() ?? null);
@@ -7234,10 +7408,12 @@ export default function SatzeGame() {
         }}
         isCampaign={selectedMode === 'campaign'}
         onCampaignRetry={retryCampaignMission}
+        onTournamentContinue={tournamentGameActive ? returnToTournamentHub : undefined}
         onRematch={
           isOnlinePvP && multiplayerSession && !onlineOpponentLeft
             ? () => requestOnlineRematch('same')
             : !isOnlinePvP &&
+                !tournamentGameActive &&
                 !guidedMatch.active &&
                 selectedMode !== 'campaign' &&
                 selectedMode !== 'multiplayer' &&
@@ -7648,6 +7824,10 @@ export default function SatzeGame() {
           }`}
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
           onClick={() => {
+            if (tournamentGameActive) {
+              if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
+              return;
+            }
             if (window.confirm('Vuoi davvero abbandonare la partita?')) {
               if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
               setCampaignLevel(null);
@@ -7657,6 +7837,10 @@ export default function SatzeGame() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
+              if (tournamentGameActive) {
+                if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
+                return;
+              }
               if (window.confirm('Vuoi davvero abbandonare la partita?')) {
               if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
                 setCampaignLevel(null);
