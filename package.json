@@ -22,6 +22,8 @@
     "icons-nobg": "node scripts/remove-icon-backgrounds.js",
     "thumbs": "node scripts/gen-image-thumbnails.mjs",
     "logo:transparent": "node scripts/process-brand-logo.mjs",
+    "manuale:pdf": "node scripts/manuale/build-pdf.mjs",
+    "manuale:schermate": "node scripts/manuale/cattura-schermate.mjs",
     "generate-menu-gif": "node scripts/generate-menu-gif-runner.cjs",
     "electron:dev": "concurrently -k \"vite\" \"npx wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && electron-builder --win --x64 --dir",
