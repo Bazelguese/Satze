@@ -200,7 +200,7 @@ Si usa `V = 2.0` per un Potere, il valore del Bonus d'Armata per un Bonus (§3.7
 
 #### 3.5.3 Regole d'uso
 
-1. **Trigger temporali** (Turbo, Resa dei conti, Ultima Chance): nel singolo round la probabilità è 0 oppure 1, non `m`. Forzare Turbo al round 1–2 vale 0; al round 3–5 vale l'intero `V`. Il prezzo va calcolato sul round in cui l'abilità sarà realisticamente usata.
+1. **Trigger noti in anticipo** (Turbo, Resa dei conti, Ultima Chance, **Imboscata e Intervento**): nel singolo round la probabilità è 0 oppure 1, non `m`, ed è nota prima della scelta dell'Eminenza. L'iniziativa si alterna a ogni round (`src/game/duel/resolveRoundInitiative.js`) e chi sceglie per secondo vede l'Agente dell'altro. Forzare un trigger già attivo vale 0, forzarne uno spento vale l'intero `V`; rinunciare a un trigger già spento costa 0. Il prezzo va calcolato sul round in cui l'abilità sarà realisticamente usata. *(Correzione del 10 novembre 2026: la prima stesura usava `m` = 0.7 per Imboscata/Intervento.)*
 2. **Conquista e Ultimo Desiderio** dipendono dall'esito. Forzarli fa scattare effetti "da vittoria" anche perdendo, e interagisce con Calibri −4 e Ratti −3. Mascarada −4 li esclude già (`excludeTriggers`). Consiglio di escluderli sempre dai "forza qualunque trigger".
 3. **Overdrive forzato** risparmia anche l'obbligo di spendere 5 FC: vale più della tabella. Va prezzato a parte se mai usato.
 4. **Effetti globali (simmetrici).** Un mattone che vale per entrambi i giocatori:
@@ -645,3 +645,24 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Il Prezzo del Canto: perdita di PV per ogni Potere attivato nel Duello.
 - Contrappunto: solo lo specchio, senza immunità ai Blocca.
 - Eco: Copia Potere condizionata all'attivazione del Potere nemico.
+
+### 10.7 Mounthborn — La Fame (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Istinto Predatorio | All'inizio dello Scontro scegli un Agente nemico: diventa Preda. Quando l'avversario schiera una Preda, +1 Presenza e il Bonus del tuo Agente schierato è considerato attivo. Una Preda smette di esserlo dopo aver combattuto. | — | circa 2.5 Presenza/Scontro |
+| +1 | Fame | Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV. | −0.75 | circa −0.85 ✅ |
+| −1 | Gorgoglio | **Reveal: prima degli Agenti.** Scegli un Agente nemico non schierato: diventa Preda. | 0.75 | circa 1.0 ✅ |
+| −2 | Frenesia della Fame | In questo Duello, il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità. | 1.50 (circa 1.05 col rimborso) | circa 0.85 ✅ |
+| −3 | Caccia | **Reveal: prima degli Agenti.** Scegli un Agente nemico non schierato: diventa Preda e l'avversario deve schierarlo in questo Duello. | 2.25 | circa 2.5 ✅ 〰️ |
+
+**Motore:** 0.75 + circa 1.9 = circa 2.65 FC.
+
+**Lavoro di implementazione:**
+- Statico: +1 Presenza alla schierata di una Preda; tolta la regola su Turbo.
+- Fame: perdita di PV condizionata alla mancata sconfitta di una Preda.
+- Frenesia: sostituzione del Potere (come Opera Composita) e rimborso di 2 Presenza se l'Agente nemico è una Preda.
+- Caccia: obbligo di schierare una carta precisa; selezionabile solo con un bersaglio valido.
+- Tolte Cannibalismo e la vecchia Frenesia.
