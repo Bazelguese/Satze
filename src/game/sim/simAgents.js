@@ -13,7 +13,8 @@ import { chooseJointAIAction } from '../ai/chooseJointAIAction.js';
 import { getAIProfile } from '../ai/aiProfiles.js';
 import { mulberry32 } from '../../utils/seededRandom.js';
 import { availableCards, legalFieldIndexes, legalFocusRange } from './headlessMatch.js';
-import { createMonteCarloAgent } from './mcAgent.js';
+import { chooseMonteCarloAction } from '../ai/mc/mcSearch.js';
+import { getMcProfile } from '../ai/mc/mcProfiles.js';
 
 function pick(list, rng) {
   return list[Math.floor(rng() * list.length)];
@@ -109,6 +110,28 @@ export function createGreedyAgent({ label = 'avido' } = {}) {
   };
 }
 
+/**
+ * Motore a simulazione (src/game/ai/mc). La vista è già dal punto di vista dell'IA.
+ * @param {'easy'|'medium'|'hard'} difficulty
+ */
+export function createMonteCarloEngineAgent(difficulty, { seed = 1, label, overrides = null } = {}) {
+  const rng = mulberry32(seed >>> 0);
+  const params = { ...getMcProfile(difficulty), ...(overrides || {}) };
+  const decide = (view) => {
+    const decision = chooseMonteCarloAction(view, params, rng);
+    return decision
+      ? { fieldIndex: decision.fieldIndex, cardId: decision.cardId, focus: decision.focus }
+      : null;
+  };
+  return {
+    id: label || `mc-${difficulty}`,
+    kind: 'montecarlo',
+    difficulty,
+    lead: decide,
+    respond: decide,
+  };
+}
+
 function parseOverrideValue(raw) {
   if (raw === 'true') return true;
   if (raw === 'false') return false;
@@ -133,15 +156,17 @@ export function parseAgentSpec(spec) {
 }
 
 /**
- * @param {string} spec - 'easy' | 'medium' | 'hard' | 'random' | 'greedy',
+ * @param {string} spec - 'easy' | 'medium' | 'hard' (motore attuale), 'mc-easy' | 'mc-medium' |
+ *   'mc-hard' (motore a simulazione), 'random' | 'greedy',
  *   con varianti di profilo opzionali: 'hard@riskWeight=0.2;searchDepth=1'
  */
 export function createAgentFromSpec(spec, { seed = 1 } = {}) {
   const { base, overrides } = parseAgentSpec(spec);
   if (base === 'random') return createRandomAgent({ seed });
   if (base === 'greedy') return createGreedyAgent();
-  if (base === 'mc') {
-    return createMonteCarloAgent({ seed, label: spec, rollouts: overrides?.rollouts ?? 40 });
+  const mc = /^mc-(easy|medium|hard)$/.exec(base);
+  if (mc) {
+    return createMonteCarloEngineAgent(mc[1], { seed, label: spec, overrides });
   }
   if (base === 'easy' || base === 'medium' || base === 'hard') {
     return createEngineAgent(base, { seed, label: spec, overrides });

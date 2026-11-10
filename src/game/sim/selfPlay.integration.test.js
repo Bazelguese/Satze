@@ -34,9 +34,9 @@ describe('varianti di profilo per esperimenti', () => {
   });
 });
 
-describe('prototipo Monte Carlo (solo banco di prova)', () => {
+describe('motore a simulazione nel banco di prova', () => {
   it('gioca partite complete con sole mosse legali', () => {
-    const records = runPairing({ a: 'mc@rollouts=4', b: 'greedy', seeds: [3] });
+    const records = runPairing({ a: 'mc-hard@rollouts=60', b: 'greedy', seeds: [3] });
     expect(records).toHaveLength(2);
     for (const r of records) expect(r.statsA.fixes).toBe(0);
   });
