@@ -328,6 +328,22 @@ Non ancora fatto:
 - tratti misurati nel Re della Collina;
 - online.
 
+### Torneo con l'IA nuova (fatto)
+
+La modalità Torneo arriva dal `main` (unito nel ramo). Decisioni dell'utente:
+
+- riga PERSONALITÀ nel menu del torneo: Neutrale, un tratto per tutte le IA, oppure "Casuale", con un tratto per ciascuna IA, fisso per tutto il torneo;
+- le serie fra IA si giocano al livello del torneo.
+
+**Cosa fa il codice:**
+
+- **Le tue partite:** sono un normale Duello, quindi usano il motore a simulazione; l'avversario gioca con il suo tratto (`aiPersonality`), che compare anche nella schermata VS.
+- **Le serie fra IA:** `aiMatchEngine.js` ora "chiede" le scelte al chiamante. `playAiGame`, sincrono, usato per la rivisione e nei test, usa il pianificatore precedente. `playAiGameAsync` accetta un decisore esterno: `src/game/tournament/tournamentAi.js` usa l'IA nuova nel worker con il tratto di ciascun lato. Le scelte vengono rese legali; se il worker manca o fallisce, si ripiega sul pianificatore. Lo spettatore rivede le partite dalle scelte salvate, quindi la rivisione non dipende dal motore.
+- **Tabellone:** il tratto compare accanto al nome di ogni IA.
+- **Verifiche nel browser (server di sviluppo):** una serie Facile di 3 partite si gioca in 1,3 s, con 26 decisioni calcolate dal worker.
+
+**Problema trovato e corretto:** in sviluppo il worker dell'IA non partiva, già prima di questo lavoro. Il runtime del ricaricamento a caldo di `@vitejs/plugin-react` 4.2 usa `window` e `$RefreshReg$`, e ci arriva perché i dati del gioco importano `src/data/icons.jsx`. Senza correzione, in sviluppo l'IA ripiegava in silenzio sul motore precedente. `src/game/ai/worker/devWindowShim.js`, caricato per primo nel worker, definisce quegli alias **solo in sviluppo**; nella build di produzione non c'è.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.

@@ -119,7 +119,7 @@ export function DifficultySelectPopup({
 
   const canConfirm = isMultiSeat || enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
   const rowsFor = (pick, mode = live.current.matchMode) => {
-    if (tournament) return ['format', 'difficulty'];
+    if (tournament) return ['format', 'difficulty', 'personality'];
     if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty', 'personality'];
     if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty', 'personality'];
     return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty', 'personality'];
@@ -166,7 +166,7 @@ export function DifficultySelectPopup({
     const format = getMatchFormat(effectiveFormatId);
     const enemyArmy = !isMultiSeat && enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
     // Torneo: restano le preferenze della partita locale, cambiano solo formato e difficoltà.
-    writeSetup(tournament ? { ...saved, formatId: format.id, difficulty: difficultyId } : {
+    writeSetup(tournament ? { ...saved, formatId: format.id, difficulty: difficultyId, personality: personalityId } : {
       formatId: format.id,
       enemyPick,
       enemyArmy: chosenEnemyArmy,
@@ -251,9 +251,11 @@ export function DifficultySelectPopup({
     enemy: enemyPick === ENEMY_PICK.random ? 'Armata ed esercito dell’IA scelti a caso.' : 'Scegli tu l’armata avversaria.',
     army: chosenEnemyArmy ? `Affronterai ${chosenEnemyArmy}.` : 'Scegli l’armata che affronterai.',
     difficulty: difficulty?.longDescription,
-    personality: isMultiSeat && personalityId === 'random'
-      ? 'Casuale: ogni avversario estrae il suo tratto, svelato nella schermata VS.'
-      : `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}${isMultiSeat ? ' (tutti gli avversari)' : ''}`,
+    personality: tournament && personalityId === 'random'
+      ? 'Casuale: ogni IA del torneo estrae il suo tratto e lo tiene fino alla fine; lo vedi nel tabellone.'
+      : isMultiSeat && personalityId === 'random'
+        ? 'Casuale: ogni avversario estrae il suo tratto, svelato nella schermata VS.'
+        : `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}${tournament ? ' (tutte le IA del torneo)' : isMultiSeat ? ' (tutti gli avversari)' : ''}`,
   }[focusKey];
   const helpLabel = {
     mode: 'MODALITÀ', teammate: 'COMPAGNO', players: 'GIOCATORI',
@@ -438,7 +440,6 @@ export function DifficultySelectPopup({
               </div>
             </section>
 
-            {!tournament && (
               <section {...focusProps('personality')}>
                 <h3><span className="n">{rowNumber('personality')}</span>{isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ'}</h3>
                 <div className="mst-chips mst-stepper">
@@ -456,7 +457,7 @@ export function DifficultySelectPopup({
                       {personalityId === 'neutral'
                         ? 'Predefinita'
                         : personalityId === 'random'
-                          ? (isMultiSeat ? 'Un tratto a testa' : 'Tratto a sorpresa')
+                          ? (isMultiSeat || tournament ? 'Un tratto a testa' : 'Tratto a sorpresa')
                           : 'Tratto IA'}
                       {` · ${PERSONALITY_IDS.indexOf(personalityId) + 1}/${PERSONALITY_IDS.length}`}
                     </span>
@@ -471,7 +472,6 @@ export function DifficultySelectPopup({
                   </button>
                 </div>
               </section>
-            )}
           </div>
 
           <footer className="mst-foot">

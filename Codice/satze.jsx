@@ -2443,6 +2443,8 @@ export default function SatzeGame() {
       null,
       {
         eminenceFormat: prepared.settings.eminenceFormat,
+        // Personalità dell'avversario, fissata alla creazione del torneo.
+        aiPersonality: info.opponent.aiTrait || 'neutral',
         fixedHands: {
           playerHand: resolveTournamentCards(game.hands[info.side]),
           enemyHand: resolveTournamentCards(game.hands[otherSide]),
@@ -6257,7 +6259,7 @@ export default function SatzeGame() {
                     playerDeckKey: selectedDeckKey,
                     playerDeckName: resolveSelectedDeckName(),
                     playerCardIds: playerCardIds || [],
-                    settings: { difficulty: choice.difficulty, mode: choice.mode, eminenceFormat: choice.eminenceFormat, formatId: choice.formatId },
+                    settings: { difficulty: choice.difficulty, mode: choice.mode, eminenceFormat: choice.eminenceFormat, formatId: choice.formatId, personality: choice.personality },
                   }));
                 } catch (err) {
                   console.error('[Torneo] iscrizione fallita:', err);

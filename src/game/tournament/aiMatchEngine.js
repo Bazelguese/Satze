@@ -207,12 +207,18 @@ function* gameSteps({ handA, handB, battlefields, mode = 'classic', difficulty =
       choiceA = scripted.a;
       choiceB = scripted.b;
     } else {
-      const lead = decideWithPlanner(state, leadSide, true, rng);
+      // Le scelte le fornisce chi guida la partita (pianificatore o IA a simulazione).
+      const lead = yield { decide: true, state, side: leadSide, lead: true };
       fieldIndex = lead.fieldIndex;
       const leadCard = findCard(leadSide === 'a' ? state.playerHand : state.enemyHand, lead.cardId);
       // Chi risponde vede Campo e Agente di chi ha aperto. Nello stato specchiato l'Agente
       // di chi ha aperto è comunque `selectedAgent` (lato player della vista).
-      const follow = decideWithPlanner({ ...state, currentFieldIndex: fieldIndex, selectedAgent: leadCard }, followSide, false, rng);
+      const follow = yield {
+        decide: true,
+        state: { ...state, currentFieldIndex: fieldIndex, selectedAgent: leadCard },
+        side: followSide,
+        lead: false,
+      };
       choiceA = leadSide === 'a' ? lead : follow;
       choiceB = leadSide === 'b' ? lead : follow;
     }
@@ -327,20 +333,69 @@ function* gameSteps({ handA, handB, battlefields, mode = 'classic', difficulty =
   };
 }
 
-export function playAiGame(cfg) {
-  const steps = gameSteps(cfg);
-  let step = steps.next();
-  while (!step.done) step = steps.next();
-  return step.value;
+/** Stato per il pianificatore e per l'IA a simulazione: chi decide è sempre il lato enemy. */
+export function decisionView(state, side, lead) {
+  const view = side === 'b' ? state : mirrorState(state);
+  return {
+    ...view,
+    isPlayerFirst: !lead,
+    currentFieldIndex: lead ? null : view.currentFieldIndex,
+    selectedAgent: lead ? null : view.selectedAgent,
+  };
 }
 
-/** Come `playAiGame`, ma tra un turno e l'altro aspetta `pause()` per non bloccare l'interfaccia. */
-export async function playAiGameAsync(cfg, pause) {
+/** Scelta legale garantita: carta disponibile, Campo legale (se apre), FC nel range. */
+export function sanitizeAiChoice(state, side, lead, choice) {
+  const view = decisionView(state, side, lead);
+  const context = buildAIContext(view);
+  const available = getAvailableCards(context.ai.hand, context.ai.usedCardIds);
+  const card = available.find((c) => c.id === choice?.cardId) || available[0];
+  const legalFields = getLegalFieldIndexes(context);
+  const fieldIndex = lead
+    ? (legalFields.includes(choice?.fieldIndex) ? choice.fieldIndex : legalFields[0])
+    : view.currentFieldIndex;
+  const { maxFocus } = getLegalFocusRange(context, 'ai');
+  const focus = Math.max(1, Math.min(Math.max(1, maxFocus), Number(choice?.focus) || 1));
+  return { fieldIndex, cardId: card.id, focus };
+}
+
+export function playAiGame(cfg) {
+  const rng = cfg.rng || Math.random;
   const steps = gameSteps(cfg);
   let step = steps.next();
   while (!step.done) {
-    await pause();
-    step = steps.next();
+    const req = step.value;
+    step = req?.decide ? steps.next(decideWithPlanner(req.state, req.side, req.lead, rng)) : steps.next();
+  }
+  return step.value;
+}
+
+/**
+ * Come `playAiGame`, ma tra un turno e l'altro aspetta `pause()` per non bloccare l'interfaccia.
+ * Con `decide(state, side, lead)` (asincrono) le scelte le prende un decisore esterno, per esempio
+ * l'IA a simulazione nel worker; se fallisce o non risponde si usa il pianificatore.
+ */
+export async function playAiGameAsync(cfg, pause, decide = null) {
+  const rng = cfg.rng || Math.random;
+  const steps = gameSteps(cfg);
+  let step = steps.next();
+  while (!step.done) {
+    const req = step.value;
+    if (req?.decide) {
+      let choice = null;
+      if (decide) {
+        try {
+          choice = await decide(req.state, req.side, req.lead);
+        } catch {
+          choice = null;
+        }
+      }
+      choice = choice ? sanitizeAiChoice(req.state, req.side, req.lead, choice) : decideWithPlanner(req.state, req.side, req.lead, rng);
+      step = steps.next(choice);
+    } else {
+      await pause();
+      step = steps.next();
+    }
   }
   return step.value;
 }
