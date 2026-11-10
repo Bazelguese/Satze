@@ -51,6 +51,13 @@ export function runPairing({ a, b, mode = 'classic', seeds, onMatch }) {
   return out;
 }
 
+function fieldsFor(final, aSide) {
+  const won = (side) =>
+    Object.values(final.conqueredFields || {}).filter((f) => f && f.winner === side).length;
+  const bSide = aSide === 'player' ? 'enemy' : 'player';
+  return { a: won(aSide), b: won(bSide) };
+}
+
 function summarizeMatch(result, { seed, mode, a, b, aSide, decks }) {
   const bSide = aSide === 'player' ? 'enemy' : 'player';
   const outcome =
@@ -78,6 +85,7 @@ function summarizeMatch(result, { seed, mode, a, b, aSide, decks }) {
     reason: result.reason,
     rounds: result.rounds.length,
     hp: { a: aSide === 'player' ? final.playerHP : final.enemyHP, b: aSide === 'player' ? final.enemyHP : final.playerHP },
+    fields: fieldsFor(final, aSide),
     statsA: sideStats(aSide),
     statsB: sideStats(bSide),
   };

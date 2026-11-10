@@ -25,6 +25,8 @@ import {
 } from '../../sim/headlessMatch.js';
 import { resolveRoundInitiative } from '../../duel/resolveRoundInitiative.js';
 import { getLearnedWeights } from './learnedPolicy.js';
+import { buildFeatureContext } from './mcFeatures.js';
+import { getMcTrait } from './mcTraits.js';
 import {
   clampFocusFor,
   createFastPolicyAgent,
@@ -69,9 +71,23 @@ function scripted(first, fallback) {
   return { lead: take('lead'), respond: take('respond') };
 }
 
-function outcomeValue(end, state) {
+function outcomeValue(end, state, trait = null) {
   const base = end.winner === 'draw' ? 0.5 : end.winner === 'enemy' ? 1 : 0;
-  return base + (state.enemyHP - state.playerHP) * 0.002;
+  const style = trait?.objective ? trait.objective(end, state) : 0;
+  return base + (state.enemyHP - state.playerHP) * 0.002 + style;
+}
+
+/** Tratto attivo: oggetto da mcTraits, oppure null per il Neutrale. */
+function activeTrait(params) {
+  const trait = typeof params.trait === 'string' ? getMcTrait(params.trait) : params.trait || null;
+  return trait && trait.id !== 'neutral' ? trait : null;
+}
+
+/** Punteggio di un candidato: stima + preferenza del tratto − rischio. */
+function candidateScore(c, trait) {
+  if (!trait) return c.mean;
+  const variance = c.n > 1 ? Math.max(0, c.sumSq / c.n - c.mean * c.mean) : 0;
+  return c.mean + (c.bias || 0) - (trait.risk || 0) * Math.sqrt(variance);
 }
 
 /** La prima risposta dell'avversario segue `first` (scelta o agente), poi la politica. */
@@ -148,7 +164,7 @@ function rollout(view, candidate, seed, params, opponentReply = null) {
   for (let guard = 0; guard < MAX_ROUNDS; guard += 1) {
     const { state: after } = playHeadlessRound(state, agents);
     const end = resolveMatchEnd(after, state.roundNumber);
-    if (end) return outcomeValue(end, after);
+    if (end) return outcomeValue(end, after, params.traitObject);
     state = nextRoundState(after, state.roundNumber);
   }
   return 0.5;
@@ -262,13 +278,16 @@ function matrixLeadStage(view, ranked, params, rng, seeds, deadline) {
     const rows = focusOptions(view, ourCard);
     const cols = opponentReplies(view, ourCard);
     const matrix = rows.map(() => new Array(cols.length).fill(0));
+    const trait = params.traitObject;
+    const featureCtx = trait?.bias ? buildFeatureContext(view) : null;
     for (let i = 0; i < rows.length; i += 1) {
       for (let j = 0; j < cols.length; j += 1) {
         let total = 0;
         for (let k = 0; k < perCell; k += 1) {
           total += rollout(view, { ...combo, focus: rows[i] }, seeds[k], params, cols[j]);
         }
-        matrix[i][j] = total / perCell;
+        matrix[i][j] =
+          total / perCell + (featureCtx ? trait.bias(view, ourCard, rows[i], featureCtx) : 0);
         spent += perCell;
       }
       if (deadline && nowMs() > deadline) break;
@@ -284,8 +303,8 @@ function matrixLeadStage(view, ranked, params, rng, seeds, deadline) {
 
 function pickWithNoise(ranked, noise, rng) {
   if (!noise || ranked.length === 1) return ranked[0];
-  const best = ranked[0].mean;
-  const weights = ranked.map((c) => Math.exp((c.mean - best) / noise));
+  const best = ranked[0].score;
+  const weights = ranked.map((c) => Math.exp((c.score - best) / noise));
   let roll = rng() * weights.reduce((s, w) => s + w, 0);
   for (let i = 0; i < ranked.length; i += 1) {
     roll -= weights[i];
@@ -307,14 +326,32 @@ function pickWithNoise(ranked, noise, rng) {
  *   leadMode?: 'matrix', matrixCombos?, matrixRollouts?: apertura come gioco simultaneo
  *   policy?: 'learned', learnedWeights?: politica addestrata nelle simulazioni
  *   onCandidates?: (view, ranked) => void, per raccogliere dati di addestramento
+ *   trait?: string|object,     personalità (mcTraits.js); assente o 'neutral' = nessuna
  * }} params
  * @param {() => number} rng
  * @returns {{ fieldIndex: number, cardId: number, focus: number, mean: number, stats: object }|null}
  */
-export function chooseMonteCarloAction(view, params, rng) {
-  const candidates = generateMcCandidates(view).map((c) => ({ ...c, total: 0, n: 0, mean: 0 }));
+export function chooseMonteCarloAction(view, inputParams, rng) {
+  const trait = activeTrait(inputParams);
+  const params = trait ? { ...inputParams, traitObject: trait } : inputParams;
+  const candidates = generateMcCandidates(view).map((c) => ({
+    ...c,
+    total: 0,
+    sumSq: 0,
+    n: 0,
+    mean: 0,
+    score: 0,
+    bias: 0,
+  }));
   if (!candidates.length) return null;
   if (candidates.length === 1) return { ...candidates[0], stats: { rollouts: 0, candidates: 1 } };
+  if (trait?.bias) {
+    const ctx = buildFeatureContext(view);
+    for (const c of candidates) {
+      const card = ctx.cards.find((x) => x.id === c.cardId);
+      c.bias = card ? trait.bias(view, card, c.focus, ctx) : 0;
+    }
+  }
 
   const started = nowMs();
   const budget = Math.max(candidates.length, Number(params.rollouts) || 0);
@@ -331,7 +368,9 @@ export function chooseMonteCarloAction(view, params, rng) {
       while (candidate.n < target) {
         // Stessi semi per tutti i candidati (numeri casuali comuni).
         while (seeds.length <= candidate.n) seeds.push((rng() * 2 ** 32) >>> 0);
-        candidate.total += rollout(view, candidate, seeds[candidate.n], params);
+        const value = rollout(view, candidate, seeds[candidate.n], params);
+        candidate.total += value;
+        candidate.sumSq += value * value;
         candidate.n += 1;
         spent += 1;
         if (params.maxMs && (spent & 7) === 0 && nowMs() - started > params.maxMs) {
@@ -340,16 +379,17 @@ export function chooseMonteCarloAction(view, params, rng) {
         }
       }
       candidate.mean = candidate.total / candidate.n;
+      candidate.score = candidateScore(candidate, trait);
       if (timedOut) break;
     }
-    const measured = alive.filter((c) => c.n > 0).sort((a, b) => b.mean - a.mean);
+    const measured = alive.filter((c) => c.n > 0).sort((a, b) => b.score - a.score);
     alive = measured.slice(0, Math.max(1, Math.ceil(measured.length / 2)));
   }
 
   // A parità di stima vince il candidato misurato con più simulazioni.
   const ranked = candidates
     .filter((c) => c.n > 0)
-    .sort((a, b) => b.mean - a.mean || b.n - a.n);
+    .sort((a, b) => b.score - a.score || b.n - a.n);
   // Senza rumore: la stima migliore fra i candidati misurati abbastanza (almeno il 60%
   // delle simulazioni del più misurato), così una stima fortunata su pochi dati non vince.
   const maxN = ranked.reduce((m, c) => Math.max(m, c.n), 0);
@@ -378,7 +418,14 @@ export function chooseMonteCarloAction(view, params, rng) {
     }
   }
 
-  const chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
+  let chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
+  if (trait?.focusSpread) {
+    // FC meno leggibili: stessa scelta di Campo e Agente, FC estratti fra quelli vicini al migliore.
+    const sameMove = ranked.filter(
+      (c) => c.fieldIndex === chosen.fieldIndex && c.cardId === chosen.cardId
+    );
+    chosen = pickWithNoise(sameMove, trait.focusSpread, rng) || chosen;
+  }
   return {
     fieldIndex: chosen.fieldIndex,
     cardId: chosen.cardId,
