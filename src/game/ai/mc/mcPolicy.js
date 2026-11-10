@@ -10,7 +10,12 @@
 // VA = POT × FC + modificatori (Documentazione/GLOSSARIO.md): per battere un Agente
 // visibile servono circa floor(VA stimato / POT) + 1 FC.
 
-import { availableCards, legalFieldIndexes, legalFocusRange } from '../../sim/headlessMatch.js';
+import {
+  availableCards,
+  legalFieldIndexes,
+  legalFocusRange,
+  resolveHeadlessDuel,
+} from '../../sim/headlessMatch.js';
 
 export function clampFocusFor(view, side, focus) {
   const { maxFocus } = legalFocusRange(view, side);
@@ -81,11 +86,47 @@ function respondChoice(view, rng, quality) {
 }
 
 /**
+ * Risposta calcolata: per ogni carta e alcuni valori di FC risolve davvero il duello
+ * (Poteri, Bonus e Campo compresi) contro l'Agente visibile, con i suoi FC stimati
+ * alla quota equa, e sceglie il modo più economico di vincere.
+ */
+function simulatedRespondChoice(view, rng, quality) {
+  if (rng() >= quality) return leadChoice(view, rng, 0);
+  const opponent = { card: view.selectedAgent, focus: fairShareFor(view, 'player') };
+  const assault = estimateVisibleAssault(view);
+  const { maxFocus } = legalFocusRange(view, 'enemy');
+  const fair = fairShareFor(view, 'enemy');
+  let best = null;
+  for (const card of availableCards(view, 'enemy')) {
+    const need = focusNeededToBeat(card, assault);
+    const options = new Set(
+      [1, need - 1, need, need + 1, need + 2]
+        .filter((f) => f <= fair + 4)
+        .map((f) => clampFocusFor(view, 'enemy', f))
+    );
+    for (const focus of options) {
+      if (focus > Math.max(1, maxFocus)) continue;
+      const result = resolveHeadlessDuel(view, view.currentFieldIndex, opponent, { card, focus });
+      const score =
+        (result.winner === 'enemy' ? 1000 : 0) +
+        (result.finalEnemyHP - result.finalPlayerHP) * 15 -
+        focus * 25 -
+        cardStrength(card) * 3;
+      if (!best || score > best.score) best = { card, focus, score };
+    }
+  }
+  return best ? { card: best.card, focus: best.focus } : respondChoice(view, rng, quality);
+}
+
+/**
  * Agente veloce per le simulazioni.
  * @param {() => number} rng
- * @param {{ quality?: number }} [options] - 0 = quasi casuale, 1 = sempre la scelta euristica
+ * @param {{ quality?: number, responder?: 'heuristic'|'simulate' }} [options]
+ *   quality: 0 = quasi casuale, 1 = sempre la scelta euristica;
+ *   responder: come risponde a un Agente visibile (stima POT × FC o duello calcolato)
  */
-export function createFastPolicyAgent(rng, { quality = 0.7 } = {}) {
+export function createFastPolicyAgent(rng, { quality = 0.7, responder = 'heuristic' } = {}) {
+  const respondWith = responder === 'simulate' ? simulatedRespondChoice : respondChoice;
   return {
     lead(view) {
       const fields = legalFieldIndexes(view);
@@ -93,7 +134,7 @@ export function createFastPolicyAgent(rng, { quality = 0.7 } = {}) {
       return { fieldIndex: fields[Math.floor(rng() * fields.length)], cardId: card.id, focus };
     },
     respond(view) {
-      const { card, focus } = respondChoice(view, rng, quality);
+      const { card, focus } = respondWith(view, rng, quality);
       return { cardId: card.id, focus };
     },
   };

@@ -336,29 +336,13 @@ function now() {
 }
 
 /**
- * Un turno completo.
- * Gli agenti espongono `lead(view)` → { fieldIndex, cardId, focus } e
- * `respond(view)` → { cardId, focus }. `view` è lo stato dal loro punto di vista (IA = `enemy`).
+ * Risolve un duello sul Campo `fieldIndex` con il risolutore del gioco, come useBattle.
+ * @param {object} state
+ * @param {number} fieldIndex
+ * @param {{ card: object, focus: number }} playerPick
+ * @param {{ card: object, focus: number }} enemyPick
  */
-export function playHeadlessRound(state, agents) {
-  const leader = state.isPlayerFirst ? 'player' : 'enemy';
-  const follower = otherSide(leader);
-
-  let t0 = now();
-  const leadRaw = agents[leader].lead(viewForSide(state, leader, null));
-  const leadMs = now() - t0;
-  const lead = sanitizeChoice(state, leader, leadRaw, { needsField: true });
-
-  const withField = { ...state, currentFieldIndex: lead.fieldIndex };
-  t0 = now();
-  const respRaw = agents[follower].respond(viewForSide(withField, follower, lead.card));
-  const respMs = now() - t0;
-  const resp = sanitizeChoice(withField, follower, respRaw, { needsField: false });
-
-  const playerPick = leader === 'player' ? lead : resp;
-  const enemyPick = leader === 'enemy' ? lead : resp;
-  const fieldIndex = lead.fieldIndex;
-
+export function resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick) {
   const { battleResult } = computeDuelResolution({
     field: state.battlefields[fieldIndex],
     campaign: null,
@@ -384,6 +368,34 @@ export function playHeadlessRound(state, agents) {
     enemyHand: state.enemyHand,
     currentFieldIndex: fieldIndex,
   });
+  return battleResult;
+}
+
+/**
+ * Un turno completo.
+ * Gli agenti espongono `lead(view)` → { fieldIndex, cardId, focus } e
+ * `respond(view)` → { cardId, focus }. `view` è lo stato dal loro punto di vista (IA = `enemy`).
+ */
+export function playHeadlessRound(state, agents) {
+  const leader = state.isPlayerFirst ? 'player' : 'enemy';
+  const follower = otherSide(leader);
+
+  let t0 = now();
+  const leadRaw = agents[leader].lead(viewForSide(state, leader, null));
+  const leadMs = now() - t0;
+  const lead = sanitizeChoice(state, leader, leadRaw, { needsField: true });
+
+  const withField = { ...state, currentFieldIndex: lead.fieldIndex };
+  t0 = now();
+  const respRaw = agents[follower].respond(viewForSide(withField, follower, lead.card));
+  const respMs = now() - t0;
+  const resp = sanitizeChoice(withField, follower, respRaw, { needsField: false });
+
+  const playerPick = leader === 'player' ? lead : resp;
+  const enemyPick = leader === 'enemy' ? lead : resp;
+  const fieldIndex = lead.fieldIndex;
+
+  const battleResult = resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick);
 
   const after = applyRoundOutcome(withField, battleResult, fieldIndex, playerPick.card, enemyPick.card);
   const record = {

@@ -76,8 +76,14 @@ function outcomeValue(end, state) {
 /** Una simulazione completa a partire dalla scelta `candidate`. */
 function rollout(view, candidate, seed, params) {
   const rng = mulberry32(seed);
-  const policy = createFastPolicyAgent(rng, { quality: params.policyQuality });
-  const opponentPolicy = createFastPolicyAgent(rng, { quality: params.opponentQuality });
+  const policy = createFastPolicyAgent(rng, {
+    quality: params.policyQuality,
+    responder: params.responder,
+  });
+  const opponentPolicy = createFastPolicyAgent(rng, {
+    quality: params.opponentQuality,
+    responder: params.responder,
+  });
   const responding = view.selectedAgent != null;
   const opponent = responding
     ? scripted(
@@ -145,6 +151,7 @@ function pickWithNoise(ranked, noise, rng) {
  *   policyQuality?: number,    qualità della politica veloce per l'IA
  *   opponentQuality?: number,  qualità della politica veloce per l'avversario
  *   noise?: number,            temperatura della scelta finale (0 = migliore)
+ *   responder?: 'heuristic'|'simulate', come rispondono le politiche veloci
  *   maxMs?: number,            tempo massimo (anytime): oltre, si sceglie con i dati raccolti
  * }} params
  * @param {() => number} rng
