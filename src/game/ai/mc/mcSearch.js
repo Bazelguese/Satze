@@ -418,25 +418,7 @@ export function chooseMonteCarloAction(view, inputParams, rng) {
     }
   }
 
-  let chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
-  if (trait?.focusWindow) {
-    // FC meno leggibili: stessa scelta di Campo e Agente, FC estratti a caso fra quelli
-    // con stima vicina alla migliore per quella carta.
-    const near = ranked.filter(
-      (c) =>
-        c.fieldIndex === chosen.fieldIndex &&
-        c.cardId === chosen.cardId &&
-        c.score >= chosen.score - trait.focusWindow
-    );
-    if (near.length) {
-      const byFocus = [...near].sort((a, b) => a.focus - b.focus);
-      const roll = rng();
-      const extremes = trait.focusExtremes || 0;
-      if (roll < extremes / 2) chosen = byFocus[0];
-      else if (roll < extremes) chosen = byFocus[byFocus.length - 1];
-      else chosen = near[Math.floor(rng() * near.length)];
-    }
-  }
+  const chosen = params.noise ? pickWithNoise(ranked, params.noise, rng) : reliable[0];
   return {
     fieldIndex: chosen.fieldIndex,
     cardId: chosen.cardId,

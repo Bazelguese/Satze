@@ -246,13 +246,15 @@ Richiesta dell'utente: stili di gioco indipendenti dalla difficoltà, scelti nel
 | Conquistatore | 51% | il 67% delle sue vittorie arriva dai Campi | ✔ riconoscibile |
 | Spietato | 49% | danni fatti 8,2 (8,0) | appena percettibile |
 | Temerario | 53% | FC all'inizio 5,3 (4,9) | poco riconoscibile |
-| Cauto | 50% | nessuna differenza | ✗ da rivedere |
-| Imprevedibile | 49% | nessuna differenza | ✗ da rivedere |
+| Cauto | 50% | nessuna differenza | ✗ tolto (decisione dell'utente) |
+| Imprevedibile | 49% | nessuna differenza | ✗ tolto (decisione dell'utente) |
 
 **Cosa ho imparato tarando:**
 
 - Il "rischio" (media ± deviazione) indebolisce molto senza dare uno stile visibile: il Temerario estremo scende al 33%, il Cauto estremo al 41%.
 - Per una stessa carta le puntate di FC hanno stime molto diverse, quindi rendere i FC imprevedibili costa forza.
+
+**Decisione dell'utente:** Cauto e Imprevedibile sono tolti. Restano Neutrale e sei tratti: Impetuoso, Paziente, Conquistatore, Spietato, Avaro e Temerario. Una scelta salvata da una versione precedente del menu ("cauto", "imprevedibile") torna a Neutrale.
 
 ### Fase 2 — Avversario e Focus
 

@@ -6,10 +6,11 @@
 // di vittoria stimata, la stessa scala delle simulazioni):
 // - bias(view, card, focus, ctx): preferenza per certe mosse, sommata alla stima;
 // - objective(end, state): premio a fine partita simulata (es. Campi, PV), dal lato IA (`enemy`);
-// - risk: avversione al rischio. >0 penalizza le mosse dall'esito variabile (Cauto),
-//   <0 le cerca (Temerario). Punteggio = media − risk × deviazione standard;
-// - focusWindow: rende i FC meno prevedibili: estrazione uniforme fra i FC dello stesso Agente
-//   con stima entro questa distanza dalla migliore.
+// - risk: avversione al rischio. >0 penalizza le mosse dall'esito variabile,
+//   <0 le cerca (Temerario). Punteggio = media − risk × deviazione standard.
+//
+// Cauto e Imprevedibile sono stati provati e tolti: non si distinguevano dal Neutrale senza
+// perdere troppa forza (vedi il piano).
 //
 // Le intensità sono tarate al banco di prova: ogni tratto resta entro ~5 punti dal Neutrale
 // dello stesso livello (vedi Documentazione/PIANO_MIGLIORAMENTO_IA.md).
@@ -85,25 +86,6 @@ export const MC_TRAITS = {
     // Misurato: rischio −1 e preferenza 0,08 lo indeboliscono troppo (33% contro il Neutrale).
     risk: -0.5,
     bias: (view, card, focus, ctx) => 0.04 * Math.max(0, focusAboveFair(focus, ctx)),
-  },
-  cauto: {
-    id: 'cauto',
-    name: 'Cauto',
-    description: 'Odia il rischio e protegge i propri PV, anche cedendo un Campo.',
-    // Misurato: rischio 1 e obiettivo 0,05 lo indeboliscono troppo (41%). Stile ancora poco
-    // riconoscibile con questi valori: da rivedere.
-    risk: 0.5,
-    // Conta i propri PV rimasti: subire danni gli pesa anche quando vince.
-    objective: (end, state) => 0.02 * (Number(state.enemyHP) || 0),
-  },
-  imprevedibile: {
-    id: 'imprevedibile',
-    name: 'Imprevedibile',
-    description: 'I suoi FC sono illeggibili: alterna puntate minime e altissime.',
-    // Fra i FC "accettabili" per la carta scelta (entro questa soglia dalla stima migliore)
-    // ne estrae uno a caso. Misurato: le puntate per una stessa carta raramente sono vicine,
-    // quindi l'effetto è piccolo; da rivedere.
-    focusWindow: 0.08,
   },
 };
 

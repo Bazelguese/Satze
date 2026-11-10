@@ -14,13 +14,23 @@ function leadView(seed) {
 }
 
 describe('personalità dell’IA', () => {
-  it('Neutrale più otto tratti, ognuno con nome e descrizione', () => {
-    expect(MC_TRAIT_IDS).toHaveLength(9);
+  it('Neutrale più sei tratti, ognuno con nome e descrizione', () => {
+    expect(MC_TRAIT_IDS).toEqual([
+      'neutral',
+      'impetuoso',
+      'paziente',
+      'conquistatore',
+      'spietato',
+      'avaro',
+      'temerario',
+    ]);
     for (const id of MC_TRAIT_IDS) {
       expect(MC_TRAITS[id].name).toBeTruthy();
       expect(MC_TRAITS[id].description).toBeTruthy();
     }
     expect(getMcTrait('sconosciuto').id).toBe('neutral');
+    // Tratti tolti (o salvati da una versione precedente del menu) diventano Neutrale.
+    expect(resolveTraitChoice('cauto')).toBe('neutral');
   });
 
   it('scelta del menu: id valido, Casuale estrae un tratto, altro → Neutrale', () => {
