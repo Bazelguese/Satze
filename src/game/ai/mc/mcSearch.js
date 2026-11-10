@@ -84,17 +84,33 @@ function rollout(view, candidate, seed, params) {
     quality: params.opponentQuality,
     responder: params.responder,
   });
-  const responding = view.selectedAgent != null;
-  const opponent = responding
-    ? scripted(
-        {
-          fieldIndex: view.currentFieldIndex,
-          cardId: view.selectedAgent.id,
-          focus: sampleOpponentFocus(view, rng),
-        },
-        opponentPolicy
-      )
-    : opponentPolicy;
+  const opponentLeads = view.isPlayerFirst === true;
+  let opponent = opponentPolicy;
+  if (opponentLeads && view.selectedAgent) {
+    // Agente avversario visibile: i suoi FC restano un'incognita.
+    opponent = scripted(
+      {
+        fieldIndex: view.currentFieldIndex,
+        cardId: view.selectedAgent.id,
+        focus: sampleOpponentFocus(view, rng),
+      },
+      opponentPolicy
+    );
+  } else if (opponentLeads && view.currentFieldIndex != null) {
+    // Campo già scelto, Agente avversario non ancora visibile: lo si simula su quel Campo.
+    let first = true;
+    opponent = {
+      lead(state) {
+        const choice = opponentPolicy.lead(state);
+        if (first) {
+          first = false;
+          return { ...choice, fieldIndex: view.currentFieldIndex };
+        }
+        return choice;
+      },
+      respond: (state) => opponentPolicy.respond(state),
+    };
+  }
   const agents = { enemy: scripted(candidate, policy), player: opponent };
 
   let state = { ...view, selectedAgent: null, enemyAgent: null };
@@ -117,10 +133,13 @@ function focusOptions(view, card) {
   return [...new Set(values.map((v) => clampFocusFor(view, 'enemy', v)))];
 }
 
-/** Azioni candidate: con l'iniziativa Campo × Agente × FC, in risposta Agente × FC. */
+/**
+ * Azioni candidate: Campo × Agente × FC. Se il Campo è già fissato (in risposta, o con
+ * l'iniziativa quando il gioco ha già scelto il Campo) si varia solo Agente × FC.
+ */
 export function generateMcCandidates(view) {
-  const responding = view.selectedAgent != null;
-  const fields = responding ? [view.currentFieldIndex] : legalFieldIndexes(view);
+  const fields =
+    view.currentFieldIndex != null ? [view.currentFieldIndex] : legalFieldIndexes(view);
   const out = [];
   for (const fieldIndex of fields) {
     for (const card of availableCards(view, 'enemy')) {

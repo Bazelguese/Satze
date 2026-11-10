@@ -3,7 +3,8 @@
 // ============================================
 
 import { mulberry32 } from '../../utils/seededRandom.js';
-import { createHeadlessMatch, playHeadlessMatch, listPresetDecks } from './headlessMatch.js';
+import { playHeadlessMatch } from './headlessMatch.js';
+import { createHeadlessMatch, listPresetDecks } from './headlessSetup.js';
 import { createAgentFromSpec } from './simAgents.js';
 
 /**

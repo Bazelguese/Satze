@@ -1,13 +1,17 @@
 import { chooseAIAction, chooseJointAIAction } from '../index.js';
+import { chooseMonteCarloDecision } from '../mc/mcGameAdapter.js';
 import { stripDecisionForTransfer } from './serializeAiDecision.js';
 
 self.onmessage = (event) => {
-  const { id, needsJoint, difficulty, context } = event.data || {};
+  const { id, kind, needsJoint, difficulty, context, view, maxMs, seed } = event.data || {};
   try {
     const cache = new Map();
-    const raw = needsJoint
-      ? chooseJointAIAction(context, difficulty, { cache })
-      : chooseAIAction(context, difficulty, { cache });
+    const raw =
+      kind === 'montecarlo'
+        ? chooseMonteCarloDecision(view, difficulty, { maxMs, seed })
+        : needsJoint
+          ? chooseJointAIAction(context, difficulty, { cache })
+          : chooseAIAction(context, difficulty, { cache });
     self.postMessage({
       id,
       ok: true,

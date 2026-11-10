@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { chooseMonteCarloAction, generateMcCandidates } from './mcSearch.js';
 import { getMcProfile } from './mcProfiles.js';
 import {
-  createHeadlessMatch,
-  listPresetDecks,
   viewForSide,
   legalFieldIndexes,
   availableCards,
 } from '../../sim/headlessMatch.js';
+import { createHeadlessMatch, listPresetDecks } from '../../sim/headlessSetup.js';
 import { mulberry32 } from '../../../utils/seededRandom.js';
 
 const decks = listPresetDecks();

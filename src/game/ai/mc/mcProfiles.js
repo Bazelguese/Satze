@@ -14,6 +14,8 @@ export const MC_PROFILES = {
     policyQuality: 0.6,
     opponentQuality: 0.6,
     noise: 0.06,
+    /** Tetto di tempo nel gioco (ms). Il worker aggiunge 4 s di margine: totale < 12 s di useAI. */
+    maxMs: 2000,
   },
   medium: {
     id: 'medium',
@@ -21,6 +23,7 @@ export const MC_PROFILES = {
     policyQuality: 0.7,
     opponentQuality: 0.7,
     noise: 0.02,
+    maxMs: 4000,
   },
   hard: {
     id: 'hard',
@@ -28,6 +31,7 @@ export const MC_PROFILES = {
     policyQuality: 0.7,
     opponentQuality: 0.7,
     noise: 0,
+    maxMs: 7000,
   },
 };
 

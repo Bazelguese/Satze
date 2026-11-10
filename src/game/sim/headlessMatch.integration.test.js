@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  createHeadlessMatch,
   playHeadlessMatch,
   playHeadlessRound,
   resolveMatchEnd,
   viewForSide,
-  listPresetDecks,
   legalFieldIndexes,
 } from './headlessMatch.js';
+import { createHeadlessMatch, listPresetDecks } from './headlessSetup.js';
 import { createAgentFromSpec, createGreedyAgent } from './simAgents.js';
 import { buildAIInformationSet } from '../ai/buildAIInformationSet.js';
 

@@ -93,6 +93,42 @@ export function runAiDecisionInWorker(context, difficulty, needsJoint) {
   }).then((stripped) => hydrateAiDecision(stripped, context));
 }
 
+/**
+ * Motore a simulazione nel worker. `maxMs` è il tempo di calcolo concesso al motore;
+ * il timeout del messaggio lascia un margine. Timeout o errore → reject (fallback del caller).
+ *
+ * @param {object} view - da buildMcViewFromGameState (già serializzabile)
+ * @param {object} context - information set, per idratare la carta scelta
+ * @param {string} difficulty
+ * @param {{ maxMs: number, seed?: number }} options
+ */
+export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed } = {}) {
+  const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(maxMs) || 0) + 4000);
+  return new Promise((resolve, reject) => {
+    let w;
+    try {
+      w = getAiWorker();
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const id = ++nextRequestId;
+    const timer = setTimeout(() => {
+      if (!pending.has(id)) return;
+      pending.delete(id);
+      reject(new Error(`AI worker (simulazione) timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+    pending.set(id, { resolve, reject, timer });
+    try {
+      w.postMessage({ id, kind: 'montecarlo', difficulty, view, maxMs, seed });
+    } catch (err) {
+      pending.delete(id);
+      clearTimeout(timer);
+      reject(err);
+    }
+  }).then((stripped) => hydrateAiDecision(stripped, context));
+}
+
 export function isAiWorkerSupported() {
   return typeof Worker !== 'undefined';
 }
