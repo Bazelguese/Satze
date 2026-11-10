@@ -19,6 +19,7 @@
     "bench:ai": "vite-node scripts/ai-planner-benchmark.mjs",
     "selfplay:ai": "vite-node scripts/ai-selfplay.mjs",
     "selfplay:team": "vite-node scripts/ai-selfplay-team.mjs",
+    "selfplay:koth": "vite-node scripts/ai-selfplay-koth.mjs",
     "preview": "vite preview",
     "update-images": "node scripts/update-card-images.js",
     "icons-nobg": "node scripts/remove-icon-backgrounds.js",

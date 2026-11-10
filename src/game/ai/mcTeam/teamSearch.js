@@ -48,7 +48,7 @@ function seatTrait(params, seatId) {
 }
 
 /** Contesto per le preferenze del tratto, come nell'1v1 (quota equa, turno, carte rimaste). */
-function traitContext(match, seat) {
+export function traitContext(match, seat) {
   const cards = availableCards(seat);
   const ranked = [...cards].sort((a, b) => cardStrength(b) - cardStrength(a));
   return {
@@ -111,7 +111,7 @@ function teamOutcome(end, teamId, aiSeatIds, params) {
  * @param {number} budget
  * @param {(candidate, seed) => number} simulate
  */
-function successiveHalving(candidates, budget, simulate, rng, deadline) {
+export function successiveHalving(candidates, budget, simulate, rng, deadline) {
   for (const c of candidates) Object.assign(c, { total: 0, n: 0, mean: 0, score: c.bias || 0 });
   if (candidates.length <= 1) return { ranked: candidates, spent: 0, timedOut: false };
   const phases = Math.max(1, Math.ceil(Math.log2(candidates.length)));
@@ -144,7 +144,7 @@ function successiveHalving(candidates, budget, simulate, rng, deadline) {
   return { ranked, spent, timedOut };
 }
 
-function pickFinal(ranked, noise, rng) {
+export function pickFinal(ranked, noise, rng) {
   if (!ranked.length) return null;
   const maxN = ranked.reduce((m, c) => Math.max(m, c.n), 0);
   const reliable = ranked.filter((c) => c.n >= maxN * 0.6);
