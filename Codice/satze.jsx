@@ -187,10 +187,14 @@ import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAn
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
 import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
 import { SpectatorHud } from '../src/components/tournament/SpectatorHud';
-import { ROUND_NAMES, describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult } from '../src/game/tournament/tournamentLogic.js';
+import {
+  ROUND_NAMES, describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult,
+  convertToAi, getPendingAiMatches, recordAiSeries, recordMatchGameResult, withViewer,
+} from '../src/game/tournament/tournamentLogic.js';
 import {
   createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards,
   hasGameLog, playAiSeries, playPendingAiSeries, replaySavedAiGame,
+  buildTournamentOnlineMatch, createOnlineTournament, detachToOffline, prepareOpenHumanGames,
 } from '../src/game/tournament/tournamentSetup.js';
 import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
 import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
@@ -1858,6 +1862,8 @@ export default function SatzeGame() {
   const multiSeatReconnectRef = useRef(null);
   const multiSeatOnlineRef = useRef(false);
   const startMultiOnlineRef = useRef(null);
+  /** Torneo online: messaggi `tn_*` ed eventi di stanza (vedi blocco «Torneo online»). */
+  const tournamentNetRef = useRef(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
@@ -1912,6 +1918,7 @@ export default function SatzeGame() {
           return next;
         });
         // Nel Duello l'unico altro giocatore è l'avversario: come se avesse lasciato la stanza.
+        tournamentNetRef.current?.({ type: '__member_left', slot: msg.slot }, null);
         if (onlineModeRef.current === 'duel') {
           setOnlineOpponentLeft(true);
           setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato la stanza."]);
@@ -1921,6 +1928,7 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'peer_left') {
+        tournamentNetRef.current?.({ type: '__room_closed' }, null);
         clearMpSession();
         setMpOpponentAway(false);
         setMpConnectionLost(false);
@@ -1940,6 +1948,7 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'reconnected') {
+        tournamentNetRef.current?.({ type: '__reconnected' }, null);
         multiSeatReconnectRef.current?.(null);
         setMpConnectionLost(false);
         setMpReconnectError('');
@@ -1977,6 +1986,9 @@ export default function SatzeGame() {
         if (ONLINE_MODES[p.mode]) setOnlineMode(p.mode);
         if (p.players === 3 || p.players === 4) setOnlinePlayers(p.players);
         if (p.difficulty) setOnlineDifficulty(p.difficulty);
+      }
+      if (typeof p.type === 'string' && p.type.startsWith('tn_')) {
+        tournamentNetRef.current?.(p, msg.fromSlot);
       }
       if (typeof p.type === 'string' && p.type.startsWith('ms_')) {
         if (p.type === MULTI_MS.START && p.pkg) startMultiOnlineRef.current?.(p.pkg);
@@ -2367,8 +2379,11 @@ export default function SatzeGame() {
 
   const storeTournament = useCallback((next) => {
     setTournament(next);
-    saveTournament(next);
+    // Il torneo online vive nella stanza: non prende il posto di quello locale salvato.
+    if (!next?.online) saveTournament(next);
   }, []);
+  /** Torneo online: azioni del blocco «Torneo online», assegnate più sotto a ogni render. */
+  const tnOnlineRef = useRef({});
 
   const stopAiThinking = useCallback(() => {
     aiThinkGenerationRef.current += 1;
@@ -2383,7 +2398,9 @@ export default function SatzeGame() {
   /** Avvia la prossima partita della serie del giocatore, con le mani decise dal torneo. */
   const playTournamentGame = useCallback(() => {
     if (!tournament) return;
-    const prepared = prepareHumanGame(tournament);
+    // Online le mani le serve l'host; contro un altro giocatore la partita la avvia la sfida.
+    if (tournament.online && tnOnlineRef.current.challenge?.()) return;
+    const prepared = tournament.online ? tournament : prepareHumanGame(tournament);
     const info = describeHumanMatch(prepared);
     const game = info ? getPendingGame(info.match) : null;
     if (!game) return;
@@ -2395,7 +2412,8 @@ export default function SatzeGame() {
     const sameDeck = Array.isArray(currentIds)
       && currentIds.length === human.cardIds.length
       && currentIds.every((id) => human.cardIds.includes(id));
-    storeTournament(prepared);
+    if (!prepared.online) storeTournament(prepared);
+    tnOnlineRef.current.markLocalGame?.(prepared.online ? { matchId: info.match.id, gameIndex: info.match.series.games.length - 1, side: info.side, peerSlot: null } : null);
     stopAiThinking();
     setVictoryCondFx(null);
     setShowFinalRoundAnimation(false);
@@ -2403,7 +2421,7 @@ export default function SatzeGame() {
     multiSeat.cancel();
     clearCardPreview();
     setDevDialogueDuelActive(false);
-    setIsMultiplayer(false);
+    if (!prepared.online) setIsMultiplayer(false);
     setCampaignLevel(null);
     setSelectedMode(prepared.settings.mode || 'classic');
     setSelectedArmy(human.army);
@@ -2443,6 +2461,7 @@ export default function SatzeGame() {
       tournamentResultPendingRef.current = false;
       setTournamentGameActive(false);
       setSpectate(null);
+      tnOnlineRef.current.leaveGame?.();
       resetToMenu();
       setGamePhaseRaw('tournamentHub');
     });
@@ -2653,8 +2672,268 @@ export default function SatzeGame() {
     if (!tournamentResultPendingRef.current) return;
     tournamentResultPendingRef.current = false;
     const outcome = gameResult.winner === 'player' ? 'human' : gameResult.winner === 'enemy' ? 'opponent' : 'draw';
+    if (tournament.online) {
+      tnOnlineRef.current.reportResult?.(outcome);
+      return;
+    }
     storeTournament(recordHumanGameResult(tournament, outcome));
   }, [tournamentGameActive, gamePhase, gameResult, tournament, storeTournament]);
+
+  // ── Torneo online ────────────────────────────────────────────────────────────────────────
+  // L'host della stanza tiene il tabellone: iscrive i giocatori, serve le mani, gioca le serie
+  // tra IA, registra gli esiti e trasmette lo stato (`tn_state`). Ognuno gioca la propria
+  // serie in contemporanea: contro un'IA la partita è locale e se ne riferisce l'esito; tra due
+  // giocatori è un Duello online i cui messaggi vanno solo all'avversario (`relayTarget`).
+  // Chi lascia la stanza viene sostituito da un'IA; se si chiude la stanza, ognuno prosegue in
+  // locale contro le IA.
+  /** Host: copia autorevole del torneo, aggiornata subito (lo stato React arriva al render dopo). */
+  const hostTournamentRef = useRef(null);
+  /** Partita di torneo in corso su questo client: { matchId, gameIndex, side, peerSlot|null }. */
+  const tournamentOnlineGameRef = useRef(null);
+  /** Host: giocatori pronti alla sfida, per incontro. */
+  const tournamentReadyRef = useRef({});
+  /** Sfida inviata: id dell'incontro per cui si aspetta l'avversario. */
+  const [tournamentWaiting, setTournamentWaiting] = useState(null);
+  const tournamentAiFailedRef = useRef(new Set());
+  const gamePhaseRef = useRef(gamePhase);
+  gamePhaseRef.current = gamePhase;
+  const tournamentRef = useRef(tournament);
+  tournamentRef.current = tournament;
+
+  const tnMySlot = () => {
+    const sess = multiplayerSessionRef.current;
+    return sess ? (sess.slot ?? (sess.role === 'host' ? 0 : 1)) : null;
+  };
+  const tnIsHost = () => multiplayerSessionRef.current?.role === 'host';
+  const tnRelay = (payload, to = 'all') => {
+    const sess = multiplayerSessionRef.current;
+    if (sess?.roomCode) getMultiplayerManager().sendRelay(sess.roomCode, payload, to);
+  };
+
+  /** Il torneo ricevuto (o deciso, per l'host) visto dal proprio posto. */
+  const tnApply = (t) => {
+    const me = `h${tnMySlot()}`;
+    setTournament(withViewer(t, me));
+    // L'avversario della partita in corso ha lasciato: è subentrata un'IA, si riparte dal tabellone.
+    const game = tournamentOnlineGameRef.current;
+    if (game?.peerSlot != null) {
+      const match = getMatch(t, game.matchId);
+      const peer = match ? t.participants[match[game.side === 'a' ? 'b' : 'a']] : null;
+      if (!peer?.isHuman) {
+        setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato il torneo: al suo posto gioca un'IA."]);
+        returnToTournamentHub();
+      }
+    }
+    if (tournamentWaiting && getMatch(t, tournamentWaiting)?.winnerId) setTournamentWaiting(null);
+  };
+
+  /** Host: nuovo stato del tabellone, con le prossime partite già servite, a tutti. */
+  const tnHostCommit = (next) => {
+    const prepared = prepareOpenHumanGames(next);
+    hostTournamentRef.current = prepared;
+    tnApply(prepared);
+    tnRelay({ type: 'tn_state', tournament: prepared });
+  };
+
+  /** Avvio di un Duello online tra due giocatori del torneo (su entrambi i client). */
+  const tnStartPeerGame = (msg) => {
+    const t = tournamentRef.current || hostTournamentRef.current;
+    const match = t ? getMatch(t, msg.matchId) : null;
+    const peer = match ? t.participants[match[msg.side === 'a' ? 'b' : 'a']] : null;
+    getMultiplayerManager().relayTarget = [msg.peerSlot];
+    tournamentOnlineGameRef.current = { matchId: msg.matchId, gameIndex: msg.gameIndex, side: msg.side, peerSlot: msg.peerSlot };
+    setTournamentWaiting(null);
+    stopAiThinking();
+    runCurtain({ label: peer?.deckName || 'SFIDA', kicker: `${ROUND_NAMES[match?.round ?? 0].toUpperCase()} · CONTRO ${(peer?.playerName || 'AVVERSARIO').toUpperCase()}` }, () => {
+      setVictoryCondFx(null);
+      setShowFinalRoundAnimation(false);
+      ai.resetAiSession();
+      multiSeat.cancel();
+      clearCardPreview();
+      setIncomingPeerMoveQueue([]);
+      setOpponentClaimPending(null);
+      setIncomingClaimDecision(null);
+      setRemoteEminenceQueue([]);
+      setOnlineOpponentLeft(false);
+      setOnlinePeerName(peer?.playerName || null);
+      setVsChosenEnemyArmy(peer?.army || null);
+      setSelectedMode(msg.match.mode === 'bareHands' ? 'bareHands' : 'classic');
+      tournamentResultPendingRef.current = true;
+      setTournamentGameActive(true);
+      try {
+        startOnlineMatch(msg.side === 'a' ? 'host' : 'guest', msg.match);
+      } catch (err) {
+        console.error('[Torneo online] avvio partita:', err);
+        returnToTournamentHub();
+      }
+    });
+  };
+
+  /** Host: un giocatore è pronto alla sfida; con entrambi pronti parte il Duello. */
+  const tnHostReady = (fromSlot, matchId) => {
+    const t = hostTournamentRef.current;
+    const match = t ? getMatch(t, matchId) : null;
+    if (!match || match.winnerId || !getPendingGame(match)) return;
+    const slots = ['a', 'b'].map((side) => t.participants[match[side]]);
+    if (!slots.every((p) => p.isHuman)) return;
+    const ready = (tournamentReadyRef.current[matchId] ||= new Set());
+    ready.add(fromSlot);
+    if (!slots.every((p) => ready.has(p.slot))) return;
+    delete tournamentReadyRef.current[matchId];
+    const seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+    const payload = buildTournamentOnlineMatch(t, match, seed);
+    const gameIndex = match.series.games.length - 1;
+    ['a', 'b'].forEach((side, i) => {
+      const msg = { type: 'tn_match_start', matchId, gameIndex, side, peerSlot: slots[1 - i].slot, match: payload };
+      if (slots[i].slot === tnMySlot()) tnStartPeerGame(msg);
+      else tnRelay(msg, [slots[i].slot]);
+    });
+  };
+
+  /** Host: esito riferito da un giocatore dell'incontro (il primo che arriva vale). */
+  const tnHostResult = (fromSlot, { matchId, gameIndex, winner }) => {
+    const t = hostTournamentRef.current;
+    const match = t ? getMatch(t, matchId) : null;
+    const who = `h${fromSlot}`;
+    if (!match || (match.a !== who && match.b !== who)) return;
+    tnHostCommit(recordMatchGameResult(t, matchId, winner, gameIndex));
+  };
+
+  /** Uscita dal torneo online: si lascia la stanza (all'host arriva l'uscita e subentra un'IA). */
+  const leaveOnlineTournament = () => {
+    getMultiplayerManager().relayTarget = null;
+    tournamentOnlineGameRef.current = null;
+    hostTournamentRef.current = null;
+    tournamentReadyRef.current = {};
+    setTournamentWaiting(null);
+    setTournamentBusy(null);
+    setTournamentGameActive(false);
+    cleanupMultiplayerSession();
+    setTournament(loadTournament());
+    resetToMenu();
+  };
+
+  tnOnlineRef.current = {
+    // true se la sfida è stata gestita qui (avversario umano, o mani non ancora arrivate)
+    challenge: () => {
+      const t = tournamentRef.current;
+      const info = t ? describeHumanMatch(t) : null;
+      if (!info) return true;
+      if (!getPendingGame(info.match)) {
+        tnRelay({ type: 'tn_hello' }, [0]);
+        return true;
+      }
+      if (!info.opponent.isHuman) return false;
+      setTournamentWaiting(info.match.id);
+      if (tnIsHost()) tnHostReady(tnMySlot(), info.match.id);
+      else tnRelay({ type: 'tn_ready', matchId: info.match.id }, [0]);
+      return true;
+    },
+    markLocalGame: (game) => { tournamentOnlineGameRef.current = game; },
+    leaveGame: () => {
+      getMultiplayerManager().relayTarget = null;
+      tournamentOnlineGameRef.current = null;
+      // il Duello tra giocatori lascia la difficoltà su «multiplayer»: sul tabellone torna quella del torneo
+      if (tournamentRef.current?.online) setAiDifficulty(tournamentRef.current.settings?.difficulty || 'medium');
+    },
+    reportResult: (outcome) => {
+      const game = tournamentOnlineGameRef.current;
+      if (!game) return;
+      const other = game.side === 'a' ? 'b' : 'a';
+      const result = { matchId: game.matchId, gameIndex: game.gameIndex, winner: outcome === 'human' ? game.side : outcome === 'opponent' ? other : 'draw' };
+      if (tnIsHost()) tnHostResult(tnMySlot(), result);
+      else tnRelay({ type: 'tn_result', ...result }, [0]);
+    },
+    // Host: i giocatori pronti della stanza diventano il tabellone
+    start: (humans, settings) => {
+      const sess = multiplayerSessionRef.current;
+      const t = createOnlineTournament({ humans, settings, roomCode: sess?.roomCode });
+      hostTournamentRef.current = t;
+      tournamentReadyRef.current = {};
+      tournamentAiFailedRef.current = new Set();
+      tnRelay({ type: 'tn_start', tournament: t });
+      runCurtain({ label: 'TORNEO', kicker: 'TABELLONE ONLINE' }, () => {
+        tnApply(t);
+        setGamePhaseRaw('tournamentHub');
+      });
+    },
+    leave: leaveOnlineTournament,
+  };
+
+  tournamentNetRef.current = (p, fromSlot) => {
+    const t = tournamentRef.current;
+    if (p.type === 'tn_start' && p.tournament && fromSlot === 0) {
+      runCurtain({ label: 'TORNEO', kicker: 'TABELLONE ONLINE' }, () => {
+        tnApply(p.tournament);
+        setGamePhaseRaw('tournamentHub');
+      });
+      return;
+    }
+    if (p.type === 'tn_state' && p.tournament && fromSlot === 0) {
+      tnApply(p.tournament);
+      // rientrato in stanza a torneo già iniziato: si torna al tabellone
+      if (!t?.online && gamePhaseRef.current === 'onlineDeckReady') setGamePhaseRaw('tournamentHub');
+      return;
+    }
+    if (p.type === 'tn_match_start' && p.match && fromSlot === 0) {
+      tnStartPeerGame(p);
+      return;
+    }
+    if (p.type === '__reconnected') {
+      if (t?.online && !tnIsHost()) tnRelay({ type: 'tn_hello' }, [0]);
+      return;
+    }
+    if (p.type === '__room_closed') {
+      // L'host ha chiuso la stanza: il torneo prosegue in locale contro le IA.
+      if (!t?.online) return;
+      const inGame = tournamentOnlineGameRef.current;
+      getMultiplayerManager().relayTarget = null;
+      tournamentOnlineGameRef.current = null;
+      setTournamentWaiting(null);
+      storeTournament(detachToOffline(t, t.humanId));
+      setLogs((prev) => [...prev.slice(-200), "[!] La stanza è stata chiusa: il torneo prosegue in locale contro le IA."]);
+      if (inGame?.peerSlot != null) returnToTournamentHub();
+      // dopo il resto della gestione di «stanza chiusa»: la sessione online non serve più
+      setTimeout(() => cleanupMultiplayerSession(), 0);
+      return;
+    }
+    if (!tnIsHost() || !hostTournamentRef.current) return;
+    if (p.type === '__member_left') {
+      delete tournamentReadyRef.current;
+      tournamentReadyRef.current = {};
+      tnHostCommit(convertToAi(hostTournamentRef.current, `h${p.slot}`));
+    } else if (p.type === 'tn_hello') {
+      tnRelay({ type: 'tn_state', tournament: hostTournamentRef.current }, [fromSlot]);
+    } else if (p.type === 'tn_ready') {
+      tnHostReady(fromSlot, p.matchId);
+    } else if (p.type === 'tn_result') {
+      tnHostResult(fromSlot, p);
+    }
+  };
+
+  // Host sul tabellone: gioca in sottofondo le serie tra IA, una alla volta, e ne trasmette l'esito.
+  useEffect(() => {
+    if (!tournament?.online || !tnIsHost() || gamePhase !== 'tournamentHub' || tournamentBusy) return;
+    const match = getPendingAiMatches(tournament).find((m) => !tournamentAiFailedRef.current.has(m.id));
+    if (!match) return;
+    setTournamentBusy({ matchId: match.id, label: 'Partita 1', soft: true });
+    (async () => {
+      try {
+        const played = await playAiSeries(hostTournamentRef.current, match.id, {
+          onGame: (n) => setTournamentBusy({ matchId: match.id, label: `Partita ${n}`, soft: true }),
+        });
+        const current = hostTournamentRef.current;
+        // si registra sullo stato di adesso: nel frattempo possono essere arrivati altri esiti
+        if (current?.online && !getMatch(current, match.id)?.winnerId) {
+          tnHostCommit(recordAiSeries(current, match.id, getMatch(played, match.id).series.games));
+        }
+      } catch (err) {
+        console.error('[Torneo online] serie IA fallita:', err);
+        tournamentAiFailedRef.current.add(match.id);
+      }
+      setTournamentBusy(null);
+    })();
+  }, [tournament, gamePhase, tournamentBusy]);
 
   const launchDialogueDuelTest = useCallback((playerArmy, shuffleKind) => {
     setDevDialogueDuelActive(true);
@@ -5146,6 +5425,9 @@ export default function SatzeGame() {
       setup: (params) => confirmEminenceSetup(params),
       affare: (risposta) => confirmPendingEminenceDeal(risposta),
       prossimoRound: () => nextRound(),
+      // chiude subito la partita con l'esito dato (prove del torneo senza giocare ogni duello)
+      concludi: (winner) => { setGameResult({ winner, reason: 'hp' }); setGamePhaseRaw('gameOver'); },
+      torneo: () => tournament,
       decidiReclamo: (d) => multiSeat.decideClaim(d),
       // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
       cadiConnessione: () => getMultiplayerManager().ws?.close(),
@@ -5758,6 +6040,7 @@ export default function SatzeGame() {
       return screen('tournamentHub', false, <div style={{ padding: 32, color: 'white' }}><button type="button" onClick={() => setGamePhase('menu')}>Nessun torneo in corso — torna al menù</button></div>);
     }
     const startNewTournament = () => {
+      if (tournament.online) { tnOnlineRef.current.leave(); return; }
       storeTournament(null);
       setTournamentSetup(true);
       setSelectedMode('classic');
@@ -5769,12 +6052,23 @@ export default function SatzeGame() {
       screen('tournamentHub', false, <TournamentHubScreen
         tournament={tournament}
         busy={tournamentBusy}
+        online={tournament.online ? { isHost: multiplayerSession?.role === 'host', waiting: tournamentWaiting } : null}
         onPlay={playTournamentGame}
         onWatch={watchTournamentSeries}
         onConcludeRound={concludeTournamentRound}
-        onMenu={() => setGamePhase('menu')}
+        onMenu={() => {
+          if (tournament.online) {
+            if (window.confirm("Vuoi uscire dal torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+            return;
+          }
+          setGamePhase('menu');
+        }}
         onNewTournament={startNewTournament}
         onAbandon={() => {
+          if (tournament.online) {
+            if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+            return;
+          }
           if (!window.confirm('Vuoi davvero abbandonare il torneo? Il tabellone andrà perso.')) return;
           storeTournament(null);
           setGamePhase('menu');
@@ -6248,6 +6542,28 @@ export default function SatzeGame() {
       if (!tuttiPronti || multiplayerSession.role !== 'host') return;
       const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.noEminence;
       const resolved = resolveDeckCardsForArmy(selectedArmy, selectedDeckKey);
+      if (onlineMode === 'tournament') {
+        // Torneo: i giocatori pronti entrano nel tabellone con l'esercito scelto, bloccato.
+        const umani = [
+          { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckName: deck.name, cardIds: resolved.map((c) => c.id) },
+          ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
+            const r = onlineReadies[m.slot] || {};
+            return { slot: m.slot, name: r.playerName || m.name, army: r.army, deckKey: r.deckKey, deckName: r.deckName || 'Esercito', cardIds: r.deckCardIds || [] };
+          }),
+        ];
+        try {
+          tnOnlineRef.current.start(umani, {
+            difficulty: onlineDifficulty,
+            mode: formato.mode === 'bareHands' ? 'bareHands' : 'classic',
+            eminenceFormat: formato.eminenceFormat,
+            formatId: formato.id,
+          });
+        } catch (err) {
+          console.error('[Torneo online] avvio fallito:', err);
+          window.alert(`Impossibile avviare il torneo: ${err.message}`);
+        }
+        return;
+      }
       const readies = [
         { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckCardIds: resolved.map((c) => c.id) },
         ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
@@ -6291,9 +6607,11 @@ export default function SatzeGame() {
         ready={{ label: onlineReadyButtonLabel, disabled: onlineLocalReady, onClick: handleOnlineReady }}
         start={isMultiMode && multiplayerSession.role === 'host'
           ? {
-              label: tuttiPronti
-                ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
-                : 'Avvia partita (aspetta che tutti siano pronti)',
+              label: onlineMode === 'tournament'
+                ? (tuttiPronti ? `Avvia torneo (${membriConnessi.length} giocatori + ${12 - membriConnessi.length} IA)` : 'Avvia torneo (aspetta che tutti siano pronti)')
+                : tuttiPronti
+                  ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
+                  : 'Avvia partita (aspetta che tutti siano pronti)',
               disabled: !tuttiPronti,
               onClick: avviaMultiOnline,
             }
@@ -8101,6 +8419,10 @@ export default function SatzeGame() {
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
           onClick={() => {
             if (spectating) { returnToTournamentHub(); return; }
+            if (tournamentGameActive && isOnlinePvP) {
+              if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+              return;
+            }
             if (tournamentGameActive) {
               if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
               return;
@@ -8115,6 +8437,10 @@ export default function SatzeGame() {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               if (spectating) { returnToTournamentHub(); return; }
+              if (tournamentGameActive && isOnlinePvP) {
+                if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+                return;
+              }
               if (tournamentGameActive) {
                 if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
                 return;

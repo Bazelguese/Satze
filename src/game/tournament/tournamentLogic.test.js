@@ -4,8 +4,13 @@ import {
   createTournament,
   dealSeriesHand,
   describeHumanMatch,
+  convertToAi,
   dealAiSeriesHands,
   getHumanMatch,
+  getOpenHumanMatches,
+  prepareMatchGame,
+  recordMatchGameResult,
+  withViewer,
   getPendingAiMatches,
   getPendingGame,
   getTournamentStatus,
@@ -241,4 +246,65 @@ test('1-1 porta allo spareggio con mazzo rimischiato', () => {
   const match = getHumanMatch(t);
   const side = humanSide(t, match);
   assert.equal(new Set(getPendingGame(match).hands[side]).size, 5);
+});
+
+// ── Torneo online: più giocatori nello stesso tabellone ──
+
+function makeOnlineParticipants(humans = 3) {
+  return makeParticipants().map((p, i) => (i < humans ? { ...p, id: `h${i}`, isHuman: true, slot: i, playerName: `G${i}` } : { ...p, isHuman: false }));
+}
+
+test('online: più giocatori, ognuno vede il proprio incontro', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const t = createTournament({ participants: makeOnlineParticipants(3), rng: seeded(seed) });
+    const humanMatches = getOpenHumanMatches(t);
+    for (const id of ['h0', 'h1', 'h2']) {
+      const mine = getHumanMatch(withViewer(t, id));
+      if (mine) assert.ok(humanMatches.some((m) => m.id === mine.id));
+      assert.equal(getTournamentStatus(withViewer(t, id)), 'active');
+    }
+    // le serie con una persona non le giocano le IA da sole
+    const pendingAi = getPendingAiMatches(t);
+    assert.ok(pendingAi.every((m) => !t.participants[m.a].isHuman && !t.participants[m.b].isHuman));
+    assert.ok(humanMatches.every((m) => !pendingAi.some((x) => x.id === m.id)));
+  }
+});
+
+test('online: esito registrato una volta sola anche se lo riferiscono entrambi', () => {
+  const rng = seeded(8);
+  let t = createTournament({ participants: makeOnlineParticipants(4), rng });
+  const match = getOpenHumanMatches(t)[0];
+  t = prepareMatchGame(t, match.id, rng);
+  const hands = getPendingGame(getOpenHumanMatches(t).find((m) => m.id === match.id)).hands;
+  assert.deepEqual(getPendingGame(prepareMatchGame(t, match.id, rng).rounds.flat().find((m) => m.id === match.id)).hands, hands);
+  t = recordMatchGameResult(t, match.id, 'a', 0);
+  // doppione della stessa partita, arrivato dopo che la successiva è già stata servita
+  t = prepareMatchGame(t, match.id, rng);
+  t = recordMatchGameResult(t, match.id, 'a', 0);
+  const saved = t.rounds.flat().find((m) => m.id === match.id);
+  assert.equal(saved.series.winsA, 1);
+  assert.equal(saved.winnerId, null);
+  t = recordMatchGameResult(t, match.id, 'a', 1);
+  assert.equal(t.rounds.flat().find((m) => m.id === match.id).winnerId, match.a);
+});
+
+test("online: chi lascia passa all'IA e la sua serie torna tra quelle delle IA", () => {
+  let found = false;
+  for (let seed = 1; seed <= 40 && !found; seed++) {
+    const rng = seeded(seed);
+    let t = createTournament({ participants: makeOnlineParticipants(1), rng });
+    const match = getOpenHumanMatches(t)[0];
+    if (!match) continue;
+    found = true;
+    t = prepareMatchGame(t, match.id, rng);
+    const held = getPendingGame(t.rounds.flat().find((m) => m.id === match.id)).hands;
+    t = convertToAi(t, 'h0');
+    assert.equal(t.participants.h0.isHuman, false);
+    assert.equal(t.participants.h0.takenOver, true);
+    assert.equal(getOpenHumanMatches(t).length, 0);
+    const pending = getPendingAiMatches(t).find((m) => m.id === match.id);
+    assert.ok(pending, "la serie è ora tra quelle delle IA");
+    assert.deepEqual(getPendingGame(pending).hands, held, 'la partita in sospeso tiene le stesse mani');
+  }
+  assert.ok(found);
 });

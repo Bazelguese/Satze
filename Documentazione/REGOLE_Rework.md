@@ -337,6 +337,7 @@ In caso di VA identico:
 - **PV e FC** ripartono da 25 e 18 a ogni partita; i Campi di Battaglia vengono rigenerati a ogni partita.
 - **Primo giocatore:** sempre chi ha la Lega totale piu bassa in mano (parita: casuale).
 - **Pareggio:** una partita pareggiata non assegna vittorie; se dopo 3 partite la serie e pari si continua con altri spareggi a Deck rimischiato.
+- **Torneo online:** nella stanza multiplayer l'host sceglie la modalita "Torneo": fino a **4 giocatori**, gli altri posti sono IA. Ognuno gioca la propria serie in contemporanea (contro un'IA o contro un altro giocatore, in quel caso la partita parte quando entrambi lanciano la sfida). Il tabellone lo tiene l'host, che gioca anche le serie tra IA. Chi lascia viene sostituito da un'IA; se l'host chiude la stanza, ognuno prosegue il torneo in locale contro le IA.
 - **Serie tra IA:** vengono giocate davvero con le stesse regole (stesse mani, Campi, PV e FC), **senza Eminenze**. Dal tabellone si possono guardare sul tavolo, rileggere nel riepilogo a turni, oppure far concludere subito con "Concludi il turno".
 
 ---

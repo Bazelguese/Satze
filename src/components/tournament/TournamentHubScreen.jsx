@@ -128,7 +128,7 @@ function useParticipantVisuals(tournament) {
   }, [tournament.participants]);
 }
 
-function Side({ participant, visual, wins, state, showScore, fresh = null, order = 0 }) {
+function Side({ participant, visual, wins, state, showScore, fresh = null, order = 0, viewerId = null }) {
   const armies = visual?.armies || [];
   return (
     <div
@@ -140,13 +140,15 @@ function Side({ participant, visual, wins, state, showScore, fresh = null, order
         {armies.slice(0, 2).map((army) => (ARMY_ICONS[army] ? <img key={army} src={ARMY_ICONS[army]} alt="" /> : null))}
       </span>
       <span className="nm">{participant ? participant.deckName : 'Da definire'}</span>
-      {participant?.isHuman ? <span className="you">TU</span> : null}
+      {participant && participant.id === viewerId ? <span className="you">TU</span> : null}
+      {participant && participant.id !== viewerId && participant.isHuman ? <span className="you is-other">{participant.playerName || 'GIOCATORE'}</span> : null}
+      {participant?.takenOver ? <span className="you is-ai">IA</span> : null}
       {showScore ? <span className="sc">{wins}</span> : null}
     </div>
   );
 }
 
-function Match({ match, participants, visuals, current, selected, selectable, watchable, playing, champion, index, news, onSelect }) {
+function Match({ match, participants, visuals, current, selected, selectable, watchable, playing, champion, index, news, viewerId, onSelect }) {
   const a = match.a ? participants[match.a] : null;
   const b = match.b ? participants[match.b] : null;
   const done = Boolean(match.winnerId);
@@ -163,10 +165,10 @@ function Match({ match, participants, visuals, current, selected, selectable, wa
   const style = { '--i': index };
   const body = (
     <>
-      <Side participant={a} visual={visuals[match.a]} wins={match.series.winsA} state={match.bye ? 'open' : stateOf(match.a)} showScore={showScore} fresh={freshOf('a')} order={orderOf('a')} />
+      <Side participant={a} visual={visuals[match.a]} wins={match.series.winsA} state={match.bye ? 'open' : stateOf(match.a)} showScore={showScore} fresh={freshOf('a')} order={orderOf('a')} viewerId={viewerId} />
       {match.bye
         ? <div className="trn-bye">PASSA IL TURNO</div>
-        : <Side participant={b} visual={visuals[match.b]} wins={match.series.winsB} state={stateOf(match.b)} showScore={showScore} fresh={freshOf('b')} order={orderOf('b')} />}
+        : <Side participant={b} visual={visuals[match.b]} wins={match.series.winsB} state={stateOf(match.b)} showScore={showScore} fresh={freshOf('b')} order={orderOf('b')} viewerId={viewerId} />}
       {watchable && !playing ? <span className="trn-tag">DA GIOCARE</span> : null}
       {playing ? <span className="trn-tag is-live">IN CORSO</span> : null}
     </>
@@ -265,7 +267,7 @@ function SeriesSummary({ tournament, match, visuals, gameIndex, onGame, onWatch,
   );
 }
 
-export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, onConcludeRound, onMenu, onAbandon, onNewTournament }) {
+export function TournamentHubScreen({ tournament, busy = null, online = null, onPlay, onWatch, onConcludeRound, onMenu, onAbandon, onNewTournament }) {
   const status = getTournamentStatus(tournament);
   const info = describeHumanMatch(tournament);
   const visuals = useParticipantVisuals(tournament);
@@ -300,11 +302,24 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
   let hint;
   let primary;
   const secondary = [];
-  if (isHumanNext) {
+  const rivalName = info?.opponent.isHuman ? (info.opponent.playerName || 'un giocatore') : null;
+  if (isHumanNext && rivalName) {
+    // Online, contro un altro giocatore: la partita parte quando entrambi lanciano la sfida.
+    const waiting = online?.waiting === info.match.id;
+    label = `${info.roundName.toUpperCase()} · SERIE ${info.humanWins}–${info.opponentWins}`;
+    headline = `Contro ${rivalName} · ${info.opponent.deckName}`;
+    hint = waiting ? `Sfida lanciata: si parte quando anche ${rivalName} è pronto.` : `${HAND_RULE_TEXT[info.handRule]} Si parte quando siete pronti entrambi.`;
+    primary = waiting ? { label: `IN ATTESA DI ${rivalName.toUpperCase()}`, run: null, idle: true } : { label: `SFIDA · PARTITA ${info.gameNumber}`, run: onPlay };
+  } else if (isHumanNext) {
     label = `${info.roundName.toUpperCase()} · SERIE ${info.humanWins}–${info.opponentWins}`;
     headline = `Contro ${info.opponent.deckName}`;
     hint = HAND_RULE_TEXT[info.handRule];
-    primary = { label: `${info.resuming ? 'RIPRENDI' : 'GIOCA'} PARTITA ${info.gameNumber}`, run: onPlay };
+    primary = { label: `${info.resuming && !online ? 'RIPRENDI' : 'GIOCA'} PARTITA ${info.gameNumber}`, run: onPlay };
+  } else if (isAiPending && online) {
+    label = `${ROUND_NAMES[selected.round].toUpperCase()} · LE IA GIOCANO`;
+    headline = `${nameOf(selected.a)} – ${nameOf(selected.b)}`;
+    hint = "Le serie tra IA le gioca l'host: il risultato arriva sul tabellone.";
+    primary = info ? { label: 'TORNA AL TUO INCONTRO', run: () => setSelectedId(null) } : { label: 'IN ATTESA', run: null, idle: true };
   } else if (isAiPending) {
     label = `${ROUND_NAMES[selected.round].toUpperCase()} · DA GIOCARE`;
     headline = `${nameOf(selected.a)} – ${nameOf(selected.b)}`;
@@ -321,24 +336,30 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
     label = 'CAMPIONE';
     headline = 'Hai vinto il torneo';
     hint = human.deckName;
-    primary = { label: 'NUOVO TORNEO', run: onNewTournament };
+    primary = { label: online ? 'ESCI DAL TORNEO' : 'NUOVO TORNEO', run: onNewTournament };
   } else if (champion) {
     label = 'ELIMINATO';
     headline = `Il torneo va a ${champion.deckName}`;
     hint = 'Seleziona un incontro per leggerne il riepilogo o rivederlo.';
-    primary = { label: 'NUOVO TORNEO', run: onNewTournament };
+    primary = { label: online ? 'ESCI DAL TORNEO' : 'NUOVO TORNEO', run: onNewTournament };
   } else {
     label = status === 'eliminated' ? 'ELIMINATO' : 'IN ATTESA';
     headline = status === 'eliminated' ? 'Il torneo prosegue senza di te' : 'Il turno non è concluso';
     hint = 'Seleziona una serie da guardare, oppure concludi il turno.';
     primary = { label: 'CONCLUDI IL TURNO', run: onConcludeRound };
+    if (online) {
+      // online il turno avanza da solo quando tutte le serie sono chiuse
+      hint = 'Il turno avanza quando gli altri giocatori e le IA hanno finito le loro serie.';
+      primary = { label: 'IN ATTESA', run: null, idle: true };
+    }
   }
-  if (pendingAi.length > 0 && primary.label !== 'CONCLUDI IL TURNO') {
+  if (!online && pendingAi.length > 0 && primary.label !== 'CONCLUDI IL TURNO') {
     secondary.push({ label: `CONCLUDI ${ROUND_NAMES[pendingRound].toUpperCase()} · ${pendingNow}`, run: onConcludeRound });
   }
 
-  const locked = Boolean(busy);
-  if (busy) {
+  // online le IA giocano in sottofondo: il tabellone resta usabile
+  const locked = Boolean(busy) && !busy.soft;
+  if (busy && !busy.soft) {
     // mentre le IA giocano la barra racconta la serie in corso; il tabellone resta in vista
     const live = allMatches.find((m) => m.id === busy.matchId);
     label = `LE IA GIOCANO${busy.total ? ` · SERIE ${busy.step}/${busy.total}` : ''}`;
@@ -376,7 +397,7 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
       <header className="trn-top">
         <div className="trn-top-left">
           <button type="button" className="trn-back" onClick={back}>
-            <span>←</span> <span>MENÙ</span>
+            <span>←</span> <span>{online ? 'ESCI' : 'MENÙ'}</span>
           </button>
           {status === 'active' ? (
             <button type="button" className="trn-quit" onClick={() => { if (!locked) { playUiClick(); onAbandon?.(); } }}>
@@ -385,7 +406,7 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
           ) : null}
         </div>
         <div className="trn-title-block">
-          <div className="trn-eye">12 ESERCITI · ELIMINAZIONE DIRETTA · AL MEGLIO DELLE 3</div>
+          <div className="trn-eye">{online ? 'ONLINE · ' : ''}12 ESERCITI · ELIMINAZIONE DIRETTA · AL MEGLIO DELLE 3</div>
           <h1 className="trn-title">TORNEO</h1>
         </div>
         <div className="trn-who">
@@ -417,6 +438,7 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
                   match={match}
                   index={mi}
                   news={news}
+                  viewerId={tournament.humanId}
                   playing={busy?.matchId === match.id}
                   champion={Boolean(champion) && r === tournament.rounds.length - 1}
                   participants={tournament.participants}
@@ -447,7 +469,7 @@ export function TournamentHubScreen({ tournament, busy = null, onPlay, onWatch, 
             <span>{s.label}</span>
           </button>
         ))}
-        <button type="button" className="trn-go" onClick={go}>
+        <button type="button" className={`trn-go${primary.idle ? ' is-idle' : ''}`} onClick={go}>
           <span>{primary.label}</span><kbd>↵</kbd>
         </button>
       </footer>
@@ -624,15 +646,21 @@ function TournamentStyles() {
         background: var(--ink); color: var(--void); font-weight: 700; font-size: 10px; letter-spacing: 0.18em; padding: 2px 8px;
       }
       .trn-side {
-        display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
+        display: flex; align-items: center; gap: 10px;
         height: 34px; padding: 0 10px 0 8px; color: var(--ink);
         transform: skewX(-14deg);
       }
       .trn-side > * { transform: skewX(14deg); }
       .trn-side .ic { min-width: 26px; height: 26px; display: flex; align-items: center; gap: 2px; }
       .trn-side .ic img { width: 22px; height: 22px; object-fit: contain; }
-      .trn-side .nm { font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
-      .trn-side .you { background: var(--ink); color: var(--void); font-weight: 700; font-size: 11px; letter-spacing: 0.18em; padding: 1px 7px; }
+      .trn-side .ic, .trn-side .you, .trn-side .sc { flex: none; }
+      .trn-side .nm { flex: 1; min-width: 0; font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
+      .trn-side .you { background: var(--ink); color: var(--void); font-weight: 700; font-size: 11px; letter-spacing: 0.18em; padding: 1px 7px; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+      .trn-side .you.is-other { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+      .trn-side .you.is-ai { background: transparent; color: var(--dim); box-shadow: inset 0 0 0 1.5px var(--dim); }
+      .trn-side.is-won .you.is-other, .trn-side.is-won .you.is-ai { color: var(--void); box-shadow: inset 0 0 0 1.5px var(--void); }
+      .trn-go.is-idle { background: var(--plate); color: var(--dim); box-shadow: inset 0 0 0 2px rgba(245,243,235,0.3); cursor: default; font-size: 30px; }
+      .trn-go.is-idle kbd { display: none; }
       .trn-side .sc { min-width: 26px; text-align: center; font-weight: 700; font-style: italic; font-size: 22px; color: var(--dim); }
       .trn-side.is-empty .nm { color: rgba(245,243,235,0.32); font-family: 'Share Tech Mono', monospace; font-weight: 400; font-size: 13px; letter-spacing: 0.14em; }
       .trn-side.is-won { background: var(--c); }

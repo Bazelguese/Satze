@@ -73,13 +73,15 @@ export function seriesWinnerSide(series) {
  * giocano e 4 passano il turno; ogni Quarto oppone chi è passato a chi ha vinto.
  * @param {{ participants: object[], settings?: object, rng?: () => number }} cfg
  *   participants: 12 voci { id, name, army, deckKey, deckName, cardIds, isHuman }
+ *   In locale l'umano è uno; online possono essere di più. `humanId` è il punto di vista
+ *   di chi guarda il tabellone (il primo umano, finché non lo si cambia con `withViewer`).
  */
 export function createTournament({ participants, settings = {}, rng = Math.random }) {
   if (!Array.isArray(participants) || participants.length !== TOURNAMENT_SIZE) {
     throw new Error(`Il torneo richiede ${TOURNAMENT_SIZE} partecipanti.`);
   }
-  if (participants.filter((p) => p.isHuman).length !== 1) {
-    throw new Error('Il torneo richiede esattamente un giocatore umano.');
+  if (participants.filter((p) => p.isHuman).length < 1) {
+    throw new Error('Il torneo richiede almeno un giocatore umano.');
   }
   for (const p of participants) {
     if (!Array.isArray(p.cardIds) || p.cardIds.length !== TOURNAMENT_DECK_SIZE || new Set(p.cardIds).size !== TOURNAMENT_DECK_SIZE) {
@@ -127,14 +129,25 @@ function findMatch(tournament, matchId) {
   return null;
 }
 
+/** Incontro con almeno un partecipante guidato da una persona (non lo giocano le IA da sole). */
 function involvesHuman(tournament, match) {
+  return Boolean(tournament.participants[match.a]?.isHuman || tournament.participants[match.b]?.isHuman);
+}
+
+/** Incontro di chi guarda il tabellone. */
+function involvesViewer(tournament, match) {
   return match.a === tournament.humanId || match.b === tournament.humanId;
+}
+
+/** Lo stesso torneo dal punto di vista di un altro partecipante (tornei online). */
+export function withViewer(tournament, participantId) {
+  return { ...tournament, humanId: participantId };
 }
 
 /** Il giocatore è ancora in corsa finché non perde una serie. */
 export function isHumanEliminated(tournament) {
   return tournament.rounds.some((round) =>
-    round.some((m) => m.winnerId && involvesHuman(tournament, m) && m.winnerId !== tournament.humanId)
+    round.some((m) => m.winnerId && involvesViewer(tournament, m) && m.winnerId !== tournament.humanId)
   );
 }
 
@@ -215,10 +228,17 @@ export function recordAiSeries(tournament, matchId, games) {
 /** L'incontro che il giocatore deve giocare adesso, o null (eliminato / torneo finito). */
 export function getHumanMatch(tournament) {
   for (const round of tournament.rounds) {
-    const m = round.find((x) => !x.winnerId && x.a && x.b && involvesHuman(tournament, x));
+    const m = round.find((x) => !x.winnerId && x.a && x.b && involvesViewer(tournament, x));
     if (m) return m;
   }
   return null;
+}
+
+/** Incontri aperti in cui gioca almeno una persona (tornei online: possono essere più d'uno). */
+export function getOpenHumanMatches(tournament) {
+  return tournament.rounds.flatMap((round) =>
+    round.filter((m) => !m.winnerId && m.a && m.b && involvesHuman(tournament, m))
+  );
 }
 
 /** Lato ('a' | 'b') del giocatore in un incontro. */
@@ -232,39 +252,49 @@ export function getPendingGame(match) {
   return last && !last.winner ? last : null;
 }
 
-/**
- * Assegna le mani della prossima partita dell'incontro del giocatore. Idempotente: se una
- * partita è già in attesa di esito le sue mani restano quelle (anche dopo un abbandono o
- * un ricaricamento), così non si può ripescare.
- */
-export function prepareHumanGame(tournament, rng = Math.random) {
-  const next = clone(tournament);
-  const match = getHumanMatch(next);
-  if (!match) return next;
-  if (getPendingGame(match)) return next;
+function prepareInPlace(tournament, match, rng) {
+  if (!match || match.winnerId || getPendingGame(match)) return;
   const { games } = match.series;
   games.push({
     hands: {
-      a: dealSeriesHand(next.participants[match.a].cardIds, games.map((g) => g.hands.a), rng),
-      b: dealSeriesHand(next.participants[match.b].cardIds, games.map((g) => g.hands.b), rng),
+      a: dealSeriesHand(tournament.participants[match.a].cardIds, games.map((g) => g.hands.a), rng),
+      b: dealSeriesHand(tournament.participants[match.b].cardIds, games.map((g) => g.hands.b), rng),
     },
     winner: null,
   });
+}
+
+/**
+ * Assegna le mani della prossima partita di un incontro. Idempotente: se una partita è già
+ * in attesa di esito le sue mani restano quelle (anche dopo un abbandono o un
+ * ricaricamento), così non si può ripescare.
+ */
+export function prepareMatchGame(tournament, matchId, rng = Math.random) {
+  const next = clone(tournament);
+  prepareInPlace(next, findMatch(next, matchId), rng);
+  return next;
+}
+
+/** Come `prepareMatchGame`, per l'incontro di chi guarda il tabellone. */
+export function prepareHumanGame(tournament, rng = Math.random) {
+  const next = clone(tournament);
+  prepareInPlace(next, getHumanMatch(next), rng);
   return next;
 }
 
 /**
- * Registra l'esito della partita in attesa nell'incontro del giocatore.
- * @param {'human'|'opponent'|'draw'} outcome
+ * Registra l'esito della partita in attesa di un incontro.
+ * @param {'a'|'b'|'draw'} winner
+ * @param {number|null} [gameIndex] - se dato, l'esito vale solo per quella partita: un
+ *   doppione arrivato in ritardo (due client che riferiscono la stessa partita) viene ignorato
  */
-export function recordHumanGameResult(tournament, outcome, rng = Math.random) {
+export function recordMatchGameResult(tournament, matchId, winner, gameIndex = null) {
   const next = clone(tournament);
-  const match = getHumanMatch(next);
-  const game = match ? getPendingGame(match) : null;
+  const match = findMatch(next, matchId);
+  const game = match && !match.winnerId ? getPendingGame(match) : null;
   if (!game) return next;
-  const side = humanSide(next, match);
-  const other = side === 'a' ? 'b' : 'a';
-  game.winner = outcome === 'human' ? side : outcome === 'opponent' ? other : 'draw';
+  if (gameIndex != null && gameIndex !== match.series.games.length - 1) return next;
+  game.winner = winner === 'a' || winner === 'b' ? winner : 'draw';
   if (game.winner === 'a') match.series.winsA += 1;
   if (game.winner === 'b') match.series.winsB += 1;
   const winnerSide = seriesWinnerSide(match.series);
@@ -273,6 +303,32 @@ export function recordHumanGameResult(tournament, outcome, rng = Math.random) {
     match.winnerId = winnerSide === 'a' ? match.a : match.b;
   }
   return advanceInPlace(next);
+}
+
+/**
+ * Registra l'esito della partita in attesa nell'incontro di chi guarda il tabellone.
+ * @param {'human'|'opponent'|'draw'} outcome
+ */
+export function recordHumanGameResult(tournament, outcome) {
+  const match = getHumanMatch(tournament);
+  if (!match) return clone(tournament);
+  const side = humanSide(tournament, match);
+  const other = side === 'a' ? 'b' : 'a';
+  return recordMatchGameResult(tournament, match.id, outcome === 'human' ? side : outcome === 'opponent' ? other : 'draw');
+}
+
+/**
+ * Un giocatore lascia il torneo: il suo esercito passa a un'IA, che prosegue al suo posto.
+ * La partita che aveva in corso resta in attesa con le stesse mani.
+ */
+export function convertToAi(tournament, participantId) {
+  const next = clone(tournament);
+  const p = next.participants[participantId];
+  if (p?.isHuman) {
+    p.isHuman = false;
+    p.takenOver = true;
+  }
+  return next;
 }
 
 /** Stato del giocatore nel torneo. */

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { playAiGame } from './aiMatchEngine.js';
-import { createTournamentForPlayer, hasGameLog, playAiSeries, playPendingAiSeries, replaySavedAiGame, resolveTournamentCards } from './tournamentSetup.js';
-import { getPendingAiMatches } from './tournamentLogic.js';
+import {
+  buildTournamentOnlineMatch, createOnlineTournament, createTournamentForPlayer, detachToOffline, hasGameLog,
+  playAiSeries, playPendingAiSeries, replaySavedAiGame, resolveTournamentCards,
+} from './tournamentSetup.js';
+import { convertToAi, getMatch, getOpenHumanMatches, getPendingAiMatches, getPendingGame } from './tournamentLogic.js';
+import { normalizeOnlineMatchPayload } from '../../utils/onlineMatch.js';
 import { ARMY_DECKS } from '../../data/cards.js';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
 import { selectBattlefields } from '../fieldLogic.js';
@@ -88,5 +92,68 @@ describe('partita IA contro IA senza tavolo', () => {
     expect(new Set(progress).size).toBeGreaterThanOrEqual(3);
     const aiDone = t.rounds[0].filter((m) => !m.bye && m.a !== 'human' && m.b !== 'human');
     expect(aiDone.every((m) => m.winnerId)).toBe(true);
+  });
+});
+
+describe('torneo online', () => {
+  const humans = (n) => ['Kethran', 'Orathai', 'Apex', 'Khemet'].slice(0, n).map((army, slot) => ({
+    slot, name: `G${slot}`, army, deckKey: 'A', deckName: ARMY_DECKS[army].A.name, cardIds: ARMY_DECKS[army].A.cards,
+  }));
+
+  it('iscrive i giocatori della stanza, riempie con IA di altre armate e serve subito le mani', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const t = createOnlineTournament({ humans: humans(4), settings: { difficulty: 'easy', mode: 'classic' }, roomCode: 'ABC123', rng: mulberry32(seed) });
+      const all = Object.values(t.participants);
+      expect(all).toHaveLength(12);
+      expect(all.filter((p) => p.isHuman).map((p) => p.id).sort()).toEqual(['h0', 'h1', 'h2', 'h3']);
+      expect(new Set(all.map((p) => p.army)).size).toBe(12);
+      expect(t.online.roomCode).toBe('ABC123');
+      for (const match of getOpenHumanMatches(t)) expect(getPendingGame(match)).toBeTruthy();
+    }
+  });
+
+  it('la partita tra due giocatori usa le mani del torneo ed è leggibile dal Duello online', () => {
+    let done = false;
+    for (let seed = 1; seed <= 60 && !done; seed++) {
+      const t = createOnlineTournament({ humans: humans(4), settings: { difficulty: 'easy', mode: 'classic' }, roomCode: 'X', rng: mulberry32(seed) });
+      const match = getOpenHumanMatches(t).find((m) => t.participants[m.a].isHuman && t.participants[m.b].isHuman);
+      if (!match) continue;
+      done = true;
+      const game = getPendingGame(match);
+      const payload = normalizeOnlineMatchPayload(JSON.parse(JSON.stringify(buildTournamentOnlineMatch(t, match, 42))), ALL_BATTLEFIELDS);
+      expect(payload.hostPlayerHand.map((c) => c.id)).toEqual(game.hands.a);
+      expect(payload.hostEnemyHand.map((c) => c.id)).toEqual(game.hands.b);
+      expect(payload.battlefields).toHaveLength(5);
+      // le prime 5 carte dell'ordine di distribuzione sono la mano
+      expect(payload.hostPlayerFinalOrder.slice(0, 5).map((i) => payload.hostPlayerSet[i].id)).toEqual(game.hands.a);
+      expect(payload.hostEnemyFinalOrder.slice(0, 5).map((i) => payload.hostEnemySet[i].id)).toEqual(game.hands.b);
+      expect(new Set(payload.hostPlayerFinalOrder).size).toBe(10);
+    }
+    expect(done).toBe(true);
+  });
+
+  it("chi lascia: l'IA rigioca la partita sospesa con le stesse mani e chiude la serie", async () => {
+    let t = createOnlineTournament({ humans: humans(1), settings: { difficulty: 'easy', mode: 'classic' }, roomCode: 'X', rng: mulberry32(3) });
+    let match = getOpenHumanMatches(t)[0];
+    if (!match) {
+      t = await playPendingAiSeries(t, { rng: mulberry32(1) });
+      t = createOnlineTournament({ humans: humans(1), settings: { difficulty: 'easy', mode: 'classic' }, roomCode: 'X', rng: mulberry32(4) });
+      match = getOpenHumanMatches(t)[0];
+    }
+    if (!match) return; // il giocatore ha il passaggio diretto con entrambi i semi: niente da verificare qui
+    const held = getPendingGame(match).hands;
+    t = convertToAi(t, 'h0');
+    t = await playAiSeries(t, match.id, { rng: mulberry32(7) });
+    const saved = getMatch(t, match.id);
+    expect(saved.winnerId).toBeTruthy();
+    expect(saved.series.games[0].hands).toEqual(held);
+  });
+
+  it('stanza chiusa: il torneo passa in locale con le IA al posto degli altri', () => {
+    const t = createOnlineTournament({ humans: humans(3), settings: {}, roomCode: 'X', rng: mulberry32(2) });
+    const local = detachToOffline(t, 'h1');
+    expect(local.online).toBeUndefined();
+    expect(local.humanId).toBe('h1');
+    expect(Object.values(local.participants).filter((p) => p.isHuman).map((p) => p.id)).toEqual(['h1']);
   });
 });

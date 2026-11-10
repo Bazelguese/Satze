@@ -6,11 +6,17 @@ import { ARMY_SETS, ARMY_DECKS } from '../../data/cards.js';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
 import { selectBattlefields } from '../fieldLogic.js';
 import { playAiGame, playAiGameAsync } from './aiMatchEngine.js';
+import { mulberry32 } from '../../utils/seededRandom.js';
+import { serializeHandForRelay } from '../../utils/onlineMatch.js';
+import { pickDistinctCardBackPairSeeded } from '../../utils/cardBackPicker.js';
 import {
   createTournament,
   dealAiSeriesHands,
   getMatch,
+  getOpenHumanMatches,
   getPendingAiMatches,
+  getPendingGame,
+  prepareMatchGame,
   recordAiSeries,
   tallySeries,
   TOURNAMENT_SIZE,
@@ -78,6 +84,109 @@ export function createTournamentForPlayer({ playerArmy, playerDeckKey, playerDec
   return createTournament({ participants, settings, rng });
 }
 
+/**
+ * Torneo online: i giocatori della stanza con i loro eserciti bloccati, più le IA che
+ * servono per arrivare a 12 (un'armata per ciascuna, evitando quelle dei giocatori).
+ * @param {{ humans: Array<{ slot: number, name: string, army: string, deckKey: string, deckName: string, cardIds: number[] }>,
+ *   settings: object, roomCode: string, rng?: () => number }} cfg
+ */
+export function createOnlineTournament({ humans, settings, roomCode, rng = Math.random }) {
+  const taken = new Set(humans.map((h) => h.army));
+  const aiArmies = Object.keys(ARMY_DECKS).filter((a) => !taken.has(a));
+  while (aiArmies.length > TOURNAMENT_SIZE - humans.length) {
+    aiArmies.splice(Math.floor(rng() * aiArmies.length), 1);
+  }
+  if (aiArmies.length !== TOURNAMENT_SIZE - humans.length) {
+    throw new Error('Armate insufficienti per comporre il tabellone.');
+  }
+  const participants = [
+    ...humans.map((h) => ({
+      id: `h${h.slot}`,
+      name: h.name,
+      playerName: h.name,
+      slot: h.slot,
+      army: h.army,
+      deckKey: h.deckKey,
+      deckName: h.deckName,
+      cardIds: [...h.cardIds],
+      isHuman: true,
+    })),
+    ...aiArmies.map((army, i) => {
+      const deckKey = pickRandom(Object.keys(ARMY_DECKS[army]), rng);
+      const deck = ARMY_DECKS[army][deckKey];
+      return { id: `ai${i + 1}`, name: army, army, deckKey, deckName: deck.name, cardIds: [...deck.cards], isHuman: false };
+    }),
+  ];
+  const tournament = createTournament({ participants, settings, rng });
+  tournament.online = { roomCode };
+  return prepareOpenHumanGames(tournament, rng);
+}
+
+/** Online: ogni incontro aperto con una persona ha sempre la prossima partita già servita. */
+export function prepareOpenHumanGames(tournament, rng = Math.random) {
+  let current = tournament;
+  for (const match of getOpenHumanMatches(tournament)) {
+    if (!getPendingGame(match)) current = prepareMatchGame(current, match.id, rng);
+  }
+  return current;
+}
+
+/**
+ * La stanza si è chiusa: il torneo prosegue in locale, con le IA al posto degli altri giocatori.
+ */
+export function detachToOffline(tournament, myId) {
+  const next = JSON.parse(JSON.stringify(tournament));
+  delete next.online;
+  next.humanId = myId;
+  for (const p of Object.values(next.participants)) {
+    if (p.id !== myId && p.isHuman) { p.isHuman = false; p.takenOver = true; }
+  }
+  return next;
+}
+
+/**
+ * Partita online tra due giocatori del torneo, nel formato del Duello online: il lato 'a'
+ * dell'incontro è la prospettiva "host" del payload, il lato 'b' quella "guest".
+ * Le mani sono quelle già assegnate dal torneo; Campi e dorsi dal seme.
+ */
+export function buildTournamentOnlineMatch(tournament, match, seed) {
+  const game = getPendingGame(match);
+  if (!game) throw new Error('Nessuna partita in attesa per questo incontro.');
+  const rng = mulberry32(seed);
+  const mode = tournament.settings?.mode || 'classic';
+  const sides = ['a', 'b'].map((side) => {
+    const p = tournament.participants[match[side]];
+    const deck = resolveTournamentCards(p.cardIds);
+    const hand = resolveTournamentCards(game.hands[side]);
+    const handIdx = hand.map((c) => deck.findIndex((d) => d.id === c.id));
+    const rest = deck.map((_, i) => i).filter((i) => !handIdx.includes(i));
+    return { p, deck, hand, order: [...handIdx, ...rest] };
+  });
+  const battlefields = selectBattlefields(mode, ALL_BATTLEFIELDS, { rng });
+  const league = (hand) => hand.reduce((sum, c) => sum + c.league, 0);
+  const la = league(sides[0].hand);
+  const lb = league(sides[1].hand);
+  const { playerCardBack, enemyCardBack } = pickDistinctCardBackPairSeeded(rng);
+  return {
+    seed,
+    mode,
+    battlefields,
+    hostPlayerHand: sides[0].hand,
+    hostEnemyHand: sides[1].hand,
+    hostIsPlayerFirst: la < lb ? true : la > lb ? false : rng() < 0.5,
+    hostPlayerArmy: sides[0].p.army,
+    hostEnemyArmy: sides[1].p.army,
+    hostPlayerSet: serializeHandForRelay(sides[0].deck),
+    hostEnemySet: serializeHandForRelay(sides[1].deck),
+    hostPlayerFinalOrder: sides[0].order,
+    hostEnemyFinalOrder: sides[1].order,
+    playerCardBack,
+    enemyCardBack,
+    eminence: { format: tournament.settings?.eminenceFormat ?? null },
+    formatId: tournament.settings?.formatId,
+  };
+}
+
 /** Campi di una partita salvata: per id quando esistono nel catalogo, altrimenti per intero. */
 function packFields(fields) {
   return fields.map((f) => (ALL_BATTLEFIELDS.some((x) => x.id === f.id && x.name === f.name) ? f.id : f));
@@ -102,11 +211,15 @@ export async function playAiSeries(tournament, matchId, { rng = Math.random, onG
   if (!match || match.winnerId) return tournament;
   const mode = tournament.settings?.mode || 'classic';
   const difficulty = tournament.settings?.difficulty || 'medium';
-  const games = [];
+  // Una serie può arrivare qui già iniziata (un giocatore ha lasciato e l'IA è subentrata):
+  // le partite concluse restano, e quella rimasta in sospeso si rigioca con le stesse mani.
+  const games = match.series.games.filter((g) => g.winner);
+  let heldHands = getPendingGame(match)?.hands || null;
   while (!tallySeries(games).winner) {
     onGame?.(games.length + 1);
     await nextTick();
-    const hands = dealAiSeriesHands(tournament, match, games, rng);
+    const hands = heldHands || dealAiSeriesHands(tournament, match, games, rng);
+    heldHands = null;
     const battlefields = selectBattlefields(mode, ALL_BATTLEFIELDS, { rng });
     const game = await playAiGameAsync({
       handA: resolveTournamentCards(hands.a),
