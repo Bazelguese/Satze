@@ -71,6 +71,8 @@ export function DifficultySelectPopup({
   accentColor = MENU_ACCENTS.magenta,
   initialMode = 'classic',
   excludeArmy = null,
+  /** Torneo: solo formato e difficoltà (duello 1v1, avversari decisi dal tabellone). */
+  tournament = false,
 }) {
   const difficulties = getAllDifficulties();
   const allFormats = useMemo(() => Object.values(MATCH_FORMATS), []);
@@ -86,7 +88,7 @@ export function DifficultySelectPopup({
     initialMode !== 'classic' ? matchFormatIdFromMode(initialMode) : (MATCH_FORMATS[saved?.formatId]?.id ?? MATCH_FORMATS.standard.id)
   );
   const [enemyPick, setEnemyPick] = useState(() =>
-    saved?.enemyPick === ENEMY_PICK.chosen && armyOptions.includes(saved?.enemyArmy) ? ENEMY_PICK.chosen : ENEMY_PICK.random
+    tournament ? ENEMY_PICK.random : saved?.enemyPick === ENEMY_PICK.chosen && armyOptions.includes(saved?.enemyArmy) ? ENEMY_PICK.chosen : ENEMY_PICK.random
   );
   const [chosenEnemyArmy, setChosenEnemyArmy] = useState(() =>
     armyOptions.includes(saved?.enemyArmy) ? saved.enemyArmy : null
@@ -95,7 +97,7 @@ export function DifficultySelectPopup({
     difficulties.some((d) => d.id === saved?.difficulty) ? saved.difficulty : 'medium'
   );
   const [matchModeId, setMatchModeIdState] = useState(() =>
-    MATCH_MODES.some((m) => m.id === saved?.matchMode) ? saved.matchMode : 'duel'
+    tournament ? 'duel' : MATCH_MODES.some((m) => m.id === saved?.matchMode) ? saved.matchMode : 'duel'
   );
   // Compagno del 2v2: una personalità (un vecchio preset salvato si converte).
   const [teammatePreset, setTeammatePreset] = useState(() => teammateTraitFromChoice(saved?.teammatePreset));
@@ -117,6 +119,7 @@ export function DifficultySelectPopup({
 
   const canConfirm = isMultiSeat || enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
   const rowsFor = (pick, mode = live.current.matchMode) => {
+    if (tournament) return ['format', 'difficulty'];
     if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty', 'personality'];
     if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty', 'personality'];
     return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty', 'personality'];
@@ -162,7 +165,8 @@ export function DifficultySelectPopup({
     if (!canConfirm || leaving) return;
     const format = getMatchFormat(effectiveFormatId);
     const enemyArmy = !isMultiSeat && enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
-    writeSetup({
+    // Torneo: restano le preferenze della partita locale, cambiano solo formato e difficoltà.
+    writeSetup(tournament ? { ...saved, formatId: format.id, difficulty: difficultyId } : {
       formatId: format.id,
       enemyPick,
       enemyArmy: chosenEnemyArmy,
@@ -260,11 +264,11 @@ export function DifficultySelectPopup({
 
   return (
     <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : requestClose}>
-      <div className="mst-card" role="dialog" aria-modal="true" aria-label="Imposta la partita" onClick={(e) => e.stopPropagation()}>
+      <div className="mst-card" role="dialog" aria-modal="true" aria-label={tournament ? 'Imposta il torneo' : 'Imposta la partita'} onClick={(e) => e.stopPropagation()}>
         <div className="mst-sheet">
           <header className="mst-head">
-            <span className="mst-eye">PRIMA DEL DUELLO</span>
-            <h2>IMPOSTA LA PARTITA</h2>
+            <span className="mst-eye">{tournament ? '12 ARMATE · AL MEGLIO DELLE 3' : 'PRIMA DEL DUELLO'}</span>
+            <h2>{tournament ? 'IMPOSTA IL TORNEO' : 'IMPOSTA LA PARTITA'}</h2>
             <div className="mst-who">
               <span className="army">{armyName}</span>
               {deckName ? <span className="deck">{deckName}</span> : null}
@@ -275,6 +279,7 @@ export function DifficultySelectPopup({
           </header>
 
           <div className="mst-rows">
+            {!tournament && (
             <section {...focusProps('mode')}>
               <h3><span className="n">{rowNumber('mode')}</span>MODALITÀ</h3>
               <div className="mst-chips">
@@ -292,6 +297,7 @@ export function DifficultySelectPopup({
                 ))}
               </div>
             </section>
+            )}
 
             <section {...focusProps('format')}>
               <h3><span className="n">{rowNumber('format')}</span>FORMATO</h3>
@@ -361,7 +367,7 @@ export function DifficultySelectPopup({
               </section>
             )}
 
-            {!isMultiSeat && (
+            {!isMultiSeat && !tournament && (
             <section {...focusProps('enemy')}>
               <h3><span className="n">{rowNumber('enemy')}</span>NEMICO</h3>
               <div className="mst-chips">
@@ -432,6 +438,7 @@ export function DifficultySelectPopup({
               </div>
             </section>
 
+            {!tournament && (
               <section {...focusProps('personality')}>
                 <h3><span className="n">{rowNumber('personality')}</span>{isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ'}</h3>
                 <div className="mst-chips mst-stepper">
@@ -464,6 +471,7 @@ export function DifficultySelectPopup({
                   </button>
                 </div>
               </section>
+            )}
           </div>
 
           <footer className="mst-foot">
