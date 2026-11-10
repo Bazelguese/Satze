@@ -175,6 +175,51 @@ async function pickIndependentAsync(fieldContext, leanProfile, options, multiFie
   );
 }
 
+function candidateFromDecision(decision, fieldIndex, strategicRoot, profile, extra = {}) {
+  const fieldStrategy = evaluateFieldSelectionAdjustment(
+    strategicRoot,
+    fieldIndex,
+    decision.card,
+    profile
+  );
+  const baseScore = Number(decision.score) || 0;
+  return {
+    fieldIndex,
+    card: decision.card,
+    cardId: decision.cardId,
+    focus: decision.focus,
+    score: baseScore + fieldStrategy.score,
+    baseScore,
+    fieldStrategy,
+    debug: decision.debug,
+    decision,
+    ...extra,
+  };
+}
+
+/**
+ * Quanti Campi ricalcolare con il profilo completo (ricerca compresa) dopo la passata ridotta.
+ * 0 = solo passata ridotta (comportamento storico).
+ */
+function refineCount(profile, multiField, candidates) {
+  if (!multiField) return 0;
+  const k = Number(profile.jointRefineFields) || 0;
+  return Math.min(k, candidates.length);
+}
+
+/** I Campi migliori della passata ridotta, da ricalcolare con il profilo completo. */
+function topForRefine(candidates, k) {
+  return [...candidates].sort((a, b) => b.score - a.score).slice(0, k);
+}
+
+function fieldContextFor(context, fieldIndex) {
+  return {
+    ...context,
+    currentFieldIndex: fieldIndex,
+    field: context.battlefields[fieldIndex],
+  };
+}
+
 function buildJointCandidatesSync(context, profile, options) {
   const legalFields = resolveJointFieldIndexes(context, profile);
   if (!legalFields.length) {
@@ -186,37 +231,38 @@ function buildJointCandidatesSync(context, profile, options) {
   const candidates = [];
 
   for (const fieldIndex of legalFields) {
-    const fieldContext = {
-      ...context,
-      currentFieldIndex: fieldIndex,
-      field: context.battlefields[fieldIndex],
-    };
     const leanProfile = leanProfileForJoint(profile, multiField);
-    const decision = pickIndependentSync(fieldContext, leanProfile, options, multiField);
-    if (!decision?.card) continue;
-
-    const fieldStrategy = evaluateFieldSelectionAdjustment(
-      strategicRoot,
-      fieldIndex,
-      decision.card,
-      profile
+    const decision = pickIndependentSync(
+      fieldContextFor(context, fieldIndex),
+      leanProfile,
+      options,
+      multiField
     );
-    const baseScore = Number(decision.score) || 0;
-
-    candidates.push({
-      fieldIndex,
-      card: decision.card,
-      cardId: decision.cardId,
-      focus: decision.focus,
-      score: baseScore + fieldStrategy.score,
-      baseScore,
-      fieldStrategy,
-      debug: decision.debug,
-      decision,
-    });
+    if (!decision?.card) continue;
+    candidates.push(candidateFromDecision(decision, fieldIndex, strategicRoot, profile));
   }
 
-  return { emptyLegal: false, candidates };
+  const k = refineCount(profile, multiField, candidates);
+  if (k <= 0) return { emptyLegal: false, candidates };
+
+  // Seconda passata: profilo completo sui Campi migliori. Si sceglie solo fra questi,
+  // perché i punteggi con e senza ricerca non sono confrontabili.
+  const refined = [];
+  for (const lean of topForRefine(candidates, k)) {
+    const decision = pickIndependentSync(
+      fieldContextFor(context, lean.fieldIndex),
+      leanProfileForJoint(profile, false),
+      options,
+      false
+    );
+    if (!decision?.card) continue;
+    refined.push(
+      candidateFromDecision(decision, lean.fieldIndex, strategicRoot, profile, {
+        leanScore: lean.score,
+      })
+    );
+  }
+  return { emptyLegal: false, candidates: refined.length ? refined : candidates };
 }
 
 async function buildJointCandidatesAsync(context, profile, options) {
@@ -230,42 +276,36 @@ async function buildJointCandidatesAsync(context, profile, options) {
   const candidates = [];
 
   for (const fieldIndex of legalFields) {
-    const fieldContext = {
-      ...context,
-      currentFieldIndex: fieldIndex,
-      field: context.battlefields[fieldIndex],
-    };
     const leanProfile = leanProfileForJoint(profile, multiField);
     const decision = await pickIndependentAsync(
-      fieldContext,
+      fieldContextFor(context, fieldIndex),
       leanProfile,
       options,
       multiField
     );
     if (!decision?.card) continue;
-
-    const fieldStrategy = evaluateFieldSelectionAdjustment(
-      strategicRoot,
-      fieldIndex,
-      decision.card,
-      profile
-    );
-    const baseScore = Number(decision.score) || 0;
-
-    candidates.push({
-      fieldIndex,
-      card: decision.card,
-      cardId: decision.cardId,
-      focus: decision.focus,
-      score: baseScore + fieldStrategy.score,
-      baseScore,
-      fieldStrategy,
-      debug: decision.debug,
-      decision,
-    });
+    candidates.push(candidateFromDecision(decision, fieldIndex, strategicRoot, profile));
   }
 
-  return { emptyLegal: false, candidates };
+  const k = refineCount(profile, multiField, candidates);
+  if (k <= 0) return { emptyLegal: false, candidates };
+
+  const refined = [];
+  for (const lean of topForRefine(candidates, k)) {
+    const decision = await pickIndependentAsync(
+      fieldContextFor(context, lean.fieldIndex),
+      leanProfileForJoint(profile, false),
+      options,
+      false
+    );
+    if (!decision?.card) continue;
+    refined.push(
+      candidateFromDecision(decision, lean.fieldIndex, strategicRoot, profile, {
+        leanScore: lean.score,
+      })
+    );
+  }
+  return { emptyLegal: false, candidates: refined.length ? refined : candidates };
 }
 
 /**
