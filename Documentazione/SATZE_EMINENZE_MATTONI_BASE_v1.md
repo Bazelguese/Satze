@@ -576,3 +576,31 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Innesto nel Bonus: usare l'override del Bonus (come Ratti Spezzacuore).
 - Innesto nel Potere e Opera Composita: usare la composizione da Frammenti (`src/game/eminence/composeAbilityParams.js`).
 - Condizioni di selezionabilità: almeno 1 / 2 Frammenti.
+
+### 10.4 Corte Rossa — Sanguinaccio, il Registro (approvata)
+
+**Presenza iniziale:** 0 (era 1). **Eccezione allo schema:** tutte le abilità sono Offerte; 4 attive, nessuna a −2.
+
+**Regola di design aggiunta alla scala (vale per tutte le Eminenze):** una ricarica (+1) non può infliggere danni all'avversario. Un danno che si ripete e a cui l'avversario non può opporsi va prezzato sull'accumulo, non sul singolo uso.
+
+**Statico — Il Registro**
+> Ogni abilità della Corte è un'Offerta all'avversario. L'Offerta viene rivelata dopo la scelta degli Agenti e prima della scelta degli FC, e l'avversario la accetta o la rifiuta. Se ha rifiutato l'Offerta del round precedente, deve accettare. Quando l'avversario accetta un'Offerta, +1 Presenza.
+> I PV che l'avversario deve pagare alla Fine dello Scontro sono scritti nel suo Registro, una voce per ogni Offerta, e si pagano prima di determinare il vincitore.
+
+| Slot | Nome | Offerta | Budget | Stima (se accettata) |
+|---|---|---|---|---|
+| +1 | Prestito | «Il tuo Agente riceve 2 FC temporanei in questo Duello; alla Fine dello Scontro perdi 2 PV.» | −0.75 | circa −0.55 ✅ |
+| 0 | Rinforzo | «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.» | 0 | circa +0.35 ✅ |
+| −1 | Debito | «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.» | 0.75 | circa 0.85 ✅ 〰️ |
+| −3 | Interessi | «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.» | 2.25 | 1.45 / 2.15 / 2.85 con 1 / 2 / 3 voci ✅ 〰️ |
+
+**Glossario (da aggiungere a `GLOSSARIO.md`) — Debito X:** il Potere si attiva senza bisogno del trigger; quando si attiva, chi lo controlla perde X PV. Se il Potere è bloccato, non si attiva e non si paga.
+
+**Motore:** circa 3.5 firme a Scontro → circa 2.6 FC.
+
+**Lavoro di implementazione:**
+- Nuovo momento di reveal tra il blocco degli Agenti e quello degli FC.
+- Offerta accetta/rifiuta con blocco del secondo rifiuto consecutivo.
+- Parola chiave Debito X.
+- Registro: voci di debito di Fine Scontro, pagate prima della determinazione del vincitore.
+- Interfaccia: Registro visibile a entrambi (voci e totale) e indicatore "rifiuto disponibile".
