@@ -123,7 +123,7 @@ function clampFocus(state, side, focus) {
   return Math.max(1, Math.min(Math.max(1, maxFocus), Number(focus) || 1));
 }
 
-function sanitizeChoice(state, side, choice, { needsField }) {
+export function sanitizeChoice(state, side, choice, { needsField }) {
   const cards = availableCards(state, side);
   const fields = legalFieldIndexes(state);
   const fixes = [];
@@ -176,7 +176,7 @@ export function resolveMatchEnd(state, roundJustPlayed) {
   return null;
 }
 
-function applyRoundOutcome(state, battleResult, fieldIndex, playerCard, enemyCard) {
+export function applyRoundOutcome(state, battleResult, fieldIndex, playerCard, enemyCard) {
   let playerHP = battleResult.finalPlayerHP;
   let enemyHP = battleResult.finalEnemyHP;
   let playerToxin = battleResult.playerToxinActivated || state.playerToxin;
@@ -228,7 +228,7 @@ function now() {
  * @param {{ card: object, focus: number }} playerPick
  * @param {{ card: object, focus: number }} enemyPick
  */
-export function resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick) {
+export function resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick, extra = {}) {
   const { battleResult } = computeDuelResolution({
     field: state.battlefields[fieldIndex],
     campaign: null,
@@ -253,6 +253,8 @@ export function resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick) {
     playerHand: state.playerHand,
     enemyHand: state.enemyHand,
     currentFieldIndex: fieldIndex,
+    // Eminenze (headlessEminenceMatch.js): bundle del Duello, snapshot Presenza, ecc.
+    ...extra,
   });
   return battleResult;
 }
