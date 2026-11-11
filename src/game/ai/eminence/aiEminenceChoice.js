@@ -208,9 +208,10 @@ function terraBruciataValue(info) {
  * Valore in FC di un'abilità in questo Duello.
  * @param {string} abilityId
  * @param {object} info - da buildEminenceDecisionInfo
- * @param {{ duelsLeft: number, spent: number }} extra - Duelli rimasti; Presenza spesa
+ * @param {{ duelsLeft: number, spent: number, future: boolean }} extra - Duelli rimasti; Presenza
+ *   spesa; future: stima per un Duello futuro (i bersagli che mancano oggi possono arrivare)
  */
-export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spent = 0 } = {}) {
+export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spent = 0, future = false } = {}) {
   const strongestOpp = Math.max(0, ...info.oppCards.map(cardStrength));
   const avgOpp = average(info.oppCards.map(cardStrength)) || 1;
   const avgOwn = average(info.ownCards.map(cardStrength)) || 1;
@@ -234,8 +235,13 @@ export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spen
     // Kethran
     case 'kethran_sacrificio': return hpLossValue(info, 2, 2);
     case 'kethran_elogio': return 0.5;
-    case 'kethran_innesto': return fragments >= 1 ? 1.2 : 0;
-    case 'kethran_opera_composita': return fragments >= 2 ? 2.25 : 0;
+    // Frammenti: si ottengono perdendo Duelli (o con Elogio). In un Duello futuro possono esserci.
+    case 'kethran_innesto':
+      if (fragments >= 1) return 1.2;
+      return future ? 0.6 : 0;
+    case 'kethran_opera_composita':
+      if (fragments >= 2) return 2.25;
+      return future ? (fragments === 1 ? 1.1 : 0.5) : 0;
     // Mounthborn
     case 'mounthborn_fame_ricarica': {
       const prey = new Set(list(info.own.persistent?.preyCardIds));
@@ -278,7 +284,7 @@ export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spen
       return info.oppCards.length <= 1 ? 0 : 0.75 * clamp(strongestOpp / avgOpp, 0.8, 1.4);
     case 'ratti_vendetta': {
       const defeated = info.ownHand.filter((card) => list(info.own.persistent?.defeatedCardIds).includes(card.id));
-      if (!defeated.length) return 0;
+      if (!defeated.length) return future ? 1.0 : 0;
       return 2.0 * clamp(Math.max(...defeated.map(cardStrength)) / avgOwn, 0.5, 1.4);
     }
     // Enclave
@@ -321,7 +327,7 @@ function createFuturePlanner(info, abilities, persistent) {
     for (const ability of abilities) {
       const delta = resolveAbilityPresenceDelta(ability, persistent, p);
       if (delta < 0 && p < Math.abs(delta)) continue;
-      const value = abilityValue(ability.id, info, { duelsLeft: duels, spent: Math.max(0, -delta) });
+      const value = abilityValue(ability.id, info, { duelsLeft: duels, spent: Math.max(0, -delta), future: true });
       const q = value + FUTURE_DISCOUNT * expectNext(p + delta, duels - 1);
       if (q > best) best = q;
     }
@@ -416,12 +422,9 @@ export function rankAiEminenceAbilities(matchState, side, { game = {}, paramCont
     if (ability.paramsSchema && !schemaTargetsAvailable(resolved, ability.paramsSchema)) continue;
     playable.push({ ability, resolved });
   }
-  // Per i Duelli futuri: tutte le abilità del catalogo con bersagli oggi disponibili.
-  const futureAbilities = eminence.abilities.filter((ability) => {
-    if (!ability.paramsSchema) return true;
-    const resolved = resolveParamsSchema(ability.paramsSchema, state.persistent, sideContext);
-    return schemaTargetsAvailable(resolved, ability.paramsSchema);
-  });
+  // Per i Duelli futuri: tutte le abilità del catalogo. Quelle con bersagli che oggi mancano
+  // (Frammenti, Agenti sconfitti) valgono meno: abilityValue con future = true.
+  const futureAbilities = eminence.abilities;
   const planner = createFuturePlanner(info, futureAbilities, state.persistent);
 
   return playable
