@@ -9,6 +9,7 @@
 import { chooseMonteCarloAction } from './mcSearch.js';
 import { getMcProfile } from './mcProfiles.js';
 import { mulberry32 } from '../../../utils/seededRandom.js';
+import { constrainedDeployableCardIds } from '../../eminence/eminenceState.js';
 
 const MC_MODES = new Set(['classic', 'bareHands']);
 const MC_DIFFICULTIES = new Set(['easy', 'medium', 'hard', 'chaos']);
@@ -70,6 +71,14 @@ export function buildMcViewFromGameState(gameState) {
 
     campaignDuelMod: null,
     eminenceState: null,
+    // Le Eminenze non si simulano, ma i vincoli di schieramento del Duello corrente
+    // (Agente imposto, vietato o riusabile) restano regole: null = nessun vincolo.
+    enemyDeployableCardIds: constrainedDeployableCardIds(
+      gameState.eminenceState ?? gameState.eminenceMatchState ?? null,
+      'enemy',
+      list(gameState.enemyHand),
+      list(gameState.enemyUsedCards),
+    ),
   };
 }
 

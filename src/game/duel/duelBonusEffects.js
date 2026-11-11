@@ -106,7 +106,8 @@ export function createApplyBonusEffects({
     }
 
     const applyBonusEffect = (eff) => {
-      const isOwnEffect = ['power', 'damage', 'assaultValue', 'focusCoin', 'heal', 'immune', 'powerAndDamage'].includes(
+      // Attrizione ed Escalation scalano statistiche proprie: sono effetti sul proprio Agente.
+      const isOwnEffect = ['power', 'damage', 'assaultValue', 'focusCoin', 'heal', 'immune', 'powerAndDamage', 'attrition', 'escalation'].includes(
         eff.effect
       );
       const isEnemyEffect = ['enemyPower', 'enemyDamage', 'enemyAssault'].includes(eff.effect);
@@ -121,6 +122,7 @@ export function createApplyBonusEffects({
         minPower: eff.minPower,
         minAssault: eff.minAssault,
         minHealth: eff.minHealth,
+        stat: eff.stat,
         sourceKind: 'bonus',
         ownerSide: target,
         ...fieldOptions,

@@ -27,9 +27,13 @@ import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { commitEminenceSetupChoice } from './eminenceDuelGate.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { EMINENCE_FORMAT, SIDES } from './eminenceConstants.js';
+import { installLegacyApexEminence, installSyntheticCostsEminence, installSyntheticTargetsEminence } from './testing/eminenceTestSupport.js';
 import { inkOn, formatPresenceDelta, relativeLuminance } from '../../components/eminence/eminenceUi.js';
 
-function match(player = 'apex_sole_verde', enemy = 'patto_grande_semaforo') {
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
+
+function match(player = LEGACY_APEX, enemy = 'patto_grande_semaforo') {
   return beginEminenceRound(
     createEminenceMatchState({
       format: EMINENCE_FORMAT.REQUIRED,
@@ -90,23 +94,26 @@ test('vista: due scelte segrete diverse producono la stessa proiezione avversari
   assert.equal(viewA.opponent.hasSealedSelection, true);
 });
 
-test('giallo a segmenti vuoti resta un\'opzione implementata', () => {
-  const view = buildEminenceChoiceView(match('patto_grande_semaforo', 'apex_sole_verde'), SIDES.PLAYER);
+test('Patto a 0 Presenza: Verde è l\'unica opzione selezionabile', () => {
+  const view = buildEminenceChoiceView(match('patto_grande_semaforo', LEGACY_APEX), SIDES.PLAYER);
+  const green = view.self.options.find((o) => o.id === 'semaforo_verde');
+  assert.equal(green.implemented, true);
+  assert.equal(green.selectable, true);
   const yellow = view.self.options.find((o) => o.id === 'semaforo_giallo');
-  assert.equal(yellow.implemented, true);
-  assert.equal(yellow.selectable, true);
+  assert.equal(yellow.selectable, false);
+  assert.equal(yellow.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
 });
 
 test('vista: il costo mostrato segue i delta persistenti', () => {
-  const opened = match('calibri_quattro_fronti', 'patto_grande_semaforo');
-  opened.player.persistent.abilityPresenceDeltas = { calibri_guerra_attrito: -2 };
+  const opened = match(installSyntheticCostsEminence(), 'patto_grande_semaforo');
+  opened.player.persistent.abilityPresenceDeltas = { test_rincaro: -2 };
   opened.player.selectionCheckpointPresence = 1;
   const view = buildEminenceChoiceView(opened, SIDES.PLAYER);
-  const guerra = view.self.options.find((o) => o.id === 'calibri_guerra_attrito');
-  assert.equal(guerra.presenceDelta, -2);
-  assert.equal(guerra.presenceCost, 2);
-  assert.equal(guerra.selectable, false);
-  assert.equal(guerra.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
+  const rincaro = view.self.options.find((o) => o.id === 'test_rincaro');
+  assert.equal(rincaro.presenceDelta, -2);
+  assert.equal(rincaro.presenceCost, 2);
+  assert.equal(rincaro.selectable, false);
+  assert.equal(rincaro.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
 });
 
 test('vista: lo schema AT_SELECTION è pubblico, il valore scelto no', () => {
@@ -132,11 +139,14 @@ test('vista: i Frammenti pubblici diventano opzioni di parametro', () => {
   const innesto = view.self.options.find((o) => o.id === 'kethran_innesto');
   const elogio = view.self.options.find((o) => o.id === 'kethran_elogio');
   assert.equal(innesto.implemented, true);
-  assert.deepEqual(innesto.paramsSchema.fragmentCardId, [101, 116]);
+  // Ogni Frammento è innestabile, anche senza trigger: il suo Potere si attiva sempre.
+  assert.deepEqual(innesto.paramsSchema.fragmentCardId, [101, 116, 106]);
+  assert.deepEqual(innesto.paramsSchema.graftInto, ['power', 'bonus']);
   assert.equal(innesto.paramsSchema.__limits, undefined);
   assert.equal(elogio.paramsSchema, null);
   assert.equal(selectionParamsReady(innesto.paramsSchema, {}), false);
-  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), true);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), false);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101, graftInto: 'bonus' }), true);
   assert.equal(selectionParamsReady({ fragmentCardId: [] }, {}), false);
   assert.equal(selectionParamsReady({ preyCardId: [] }, {}), false);
 });
@@ -179,8 +189,9 @@ test('rail: sotto l\'ultima losanga scendono solo i Frammenti', () => {
   assert.equal(abilityRailExpandsDown({ slot: [0, 1, 2] }, { isLastOption: true }), false);
 });
 
-test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o confermati', () => {
-  const view = buildEminenceChoiceView(match('corte_rossa', 'patto_grande_semaforo'), SIDES.PLAYER, {
+test('vista: i bersagli Agente materializzano non schierati o confermati', () => {
+  const synthetic = installSyntheticTargetsEminence();
+  const view = buildEminenceChoiceView(match(synthetic, 'patto_grande_semaforo'), SIDES.PLAYER, {
     ownUndeployedCardIds: [201],
     enemyUndeployedCardIds: [301, 302],
     confirmedAgents: [
@@ -188,11 +199,11 @@ test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o conf
       { id: 301, side: SIDES.ENEMY, label: 'Avversario' },
     ],
   });
-  const clausola = view.self.options.find((o) => o.id === 'corte_debito');
-  const eterno = view.self.options.find((o) => o.id === 'corte_brutto_affare');
-  assert.deepEqual(clausola.paramsSchema.cardId, [201, 301, 302]);
-  assert.deepEqual(eterno.paramsSchema.cardId, [201, 301]);
-  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'corte_debito' }), [201, 301, 302]);
+  const undeployed = view.self.options.find((o) => o.id === 'test_non_schierato');
+  const confirmed = view.self.options.find((o) => o.id === 'test_confermato');
+  assert.deepEqual(undeployed.paramsSchema.cardId, [201, 301, 302]);
+  assert.deepEqual(confirmed.paramsSchema.cardId, [201, 301]);
+  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'test_non_schierato' }), [201, 301, 302]);
   assert.equal(view.paramMeta.cardId[201].side, SIDES.PLAYER);
   assert.equal(view.paramMeta.cardId[301].side, SIDES.ENEMY);
 });
@@ -335,7 +346,7 @@ test('vista tavolo: il peek non ritarda la comparsa e dopo il lock si può riapr
   const both = selectEminenceAbility(
     selectEminenceAbility(match(), SIDES.PLAYER, 'apex_disprezzo').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const done = buildEminenceChoiceView(both, SIDES.PLAYER);
   const afterLock = shouldShowEminenceLayer(done, { gamePhase: 'selectField' });
@@ -362,7 +373,7 @@ test('rail: dopo un avviso non torna da sola se la scelta è già sigillata', ()
   const both = selectEminenceAbility(
     selectEminenceAbility(match(), SIDES.PLAYER, 'apex_disprezzo').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const locked = buildEminenceChoiceView(both, SIDES.PLAYER);
   assert.equal(isAwaitingEminenceChoice(locked), false);
@@ -426,15 +437,14 @@ test('hold: il tendone R5 e il round non aperto bloccano Campo e Agenti', () => 
 test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', () => {
   const base = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
-    playerEminenceId: 'corte_rossa',
+    playerEminenceId: installSyntheticTargetsEminence(),
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  base.player.presence = 4;
   const opened = beginEminenceRound(base, { roundNumber: 1 });
   const sealed = selectEminenceAbility(
-    selectEminenceAbility(opened, SIDES.PLAYER, 'corte_brutto_affare').matchState,
+    selectEminenceAbility(opened, SIDES.PLAYER, 'test_confermato').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const beforeAgents = buildEminenceChoiceView(sealed, SIDES.PLAYER);
   assert.equal(isAwaitingRevealParams(beforeAgents), false);
@@ -475,7 +485,7 @@ test('tabellone: dopo params slot pronti i click non restano in modalità Maledi
   const sealed = selectEminenceAbility(
     selectEminenceAbility(opened, SIDES.PLAYER, 'khemet_maledizione_va').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
 
   const awaiting = buildEminenceChoiceView(sealed, SIDES.PLAYER, { slotCount: 5 });

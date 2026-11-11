@@ -4,7 +4,7 @@
     "name": "Rosso",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
+    "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -29,11 +29,11 @@
     "legalAbilities": [
       {
         "id": "semaforo_verde",
-        "presenceDelta": 1
+        "presenceDelta": 0
       },
       {
         "id": "semaforo_giallo",
-        "presenceDelta": 0
+        "presenceDelta": -2
       },
       {
         "id": "semaforo_rosso",
@@ -94,7 +94,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
+      "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori."
     }
   ],
   "scenario": {
@@ -200,7 +200,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round."
+          "text": "Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori."
         }
       ],
       "presence": {

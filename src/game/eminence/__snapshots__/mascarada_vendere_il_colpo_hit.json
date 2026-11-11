@@ -1,0 +1,344 @@
+{
+  "ability": {
+    "id": "mascarada_vendere_il_colpo",
+    "name": "Vendere il Colpo",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      3
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
+      {
+        "id": "mascarada_scommessa",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "mascarada_vendere_il_colpo"
+  },
+  "eminence": {
+    "army": "Mascarada",
+    "id": "mascarada_organizzatore",
+    "name": "L'Organizzatore degli Incontri"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
+      "kind": "reveal",
+      "name": "Vendere il Colpo",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "slot": null,
+          "target": "ENEMY_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
+    },
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Organizzazione Impeccabile",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "mascarada_vendere_il_colpo_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "enemy",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "enemy",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
+          "kind": "reveal",
+          "name": "Vendere il Colpo",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "GRANT_TEMPORARY_FOCUS",
+              "slot": null,
+              "target": "ENEMY_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Organizzazione Impeccabile",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "GRANT_TEMPORARY_FOCUS",
+          "source": "ability",
+          "sourceId": "mascarada_vendere_il_colpo",
+          "sourceName": "Vendere il Colpo",
+          "target": "ENEMY_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

@@ -98,6 +98,8 @@ export function createDuelCombatState(duel, fieldStatDeltas = null, slotCurseSta
     enemyToxinActivated: null,
     pModifierInversion: false,
     eModifierInversion: false,
+    // Maledizione Inversa sullo slot: tutti i modificatori di POT, DAN e VA si invertono.
+    fullStatInversion: Boolean(duel.fullStatInversion),
     fieldStatDeltas,
     slotCurseStatDeltas,
   });

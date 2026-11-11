@@ -1,0 +1,335 @@
+{
+  "ability": {
+    "id": "ratti_vendetta",
+    "name": "Vendetta oltre la Morte",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "ratti_corteggiamento",
+        "presenceDelta": 1
+      },
+      {
+        "id": "ratti_seduzione",
+        "presenceDelta": -1
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "ratti_vendetta"
+  },
+  "eminence": {
+    "army": "Ratti della Megera",
+    "id": "ratti_bella_malelabbra",
+    "name": "Bella Malelabbra"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:ratti_vendetta:GENERAL",
+      "kind": "reveal",
+      "name": "Vendetta oltre la Morte",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "CONSTRAIN_DEPLOY",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
+    },
+    {
+      "badgeText": "Risoluzione · Prima dei trigger",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
+      "kind": "effect",
+      "name": "Male Crescente",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Prima dei trigger",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Lega effettiva più bassa: +1 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "ratti_vendetta_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:ratti_vendetta:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:ratti_vendetta:GENERAL",
+          "kind": "reveal",
+          "name": "Vendetta oltre la Morte",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "CONSTRAIN_DEPLOY",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Prima dei trigger",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Prima dei trigger",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
+          "kind": "effect",
+          "name": "Male Crescente",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Prima dei trigger",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Lega effettiva più bassa: +1 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownDeployedIsLowestLeague: (assente) → non ancora valutabile",
+            "keys": [
+              "ownDeployedIsLowestLeague"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "ratti_male_crescente",
+          "sourceName": "Male Crescente",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "CONSTRAIN_DEPLOY",
+          "source": "ability",
+          "sourceId": "ratti_vendetta",
+          "sourceName": "Vendetta oltre la Morte",
+          "target": "SELF",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

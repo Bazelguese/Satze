@@ -3,7 +3,7 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "apex_sole_verde",
-    "presence": 3,
+    "presence": 2,
     "abilityId": "apex_disprezzo",
     "params": null,
     "agent": {

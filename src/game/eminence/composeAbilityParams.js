@@ -85,6 +85,11 @@ function cardOf(id) {
   return ALL_AGENTS.find((agent) => agent.id === id) || null;
 }
 
+/** Potere stampato di una carta del catalogo, o null. */
+export function cardAbilityOf(id) {
+  return cardOf(id)?.ability ?? null;
+}
+
 function assignComposeRoles(ids) {
   const cards = ids.map(cardOf).filter(Boolean);
   if (cards.length === 0) return { triggerCard: null, effectCard: null };

@@ -2,9 +2,9 @@
   "ability": {
     "id": "semaforo_verde",
     "name": "Verde",
-    "presenceDelta": 1,
+    "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Tutti i trigger seguono le condizioni normali."
+    "text": "Se in questo Duello un Agente attiva un Potere o un Bonus con trigger Turbo o Intervento, +1 Presenza (una sola volta per Duello)."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -29,17 +29,13 @@
     "legalAbilities": [
       {
         "id": "semaforo_verde",
-        "presenceDelta": 1
-      },
-      {
-        "id": "semaforo_giallo",
         "presenceDelta": 0
       }
     ],
-    "presenceAfterReveal": 1,
+    "presenceAfterReveal": 0,
     "presenceAfterSelect": 0,
     "presenceAvailable": 0,
-    "presenceDelta": 1,
+    "presenceDelta": 0,
     "selected": "semaforo_verde"
   },
   "eminence": {
@@ -49,7 +45,7 @@
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima del Duello",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -57,26 +53,32 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": true,
-          "recipe": "REVEAL_OPEN",
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
           "to": {
             "side": "player",
-            "type": "announce"
+            "type": "presence"
           },
           "waitFor": null
         }
       ],
-      "id": "reveal:player:semaforo_verde:GENERAL",
-      "kind": "reveal",
+      "id": "effect:player:semaforo_verde:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
       "name": "Verde",
-      "outcome": null,
-      "payoffs": [],
-      "phase": "REVEAL",
-      "phaseDetail": "Prima del Duello",
-      "phaseLabel": "Rivelazione",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
       "presenceDelta": 1,
       "side": "player",
-      "text": "Tutti i trigger seguono le condizioni normali."
+      "text": "+1 Presenza."
     }
   ],
   "scenario": {
@@ -115,64 +117,17 @@
       "timing": null
     },
     {
-      "badge": "Rivelazione · Prima del Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": true,
-          "noticeId": "reveal:player:semaforo_verde:GENERAL",
-          "recipe": "REVEAL_OPEN",
-          "to": {
-            "side": "player",
-            "type": "announce"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Prima del Duello",
+      "cues": [],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [
-        {
-          "badgeText": "Rivelazione · Prima del Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": true,
-              "recipe": "REVEAL_OPEN",
-              "to": {
-                "side": "player",
-                "type": "announce"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "reveal:player:semaforo_verde:GENERAL",
-          "kind": "reveal",
-          "name": "Verde",
-          "outcome": null,
-          "payoffs": [],
-          "phase": "REVEAL",
-          "phaseDetail": "Prima del Duello",
-          "phaseLabel": "Rivelazione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "Tutti i trigger seguono le condizioni normali."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -183,16 +138,69 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [],
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:semaforo_verde:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": null,
       "kind": "settle",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:semaforo_verde:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Verde",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        }
+      ],
       "presence": {
         "enemy": 0,
         "player": 1
@@ -211,6 +219,22 @@
           "source": "static",
           "sourceId": "semaforo_multa_caos",
           "sourceName": "Multa per eccesso di Caos",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "activatedTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedTriggers"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "semaforo_verde",
+          "sourceName": "Verde",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         }

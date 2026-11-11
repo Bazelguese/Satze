@@ -106,3 +106,12 @@ test('generazione: pool 0 → nessuna azione Focus legale', () => {
   assert.equal(range.maxFocus, 0);
   assert.equal(generateActionsForSide(context, 'ai', 0).length, 0);
 });
+
+test('getLegalAgentCards: i vincoli Eminenza restringono gli Agenti schierabili', async () => {
+  const { getLegalAgentCards } = await import('./generateAIActions.js');
+  const hand = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  assert.deepEqual(getLegalAgentCards({ hand, usedCardIds: [3] }).map((c) => c.id), [1, 2]);
+  assert.deepEqual(getLegalAgentCards({ hand, usedCardIds: [3], deployableCardIds: [2] }).map((c) => c.id), [2]);
+  // Un Agente riusabile è già nella lista dei schierabili anche se usato.
+  assert.deepEqual(getLegalAgentCards({ hand, usedCardIds: [3], deployableCardIds: [1, 3] }).map((c) => c.id), [1, 3]);
+});

@@ -108,6 +108,8 @@ export function resolveParamsSchema(schema, persistent, paramContext = null) {
     } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.ENEMY_UNDEPLOYED) {
       const alreadyPrey = new Set(persistent?.preyCardIds || []);
       resolved[key] = (paramContext?.enemyUndeployedCardIds || []).filter((id) => !alreadyPrey.has(id));
+    } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_DEFEATED) {
+      resolved[key] = [...new Set(persistent?.defeatedCardIds || [])];
     } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.OWN_UNDEPLOYED) {
       resolved[key] = [...(paramContext?.ownUndeployedCardIds || [])];
     } else if (spec && typeof spec === 'object' && !Array.isArray(spec) && spec.source === PARAM_SOURCES.UNDEPLOYED_AGENTS) {

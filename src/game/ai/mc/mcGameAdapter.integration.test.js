@@ -59,3 +59,25 @@ describe('adattatore motore a simulazione', () => {
     expect(decision.debug.trait).toBe('avaro');
   });
 });
+
+describe('vincoli di schieramento delle Eminenze nel motore a simulazione', () => {
+  it('Caccia: l\'Agente imposto è l\'unico candidato; senza vincoli restano tutti', async () => {
+    const { buildMcViewFromGameState } = await import('./mcGameAdapter.js');
+    const { generateMcCandidates } = await import('./mcSearch.js');
+    const hand = [{ id: 1, league: 2, power: 3, damage: 2 }, { id: 2, league: 2, power: 3, damage: 2 }];
+    const base = {
+      battlefields: [{ id: 51 }], currentFieldIndex: 0, enemyHand: hand, playerHand: [],
+      enemyUsedCards: [], playerUsedCards: [], enemyFocus: 6, playerFocus: 6, playerHP: 20, enemyHP: 20,
+    };
+    const free = buildMcViewFromGameState(base);
+    expect(free.enemyDeployableCardIds).toBeNull();
+    expect(new Set(generateMcCandidates(free).map((c) => c.cardId))).toEqual(new Set([1, 2]));
+
+    const forced = buildMcViewFromGameState({
+      ...base,
+      eminenceMatchState: { enemy: { round: { deployConstraints: { forcedCardId: 2, bannedCardIds: [], revivedCardIds: [] } } } },
+    });
+    expect(forced.enemyDeployableCardIds).toEqual([2]);
+    expect(new Set(generateMcCandidates(forced).map((c) => c.cardId))).toEqual(new Set([2]));
+  });
+});

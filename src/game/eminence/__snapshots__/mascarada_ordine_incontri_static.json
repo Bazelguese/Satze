@@ -4,22 +4,22 @@
     "name": "Scommessa",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +2 Presenza."
+    "text": "Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza."
   },
   "bilance": {
-    "cinematicCues": 0,
+    "cinematicCues": 2,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 0,
+    "noticesEmitted": 2,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       1,
-      1
+      3
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -27,6 +27,10 @@
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
+      {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
       {
         "id": "mascarada_scommessa",
         "presenceDelta": 0
@@ -43,7 +47,80 @@
     "id": "mascarada_organizzatore",
     "name": "L'Organizzatore degli Incontri"
   },
-  "notices": [],
+  "notices": [
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Organizzazione Impeccabile",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "+1 Presenza."
+    },
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mascarada_scommessa:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Scommessa",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
+      "side": "player",
+      "text": "Pronostico: la vittoria avversaria. +1 Presenza."
+    }
+  ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
@@ -107,15 +184,135 @@
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [],
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        },
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mascarada_scommessa:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": null,
       "kind": "settle",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mascarada_ordine_incontri:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Organizzazione Impeccabile",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "+1 Presenza."
+        },
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mascarada_scommessa:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Scommessa",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
+          "side": "player",
+          "text": "Pronostico: la vittoria avversaria. +1 Presenza."
+        }
+      ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
         {
           "condition": {
             "detail": "duelWinnerRelative: {\"param\":\"pronostico\",\"map\":{\"VITTORIA_PROPRIA\":\"self\",\"VITTORIA_AVVERSARIA\":\"opponent\",\"PAREGGIO\":\"draw\"}} (obs \"opponent\") → falsa",

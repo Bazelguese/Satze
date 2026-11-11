@@ -180,8 +180,13 @@ export function generateMcCandidates(view) {
   const fields =
     view.currentFieldIndex != null ? [view.currentFieldIndex] : legalFieldIndexes(view);
   const out = [];
+  // Vincoli Eminenza sugli Agenti di questo Duello: valgono solo per la scelta corrente.
+  const allowed = Array.isArray(view.enemyDeployableCardIds) ? new Set(view.enemyDeployableCardIds) : null;
+  const cards = allowed
+    ? (view.enemyHand || []).filter((card) => card && allowed.has(card.id))
+    : availableCards(view, 'enemy');
   for (const fieldIndex of fields) {
-    for (const card of availableCards(view, 'enemy')) {
+    for (const card of cards) {
       for (const focus of focusOptions(view, card)) {
         out.push({ fieldIndex, cardId: card.id, focus });
       }
@@ -274,7 +279,7 @@ function matrixLeadStage(view, ranked, params, rng, seeds, deadline) {
   let spent = 0;
   let best = null;
   for (const combo of combos) {
-    const ourCard = availableCards(view, 'enemy').find((c) => c.id === combo.cardId);
+    const ourCard = (view.enemyHand || []).find((c) => c.id === combo.cardId);
     const rows = focusOptions(view, ourCard);
     const cols = opponentReplies(view, ourCard);
     const matrix = rows.map(() => new Array(cols.length).fill(0));

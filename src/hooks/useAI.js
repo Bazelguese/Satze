@@ -24,7 +24,7 @@ import {
   serializeMcView,
 } from '../game/ai/mc/mcGameAdapter.js';
 import { getMcProfile } from '../game/ai/mc/mcProfiles.js';
-import { getAvailableCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
+import { getLegalAgentCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
 
 /**
  * Hook per gestire la logica dell'IA
@@ -90,14 +90,14 @@ export function useAI(gameState) {
   /** La carta in cache deve essere ancora giocabile nella mano IA corrente. */
   const isPendingCardPlayable = useCallback((ctx, card) => {
     if (card == null || card.id == null) return false;
-    const available = getAvailableCards(ctx.ai?.hand, ctx.ai?.usedCardIds);
+    const available = getLegalAgentCards(ctx.ai);
     return available.some((c) => c.id === card.id);
   }, []);
 
   /** Agente+FC minimi se il motore non produce una carta (es. Campo ancora assente). */
   const fallbackAiAgentDecision = useCallback((state) => {
     const ctx = buildAIContext(state);
-    const available = getAvailableCards(ctx.ai?.hand, ctx.ai?.usedCardIds);
+    const available = getLegalAgentCards(ctx.ai);
     const card = available[0] || null;
     if (!card) return null;
     const { maxFocus } = getLegalFocusRange(ctx, 'ai');

@@ -73,7 +73,7 @@ import {
   getEminenceAnnounceHoldMs,
   getEminenceSparkNoticeGapMs,
 } from '../src/utils/eminenceSystemPreference.js';
-import { isEminenceSubsystemEnabled } from '../src/game/eminence/eminenceState.js';
+import { isEminenceSubsystemEnabled, filterDeployableCardIds } from '../src/game/eminence/eminenceState.js';
 import { waitForFieldAgentEntrance } from '../src/components/eminence/eminenceMarkCinematic.js';
 import { stampComposeParams } from '../src/game/eminence/composeAbilityParams.js';
 import { mergeSlotCurseCounts } from '../src/game/eminence/slotCurses.js';
@@ -498,6 +498,34 @@ export default function SatzeGame() {
   const playerUndeployedCardIds = useMemo(
     () => (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)).map((card) => card.id),
     [playerHand, playerUsedCards],
+  );
+  // Iniziativa del round imposta da un'Eminenza (Corteggiamento): sostituisce quella normale
+  // per questo round; il round successivo riparte dall'alternanza consueta.
+  const roundInitiativeOverride = eminenceMatchState?.roundInitiativeOverride ?? null;
+  useEffect(() => {
+    if (!roundInitiativeOverride) return;
+    setIsPlayerFirst(roundInitiativeOverride === 'player');
+  }, [roundInitiativeOverride, setIsPlayerFirst]);
+
+  // Vincoli Eminenza sugli Agenti schierabili in questo Duello (Caccia, Seduzione…).
+  const playerDeployableCardIds = useMemo(
+    () => filterDeployableCardIds(
+      eminenceMatchState,
+      'player',
+      (playerHand || []).map((card) => card.id),
+      playerUsedCards,
+    ),
+    [eminenceMatchState, playerHand, playerUsedCards],
+  );
+  const playerLockedCardIds = useMemo(
+    () => playerUndeployedCardIds.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUndeployedCardIds, playerDeployableCardIds],
+  );
+  // Carte usate ma di nuovo schierabili in questo Duello (Vendetta oltre la Morte): per la
+  // mano e il trascinamento non contano come usate.
+  const playerHandUsedCards = useMemo(
+    () => playerUsedCards.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUsedCards, playerDeployableCardIds],
   );
   const slotCurseCounts = useMemo(
     () => mergeSlotCurseCounts(
@@ -1088,6 +1116,15 @@ export default function SatzeGame() {
     // Affari verso il giocatore: una sola scelta legale Salasso → auto; altrimenti UI.
     const playerDeals = [];
     for (const deal of pending.filter((entry) => entry.recipientSide === 'player')) {
+      if (deal.mode === 'OFFER' && deal.mustAccept && !deal.choices?.length) {
+        // Offerta obbligata senza varianti: nulla da decidere, e l'altro client la risolve da solo.
+        const resolved = resolvePendingDeal(nextMatch, deal, { dealAccepted: true }, { initiativeSide });
+        nextMatch = resolved.matchState;
+        notices = [...notices, ...(resolved.notices || [])];
+        playerHp += readHpDelta(resolved.bundle, 'player');
+        enemyHp += readHpDelta(resolved.bundle, 'enemy');
+        continue;
+      }
       if (deal.mode === 'CHOOSE_ONE') {
         const presence = nextMatch.player?.presence ?? 0;
         const legal = (deal.deals || []).filter((option) => (
@@ -1724,7 +1761,33 @@ export default function SatzeGame() {
     const ownerEminenceId = eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId;
     const ability = ownerEminenceId ? getEminenceAbility(ownerEminenceId, pendingDeal.source) : null;
     const title = ability?.name || 'Affare';
-    if (pendingDeal.mode === 'CHOOSE_ONE') {
+    if (pendingDeal.mode === 'OFFER') {
+      // Offerta della Corte: si accetta (scegliendo la variante, se ce ne sono) o si rifiuta.
+      // Dopo un rifiuto, l'Offerta del round successivo va accettata.
+      const choices = pendingDeal.choices || [];
+      const accept = choices.length
+        ? choices.map((choice, i) => ({
+          key: `offer-${choice}`,
+          label: pendingDeal.choiceLabels?.[choice] || choice,
+          variant: i === choices.length - 1 ? 'primary' : 'secondary',
+          onClick: () => confirmPendingEminenceDeal({ dealAccepted: true, dealChoice: choice }),
+        }))
+        : [{ key: 'offer-accept', label: 'Accetta', variant: 'primary', waiting: true, onClick: () => confirmPendingEminenceDeal({ dealAccepted: true }) }];
+      const isChoice = pendingDeal.kind === 'CHOICE';
+      portalDecision = {
+        kicker: isChoice ? 'Scelta' : 'Offerta',
+        name: title,
+        desc: ability?.text || "Accetti l'Offerta?",
+        options: pendingDeal.mustAccept
+          ? accept
+          : [{ key: 'offer-refuse', label: 'Rifiuta', variant: 'secondary', onClick: () => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' }) }, ...accept],
+        note: isChoice
+          ? 'Scegli una delle opzioni.'
+          : pendingDeal.mustAccept
+            ? "Hai rifiutato l'Offerta precedente: questa va accettata."
+            : 'Se rifiuti non succede nulla, ma la prossima Offerta andrà accettata.',
+      };
+    } else if (pendingDeal.mode === 'CHOOSE_ONE') {
       const presence = eminenceMatchState?.player?.presence ?? 0;
       const names = ['Primo', 'Secondo'];
       const opts = (pendingDeal.deals || []).slice(0, 2);
@@ -3843,6 +3906,7 @@ export default function SatzeGame() {
       setGuidedHint(`Per questo step devi schierare: ${expectedName}.`);
       return;
     }
+    if (agent && !playerDeployableCardIds.includes(agent.id)) return;
     setGuidedHint('');
     if (!agent) {
       playGame(GAME_SOUND.CARD_DESELECT);
@@ -3865,13 +3929,13 @@ export default function SatzeGame() {
     const landMs = prefersReducedMotion() ? 0 : via === 'drop' ? (DROP_IMPACT_MS[placeFx] ?? 0) : CLICK_LAND_MS;
     playGameAt(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT, landMs);
     setSelectedAgent(agent);
-  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
+  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, playerDeployableCardIds, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
     isPlayerFirst,
     enemyAgent,
-    playerUsedCards,
+    playerUsedCards: playerHandUsedCards,
     onAgentSelect: handleAgentSelect,
     selectedAgent,
     gameState,
@@ -4691,6 +4755,8 @@ export default function SatzeGame() {
     if (spectateRef.current) return;
     if (eminenceAnnounceHold || announcePointerGuard) return;
     if (eminenceBlocksMatch) return;
+    // Un vincolo Eminenza arrivato dopo la scelta (es. Caccia) invalida l'Agente già posato.
+    if (!isMultiSeat && selectedAgent && !playerDeployableCardIds.includes(selectedAgent.id)) return;
     if (isMultiSeat) {
       if (!multiSeat.acceptsHumanConfirm) return;
       if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
@@ -7648,7 +7714,8 @@ export default function SatzeGame() {
       <div className="imp-hand imp-hand-player" ref={playerHandWrapRef}>
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
-        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
+        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerHandUsedCards}
+        lockedCardIds={playerHandOverride ? [] : playerLockedCardIds}
         fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
         arrivingPreyId={preyFlight.preyLandId}

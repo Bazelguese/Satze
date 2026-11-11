@@ -17,6 +17,7 @@ import {
 import { applyEminenceSegments } from './eminence/primitiveHandlers.js';
 import { openEminenceRound } from './eminence/eminenceDuelGate.js';
 import { applyFieldOperations } from './eminence/fieldOperations.js';
+import { installLegacyApexEminence } from './eminence/testing/eminenceTestSupport.js';
 import {
   EFFECT_TIMINGS,
   EMINENCE_FORMAT,
@@ -25,6 +26,9 @@ import {
 } from './eminence/eminenceConstants.js';
 
 const neutralField = ALL_BATTLEFIELDS.find((f) => f.id === 51);
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 function agent(name, army, ability) {
   return { name, army, power: 4, damage: 3, league: 2, ability };
@@ -143,7 +147,7 @@ describe('Eminenze nel Duello reale', () => {
   it('Semaforo Giallo accende Imboscata su chi non ha l\'iniziativa', () => {
     const { battleResult } = computeDuelResolution({
       ...baseInput,
-      eminenceBundle: bundleForAbility('semaforo_giallo'),
+      eminenceBundle: bundleForAbility('semaforo_giallo', { presence: 2 }),
     });
 
     expect(battleResult.playerPower).toBe(6);
@@ -151,7 +155,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('Apex Furia: +1 POT all\'Agente e 2 PV al controllore', () => {
-    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const bundle = bundleForAbility('apex_furia', { eminenceId: LEGACY_APEX });
     const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
 
     expect(battleResult.playerPower).toBe(5);
@@ -161,7 +165,7 @@ describe('Eminenze nel Duello reale', () => {
 
   it('Apex Cataclisma: +2 POT e +2 DAN arrivano come Potere, non allo schieramento', () => {
     const bundle = bundleForAbility('apex_cataclisma', {
-      eminenceId: 'apex_sole_verde',
+      eminenceId: LEGACY_APEX,
       presence: 4,
     });
     const { battleResult } = computeDuelResolution({
@@ -183,7 +187,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('gli effetti dell\'Eminenza compaiono nel log come eventi di schieramento', () => {
-    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const bundle = bundleForAbility('apex_furia', { eminenceId: LEGACY_APEX });
     const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
 
     const eminenceEvents = battleResult.events.filter((e) => e.source?.kind === 'eminence');
@@ -222,7 +226,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
-    const bundle = bundleForAbility('semaforo_giallo');
+    const bundle = bundleForAbility('semaforo_giallo', { presence: 2 });
     // Regole di ambito globale: devono valere per entrambi i lati, non per il solo autore.
     expect(bundle.triggerRules.forceSatisfied).toHaveLength(1);
     expect(bundle.triggerRules.forceSatisfied[0].ownerSide).toBe(SIDES.PLAYER);
@@ -233,9 +237,172 @@ describe('Eminenze nel Duello reale', () => {
  * «Il prossimo Agente ignora tutti gli effetti del Campo» ha una portata delimitata: cade
  * ciò che il Campo fa all'Agente, resta ciò che decide chi vince.
  */
+describe('BLOCK_POWER nel Duello reale', () => {
+  it('blocca il Potere del lato indicato e lascia il Bonus al suo posto', () => {
+    const bundle = applyEminenceSegments([{
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'BLOCK_POWER',
+        target: 'ENEMY_AGENT',
+      },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_block_power',
+    }]);
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+
+    // Senza blocco l'avversario (Imboscata) arriverebbe a 6.
+    expect(battleResult.enemyPower).toBe(4);
+    expect(battleResult.playerPower).toBe(4);
+  });
+});
+
+describe('ECHO_POWER nel Duello reale', () => {
+  function echo() {
+    return applyEminenceSegments([{
+      segment: { timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK, primitive: 'ECHO_POWER', target: 'OWN_AGENT' },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_echo',
+    }]);
+  }
+
+  it('se il Potere nemico si attiva, si attiva anche per il proprio Agente', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: echo() });
+    // L'avversario (Imboscata: +2 POT) si attiva; l'Eco lo ripete per il giocatore.
+    expect(battleResult.enemyPower).toBe(6);
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('se il Potere nemico non si attiva, non c\'è nulla da ripetere', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, isPlayerFirst: true, eminenceBundle: echo() });
+    // Ora l'avversario risponde: la sua Imboscata è spenta, quella del giocatore accesa.
+    expect(battleResult.enemyPower).toBe(4);
+    expect(battleResult.playerPower).toBe(6);
+  });
+});
+
+describe('Apex rework nel Duello reale', () => {
+  it('Preghiera Ululata: il Bonus diventa «Invasione: Attrizione 3 VA»', () => {
+    const bundle = bundleForAbility('apex_preghiera_ululata', { eminenceId: 'apex_sole_verde', presence: 3 });
+    const apexAgent = { ...agent('Tu', 'Apex', { trigger: 'glory', effect: 'power', value: 0 }), id: 9101 };
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: apexAgent,
+      playerArmyBonuses: { Apex: true },
+      playerUsedCards: [9001, 9002],
+      conqueredFields: { 3: { winner: 'player', army: 'Apex' } },
+      eminenceBundle: bundle,
+    });
+    expect(battleResult.playerHasBonus).toBe(true);
+    // Invasione soddisfatta (1 Campo conquistato): +3 VA per ciascuno dei 2 Agenti già usati.
+    expect(battleResult.playerAssaultMod).toBe(6);
+  });
+
+  it('l\'Arena del Violento Gaudio dà +2 POT e +2 DAN a entrambi gli Agenti', () => {
+    const arena = ALL_BATTLEFIELDS.find((f) => f.id === 122);
+    const { battleResult } = computeDuelResolution({ ...baseInput, field: arena });
+    // Il giocatore risponde: la sua Imboscata è spenta, quella avversaria accesa.
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.enemyPower).toBe(8);
+    expect(battleResult.playerDamage).toBe(5);
+  });
+});
+
+describe('Maledizione Inversa nel Duello reale', () => {
+  const inverse = (extra = []) => ({
+    slotModifiers: [{ slot: 0, deltas: {}, invertModifiers: true }, ...extra],
+  });
+
+  it('inverte i modificatori di entrambi i lati: il +2 POT dell\'Imboscata diventa −2', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: inverse() });
+    // Avversario (Imboscata +2 POT) da 4+2 a 4−2; giocatore senza modificatori resta a 4.
+    expect(battleResult.enemyPower).toBe(2);
+    expect(battleResult.playerPower).toBe(4);
+  });
+
+  it('una Maledizione del Cosmo sullo stesso slot diventa un vantaggio', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: inverse([{ slot: 0, deltas: { power: -1, damage: -1, assaultValue: -1 } }]),
+    });
+    expect(battleResult.playerPower).toBe(5);
+    expect(battleResult.playerDamage).toBe(4);
+  });
+
+  it('i minimi non si applicano: −5 POT con minimo 1 si inverte in +5', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: inverse(),
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        ability: { trigger: 'imboscata', effect: 'enemyPower', value: -5, minPower: 1 },
+      },
+    });
+    expect(battleResult.playerPower).toBe(9);
+  });
+
+  it('un lato Immune ignora le riduzioni prodotte dall\'inversione', () => {
+    const bundle = inverse();
+    bundle.immuneSides = ['enemy'];
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    expect(battleResult.enemyPower).toBe(6);
+  });
+});
+
+describe('TRANSPLANT_POWER nel Duello reale', () => {
+  function transplant(graftInto) {
+    return applyEminenceSegments([{
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'TRANSPLANT_POWER',
+        target: 'OWN_AGENT',
+        sourceParam: 'fragmentCardId',
+        slotParam: 'graftInto',
+      },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_transplant',
+      params: { fragmentCardId: 315, graftInto },
+    }], null, { agentIdBySide: { [SIDES.PLAYER]: 9901, [SIDES.ENEMY]: 9902 } });
+  }
+  const playerAgent = { ...baseInput.selectedAgent, id: 9901 };
+  const enemyAgent = { ...baseInput.enemyAgent, id: 9902 };
+
+  it('nel Potere: il Potere del Frammento (Intervento: +2 POT) sostituisce quello dell\'Agente', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerAgent,
+      enemyAgent,
+      eminenceBundle: transplant('power'),
+    });
+    // Il giocatore risponde: Imboscata (Potere originale) sarebbe spenta, Intervento è acceso.
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('nel Bonus: il Potere del Frammento diventa il Bonus, anche senza Bonus d\'Armata', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerAgent,
+      enemyAgent,
+      eminenceBundle: transplant('bonus'),
+    });
+    // Da secondo: Potere originale (Imboscata) spento, Bonus innestato (Intervento: +2 POT) acceso.
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('nel Bonus: il Potere originale resta, e i due si sommano quando entrambi scattano', () => {
+    const both = { ...playerAgent, ability: { trigger: 'intervention', effect: 'power', value: 1 } };
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: both,
+      enemyAgent,
+      eminenceBundle: transplant('bonus'),
+    });
+    expect(battleResult.playerPower).toBe(7);
+  });
+});
+
 describe('Disprezzo: portata di “ignora gli effetti del Campo”', () => {
   const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
-  const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: 'apex_sole_verde' });
+  const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: LEGACY_APEX });
 
   it('i modificatori di statistica cadono sul lato velato e restano sull\'altro', () => {
     // Nido dei Grifoni (5): −2 DAN a entrambi.
@@ -337,7 +504,7 @@ describe('Statico: Ora Verde sul tabellone reale', () => {
   function replaceAtRound(roundNumber) {
     const matchState = createEminenceMatchState({
       format: EMINENCE_FORMAT.REQUIRED,
-      playerEminenceId: 'apex_sole_verde',
+      playerEminenceId: LEGACY_APEX,
       enemyEminenceId: 'patto_grande_semaforo',
     });
 
@@ -521,13 +688,13 @@ describe('Conversioni e override Conquista nel Duello', () => {
 });
 
 describe('Orathai nel Duello', () => {
-  it('Contrappunto deposita UNBLOCKABLE proprio e MIRROR sull\'avversario', () => {
+  it('Contrappunto deposita solo il MIRROR sull\'avversario', () => {
     const bundle = bundleForAbility('orathai_contrappunto', {
       eminenceId: 'orathai_primo_canto',
       presence: 2,
     });
 
-    expect(bundle.triggerRules.unblockable.length).toBeGreaterThan(0);
+    expect(bundle.triggerRules.unblockable.length).toBe(0);
     expect(bundle.triggerRules.mirrorUnsatisfied.length).toBeGreaterThan(0);
 
     const { battleResult } = computeDuelResolution({
@@ -554,11 +721,38 @@ describe('Orathai nel Duello', () => {
 });
 
 describe('Lega effettiva e parità VA nel Duello', () => {
-  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE accende solo il lato proprietario a Leghe uguali', () => {
+  // La primitiva non ha più utenti nel catalogo: la si esercita con un segmento diretto.
+  const equalLeagueBundle = () => applyEminenceSegments([
+    {
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_equal_league',
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'SATISFY_TRIGGER_ON_EQUAL_LEAGUE',
+        scope: 'OWN',
+        triggers: ['sfida', 'sopraffare'],
+      },
+    },
+    {
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_equal_league',
+      segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'ARM_VA_TIE_WIN' },
+    },
+  ]);
+
+  it('Ascensione: +1 POT per ogni Presenza spesa, tutta quella posseduta', () => {
     const bundle = bundleForAbility('enclave_ascensione', {
       eminenceId: 'enclave_ascensione',
-      presence: 3,
+      presence: 5,
     });
+    expect(bundle.statDeltas[SIDES.PLAYER].power).toBe(5);
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    // Il giocatore risponde: Imboscata spenta, quindi 4 di base + 5.
+    expect(battleResult.playerPower).toBe(9);
+  });
+
+  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE accende solo il lato proprietario a Leghe uguali', () => {
+    const bundle = equalLeagueBundle();
 
     const { battleResult } = computeDuelResolution({
       ...baseInput,
@@ -581,10 +775,7 @@ describe('Lega effettiva e parità VA nel Duello', () => {
   });
 
   it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE non forza Sopraffare se la Lega è inferiore', () => {
-    const bundle = bundleForAbility('enclave_ascensione', {
-      eminenceId: 'enclave_ascensione',
-      presence: 3,
-    });
+    const bundle = equalLeagueBundle();
 
     const { battleResult } = computeDuelResolution({
       ...baseInput,
@@ -640,6 +831,22 @@ describe('Lega effettiva e parità VA nel Duello', () => {
   });
 });
 
+/** Spezzacuore non è più nel catalogo: REMOVE_TOXIN con override del Bonus, diretto. */
+function spezzacuoreBundle(removedToxinValue) {
+  return applyEminenceSegments([{
+    ownerSide: SIDES.PLAYER,
+    abilityId: 'test_spezzacuore',
+    params: { removedToxinValue },
+    segment: {
+      timing: EFFECT_TIMINGS.AFTER_REVEAL,
+      primitive: 'REMOVE_TOXIN',
+      target: 'OPPONENT',
+      bonusOverrideFactor: 2,
+      bonusOverrideEffect: 'directDamage',
+    },
+  }]);
+}
+
 describe('Riduzioni in Duello e Tossina del bundle', () => {
   it('una maledizione di slot che abbassa il DAN marca la riduzione', () => {
     const { battleResult } = computeDuelResolution({
@@ -658,10 +865,19 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('APPLY_TOXIN deposita Tossina sull\'avversario e sopprime il Bonus proprio', () => {
-    const bundle = bundleForAbility('ratti_veleno', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 2,
-    });
+    // Veleno non è più nel catalogo: le sue primitive si esercitano con segmenti diretti.
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_veleno',
+        segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'SET_ARMY_BONUS_STATE', target: 'SELF', suppressed: true },
+      },
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_veleno',
+        segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'APPLY_TOXIN', target: 'OPPONENT', value: 1, minHealth: 10 },
+      },
+    ]);
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       selectedAgent: {
@@ -679,11 +895,7 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('Spezzacuore rimuove Tossina avversaria e converte il Bonus in danni diretti ×2', () => {
-    const bundle = bundleForAbility('ratti_spezzacuore', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 3,
-      params: { removedToxinValue: 2 },
-    });
+    const bundle = spezzacuoreBundle(2);
     expect(bundle.toxinRemovals?.[0]?.removedValue).toBe(2);
     expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override).toEqual(
       expect.objectContaining({ effect: 'directDamage', value: 4 }),
@@ -705,11 +917,7 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('Spezzacuore senza Tossina da rimuovere non inventa danni da Bonus', () => {
-    const bundle = bundleForAbility('ratti_spezzacuore', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 3,
-      params: { removedToxinValue: 0 },
-    });
+    const bundle = spezzacuoreBundle(0);
     expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override?.value ?? 0).toBe(0);
 
     const { battleResult } = computeDuelResolution({

@@ -3,10 +3,10 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 3,
+    "presence": 1,
     "abilityId": "corte_debito",
     "params": {
-      "cardId": 231
+      "dealAccepted": true
     },
     "agent": {
       "cardId": 231,
