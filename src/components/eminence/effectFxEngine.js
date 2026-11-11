@@ -456,8 +456,9 @@ const THEMES = {
       }
     },
     setup(e, rnd) {
-      // vene di veleno: spezzate che si diramano dal bacio
-      e.veins = Array.from({ length: 6 }, (_, i) => { let a = (i / 6) * TAU + rnd() * 0.5; let x = Math.cos(a) * 0.5; let y = Math.sin(a) * 0.22; const pts = [[x, y]]; const n = 7 + Math.floor(rnd() * 4); for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.1; const step = 0.16 + rnd() * 0.16; x += Math.cos(a) * step; y += Math.sin(a) * step; pts.push([x, y]); } return { pts, d: rnd() * 260, w: 0.8 + rnd() * 0.9 }; });
+      // altri occhi nel buio della bocca, e le chiazze di pelo rado del topo
+      e.eyes = Array.from({ length: 5 }, () => ({ x: (rnd() - 0.5) * 1.25, y: (rnd() - 0.5) * 0.5, s: 0.5 + rnd() * 0.6, d: rnd() * 260, bl: 300 + rnd() * 500 }));
+      e.mange = Array.from({ length: 9 }, () => ({ x: (rnd() - 0.5) * 1.4, y: 0.12 + rnd() * 0.6, l: 0.12 + rnd() * 0.2, a: (rnd() - 0.5) * 1.2 }));
       e.hearts = burst(rnd, 7, { speed: 150, life: 1500, size: 6, delay: 380, drag: 1.6 }); e.hearts.forEach((p) => { p.a = -Math.PI / 2 + (rnd() - 0.5) * 1.5; });
     },
     impact(ctx, t, e) {
@@ -465,24 +466,12 @@ const THEMES = {
       // lo schiocco: dopo l'impronta le labbra si stringono un istante e si rilassano
       const smack = env(t - 330, 70, 110, 330); const lw = w * (1 - 0.07 * smack);
       // poi la bocca si schiude e ne sbuca un topo: annusa, si guarda attorno e rientra
-      const part = env(t - 500, 170, 760, 940); const open = 0.32 - 0.2 * smack + 0.5 * part;
-      const out = easeInOut(env(t - 560, 220, 640, 840)); const tilt = -0.2;
+      const part = env(t - 500, 170, 800, 980); const open = 0.32 - 0.2 * smack + 0.58 * part;
+      const out = easeInOut(env(t - 560, 300, 700, 860)); const tilt = -0.2;
       // alone verde dietro alle labbra: respira piano
       const breathe = 0.82 + 0.18 * Math.sin(t * 0.008);
       ctx.save(); ctx.translate(e.cx, e.cy); ctx.scale(1, 0.62); glow(ctx, 0, 0, w * 1.7, e.c, 0.6 * a * breathe); ctx.restore();
-      // il veleno si dirama
       const press = t - 180;
-      if (press > 0) {
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        e.veins.forEach((v) => {
-          const k = easeOut((press - v.d) / 620); if (k <= 0) return; const upto = k * (v.pts.length - 1);
-          for (let pass = 0; pass < 2; pass += 1) {
-            ctx.strokeStyle = pass ? rgba(mix(e.c, WHITE, 0.35), 0.5 * a) : rgba(e.c, 0.2 * a); ctx.lineWidth = pass ? v.w : v.w * 3; ctx.beginPath();
-            v.pts.forEach(([px, py], j) => { if (j > upto + 1) return; const f = j <= upto ? 1 : upto - (j - 1); const [qx, qy] = j ? v.pts[j - 1] : [px, py]; const x = e.cx + (qx + (px - qx) * f) * e.R; const y = e.cy + (qy + (py - qy) * f) * e.R; ctx[j ? 'lineTo' : 'moveTo'](x, y); });
-            ctx.stroke();
-          }
-        });
-      }
       ctx.globalCompositeOperation = 'source-over';
       // le labbra stanno un po' inclinate: tutto quello che le riguarda ruota insieme
       ctx.save(); ctx.translate(e.cx, e.cy); ctx.rotate(tilt); ctx.translate(-e.cx, -e.cy);
@@ -497,6 +486,9 @@ const THEMES = {
       const mg = ctx.createRadialGradient(e.cx, e.cy, 0, e.cx, e.cy, lw * 0.8);
       mg.addColorStop(0, rgba(mix(e.c, [0, 0, 0], 0.72), a)); mg.addColorStop(1, rgba([14, 2, 14], a));
       ctx.fillStyle = mg; ctx.beginPath(); ctx.moveTo(e.cx - lw, e.cy); ctx.bezierCurveTo(e.cx - lw * 0.5, e.cy - hh * open, e.cx + lw * 0.5, e.cy - hh * open, e.cx + lw, e.cy); ctx.bezierCurveTo(e.cx + lw * 0.5, e.cy + hh * open, e.cx - lw * 0.5, e.cy + hh * open, e.cx - lw, e.cy); ctx.closePath(); ctx.fill();
+      // nel buio si accendono altre coppie di occhi: non è solo
+      if (part > 0.25) { ctx.save(); ctx.clip(); e.eyes.forEach((q) => { const tt = t - 620 - q.d; if (tt <= 0) return; const on = Math.min(1, tt / 160) * (Math.sin((tt / q.bl) * Math.PI * 2) > -0.86 ? 1 : 0.1) * part; const ex = e.cx + q.x * lw * 0.62; const ey = e.cy + q.y * hh * open; const r = lw * 0.018 * q.s;
+        [-1, 1].forEach((d) => { ctx.globalCompositeOperation = 'lighter'; glow(ctx, ex + d * r * 2.4, ey, r * 4, e.c, 0.7 * a * on); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = rgba(mix(e.c, WHITE, 0.5), a * on); ctx.beginPath(); ctx.arc(ex + d * r * 2.4, ey, r, 0, TAU); ctx.fill(); }); }); ctx.restore(); }
       // le labbra
       const g = ctx.createLinearGradient(e.cx, e.cy - lw * 0.55, e.cx, e.cy + lw * 0.65);
       g.addColorStop(0, rgba(mix(e.c2, WHITE, 0.3), a)); g.addColorStop(0.45, rgba(e.c2, a)); g.addColorStop(1, rgba(dark, a));
@@ -510,38 +502,56 @@ const THEMES = {
         const sweep = (t - 380) / 480; if (sweep > 0 && sweep < 1) { const sx = e.cx - lw * 1.2 + sweep * lw * 2.4; const sg = ctx.createLinearGradient(sx - lw * 0.22, 0, sx + lw * 0.22, 0); sg.addColorStop(0, rgba(WHITE, 0)); sg.addColorStop(0.5, rgba(WHITE, 0.55 * a)); sg.addColorStop(1, rgba(WHITE, 0)); ctx.fillStyle = sg; ctx.fillRect(sx - lw * 0.22, e.cy - lw, lw * 0.44, lw * 2); }
       };
       ctx.save(); L(ctx, e.cx, e.cy, lw, open); ctx.clip(); shine(); ctx.restore();
-      // il topo: sbuca dal buio tra le labbra, annusa, si guarda attorno e rientra
+      // il topo: sbuca dal buio tra le labbra a scatti, fissa, poi scatta in avanti e rientra
       if (out > 0.01) {
-        const hw2 = lw * 0.2; const hl = lw * 0.52; // mezza larghezza e lunghezza del muso
-        const look = Math.sin(t * 0.011) * 0.16 * out; const sniff = Math.sin(t * 0.06) * lw * 0.012;
-        const fur = [74, 64, 84]; const furD = [30, 24, 38]; const pink = [244, 150, 190];
-        ctx.save(); ctx.translate(e.cx + lw * 0.04, e.cy - hh * open * 0.55 - hl * 0.55 + hl * 0.86 * out); ctx.rotate(look);
-        // orecchie (dietro alla testa): spuntano per ultime
-        [-1, 1].forEach((d) => { const tw2 = Math.sin(t * 0.03 + d) * 0.06; ctx.save(); ctx.translate(d * hw2 * 0.86, hl * 0.06); ctx.rotate(d * (0.25 + tw2));
-          ctx.fillStyle = rgba(furD, a); ctx.beginPath(); ctx.ellipse(0, 0, hw2 * 0.5, hw2 * 0.58, 0, 0, TAU); ctx.fill();
-          ctx.fillStyle = rgba(pink, 0.85 * a); ctx.beginPath(); ctx.ellipse(0, hw2 * 0.04, hw2 * 0.3, hw2 * 0.38, 0, 0, TAU); ctx.fill(); ctx.restore(); });
-        // testa a pera: guance larghe in alto, muso che si stringe verso il basso
-        const hg = ctx.createLinearGradient(0, 0, 0, hl); hg.addColorStop(0, rgba(furD, a)); hg.addColorStop(0.45, rgba(fur, a)); hg.addColorStop(1, rgba(mix(fur, WHITE, 0.22), a));
-        ctx.fillStyle = hg; ctx.shadowColor = rgba(e.c, 0.9 * a); ctx.shadowBlur = 9; ctx.beginPath(); ctx.moveTo(-hw2, hl * 0.2);
-        ctx.bezierCurveTo(-hw2 * 1.05, -hl * 0.12, hw2 * 1.05, -hl * 0.12, hw2, hl * 0.2);
-        ctx.bezierCurveTo(hw2 * 0.95, hl * 0.6, hw2 * 0.34, hl * 0.92, 0, hl + sniff);
-        ctx.bezierCurveTo(-hw2 * 0.34, hl * 0.92, -hw2 * 0.95, hl * 0.6, -hw2, hl * 0.2); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
-        // occhi verdi accesi, con una palpebra che batte una volta
-        const blink = 1 - env(t - 1010, 40, 70, 140) * 0.9;
-        [-1, 1].forEach((d) => { const ex = d * hw2 * 0.46; const ey = hl * 0.36; ctx.globalCompositeOperation = 'lighter'; glow(ctx, ex, ey, hw2 * 0.5, e.c, 0.8 * a); ctx.globalCompositeOperation = 'source-over';
-          ctx.fillStyle = rgba(mix(e.c, WHITE, 0.35), a); ctx.beginPath(); ctx.ellipse(ex, ey, hw2 * 0.15, hw2 * 0.17 * blink, 0, 0, TAU); ctx.fill();
-          ctx.fillStyle = rgba([6, 16, 8], a); ctx.beginPath(); ctx.ellipse(ex, ey, hw2 * 0.055, hw2 * 0.13 * blink, 0, 0, TAU); ctx.fill();
-          ctx.fillStyle = rgba(WHITE, 0.9 * a); ctx.beginPath(); ctx.arc(ex - hw2 * 0.05, ey - hw2 * 0.06, hw2 * 0.035, 0, TAU); ctx.fill(); });
-        // naso, incisivi e baffi che fremono
-        const ny2 = hl * 0.93 + sniff;
-        ctx.fillStyle = rgba([250, 246, 232], a); ctx.fillRect(-hw2 * 0.09, ny2 + hw2 * 0.08, hw2 * 0.08, hw2 * 0.2); ctx.fillRect(hw2 * 0.01, ny2 + hw2 * 0.08, hw2 * 0.08, hw2 * 0.2);
-        ctx.fillStyle = rgba(pink, a); ctx.beginPath(); ctx.ellipse(0, ny2, hw2 * 0.17, hw2 * 0.13, 0, 0, TAU); ctx.fill();
-        ctx.strokeStyle = rgba([236, 230, 240], 0.8 * a); ctx.lineWidth = Math.max(0.8, lw * 0.006); ctx.lineCap = 'round';
-        [-1, 1].forEach((d) => { for (let i = -1; i <= 1; i += 1) { const wa = i * 0.3 + Math.sin(t * 0.05 + i) * 0.07; ctx.beginPath(); ctx.moveTo(d * hw2 * 0.16, ny2 - hw2 * 0.08); ctx.lineTo(d * (hw2 * 0.16 + Math.cos(wa) * hw2 * 1.05), ny2 - hw2 * 0.08 + Math.sin(wa) * hw2 * 1.05); ctx.stroke(); } });
-        ctx.restore();
-        // zampine rosa aggrappate al labbro inferiore
-        [-1, 1].forEach((d) => { const px = e.cx + lw * 0.04 + d * hw2 * 1.25; const py = e.cy + hh * open * 0.7 + (1 - out) * lw * 0.1; ctx.fillStyle = rgba(pink, a * Math.min(1, out * 1.6));
-          for (let f = -1; f <= 1; f += 1) { ctx.beginPath(); ctx.ellipse(px + f * hw2 * 0.13, py + Math.abs(f) * hw2 * 0.03, hw2 * 0.065, hw2 * 0.17, f * 0.2, 0, TAU); ctx.fill(); } });
+        // coda: scivola fuori dall'angolo della bocca e frusta
+        ctx.strokeStyle = rgba([226, 150, 170], a * out); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (let seg = 0; seg < 14; seg += 1) { const u0 = seg / 14; const u1 = (seg + 1) / 14; if (u1 > out) break; const pt = (u) => [e.cx + lw * (0.62 + 0.42 * u) + Math.sin(u * 5 + t * 0.012) * lw * 0.06 * u, e.cy + lw * (0.02 + 0.5 * u * u) + Math.cos(u * 4 + t * 0.01) * lw * 0.05 * u]; const [x0, y0] = pt(u0); const [x1, y1] = pt(u1); ctx.lineWidth = Math.max(0.8, lw * 0.03 * (1 - u0 * 0.85)); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
+        const hw2 = lw * 0.2; const hl = lw * 0.66; // muso lungo e scavato
+        // tremito nervoso, e lo scatto in avanti verso chi guarda
+        const jit = (k) => { const v = Math.sin(Math.floor(t / 34) * 91.7 + k * 13.1) * 43758.5; return (v - Math.floor(v) - 0.5); };
+        const lunge = env(t - 1030, 60, 150, 330); const look = (Math.sin(t * 0.004) > 0 ? 0.13 : -0.1) * out + jit(1) * 0.035;
+        const fur = [52, 46, 60]; const furD = [16, 12, 22]; const flesh = [206, 128, 150]; const bone = [226, 214, 160];
+        // esce da sotto il labbro superiore: sopra quella linea non si deve vedere
+        ctx.save(); ctx.beginPath(); ctx.rect(e.cx - lw * 2, e.cy - hh * 0.85, lw * 4, lw * 4); ctx.clip();
+        ctx.save(); ctx.translate(e.cx + lw * 0.04 + jit(2) * lw * 0.008, e.cy - hh * open * 0.55 - hl * 0.6 + hl * 0.84 * out + jit(3) * lw * 0.008); ctx.rotate(look); ctx.scale(1 + 0.26 * lunge, 1 + 0.26 * lunge);
+        // orecchie: una è strappata
+        [-1, 1].forEach((d) => { ctx.save(); ctx.translate(d * hw2 * 0.92, hl * 0.05); ctx.rotate(d * (0.35 + jit(4 + d) * 0.12));
+          ctx.fillStyle = rgba(furD, a); ctx.beginPath(); ctx.ellipse(0, 0, hw2 * 0.46, hw2 * 0.62, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = rgba(flesh, 0.7 * a); ctx.beginPath(); ctx.ellipse(0, hw2 * 0.05, hw2 * 0.26, hw2 * 0.4, 0, 0, TAU); ctx.fill();
+          if (d > 0) { ctx.fillStyle = rgba([14, 2, 14], a); poly(ctx, [[hw2 * 0.1, -hw2 * 0.7], [hw2 * 0.6, -hw2 * 0.5], [hw2 * 0.12, -hw2 * 0.08]]); ctx.fill(); }
+          ctx.restore(); });
+        // testa scavata: zigomi sporgenti, guance incavate, muso lungo
+        const hg = ctx.createLinearGradient(0, 0, 0, hl); hg.addColorStop(0, rgba(furD, a)); hg.addColorStop(0.5, rgba(fur, a)); hg.addColorStop(1, rgba(mix(fur, flesh, 0.35), a));
+        ctx.fillStyle = hg; ctx.shadowColor = rgba(e.c, a); ctx.shadowBlur = 12; ctx.beginPath(); ctx.moveTo(-hw2, hl * 0.16);
+        ctx.bezierCurveTo(-hw2 * 0.9, -hl * 0.1, hw2 * 0.9, -hl * 0.1, hw2, hl * 0.16);
+        ctx.lineTo(hw2 * 1.08, hl * 0.3); ctx.bezierCurveTo(hw2 * 0.5, hl * 0.46, hw2 * 0.4, hl * 0.8, hw2 * 0.17, hl * 0.97);
+        ctx.quadraticCurveTo(0, hl * 1.04, -hw2 * 0.17, hl * 0.97);
+        ctx.bezierCurveTo(-hw2 * 0.4, hl * 0.8, -hw2 * 0.5, hl * 0.46, -hw2 * 1.08, hl * 0.3); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        // pelo rado: chiazze e ciuffi
+        ctx.save(); ctx.clip(); ctx.strokeStyle = rgba(furD, 0.75 * a); ctx.lineWidth = Math.max(0.8, lw * 0.008);
+        e.mange.forEach((m) => { ctx.beginPath(); ctx.moveTo(m.x * hw2, m.y * hl); ctx.lineTo(m.x * hw2 + Math.sin(m.a) * m.l * hw2, m.y * hl + Math.cos(m.a) * m.l * hw2 * 1.6); ctx.stroke(); });
+        ctx.fillStyle = rgba(flesh, 0.28 * a); ctx.beginPath(); ctx.ellipse(-hw2 * 0.42, hl * 0.2, hw2 * 0.3, hw2 * 0.2, 0.4, 0, TAU); ctx.fill(); ctx.restore();
+        // occhi: uno spalancato con la pupilla a fessura che ti segue, l'altro velato e cieco
+        const stare = 1 - env(t - 960, 30, 50, 110) * 0.95;
+        ctx.globalCompositeOperation = 'lighter'; glow(ctx, -hw2 * 0.46, hl * 0.33, hw2 * (0.8 + 0.5 * lunge), e.c, 0.95 * a); ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = rgba(mix(e.c, WHITE, 0.45), a); ctx.beginPath(); ctx.ellipse(-hw2 * 0.46, hl * 0.33, hw2 * 0.23, hw2 * 0.25 * stare, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba([4, 10, 4], a); ctx.beginPath(); ctx.ellipse(-hw2 * 0.46 + look * hw2 * 0.4, hl * 0.33, hw2 * 0.035, hw2 * 0.21 * stare, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba([198, 208, 196], a); ctx.beginPath(); ctx.ellipse(hw2 * 0.5, hl * 0.35, hw2 * 0.13, hw2 * 0.12, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = rgba(flesh, 0.8 * a); ctx.lineWidth = Math.max(0.8, lw * 0.007); ctx.beginPath(); ctx.moveTo(hw2 * 0.28, hl * 0.22); ctx.lineTo(hw2 * 0.72, hl * 0.47); ctx.stroke(); // cicatrice
+        // incisivi lunghi, gialli e storti; naso umido; baffi lunghi e spezzati
+        const ny2 = hl * 0.96;
+        ctx.fillStyle = rgba(bone, a); poly(ctx, [[-hw2 * 0.13, ny2 + hw2 * 0.04], [-hw2 * 0.01, ny2 + hw2 * 0.04], [-hw2 * 0.1, ny2 + hw2 * 0.6]]); ctx.fill();
+        poly(ctx, [[hw2 * 0.01, ny2 + hw2 * 0.04], [hw2 * 0.13, ny2 + hw2 * 0.04], [hw2 * 0.12, ny2 + hw2 * 0.42]]); ctx.fill();
+        ctx.fillStyle = rgba([60, 20, 34], a); ctx.beginPath(); ctx.ellipse(0, ny2 + jit(8) * lw * 0.006, hw2 * 0.17, hw2 * 0.12, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(WHITE, 0.6 * a); ctx.beginPath(); ctx.arc(-hw2 * 0.05, ny2 - hw2 * 0.04, hw2 * 0.03, 0, TAU); ctx.fill();
+        ctx.strokeStyle = rgba([214, 206, 220], 0.75 * a); ctx.lineWidth = Math.max(0.7, lw * 0.005); ctx.lineCap = 'round';
+        [-1, 1].forEach((d) => { for (let i = -1; i <= 2; i += 1) { const wa = i * 0.26 + jit(10 + i * d) * 0.14; const len2 = hw2 * (1.2 + 0.5 * Math.abs(jit(20 + i + d))); const mx = d * (hw2 * 0.16 + Math.cos(wa) * len2 * 0.55); const my = ny2 - hw2 * 0.1 + Math.sin(wa) * len2 * 0.55; ctx.beginPath(); ctx.moveTo(d * hw2 * 0.16, ny2 - hw2 * 0.1); ctx.lineTo(mx, my); ctx.lineTo(mx + d * Math.cos(wa + 0.5) * len2 * 0.45, my + Math.sin(wa + 0.5) * len2 * 0.45); ctx.stroke(); } });
+        ctx.restore(); ctx.restore();
+        // zampe: dita lunghe e ossute, con le unghie che affondano nel labbro
+        [-1, 1].forEach((d) => { const px = e.cx + lw * 0.04 + d * hw2 * 1.5; const py = e.cy + hh * open * 0.62 + (1 - out) * lw * 0.12; const al = a * Math.min(1, out * 1.6);
+          for (let f = 0; f < 4; f += 1) { const fx = px + (f - 1.5) * hw2 * 0.17; const bend = (f - 1.5) * 0.12 * d; ctx.strokeStyle = rgba(flesh, al); ctx.lineWidth = Math.max(1.2, lw * 0.014); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(fx, py - hw2 * 0.42); ctx.quadraticCurveTo(fx + bend * hw2, py - hw2 * 0.1, fx + bend * hw2 * 1.6, py + hw2 * 0.22); ctx.stroke();
+            ctx.fillStyle = rgba([24, 14, 20], al); poly(ctx, [[fx + bend * hw2 * 1.6 - hw2 * 0.04, py + hw2 * 0.2], [fx + bend * hw2 * 1.6 + hw2 * 0.04, py + hw2 * 0.2], [fx + bend * hw2 * 1.9, py + hw2 * 0.44]]); ctx.fill(); } });
         // il labbro superiore torna davanti: il topo esce da sotto
         ctx.fillStyle = g; L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.fill();
         ctx.save(); L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.clip(); shine(); ctx.restore();
