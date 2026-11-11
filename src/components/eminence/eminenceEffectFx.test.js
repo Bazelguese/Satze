@@ -42,6 +42,24 @@ test('effetti: il Semaforo prende il colore della luce dal nome dell\'abilità',
   assert.equal(planEffectFx([], src)[0].lamp, null);
 });
 
+test('effetti: le abilità senza ricetta trovano comunque il loro bersaglio', () => {
+  const plan = (payoffs) => planEffectFx([], { ...src, payoffs }).map((p) => `${p.kind}:${p.to?.type}:${p.to?.side ?? ''}`);
+  assert.deepEqual(plan([{ primitive: 'BLOCK_POWER', target: 'OWN_AGENT' }]), ['bane:field-agent:player']);
+  assert.deepEqual(plan([{ primitive: 'BLOCK_POWER', target: 'ENEMY_AGENT' }]), ['bane:field-agent:enemy']);
+  assert.deepEqual(plan([{ primitive: 'REPLACE_ABILITY', target: 'OWN_AGENT' }]), ['boon:field-agent:player']);
+  assert.deepEqual(plan([{ primitive: 'MIRROR_UNSATISFIED_POWER', target: null }]), ['boon:field-agent:player', 'bane:field-agent:enemy']);
+  assert.deepEqual(plan([{ primitive: 'MARK_CARD', target: null }]), ['bane:hand:enemy']);
+  assert.deepEqual(plan([{ primitive: 'MARK_CARD', target: 'OWN_AGENT' }]), ['boon:field-agent:player']);
+  assert.deepEqual(plan([{ primitive: 'CONSTRAIN_DEPLOY', target: 'SELF' }]), ['boon:hand:player']);
+  assert.deepEqual(plan([{ primitive: 'PROPOSE_DEAL', target: null }]), ['hp:hp:enemy']);
+  assert.deepEqual(plan([{ primitive: 'GRANT_POOL_FOCUS', target: 'SELF' }, { primitive: 'GRANT_POOL_FOCUS', target: 'SELF' }]), ['hp:fc:player']);
+  // Presenza propria: resta alle scintille; Presenza tolta all'avversario: sul suo contatore o sulla sua targa
+  assert.deepEqual(plan([{ primitive: 'CHANGE_PRESENCE', target: 'SELF' }]), ['aura:undefined:']);
+  const steal = planEffectFx([], { ...src, payoffs: [{ primitive: 'CHANGE_PRESENCE', target: 'OPPONENT' }] });
+  assert.deepEqual(steal[0].to, { type: 'presence', side: 'enemy' });
+  assert.deepEqual(steal[0].fallback, { type: 'hp', side: 'enemy' });
+});
+
 test('effetti: ogni armata ha il suo motivo', () => {
   assert.deepEqual([...EFFECT_FX_THEMES].sort(), [...new Set(Object.values(ARMY_ENTRY))].sort());
 });

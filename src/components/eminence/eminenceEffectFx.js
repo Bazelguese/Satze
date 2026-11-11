@@ -11,6 +11,7 @@
 // tranne il colore della luce del Semaforo.
 
 import { CINEMATIC_RECIPES as R } from '../../game/eminence/eminenceCinematics.js';
+import { EMINENCE_PRIMITIVES as P } from '../../game/eminence/eminenceConstants.js';
 import { resolveArmyEntrySlug } from '../../lib/eminenzaEntry.js';
 
 /** Tipi di impatto. `aura` non ha bersaglio: il motivo si accende sull'avviso stesso. */
@@ -42,17 +43,49 @@ function kindOfCue(cue, side) {
   }
   if (cue.recipe === R.SLOT_CURSE || cue.recipe === R.FIELD_RULE) return EFFECT_FX_KINDS.SLOT;
   if (cue.recipe === R.HP_TICK) return EFFECT_FX_KINDS.HP;
-  return null; // Presenza: ci pensano già le scintille verso il contatore
+  return null; // Presenza propria: ci pensano già le scintille verso il contatore
 }
 
+const other = (side) => (side === 'enemy' ? 'player' : 'enemy');
+const agentOf = (side) => ({ type: 'field-agent', side });
+const isFoeTarget = (target) => target === 'ENEMY_AGENT' || target === 'OPPONENT';
+
 /**
- * Traduce le cue di un avviso in effetti da mostrare.
+ * Bersagli delle primitive che le ricette cinematiche non collegano a nulla: abilità che
+ * cambiano Potere o trigger di un Agente, segnano o vincolano carte in mano, fanno
+ * un'Offerta, danno FC o tolgono Presenza all'avversario.
+ * Ogni voce: (lato di chi attiva, payoff) → lista di { kind, to, fallback? }.
+ */
+const EXTRA_TARGETS = {
+  [P.REPLACE_ABILITY]: (side, p) => [isFoeTarget(p.target) ? { kind: 'bane', to: agentOf(other(side)) } : { kind: 'boon', to: agentOf(side) }],
+  [P.TRANSPLANT_POWER]: (side) => [{ kind: 'boon', to: agentOf(side) }],
+  [P.COMPOSE_ABILITY]: (side) => [{ kind: 'boon', to: agentOf(side) }],
+  [P.ECHO_POWER]: (side) => [{ kind: 'boon', to: agentOf(side) }],
+  [P.SWAP_POWER_BONUS_TRIGGERS]: (side) => [{ kind: 'boon', to: agentOf(side) }],
+  // blocca un Potere: è un colpo «contro», anche quando l'Agente è il proprio (Fermo Macchine)
+  [P.BLOCK_POWER]: (side, p) => [{ kind: 'bane', to: agentOf(isFoeTarget(p.target) ? other(side) : side) }],
+  [P.MIRROR_UNSATISFIED_POWER]: (side) => [{ kind: 'boon', to: agentOf(side) }, { kind: 'bane', to: agentOf(other(side)) }],
+  // segno: sull'Agente proprio (Frammento) oppure su una carta in mano all'avversario (Preda)
+  [P.MARK_CARD]: (side, p) => [p.target === 'OWN_AGENT' ? { kind: 'boon', to: agentOf(side) } : { kind: 'bane', to: { type: 'hand', side: other(side) } }],
+  [P.CONSTRAIN_DEPLOY]: (side, p) => [p.target === 'SELF' ? { kind: 'boon', to: { type: 'hand', side } } : { kind: 'bane', to: { type: 'hand', side: other(side) } }],
+  // un'Offerta arriva all'avversario: sulla sua targa
+  [P.PROPOSE_DEAL]: (side) => [{ kind: 'hp', to: { type: 'hp', side: other(side) } }],
+  [P.GRANT_POOL_FOCUS]: (side, p) => [{ kind: 'hp', to: { type: 'fc', side: isFoeTarget(p.target) ? other(side) : side } }],
+  // Presenza tolta all'avversario: sul suo contatore se la carta è in vista, altrimenti sulla sua targa
+  [P.CHANGE_PRESENCE]: (side, p) => (isFoeTarget(p.target)
+    ? [{ kind: 'hp', to: { type: 'presence', side: other(side) }, fallback: { type: 'hp', side: other(side) } }]
+    : []),
+};
+
+/**
+ * Traduce un avviso in effetti da mostrare.
  *
  * @param {Array} cues da `resolveNoticeCinematics`
- * @param {{ side: string, army: string, accent: string, abilityName?: string }} source
- * @returns {Array<{ kind: string, theme: string, accent: string, lamp: string|null, from: object, to: object|null }>}
+ * @param {{ side: string, army: string, accent: string, abilityName?: string, payoffs?: Array }} source
+ *   `payoffs` sono quelli dell'avviso: servono a collegare le abilità che le ricette lasciano senza bersaglio.
+ * @returns {Array<{ kind: string, theme: string, accent: string, lamp: string|null, from: object, to: object|null, fallback?: object }>}
  */
-export function planEffectFx(cues, { side, army, accent, abilityName } = {}) {
+export function planEffectFx(cues, { side, army, accent, abilityName, payoffs } = {}) {
   const list = Array.isArray(cues) ? cues : [];
   if (!side || list.some((cue) => cue?.recipe === R.MISS_DIM)) return [];
   const theme = resolveArmyEntrySlug(army);
@@ -64,14 +97,19 @@ export function planEffectFx(cues, { side, army, accent, abilityName } = {}) {
   };
   const hits = [];
   const seen = new Set();
+  const add = (kind, to, fallback) => {
+    const key = `${to?.type}:${to?.side}:${to?.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    hits.push(fallback ? { ...base, kind, to, fallback } : { ...base, kind, to });
+  };
   for (const cue of list) {
     const kind = kindOfCue(cue, side);
-    if (!kind) continue;
-    const to = cue.flight.to;
-    const key = `${kind}:${to?.type}:${to?.side}:${to?.id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    hits.push({ ...base, kind, to });
+    if (kind) add(kind, cue.flight.to);
+  }
+  for (const payoff of Array.isArray(payoffs) ? payoffs : []) {
+    const extra = EXTRA_TARGETS[payoff?.primitive];
+    if (extra) extra(side, payoff).forEach((hit) => add(hit.kind, hit.to, hit.fallback));
   }
   if (hits.length) return hits;
   return [{ ...base, kind: EFFECT_FX_KINDS.AURA, to: null }];

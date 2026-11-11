@@ -756,7 +756,7 @@ export default function SatzeGame() {
         enemy: Boolean(document.querySelector('[data-field-agent="enemy"]')),
       },
     });
-    const plans = planEffectFx(cues, { side: notice.side, army, accent: accents[notice.side], abilityName: notice.name });
+    const plans = planEffectFx(cues, { side: notice.side, army, accent: accents[notice.side], abilityName: notice.name, payoffs: notice.payoffs });
     // l'avviso entra con un'animazione di circa 0,8 s: l'effetto parte quando è al suo posto,
     // altrimenti verrebbe misurato a metà strada
     if (plans.length) window.setTimeout(() => eminenceEffectFx.play(plans), NOTICE_EFFECT_FX_DELAY_MS);

@@ -15,16 +15,36 @@ function reducedMotion() {
     && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
+/** Riquadro che racchiude più elementi (le carte di una mano). */
+function unionRect(els) {
+  const rects = [...els].map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0);
+  if (!rects.length) return null;
+  const left = Math.min(...rects.map((r) => r.left));
+  const top = Math.min(...rects.map((r) => r.top));
+  const right = Math.max(...rects.map((r) => r.right));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+/** Riquadro del bersaglio: le ancore dei voli, più la mano e il contatore FC di un lato. */
+function targetRect(to) {
+  if (!to || typeof document === 'undefined') return null;
+  if (to.type === 'hand') return unionRect(document.querySelectorAll(`[data-hand-side="${to.side}"]`));
+  const el = to.type === 'fc' ? document.querySelector(`[data-em-fc="${to.side}"]`) : queryFlightAnchor(to);
+  const rect = el?.getBoundingClientRect();
+  return rect?.width ? rect : null;
+}
+
 /** Dove parte e dove arriva l'effetto, in pixel di finestra. */
 export function measureEffectFx(plan) {
   const fromEl = plan.fromEl || queryFlightAnchor(plan.from) || queryFlightAnchor({ type: 'card', side: plan.from?.side });
   if (!fromEl) return null;
   const a = fromEl.getBoundingClientRect();
   const aura = plan.kind === EFFECT_FX_KINDS.AURA;
-  const toEl = aura ? fromEl : (plan.toEl || queryFlightAnchor(plan.to));
-  if (!toEl) return null;
-  const b = toEl.getBoundingClientRect();
-  if (!a.width || !b.width) return null;
+  const b = aura
+    ? a
+    : (plan.toEl?.getBoundingClientRect() || targetRect(plan.to) || targetRect(plan.fallback));
+  if (!a.width || !b?.width) return null;
   const x1 = a.left + a.width / 2;
   const y1 = a.top + a.height / 2;
   if (aura) {
@@ -95,6 +115,10 @@ export function useEminenceEffectFx({ zIndex = 400 } = {}) {
           if (tries < ANCHOR_TRIES) {
             const id = window.requestAnimationFrame(() => { retryRef.current.delete(id); attempt(); });
             retryRef.current.add(id);
+          } else if (plan.kind !== EFFECT_FX_KINDS.AURA) {
+            // il bersaglio non è in vista (Agente non ancora schierato, mano nascosta):
+            // l'abilità si vede comunque, sull'avviso
+            play([{ ...plan, kind: EFFECT_FX_KINDS.AURA, to: null, fallback: null }]);
           }
           return;
         }
