@@ -419,4 +419,12 @@ Vantaggio piccolo (al massimo circa +6%) e il gradino Normale–Facile non si al
 
 - Gli obiettivi numerici delle distanze fra i livelli, dopo la misura di partenza.
 - Il budget di tempo esatto per livello, quando ci sarà il timer del duello.
-- Se e quando riportare nell'ambito le Eminenze.
+- ~~Se e quando riportare nell'ambito le Eminenze.~~ Fatto in parte: scelta delle abilità, Offerte e banco di prova (vedi "Eminenze").
+
+## Da fare più avanti
+
+- **C — Agente e FC che tengono conto delle Eminenze** (deciso dall'utente l'11/11/2026: va fatto, non ora). Oggi l'IA sceglie bene l'abilità, ma poi decide Agente e FC come se le Eminenze non ci fossero (per esempio non sa di avere +3 VA da Logoramento). Punto di partenza:
+  - la prova con le Eminenze nel solo primo Duello delle simulazioni è già nel codice (`src/game/ai/mc/mcEminence.js`, `simulateEminences: true`) ma rende poco (circa +5%) e rallenta le decisioni di 2-3 volte;
+  - strade da provare: Eminenze in tutti i Duelli simulati, con una scelta veloce delle abilità nei turni futuri; candidati costruiti sugli effetti (per esempio FC ridotti quando l'abilità dà VA); stime dei FC e del rischio che tengano conto delle abilità rivelate;
+  - insieme a C: bersagli ragionati per le Maledizioni di Khemet, Ascesa, Innesto e Opera Composita;
+  - misura con `npm run selfplay:eminence` contro la scelta attuale, e di nuovo la scala dei livelli (il gradino Normale–Facile con le Eminenze è al 62,5%, senza al 72,5%).
