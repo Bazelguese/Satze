@@ -6,6 +6,7 @@
 import {
   EMINENCE_ELIGIBILITY_THRESHOLD,
   EMINENCE_FORMAT,
+  PARAM_SOURCES,
   SIDES,
 } from './eminenceConstants.js';
 import { EMINENCES, getEminence, getEminenceForArmy } from '../../data/eminences.js';
@@ -358,10 +359,25 @@ export function getLegalAbilityIds(eminenceId, presence, persistent = null, opti
   return eminence.abilities
     .filter((ability) => {
       if (forbidConsecutive && lastId && ability.id === lastId) return false;
+      if (!persistentTargetsAvailable(ability, persistent)) return false;
       const delta = resolveAbilityPresenceDelta(ability, persistent);
       return delta >= 0 || presence >= Math.abs(delta);
     })
     .map((ability) => ability.id);
+}
+
+/**
+ * Un'abilità che sceglie fra i propri Frammenti non è selezionabile se non ne esistono
+ * abbastanza. Il conteggio è pubblico, quindi vale anche per le deduzioni dell'IA.
+ */
+function persistentTargetsAvailable(ability, persistent) {
+  for (const spec of Object.values(ability?.paramsSchema || {})) {
+    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) continue;
+    if (spec.source !== PARAM_SOURCES.OWN_FRAGMENTS) continue;
+    const owned = persistent?.fragmentCardIds?.length || 0;
+    if (owned < (spec.min ?? 1)) return false;
+  }
+  return true;
 }
 
 export function isAbilitySelectable(eminenceId, abilityId, presence, persistent = null, options = {}) {

@@ -132,11 +132,14 @@ test('vista: i Frammenti pubblici diventano opzioni di parametro', () => {
   const innesto = view.self.options.find((o) => o.id === 'kethran_innesto');
   const elogio = view.self.options.find((o) => o.id === 'kethran_elogio');
   assert.equal(innesto.implemented, true);
-  assert.deepEqual(innesto.paramsSchema.fragmentCardId, [101, 116]);
+  // Ogni Frammento è innestabile, anche senza trigger: il suo Potere si attiva sempre.
+  assert.deepEqual(innesto.paramsSchema.fragmentCardId, [101, 116, 106]);
+  assert.deepEqual(innesto.paramsSchema.graftInto, ['power', 'bonus']);
   assert.equal(innesto.paramsSchema.__limits, undefined);
   assert.equal(elogio.paramsSchema, null);
   assert.equal(selectionParamsReady(innesto.paramsSchema, {}), false);
-  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), true);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101 }), false);
+  assert.equal(selectionParamsReady(innesto.paramsSchema, { fragmentCardId: 101, graftInto: 'bonus' }), true);
   assert.equal(selectionParamsReady({ fragmentCardId: [] }, {}), false);
   assert.equal(selectionParamsReady({ preyCardId: [] }, {}), false);
 });

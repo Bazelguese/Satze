@@ -252,6 +252,58 @@ describe('BLOCK_POWER nel Duello reale', () => {
   });
 });
 
+describe('TRANSPLANT_POWER nel Duello reale', () => {
+  function transplant(graftInto) {
+    return applyEminenceSegments([{
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'TRANSPLANT_POWER',
+        target: 'OWN_AGENT',
+        sourceParam: 'fragmentCardId',
+        slotParam: 'graftInto',
+      },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_transplant',
+      params: { fragmentCardId: 315, graftInto },
+    }], null, { agentIdBySide: { [SIDES.PLAYER]: 9901, [SIDES.ENEMY]: 9902 } });
+  }
+  const playerAgent = { ...baseInput.selectedAgent, id: 9901 };
+  const enemyAgent = { ...baseInput.enemyAgent, id: 9902 };
+
+  it('nel Potere: il Potere del Frammento (Intervento: +2 POT) sostituisce quello dell\'Agente', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerAgent,
+      enemyAgent,
+      eminenceBundle: transplant('power'),
+    });
+    // Il giocatore risponde: Imboscata (Potere originale) sarebbe spenta, Intervento è acceso.
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('nel Bonus: il Potere del Frammento diventa il Bonus, anche senza Bonus d\'Armata', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: playerAgent,
+      enemyAgent,
+      eminenceBundle: transplant('bonus'),
+    });
+    // Da secondo: Potere originale (Imboscata) spento, Bonus innestato (Intervento: +2 POT) acceso.
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('nel Bonus: il Potere originale resta, e i due si sommano quando entrambi scattano', () => {
+    const both = { ...playerAgent, ability: { trigger: 'intervention', effect: 'power', value: 1 } };
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: both,
+      enemyAgent,
+      eminenceBundle: transplant('bonus'),
+    });
+    expect(battleResult.playerPower).toBe(7);
+  });
+});
+
 describe('Disprezzo: portata di “ignora gli effetti del Campo”', () => {
   const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
   const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: 'apex_sole_verde' });

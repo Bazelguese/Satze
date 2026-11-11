@@ -4,25 +4,25 @@
     "name": "Innesto",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
+    "text": "Selezionabile solo se hai almeno 1 Frammento. Scegli un tuo Frammento: in questo Duello il suo Potere, con il suo trigger e il suo effetto, sostituisce a tua scelta il Potere oppure il Bonus del tuo Agente schierato. Se sostituisce il Bonus, è trattato come Bonus."
   },
   "bilance": {
-    "cinematicCues": 2,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
-      0,
+      1,
       1
     ],
-    "noticesEmitted": 2,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
       2,
-      1
+      0
     ],
-    "segmentsWithoutCue": 2,
-    "segmentsWithoutNotice": 0
+    "segmentsWithoutCue": 1,
+    "segmentsWithoutNotice": 1
   },
   "choice": {
     "alwaysLegalOption": true,
@@ -34,10 +34,6 @@
       {
         "id": "kethran_elogio",
         "presenceDelta": -1
-      },
-      {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 0,
@@ -61,16 +57,13 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "id": "reveal:player:kethran_innesto:GENERAL",
@@ -79,14 +72,9 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "ALIAS_TRIGGER",
+          "primitive": "TRANSPLANT_POWER",
           "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "MARK_CARD",
-          "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         }
       ],
       "phase": "REVEAL",
@@ -94,43 +82,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
-    },
-    {
-      "badgeText": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-      "kind": "effect",
-      "name": "Ricomposizione",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "+1 Presenza."
+      "text": "Selezionabile solo se hai almeno 1 Frammento. Scegli un tuo Frammento: in questo Duello il suo Potere, con il suo trigger e il suo effetto, sostituisce a tua scelta il Potere oppure il Bonus del tuo Agente schierato. Se sostituisce il Bonus, è trattato come Bonus."
     }
   ],
   "scenario": {
@@ -177,17 +129,14 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
+          "holdAnnounce": true,
           "noticeId": "reveal:player:kethran_innesto:GENERAL",
-          "recipe": "LINK_AGENT",
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "gate": "GENERAL",
@@ -203,16 +152,13 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
                 "side": "player",
-                "type": "field-agent"
+                "type": "announce"
               },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
+              "waitFor": null
             }
           ],
           "id": "reveal:player:kethran_innesto:GENERAL",
@@ -221,14 +167,9 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "ALIAS_TRIGGER",
+              "primitive": "TRANSPLANT_POWER",
               "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "MARK_CARD",
-              "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             }
           ],
           "phase": "REVEAL",
@@ -236,7 +177,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Scegli un Frammento. In questo Duello, il Potere del tuo Agente schierato può attivarsi con il proprio trigger oppure con quello del Frammento. Se viene utilizzato il trigger del Frammento, il Frammento viene consumato."
+          "text": "Selezionabile solo se hai almeno 1 Frammento. Scegli un tuo Frammento: in questo Duello il suo Potere, con il suo trigger e il suo effetto, sostituisce a tua scelta il Potere oppure il Bonus del tuo Agente schierato. Se sostituisce il Bonus, è trattato come Bonus."
         }
       ],
       "presence": {
@@ -260,66 +201,13 @@
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "cues": [],
       "gate": null,
       "kind": "settle",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Dopo il Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:kethran_ricomposizione:ON_MARK_GAIN:hit",
-          "kind": "effect",
-          "name": "Ricomposizione",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "+1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "segments": [
         {
@@ -360,28 +248,12 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "ALIAS_TRIGGER",
+          "primitive": "TRANSPLANT_POWER",
           "source": "ability",
           "sourceId": "kethran_innesto",
           "sourceName": "Innesto",
-          "target": null,
+          "target": "OWN_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
-        },
-        {
-          "condition": {
-            "detail": "aliasUsed: (assente) → non ancora valutabile",
-            "keys": [
-              "aliasUsed"
-            ],
-            "status": "deferred"
-          },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
-          "source": "ability",
-          "sourceId": "kethran_innesto",
-          "sourceName": "Innesto",
-          "target": null,
-          "timing": "AFTER_DUEL_OUTCOME"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

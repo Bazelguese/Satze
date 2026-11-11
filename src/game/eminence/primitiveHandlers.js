@@ -17,6 +17,7 @@ import {
   TRIGGER_SCOPES,
 } from './eminenceConstants.js';
 import { createTriggerRules, applyPrimitiveToTriggerRules } from './triggerRulesOverlay.js';
+import { stampComposeParams, cardAbilityOf } from './composeAbilityParams.js';
 
 /** Accumulatore degli effetti Eminenza di un checkpoint. */
 export function createEffectBundle() {
@@ -112,12 +113,21 @@ function resolveMarkCardIds(segment, ctx) {
   return [...(segment.cardIds || [])];
 }
 
+const OVERLAY_ABILITY_KEYS = ['effect', 'value', 'minPower', 'minDamage', 'minAssault', 'minHealth', 'stat'];
+
 function overlayAbilityFields(ability) {
   if (!ability || typeof ability !== 'object') return {};
   const overlay = {};
-  for (const key of ['effect', 'value', 'minPower', 'minDamage', 'minAssault', 'minHealth', 'stat']) {
+  for (const key of OVERLAY_ABILITY_KEYS) {
     if (Object.prototype.hasOwnProperty.call(ability, key)) overlay[key] = ability[key];
   }
+  return overlay;
+}
+
+/** Tutti i campi dell'effetto, anche quelli assenti: un trapianto non eredita resti del vecchio Potere. */
+function fullAbilityFields(ability) {
+  const overlay = {};
+  for (const key of OVERLAY_ABILITY_KEYS) overlay[key] = ability?.[key];
   return overlay;
 }
 
@@ -370,7 +380,9 @@ const handlers = {
     if (cardId == null) return;
 
     const overlay = { ...((bundle.abilityOverlays ||= {})[cardId] || {}) };
-    const params = ctx.params || {};
+    // I params della UI possono portare solo gli id dei Frammenti: il trigger e l'effetto
+    // composti si ricavano qui dalle carte, così il motore non dipende da chi ha scelto.
+    const params = stampComposeParams(ctx.params || {}) || {};
 
     if (Object.prototype.hasOwnProperty.call(params, 'composedTrigger')) {
       overlay.trigger = params.composedTrigger;
@@ -382,12 +394,46 @@ const handlers = {
     }
 
     if (params.composedAbility) {
-      Object.assign(overlay, overlayAbilityFields(params.composedAbility));
+      Object.assign(overlay, fullAbilityFields(params.composedAbility));
     }
 
     if (Object.keys(overlay).length) {
       bundle.abilityOverlays[cardId] = overlay;
     }
+  },
+
+  // Il Potere stampato su un'altra carta prende il posto del Potere oppure del Bonus
+  // dell'Agente schierato, per questo Duello. Nel Bonus è trattato come Bonus.
+  [P.TRANSPLANT_POWER]: (bundle, segment, ctx) => {
+    const params = ctx.params || {};
+    const sourceId = params[segment.sourceParam || 'fragmentCardId'];
+    const ability = cardAbilityOf(Array.isArray(sourceId) ? sourceId[0] : sourceId);
+    if (!ability) return;
+    const into = params[segment.slotParam || 'graftInto'] === 'bonus' ? 'bonus' : 'power';
+
+    if (into === 'bonus') {
+      bundle.armyBonusState[ctx.ownerSide] = {
+        ...(bundle.armyBonusState[ctx.ownerSide] || {}),
+        override: {
+          trigger: ability.trigger ?? null,
+          effects: [overlayAbilityFields(ability)],
+        },
+      };
+      return;
+    }
+
+    const agentId = ctx.agentIdBySide?.[ctx.ownerSide];
+    if (agentId == null) return;
+    bundle.abilityOverlays[agentId] = {
+      ...(bundle.abilityOverlays[agentId] || {}),
+      trigger: ability.trigger ?? null,
+      ...fullAbilityFields(ability),
+    };
+    bundle.triggerRules = applyPrimitiveToTriggerRules(bundle.triggerRules, {
+      primitive: P.REPLACE_TRIGGER,
+      cardIds: [agentId],
+      trigger: ability.trigger ?? null,
+    }, { ownerSide: ctx.ownerSide, source: ctx.source, params });
   },
 
   [P.GRANT_POWER]: (bundle, segment, ctx) => {

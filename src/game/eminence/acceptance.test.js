@@ -21,6 +21,7 @@ import {
   SIDES,
 } from './eminenceConstants.js';
 import { EMINENCES, EMINENCE_IDS } from '../../data/eminences.js';
+import { ALL_AGENTS } from '../../data/cards.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import {
   beginEminenceRound,
@@ -562,7 +563,12 @@ test('Altare statico: una sconfitta marca l\'Agente come Frammento; vittoria e p
   assert.deepEqual(afterDraw.matchState.player.persistent.fragmentCardIds, []);
 });
 
-test('Altare +1 Sacrificio: immediato −2 PV / +1 Presenza e scala all\'uso successivo', () => {
+test('Altare: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+});
+
+test('Altare +1 Sacrificio: perdi 2 PV e basta, senza crescita', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: ALTAR,
     enemyEminenceId: 'patto_grande_semaforo',
@@ -570,13 +576,13 @@ test('Altare +1 Sacrificio: immediato −2 PV / +1 Presenza e scala all\'uso suc
     enemyAbility: 'semaforo_verde',
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A },
   });
-  // Reveal +1 (presenceDelta) sulla Presenza iniziale 2 → 3; l'effetto +1 è nel bundle.
-  assert.equal(matchState.player.presence, 3);
+  // Reveal +1 sulla Presenza iniziale 1 → 2; nessuna Presenza extra dall'effetto.
+  assert.equal(matchState.player.presence, 2);
   assert.deepEqual(bundle.hpDeltas, [
     { side: SIDES.PLAYER, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'kethran_sacrificio' },
   ]);
-  assert.ok(bundle.presenceChanges.some((c) => c.delta === 1 && c.source === 'kethran_sacrificio'));
-  assert.ok(bundle.abilityEscalations.some((e) => e.key === 'sacrificio'));
+  assert.equal(bundle.presenceChanges.length, 0);
+  assert.equal(bundle.abilityEscalations.length, 0);
 });
 
 test('Altare statico: ottenere un Frammento (sconfitta) dà +1 Presenza', () => {
@@ -593,7 +599,7 @@ test('Altare statico: ottenere un Frammento (sconfitta) dà +1 Presenza', () => 
   });
   assert.deepEqual(afterLoss.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
   // +1 da ON_MARK_GAIN sul Frammento (in più al reveal già contato nello stato di partenza).
-  assert.equal(afterLoss.matchState.player.presence, 4);
+  assert.equal(afterLoss.matchState.player.presence, 3);
 });
 
 test('Altare statico: un Frammento già presente non ripaga +1 Presenza', () => {
@@ -620,48 +626,92 @@ test('Altare statico: un Frammento già presente non ripaga +1 Presenza', () => 
   assert.equal(afterLoss.matchState.player.presence, 2);
 });
 
-test('Altare −2: l\'alias usa il trigger del Frammento; il Frammento si consuma solo se l\'alternativa scatta', () => {
-  const { matchState, bundle } = playRound({
+test('Altare −2 Innesto: non è selezionabile senza Frammenti', () => {
+  let matchState = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  matchState.player.presence = 3;
+  matchState = beginEminenceRound(matchState, { roundNumber: 2 });
+  const attempt = selectEminenceAbility(matchState, SIDES.PLAYER, 'kethran_innesto', { fragmentCardId: AGENT_A });
+  assert.equal(attempt.ok, false);
+});
+
+test('Altare −2 Innesto nel Potere: il Potere del Frammento sostituisce quello dell\'Agente', () => {
+  const fragment = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const { bundle } = playRound({
     playerEminenceId: ALTAR,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'kethran_innesto',
     enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
     fragments: { player: [AGENT_A] },
-    playerParams: { fragmentCardId: AGENT_A, fragmentTrigger: 'imboscata' },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'power' },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
+  const overlay = bundle.abilityOverlays[AGENT_B];
+  assert.equal(overlay.trigger, fragment.ability.trigger ?? null);
+  assert.equal(overlay.effect, fragment.ability.effect);
+  assert.equal(overlay.value, fragment.ability.value);
+  assert.equal(bundle.triggerRules.replacementsByCardId[AGENT_B].trigger, fragment.ability.trigger ?? null);
+  assert.equal(bundle.armyBonusState[SIDES.PLAYER], undefined);
+});
 
-  const aliased = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext({ isFirst: true, roundNumber: 3 }),
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
+test('Altare −2 Innesto nel Bonus: il Potere del Frammento diventa il Bonus, il Potere resta', () => {
+  const fragment = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const { bundle } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_innesto',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    fragments: { player: [AGENT_A] },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'bonus' },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
-  assert.equal(aliased.naturalSatisfied, true);
-  assert.equal(aliased.aliasUsed, true);
+  assert.equal(bundle.abilityOverlays[AGENT_B], undefined);
+  const override = bundle.armyBonusState[SIDES.PLAYER].override;
+  assert.equal(override.trigger, fragment.ability.trigger ?? null);
+  assert.equal(override.effects[0].effect, fragment.ability.effect);
+});
 
-  const ownTrigger = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext({ isFirst: false, roundNumber: 1 }),
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
+test('Altare −2 Innesto: il Frammento non si consuma', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_innesto',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    fragments: { player: [AGENT_A] },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'power' },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
-  assert.equal(ownTrigger.aliasUsed, false);
-  assert.equal(ownTrigger.naturalSatisfied, true);
-
-  const consumed = settleEminenceRound(matchState, {
+  const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
     agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
-    aliasUsedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.deepEqual(consumed.matchState.player.persistent.fragmentCardIds, []);
+  assert.deepEqual(settled.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
+});
 
-  const kept = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
-    aliasUsedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+test('Altare −3 Opera Composita: richiede 2 Frammenti e compone trigger ed effetto', () => {
+  let lonely = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  lonely.player.presence = 3;
+  lonely.player.persistent.fragmentCardIds = [AGENT_A];
+  lonely = beginEminenceRound(lonely, { roundNumber: 3 });
+  assert.equal(selectEminenceAbility(lonely, SIDES.PLAYER, 'kethran_opera_composita').ok, false);
+
+  const triggerCard = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const effectCard = ALL_AGENTS.find((agent) => agent.id === AGENT_B);
+  const { bundle } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_opera_composita',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 3 },
+    fragments: { player: [AGENT_A, AGENT_B] },
+    playerParams: { fragmentCardId: [AGENT_A, AGENT_B] },
+    agentIdBySide: { [SIDES.PLAYER]: 103 },
   });
-  assert.deepEqual(kept.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
+  const overlay = bundle.abilityOverlays[103];
+  assert.equal(overlay.trigger, triggerCard.ability.trigger);
+  assert.equal(overlay.effect, effectCard.ability.effect);
 });
 
 test('Altare −1 Elogio: in vittoria l\'Agente diventa Frammento e lo Statico dà +1 Presenza', () => {
