@@ -378,7 +378,18 @@ Per Eminenza (stesse partite, scelta nuova contro vecchia): miglioramenti da +6%
 
 Con le Eminenze il gradino Normale–Facile si accorcia davvero. Probabile causa: la scelta di Agente e FC non simula gli effetti delle Eminenze, quindi il vantaggio di una ricerca più profonda pesa meno.
 
-**Aperti:** Innesto, Opera Composita, slot delle Maledizioni e Ascesa con bersagli predefiniti; Agente e FC che non tengono conto delle Eminenze.
+**Prova C: Eminenze nelle simulazioni** (`src/game/ai/mc/mcEminence.js`, non attivo nel gioco). Ogni simulazione risolve con le Eminenze il primo Duello, quello che l'IA sta decidendo; la scelta segreta dell'avversario si estrae fra le sue abilità legali. Verifiche: nessun ripiego su 2432 Duelli; il vincitore del Duello cambia nell'11,7% dei casi, i PV nel 27%. Costo: decisioni 2-3 volte più lente.
+
+| Confronto | Risultato |
+|---|---|
+| Facile che simula – Facile che non simula (400 partite) | 56,0% (51,1–60,8) |
+| Normale che simula – Normale che non simula (200) | 49,5% (42,6–56,4) |
+| Difficile – Normale, entrambe simulano (200) | 65,0%, +5,0% ±8,6 rispetto a senza |
+| Normale che simula – Facile che non simula (200) | 63,5%, +1,0% ±8,5 rispetto a senza |
+
+Vantaggio piccolo (al massimo circa +6%) e il gradino Normale–Facile non si allarga. Probabile motivo: gran parte degli effetti delle Eminenze sposta allo stesso modo tutte le mosse candidate, e quindi non cambia quale sia la migliore.
+
+**Aperti:** Innesto, Opera Composita, slot delle Maledizioni e Ascesa con bersagli predefiniti; gradino Normale–Facile più corto con le Eminenze.
 
 ### Fase 2 — Avversario e Focus
 
