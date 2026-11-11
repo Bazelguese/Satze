@@ -6834,7 +6834,9 @@ export default function SatzeGame() {
         eminenceMatchState={eminenceMatchState}
         showChrome={!launchHandoffBusy}
         versus={duelVersus}
-        versusIntro={!isOnlinePvP}
+        // Torneo: avversario ed esercito li ha già decisi il tabellone, quindi niente sorteggio
+        // con la ruota: si va dritti al VS (come nel Duello online).
+        versusIntro={!isOnlinePvP && !tournamentGameActive && !spectating}
         versusDeckArmy={vsChosenEnemyArmy}
         onComplete={() => {
           const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');

@@ -38,12 +38,10 @@ export function computeShuffleDealFromSets(playerSet, enemySet, playerArmy, enem
   let enemyHand;
 
   if (useFixed) {
-    const playerHandIndices = playerSet.map((card, i) => i).filter((i) =>
-      fixedHands.playerHand.some((c) => c.id === playerSet[i].id)
-    );
-    const enemyHandIndices = enemySet.map((card, i) => i).filter((i) =>
-      fixedHands.enemyHand.some((c) => c.id === enemySet[i].id)
-    );
+    // Nell'ordine della mano, non del mazzo: la distribuzione animata serve le carte nello
+    // stesso ordine in cui poi restano in mano, altrimenti a fine animazione cambiano posto.
+    const playerHandIndices = fixedHands.playerHand.map((c) => playerSet.findIndex((d) => d.id === c.id));
+    const enemyHandIndices = fixedHands.enemyHand.map((c) => enemySet.findIndex((d) => d.id === c.id));
     playerFinalOrder = buildFinalOrderFromHand(playerSet.length, playerHandIndices);
     enemyFinalOrder = buildFinalOrderFromHand(enemySet.length, enemyHandIndices);
     playerHand = fixedHands.playerHand.map((card) => ({ ...card, army: card.army || playerArmy }));
