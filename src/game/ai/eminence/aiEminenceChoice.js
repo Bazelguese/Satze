@@ -522,11 +522,14 @@ export function evaluateCorteOffer(abilityId, info, choices = null) {
 
 /**
  * Corteggiamento: l'IA sceglie se scegliere per prima o per seconda l'Agente.
- * Vedi la nota in chooseAiDealResponse.
+ *
+ * Misurato l'11/11/2026 (464 partite IA Normale contro IA Normale, Classico senza Eminenze,
+ * stessa partita giocata nei due modi da un turno a caso fra 1 e 4):
+ * - turni 1-2: per seconda vince il 12% di partite in più (±7.7);
+ * - turni 3-4: nessuna differenza netta (−4.5% ±5.8), leggera tendenza a favore della prima.
  */
 export function chooseCourtshipPosition(info) {
-  void info;
-  return 'second';
+  return info.roundNumber <= 2 ? 'second' : 'first';
 }
 
 /**

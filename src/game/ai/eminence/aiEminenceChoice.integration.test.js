@@ -163,13 +163,9 @@ describe('IA: risposte alle Offerte', () => {
     expect(['damage', 'power']).toContain(res.dealChoice);
   });
 
-  it('Corteggiamento: risponde con una posizione valida', () => {
-    const res = chooseAiDealResponse(
-      offer('ratti_corteggiamento', { kind: 'CHOICE', choices: ['first', 'second'] }),
-      corte(),
-      game(),
-    );
-    expect(res.dealAccepted).toBe(true);
-    expect(['first', 'second']).toContain(res.dealChoice);
+  it('Corteggiamento: per seconda nei primi due turni, per prima dopo', () => {
+    const deal = offer('ratti_corteggiamento', { kind: 'CHOICE', choices: ['first', 'second'] });
+    expect(chooseAiDealResponse(deal, corte(), game({ roundNumber: 1 }))).toEqual({ dealAccepted: true, dealChoice: 'second' });
+    expect(chooseAiDealResponse(deal, corte(), game({ roundNumber: 3 }))).toEqual({ dealAccepted: true, dealChoice: 'first' });
   });
 });
