@@ -849,3 +849,26 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - «PV persi in questo Scontro» = PV iniziali meno PV attuali; le Cure li riducono.
 
 **Lavoro di implementazione:** condizione «hai meno PV dell'avversario»; riflesso dei PV inflitti a fine Duello; VA scalato sui PV persi con tetto; supporto a due Eminenze per Armata nel deckbuilding.
+
+### 12.2 Kethran — Istituto della caccia agli angeli (approvata)
+
+**Lore:** i Kethran prima della caduta, l'impero costruttore di Keth Vahar ossessionato dall'altezza e dal cielo.
+
+**Stile:** opposto all'Altare della Ricomposizione. Non si cresce perdendo, si costruisce: i Livelli dell'Istituto salgono con le vittorie e con l'Organizzazione, e si incassano con la Parata.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | L'Ossessione dell'Altezza | Quando vinci un Duello, l'Istituto sale di 1 Livello e +1 Presenza. Quando perdi due Duelli di fila, scende di 1 Livello. | — | circa 2.5 Presenza/Scontro |
+| +1 | Tributo al popolo | Se vinci il Duello, perdi PV pari al DAN dell'Agente nemico. | −0.75 | circa −0.8 ✅ |
+| −1 | Organizzazione anticielo | L'Istituto sale di 1 Livello; se perdi questo Duello, sale di 2. | 0.75 | circa 1.1 〰️ (sopra il budget, accettato) |
+| −2 | Festa della grande serpe | Il trigger del Bonus del tuo Agente diventa, a tua scelta, Gloria o Magnanimo. | 1.50 | circa 1.5 ✅ |
+| −3 | Parata dei cadaveri volanti | Il tuo Agente ottiene +1 DAN e +2 VA per ogni Livello dell'Istituto. | 2.25 | circa 1.8 con 2 Livelli, 2.7 con 3 ✅ 〰️ |
+
+**Note di regola:**
+- I Livelli partono da 0, non scendono sotto 0 e sono pubblici.
+- «Due Duelli di fila» persi: la seconda sconfitta consecutiva toglie 1 Livello; una vittoria o un pareggio interrompe la serie.
+- Festa: la scelta fra Gloria e Magnanimo si fa al momento della scelta dell'abilità.
+
+**Lavoro di implementazione:** contatore persistente dei Livelli con serie di sconfitte; alias o sostituzione del trigger del Bonus con scelta; statistiche scalate sui Livelli.
