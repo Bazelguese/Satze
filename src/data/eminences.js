@@ -208,12 +208,36 @@ export const EMINENCES = {
     static: {
       id: 'mascarada_ordine_incontri',
       name: 'Organizzazione Impeccabile',
-      text: 'Gli Agenti vengono scelti e resi noti prima della scelta del Campo.',
+      text: 'Gli Agenti vengono scelti e resi noti prima della scelta del Campo. Il pubblico ama le rivalità: quando un Agente attiva un Potere con trigger Gloria o Vendetta, +1 Presenza (una sola volta per Duello).',
       implemented: true,
-      segments: [],
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          condition: { activatedPowerTriggers: { any: ['glory', 'vendetta'] } },
+        },
+      ],
     },
 
     abilities: [
+      {
+        id: 'mascarada_vendere_il_colpo',
+        name: 'Vendere il Colpo',
+        presenceDelta: 1,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'In questo Duello l\'Agente avversario ottiene 1 FC temporaneo.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.GRANT_TEMPORARY_FOCUS,
+            target: T.ENEMY_AGENT,
+            amount: 1,
+          },
+        ],
+      },
       {
         id: 'mascarada_scommessa',
         name: 'Scommessa',
@@ -221,13 +245,13 @@ export const EMINENCES = {
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_SELECTION,
         paramsSchema: { pronostico: ['VITTORIA_PROPRIA', 'VITTORIA_AVVERSARIA', 'PAREGGIO'] },
-        text: 'Pronostica segretamente l\'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +2 Presenza.',
+        text: 'Pronostica segretamente l\'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
             primitive: P.CHANGE_PRESENCE,
             target: T.SELF,
-            delta: 2,
+            delta: 1,
             condition: {
               duelWinnerRelative: {
                 param: 'pronostico',
@@ -247,12 +271,12 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa.',
+        text: 'In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
             primitive: P.ALIAS_TRIGGER,
-            scope: TRIGGER_SCOPES.GLOBAL,
+            scope: TRIGGER_SCOPES.OWN,
             map: {
               glory: ['vendetta'],
               vendetta: ['glory'],
@@ -263,24 +287,21 @@ export const EMINENCES = {
         ],
       },
       {
-        id: 'mascarada_incontro_truccato',
-        name: 'Incontro Truccato',
-        presenceDelta: -4,
+        id: 'mascarada_ego',
+        name: 'Ego senza Maschere',
+        presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato.',
+        text: 'Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN».',
         segments: [
           {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.FORCE_TRIGGER,
-            scope: TRIGGER_SCOPES.OWN,
-            excludeTriggers: ['conquest', 'lastWish'],
-          },
-          {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.UNBLOCKABLE_POWER,
-            scope: TRIGGER_SCOPES.OWN,
-            excludeTriggers: ['conquest', 'lastWish'],
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.REPLACE_ABILITY,
+            target: T.OWN_AGENT,
+            slot: 'bonus',
+            persistent: true,
+            persistentUntil: 'OWN_WIN',
+            ability: { trigger: 'overdrive', effect: 'powerAndDamage', value: 2 },
           },
         ],
       },

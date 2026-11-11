@@ -455,6 +455,7 @@ test('Mascarada -2: Gloria↔Vendetta e Conquista↔Ultimo Desiderio sono alias,
   });
   assert.equal(lastWishViaConquest.naturalSatisfied, true);
 
+  // Solo il proprio Agente: per l'avversario Gloria resta Gloria.
   const enemyGlory = resolveTriggerState({
     originalTrigger: 'glory',
     context: duelContext({ lostPrevious: true }),
@@ -462,63 +463,61 @@ test('Mascarada -2: Gloria↔Vendetta e Conquista↔Ultimo Desiderio sono alias,
     side: SIDES.ENEMY,
     triggerRules: bundle.triggerRules,
   });
-  assert.equal(enemyGlory.naturalSatisfied, true);
+  assert.equal(Boolean(enemyGlory.naturalSatisfied), false);
+  assert.equal(Boolean(enemyGlory.aliasUsed), false);
 });
 
-test('Mascarada -4: forza il Potere proprio e lo rende non bloccabile, senza toccare la Conquista', () => {
-  const { bundle } = playRound({
+test('Mascarada statico: +1 Presenza, una volta, se si attiva un Potere Gloria o Vendetta', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: 'mascarada_organizzatore', enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+  const presence = (activatedTriggerBySide) => settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    activatedTriggerBySide,
+  }).matchState.player.presence;
+  assert.equal(presence({ [SIDES.PLAYER]: null, [SIDES.ENEMY]: 'vendetta' }), 2);
+  assert.equal(presence({ [SIDES.PLAYER]: 'glory', [SIDES.ENEMY]: 'vendetta' }), 2);
+  assert.equal(presence({ [SIDES.PLAYER]: 'conquest', [SIDES.ENEMY]: 'turbo' }), 1);
+});
+
+test('Mascarada +1: Vendere il Colpo dà 1 FC temporaneo all\'Agente avversario', () => {
+  const { matchState, bundle } = playRound({
     playerEminenceId: 'mascarada_organizzatore',
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mascarada_incontro_truccato',
+    playerAbility: 'mascarada_vendere_il_colpo',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 4 },
   });
-
-  const ownGlory = resolveTriggerState({
-    originalTrigger: 'glory',
-    context: duelContext(),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-    powerBlocked: true,
-  });
-  assert.equal(ownGlory.forced, true);
-  assert.equal(ownGlory.satisfied, true);
-  assert.equal(ownGlory.unblockable, true);
-  assert.equal(ownGlory.resolves, true);
-
-  const ownConquest = resolveTriggerState({
-    originalTrigger: 'conquest',
-    context: duelContext({ won: false }),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-  });
-  assert.equal(ownConquest.forced, false);
-  assert.equal(ownConquest.satisfied, false);
-
-  const enemyTurbo = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext(),
-    card: { id: 2 },
-    side: SIDES.ENEMY,
-    triggerRules: bundle.triggerRules,
-  });
-  assert.equal(enemyTurbo.forced, false);
-
-  const disabled = resolveTriggerState({
-    originalTrigger: 'glory',
-    context: duelContext(),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-    powerDisabled: true,
-  });
-  assert.equal(disabled.forced, true);
-  assert.equal(disabled.resolves, false);
+  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 1);
+  assert.equal(bundle.temporaryFocus[SIDES.PLAYER], 0);
+  assert.equal(matchState.player.presence, 2);
 });
 
-test('Mascarada +0: pronostico corretto vale +2 Presenza dopo il Duello', () => {
+test('Mascarada −3: Ego senza Maschere sostituisce il Bonus finché non vinci un Duello', () => {
+  const base = createEminenceMatchState({ playerEminenceId: 'mascarada_organizzatore', enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 2 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'mascarada_ego').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const expected = { trigger: 'overdrive', effects: [{ effect: 'powerAndDamage', value: 2 }] };
+  const first = prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+  assert.deepEqual(first.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+
+  // Persa: il Bonus resta sostituito nel Duello successivo.
+  let next = settleEminenceRound(first.matchState, { winner: SIDES.ENEMY }).matchState;
+  assert.deepEqual(next.player.persistent.armyBonusOverride.override, expected);
+  next = beginEminenceRound(next, { roundNumber: 3 });
+  next = selectEminenceAbility(next, SIDES.PLAYER, 'mascarada_vendere_il_colpo').matchState;
+  next = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const second = prepareEminenceDuel(next, { agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: 302 } });
+  assert.deepEqual(second.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+
+  // Vinta: da qui il Bonus torna quello dell'Armata.
+  const won = settleEminenceRound(second.matchState, { winner: SIDES.PLAYER }).matchState;
+  assert.equal(won.player.persistent.armyBonusOverride, null);
+});
+
+test('Mascarada 0: pronostico corretto vale +1 Presenza dopo il Duello', () => {
   const { matchState } = playRound({
     playerEminenceId: 'mascarada_organizzatore',
     enemyEminenceId: 'patto_grande_semaforo',
@@ -532,8 +531,8 @@ test('Mascarada +0: pronostico corretto vale +2 Presenza dopo il Duello', () => 
   assert.equal(matchState.player.presence, 1);
 
   const settled = settleEminenceRound(matchState, { winner: 'player' });
-  assert.equal(settled.matchState.player.presence, 3);
-  assert.equal(settled.bundle.presenceChanges[0].delta, 2);
+  assert.equal(settled.matchState.player.presence, 2);
+  assert.equal(settled.bundle.presenceChanges[0].delta, 1);
   assert.equal(settled.bundle.presenceChanges[0].countsAsSpend, false);
 });
 
@@ -557,7 +556,7 @@ test('Mascarada +0: pronostico sbagliato non paga; il pareggio sì se era il pro
     playerParams: { pronostico: 'PAREGGIO' },
   });
   const afterDraw = settleEminenceRound(drawBet.matchState, { winner: 'draw' });
-  assert.equal(afterDraw.matchState.player.presence, 3);
+  assert.equal(afterDraw.matchState.player.presence, 2);
 });
 
 test('Mascarada +0: senza pronostico il segmento non scatta; senza vincitore fallisce rumorosamente', () => {

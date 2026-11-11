@@ -228,7 +228,7 @@ test('sequenza: dopo la scelta lo Statico che riordina apre PRE_AGENT prima di P
   assert.equal(hit.notices[0].name, 'Scommessa');
   assert.equal(hit.notices[0].sourceName, 'L\'Organizzatore degli Incontri');
   assert.match(hit.notices[0].text, /propria vittoria/i);
-  assert.match(hit.notices[0].text, /\+2/);
+  assert.match(hit.notices[0].text, /\+1/);
 
   const miss = settleEminenceRound(third.matchState, { initiativeSide: SIDES.PLAYER, winner: SIDES.ENEMY });
   assert.equal(miss.notices.length, 0);

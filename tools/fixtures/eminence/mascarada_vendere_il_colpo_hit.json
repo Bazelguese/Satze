@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "mascarada_organizzatore",
-    "presence": 4,
-    "abilityId": "mascarada_incontro_truccato",
+    "presence": 1,
+    "abilityId": "mascarada_vendere_il_colpo",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -34,26 +34,26 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "mascarada_incontro_truccato_miss",
-  "branch": "miss"
+  "name": "mascarada_vendere_il_colpo_hit",
+  "branch": "hit"
 }

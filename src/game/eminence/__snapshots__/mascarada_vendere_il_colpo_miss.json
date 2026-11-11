@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "mascarada_incontro_truccato",
-    "name": "Incontro Truccato",
-    "presenceDelta": -4,
+    "id": "mascarada_vendere_il_colpo",
+    "name": "Vendere il Colpo",
+    "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+    "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      4,
-      0
+      1,
+      2
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,23 +28,19 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
+      {
         "id": "mascarada_scommessa",
         "presenceDelta": 0
-      },
-      {
-        "id": "mascarada_maschere",
-        "presenceDelta": -2
-      },
-      {
-        "id": "mascarada_incontro_truccato",
-        "presenceDelta": -4
       }
     ],
-    "presenceAfterReveal": 0,
-    "presenceAfterSelect": 4,
-    "presenceAvailable": 4,
-    "presenceDelta": -4,
-    "selected": "mascarada_incontro_truccato"
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "mascarada_vendere_il_colpo"
   },
   "eminence": {
     "army": "Mascarada",
@@ -64,43 +60,38 @@
           "holdAnnounce": false,
           "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           },
           "waitFor": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           }
         }
       ],
-      "id": "reveal:player:mascarada_incontro_truccato:GENERAL",
+      "id": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
       "kind": "reveal",
-      "name": "Incontro Truccato",
+      "name": "Vendere il Colpo",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "GRANT_TEMPORARY_FOCUS",
           "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "UNBLOCKABLE_POWER",
-          "slot": null,
-          "target": null
+          "target": "ENEMY_AGENT"
         }
       ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -4,
+      "presenceDelta": 1,
       "side": "player",
-      "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+      "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
     }
   ],
   "scenario": {
     "branch": "miss",
     "initiativeSide": "player",
-    "name": "mascarada_incontro_truccato_miss",
+    "name": "mascarada_vendere_il_colpo_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -113,9 +104,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -127,9 +118,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -142,14 +133,14 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:mascarada_incontro_truccato:GENERAL",
+          "noticeId": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
           "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           },
           "waitFor": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           }
         }
@@ -170,44 +161,39 @@
               "holdAnnounce": false,
               "recipe": "LINK_AGENT",
               "to": {
-                "side": "player",
+                "side": "enemy",
                 "type": "field-agent"
               },
               "waitFor": {
-                "side": "player",
+                "side": "enemy",
                 "type": "field-agent"
               }
             }
           ],
-          "id": "reveal:player:mascarada_incontro_truccato:GENERAL",
+          "id": "reveal:player:mascarada_vendere_il_colpo:GENERAL",
           "kind": "reveal",
-          "name": "Incontro Truccato",
+          "name": "Vendere il Colpo",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "FORCE_TRIGGER",
+              "primitive": "GRANT_TEMPORARY_FOCUS",
               "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "UNBLOCKABLE_POWER",
-              "slot": null,
-              "target": null
+              "target": "ENEMY_AGENT"
             }
           ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -4,
+          "presenceDelta": 1,
           "side": "player",
-          "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+          "text": "In questo Duello l'Agente avversario ottiene 1 FC temporaneo."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -218,7 +204,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -230,21 +216,24 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "segments": [
         {
           "condition": {
-            "detail": null,
-            "status": "none"
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "FORCE_TRIGGER",
-          "source": "ability",
-          "sourceId": "mascarada_incontro_truccato",
-          "sourceName": "Incontro Truccato",
-          "target": null,
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
@@ -252,11 +241,11 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "UNBLOCKABLE_POWER",
+          "primitive": "GRANT_TEMPORARY_FOCUS",
           "source": "ability",
-          "sourceId": "mascarada_incontro_truccato",
-          "sourceName": "Incontro Truccato",
-          "target": null,
+          "sourceId": "mascarada_vendere_il_colpo",
+          "sourceName": "Vendere il Colpo",
+          "target": "ENEMY_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],

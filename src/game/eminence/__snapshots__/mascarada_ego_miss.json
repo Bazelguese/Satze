@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "mascarada_incontro_truccato",
-    "name": "Incontro Truccato",
-    "presenceDelta": -4,
+    "id": "mascarada_ego",
+    "name": "Ego senza Maschere",
+    "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+    "text": "Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN»."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      4,
+      3,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -28,6 +28,10 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
+      {
         "id": "mascarada_scommessa",
         "presenceDelta": 0
       },
@@ -36,15 +40,15 @@
         "presenceDelta": -2
       },
       {
-        "id": "mascarada_incontro_truccato",
-        "presenceDelta": -4
+        "id": "mascarada_ego",
+        "presenceDelta": -3
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 4,
-    "presenceAvailable": 4,
-    "presenceDelta": -4,
-    "selected": "mascarada_incontro_truccato"
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "mascarada_ego"
   },
   "eminence": {
     "army": "Mascarada",
@@ -61,46 +65,38 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
-      "id": "reveal:player:mascarada_incontro_truccato:GENERAL",
+      "id": "reveal:player:mascarada_ego:GENERAL",
       "kind": "reveal",
-      "name": "Incontro Truccato",
+      "name": "Ego senza Maschere",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "REPLACE_ABILITY",
           "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "UNBLOCKABLE_POWER",
-          "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         }
       ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -4,
+      "presenceDelta": -3,
       "side": "player",
-      "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+      "text": "Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN»."
     }
   ],
   "scenario": {
-    "branch": "hit",
+    "branch": "miss",
     "initiativeSide": "player",
-    "name": "mascarada_incontro_truccato_hit",
+    "name": "mascarada_ego_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -113,9 +109,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 3
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -127,9 +123,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 3
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -141,17 +137,14 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:mascarada_incontro_truccato:GENERAL",
-          "recipe": "LINK_AGENT",
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:mascarada_ego:GENERAL",
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "gate": "GENERAL",
@@ -167,40 +160,32 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
                 "side": "player",
-                "type": "field-agent"
+                "type": "announce"
               },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
+              "waitFor": null
             }
           ],
-          "id": "reveal:player:mascarada_incontro_truccato:GENERAL",
+          "id": "reveal:player:mascarada_ego:GENERAL",
           "kind": "reveal",
-          "name": "Incontro Truccato",
+          "name": "Ego senza Maschere",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "FORCE_TRIGGER",
+              "primitive": "REPLACE_ABILITY",
               "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "UNBLOCKABLE_POWER",
-              "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             }
           ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -4,
+          "presenceDelta": -3,
           "side": "player",
-          "text": "In questo Duello, il trigger del tuo Agente schierato è considerato soddisfatto e il suo Potere non può essere bloccato."
+          "text": "Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN»."
         }
       ],
       "presence": {
@@ -235,16 +220,19 @@
       "segments": [
         {
           "condition": {
-            "detail": null,
-            "status": "none"
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "FORCE_TRIGGER",
-          "source": "ability",
-          "sourceId": "mascarada_incontro_truccato",
-          "sourceName": "Incontro Truccato",
-          "target": null,
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
@@ -252,12 +240,12 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "UNBLOCKABLE_POWER",
+          "primitive": "REPLACE_ABILITY",
           "source": "ability",
-          "sourceId": "mascarada_incontro_truccato",
-          "sourceName": "Incontro Truccato",
-          "target": null,
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "sourceId": "mascarada_ego",
+          "sourceName": "Ego senza Maschere",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"
