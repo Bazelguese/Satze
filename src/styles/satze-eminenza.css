@@ -1012,3 +1012,22 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
    per entrambe le zone. translateZ perché lo stage è un contesto 3D (preserve-3d). */
 .em-stage > .em-card-shell{z-index:2;transform:translateZ(2px)}
 .em-stage > .em-rail{z-index:1}
+
+/* Le fasce avversarie sono pulsanti disattivati (non si cliccano): senza questa riga
+   prendono l'opacità ridotta dei pulsanti disattivati e sembrano più chiare delle tue. */
+.em-rail-hit:disabled{opacity:1}
+
+/* Costo di Presenza: riquadro proprio, inclinato come il taglio della fascia, così il
+   numero si riconosce a colpo d'occhio come «prezzo» e non come parte del testo. */
+.em-rail--portale .em-rail-cost{isolation:isolate;background:none !important;padding-right:14px !important}
+.em-rail--portale .em-rail-cost::before{
+  content:'';position:absolute;z-index:-1;left:6px;right:16px;top:7px;bottom:7px;
+  transform:skewX(-9deg);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 26%,rgba(4,6,10,.9)),rgba(4,6,10,.9));
+  border:1.5px solid color-mix(in srgb,var(--em-sel,#d5ecf9) 62%,#ffffff);
+  box-shadow:0 0 12px color-mix(in srgb,var(--em-sel,#d5ecf9) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.35);
+}
+.em-rail--portale .em-rail-cost::after{color:#cfd8e6}
+.em-rail--portale .em-rail-illegal .em-rail-cost::before{
+  border-color:rgba(180,191,208,.35);box-shadow:none;background:rgba(4,6,10,.8);
+}
