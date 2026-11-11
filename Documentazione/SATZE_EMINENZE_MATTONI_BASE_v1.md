@@ -696,7 +696,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 | Slot | Nome | Testo | Budget | Stima |
 |---|---|---|---|---|
 | Statico | Male Crescente *(invariato)* | Quando schieri un Agente con la Lega effettiva più bassa tra quelli che non hai ancora usato, +1 Presenza. In caso di parità, la condizione è soddisfatta. | — | fino a 5 Presenza/Scontro (l'ordine crescente costa Duelli) |
-| +1 | Dono della Megera | In questo Duello l'Agente nemico riceve 1 FC temporaneo. | −0.75 | circa −1.0 ✅ |
+| +1 | Corteggiamento | **Reveal: a inizio round.** In questo Duello l'avversario sceglie se essere il primo o il secondo a scegliere l'Agente. | −0.75 | circa −0.75 ✅ |
 | −1 | Seduzione | **Reveal: prima degli Agenti.** Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello. | 0.75 | circa 0.75 ✅ |
 | −3 | Vendetta oltre la Morte | **Si rivela quando schieri l'Agente.** Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo. | 2.25 | circa 2.0 ✅ 〰️ |
 
@@ -704,6 +704,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 
 **Lavoro di implementazione:**
 - Tolte Sussurro, Veleno e Spezzacuore.
+- Corteggiamento: l'avversario sceglie la propria posizione (primo o secondo) per un singolo round; reveal a inizio round. *(Aggiornato l'11 novembre 2026: sostituisce il Dono della Megera, che coincideva con Vendere il Colpo di Mascarada.)*
 - Seduzione: divieto di usare un Agente preciso per un Duello, se non è l'unico disponibile.
 - Vendetta: permettere di schierare un Agente già usato e sconfitto; reveal al momento dello schieramento.
 
@@ -755,12 +756,12 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 
 | Slot | Nome | Testo | Budget | Stima |
 |---|---|---|---|---|
-| Statico | Cataclisma Verde | All'inizio del round 5, lo slot aperto subisce Terraformare: L'Ora Verde. Quando il tuo Bonus d'Armata si attiva, +1 Presenza. | — | circa 3 Presenza/Scontro |
+| Statico | Cataclisma Verde | All'inizio del round 5, lo slot aperto subisce Terraformare: Arena del Violento Gaudio. Quando il tuo Bonus d'Armata si attiva, +1 Presenza. | — | circa 3 Presenza/Scontro |
 | +1 | Cielo Smeraldino | In questo Duello il tuo Agente schierato ha −1 DAN. | −0.75 | circa −0.35 ✅ (al limite) |
 | −2 | Disprezzo *(originale)* | Il tuo Agente schierato ignora gli effetti del Campo in questo Duello. | 1.50 | circa 1.5–2.0 quando usato contro Campi pesanti ✅ 〰️ |
 | −3 | Preghiera Ululata | Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA». | 2.25 | circa 2.0–2.5 ✅ 〰️ |
 
-**Nuovo Campo richiesto — «L'Ora Verde» (nome provvisorio):**
+**Nuovo Campo richiesto — «Arena del Violento Gaudio»:**
 - id: nuovo (il catalogo arriva oggi a 121);
 - tema: Apex;
 - effetto: «In scontro · Entrambi · +2 POT, +2 DAN»;
@@ -772,3 +773,27 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Statico: `REPLACE_FIELD` verso il nuovo id al round 5; +1 Presenza all'attivazione del Bonus.
 - Preghiera Ululata: override permanente del Bonus con Attrizione su VA (`assaultValue`, già supportata).
 - Tolte Furia e Ora Verde (abilità).
+
+### 10.13 Mascarada — L'Organizzatore degli Incontri (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Organizzazione Impeccabile | Gli Agenti vengono scelti e resi noti prima della scelta del Campo. Il pubblico ama le rivalità: quando un Agente attiva un Potere con trigger Gloria o Vendetta, +1 Presenza (una sola volta per Duello). | — | circa 2.5 Presenza/Scontro |
+| +1 | Vendere il Colpo | In questo Duello l'Agente avversario ottiene 1 FC temporaneo. | −0.75 | circa −1.0 ✅ |
+| 0 | Scommessa | Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza. | 0 | circa +0.6 (lieve ⬆️) |
+| −2 | Maschere Invertite | In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa. | 1.50 | circa 0.8 (lieve ⬇️) |
+| −3 | Ego senza Maschere | Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN». | 2.25 | circa 1.8 ✅ (al limite) 〰️ |
+
+**Motore:** 0.75 + circa 1.9 = circa 2.65 FC.
+
+**Da osservare in playtest:** Scommessa sulla propria sconfitta nei round già persi; durata reale di Ego senza Maschere.
+
+**Lavoro di implementazione:**
+- Statico: +1 Presenza (max una per Duello) all'attivazione di un Potere con trigger Gloria o Vendetta.
+- Vendere il Colpo: FC temporaneo all'Agente avversario.
+- Scommessa: premio da 2 a 1 Presenza.
+- Maschere Invertite: alias dei trigger limitato al proprio lato.
+- Ego senza Maschere: override del Bonus con «Overdrive: +2 POT, +2 DAN», attivo finché il giocatore non vince un Duello.
+- Tolto Incontro Truccato.
