@@ -118,6 +118,16 @@ function rispondiAffari(c, pendenti, rng, round, altro, iniziativa) {
           c.ms = resolvePendingDeal(c.ms, deal, risposta, { initiativeSide: iniziativa }).matchState;
           continue; // forzato: l'altro client lo risolve da solo
         }
+      } else if (deal.mode === 'OFFER') {
+        if (!dealNeedsRemoteResponse({ ...deal, recipientSide: 'enemy' }, c.ms)) {
+          c.ms = resolvePendingDeal(c.ms, deal, forcedDealResponse(deal, c.ms), { initiativeSide: iniziativa }).matchState;
+          continue; // obbligata e senza varianti: l'altro client la risolve da solo
+        }
+        const accetta = deal.mustAccept || rng() < 0.5;
+        const scelte = deal.choices || [];
+        risposta = accetta
+          ? { dealAccepted: true, dealChoice: scelte.length ? scelte[Math.floor(rng() * scelte.length)] : null }
+          : { dealAccepted: false, dealResponse: 'refuse' };
       } else {
         risposta = rng() < 0.5 ? { dealAccepted: true } : { dealAccepted: false, dealResponse: 'refuse' };
       }

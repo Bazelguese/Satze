@@ -94,6 +94,11 @@ export function applyDuelMainAbilities({
           : ability.value;
       const abilitySource = `${side.labelSelf} (${agent.name})`;
       applyEffect(ability.effect, abilityValue, sideKey, abilitySource, battleLog, opt(ability));
+      // Debito X: il Potere si attiva senza bisogno del trigger, e chi lo controlla paga X PV
+      // quando si attiva. Un Potere bloccato non arriva qui, quindi non si paga.
+      if (ability.trigger === 'debt') {
+        applyEffect('selfDamage', ability.debtAmount ?? 2, sideKey, `${abilitySource} (Debito)`, battleLog, {});
+      }
       if (ability.trigger === 'lastWish' && fieldOptions?.lastWishDouble) {
         applyEffect(ability.effect, abilityValue, sideKey, `${abilitySource} (2×)`, battleLog, opt(ability));
       }

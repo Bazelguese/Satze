@@ -2,9 +2,9 @@
   "ability": {
     "id": "corte_debito",
     "name": "Debito",
-    "presenceDelta": 1,
-    "revealGate": "PRE_AGENT",
-    "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
+    "presenceDelta": -1,
+    "revealGate": "PRE_FIELD",
+    "text": "Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»"
   },
   "bilance": {
     "cinematicCues": 2,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      3,
-      5
+      1,
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,22 +28,22 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "corte_accordo",
+        "id": "corte_prestito",
+        "presenceDelta": 1
+      },
+      {
+        "id": "corte_rinforzo",
         "presenceDelta": 0
       },
       {
         "id": "corte_debito",
-        "presenceDelta": 1
-      },
-      {
-        "id": "corte_salasso",
-        "presenceDelta": -2
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 4,
-    "presenceAfterSelect": 3,
-    "presenceAvailable": 3,
-    "presenceDelta": 1,
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": -1,
     "selected": "corte_debito"
   },
   "eminence": {
@@ -53,7 +53,7 @@
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima dell'Agente",
+      "badgeText": "Rivelazione · Prima del Campo",
       "cues": [
         {
           "flight": true,
@@ -64,35 +64,40 @@
           "holdAnnounce": false,
           "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           },
           "waitFor": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           }
         }
       ],
-      "id": "reveal:player:corte_debito:PRE_AGENT",
+      "id": "reveal:player:corte_debito:PRE_FIELD",
       "kind": "reveal",
       "name": "Debito",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "REPLACE_TRIGGER",
+          "primitive": "PROPOSE_DEAL",
           "slot": null,
           "target": null
+        },
+        {
+          "primitive": "REPLACE_TRIGGER",
+          "slot": null,
+          "target": "ENEMY_AGENT"
         }
       ],
       "phase": "REVEAL",
-      "phaseDetail": "Prima dell'Agente",
+      "phaseDetail": "Prima del Campo",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": 1,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
+      "text": "Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»"
     },
     {
-      "badgeText": "Risoluzione · Condizione soddisfatta",
+      "badgeText": "Risoluzione · Prima dei trigger",
       "cues": [
         {
           "flight": true,
@@ -101,31 +106,34 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
+          "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
-            "type": "presence"
+            "side": "enemy",
+            "type": "field-agent"
           },
-          "waitFor": null
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
         }
       ],
-      "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+      "id": "effect:player:corte_debito:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
-      "name": "Pagare i Debiti",
+      "name": "Debito",
       "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "REPLACE_TRIGGER",
           "slot": null,
-          "target": "SELF"
+          "target": "ENEMY_AGENT"
         }
       ],
       "phase": "RESOLVE",
-      "phaseDetail": "Condizione soddisfatta",
+      "phaseDetail": "Prima dei trigger",
       "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
+      "presenceDelta": null,
       "side": "player",
-      "text": "+1 Presenza."
+      "text": "Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»"
     }
   ],
   "scenario": {
@@ -136,21 +144,7 @@
   },
   "steps": [
     {
-      "badge": "Prima del Campo",
-      "cues": [],
-      "gate": "PRE_FIELD",
-      "gateLabel": "Prima del Campo",
-      "kind": "gate",
-      "notices": [],
-      "presence": {
-        "enemy": 0,
-        "player": 3
-      },
-      "presenceAfterReveal": 3,
-      "timing": null
-    },
-    {
-      "badge": "Rivelazione · Prima dell'Agente",
+      "badge": "Rivelazione · Prima del Campo",
       "cues": [
         {
           "flight": true,
@@ -159,24 +153,24 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:corte_debito:PRE_AGENT",
+          "noticeId": "reveal:player:corte_debito:PRE_FIELD",
           "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           },
           "waitFor": {
-            "side": "player",
+            "side": "enemy",
             "type": "field-agent"
           }
         }
       ],
-      "gate": "PRE_AGENT",
-      "gateLabel": "Prima dell'Agente",
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
       "kind": "gate",
       "notices": [
         {
-          "badgeText": "Rivelazione · Prima dell'Agente",
+          "badgeText": "Rivelazione · Prima del Campo",
           "cues": [
             {
               "flight": true,
@@ -187,39 +181,58 @@
               "holdAnnounce": false,
               "recipe": "LINK_AGENT",
               "to": {
-                "side": "player",
+                "side": "enemy",
                 "type": "field-agent"
               },
               "waitFor": {
-                "side": "player",
+                "side": "enemy",
                 "type": "field-agent"
               }
             }
           ],
-          "id": "reveal:player:corte_debito:PRE_AGENT",
+          "id": "reveal:player:corte_debito:PRE_FIELD",
           "kind": "reveal",
           "name": "Debito",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "REPLACE_TRIGGER",
+              "primitive": "PROPOSE_DEAL",
               "slot": null,
               "target": null
+            },
+            {
+              "primitive": "REPLACE_TRIGGER",
+              "slot": null,
+              "target": "ENEMY_AGENT"
             }
           ],
           "phase": "REVEAL",
-          "phaseDetail": "Prima dell'Agente",
+          "phaseDetail": "Prima del Campo",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": 1,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva."
+          "text": "Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»"
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -231,13 +244,13 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
-      "badge": "Risoluzione · Condizione soddisfatta",
+      "badge": "Risoluzione · Prima dei trigger",
       "cues": [
         {
           "flight": true,
@@ -246,20 +259,23 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
-          "recipe": "PRESENCE_PULSE",
+          "noticeId": "effect:player:corte_debito:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "LINK_AGENT",
           "to": {
-            "side": "player",
-            "type": "presence"
+            "side": "enemy",
+            "type": "field-agent"
           },
-          "waitFor": null
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
         }
       ],
       "gate": null,
       "kind": "checkpoint",
       "notices": [
         {
-          "badgeText": "Risoluzione · Condizione soddisfatta",
+          "badgeText": "Risoluzione · Prima dei trigger",
           "cues": [
             {
               "flight": true,
@@ -268,36 +284,39 @@
                 "type": "card"
               },
               "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
+              "recipe": "LINK_AGENT",
               "to": {
-                "side": "player",
-                "type": "presence"
+                "side": "enemy",
+                "type": "field-agent"
               },
-              "waitFor": null
+              "waitFor": {
+                "side": "enemy",
+                "type": "field-agent"
+              }
             }
           ],
-          "id": "effect:player:corte_pagare_debiti:ON_HP_LOSS:hit",
+          "id": "effect:player:corte_debito:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
-          "name": "Pagare i Debiti",
+          "name": "Debito",
           "outcome": "hit",
           "payoffs": [
             {
-              "primitive": "CHANGE_PRESENCE",
+              "primitive": "REPLACE_TRIGGER",
               "slot": null,
-              "target": "SELF"
+              "target": "ENEMY_AGENT"
             }
           ],
           "phase": "RESOLVE",
-          "phaseDetail": "Condizione soddisfatta",
+          "phaseDetail": "Prima dei trigger",
           "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
+          "presenceDelta": null,
           "side": "player",
-          "text": "+1 Presenza."
+          "text": "Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»"
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 5
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -309,37 +328,37 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 5
+        "player": 1
       },
       "segments": [
-        {
-          "condition": {
-            "detail": "hpLossCause: (assente) → non ancora valutabile",
-            "keys": [
-              "hpLossCause"
-            ],
-            "status": "deferred"
-          },
-          "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
-          "source": "static",
-          "sourceId": "corte_pagare_debiti",
-          "sourceName": "Pagare i Debiti",
-          "target": "SELF",
-          "timing": "ON_HP_LOSS"
-        },
         {
           "condition": {
             "detail": null,
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "REPLACE_TRIGGER",
+          "primitive": "PROPOSE_DEAL",
           "source": "ability",
           "sourceId": "corte_debito",
           "sourceName": "Debito",
           "target": null,
           "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": "dealAccepted: (assente) → non ancora valutabile",
+            "keys": [
+              "dealAccepted"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_TRIGGER",
+          "source": "ability",
+          "sourceId": "corte_debito",
+          "sourceName": "Debito",
+          "target": "ENEMY_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

@@ -3,10 +3,10 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 4,
-    "abilityId": "corte_brutto_affare",
+    "presence": 0,
+    "abilityId": "corte_prestito",
     "params": {
-      "cardId": 231
+      "dealAccepted": true
     },
     "agent": {
       "cardId": 231,
@@ -36,26 +36,26 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_brutto_affare_miss",
-  "branch": "miss"
+  "name": "corte_prestito_hit",
+  "branch": "hit"
 }

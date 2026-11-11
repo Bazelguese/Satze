@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "corte_accordo",
-    "name": "Accordo Unilaterale",
-    "presenceDelta": 0,
-    "revealGate": "GENERAL",
-    "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
+    "id": "corte_interessi",
+    "name": "Interessi",
+    "presenceDelta": -3,
+    "revealGate": "PRE_FIELD",
+    "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      1,
+      3,
       1
     ],
     "segmentsWithoutCue": 0,
@@ -28,19 +28,27 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "corte_accordo",
+        "id": "corte_prestito",
+        "presenceDelta": 1
+      },
+      {
+        "id": "corte_rinforzo",
         "presenceDelta": 0
       },
       {
         "id": "corte_debito",
-        "presenceDelta": 1
+        "presenceDelta": -1
+      },
+      {
+        "id": "corte_interessi",
+        "presenceDelta": -3
       }
     ],
     "presenceAfterReveal": 1,
-    "presenceAfterSelect": 1,
-    "presenceAvailable": 1,
-    "presenceDelta": 0,
-    "selected": "corte_accordo"
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "corte_interessi"
   },
   "eminence": {
     "army": "Corte Rossa",
@@ -49,7 +57,7 @@
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima del Duello",
+      "badgeText": "Rivelazione · Prima del Campo",
       "cues": [
         {
           "flight": true,
@@ -66,9 +74,9 @@
           "waitFor": null
         }
       ],
-      "id": "reveal:player:corte_accordo:GENERAL",
+      "id": "reveal:player:corte_interessi:PRE_FIELD",
       "kind": "reveal",
-      "name": "Accordo Unilaterale",
+      "name": "Interessi",
       "outcome": null,
       "payoffs": [
         {
@@ -78,27 +86,80 @@
         }
       ],
       "phase": "REVEAL",
-      "phaseDetail": "Prima del Duello",
+      "phaseDetail": "Prima del Campo",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": 0,
+      "presenceDelta": -3,
       "side": "player",
-      "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
+      "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
     }
   ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
-    "name": "corte_accordo_hit",
+    "name": "corte_interessi_hit",
     "roundNumber": 3
   },
   "steps": [
     {
-      "badge": "Prima del Campo",
-      "cues": [],
+      "badge": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:corte_interessi:PRE_FIELD",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": "PRE_FIELD",
       "gateLabel": "Prima del Campo",
       "kind": "gate",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Campo",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:corte_interessi:PRE_FIELD",
+          "kind": "reveal",
+          "name": "Interessi",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "PROPOSE_DEAL",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Campo",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
+        }
+      ],
       "presence": {
         "enemy": 0,
         "player": 1
@@ -121,65 +182,12 @@
       "timing": null
     },
     {
-      "badge": "Rivelazione · Prima del Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": true,
-          "noticeId": "reveal:player:corte_accordo:GENERAL",
-          "recipe": "REVEAL_OPEN",
-          "to": {
-            "side": "player",
-            "type": "announce"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Prima del Duello",
+      "cues": [],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [
-        {
-          "badgeText": "Rivelazione · Prima del Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": true,
-              "recipe": "REVEAL_OPEN",
-              "to": {
-                "side": "player",
-                "type": "announce"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "reveal:player:corte_accordo:GENERAL",
-          "kind": "reveal",
-          "name": "Accordo Unilaterale",
-          "outcome": null,
-          "payoffs": [
-            {
-              "primitive": "PROPOSE_DEAL",
-              "slot": null,
-              "target": null
-            }
-          ],
-          "phase": "REVEAL",
-          "phaseDetail": "Prima del Duello",
-          "phaseLabel": "Rivelazione",
-          "presenceDelta": 0,
-          "side": "player",
-          "text": "All'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l'avversario rifiuta, l'effetto si risolve come se lo avessi accettato tu."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
         "player": 1
@@ -212,30 +220,14 @@
       "segments": [
         {
           "condition": {
-            "detail": "hpLossCause: (assente) → non ancora valutabile",
-            "keys": [
-              "hpLossCause"
-            ],
-            "status": "deferred"
-          },
-          "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
-          "source": "static",
-          "sourceId": "corte_pagare_debiti",
-          "sourceName": "Pagare i Debiti",
-          "target": "SELF",
-          "timing": "ON_HP_LOSS"
-        },
-        {
-          "condition": {
             "detail": null,
             "status": "none"
           },
           "expectedNoCue": false,
           "primitive": "PROPOSE_DEAL",
           "source": "ability",
-          "sourceId": "corte_accordo",
-          "sourceName": "Accordo Unilaterale",
+          "sourceId": "corte_interessi",
+          "sourceName": "Interessi",
           "target": null,
           "timing": "AFTER_REVEAL"
         }

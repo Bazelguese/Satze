@@ -56,6 +56,7 @@ export function createEffectBundle() {
     deals: [],
     pendingDeals: [],
     blockedPowerSides: [],
+    debtEscalations: [],
   };
 }
 
@@ -316,16 +317,29 @@ const handlers = {
   },
 
   [P.REGISTER_END_MATCH_DEBT]: (bundle, segment, ctx) => {
-    const side = inferTargetSide(ctx.params, ctx.agentIdBySide);
-    if (!side) return;
-    bundle.endMatchDebts.push({
-      side,
-      basis: segment.basis ?? 'FINAL_POWER',
-      cardId: ctx.params?.cardId ?? null,
-      amount: segment.amount ?? null,
-      source: ctx.source,
-      ownerSide: ctx.ownerSide,
-    });
+    // Con un bersaglio esplicito il debito ha importo fisso e un debitore noto; senza,
+    // il debitore è il lato dell'Agente scelto e l'importo si registra a fine Duello.
+    const sides = segment.target
+      ? resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)
+      : [inferTargetSide(ctx.params, ctx.agentIdBySide)].filter(Boolean);
+    for (const side of sides) {
+      bundle.endMatchDebts.push({
+        side,
+        basis: segment.basis ?? (segment.target ? 'FIXED' : 'FINAL_POWER'),
+        cardId: segment.target ? null : (ctx.params?.cardId ?? null),
+        amount: segment.amount ?? null,
+        dueAt: segment.dueAt ?? null,
+        source: ctx.source,
+        ownerSide: ctx.ownerSide,
+      });
+    }
+  },
+
+  // Ogni voce già registrata a carico del lato bersaglio aumenta di `delta` PV.
+  [P.ESCALATE_END_MATCH_DEBTS]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.debtEscalations.push({ side, delta: segment.delta || 0, source: ctx.source });
+    }
   },
 
   [P.BLOCK_EMINENCE]: (bundle, segment, ctx) => {
@@ -548,6 +562,52 @@ const handlers = {
       }
     };
 
+    if (mode === 'OFFER') {
+      // Offerta: il destinatario accetta o rifiuta. Rifiutare non ha effetti, ma se il
+      // destinatario aveva rifiutato l'Offerta del round precedente deve accettare.
+      const lastOffer = ctx.persistent?.lastOffer || null;
+      const mustAccept = Boolean(params.mustAccept)
+        || Boolean(lastOffer && !lastOffer.accepted && ctx.roundNumber != null
+          && lastOffer.round === ctx.roundNumber - 1);
+      const hasResponse = Object.prototype.hasOwnProperty.call(params, 'dealAccepted')
+        || Object.prototype.hasOwnProperty.call(params, 'dealResponse');
+      if (!hasResponse) {
+        bundle.pendingDeals.push({
+          mode,
+          ownerSide: ctx.ownerSide,
+          recipientSide: OPPOSITE_SIDE[ctx.ownerSide],
+          source: ctx.source,
+          choices: segment.choices ? [...segment.choices] : null,
+          mustAccept,
+          deal: { onAccept: segment.onAccept || [], ownerPresenceOnAccept: segment.ownerPresenceOnAccept || 0 },
+        });
+        return;
+      }
+      const accepted = mustAccept || (params.dealAccepted !== false
+        && params.dealResponse !== 'refuse'
+        && params.dealResponse !== false);
+      if (accepted) {
+        if (segment.ownerPresenceOnAccept) {
+          bundle.presenceChanges.push({
+            side: ctx.ownerSide,
+            delta: segment.ownerPresenceOnAccept,
+            countsAsSpend: false,
+            source: ctx.source,
+          });
+        }
+        applyDealEffects(segment.onAccept || [], OPPOSITE_SIDE[ctx.ownerSide]);
+      }
+      bundle.deals.push({
+        mode,
+        accepted,
+        mustAccept,
+        choice: accepted ? (params.dealChoice ?? null) : null,
+        ownerSide: ctx.ownerSide,
+        source: ctx.source,
+      });
+      return;
+    }
+
     if (mode === 'CHOOSE_ONE') {
       const deals = segment.deals || [];
       let choice = params.dealChoice ?? params.dealId ?? null;
@@ -637,6 +697,23 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
     const inferredSide = inferTargetSide(params, agentIdBySide);
     if (inferredSide && !params.targetSide) params.targetSide = inferredSide;
 
+    // REPLACE_TRIGGER su un Agente schierato: il bersaglio è la carta in campo, e il nuovo
+    // trigger compare anche sul Potere dell'Agente, così il Duello lo legge come proprio.
+    if (
+      segment.primitive === P.REPLACE_TRIGGER
+      && (segment.target === T.OWN_AGENT || segment.target === T.ENEMY_AGENT)
+    ) {
+      const side = segment.target === T.OWN_AGENT ? entry.ownerSide : OPPOSITE_SIDE[entry.ownerSide];
+      const cardId = agentIdBySide[side];
+      if (cardId == null) continue;
+      params.cardIds = [cardId];
+      target.abilityOverlays[cardId] = {
+        ...(target.abilityOverlays[cardId] || {}),
+        trigger: segment.trigger,
+        ...(segment.debtAmount != null ? { debtAmount: segment.debtAmount } : {}),
+      };
+    }
+
     // REPLACE_TRIGGER GLOBAL: entrambi gli Agenti schierati, senza params.cardId.
     if (
       segment.primitive === P.REPLACE_TRIGGER
@@ -660,6 +737,7 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
       persistent: ownerPersistent,
       persistentBySide: applyContext.persistentBySide || null,
       toxinBySide: applyContext.toxinBySide || null,
+      roundNumber: applyContext.roundNumber ?? null,
     };
 
     if (TRIGGER_PRIMITIVES.has(segment.primitive)) {
@@ -691,6 +769,25 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
  */
 export function applyPendingDealResponse(pendingDeal, response = {}) {
   if (!pendingDeal) return createEffectBundle();
+  if (pendingDeal.mode === 'OFFER') {
+    return applyEminenceSegments([{
+      segment: {
+        primitive: P.PROPOSE_DEAL,
+        mode: 'OFFER',
+        onAccept: pendingDeal.deal?.onAccept || [],
+        ownerPresenceOnAccept: pendingDeal.deal?.ownerPresenceOnAccept || 0,
+      },
+      ownerSide: pendingDeal.ownerSide,
+      abilityId: pendingDeal.source,
+      params: {
+        dealAccepted: response.dealAccepted !== false
+          && response.dealResponse !== 'refuse'
+          && response.dealResponse !== false,
+        dealChoice: response.dealChoice ?? null,
+        mustAccept: Boolean(pendingDeal.mustAccept),
+      },
+    }]);
+  }
   if (pendingDeal.mode === 'CHOOSE_ONE') {
     const choice = response.dealChoice ?? response.dealId ?? null;
     if (choice == null) {

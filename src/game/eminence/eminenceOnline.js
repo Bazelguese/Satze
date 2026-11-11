@@ -85,12 +85,18 @@ export function legalDealOptions(deal, matchState) {
  */
 export function dealNeedsRemoteResponse(deal, matchState) {
   if (deal?.recipientSide !== SIDES.ENEMY) return false;
+  // Un'Offerta obbligata senza varianti da scegliere non ha nulla da decidere.
+  if (deal.mode === 'OFFER' && deal.mustAccept && !deal.choices?.length) return false;
   if (deal.mode === 'CHOOSE_ONE' && legalDealOptions(deal, matchState).length <= 1) return false;
   return true;
 }
 
-/** Risposta automatica, identica sui due client, per un "scegli uno" con una sola opzione legale. */
+/**
+ * Risposta automatica, identica sui due client, per un "scegli uno" con una sola opzione
+ * legale o per un'Offerta obbligata senza varianti.
+ */
 export function forcedDealResponse(deal, matchState) {
+  if (deal?.mode === 'OFFER') return { dealAccepted: true, dealChoice: null };
   const legal = legalDealOptions(deal, matchState);
   return {
     dealChoice: (legal[0] || deal.deals?.[0])?.id ?? null,

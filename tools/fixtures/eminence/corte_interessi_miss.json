@@ -3,9 +3,11 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 2,
-    "abilityId": "corte_salasso",
-    "params": null,
+    "presence": 3,
+    "abilityId": "corte_interessi",
+    "params": {
+      "dealAccepted": false
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -34,26 +36,26 @@
     }
   },
   "outcome": {
-    "winner": "enemy",
+    "winner": "player",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": true
+      "enemy": false
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": "glory"
+      "enemy": null
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": -3,
+      "player": 0,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_salasso_hit",
-  "branch": "hit"
+  "name": "corte_interessi_miss",
+  "branch": "miss"
 }

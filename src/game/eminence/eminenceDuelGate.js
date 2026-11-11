@@ -29,11 +29,9 @@ import {
   setEminenceAbilityParams,
 } from './eminenceRound.js';
 import { applyEminenceSegments, applyPendingDealResponse, createEffectBundle } from './primitiveHandlers.js';
-import { resolveTriggerState } from './triggerRulesOverlay.js';
 import { changePresence } from './presence.js';
 import { isEminenceSubsystemEnabled, getLegalAbilityIds } from './eminenceState.js';
 import { getEminence, getEminenceAbility } from '../../data/eminences.js';
-import { ALL_AGENTS } from '../../data/cards.js';
 import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployedMarkResolution } from './eminenceAnnouncements.js';
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
 import { snapshotAnchoredBySide, snapshotEnemyAnchoredByOwnRule } from './anchored.js';
@@ -44,11 +42,6 @@ import {
   pickDefaultSelectionParams,
   selectionParamsReady,
 } from './eminenceParamSchema.js';
-
-/** Costo di schieramento legato al trigger effettivo, non a una singola Eminenza. */
-const DEPLOY_TRIGGER_HP_COSTS = {
-  debt: { amount: 2, cause: HP_LOSS_CAUSES.DEBT },
-};
 
 const BOTH_SIDES = [SIDES.PLAYER, SIDES.ENEMY];
 
@@ -266,6 +259,24 @@ function applyBundleToState(matchState, bundle) {
     state = { ...state, [block.side]: { ...state[block.side], blockedNextRound: true } };
   }
 
+  // Esito dell'Offerta del round: decide se la prossima si potrà rifiutare.
+  for (const deal of bundle.deals || []) {
+    if (deal.mode !== 'OFFER' || !state[deal.ownerSide]) continue;
+    const owner = state[deal.ownerSide];
+    state = {
+      ...state,
+      [deal.ownerSide]: {
+        ...owner,
+        persistent: {
+          ...(owner.persistent || {}),
+          lastOffer: { round: state.roundNumber ?? null, accepted: Boolean(deal.accepted) },
+        },
+      },
+    };
+  }
+
+  state = applyDebtEscalations(state, bundle.debtEscalations);
+
   return persistAbilityEscalation(
     persistLeagueByCardId(
       persistEndMatchDebts(
@@ -285,6 +296,31 @@ function applyBundleToState(matchState, bundle) {
     ),
     bundle.abilityEscalations,
   );
+}
+
+/** Ogni voce del Registro a carico del lato indicato cresce del delta. */
+function applyDebtEscalations(matchState, escalations) {
+  if (!escalations?.length) return matchState;
+  let state = matchState;
+  for (const escalation of escalations) {
+    for (const holder of BOTH_SIDES) {
+      const debts = state[holder]?.persistent?.endMatchDebts;
+      if (!debts?.length) continue;
+      const next = debts.map((debt) => (
+        debt.side === escalation.side && debt.amount != null
+          ? { ...debt, amount: debt.amount + (escalation.delta || 0) }
+          : debt
+      ));
+      state = {
+        ...state,
+        [holder]: {
+          ...state[holder],
+          persistent: { ...state[holder].persistent, endMatchDebts: next },
+        },
+      };
+    }
+  }
+  return state;
 }
 
 function persistAbilityEscalation(matchState, escalations) {
@@ -416,35 +452,6 @@ function mergePersistentReplacements(bundle, matchState) {
       },
     },
   };
-}
-
-function applyOnDeployTriggerCosts(bundle, { agentIdBySide } = {}) {
-  if (!bundle || !agentIdBySide) return bundle;
-  for (const side of BOTH_SIDES) {
-    const cardId = agentIdBySide[side];
-    if (cardId == null) continue;
-    const card = ALL_AGENTS.find((agent) => agent.id === cardId);
-    const resolved = resolveTriggerState({
-      originalTrigger: card?.ability?.trigger ?? null,
-      card: { id: cardId },
-      side,
-      triggerRules: bundle.triggerRules,
-      context: {},
-    });
-    const cost = DEPLOY_TRIGGER_HP_COSTS[resolved.effectiveTrigger];
-    if (!cost) continue;
-    const already = (bundle.hpDeltas || []).some(
-      (entry) => entry.side === side && entry.cause === cost.cause,
-    );
-    if (already) continue;
-    bundle.hpDeltas.push({
-      side,
-      amount: -Math.abs(cost.amount),
-      cause: cost.cause,
-      source: resolved.source,
-    });
-  }
-  return bundle;
 }
 
 function qualifyingHpLossEvents(hpDeltas) {
@@ -675,6 +682,7 @@ export function advanceToNextRevealGate(matchState, {
     ? applyEminenceSegments(opened.resolutionQueue, null, {
       agentIdBySide,
       toxinBySide,
+      roundNumber: opened.matchState.roundNumber ?? null,
       persistentBySide: {
         [SIDES.PLAYER]: opened.matchState[SIDES.PLAYER]?.persistent,
         [SIDES.ENEMY]: opened.matchState[SIDES.ENEMY]?.persistent,
@@ -883,6 +891,7 @@ export function prepareEminenceDuel(matchState, {
   const applyContext = {
     agentIdBySide,
     toxinBySide,
+    roundNumber: collected.matchState.roundNumber ?? null,
     persistentBySide: {
       [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
       [SIDES.ENEMY]: collected.matchState[SIDES.ENEMY]?.persistent,
@@ -894,7 +903,6 @@ export function prepareEminenceDuel(matchState, {
   }
   bundle = mergePersistentReplacements(bundle, collected.matchState);
   bundle = mergeRoundLeagues(bundle, collected.matchState);
-  applyOnDeployTriggerCosts(bundle, { agentIdBySide });
   const withCurses = attachPersistentSlotCurses(bundle, collected.matchState, currentFieldIndex);
   const evalContextBySide = {
     [SIDES.PLAYER]: {
@@ -1105,7 +1113,7 @@ export function settleEminenceRound(matchState, {
     statReductionOccurred,
   };
   const collected = collectTimings(recorded, POST_DUEL_TIMINGS, initiativeSide, context);
-  const debtQueue = storedDebtsToHpQueue(recorded);
+  const debtQueue = storedDebtsToHpQueue(recorded, { includeEndMatch: false });
   const queue = [...collected.queue, ...debtQueue];
   const persistentBySide = {
     [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
@@ -1114,7 +1122,9 @@ export function settleEminenceRound(matchState, {
   const bundle = queue.length
     ? applyEminenceSegments(queue, null, { agentIdBySide: context.agentIdBySide, persistentBySide })
     : null;
-  const stateAfterDebts = debtQueue.length ? clearEndMatchDebts(collected.matchState) : collected.matchState;
+  const stateAfterDebts = debtQueue.length
+    ? clearEndMatchDebts(collected.matchState, { includeEndMatch: false })
+    : collected.matchState;
   const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
   return {
     matchState: applied.matchState,
@@ -1175,9 +1185,10 @@ function collectStoredEndMatchDebts(matchState) {
   return debts;
 }
 
-function storedDebtsToHpQueue(matchState) {
+function storedDebtsToHpQueue(matchState, { includeEndMatch = true } = {}) {
   return collectStoredEndMatchDebts(matchState)
     .filter((debt) => (debt.amount || 0) > 0)
+    .filter((debt) => includeEndMatch || debt.dueAt !== 'END_MATCH')
     .map((debt) => {
       const ownerSide = debt.ownerSide;
       const victimSide = debt.side;
@@ -1196,16 +1207,20 @@ function storedDebtsToHpQueue(matchState) {
     });
 }
 
-function clearEndMatchDebts(matchState) {
+function clearEndMatchDebts(matchState, { includeEndMatch = true } = {}) {
   let state = matchState;
   for (const side of BOTH_SIDES) {
     const current = state[side];
     if (!current?.persistent?.endMatchDebts?.length) continue;
+    // Le voci del Registro restano fino alla Fine dello Scontro.
+    const kept = includeEndMatch
+      ? []
+      : current.persistent.endMatchDebts.filter((debt) => debt.dueAt === 'END_MATCH' || !(debt.amount > 0));
     state = {
       ...state,
       [side]: {
         ...current,
-        persistent: { ...current.persistent, endMatchDebts: [] },
+        persistent: { ...current.persistent, endMatchDebts: kept },
       },
     };
   }
@@ -1355,7 +1370,22 @@ export function resolvePendingDeal(matchState, pendingDeal, response = {}, {
 
   const recipientPresence = matchState[pendingDeal.recipientSide]?.presence;
   let normalized;
-  if (pendingDeal.mode === 'CHOOSE_ONE') {
+  if (pendingDeal.mode === 'OFFER') {
+    const hasExplicitResponse = Object.prototype.hasOwnProperty.call(response, 'dealAccepted')
+      || Object.prototype.hasOwnProperty.call(response, 'dealResponse');
+    if (!hasExplicitResponse && !pendingDeal.mustAccept) {
+      throw new Error('resolvePendingDeal: dealAccepted/dealResponse obbligatorio');
+    }
+    const accepted = Boolean(pendingDeal.mustAccept) || (response.dealAccepted !== false
+      && response.dealResponse !== 'refuse'
+      && response.dealResponse !== false);
+    const choices = pendingDeal.choices || null;
+    const choice = response.dealChoice ?? null;
+    if (accepted && choices?.length && !choices.includes(choice)) {
+      throw new Error(`resolvePendingDeal: scelta dell'Offerta obbligatoria fra ${choices.join(', ')}`);
+    }
+    normalized = { dealAccepted: accepted, dealChoice: accepted ? choice : null };
+  } else if (pendingDeal.mode === 'CHOOSE_ONE') {
     if (response.dealChoice == null && response.dealId == null) {
       throw new Error('resolvePendingDeal: dealChoice obbligatorio');
     }
@@ -1391,6 +1421,9 @@ export function resolvePendingDeal(matchState, pendingDeal, response = {}, {
 /** Risposta automatica dell'IA (o unica scelta legale Salasso). */
 export function autoResponseForPendingDeal(pendingDeal, matchState) {
   if (!pendingDeal) return {};
+  if (pendingDeal.mode === 'OFFER') {
+    return { dealAccepted: true, dealChoice: pendingDeal.choices?.[0] ?? null };
+  }
   if (pendingDeal.mode === 'CHOOSE_ONE') {
     const presence = matchState[pendingDeal.recipientSide]?.presence ?? 0;
     const deals = pendingDeal.deals || [];

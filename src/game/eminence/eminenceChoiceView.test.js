@@ -27,6 +27,7 @@ import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { commitEminenceSetupChoice } from './eminenceDuelGate.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { EMINENCE_FORMAT, SIDES } from './eminenceConstants.js';
+import { installSyntheticTargetsEminence } from './eminenceTestSupport.js';
 import { inkOn, formatPresenceDelta, relativeLuminance } from '../../components/eminence/eminenceUi.js';
 
 function match(player = 'apex_sole_verde', enemy = 'patto_grande_semaforo') {
@@ -182,8 +183,9 @@ test('rail: sotto l\'ultima losanga scendono solo i Frammenti', () => {
   assert.equal(abilityRailExpandsDown({ slot: [0, 1, 2] }, { isLastOption: true }), false);
 });
 
-test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o confermati', () => {
-  const view = buildEminenceChoiceView(match('corte_rossa', 'patto_grande_semaforo'), SIDES.PLAYER, {
+test('vista: i bersagli Agente materializzano non schierati o confermati', () => {
+  const synthetic = installSyntheticTargetsEminence();
+  const view = buildEminenceChoiceView(match(synthetic, 'patto_grande_semaforo'), SIDES.PLAYER, {
     ownUndeployedCardIds: [201],
     enemyUndeployedCardIds: [301, 302],
     confirmedAgents: [
@@ -191,11 +193,11 @@ test('vista: Clausola e Debito Eterno materializzano Agenti non schierati o conf
       { id: 301, side: SIDES.ENEMY, label: 'Avversario' },
     ],
   });
-  const clausola = view.self.options.find((o) => o.id === 'corte_debito');
-  const eterno = view.self.options.find((o) => o.id === 'corte_brutto_affare');
-  assert.deepEqual(clausola.paramsSchema.cardId, [201, 301, 302]);
-  assert.deepEqual(eterno.paramsSchema.cardId, [201, 301]);
-  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'corte_debito' }), [201, 301, 302]);
+  const undeployed = view.self.options.find((o) => o.id === 'test_non_schierato');
+  const confirmed = view.self.options.find((o) => o.id === 'test_confermato');
+  assert.deepEqual(undeployed.paramsSchema.cardId, [201, 301, 302]);
+  assert.deepEqual(confirmed.paramsSchema.cardId, [201, 301]);
+  assert.deepEqual(legalCardIdsForChoice(view, { draftId: 'test_non_schierato' }), [201, 301, 302]);
   assert.equal(view.paramMeta.cardId[201].side, SIDES.PLAYER);
   assert.equal(view.paramMeta.cardId[301].side, SIDES.ENEMY);
 });
@@ -429,13 +431,12 @@ test('hold: il tendone R5 e il round non aperto bloccano Campo e Agenti', () => 
 test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', () => {
   const base = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
-    playerEminenceId: 'corte_rossa',
+    playerEminenceId: installSyntheticTargetsEminence(),
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  base.player.presence = 4;
   const opened = beginEminenceRound(base, { roundNumber: 1 });
   const sealed = selectEminenceAbility(
-    selectEminenceAbility(opened, SIDES.PLAYER, 'corte_brutto_affare').matchState,
+    selectEminenceAbility(opened, SIDES.PLAYER, 'test_confermato').matchState,
     SIDES.ENEMY,
     'semaforo_giallo',
   ).matchState;

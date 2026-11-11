@@ -712,147 +712,138 @@ export const EMINENCES = {
     id: 'corte_rossa',
     army: 'Corte Rossa',
     name: 'Sanguinaccio, il Registro',
-    initialPresence: 1,
+    initialPresence: 0,
     implemented: true,
-    forbidConsecutiveAbility: true,
 
     static: {
-      id: 'corte_pagare_debiti',
-      name: 'Pagare i Debiti',
-      text: 'Ogni volta che un giocatore perde uno o più PV per una causa diversa dal normale DAN della sconfitta, +1 Presenza. Si conta l\'evento di perdita, non il numero di PV persi. Non è possibile selezionare la stessa abilità due volte di fila.',
+      id: 'corte_registro',
+      name: 'Il Registro',
+      text: 'Ogni abilità della Corte è un\'Offerta all\'avversario. L\'Offerta viene rivelata all\'inizio del round, subito dopo la scelta delle Eminenze e prima di ogni altra decisione, e l\'avversario la accetta o la rifiuta. Se ha rifiutato l\'Offerta del round precedente, deve accettare. Quando l\'avversario accetta un\'Offerta, +1 Presenza. I PV che l\'avversario deve pagare alla Fine dello Scontro sono scritti nel suo Registro, una voce per ogni Offerta, e si pagano prima di determinare il vincitore.',
       implemented: true,
-      segments: [
-        {
-          timing: EFFECT_TIMINGS.ON_HP_LOSS,
-          primitive: P.CHANGE_PRESENCE,
-          target: T.SELF,
-          delta: 1,
-          repeatable: true,
-          condition: { hpLossCause: { not: HP_LOSS_CAUSES.DUEL_DEFEAT_DAMAGE } },
-        },
-      ],
+      // Le regole dell'Offerta vivono nei segmenti PROPOSE_DEAL di ciascuna attiva.
+      segments: [],
     },
 
     abilities: [
       {
-        id: 'corte_accordo',
-        name: 'Accordo Unilaterale',
-        presenceDelta: 0,
-        revealGate: REVEAL_GATES.GENERAL,
+        id: 'corte_prestito',
+        name: 'Prestito',
+        presenceDelta: 1,
+        revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'All\'avversario viene proposto un Affare: «Perdi 2 PV; in questo Duello il tuo Agente riceve 1 FC temporaneo.» Se l\'avversario rifiuta, l\'effetto si risolve come se lo avessi accettato tu.',
+        text: 'Offerta: «Il tuo Agente riceve 2 FC temporanei in questo Duello; alla Fine dello Scontro perdi 2 PV.»',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.PROPOSE_DEAL,
-            mode: 'ACCEPT_OR_SELF',
-            deal: {
-              effects: [
-                {
-                  primitive: P.LOSE_HP,
-                  target: T.SELF,
-                  amount: 2,
-                  cause: HP_LOSS_CAUSES.EMINENCE_COST,
-                },
-                {
-                  primitive: P.GRANT_TEMPORARY_FOCUS,
-                  target: T.OWN_AGENT,
-                  amount: 1,
-                },
-              ],
-            },
+            mode: 'OFFER',
+            ownerPresenceOnAccept: 1,
+            onAccept: [
+              {
+                primitive: P.REGISTER_END_MATCH_DEBT,
+                target: T.SELF,
+                amount: 2,
+                basis: 'FIXED',
+                dueAt: 'END_MATCH',
+              },
+            ],
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.GRANT_TEMPORARY_FOCUS,
+            target: T.ENEMY_AGENT,
+            amount: 2,
+            condition: { dealAccepted: true },
+          },
+        ],
+      },
+      {
+        id: 'corte_rinforzo',
+        name: 'Rinforzo',
+        presenceDelta: 0,
+        revealGate: REVEAL_GATES.PRE_FIELD,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.PROPOSE_DEAL,
+            mode: 'OFFER',
+            choices: ['damage', 'power'],
+            ownerPresenceOnAccept: 1,
+            onAccept: [
+              {
+                primitive: P.REGISTER_END_MATCH_DEBT,
+                target: T.SELF,
+                amount: 1,
+                basis: 'FIXED',
+                dueAt: 'END_MATCH',
+              },
+            ],
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.MODIFY_STAT,
+            target: T.ENEMY_AGENT,
+            stat: 'damage',
+            delta: 2,
+            condition: { dealAccepted: true, dealChoice: 'damage' },
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.MODIFY_STAT,
+            target: T.ENEMY_AGENT,
+            stat: 'power',
+            delta: 1,
+            condition: { dealAccepted: true, dealChoice: 'power' },
           },
         ],
       },
       {
         id: 'corte_debito',
         name: 'Debito',
-        presenceDelta: 1,
-        revealGate: REVEAL_GATES.PRE_AGENT,
+        presenceDelta: -1,
+        revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        paramsSchema: {
-          cardId: { source: PARAM_SOURCES.UNDEPLOYED_AGENTS },
-        },
-        text: 'Scegli un Agente non schierato. Per il resto dello Scontro, il suo trigger Potere diventa Debito: quando viene schierato, chi lo schiera perde 2 PV; poi il Potere si attiva.',
-        segments: [
-          {
-            timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.REPLACE_TRIGGER,
-            persistent: true,
-            trigger: 'debt',
-          },
-        ],
-      },
-      {
-        id: 'corte_salasso',
-        name: 'Salasso',
-        presenceDelta: -2,
-        revealGate: REVEAL_GATES.GENERAL,
-        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'All\'avversario vengono proposti due Affari e deve sceglierne uno: «Perdi 3 PV; +2 Presenza.» oppure «Perdi 3 Presenza; Cura 2 PV.» Se uno dei due Affari non può essere accettato, viene scelto automaticamente l\'altro.',
+        text: 'Offerta: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.»',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.PROPOSE_DEAL,
-            mode: 'CHOOSE_ONE',
-            deals: [
-              {
-                id: 'hp_for_presence',
-                effects: [
-                  {
-                    primitive: P.LOSE_HP,
-                    target: T.SELF,
-                    amount: 3,
-                    cause: HP_LOSS_CAUSES.EMINENCE_COST,
-                  },
-                  {
-                    primitive: P.CHANGE_PRESENCE,
-                    target: T.SELF,
-                    delta: 2,
-                  },
-                ],
-              },
-              {
-                id: 'presence_for_heal',
-                minPresence: 3,
-                effects: [
-                  {
-                    primitive: P.CHANGE_PRESENCE,
-                    target: T.SELF,
-                    delta: -3,
-                  },
-                  {
-                    primitive: P.HEAL_HP,
-                    target: T.SELF,
-                    amount: 2,
-                  },
-                ],
-              },
-            ],
+            mode: 'OFFER',
+            ownerPresenceOnAccept: 1,
+            onAccept: [],
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.REPLACE_TRIGGER,
+            target: T.ENEMY_AGENT,
+            trigger: 'debt',
+            debtAmount: 2,
+            condition: { dealAccepted: true },
           },
         ],
       },
       {
-        id: 'corte_brutto_affare',
-        name: 'Brutto Affare',
-        presenceDelta: -4,
-        revealGate: REVEAL_GATES.GENERAL,
+        id: 'corte_interessi',
+        name: 'Interessi',
+        presenceDelta: -3,
+        revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        paramsSchema: {
-          cardId: { source: PARAM_SOURCES.CONFIRMED_AGENTS },
-        },
-        text: 'Scegli uno dei due Agenti già confermati, tuo o avversario: riceve 2 FC temporanei in questo Duello. Alla fine del Duello registra la sua POT finale. Alla Fine Scontro, il giocatore di quell\'Agente perde PV pari a metà della POT finale registrata, arrotondata per eccesso.',
+        text: 'Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.GRANT_TEMPORARY_FOCUS,
-            target: T.CHOSEN,
-            amount: 2,
-          },
-          {
-            timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.REGISTER_END_MATCH_DEBT,
-            basis: 'HALF_FINAL_POWER_CEIL',
+            primitive: P.PROPOSE_DEAL,
+            mode: 'OFFER',
+            ownerPresenceOnAccept: 1,
+            onAccept: [
+              {
+                primitive: P.ESCALATE_END_MATCH_DEBTS,
+                target: T.SELF,
+                delta: 2,
+              },
+            ],
           },
         ],
       },

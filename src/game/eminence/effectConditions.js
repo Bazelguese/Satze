@@ -42,6 +42,8 @@ export const CONDITION_KEYS = Object.freeze([
   'activationUnsatisfiedCount',
   'totalFocusPlayed',
   'markGained',
+  'dealAccepted',
+  'dealChoice',
 ]);
 
 /**

@@ -471,18 +471,27 @@ export function collectPendingEffects(
     const remaining = [];
     for (const entry of state.round.pendingEffects) {
       if (!entry.consumed && entry.timing === timing) {
+        // La risposta a un'Offerta arriva dopo il reveal e vive sui params correnti
+        // dell'abilità: il segmento armato al reveal deve leggerla da lì.
+        const params = entry.abilityId && entry.abilityId === state.revealedAbilityId
+          ? { ...(entry.params || {}), ...(state.selectedParams || {}) }
+          : (entry.params ?? null);
         const entryContext = createConditionContext(matchState, {
           ...sideExtra,
-          params: entry.params ?? null,
+          params,
+          dealAccepted: Boolean(params?.dealAccepted),
+          dealChoice: params?.dealChoice ?? null,
         });
         if (matchesCondition(entry.segment?.condition, entryContext)) {
           queue.push({
             ...entry,
+            params,
             agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
           });
         } else if (entry.segment?.condition) {
           skipped.push({
             ...entry,
+            params,
             agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
           });
         }

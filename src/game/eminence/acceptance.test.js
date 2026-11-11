@@ -41,6 +41,7 @@ import {
   needsEminenceSetup,
   prepareEminenceDuel,
   notifyHpLossEvents,
+  resolvePendingDeal,
 } from './eminenceDuelGate.js';
 import { collectSlotCurses } from './slotCurses.js';
 import { powerResolutionFromDuel, isLowestEffectiveLeague } from './eminenceDuelBinding.js';
@@ -1090,142 +1091,137 @@ const CORTE = 'corte_rossa';
 const CORTE_AGENT = 201;
 const CORTE_ENEMY = 301;
 
-function sealCorte(playerAbility, { presence = 1, playerParams = null } = {}) {
-  const base = createEminenceMatchState({
+/**
+ * Apre un round con la Corte sul lato giocatore: l'Offerta si rivela al primo gate.
+ * Restituisce lo stato subito dopo il reveal e l'Offerta in attesa di risposta.
+ */
+function openCorteOffer(playerAbility, { presence = 3, roundNumber = 3, base = null } = {}) {
+  const start = base || createEminenceMatchState({
     playerEminenceId: CORTE,
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  base.player.presence = presence;
-  let matchState = beginEminenceRound(base, { roundNumber: 3 });
-  const player = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility, playerParams);
-  assert.equal(player.ok, true, player.reason);
-  const enemy = selectEminenceAbility(player.matchState, SIDES.ENEMY, 'semaforo_verde');
-  assert.equal(enemy.ok, true, enemy.reason);
-  matchState = enemy.matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  return matchState;
+  start.player.presence = presence;
+  let matchState = beginEminenceRound(start, { roundNumber });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const revealed = advanceToNextRevealGate(matchState);
+  assert.equal(revealed.gate, REVEAL_GATES.PRE_FIELD);
+  return { matchState: revealed.matchState, pending: revealed.bundle?.pendingDeals?.[0] ?? null };
 }
 
-function prepareCorte(playerAbility, {
-  presence = 1,
-  playerParams = null,
-  agentIdBySide = { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-} = {}) {
-  return prepareEminenceDuel(sealCorte(playerAbility, { presence, playerParams }), { agentIdBySide });
+function answerAndPrepare(opened, response) {
+  let matchState = opened.matchState;
+  if (opened.pending) {
+    matchState = resolvePendingDeal(matchState, opened.pending, response).matchState;
+  }
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  return prepareEminenceDuel(matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
+  });
 }
 
-test('Corte +0: Accordo senza risposta resta pending (niente auto-accept)', () => {
-  const { bundle } = prepareCorte('corte_accordo');
-  assert.equal(bundle.pendingDeals?.length, 1);
-  assert.equal(bundle.pendingDeals[0].mode, 'ACCEPT_OR_SELF');
-  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 0);
-  assert.deepEqual(bundle.hpDeltas, []);
+function registro(matchState) {
+  return (matchState.player.persistent.endMatchDebts || []).map((debt) => ({
+    side: debt.side,
+    amount: debt.amount,
+    source: debt.source,
+  }));
+}
+
+test('Corte: Presenza iniziale 0 e tutte le attive sono Offerte rivelate al primo gate', () => {
+  const state = createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 0);
+  for (const ability of EMINENCES[CORTE].abilities) {
+    assert.equal(ability.revealGate, REVEAL_GATES.PRE_FIELD, ability.id);
+    assert.equal(ability.segments[0].mode, 'OFFER', ability.id);
+  }
 });
 
-test('Corte +0: Accordo accettato esplicitamente → −2 PV e 1 FC temp all\'avversario', () => {
-  const { matchState, bundle } = prepareCorte('corte_accordo', {
-    playerParams: { dealAccepted: true },
-  });
-  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 1);
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_accordo' },
-  ]);
-  assert.equal(matchState.player.presence, 2);
+test('Corte: l\'Offerta resta in attesa finché l\'avversario non risponde', () => {
+  const opened = openCorteOffer('corte_prestito');
+  assert.equal(opened.pending.mode, 'OFFER');
+  assert.equal(opened.pending.recipientSide, SIDES.ENEMY);
+  assert.equal(opened.pending.mustAccept, false);
 });
 
-test('Corte −2: Salasso senza scelta resta pending', () => {
-  const { bundle } = prepareCorte('corte_salasso', { presence: 3 });
-  assert.equal(bundle.pendingDeals?.length, 1);
-  assert.equal(bundle.pendingDeals[0].mode, 'CHOOSE_ONE');
-  assert.deepEqual(bundle.hpDeltas, []);
-});
-
-test('Corte −2: Salasso con dealChoice hp_for_presence applica l\'Affare', () => {
-  const { matchState, bundle } = prepareCorte('corte_salasso', {
-    presence: 3,
-    playerParams: { dealChoice: 'hp_for_presence' },
-  });
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -3, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_salasso' },
-  ]);
-  assert.ok(bundle.presenceChanges.some((c) => c.side === SIDES.ENEMY && c.delta === 2));
-  assert.equal(matchState.player.presence, 2);
-  assert.equal(matchState.player.presenceSpentThisRound, 2);
-});
-
-test('Corte statico: il DAN da sconfitta non paga Presenza', () => {
-  const base = beginEminenceRound(
-    createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' }),
-    { roundNumber: 3 },
-  );
-  const reacted = notifyHpLossEvents(base, [
-    { side: SIDES.PLAYER, amount: -4, cause: HP_LOSS_CAUSES.DUEL_DEFEAT_DAMAGE },
-  ]);
-  assert.equal(reacted.matchState.player.presence, 1);
-  assert.equal(reacted.bundle, null);
-});
-
-test('Corte +1: Debito sostituisce il trigger in Debito e al schieramento costa 2 PV', () => {
-  const first = prepareCorte('corte_debito', {
-    presence: 1,
-    playerParams: { cardId: CORTE_AGENT },
-    agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
-  assert.equal(first.bundle.triggerRules.persistentReplacementsByCardId[CORTE_AGENT].trigger, 'debt');
-  assert.equal(first.matchState.player.persistent.triggerReplacementsByCardId[CORTE_AGENT].trigger, 'debt');
-  assert.equal(first.bundle.hpDeltas.length, 0);
-  assert.equal(first.matchState.player.presence, 2);
-
-  const nextBase = beginEminenceRound(first.matchState, { roundNumber: 4 });
-  const enemy = selectEminenceAbility(nextBase, SIDES.ENEMY, 'semaforo_verde');
-  const player = selectEminenceAbility(enemy.matchState, SIDES.PLAYER, 'corte_accordo');
-  let matchState = advanceToNextRevealGate(player.matchState).matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  const deployed = prepareEminenceDuel(matchState, {
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
-  const debt = resolveTriggerState({
-    originalTrigger: 'intervention',
-    context: {},
-    card: { id: CORTE_AGENT },
-    side: SIDES.PLAYER,
-    triggerRules: deployed.bundle.triggerRules,
-  });
-  assert.equal(debt.effectiveTrigger, 'debt');
-  assert.equal(debt.satisfied, true);
-  assert.ok(deployed.bundle.hpDeltas.some((entry) => (
-    entry.side === SIDES.PLAYER && entry.amount === -2 && entry.cause === HP_LOSS_CAUSES.DEBT
-  )));
-});
-
-test('Corte −4: Brutto Affare dà 2 FC e riscuote ceil(POT/2) a fine Duello', () => {
-  const prepared = prepareCorte('corte_brutto_affare', {
-    presence: 4,
-    playerParams: { cardId: CORTE_ENEMY, targetSide: SIDES.ENEMY },
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
+test('Corte +1 Prestito accettato: 2 FC temporanei all\'Agente nemico, voce di 2 PV nel Registro, +1 Presenza', () => {
+  const opened = openCorteOffer('corte_prestito', { presence: 0 });
+  // Reveal +1 Presenza.
+  assert.equal(opened.matchState.player.presence, 1);
+  const prepared = answerAndPrepare(opened, { dealAccepted: true });
+  assert.equal(prepared.matchState.player.presence, 2);
   assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 2);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts.length, 1);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].basis, 'HALF_FINAL_POWER_CEIL');
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].side, SIDES.ENEMY);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].cardId, CORTE_ENEMY);
+  assert.deepEqual(registro(prepared.matchState), [{ side: SIDES.ENEMY, amount: 2, source: 'corte_prestito' }]);
+});
 
-  assert.equal(prepared.notices.some((notice) => notice.name === 'Brutto Affare'), true);
+test('Corte +1 Prestito rifiutato: nessun effetto e nessuna Presenza extra', () => {
+  const opened = openCorteOffer('corte_prestito', { presence: 0 });
+  const prepared = answerAndPrepare(opened, { dealAccepted: false });
+  assert.equal(prepared.matchState.player.presence, 1);
+  assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 0);
+  assert.deepEqual(registro(prepared.matchState), []);
+});
 
-  const settled = settleEminenceRound(prepared.matchState, {
-    winner: SIDES.PLAYER,
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-    finalPowerByCardId: { [CORTE_ENEMY]: 5 },
-  });
-  assert.deepEqual(settled.bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -3, cause: HP_LOSS_CAUSES.END_MATCH_DEBT, source: 'corte_brutto_affare' },
-  ]);
-  assert.equal(settled.matchState.player.presence, 1);
-  assert.deepEqual(settled.matchState.player.persistent.endMatchDebts, []);
+test('Corte 0 Rinforzo: l\'avversario sceglie +2 DAN o +1 POT', () => {
+  const damage = answerAndPrepare(openCorteOffer('corte_rinforzo'), { dealAccepted: true, dealChoice: 'damage' });
+  assert.equal(damage.bundle.statDeltas[SIDES.ENEMY].damage, 2);
+  assert.equal(damage.bundle.statDeltas[SIDES.ENEMY].power, 0);
+  assert.deepEqual(registro(damage.matchState), [{ side: SIDES.ENEMY, amount: 1, source: 'corte_rinforzo' }]);
 
-  const closed = settleEminenceMatch(settled.matchState);
-  assert.equal(closed.bundle, null);
+  const power = answerAndPrepare(openCorteOffer('corte_rinforzo'), { dealAccepted: true, dealChoice: 'power' });
+  assert.equal(power.bundle.statDeltas[SIDES.ENEMY].power, 1);
+  assert.equal(power.bundle.statDeltas[SIDES.ENEMY].damage, 0);
+});
+
+test('Corte 0 Rinforzo: accettare senza scegliere è un errore', () => {
+  const opened = openCorteOffer('corte_rinforzo');
+  assert.throws(() => resolvePendingDeal(opened.matchState, opened.pending, { dealAccepted: true }), /scelta/);
+});
+
+test('Corte −1 Debito accettato: il Potere nemico diventa Debito 2', () => {
+  const prepared = answerAndPrepare(openCorteOffer('corte_debito'), { dealAccepted: true });
+  assert.equal(prepared.bundle.abilityOverlays[CORTE_ENEMY].trigger, 'debt');
+  assert.equal(prepared.bundle.abilityOverlays[CORTE_ENEMY].debtAmount, 2);
+  assert.equal(prepared.bundle.triggerRules.replacementsByCardId[CORTE_ENEMY].trigger, 'debt');
+  // Nessun costo allo schieramento: il Debito si paga solo se il Potere si attiva.
+  assert.deepEqual(prepared.bundle.hpDeltas, []);
+});
+
+test('Corte −3 Interessi: ogni voce del Registro aumenta di 2 PV', () => {
+  const base = createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.persistent.endMatchDebts = [
+    { side: SIDES.ENEMY, amount: 2, basis: 'FIXED', dueAt: 'END_MATCH', source: 'corte_prestito', ownerSide: SIDES.PLAYER },
+    { side: SIDES.ENEMY, amount: 1, basis: 'FIXED', dueAt: 'END_MATCH', source: 'corte_rinforzo', ownerSide: SIDES.PLAYER },
+  ];
+  const prepared = answerAndPrepare(openCorteOffer('corte_interessi', { base }), { dealAccepted: true });
+  assert.deepEqual(registro(prepared.matchState).map((entry) => entry.amount), [4, 3]);
+});
+
+test('Corte: rifiutata un\'Offerta, la successiva va accettata', () => {
+  const refused = answerAndPrepare(openCorteOffer('corte_prestito', { roundNumber: 2 }), { dealAccepted: false });
+  const settled = settleEminenceRound(refused.matchState, { winner: SIDES.PLAYER });
+
+  const opened = openCorteOffer('corte_rinforzo', { roundNumber: 3, base: settled.matchState });
+  assert.equal(opened.pending.mustAccept, true);
+  const prepared = answerAndPrepare(opened, { dealAccepted: false, dealChoice: 'power' });
+  assert.equal(prepared.bundle.statDeltas[SIDES.ENEMY].power, 1);
+});
+
+test('Corte: dopo un\'Offerta accettata il rifiuto torna disponibile', () => {
+  const accepted = answerAndPrepare(openCorteOffer('corte_prestito', { roundNumber: 2 }), { dealAccepted: true });
+  const settled = settleEminenceRound(accepted.matchState, { winner: SIDES.PLAYER });
+  const opened = openCorteOffer('corte_prestito', { roundNumber: 3, base: settled.matchState });
+  assert.equal(opened.pending.mustAccept, false);
+});
+
+test('Corte: il Registro non si paga a fine round ma alla Fine dello Scontro', () => {
+  const prepared = answerAndPrepare(openCorteOffer('corte_prestito'), { dealAccepted: true });
+  const settled = settleEminenceRound(prepared.matchState, { winner: SIDES.PLAYER });
+  assert.deepEqual(registro(settled.matchState).map((entry) => entry.amount), [2]);
+
+  const ended = settleEminenceMatch(settled.matchState);
+  assert.ok(ended.bundle.hpDeltas.some((delta) => delta.side === SIDES.ENEMY && delta.amount === -2));
+  assert.deepEqual(registro(ended.matchState), []);
 });
 
 // ------------------------------------------------------------------

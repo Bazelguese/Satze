@@ -3,9 +3,12 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "corte_rossa",
-    "presence": 1,
-    "abilityId": "corte_accordo",
-    "params": null,
+    "presence": 0,
+    "abilityId": "corte_rinforzo",
+    "params": {
+      "dealAccepted": true,
+      "dealChoice": "damage"
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -54,6 +57,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "corte_accordo_hit",
+  "name": "corte_rinforzo_hit",
   "branch": "hit"
 }
