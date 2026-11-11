@@ -593,6 +593,13 @@ export const BattlefieldPanel = ({
   onMenu,
   isCampaign = false,
   onCampaignRetry,
+  /** Torneo: a fine partita si torna al tabellone (niente Rematch né Menù). */
+  onTournamentContinue,
+  tournamentContinueLabel = 'Torna al torneo',
+  /** Torneo da spettatore: secondo comando (tabellone) quando il primo porta alla partita dopo. */
+  onTournamentSecondary,
+  /** Esito scritto da fuori (spettatore): { title, desc, color } al posto di Vittoria/Sconfitta. */
+  outcomeOverride = null,
   onRematch,
   /** Rematch online: cambia esercito/mazzo restando in stanza */
   onRematchChangeDeck,
@@ -695,7 +702,12 @@ export const BattlefieldPanel = ({
         : { key: 'retry', label: 'Ritenta', variant: 'primary', dL: 124, dR: 56, onClick: onCampaignRetry });
     } else {
       // sotto: Menù a sinistra e Rematch a destra, come Riepilogo / Continua
-      if (onRematchChangeDeck) {
+      if (onTournamentContinue && onTournamentSecondary) {
+        portalActions.push({ key: 'hub', label: 'Tabellone', variant: 'secondary', dL: 156, dR: 96, onClick: onTournamentSecondary });
+        portalActions.push({ key: 'go', label: tournamentContinueLabel, variant: 'primary', dL: 84, dR: 24, onClick: onTournamentContinue });
+      } else if (onTournamentContinue) {
+        portalActions.push({ key: 'go', label: tournamentContinueLabel, variant: 'primary', dL: 124, dR: 56, onClick: onTournamentContinue });
+      } else if (onRematchChangeDeck) {
         portalActions.push({ key: 'menu', label: 'Menù', variant: 'secondary', dL: 176, dR: 134, onClick: onMenu });
         portalActions.push({ key: 'deck', label: rematchChangeDeckLabel, variant: 'secondary', dL: 128, dR: 84, onClick: onRematchChangeDeck });
         if (onRematch) portalActions.push({ key: 'rematch', label: rematchLabel, variant: 'primary', dL: 78, dR: 22, onClick: onRematch });
@@ -717,7 +729,9 @@ export const BattlefieldPanel = ({
     }
   }
   const outcome = endPortal && gameResult ? (
-    gameResult.winner === 'player'
+    outcomeOverride
+      ? { kind: gameResult.winner === 'draw' ? 'draw' : 'win', title: outcomeOverride.title, desc: outcomeOverride.desc, color: outcomeOverride.color }
+      : gameResult.winner === 'player'
       ? { kind: 'win', title: 'Vittoria', desc: getDuelOutcomeSubtitle(gameResult, 'win'), color: outcomeColor }
       : gameResult.winner === 'enemy'
         ? { kind: 'lose', title: 'Sconfitta', desc: getDuelOutcomeSubtitle(gameResult, 'lose'), color: outcomeColor }
@@ -1306,6 +1320,9 @@ export const BattlefieldPanel = ({
             {isCampaign ? <button type="button" onClick={gameResult?.winner === 'player' ? onMenu : onCampaignRetry}
               className="w-full py-2 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-medium rounded-lg border border-amber-400/40 transition-all">
               {gameResult?.winner === 'player' ? 'Prosegui' : 'Ritenta'}
+            </button> : onTournamentContinue ? <button type="button" onClick={onTournamentContinue}
+              className="w-full py-2 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-medium rounded-lg border border-amber-400/40 transition-all">
+              {tournamentContinueLabel}
             </button> : <>
             {onRematch && (
               <button

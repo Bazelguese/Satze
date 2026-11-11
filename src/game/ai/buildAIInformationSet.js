@@ -10,21 +10,11 @@ import {
   createDisabledEminenceView,
   findEminenceViewLeaks,
 } from '../eminence/eminenceAIView.js';
-import { filterDeployableCardIds, readDeployConstraints } from '../eminence/eminenceState.js';
+import { constrainedDeployableCardIds } from '../eminence/eminenceState.js';
 
-/**
- * Agenti schierabili dal lato secondo i vincoli Eminenza del Duello corrente; null se il
- * lato non ha vincoli (la scelta segue le sole carte non usate).
- */
-function deployableIdsFor(eminenceState, side, hand, usedCards) {
-  if (!eminenceState) return null;
-  const constraints = readDeployConstraints(eminenceState, side);
-  const constrained = constraints.forcedCardId != null
-    || constraints.bannedCardIds.length > 0
-    || constraints.revivedCardIds.length > 0;
-  if (!constrained) return null;
-  const handIds = (hand || []).map((card) => card?.id).filter((id) => id != null);
-  return filterDeployableCardIds(eminenceState, side, handIds, Array.isArray(usedCards) ? usedCards : []);
+/** Nel gioco lo stato Eminenze arriva come `eminenceMatchState`, nei test come `eminenceState`. */
+function deployConstraintState(gameState) {
+  return gameState.eminenceState ?? gameState.eminenceMatchState ?? null;
 }
 
 /**
@@ -107,7 +97,7 @@ export function buildAIInformationSet(gameState) {
       toxin: gameState.playerToxin ?? null,
       visibleCard,
       eminence: eminence.player,
-      deployableCardIds: deployableIdsFor(gameState.eminenceState, 'player', playerHand, gameState.playerUsedCards),
+      deployableCardIds: constrainedDeployableCardIds(deployConstraintState(gameState), 'player', playerHand, gameState.playerUsedCards),
     },
 
     ai: {
@@ -120,7 +110,7 @@ export function buildAIInformationSet(gameState) {
       toxin: gameState.enemyToxin ?? null,
       eminence: eminence.ai,
       // Vincoli Eminenza sugli Agenti schierabili in questo Duello (null = nessuno).
-      deployableCardIds: deployableIdsFor(gameState.eminenceState, 'enemy', enemyHand, gameState.enemyUsedCards),
+      deployableCardIds: constrainedDeployableCardIds(deployConstraintState(gameState), 'enemy', enemyHand, gameState.enemyUsedCards),
     },
 
     campaignDuelMod: gameState.campaignDuelMod ?? null,

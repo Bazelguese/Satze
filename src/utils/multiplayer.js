@@ -26,6 +26,13 @@ export class MultiplayerManager {
     this._intentionalClose = false;
     /** @type {ReturnType<typeof setInterval> | null} */
     this._heartbeatTimer = null;
+    /**
+     * Destinatari predefiniti dei relay senza `to` esplicito. Nel torneo online due giocatori
+     * di una stanza a più posti giocano un Duello tra loro: i messaggi del Duello (che non
+     * indicano destinatari) vanno solo all'avversario, non a tutta la stanza.
+     * @type {number[] | null}
+     */
+    this.relayTarget = null;
   }
 
   _startHeartbeat() {
@@ -143,8 +150,10 @@ export class MultiplayerManager {
    * @param {Record<string, unknown>} payload
    */
   sendRelay(roomCode, payload, to = null) {
-    // `to`: elenco di posti destinatari (stanze a più posti); senza, a tutti gli altri.
-    this.send({ type: 'relay', roomCode, payload, ...(Array.isArray(to) ? { to } : {}) });
+    // `to`: elenco di posti destinatari (stanze a più posti); 'all' = a tutti gli altri anche
+    // con un destinatario predefinito attivo; senza, vale `relayTarget` (di norma: tutti).
+    const dest = Array.isArray(to) ? to : to === 'all' ? null : this.relayTarget;
+    this.send({ type: 'relay', roomCode, payload, ...(Array.isArray(dest) ? { to: dest } : {}) });
   }
 
   isConnected() {

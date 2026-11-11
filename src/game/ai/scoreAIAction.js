@@ -6,6 +6,7 @@ import { AI_SCORE_WEIGHTS, SCORE_TIE_EPSILON } from './aiConstants.js';
 import { getAvailableCards } from './generateAIActions.js';
 import { computeOverinvestmentPenalty } from './focusBudget.js';
 import { aggregatePlayerCardScores } from './cardBeliefAggregation.js';
+import { countFuturePositionWindows } from './initiativeCalendar.js';
 
 const POST_BATTLE = new Set(['conquest', 'lastWish']);
 
@@ -43,11 +44,18 @@ export function estimateFutureCardValue(card, context) {
       triggerFuture = (context.playerFieldsConquered || 0) >= 1 ? 5 : 4;
       break;
     case 'intervention':
-      triggerFuture = context.isPlayerFirst ? 7 : 3;
+    case 'imboscata': {
+      // Turni futuri in cui l'IA sarà nella posizione giusta (l'iniziativa si alterna).
+      const remaining = getAvailableCards(context.ai?.hand, context.ai?.usedCardIds).length;
+      const windows = countFuturePositionWindows(
+        context,
+        'ai',
+        trigger === 'imboscata',
+        remaining
+      );
+      triggerFuture = windows > 0 ? 7 : 1;
       break;
-    case 'imboscata':
-      triggerFuture = !context.isPlayerFirst ? 7 : 3;
-      break;
+    }
     case 'overdrive':
       triggerFuture = 5;
       break;

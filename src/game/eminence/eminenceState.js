@@ -131,6 +131,23 @@ export function readDeployConstraints(matchState, side) {
 }
 
 /**
+ * Come filterDeployableCardIds, ma null se il lato non ha vincoli: chi lo riceve può
+ * continuare a usare le sole carte non usate. `hand` accetta carte o id.
+ */
+export function constrainedDeployableCardIds(matchState, side, hand = [], usedIds = []) {
+  if (!matchState) return null;
+  const constraints = readDeployConstraints(matchState, side);
+  const constrained = constraints.forcedCardId != null
+    || constraints.bannedCardIds.length > 0
+    || constraints.revivedCardIds.length > 0;
+  if (!constrained) return null;
+  const handIds = (hand || [])
+    .map((card) => (card && typeof card === 'object' ? card.id : card))
+    .filter((id) => id != null);
+  return filterDeployableCardIds(matchState, side, handIds, Array.isArray(usedIds) ? usedIds : []);
+}
+
+/**
  * Agenti che il lato può schierare in questo Duello, dati la mano e gli Agenti già usati.
  * Un Agente riusabile torna disponibile anche se usato; un Agente vietato no, salvo che sia
  * l'unico rimasto; un Agente imposto, se disponibile, è l'unica scelta.

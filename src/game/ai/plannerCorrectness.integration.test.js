@@ -13,7 +13,7 @@ import {
   createConstantRng,
   publicStateHash,
   projectPostDuelState,
-  resolveNextInitiativeFromWinner,
+  resolveProjectedInitiative,
   selectCandidateFields,
   lightRankField,
   evaluateStrategicState,
@@ -276,20 +276,20 @@ describe('selezione Campi futuri', () => {
 });
 
 describe('iniziativa e hash pubblici', () => {
-  it('iniziativa: perde giocatore / perde IA', () => {
-    expect(resolveNextInitiativeFromWinner('enemy', false)).toBe(true);
-    expect(resolveNextInitiativeFromWinner('player', true)).toBe(false);
-
+  it('iniziativa: alterna da openingPlayerFirst, indipendente dal vincitore', () => {
     const playerCard = makeCard({ id: 100 });
     const aiCard = makeCard({ id: 200 });
+    // R2 con opening giocatore: al R2 sceglie prima l'IA, al R3 di nuovo il giocatore.
     const ctx = makeAIContext({
       roundNumber: 2,
-      isPlayerFirst: true,
+      isPlayerFirst: false,
       openingPlayerFirst: true,
       revealedFields: 2,
       battlefields: [makeField(1, 'A'), makeField(2, 'B'), makeField(3, 'C')],
     });
     const root = buildStrategicState(ctx);
+    expect(resolveProjectedInitiative(root, 3)).toBe(true);
+    expect(resolveProjectedInitiative(root, 4)).toBe(false);
 
     const losePlayer = projectPostDuelState(
       root,
@@ -321,7 +321,7 @@ describe('iniziativa e hash pubblici', () => {
       { card: aiCard, cardId: 200, focus: 2, fieldIndex: 0 },
       { card: playerCard, cardId: 100, focus: 2 }
     );
-    expect(loseAi.isPlayerFirst).toBe(false);
+    expect(loseAi.isPlayerFirst).toBe(true);
   });
 
   it('publicStateHash distingue tossina, campi rivelati e profilo iniziativa', () => {

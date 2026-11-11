@@ -490,6 +490,12 @@ export function formatAIReasoningEntry(decision, meta = {}) {
       `Non è sicura di vincere lo scontro: sta scegliendo una linea di contenimento / risparmio, non un all-in sicuro.`
     );
   }
+  if (debug.engine === 'montecarlo' && debug.winEstimate != null) {
+    const pct = Math.round(Math.min(1, Math.max(0, Number(debug.winEstimate))) * 100);
+    lines.push(
+      `Ha simulato ${debug.rollouts ?? 'molte'} partite fino alla fine: con questa scelta stima ~${pct}% di vincere la partita.`
+    );
+  }
   if (debug.winProbability != null) {
     const pct = Math.round(Number(debug.winProbability) * 100);
     lines.push(
@@ -514,7 +520,9 @@ export function formatAIReasoningEntry(decision, meta = {}) {
   }
 
   lines.push(
-    `Limite: non conosce i tuoi Focus esatti — confronta scenari tipici (pochi / medi / tanti FC).`
+    debug.engine === 'montecarlo'
+      ? `Limite: non conosce i tuoi Focus esatti — nelle simulazioni li stima intorno al tuo ritmo medio.`
+      : `Limite: non conosce i tuoi Focus esatti — confronta scenari tipici (pochi / medi / tanti FC).`
   );
 
   const headline =

@@ -17,7 +17,7 @@ import { ALL_BATTLEFIELDS } from '../data/battlefields.js';
 import { selectBattlefields } from '../game/fieldLogic.js';
 import { battleOutcomeKey } from '../game/duel/duelHelpers.js';
 import { createRng, createSeat, legalFocusRange } from '../game/multiSeat/multiSeatCore.js';
-import { getSeatAIProfile, investmentForLevel, npcSeatNames, profileForDifficulty } from '../game/multiSeat/seatAI.js';
+import { getSeatAIProfile, investmentForLevel, profileForDifficulty } from '../game/multiSeat/seatAI.js';
 import { pickAiArmyDeck } from '../game/multiSeat/seatSetup.js';
 import { kothScontri, scontroTransition, teamScontri, waitingAgents } from '../game/multiSeat/scontroQueue.js';
 import {
@@ -56,6 +56,16 @@ import {
   submitCommit,
 } from '../game/kingOfHill/kingOfHill.js';
 import { aiCommit } from '../game/kingOfHill/kingOfHillAI.js';
+import { isAiWorkerSupported, runMultiSeatMcInWorker, runTeamMcInWorker } from '../game/ai/aiWorkerClient.js';
+import { getTeamMcProfile } from '../game/ai/mcTeam/teamProfiles.js';
+import { getKothMcProfile } from '../game/ai/mcKoth/kothProfiles.js';
+import {
+  legacyProfileForTrait,
+  npcTraitNames,
+  opponentTraits,
+  teammateTraitFromChoice,
+  trustForTrait,
+} from '../game/ai/mcTeam/teamTraits.js';
 import {
   MS, ENTRY, HostSequencer, matchFromPackage, applyEntry, advanceIfResolved, stateHash,
 } from '../game/multiSeat/onlineSession.js';
@@ -300,8 +310,10 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
    * Fa «pensare» alcuni posti IA: ciascuno con il proprio tempo, lo stato è visibile nel
    * Tavolo; quando hanno deciso tutti si chiama onDone con la sessione corrente.
    * Le decisioni vere restano quelle dell'orchestratore: qui cambia solo il ritmo.
+   * Con `pending` (decisione calcolata nel worker) i posti restano «a pensare» finché il
+   * calcolo non è finito, e onDone riceve il suo risultato.
    */
-  const think = useCallback((seatIds, kind, onDone) => {
+  const think = useCallback((seatIds, kind, onDone, pending = null) => {
     const start = sessionRef.current;
     if (!start) return;
     const rng = rngRef.current || Math.random;
@@ -313,9 +325,15 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const seats = Object.fromEntries(seatIds.map((id) => [id, { status: 'thinking', task: THINK_TASK[kind] }]));
     commit({ ...start, thinking: { ...(start.thinking || {}), [kind]: seats } });
     let remaining = seatIds.length;
+    let pendingResult = null;
+    const computed = pending
+      ? pending.then((r) => {
+        pendingResult = r;
+      }, () => {})
+      : null;
     for (const id of seatIds) {
       const ms = thinkMs(rng, seatOf(start, id)?.aiProfile, kind);
-      later(() => {
+      const markReady = () => {
         if (!alive()) return;
         const cur = sessionRef.current;
         commit({ ...cur, thinking: { ...cur.thinking, [kind]: { ...cur.thinking[kind], [id]: { status: 'ready', task: 'pronto' } } } });
@@ -327,8 +345,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
           const th = { ...c2.thinking };
           delete th[kind];
           commit({ ...c2, thinking: th });
-          onDone(sessionRef.current);
+          onDone(sessionRef.current, pendingResult);
         }, THINK_SETTLE_MS);
+      };
+      later(() => {
+        if (!alive()) return;
+        if (computed) computed.then(markReady);
+        else markReady();
       }, ms);
     }
   }, [commit, later]);
@@ -398,6 +421,44 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
   // 2v2
   // ------------------------------------------------------------------
   /**
+   * Decisione di squadra con l'IA nuova (motore a simulazione nel worker). Risolve a null se
+   * non disponibile (online, worker assente, errore o timeout): il chiamante usa l'IA precedente.
+   */
+  const decideTeamMc = useCallback((kind, s, match, teamId, aiSeatIds, extra = {}) => {
+    if (s.online || !isAiWorkerSupported()) return Promise.resolve(null);
+    const difficulty = s.options?.difficulty || 'medium';
+    const traits = Object.fromEntries(match.seats.map((seat) => [seat.id, seat.aiTrait || 'neutral']));
+    return runTeamMcInWorker(kind, {
+      match,
+      teamId,
+      aiSeatIds,
+      traits,
+      difficulty,
+      maxMs: getTeamMcProfile(difficulty).maxMs,
+      seed: Math.floor((rngRef.current || Math.random)() * 2 ** 32),
+      ...extra,
+    }).catch(() => null);
+  }, []);
+
+  /**
+   * Posa di un posto IA del Re della collina con l'IA nuova (worker). Null se non disponibile:
+   * il chiamante usa l'IA precedente.
+   */
+  const decideKothMc = useCallback((s, match, seatId) => {
+    if (s.online || !isAiWorkerSupported()) return Promise.resolve(null);
+    const difficulty = s.options?.difficulty || 'medium';
+    const seat = match.seats.find((x) => x.id === seatId);
+    return runMultiSeatMcInWorker('koth-commit', {
+      match,
+      seatId,
+      difficulty,
+      trait: seat?.aiTrait || 'neutral',
+      maxMs: getKothMcProfile(difficulty).maxMs,
+      seed: Math.floor((rngRef.current || Math.random)() * 2 ** 32),
+    }).catch(() => null);
+  }, []);
+
+  /**
    * FC del compagno IA per la sua proposta: il consiglio accettato vince; in risposta mira
    * all'avversario del fronte che gli tocca con la disposizione scelta.
    */
@@ -405,6 +466,9 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const match = s.match;
     const mate = getTeamSeat(match, 'A2');
     if (s.advice?.invest?.accepted) return investmentForLevel(mate, s.advice.invest.value);
+    // Scelta dell'IA nuova per questa disposizione, se la carta è la stessa.
+    const mc = pairing ? s.mateByPairing?.[pairing]?.A2 : null;
+    if (s.role === 'response' && mc && mc.cardId === cardId) return mc.focus;
     if (s.role === 'response' && pairing) return aiResponseInvestment(match, 'A2', cardId, pairing, rngRef.current);
     return s.teammateProposal?.focus ?? aiOpeningDeploy(match, 'A2', rngRef.current).focus;
   }, []);
@@ -467,21 +531,28 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     }
     // Il compagno pensa mentre scegli tu: la sua proposta (carta, FC e, in risposta, la
     // disposizione che consiglia) arriva dopo qualche istante.
-    const mateThinks = (role) => think(['A2'], 'proposal', (cur) => {
+    const mateThinks = (role, matchNow) => think(['A2'], 'proposal', (cur, mc) => {
       const m = cur.match;
       const mate = getTeamSeat(m, 'A2');
       let proposal;
       let plan;
+      let mateExtras = { mateAlternatives: null, mateByPairing: null };
       if (role === 'opening') {
-        proposal = aiOpeningDeploy(m, 'A2', rng);
+        const fromMc = mc?.choices?.A2;
+        proposal = fromMc ? { ...fromMc } : aiOpeningDeploy(m, 'A2', rng);
         plan = { pairing: null, suggestedPairing: null, investments: {} };
+        if (fromMc) mateExtras = { ...mateExtras, mateAlternatives: mc.alternatives?.A2 || null };
+      } else if (mc?.deployments?.A2) {
+        proposal = { cardId: mc.deployments.A2.cardId };
+        plan = { pairing: mc.pairing, suggestedPairing: mc.pairing, investments: {} };
+        mateExtras = { ...mateExtras, mateByPairing: mc.byPairing || null };
       } else {
         const cardId = aiResponseDeploy(m, 'A2', rng).cardId;
         const pairing = suggestPairing(m, 'A', 'A2', cardId, rng);
         proposal = { cardId };
         plan = { pairing, suggestedPairing: pairing, investments: {} };
       }
-      let next = { ...cur, teammateProposal: proposal, plan, mateReady: true };
+      let next = { ...cur, ...mateExtras, teammateProposal: proposal, plan, mateReady: true };
       // Carta consigliata e accettata prima che il compagno decidesse.
       if (cur.advice?.card?.accepted) next.teammateProposal = { ...next.teammateProposal, cardId: cur.advice.card.value };
       next = refreshMatePlan(next);
@@ -489,13 +560,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       next = { ...next, mateLine: `${mateCardLine(mate.aiProfile, card?.name)} ${mateInvestLine(mate, next.teammateProposal.focus)}` };
       commit(next);
       if (cur.pendingConfirm) teamHumanConfirmRef.current?.(next, cur.pendingConfirm);
-    });
+    }, decideTeamMc(role === 'opening' ? 'team-opening' : 'team-response', s, matchNow, 'A', ['A2']));
     if (match.openingTeam === 'A') {
       const next = { ...s, match, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, role: 'opening', plan: null, teammateProposal: null };
       log(`[T${match.roundNumber}] 2v2 · Apre la tua squadra: Campo, Agente e FC, insieme al compagno.`);
       project(next, { playerSeatId: HUMAN_TEAM_SEAT, enemySeatId: 'B1', playerHP: hp('A'), enemyHP: hp('B'), isPlayerFirst: true });
       sceneRef.current?.setGamePhase('selectField');
-      mateThinks('opening');
+      mateThinks('opening', match);
       return;
     }
     // La scena mostra subito la tua squadra contro gli avversari (PV di squadra, mani).
@@ -505,10 +576,20 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     sceneRef.current?.setGamePhase('selectField');
     // Gli avversari pensano ciascuno con il suo tempo; le due carte si rivelano insieme
     // (i loro FC restano nascosti fino alla rivelazione).
-    think(['B1', 'B2'], 'opening', (cur) => {
-      const d1 = aiOpeningDeploy(cur.match, 'B1', rng);
-      const d2 = aiOpeningDeploy(cur.match, 'B2', rng, [d1.fieldIndex]);
-      const m = submitOpeningDeploy(cur.match, { B1: d1, B2: d2 });
+    think(['B1', 'B2'], 'opening', (cur, mc) => {
+      let d1;
+      let d2;
+      let m;
+      try {
+        if (!mc?.choices?.B1 || !mc?.choices?.B2) throw new Error('IA nuova non disponibile');
+        d1 = mc.choices.B1;
+        d2 = mc.choices.B2;
+        m = submitOpeningDeploy(cur.match, { B1: d1, B2: d2 });
+      } catch {
+        d1 = aiOpeningDeploy(cur.match, 'B1', rng);
+        d2 = aiOpeningDeploy(cur.match, 'B2', rng, [d1.fieldIndex]);
+        m = submitOpeningDeploy(cur.match, { B1: d1, B2: d2 });
+      }
       const next = { ...cur, match: m, stage: MULTI_SEAT_STAGES.HUMAN_DEPLOY, role: 'response', teammateProposal: null };
       log(`[T${m.roundNumber}] 2v2 · Apre la squadra avversaria: ${m.battlefields[d1.fieldIndex].name} e ${m.battlefields[d2.fieldIndex].name}.`);
       project(next, { playerSeatId: HUMAN_TEAM_SEAT, enemySeatId: 'B1', playerHP: m.teams.A.hp, enemyHP: m.teams.B.hp, isPlayerFirst: false });
@@ -516,9 +597,9 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       const b1Card = getTeamSeat(m, 'B1').hand.find((c) => c.id === d1.cardId);
       sceneRef.current?.showOpponentDeploy?.({ agent: b1Card, fieldIndex: d1.fieldIndex });
       sceneRef.current?.setGamePhase('selectAgent');
-      mateThinks('response');
-    });
-  }, [commit, log, project, refreshMatePlan, sceneRef, think]);
+      mateThinks('response', m);
+    }, decideTeamMc('team-opening', s, match, 'B', ['B1', 'B2']));
+  }, [commit, decideTeamMc, log, project, refreshMatePlan, sceneRef, think]);
 
   const teamHumanConfirm = useCallback((s, choice) => {
     const { agent, focus, fieldIndex } = choice;
@@ -545,9 +626,13 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const roundStartMatch = match;
     try {
       if (s.role === 'opening') {
-        // Il compagno cambia Campo solo se hai scelto proprio il suo.
+        // Il compagno cambia Campo solo se hai scelto proprio il suo: prima la sua miglior
+        // alternativa con la stessa carta (IA nuova), altrimenti un altro Campo.
         let a2 = { ...proposal };
-        if (a2.fieldIndex === fieldIndex) a2.fieldIndex = aiOpeningDeploy(match, 'A2', rng, [fieldIndex]).fieldIndex;
+        if (a2.fieldIndex === fieldIndex) {
+          const alt = (s.mateAlternatives || []).find((c) => c.cardId === a2.cardId && c.fieldIndex !== fieldIndex);
+          a2.fieldIndex = alt ? alt.fieldIndex : aiOpeningDeploy(match, 'A2', rng, [fieldIndex]).fieldIndex;
+        }
         match = submitOpeningDeploy(match, {
           A1: { cardId: agent.id, fieldIndex, focus },
           A2: { cardId: a2.cardId, fieldIndex: a2.fieldIndex, focus: a2.focus },
@@ -570,15 +655,21 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     // La tua squadra è schierata (insieme); la risposta arriva dopo una pausa visibile.
     log(`[T${match.roundNumber}] 2v2 · La tua squadra si schiera. Risponde la squadra avversaria…`);
     commit({ ...s, match, stage: MULTI_SEAT_STAGES.AI_TURN, teammateProposal: null, pendingConfirm: null });
-    think(['B1', 'B2'], 'response', (cur) => {
+    think(['B1', 'B2'], 'response', (cur, mc) => {
       if (cur.stage !== MULTI_SEAT_STAGES.AI_TURN) return;
       const before = cur.match;
-      const plan = aiResponsePlan(before, 'B', rng);
-      const m = submitResponseDeploy(before, plan.deployments, plan.pairing);
+      let m;
+      try {
+        if (!mc?.deployments?.B1 || !mc?.deployments?.B2) throw new Error('IA nuova non disponibile');
+        m = submitResponseDeploy(before, mc.deployments, mc.pairing);
+      } catch {
+        const plan = aiResponsePlan(before, 'B', rng);
+        m = submitResponseDeploy(before, plan.deployments, plan.pairing);
+      }
       log(`[T${m.roundNumber}] 2v2 · La squadra avversaria risponde con due Agenti.`);
       teamReveal(cur, m, before);
-    });
-  }, [commit, log, sceneRef, teamReveal, think]);
+    }, decideTeamMc('team-response', s, match, 'B', ['B1', 'B2']));
+  }, [commit, decideTeamMc, log, sceneRef, teamReveal, think]);
   const teamHumanConfirmRef = useRef(teamHumanConfirm);
   teamHumanConfirmRef.current = teamHumanConfirm;
 
@@ -753,17 +844,25 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       return;
     }
     commit({ ...s, match, stage: MULTI_SEAT_STAGES.AI_TURN });
-    think([committer], 'commit', (cur) => {
+    think([committer], 'commit', (cur, mc) => {
       if (!cur || cur.stage === MULTI_SEAT_STAGES.OVER) return;
-      const choice = aiCommit(cur.match, committer, rng);
-      const m2 = submitCommit(cur.match, committer, choice);
+      let choice;
+      let m2;
+      try {
+        if (!mc?.choice) throw new Error('IA nuova non disponibile');
+        choice = mc.choice;
+        m2 = submitCommit(cur.match, committer, choice);
+      } catch {
+        choice = aiCommit(cur.match, committer, rng);
+        m2 = submitCommit(cur.match, committer, choice);
+      }
       const seat = getKothSeat(m2, committer);
       const card = seat.hand.find((c) => c.id === choice.cardId);
       const fieldName = m2.battlefields[m2.contestFieldIndex]?.name;
       log(`[C${m2.roundNumber}] ${seat.name} posa ${card?.name}${choice.fieldIndex != null ? ` su ${fieldName}` : ''}.`);
       kothRunCommitsRef.current({ ...cur, match: m2 });
-    });
-  }, [commit, kothPresentFight, log, project, sceneRef, think]);
+    }, decideKothMc(s, match, committer));
+  }, [commit, decideKothMc, kothPresentFight, log, project, sceneRef, think]);
   const kothRunCommitsRef = useRef(kothRunCommits);
   kothRunCommitsRef.current = kothRunCommits;
 
@@ -1116,13 +1215,20 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     if (s.kind === MULTI_SEAT_KINDS.TEAM) {
       const mate = extra();
       const foe = extra();
-      const preset = getSeatAIProfile(s.options.teammatePreset);
+      // IA nuova: tratti (personalità) dei posti decisi all'avvio; il profilo precedente resta
+      // per il ripiego, il ritmo e le frasi del compagno.
+      const mateTrait = s.traits?.mate ?? teammateTraitFromChoice(s.options.teammatePreset);
+      const [b1Trait, b2Trait] = s.traits?.opponents ?? opponentTraits(s.options.personality, 2, rng);
       const seats = [
         createSeat({ id: 'A1', name: 'Tu', isHuman: true, team: 'A', army: humanArmy, hand: humanHand, focus: TEAM_DUEL_CONFIG.startFocus }),
-        // Nomi segnaposto dei posti IA: PNG + archetipo di personalità (l'armata resta a parte).
-        createSeat({ id: 'A2', name: npcName(`PNG ${preset.name}`), team: 'A', army: mate.army, hand: mate.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: preset.id, deckKey: mate.deckKey }),
-        createSeat({ id: 'B1', name: firstEnemyName, team: 'B', army: firstEnemyArmy, hand: enemyHand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile }),
-        createSeat({ id: 'B2', name: npcName(foe.army), team: 'B', army: foe.army, hand: foe.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: foe.deckKey }),
+        // Nomi segnaposto dei posti IA: PNG + personalità (l'armata resta a parte).
+        {
+          ...createSeat({ id: 'A2', name: npcName(npcTraitNames([mateTrait])[0]), team: 'A', army: mate.army, hand: mate.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: legacyProfileForTrait(mateTrait), deckKey: mate.deckKey }),
+          aiTrait: mateTrait,
+          trust: trustForTrait(mateTrait),
+        },
+        { ...createSeat({ id: 'B1', name: firstEnemyName, team: 'B', army: firstEnemyArmy, hand: enemyHand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile }), aiTrait: b1Trait },
+        { ...createSeat({ id: 'B2', name: npcName(foe.army), team: 'B', army: foe.army, hand: foe.hand, focus: TEAM_DUEL_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: foe.deckKey }), aiTrait: b2Trait },
       ];
       const battlefields = selectBattlefields(s.options.fieldMode, ALL_BATTLEFIELDS, {
         rng,
@@ -1135,13 +1241,18 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       return;
     }
     const players = s.options.players === 4 ? 4 : 3;
+    // Personalità degli avversari (IA nuova): decise all'avvio, una per posto IA.
+    const kothTraits = s.traits?.opponents ?? opponentTraits(s.options.personality, players - 1, rng);
     const seats = [
       createSeat({ id: 'P1', name: 'Tu', isHuman: true, army: humanArmy, hand: humanHand, focus: KOTH_CONFIG.startFocus }),
-      createSeat({ id: 'P2', name: firstEnemyName, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }),
+      { ...createSeat({ id: 'P2', name: firstEnemyName, army: firstEnemyArmy, hand: enemyHand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile }), aiTrait: kothTraits[0] },
     ];
     for (let i = 3; i <= players; i += 1) {
       const pick = extra();
-      seats.push(createSeat({ id: `P${i}`, name: npcName(pick.army), army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }));
+      seats.push({
+        ...createSeat({ id: `P${i}`, name: npcName(pick.army), army: pick.army, hand: pick.hand, focus: KOTH_CONFIG.startFocus, aiProfile: enemyProfile, deckKey: pick.deckKey }),
+        aiTrait: kothTraits[i - 2],
+      });
     }
     const battlefields = selectBattlefields(s.options.fieldMode, ALL_BATTLEFIELDS, { rng });
     const match = createKothMatch({ seats, battlefields, rng, seed, mode: s.options.fieldMode, perspectiveSeatId: HUMAN_KOTH_SEAT });
@@ -1216,9 +1327,16 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     // Nomi PNG decisi subito: servono già alla schermata VS. Ordine: [compagno,] primo avversario, altri.
     const enemyProfile = profileForDifficulty(options.difficulty);
     const isTeam = options.kind === MULTI_SEAT_KINDS.TEAM;
-    const names = npcSeatNames(isTeam
-      ? [getSeatAIProfile(options.teammatePreset).id, enemyProfile, enemyProfile]
-      : Array.from({ length: 1 + extraCount }, () => enemyProfile));
+    // Personalità decise subito (servono ai nomi della schermata VS).
+    const traits = isTeam
+      ? {
+        mate: teammateTraitFromChoice(options.teammatePreset),
+        opponents: opponentTraits(options.personality, 2, rng),
+      }
+      : { mate: null, opponents: opponentTraits(options.personality, 1 + extraCount, rng) };
+    const names = isTeam
+      ? npcTraitNames([traits.mate, ...traits.opponents])
+      : npcTraitNames(traits.opponents);
     const npcNames = isTeam
       ? { mate: names[0], firstEnemy: names[1], extras: [names[0], names[2]] }
       : { mate: null, firstEnemy: names[0], extras: names.slice(1) };
@@ -1232,6 +1350,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
       firstEnemy: { army: first.army, deckKey: first.deckKey },
       extras,
       npcNames,
+      traits,
     });
     return { enemyArmy: first.army, enemyDeckKey: first.deckKey };
   }, [clearTimers, commit]);
@@ -1291,7 +1410,7 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
     const profile = getSeatAIProfile(mate.aiProfile);
     const memoKey = `${kind}:${value}`;
     const memo = { ...(s.adviceMemo || {}) };
-    if (memo[memoKey] == null) memo[memoKey] = rngRef.current() < (profile.trust ?? 0.6);
+    if (memo[memoKey] == null) memo[memoKey] = rngRef.current() < (mate.trust ?? profile.trust ?? 0.6);
     const accepted = memo[memoKey];
 
     const cardName = kind === 'card' ? mate.hand.find((c) => c.id === value)?.name : null;
@@ -1444,7 +1563,9 @@ export function useMultiSeatDuel({ gameState, sceneRef }) {
         pairingCaptain: session.online
           ? session.online.pkg.seats.find((x) => x.team === myTeamOf(session) && x.controller.type === 'human')?.id ?? meOf(session)
           : meOf(session),
-        mateTrust: session.online ? null : getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
+        mateTrust: session.online
+          ? null
+          : getTeamSeat(match, 'A2')?.trust ?? getSeatAIProfile(getTeamSeat(match, 'A2')?.aiProfile)?.trust ?? null,
         online: Boolean(session.online),
         // Quando risponde la tua squadra: i fronti con la disposizione che stai scegliendo.
         fronts: match.phase === TEAM_DUEL_PHASES.RESPONSE_DEPLOY && session.role === 'response' && session.plan
