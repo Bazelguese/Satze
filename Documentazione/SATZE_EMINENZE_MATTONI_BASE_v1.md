@@ -797,3 +797,23 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Maschere Invertite: alias dei trigger limitato al proprio lato.
 - Ego senza Maschere: override del Bonus con «Overdrive: +2 POT, +2 DAN», attivo finché il giocatore non vince un Duello.
 - Tolto Incontro Truccato.
+
+## 11. Stato dell'implementazione (11 novembre 2026)
+
+Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e nel motore, con test di accettazione, integrazione nel Duello reale e snapshot del tracer.
+
+### 11.1 Scelte interpretative da confermare
+
+- **Calibri — Tenere la Linea:** «il DAN nemico ti ha tolto 2 PV o meno» è letto come *DAN finale dell'Agente nemico ≤ 2* in un Duello perso.
+- **Orathai — Eco:** l'effetto del Potere nemico si applica anche al tuo Agente dopo che entrambi i Poteri si sono risolti. Non si ripetono i Poteri che agiscono su altri Poteri (Blocca, Copia, Inversione). Se il Potere del tuo Agente è bloccato, anche l'Eco è bloccata.
+- **Ratti — Corteggiamento:** l'avversario sceglie l'iniziativa dell'intero round (chi sceglie per primo Campo e Agente), non solo l'ordine degli Agenti.
+- **Ratti — Vendetta oltre la Morte:** «sconfitto» = ha perso un Duello (il pareggio non conta). La scelta resta sigillata fino al gate generale, ma con un'unica attiva a quel gate l'avversario la deduce quando PRE_AGENT passa senza aperture.
+- **Khemet — Maledizione Inversa:** l'inversione lavora sul netto rispetto ai valori stampati sulla carta (`finale = base − (corrente − base)`); gli FC restano fuori. Un lato Immune non subisce riduzioni dall'inversione. Gli effetti Copia non sono esclusi dal netto.
+- **Apex — Cataclisma Verde:** «subisce Terraformare» è realizzato come sostituzione del Campo all'apertura del round 5, prima della scelta del Campo.
+
+### 11.2 Punti aperti
+
+- **Corte Rossa:** manca l'interfaccia del Registro (voci e totale visibili a entrambi) e l'indicatore «rifiuto disponibile». L'Offerta si risponde dal portale di scelta.
+- **Campo 122:** usa lo sfondo del Meridiano (89) finché non c'è l'illustrazione `campo-122.webp`.
+- **Cinematiche:** le primitive nuove (BLOCK_POWER, ECHO_POWER, REPLACE_ABILITY, CONSTRAIN_DEPLOY, SET_ROUND_INITIATIVE, TRANSPLANT_POWER, ESCALATE_END_MATCH_DEBTS) non hanno ancora un cue cinematico, come diverse primitive già esistenti.
+- **IA:** sceglie le abilità con le euristiche generiche esistenti; alle Offerte e alla Scelta di Corteggiamento risponde sempre accettando la prima opzione.

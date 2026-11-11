@@ -911,31 +911,21 @@ export function findCatalogGaps() {
     }
   }
 
-  // Also scan non-implemented for orathai_tacet / ratti_sussurro listed in handoff
-  for (const id of ['orathai_primo_canto', 'ratti_bella_malelabbra']) {
-    const eminence = EMINENCES[id];
-    if (!eminence) continue;
-    for (const ability of eminence.abilities || []) {
-      if (ability.presenceDelta >= 0 && (!ability.segments || ability.segments.every((s) => !s || s.primitive === EMINENCE_PRIMITIVES.CHANGE_PRESENCE || s.primitive == null))) {
-        // null segments still count as observation-shaped recharge in catalog text
-        if (ability.id === 'orathai_tacet' || ability.id === 'ratti_sussurro') {
-          inertRecharge.push({ id: ability.id, eminenceId: id, name: ability.name, unimplemented: true });
-        }
-      }
-    }
-  }
-
   const unexpectedNoCue = [...noCuePrimitives].filter(
     (p) => !EXPECTED_NO_CUE_PRIMITIVES.includes(p),
   );
 
+  // Ricariche e Statici di sola osservazione dopo il rework dell'11/11/2026.
   const expectedInertIds = [
-    'kethran_sacrificio',
-    'khemet_devozione',
-    'orathai_tacet',
-    'ratti_sussurro',
-    'figli_leggerezza',
+    'semaforo_verde',
+    'semaforo_multa_caos',
+    'mascarada_ordine_incontri',
     'khemet_rito_overdrive',
+    'orathai_risonanza',
+    'figli_ancorato',
+    'ratti_male_crescente',
+    'enclave_accumulo',
+    'calibri_tenere_la_linea',
   ];
   const foundInertIds = inertRecharge.map((r) => r.id);
   const missingExpectedInert = expectedInertIds.filter((id) => !foundInertIds.includes(id));
