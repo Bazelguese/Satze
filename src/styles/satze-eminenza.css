@@ -1007,3 +1007,8 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
 .em-card:hover .em-card-static-text{max-height:340px;opacity:1;margin-top:5px !important}
 .em-card:not(:hover) .em-card-static{padding:6px 10px !important;background:rgba(4,6,12,.72) !important}
 @media(prefers-reduced-motion:reduce){.em-card-static,.em-card-static-text{transition:none}}
+
+/* La carta sta davanti alle fasce: il taglio obliquo di ogni fascia le finisce sotto,
+   per entrambe le zone. translateZ perché lo stage è un contesto 3D (preserve-3d). */
+.em-stage > .em-card-shell{z-index:2;transform:translateZ(2px)}
+.em-stage > .em-rail{z-index:1}
