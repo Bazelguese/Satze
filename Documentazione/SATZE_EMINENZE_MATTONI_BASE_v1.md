@@ -895,3 +895,25 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - Il tetto di 4 FC nega Overdrive e i colpi da 5+ FC: misurato in autoplay, le IA del gioco investono 5+ FC in circa metà dei Duelli e quasi sempre con carte Overdrive e Conquista.
 
 **Lavoro di implementazione:** fonte del blocco del Potere nel risultato del Duello; marchio persistente che blocca il Bonus allo schieramento; tetto agli FC investibili rispettato da interfaccia, IA e online; divieto di trigger per due Duelli.
+
+### 12.4 Calibri Pesanti — Le Bombe Nere (approvata)
+
+**Lore:** le armi della Guerra dell'Ultimo Giorno, costruite perché nessuno le usasse: «se tutti potevano distruggere tutti, nessuno avrebbe distrutto nessuno. La teoria era sbagliata».
+
+**Stile:** opposto al Comando dei Quattro Fronti. Non conta quanto subisci ma quanto infliggi: corsa ai PV, danni anche nella sconfitta, mazzi costruiti sui Danni diretti.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Nessun vincitore | Alla fine del Duello, se l'avversario ha perso PV in questo Duello, +1 Presenza. | — | circa 2.5–2.8 Presenza/Scontro |
+| +1 | Deterrenza | In questo Duello il tuo Agente ha −2 DAN. | −0.75 | circa −0.55 ✅ |
+| −1 | Ricaduta | Se perdi il Duello, l'avversario perde PV pari a metà del tuo DAN, arrotondata per eccesso. | 0.75 | circa 0.75 ✅ (caso peggiore 3 PV) |
+| −2 | Artiglieria Pesante | Per il resto dello Scontro, gli effetti di Danni diretti dei tuoi Agenti infliggono 1 danno in più. | 1.50 | circa 1.0–1.3 con un mazzo di Danni diretti (anche bi-armata), meno altrimenti 〰️ |
+| −3 | La Guerra dell'Ultimo Giorno | Infliggi il tuo DAN anche se perdi il Duello; se vinci, l'avversario perde altri 3 PV. | 2.25 | circa 1.8–2.0 ✅ (caso peggiore 6 PV perdendo con DAN 6) |
+
+**Note di regola:**
+- Artiglieria Pesante vale per gli effetti di Danni diretti del Potere e del Bonus dei tuoi Agenti; non è cumulabile con se stessa oltre quanto scelto dal giocatore (ogni uso aggiunge +1).
+- La versione con «1 Danno diretto per ogni FC oltre il terzo» è stata scartata: al round 2 si possono investire 10–12 FC su un Agente (18 FC iniziali, riserva di 1 FC per Agente da giocare), e con il Titano Corazzato MK-IV darebbe 13 PV in un solo round.
+
+**Lavoro di implementazione:** modificatore persistente ai Danni diretti dei propri Agenti; DAN inflitto anche in sconfitta; PV extra in vittoria.
