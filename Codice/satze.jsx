@@ -416,7 +416,7 @@ export default function SatzeGame() {
   const aiEminenceGameRef = useRef(null);
   aiEminenceGameRef.current = {
     playerHand, enemyHand, playerUsedCards, enemyUsedCards, playerHP, enemyHP,
-    conqueredFields, battlefields, roundNumber, isPlayerFirst,
+    conqueredFields, battlefields, roundNumber, isPlayerFirst, playerArmyBonuses, enemyArmyBonuses,
   };
 
   /**

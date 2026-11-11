@@ -20,6 +20,7 @@
 // La scelta non dipende dalla difficoltà né dalla personalità (decisione del 11/11/2026).
 
 import { getEminence, getEminenceAbility } from '../../../data/eminences.js';
+import { ARMY_BONUSES } from '../../../data/armies.js';
 import {
   getLegalAbilityIds,
   isEminenceSubsystemEnabled,
@@ -133,6 +134,10 @@ export function buildEminenceDecisionInfo(matchState, side, game = {}) {
   const ownState = matchState?.[side] || {};
   const oppState = matchState?.[opp] || {};
   const ownCards = available(side);
+  // Bonus d'Armata dell'Eminenza (es. Kethran «Rimonta: +2 POT») e se è attivo per la mano.
+  const army = getEminence(ownState.eminenceId)?.army ?? null;
+  const armyBonus = army ? ARMY_BONUSES[army] : null;
+  const armyBonusActive = Boolean(army && game[`${side}ArmyBonuses`]?.[army]);
   return {
     side,
     roundNumber: Number(game.roundNumber) || 1,
@@ -153,6 +158,7 @@ export function buildEminenceDecisionInfo(matchState, side, game = {}) {
     oppDebts: endMatchDebtsOn(matchState, opp),
     // Duelli che restano compreso questo: uno per Agente ancora da usare.
     duelsLeft: clamp(ownCards.length || 1, 1, 5),
+    armyBonusTrigger: armyBonusActive ? armyBonus?.trigger ?? null : null,
   };
 }
 
@@ -166,6 +172,24 @@ function hpLossValue(info, expectedLoss, worstLoss) {
   const effectiveHp = info.ownHP - info.ownDebts.total;
   if (effectiveHp <= worstLoss) return FORBIDDEN;
   return -expectedLoss * hpUnitValue(effectiveHp - expectedLoss);
+}
+
+/** Valore del Bonus d'Armata con trigger quando si accende (+2 POT ≈ 1.5 FC, documento §10.12). */
+const ARMY_BONUS_VALUE = 1.5;
+
+/**
+ * Cambio di posizione nei PV per una perdita prima del Duello: passare sotto l'avversario
+ * accende Rimonta («se hai meno PV»), smettere di stargli sopra spegne Magnanimo.
+ */
+function hpPositionValue(info, loss) {
+  const before = info.ownHP;
+  const after = info.ownHP - loss;
+  const triggerValue = (trigger) => POWER_VALUE * shareWithTrigger(info.ownCards, [trigger])
+    + (info.armyBonusTrigger === trigger ? ARMY_BONUS_VALUE : 0);
+  let value = 0;
+  if (before >= info.oppHP && after < info.oppHP) value += triggerValue('rimonta');
+  if (before > info.oppHP && after <= info.oppHP) value -= triggerValue('magnanimous');
+  return value;
 }
 
 /** Semaforo: differenza fra la quota di carte proprie e nemiche che il colore accende. */
@@ -233,7 +257,11 @@ export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spen
     // Dura finché l'IA non vince un Duello: circa 1.8 con tre o più Duelli davanti.
     case 'mascarada_ego': return info.own.persistent?.armyBonusOverride ? 0 : 0.6 * Math.min(duelsLeft, 3);
     // Kethran
-    case 'kethran_sacrificio': return hpLossValue(info, 2, 2);
+    // I 2 PV si perdono al reveal, prima del Duello: possono accendere Rimonta (Bonus di Kethran).
+    case 'kethran_sacrificio': {
+      const loss = hpLossValue(info, 2, 2);
+      return loss <= FORBIDDEN ? loss : loss + hpPositionValue(info, 2);
+    }
     case 'kethran_elogio': return 0.5;
     // Frammenti: si ottengono perdendo Duelli (o con Elogio). In un Duello futuro possono esserci.
     case 'kethran_innesto':

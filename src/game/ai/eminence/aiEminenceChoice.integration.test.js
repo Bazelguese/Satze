@@ -91,6 +91,16 @@ describe('IA: scelta dell\'abilità Eminenza', () => {
     expect(ranking.find((r) => r.abilityId === 'kethran_sacrificio').value).toBeLessThan(-5);
   });
 
+  it('Sacrificio vale se accende Rimonta (Bonus di Kethran), non se Kethran è già sotto', () => {
+    const value = (g) => rankAiEminenceAbilities(roundState('kethran_altare', { presence: 0 }), 'enemy', {
+      game: g, paramContext: paramContext(g), rng: rngZero,
+    }).find((r) => r.abilityId === 'kethran_sacrificio').value;
+    const bonus = { enemyArmyBonuses: { Kethran: true } };
+    expect(value(game({ ...bonus, enemyHP: 20, playerHP: 20 }))).toBeGreaterThan(0);
+    expect(value(game({ ...bonus, enemyHP: 15, playerHP: 20 }))).toBeLessThan(0);
+    expect(value(game({ enemyHP: 20, playerHP: 20 }))).toBeLessThan(0);
+  });
+
   it('Logoramento cresce con i Duelli persi; Terra Bruciata quando l\'avversario sta per vincere sui Campi', () => {
     const g = game({
       roundNumber: 3,
