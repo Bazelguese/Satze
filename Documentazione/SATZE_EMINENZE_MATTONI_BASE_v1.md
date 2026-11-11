@@ -826,10 +826,11 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - Stessa scala di valore del rework; schema base Statico + ricarica + base + firma, con eccezioni ammesse per l'identità.
 - La seconda Eminenza deve offrire uno stile di gioco opposto alla prima ed essere coerente con la lore dell'Armata.
 - Si procede Armata per Armata, in ordine di `src/data/armies.js`.
+- Le Eminenze non sono Agenti né personaggi delle carte: sono entità, istituzioni o forze che stanno al di sopra del tavolo. Nomi e lore non si legano mai a un Agente.
 
 ### 12.1 Figli dell'Orizzonte — Orrore Nero (approvata)
 
-**Lore:** Vega, il Sofferente, uno dei cuori dell'orrore: attira i Leggeri e li costringe a condividere i dolori della Domanda; più è il dolore, più la Domanda diviene chiara.
+**Lore:** l'orrore della Nebula che attira i Leggeri e li costringe a condividere i dolori della Domanda; più è il dolore, più la Domanda diviene chiara.
 
 **Stile:** opposto alla Domanda Senza Fine. Non precisione sugli FC e controllo delle soglie, ma economia dei PV: restare indietro genera Presenza e il dolore subito torna all'avversario.
 
