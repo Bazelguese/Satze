@@ -378,7 +378,7 @@ Per Eminenza (stesse partite, scelta nuova contro vecchia): miglioramenti da +6%
 
 Con le Eminenze il gradino Normale–Facile si accorcia davvero. Probabile causa: la scelta di Agente e FC non simula gli effetti delle Eminenze, quindi il vantaggio di una ricerca più profonda pesa meno.
 
-**Prova C: Eminenze nelle simulazioni** (`src/game/ai/mc/mcEminence.js`, non attivo nel gioco). Ogni simulazione risolve con le Eminenze il primo Duello, quello che l'IA sta decidendo; la scelta segreta dell'avversario si estrae fra le sue abilità legali. Verifiche: nessun ripiego su 2432 Duelli; il vincitore del Duello cambia nell'11,7% dei casi, i PV nel 27%. Costo: decisioni 2-3 volte più lente.
+**Prova C: Eminenze nelle simulazioni** (`src/game/ai/mc/mcEminence.js`; non attiva nel gioco, si accende con `simulateEminences: true`, per esempio `mc-medium@simulateEminences=true` nel banco di prova). Decisione dell'utente: lasciare così. Ogni simulazione risolve con le Eminenze il primo Duello, quello che l'IA sta decidendo; la scelta segreta dell'avversario si estrae fra le sue abilità legali. Verifiche: nessun ripiego su 2432 Duelli; il vincitore del Duello cambia nell'11,7% dei casi, i PV nel 27%. Costo: decisioni 2-3 volte più lente.
 
 | Confronto | Risultato |
 |---|---|

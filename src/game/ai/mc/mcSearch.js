@@ -343,8 +343,9 @@ function pickWithNoise(ranked, noise, rng) {
  */
 export function chooseMonteCarloAction(view, inputParams, rng) {
   const trait = activeTrait(inputParams);
-  // Eminenze nel primo Duello delle simulazioni, salvo simulateEminences: false.
-  const eminenceCtx = inputParams.simulateEminences === false ? null : createEminenceRolloutContext(view);
+  // Eminenze nel primo Duello delle simulazioni: solo con simulateEminences: true (prova C,
+  // non attiva nel gioco: vantaggio piccolo e decisioni 2-3 volte più lente, vedi il piano IA).
+  const eminenceCtx = inputParams.simulateEminences === true ? createEminenceRolloutContext(view) : null;
   const params = {
     ...inputParams,
     ...(trait ? { traitObject: trait } : {}),
