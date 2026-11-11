@@ -52,3 +52,44 @@ export function installSyntheticTargetsEminence() {
   };
   return SYNTHETIC_TARGETS_ID;
 }
+
+export const SYNTHETIC_COSTS_ID = 'test_costi';
+
+/** Eminenza sintetica con un costo che cresce nello Scontro (delta persistenti, minimo -4). */
+export function installSyntheticCostsEminence() {
+  EMINENCES[SYNTHETIC_COSTS_ID] = {
+    id: SYNTHETIC_COSTS_ID,
+    army: 'Test',
+    name: 'Costi di prova',
+    initialPresence: 1,
+    implemented: true,
+    static: { id: 'test_costi_statico', name: 'Statico', text: '', implemented: true, segments: [] },
+    abilities: [
+      {
+        id: 'test_rincaro',
+        name: 'Rincaro',
+        presenceDelta: 0,
+        presenceDeltaMin: -4,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Ottieni 1 FC; ogni uso costa 1 Presenza in più.',
+        segments: [
+          { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: P.GRANT_POOL_FOCUS, target: T.SELF, amount: 1 },
+          { timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME, primitive: P.ADJUST_ABILITY_COST, delta: -1, min: -4 },
+        ],
+      },
+      {
+        id: 'test_cara',
+        name: 'Cara',
+        presenceDelta: -2,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Ottieni 2 FC.',
+        segments: [
+          { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: P.GRANT_POOL_FOCUS, target: T.SELF, amount: 2 },
+        ],
+      },
+    ],
+  };
+  return SYNTHETIC_COSTS_ID;
+}

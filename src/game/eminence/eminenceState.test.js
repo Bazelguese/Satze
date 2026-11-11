@@ -34,6 +34,7 @@ import {
   hasAlwaysLegalOption,
   resolveAbilityPresenceDelta,
 } from './eminenceState.js';
+import { installSyntheticCostsEminence } from './eminenceTestSupport.js';
 
 // Le 12 Armate canoniche. Duplicate qui di proposito: `src/data/armies.js` importa un modulo
 // JSX e non è caricabile dal runner node:test.
@@ -369,24 +370,25 @@ test('legalità: il costo esatto è pagabile', () => {
 });
 
 test('legalità: i delta persistenti alzano il costo effettivo', () => {
-  const guerra = getEminenceAbility('calibri_quattro_fronti', 'calibri_guerra_attrito');
-  assert.equal(resolveAbilityPresenceDelta(guerra), 0);
+  const id = installSyntheticCostsEminence();
+  const rincaro = getEminenceAbility(id, 'test_rincaro');
+  assert.equal(resolveAbilityPresenceDelta(rincaro), 0);
   assert.equal(
-    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -1 } }),
+    resolveAbilityPresenceDelta(rincaro, { abilityPresenceDeltas: { test_rincaro: -1 } }),
     -1,
   );
   assert.equal(
-    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -6 } }),
+    resolveAbilityPresenceDelta(rincaro, { abilityPresenceDeltas: { test_rincaro: -6 } }),
     -4,
   );
-  assert.deepEqual(getLegalAbilityIds('calibri_quattro_fronti', 0), ['calibri_guerra_attrito']);
+  assert.deepEqual(getLegalAbilityIds(id, 0), ['test_rincaro']);
   assert.deepEqual(
-    getLegalAbilityIds('calibri_quattro_fronti', 0, { abilityPresenceDeltas: { calibri_guerra_attrito: -4 } }),
+    getLegalAbilityIds(id, 0, { abilityPresenceDeltas: { test_rincaro: -4 } }),
     [],
   );
   assert.equal(
-    isAbilitySelectable('calibri_quattro_fronti', 'calibri_guerra_attrito', 1, {
-      abilityPresenceDeltas: { calibri_guerra_attrito: -1 },
+    isAbilitySelectable(id, 'test_rincaro', 1, {
+      abilityPresenceDeltas: { test_rincaro: -1 },
     }),
     true,
   );

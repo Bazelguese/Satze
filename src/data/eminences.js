@@ -1134,13 +1134,13 @@ export const EMINENCES = {
     id: 'calibri_quattro_fronti',
     army: 'Calibri Pesanti',
     name: 'Il Comando dei Quattro Fronti',
-    initialPresence: 2,
+    initialPresence: 1,
     implemented: true,
 
     static: {
       id: 'calibri_tenere_la_linea',
       name: 'Tenere la Linea',
-      text: 'Alla fine del Duello, se il DAN finale dell\'Agente nemico è 2 o meno, +1 Presenza.',
+      text: 'Quando perdi un Duello, se il DAN nemico ti ha tolto 2 PV o meno, +1 Presenza.',
       implemented: true,
       segments: [
         {
@@ -1150,6 +1150,7 @@ export const EMINENCES = {
           delta: 1,
           repeatable: true,
           condition: {
+            duelWinnerRelative: 'opponent',
             enemyFinalDamage: { max: 2 },
           },
         },
@@ -1158,53 +1159,59 @@ export const EMINENCES = {
 
     abilities: [
       {
-        id: 'calibri_guerra_attrito',
-        name: 'Guerra d\'Attrito',
-        presenceDelta: 0,
-        presenceDeltaMin: -4,
+        id: 'calibri_fermo_macchine',
+        name: 'Fermo Macchine',
+        presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva.',
+        text: 'Il Potere del tuo Agente non si attiva in questo Duello.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.BLOCK_POWER,
+            target: T.OWN_AGENT,
+          },
+        ],
+      },
+      {
+        id: 'calibri_guerra_attrito',
+        name: 'Guerra d\'Attrito',
+        presenceDelta: -1,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Ottieni 1 FC. Se hai vinto meno Duelli dell\'avversario, ottieni invece 2 FC.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.GRANT_POOL_FOCUS,
             target: T.SELF,
             amount: 1,
+            condition: { ownDuelsWonLead: { min: 0 } },
           },
           {
-            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
-            primitive: P.ADJUST_ABILITY_COST,
-            delta: -1,
-            min: -4,
-            condition: { duelWinnerRelative: 'self' },
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.GRANT_POOL_FOCUS,
+            target: T.SELF,
+            amount: 2,
+            condition: { ownDuelsWonLead: { max: -1 } },
           },
         ],
       },
       {
-        id: 'calibri_contenimento',
-        name: 'Protocollo di Contenimento',
+        id: 'calibri_logoramento',
+        name: 'Logoramento',
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Dopo la risoluzione dei Bonus, registra il DAN del tuo Agente schierato come X. Il suo DAN diventa 0 in questo Duello e l\'avversario subisce Danni diretti pari a X/2, arrotondati per eccesso. Se vinci il Duello, +2 Presenza.',
+        text: 'Il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro.',
         segments: [
           {
-            timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.CONVERT_STAT,
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.MODIFY_STAT,
             target: T.OWN_AGENT,
-            stat: 'damage',
-            factor: 0.5,
-            round: 'ceil',
-            dest: 'DIRECT_DAMAGE',
-            zeroStat: true,
-          },
-          {
-            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
-            primitive: P.CHANGE_PRESENCE,
-            target: T.SELF,
-            delta: 2,
-            condition: { duelWinnerRelative: 'self' },
+            stat: 'assaultValue',
+            delta: 3,
+            scaleBy: 'duelsLost',
           },
         ],
       },
@@ -1214,7 +1221,7 @@ export const EMINENCES = {
         presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente.',
+        text: 'Se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,

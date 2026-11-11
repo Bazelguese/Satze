@@ -118,7 +118,19 @@ export function createEminencePersistentState() {
     slotCurses: {},
     abilityPresenceDeltas: {},
     abilityEscalation: {},
+    // Esiti dei Duelli già chiusi in questo Scontro, dal punto di vista del lato.
+    duelRecord: { won: 0, lost: 0, draw: 0 },
     custom: {},
+  };
+}
+
+/** Esiti dei Duelli del lato; i salvataggi senza registro valgono come nessun Duello. */
+export function readDuelRecord(persistent) {
+  const record = persistent?.duelRecord || {};
+  return {
+    won: record.won || 0,
+    lost: record.lost || 0,
+    draw: record.draw || 0,
   };
 }
 
@@ -276,6 +288,7 @@ export function selectPublicPersistentState(persistent) {
     slotCurses: cloneSlotCurses(persistent.slotCurses),
     abilityPresenceDeltas: { ...(persistent.abilityPresenceDeltas || {}) },
     abilityEscalation: { ...(persistent.abilityEscalation || {}) },
+    duelRecord: readDuelRecord(persistent),
   };
 }
 

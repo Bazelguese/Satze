@@ -25,12 +25,14 @@ import {
   getNextGate,
   isGateCompleted,
   mustChooseThisRound,
+  revealConditionContext,
   selectEminenceAbility,
   setEminenceAbilityParams,
 } from './eminenceRound.js';
+import { matchesCondition } from './effectConditions.js';
 import { applyEminenceSegments, applyPendingDealResponse, createEffectBundle } from './primitiveHandlers.js';
 import { changePresence } from './presence.js';
-import { isEminenceSubsystemEnabled, getLegalAbilityIds } from './eminenceState.js';
+import { isEminenceSubsystemEnabled, getLegalAbilityIds, readDuelRecord } from './eminenceState.js';
 import { getEminence, getEminenceAbility } from '../../data/eminences.js';
 import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployedMarkResolution } from './eminenceAnnouncements.js';
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
@@ -752,6 +754,7 @@ function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null
     for (const segment of ability?.segments || []) {
       if (segment.timing !== EFFECT_TIMINGS.AFTER_REVEAL) continue;
       if (!DUEL_REPLAY_PRIMITIVES.has(segment.primitive)) continue;
+      if (!matchesCondition(segment.condition, revealConditionContext(matchState, side, current.selectedParams))) continue;
       queue.push({
         abilityId: ability.id,
         ownerSide: side,
@@ -1127,7 +1130,7 @@ export function settleEminenceRound(matchState, {
     : collected.matchState;
   const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
   return {
-    matchState: applied.matchState,
+    matchState: recordDuelOutcome(applied.matchState, winner),
     bundle,
     notices: [
       ...noticesFromAppliedEffects(collected.matchState, queue, {
@@ -1136,6 +1139,30 @@ export function settleEminenceRound(matchState, {
       ...applied.notices,
     ],
   };
+}
+
+/**
+ * Annota l'esito del Duello appena chiuso nel registro di ciascun lato. Va fatto dopo i
+ * checkpoint post-Duello: per gli effetti di questo round il registro conta solo i
+ * Duelli precedenti.
+ */
+function recordDuelOutcome(matchState, winner) {
+  if (winner !== SIDES.PLAYER && winner !== SIDES.ENEMY && winner !== 'draw') return matchState;
+  let state = matchState;
+  for (const side of BOTH_SIDES) {
+    const current = state[side];
+    if (!current?.persistent) continue;
+    const record = readDuelRecord(current.persistent);
+    const key = winner === 'draw' ? 'draw' : (winner === side ? 'won' : 'lost');
+    state = {
+      ...state,
+      [side]: {
+        ...current,
+        persistent: { ...current.persistent, duelRecord: { ...record, [key]: record[key] + 1 } },
+      },
+    };
+  }
+  return state;
 }
 
 function recordEndMatchDebtAmounts(matchState, { finalPowerByCardId, finalPowerBySide, agentIdBySide } = {}) {

@@ -3,14 +3,14 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "calibri_quattro_fronti",
-    "presence": 3,
-    "abilityId": "calibri_contenimento",
+    "presence": 1,
+    "abilityId": "calibri_fermo_macchine",
     "params": null,
     "agent": {
       "cardId": 231,
       "league": 4,
       "power": 3,
-      "damage": 5,
+      "damage": 2,
       "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
@@ -54,6 +54,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "calibri_contenimento_hit",
-  "branch": "hit"
+  "name": "calibri_fermo_macchine_miss",
+  "branch": "miss"
 }

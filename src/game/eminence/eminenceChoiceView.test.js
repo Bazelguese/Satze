@@ -27,7 +27,7 @@ import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { commitEminenceSetupChoice } from './eminenceDuelGate.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { EMINENCE_FORMAT, SIDES } from './eminenceConstants.js';
-import { installSyntheticTargetsEminence } from './eminenceTestSupport.js';
+import { installSyntheticCostsEminence, installSyntheticTargetsEminence } from './eminenceTestSupport.js';
 import { inkOn, formatPresenceDelta, relativeLuminance } from '../../components/eminence/eminenceUi.js';
 
 function match(player = 'apex_sole_verde', enemy = 'patto_grande_semaforo') {
@@ -99,15 +99,15 @@ test('giallo a segmenti vuoti resta un\'opzione implementata', () => {
 });
 
 test('vista: il costo mostrato segue i delta persistenti', () => {
-  const opened = match('calibri_quattro_fronti', 'patto_grande_semaforo');
-  opened.player.persistent.abilityPresenceDeltas = { calibri_guerra_attrito: -2 };
+  const opened = match(installSyntheticCostsEminence(), 'patto_grande_semaforo');
+  opened.player.persistent.abilityPresenceDeltas = { test_rincaro: -2 };
   opened.player.selectionCheckpointPresence = 1;
   const view = buildEminenceChoiceView(opened, SIDES.PLAYER);
-  const guerra = view.self.options.find((o) => o.id === 'calibri_guerra_attrito');
-  assert.equal(guerra.presenceDelta, -2);
-  assert.equal(guerra.presenceCost, 2);
-  assert.equal(guerra.selectable, false);
-  assert.equal(guerra.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
+  const rincaro = view.self.options.find((o) => o.id === 'test_rincaro');
+  assert.equal(rincaro.presenceDelta, -2);
+  assert.equal(rincaro.presenceCost, 2);
+  assert.equal(rincaro.selectable, false);
+  assert.equal(rincaro.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
 });
 
 test('vista: lo schema AT_SELECTION è pubblico, il valore scelto no', () => {

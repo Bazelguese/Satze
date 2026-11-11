@@ -17,6 +17,7 @@ import {
   resetEminenceMatchRound,
   getLegalAbilityIds,
   resolveAbilityPresenceDelta,
+  readDuelRecord,
 } from './eminenceState.js';
 import { changePresence } from './presence.js';
 import { createConditionContext, matchesCondition } from './effectConditions.js';
@@ -247,6 +248,22 @@ export function areSelectionsComplete(matchState) {
 // Reveal a un gate
 // ------------------------------------------------------------------
 
+/**
+ * Termini di condizione noti al reveal, prima del Duello: round, params dell'abilità e
+ * registro dei Duelli già chiusi. Gli esiti del Duello corrente non esistono ancora.
+ */
+export function revealConditionContext(matchState, side, params = null) {
+  const duelRecord = readDuelRecord(matchState?.[side]?.persistent);
+  return createConditionContext(matchState, {
+    params,
+    dealAccepted: Boolean(params?.dealAccepted),
+    dealChoice: params?.dealChoice ?? null,
+    ownDuelsWon: duelRecord.won,
+    ownDuelsLost: duelRecord.lost,
+    ownDuelsWonLead: duelRecord.won - duelRecord.lost,
+  });
+}
+
 function collectSegments(ability, ownerSide, params = null) {
   if (!ability?.segments) return { immediate: [], pending: [] };
 
@@ -351,7 +368,10 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
     });
     if (event) events.push({ ...event, side });
 
-    resolutionQueue.push(...immediate.map(stamp));
+    const revealContext = revealConditionContext(matchState, side, state.selectedParams);
+    resolutionQueue.push(...immediate
+      .filter((entry) => matchesCondition(entry.segment.condition, revealContext))
+      .map(stamp));
   }
 
   // Passo 3 — il gate risulta superato anche se nessuno ha aperto: è informazione pubblica.
@@ -467,6 +487,10 @@ export function collectPendingEffects(
     sideExtra.activationUnsatisfiedCount = extra.activationUnsatisfiedCount ?? null;
     sideExtra.totalFocusPlayed = extra.totalFocusPlayed ?? null;
     if (extra.markGained != null) sideExtra.markGained = extra.markGained;
+    const duelRecord = readDuelRecord(state.persistent);
+    sideExtra.ownDuelsWon = duelRecord.won;
+    sideExtra.ownDuelsLost = duelRecord.lost;
+    sideExtra.ownDuelsWonLead = duelRecord.won - duelRecord.lost;
 
     const remaining = [];
     for (const entry of state.round.pendingEffects) {

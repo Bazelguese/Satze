@@ -265,7 +265,7 @@ test('Duello online con Eminenze: i due client restano speculari (ogni armata co
   assert.ok(partite >= 60);
 });
 
-test('Calibri senza abilità legali (Guerra d\'Attrito rincarata, Presenza 0): il round non si blocca', async () => {
+test('Calibri senza abilità legali (Fermo Macchine rincarata, Presenza 0): il round non si blocca', async () => {
   const { mustChooseThisRound, areSelectionsComplete } = await import('./eminenceRound.js');
   const base = createMatchEminenceState({
     format: EMINENCE_FORMAT.REQUIRED, playerDeck: mazzo('Calibri Pesanti'), enemyDeck: mazzo('Kethran'),
@@ -278,7 +278,7 @@ test('Calibri senza abilità legali (Guerra d\'Attrito rincarata, Presenza 0): i
       ...ms.player,
       presence: 0,
       selectionCheckpointPresence: 0,
-      persistent: { ...ms.player.persistent, abilityPresenceDeltas: { calibri_guerra_attrito: -1 } },
+      persistent: { ...ms.player.persistent, abilityPresenceDeltas: { calibri_fermo_macchine: -2 } },
     },
   };
   assert.equal(mustChooseThisRound(ms, 'player'), false);

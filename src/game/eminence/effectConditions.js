@@ -44,6 +44,9 @@ export const CONDITION_KEYS = Object.freeze([
   'markGained',
   'dealAccepted',
   'dealChoice',
+  'ownDuelsWon',
+  'ownDuelsLost',
+  'ownDuelsWonLead',
 ]);
 
 /**

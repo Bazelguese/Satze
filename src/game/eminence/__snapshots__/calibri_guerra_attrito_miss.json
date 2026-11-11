@@ -2,9 +2,9 @@
   "ability": {
     "id": "calibri_guerra_attrito",
     "name": "Guerra d'Attrito",
-    "presenceDelta": 0,
+    "presenceDelta": -1,
     "revealGate": "GENERAL",
-    "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
+    "text": "Ottieni 1 FC. Se hai vinto meno Duelli dell'avversario, ottieni invece 2 FC."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       1,
-      1
+      0
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,14 +28,18 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "calibri_fermo_macchine",
+        "presenceDelta": 1
+      },
+      {
         "id": "calibri_guerra_attrito",
-        "presenceDelta": 0
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 1,
+    "presenceAfterReveal": 0,
     "presenceAfterSelect": 1,
     "presenceAvailable": 1,
-    "presenceDelta": 0,
+    "presenceDelta": -1,
     "selected": "calibri_guerra_attrito"
   },
   "eminence": {
@@ -53,11 +57,11 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "announce"
           },
           "waitFor": null
         }
@@ -73,17 +77,17 @@
           "target": "SELF"
         },
         {
-          "primitive": "ADJUST_ABILITY_COST",
+          "primitive": "GRANT_POOL_FOCUS",
           "slot": null,
-          "target": null
+          "target": "SELF"
         }
       ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": 0,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
+      "text": "Ottieni 1 FC. Se hai vinto meno Duelli dell'avversario, ottieni invece 2 FC."
     }
   ],
   "scenario": {
@@ -130,12 +134,12 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
+          "holdAnnounce": true,
           "noticeId": "reveal:player:calibri_guerra_attrito:GENERAL",
-          "recipe": "PRESENCE_PULSE",
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "announce"
           },
           "waitFor": null
         }
@@ -153,11 +157,11 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
                 "side": "player",
-                "type": "presence"
+                "type": "announce"
               },
               "waitFor": null
             }
@@ -173,24 +177,24 @@
               "target": "SELF"
             },
             {
-              "primitive": "ADJUST_ABILITY_COST",
+              "primitive": "GRANT_POOL_FOCUS",
               "slot": null,
-              "target": null
+              "target": "SELF"
             }
           ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": 0,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Ottieni 1 FC. Per ogni Duello che hai vinto in questo Scontro, questa abilità costa 1 Presenza aggiuntiva."
+          "text": "Ottieni 1 FC. Se hai vinto meno Duelli dell'avversario, ottieni invece 2 FC."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -201,7 +205,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -213,13 +217,14 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "segments": [
         {
           "condition": {
             "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
             "keys": [
+              "duelWinnerRelative",
               "enemyFinalDamage"
             ],
             "status": "deferred"
@@ -234,8 +239,11 @@
         },
         {
           "condition": {
-            "detail": null,
-            "status": "none"
+            "detail": "ownDuelsWonLead: (assente) → non ancora valutabile",
+            "keys": [
+              "ownDuelsWonLead"
+            ],
+            "status": "deferred"
           },
           "expectedNoCue": false,
           "primitive": "GRANT_POOL_FOCUS",
@@ -247,19 +255,19 @@
         },
         {
           "condition": {
-            "detail": "duelWinnerRelative: \"self\" (obs \"opponent\") → falsa",
+            "detail": "ownDuelsWonLead: (assente) → non ancora valutabile",
             "keys": [
-              "duelWinnerRelative"
+              "ownDuelsWonLead"
             ],
-            "status": "false"
+            "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "ADJUST_ABILITY_COST",
+          "primitive": "GRANT_POOL_FOCUS",
           "source": "ability",
           "sourceId": "calibri_guerra_attrito",
           "sourceName": "Guerra d'Attrito",
-          "target": null,
-          "timing": "AFTER_DUEL_OUTCOME"
+          "target": "SELF",
+          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

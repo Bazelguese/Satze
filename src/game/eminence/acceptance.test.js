@@ -1230,7 +1230,23 @@ test('Corte: il Registro non si paga a fine round ma alla Fine dello Scontro', (
 
 const CALIBRI = 'calibri_quattro_fronti';
 
-test('Calibri statico: +1 Presenza se il DAN nemico finale è ≤ 2 (anche in vittoria)', () => {
+function calibriDuel(playerAbility, { presence = 4, duelRecord = null } = {}) {
+  const base = createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = presence;
+  if (duelRecord) base.player.persistent.duelRecord = { won: 0, lost: 0, draw: 0, ...duelRecord };
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  return prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+}
+
+test('Calibri: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+  assert.equal(EMINENCES[CALIBRI].abilities.some((a) => a.id === 'calibri_contenimento'), false);
+});
+
+test('Calibri statico: +1 Presenza solo in sconfitta con DAN nemico ≤ 2', () => {
   const base = beginEminenceRound(
     createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' }),
     { roundNumber: 3 },
@@ -1240,67 +1256,59 @@ test('Calibri statico: +1 Presenza se il DAN nemico finale è ≤ 2 (anche in vi
     winner: SIDES.ENEMY,
     finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 2 },
   });
-  assert.equal(hitLoss.matchState.player.presence, 3);
+  assert.equal(hitLoss.matchState.player.presence, 2);
 
   const missHigh = settleEminenceRound(base, {
     winner: SIDES.ENEMY,
     finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 3 },
   });
-  assert.equal(missHigh.matchState.player.presence, 2);
+  assert.equal(missHigh.matchState.player.presence, 1);
 
-  const hitWin = settleEminenceRound(base, {
+  const missWin = settleEminenceRound(base, {
     winner: SIDES.PLAYER,
     finalDamageBySide: { [SIDES.PLAYER]: 1, [SIDES.ENEMY]: 1 },
   });
-  assert.equal(hitWin.matchState.player.presence, 3);
+  assert.equal(missWin.matchState.player.presence, 1);
 });
 
-test('Calibri +0: Guerra d\'Attrito dà 1 FC al pool e alza il costo solo se vinci', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: CALIBRI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'calibri_guerra_attrito',
-    enemyAbility: 'semaforo_verde',
-  });
-
-  assert.equal(bundle.poolFocus[SIDES.PLAYER], 1);
-  assert.equal(bundle.temporaryFocus[SIDES.PLAYER], 0);
-  assert.equal(matchState.player.presence, 2);
-  assert.equal(matchState.player.presenceSpentThisRound, 0);
-
-  const afterWin = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
-  assert.equal(afterWin.matchState.player.persistent.abilityPresenceDeltas.calibri_guerra_attrito, -1);
-
-  const afterLoss = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
-  assert.deepEqual(afterLoss.matchState.player.persistent.abilityPresenceDeltas, {});
-
-  const next = beginEminenceRound(afterWin.matchState, { roundNumber: 4 });
-  const enemy = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde');
-  const replay = selectEminenceAbility(enemy.matchState, SIDES.PLAYER, 'calibri_guerra_attrito');
-  assert.equal(replay.ok, true);
-  assert.equal(replay.matchState.player.committedPresenceCost, 1);
+test('Calibri: la chiusura del round annota vittorie, sconfitte e pareggi per lato', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 1 },
+  );
+  const lost = settleEminenceRound(base, { winner: SIDES.ENEMY }).matchState;
+  assert.deepEqual(lost.player.persistent.duelRecord, { won: 0, lost: 1, draw: 0 });
+  assert.deepEqual(lost.enemy.persistent.duelRecord, { won: 1, lost: 0, draw: 0 });
+  const drawn = settleEminenceRound(beginEminenceRound(lost, { roundNumber: 2 }), { winner: 'draw' }).matchState;
+  assert.deepEqual(drawn.player.persistent.duelRecord, { won: 0, lost: 1, draw: 1 });
 });
 
-test('Calibri −2: Contenimento registra la conversione DAN e +2 Presenza in vittoria', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: CALIBRI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'calibri_contenimento',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
-  });
+test('Calibri +1: Fermo Macchine blocca il proprio Potere', () => {
+  const prepared = calibriDuel('calibri_fermo_macchine', { presence: 1 });
+  assert.equal(prepared.blocked, null);
+  assert.equal(prepared.matchState.player.presence, 2);
+  assert.deepEqual(prepared.bundle.blockedPowerSides, [SIDES.PLAYER]);
+});
 
-  assert.equal(bundle.statConverts.length, 1);
-  assert.equal(bundle.statConverts[0].stat, 'damage');
-  assert.equal(bundle.statConverts[0].dest, 'DIRECT_DAMAGE');
-  assert.equal(bundle.statConverts[0].zeroStat, true);
-  assert.equal(matchState.player.presence, 1);
+test('Calibri −1: Guerra d\'Attrito dà 1 FC, 2 se hai vinto meno Duelli', () => {
+  const pari = calibriDuel('calibri_guerra_attrito', { presence: 1, duelRecord: { won: 1, lost: 1 } });
+  assert.equal(pari.matchState.player.presence, 0);
+  assert.equal(pari.bundle.poolFocus[SIDES.PLAYER], 1);
 
-  const win = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
-  assert.equal(win.matchState.player.presence, 3);
+  const indietro = calibriDuel('calibri_guerra_attrito', { presence: 1, duelRecord: { won: 0, lost: 2 } });
+  assert.equal(indietro.bundle.poolFocus[SIDES.PLAYER], 2);
 
-  const lose = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
-  assert.equal(lose.matchState.player.presence, 1);
+  // Il costo è fisso: vincere non lo rincara.
+  const settled = settleEminenceRound(pari.matchState, { winner: SIDES.PLAYER });
+  assert.deepEqual(settled.matchState.player.persistent.abilityPresenceDeltas, {});
+});
+
+test('Calibri −2: Logoramento dà +3 VA per ogni Duello perso', () => {
+  const zero = calibriDuel('calibri_logoramento', { presence: 2 });
+  assert.equal(zero.bundle.statDeltas[SIDES.PLAYER].assaultValue, 0);
+  const tre = calibriDuel('calibri_logoramento', { presence: 2, duelRecord: { won: 1, lost: 3 } });
+  assert.equal(tre.bundle.statDeltas[SIDES.PLAYER].assaultValue, 9);
+  assert.equal(tre.bundle.statDeltas[SIDES.ENEMY].assaultValue, 0);
 });
 
 test('Calibri −4: Terra Bruciata arma la distruzione Campo solo in sconfitta', () => {

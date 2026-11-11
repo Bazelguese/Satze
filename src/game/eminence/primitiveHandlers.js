@@ -18,6 +18,7 @@ import {
 } from './eminenceConstants.js';
 import { createTriggerRules, applyPrimitiveToTriggerRules } from './triggerRulesOverlay.js';
 import { stampComposeParams, cardAbilityOf } from './composeAbilityParams.js';
+import { readDuelRecord } from './eminenceState.js';
 
 /** Accumulatore degli effetti Eminenza di un checkpoint. */
 export function createEffectBundle() {
@@ -132,6 +133,22 @@ function fullAbilityFields(ability) {
   return overlay;
 }
 
+/**
+ * Moltiplicatore di un MODIFY_STAT scalato: `scaleBy` nomina un contatore pubblico del
+ * proprietario ('duelsWon', 'duelsLost'). Senza `scaleBy` il delta vale una volta.
+ */
+const STAT_SCALE_SOURCES = {
+  duelsWon: (persistent) => readDuelRecord(persistent).won,
+  duelsLost: (persistent) => readDuelRecord(persistent).lost,
+};
+
+function statScale(scaleBy, ctx) {
+  if (!scaleBy) return 1;
+  const source = STAT_SCALE_SOURCES[scaleBy];
+  if (!source) throw new Error(`MODIFY_STAT: scaleBy sconosciuto ${scaleBy}`);
+  return source(ctx.persistent);
+}
+
 const handlers = {
   [P.MODIFY_STAT]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
@@ -139,7 +156,7 @@ const handlers = {
       if (!(stat in bundle.statDeltas[side])) {
         throw new Error(`Statistica non gestita da MODIFY_STAT: ${stat}`);
       }
-      bundle.statDeltas[side][stat] += segment.delta || 0;
+      bundle.statDeltas[side][stat] += (segment.delta || 0) * statScale(segment.scaleBy, ctx);
       if (Number.isFinite(segment.minimum)) {
         bundle.statMinimums ||= {};
         bundle.statMinimums[side] ||= {};
