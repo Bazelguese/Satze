@@ -3,7 +3,7 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "khemet_maledizioni",
-    "presence": 2,
+    "presence": 1,
     "abilityId": "khemet_maledizione_va",
     "params": {
       "slot": 2

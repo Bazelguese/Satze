@@ -554,13 +554,13 @@ export const EMINENCES = {
   },
 
   // ------------------------------------------------------------------
-  // Khemet — Il Castello dei Sigillatori
+  // Khemet — Il Castello degli Arcanisti Nefasti
   // ------------------------------------------------------------------
   khemet_maledizioni: {
     id: 'khemet_maledizioni',
     army: 'Khemet',
-    name: 'Il Castello dei Sigillatori',
-    initialPresence: 2,
+    name: 'Il Castello degli Arcanisti Nefasti',
+    initialPresence: 1,
     implemented: true,
 
     static: {
@@ -583,7 +583,7 @@ export const EMINENCES = {
       {
         id: 'khemet_devozione',
         name: 'Devozione al cervello',
-        presenceDelta: 2,
+        presenceDelta: 0,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         text: 'Il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus.',
@@ -598,13 +598,13 @@ export const EMINENCES = {
       {
         id: 'khemet_maledizione_va',
         name: 'Maledizione della Fama',
-        presenceDelta: -2,
+        presenceDelta: -1,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         paramsSchema: {
           slot: { source: PARAM_SOURCES.BATTLEFIELD_SLOTS },
         },
-        text: 'Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega.',
+        text: 'Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -617,19 +617,38 @@ export const EMINENCES = {
       {
         id: 'khemet_maledizione_stat',
         name: 'Maledizione del Cosmo',
-        presenceDelta: -3,
+        presenceDelta: -2,
         revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         paramsSchema: {
           slot: { source: PARAM_SOURCES.BATTLEFIELD_SLOTS },
         },
-        text: 'Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA.',
+        text: 'Scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.APPLY_SLOT_MODIFIER,
             persistent: true,
             deltas: { power: -1, damage: -1, assaultValue: -1 },
+          },
+        ],
+      },
+      {
+        id: 'khemet_maledizione_inversa',
+        name: 'Maledizione Inversa',
+        presenceDelta: -3,
+        revealGate: REVEAL_GATES.PRE_FIELD,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        paramsSchema: {
+          slot: { source: PARAM_SOURCES.BATTLEFIELD_SLOTS },
+        },
+        text: 'Scegli uno slot: nel Duello combattuto lì, tutti i modificatori di POT, DAN e VA si invertono, per entrambi gli Agenti. I + diventano −, i − diventano +, e i minimi non si applicano.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.APPLY_SLOT_MODIFIER,
+            persistent: true,
+            invertModifiers: true,
           },
         ],
       },

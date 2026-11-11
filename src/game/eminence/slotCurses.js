@@ -25,6 +25,7 @@ export function appendSlotCurse(slotCurses, slot, curse) {
   next[key] = [...(next[key] || []), {
     deltas: { ...(curse.deltas || {}) },
     leagueScaled: Boolean(curse.leagueScaled),
+    invertModifiers: Boolean(curse.invertModifiers),
     source: curse.source ?? null,
   }];
   return next;

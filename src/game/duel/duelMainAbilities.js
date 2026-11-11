@@ -62,6 +62,8 @@ export function applyDuelMainAbilities({
     const agent = side.agent;
     if (
       !state[side.abilityBlocked] &&
+      // Sotto Maledizione Inversa una carta Inversione non inverte di nuovo.
+      !state.fullStatInversion &&
       agent?.ability?.effect === 'inversion' &&
       canTriggerPreBattleAbility(agent, side.context)
     ) {

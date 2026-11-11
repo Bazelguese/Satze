@@ -54,7 +54,7 @@ import { applyDuelBlockPrescan } from './duel/duelBlockPrescan.js';
 import { previewDisabledSources } from './duel/duelImmunitySources.js';
 import { applyDuelMainAbilities } from './duel/duelMainAbilities.js';
 import { applyDuelArmyBonusPhases } from './duel/duelArmyBonusPhases.js';
-import { applyInversionFieldFinalization } from './duel/duelInversionFinalization.js';
+import { applyInversionFieldFinalization, applySlotStatInversion } from './duel/duelInversionFinalization.js';
 import { createEmptyFieldStatDeltas } from './duel/duelFieldStatTracking.js';
 import { runDuelAssaultCalculation } from './duel/duelAssaultPhase.js';
 import { resolveDuelWinnerByAssault } from './duel/duelWinnerResolve.js';
@@ -360,6 +360,7 @@ export function computeDuelResolution({
       player: pAgent.league || 0,
       enemy: eAgent.league || 0,
     }, slotCurseStatDeltas);
+    duel.fullStatInversion = (eminenceBundle?.slotModifiers || []).some((curse) => curse?.invertModifiers);
     veilContextModifiers(veiledSides, playerContext, enemyContext);
     if (eminenceBundle?.triggerRules) {
       snapshotXorActivation(eminenceBundle.triggerRules, {
@@ -681,6 +682,7 @@ export function computeDuelResolution({
       state.slotCurseStatDeltas,
       battleLog
     );
+    const slotInversionChanged = applySlotStatInversion(state, { pAgent, eAgent }, battleLog);
     emitDuelFieldSetupEvents(
       battleLog,
       field,
@@ -697,7 +699,8 @@ export function computeDuelResolution({
       statsBeforeField.playerDamage !== statsAfterField.playerDamage ||
       statsBeforeField.enemyDamage !== statsAfterField.enemyDamage ||
       inversionFieldChanged ||
-      immuneSlotCurseChanged
+      immuneSlotCurseChanged ||
+      slotInversionChanged
     ) {
       visualRecorder.pushField(state);
     }

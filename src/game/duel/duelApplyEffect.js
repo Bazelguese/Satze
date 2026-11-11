@@ -100,6 +100,18 @@ function emitImmuneBlock(log, source, target, options, ctx, effectType) {
 }
 
 export function applyDuelPowerEffect(effect, value, target, source, log, options = {}, state, ctx) {
+  if (state?.fullStatInversion && !options.inversionFloorsOff) {
+    // Maledizione Inversa: i minimi non si applicano, così l'inversione finale rispecchia
+    // l'intero modificatore e non quello troncato dal minimo.
+    options = {
+      ...options,
+      minPower: -Infinity,
+      minDamage: -Infinity,
+      minAssault: undefined,
+      minFloorReduction: 0,
+      inversionFloorsOff: true,
+    };
+  }
   const {
     minDamage,
     minPower,

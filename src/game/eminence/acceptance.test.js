@@ -942,7 +942,7 @@ test('vincoli di schieramento: vietato salvo ultimo, riusabile, imposto', () => 
 });
 
 // ------------------------------------------------------------------
-// Khemet — Il Castello dei Sigillatori
+// Khemet — Il Castello degli Arcanisti Nefasti
 // ------------------------------------------------------------------
 
 const KHEMET = 'khemet_maledizioni';
@@ -1012,15 +1012,15 @@ test('Khemet: attaccare le maledizioni al Duello non le riscrive nello stato', (
   assert.equal((otherSlot.bundle?.slotModifiers || []).filter((entry) => entry.leagueScaled).length, 0);
 });
 
-test('Khemet +2: Devozione al cervello deposita SWAP_POWER_BONUS_TRIGGERS', () => {
+test('Khemet 0: Devozione al cervello deposita SWAP_POWER_BONUS_TRIGGERS', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: KHEMET,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'khemet_devozione',
     enemyAbility: 'semaforo_verde',
   });
-  // presenceDelta +2 sulla Presenza iniziale 2.
-  assert.equal(matchState.player.presence, 4);
+  // Costo 0 sulla Presenza iniziale 1.
+  assert.equal(matchState.player.presence, 1);
   assert.equal(bundle.triggerRules.powerBonusSwaps.length, 1);
   assert.equal(bundle.triggerRules.powerBonusSwaps[0].scope, TRIGGER_SCOPES.OWN);
 });
@@ -1037,14 +1037,42 @@ test('Khemet statico: Cattura-Energia paga +2 Presenza su Overdrive realmente at
     powerResolvedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: { [SIDES.PLAYER]: 'overdrive', [SIDES.ENEMY]: null },
   });
-  assert.equal(hit.matchState.player.presence, 6);
+  assert.equal(hit.matchState.player.presence, 3);
   assert.equal(hit.bundle.presenceChanges[0].source, 'khemet_rito_overdrive');
   assert.equal(hit.bundle.presenceChanges[0].delta, 2);
 
   const miss = settleEminenceRound(matchState, {
     activatedTriggerBySide: { [SIDES.PLAYER]: 'imboscata', [SIDES.ENEMY]: null },
   });
-  assert.equal(miss.matchState.player.presence, 4);
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Khemet: nuovo nome, Presenza iniziale 1 e costi aggiornati', () => {
+  assert.equal(EMINENCES[KHEMET].name, 'Il Castello degli Arcanisti Nefasti');
+  assert.equal(EMINENCES[KHEMET].initialPresence, 1);
+  const costs = Object.fromEntries(EMINENCES[KHEMET].abilities.map((a) => [a.id, a.presenceDelta]));
+  assert.deepEqual(costs, {
+    khemet_devozione: 0,
+    khemet_maledizione_va: -1,
+    khemet_maledizione_stat: -2,
+    khemet_maledizione_inversa: -3,
+  });
+});
+
+test('Khemet −3: Maledizione Inversa marca lo slot con l\'inversione, per entrambi i lati', () => {
+  const { matchState } = playRound({
+    playerEminenceId: KHEMET,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'khemet_maledizione_inversa',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 3 },
+    playerParams: { slot: 2 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  const curses = collectSlotCurses(matchState, 2);
+  assert.equal(curses.length, 1);
+  assert.equal(curses[0].invertModifiers, true);
+  assert.deepEqual(curses[0].deltas, {});
 });
 
 const FIGLI = 'figli_domanda_senza_fine';

@@ -156,9 +156,10 @@ test('igiene informativa: nessun gate anticipato lascia una sola abilità sigill
   }
 });
 
-test('igiene informativa: Khemet apre tutte e tre le attive a PRE_FIELD', () => {
+test('igiene informativa: Khemet apre tutte e quattro le attive a PRE_FIELD', () => {
   const gates = EMINENCES.khemet_maledizioni.abilities.map((a) => a.revealGate);
   assert.deepEqual(gates, [
+    REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
@@ -233,7 +234,7 @@ test('validazione: il formato disattivato accetta qualunque cosa', () => {
 test('stato: la Presenza iniziale viene dal catalogo', () => {
   assert.equal(createEminenceState('apex_sole_verde').presence, 3);
   assert.equal(createEminenceState('patto_grande_semaforo').presence, 0);
-  assert.equal(createEminenceState('khemet_maledizioni').presence, 2);
+  assert.equal(createEminenceState('khemet_maledizioni').presence, 1);
 });
 
 test('stato: il fallback null non è uno stato competitivo', () => {

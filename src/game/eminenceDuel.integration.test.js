@@ -276,6 +276,47 @@ describe('ECHO_POWER nel Duello reale', () => {
   });
 });
 
+describe('Maledizione Inversa nel Duello reale', () => {
+  const inverse = (extra = []) => ({
+    slotModifiers: [{ slot: 0, deltas: {}, invertModifiers: true }, ...extra],
+  });
+
+  it('inverte i modificatori di entrambi i lati: il +2 POT dell\'Imboscata diventa −2', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: inverse() });
+    // Avversario (Imboscata +2 POT) da 4+2 a 4−2; giocatore senza modificatori resta a 4.
+    expect(battleResult.enemyPower).toBe(2);
+    expect(battleResult.playerPower).toBe(4);
+  });
+
+  it('una Maledizione del Cosmo sullo stesso slot diventa un vantaggio', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: inverse([{ slot: 0, deltas: { power: -1, damage: -1, assaultValue: -1 } }]),
+    });
+    expect(battleResult.playerPower).toBe(5);
+    expect(battleResult.playerDamage).toBe(4);
+  });
+
+  it('i minimi non si applicano: −5 POT con minimo 1 si inverte in +5', () => {
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      eminenceBundle: inverse(),
+      enemyAgent: {
+        ...baseInput.enemyAgent,
+        ability: { trigger: 'imboscata', effect: 'enemyPower', value: -5, minPower: 1 },
+      },
+    });
+    expect(battleResult.playerPower).toBe(9);
+  });
+
+  it('un lato Immune ignora le riduzioni prodotte dall\'inversione', () => {
+    const bundle = inverse();
+    bundle.immuneSides = ['enemy'];
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    expect(battleResult.enemyPower).toBe(6);
+  });
+});
+
 describe('TRANSPLANT_POWER nel Duello reale', () => {
   function transplant(graftInto) {
     return applyEminenceSegments([{

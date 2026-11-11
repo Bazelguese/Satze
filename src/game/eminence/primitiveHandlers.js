@@ -289,6 +289,7 @@ const handlers = {
       slot: ctx.params?.slot ?? segment.slot ?? null,
       deltas: { ...(segment.deltas || {}) },
       leagueScaled: Boolean(segment.leagueScaled),
+      invertModifiers: Boolean(segment.invertModifiers),
       persistent: segment.persistent !== false,
       source: ctx.source,
       ownerSide: ctx.ownerSide,
