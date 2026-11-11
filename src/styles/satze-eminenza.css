@@ -1031,3 +1031,16 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
 .em-rail--portale .em-rail-illegal .em-rail-cost::before{
   border-color:rgba(180,191,208,.35);box-shadow:none;background:rgba(4,6,10,.8);
 }
+
+/* Tue fasce: il costo sta all'estremità lontana dalla carta, come già in quelle avversarie.
+   Così in entrambe le zone la lettura è carta → abilità → prezzo. */
+.em-zone-player .em-rail--portale .em-rail-hit{flex-direction:row-reverse}
+.em-zone-player .em-rail--portale .em-rail-cost{padding-right:0 !important;padding-left:22px !important}
+.em-zone-player .em-rail--portale .em-rail-cost::before{left:26px;right:2px;transform:skewX(-14deg)}
+.em-zone-player .em-rail--portale .em-rail-copy{padding:12px 30px 13px 14px !important}
+.em-zone-player .em-rail--portale .em-rail-hit::before{left:140px;right:40px}
+
+/* Fasce avversarie: il taglio a bandiera dal lato della carta è largo 26px, più dei 20px
+   di sovrapposizione, e ne restava fuori un triangolino. Rientrano quanto basta a coprirlo. */
+.em-zone-enemy .em-rail--portale,
+.em-zone-enemy .em-rail--nastro{margin-left:-36px}
