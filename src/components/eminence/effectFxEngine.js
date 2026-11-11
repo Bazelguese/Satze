@@ -241,11 +241,23 @@ const THEMES = {
       const reach = Math.min(e.tw, e.th) * 0.42;
       // su bersagli piccoli (targa PV, Campo) gocce e fili si rimpiccioliscono
       const sc = Math.max(0.42, Math.min(1, Math.min(e.tw, e.th) / 150));
-      e.veins = Array.from({ length: 14 }, (_, i) => {
-        const [x0, y0, nx, ny] = per((i + rnd() * 0.7) / 14); let a = Math.atan2(ny, nx); let x = x0; let y = y0; const pts = [[x, y]]; const n = 5 + Math.floor(rnd() * 4);
-        for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.2; const st = (reach / n) * (0.7 + rnd() * 0.7); x += Math.cos(a) * st; y += Math.sin(a) * st; pts.push([x, y]); }
-        return { pts, d: rnd() * 260, w: 0.8 + rnd() * 1.1 };
-      });
+      // vene: un tronco che parte dal bordo, curva dolcemente e si assottiglia, con uno o due rami
+      const walk = (x0, y0, a0, len, n, w0) => {
+        let a = a0; let turn = (rnd() - 0.5) * 0.3; let x = x0; let y = y0; const pts = [[x, y, w0]];
+        for (let j = 1; j <= n; j += 1) { turn = turn * 0.6 + (rnd() - 0.5) * 0.34; a += turn; x += Math.cos(a) * (len / n); y += Math.sin(a) * (len / n); pts.push([x, y, w0 * (1 - (j / n) * 0.86), a]); }
+        return pts;
+      };
+      e.veins = [];
+      for (let i = 0; i < 9; i += 1) {
+        const [x0, y0, nx, ny] = per((i + 0.15 + rnd() * 0.7) / 9); const d = rnd() * 240; const w0 = (1.5 + rnd() * 1.1) * sc;
+        const trunk = walk(x0, y0, Math.atan2(ny, nx) + (rnd() - 0.5) * 0.7, reach * (0.8 + rnd() * 0.6), 14, w0);
+        e.veins.push({ pts: trunk, d, from: 0 });
+        const twigs = 1 + (rnd() < 0.6 ? 1 : 0);
+        for (let b2 = 0; b2 < twigs; b2 += 1) {
+          const at = 4 + Math.floor(rnd() * 6); const [bx, by, bw, ba] = trunk[at];
+          e.veins.push({ pts: walk(bx, by, ba + (rnd() < 0.5 ? -1 : 1) * (0.5 + rnd() * 0.5), reach * (0.3 + rnd() * 0.3), 8, bw * 0.75), d, from: at / 14 });
+        }
+      }
       e.sweat = Array.from({ length: Math.round(4 + Math.min(18, (e.tw * e.th) / 3600)) }, () => ({ x: (rnd() - 0.5) * e.tw * 0.84, y: -hh + rnd() * e.th * 0.62, r: (1.6 + rnd() * 2.2) * sc, born: 120 + rnd() * 620, hold: 260 + rnd() * 420, run: 0.5 + rnd() * 0.9 }));
       const strands = Math.max(2, Math.min(5, Math.round(e.tw / 60)));
       e.drool = Array.from({ length: strands }, (_, i) => ({ x: -hw + ((i + 0.3 + rnd() * 0.4) / strands) * e.tw, len: (0.34 + rnd() * 0.3) * Math.max(e.th, 70), d: 160 + rnd() * 320, sway: rnd() * TAU, r: (2.4 + rnd() * 1.6) * sc }));
@@ -261,14 +273,26 @@ const THEMES = {
       const vg = ctx.createRadialGradient(e.cx, e.cy, Math.min(hw, hh) * 0.35, e.cx, e.cy, Math.hypot(hw, hh));
       vg.addColorStop(0, rgba(e.c, 0)); vg.addColorStop(1, rgba(e.c, (0.12 + 0.3 * pulse) * a));
       ctx.fillStyle = vg; ctx.fillRect(e.cx - hw, e.cy - hh, e.tw, e.th);
-      // vene che affiorano dai bordi e pulsano col battito
+      // vene: affiorano dal bordo, e a ogni battito un'onda di sangue le percorre dalla radice alla punta
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      e.veins.forEach((v) => {
-        const k = easeOut((t - v.d) / 560); if (k <= 0) return; const upto = k * (v.pts.length - 1);
-        ctx.strokeStyle = rgba(mix(e.c2, e.c, 0.25), (0.34 + 0.5 * pulse) * a); ctx.lineWidth = v.w * (1 + 0.5 * pulse); ctx.beginPath();
-        v.pts.forEach(([px, py], j) => { if (j > upto + 1) return; const f = j <= upto ? 1 : upto - (j - 1); const [qx, qy] = j ? v.pts[j - 1] : [px, py]; ctx[j ? 'lineTo' : 'moveTo'](e.cx + qx + (px - qx) * f, e.cy + qy + (py - qy) * f); });
-        ctx.stroke();
-      });
+      // sotto pelle: scure e opache, non luminose; si schiariscono solo al passaggio dell'onda
+      ctx.globalCompositeOperation = 'source-over';
+      const deep = mix(e.c2, [58, 10, 52], 0.72); const lit = mix(e.c2, WHITE, 0.12);
+      const wave = (u) => { let w = 0; e.beats.forEach((b) => { const x = (t - b) / 380 - u; if (x > -0.18 && x < 0.18) w = Math.max(w, 1 - Math.abs(x) / 0.18); }); return w; };
+      for (let pass = 0; pass < 2; pass += 1) {
+        e.veins.forEach((v) => {
+          const grown = easeOut((t - v.d) / 700) * 1.25 - v.from; if (grown <= 0) return; const n = v.pts.length - 1;
+          for (let j = 1; j <= n; j += 1) {
+            const u = j / n; if (u > grown) break;
+            const [x1, y1] = v.pts[j - 1]; const [x2, y2, w] = v.pts[j]; const [x3, y3] = v.pts[Math.min(n, j + 1)];
+            const k = wave(v.from + u * (1 - v.from)); const tip = Math.min(1, (grown - u) * 6);
+            ctx.strokeStyle = pass ? rgba(mix(deep, lit, 0.1 + 0.8 * k), (0.5 + 0.35 * k) * a * tip) : rgba(deep, (0.1 + 0.1 * k) * a * tip);
+            ctx.lineWidth = pass ? Math.max(0.45, w * (1 + 0.4 * k)) : w * (2.4 + 0.8 * k);
+            ctx.beginPath(); ctx.moveTo(e.cx + (x1 + x2) / 2, e.cy + (y1 + y2) / 2); ctx.quadraticCurveTo(e.cx + x2, e.cy + y2, e.cx + (x2 + x3) / 2, e.cy + (y2 + y3) / 2); ctx.stroke();
+          }
+        });
+      }
+      ctx.globalCompositeOperation = 'lighter';
       // fiato caldo dal basso
       e.breath.forEach((b) => { const tt = t - b.d; const k = clamp01(tt / 1100); if (tt <= 0 || k >= 1) return; glow(ctx, e.cx + b.x, e.cy + hh - k * e.th * 0.5, Math.min(hw, hh) * b.r * (0.6 + k), mix(e.c, WHITE, 0.5), 0.1 * (1 - k) * a); });
       ctx.globalCompositeOperation = 'source-over';
