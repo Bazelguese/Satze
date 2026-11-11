@@ -873,3 +873,25 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - Festa: la scelta fra Gloria e Magnanimo si fa al momento della scelta dell'abilità.
 
 **Lavoro di implementazione:** contatore persistente dei Livelli con serie di sconfitte; alias o sostituzione del trigger del Bonus con scelta; statistiche scalate sui Livelli.
+
+### 12.3 Corte Rossa — Corona del desiderio (approvata)
+
+**Lore:** l'Estrazione, l'eccezione al Codice dell'Offerta: quando la Corte tira i fili dei contratti non offre, prende, e toglie al nemico capacità e risorse («tranne la capacità di dire no»).
+
+**Stile:** opposto al Registro. Niente consenso né debiti differiti: negazione immediata e decisa da te, su Poteri, Bonus e FC dell'avversario.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Inginocchiati | Quando il Potere dell'Agente nemico non si attiva, +1 Presenza; +2 se è stato bloccato dal tuo Agente. | — | circa 2.3–2.5 Presenza/Scontro |
+| +1 | Opulenza | In questo Duello l'Agente nemico è Immune. | −0.75 | circa −0.7 ✅ |
+| −1 | In esilio | Scegli un Agente nemico non schierato: quando verrà schierato in questo Scontro, il suo Bonus d'Armata è bloccato. | 0.75 | circa 0.8 ✅ |
+| −2 | Prezzo del fardello | **Prima degli Agenti.** In questo Duello l'avversario può investire al massimo 4 FC sul suo Agente. | 1.50 | circa 1.3–1.8 ✅ |
+| −3 | Editto di intolleranza | **Prima degli Agenti.** Scegli un trigger: in questo Duello e nel prossimo, i Poteri dell'avversario con quel trigger non si attivano. | 2.25 | circa 2.0–2.4 ✅ |
+
+**Note di regola:**
+- Inginocchiati: il +2 vale solo se il Potere nemico è bloccato dal Potere o dal Bonus del tuo Agente; un blocco prodotto da questa Eminenza (Editto) dà +1.
+- Il tetto di 4 FC nega Overdrive e i colpi da 5+ FC: misurato in autoplay, le IA del gioco investono 5+ FC in circa metà dei Duelli e quasi sempre con carte Overdrive e Conquista.
+
+**Lavoro di implementazione:** fonte del blocco del Potere nel risultato del Duello; marchio persistente che blocca il Bonus allo schieramento; tetto agli FC investibili rispettato da interfaccia, IA e online; divieto di trigger per due Duelli.
