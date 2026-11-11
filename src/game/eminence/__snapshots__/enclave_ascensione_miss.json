@@ -1,25 +1,25 @@
 {
   "ability": {
-    "id": "enclave_rinuncia",
-    "name": "Rinuncia al Privilegio",
-    "presenceDelta": 1,
+    "id": "enclave_ascensione",
+    "name": "Ascensione",
+    "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
+    "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
   },
   "bilance": {
-    "cinematicCues": 2,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 2,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
     ],
     "presencePlayer": [
-      1,
-      3
+      3,
+      0
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -34,13 +34,21 @@
       {
         "id": "enclave_ascesa",
         "presenceDelta": -1
+      },
+      {
+        "id": "enclave_furto_reliquie",
+        "presenceDelta": -2
+      },
+      {
+        "id": "enclave_ascensione",
+        "presenceDelta": -3
       }
     ],
-    "presenceAfterReveal": 2,
-    "presenceAfterSelect": 1,
-    "presenceAvailable": 1,
-    "presenceDelta": 1,
-    "selected": "enclave_rinuncia"
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "enclave_ascensione"
   },
   "eminence": {
     "army": "L'Enclave delle Scaglie",
@@ -69,65 +77,29 @@
           }
         }
       ],
-      "id": "reveal:player:enclave_rinuncia:GENERAL",
+      "id": "reveal:player:enclave_ascensione:GENERAL",
       "kind": "reveal",
-      "name": "Rinuncia al Privilegio",
+      "name": "Ascensione",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "SET_ARMY_BONUS_STATE",
+          "primitive": "MODIFY_STAT",
           "slot": null,
-          "target": "SELF"
+          "target": "OWN_AGENT"
         }
       ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": 1,
+      "presenceDelta": -3,
       "side": "player",
-      "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
-    },
-    {
-      "badgeText": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:enclave_accumulo:AFTER_DUEL_OUTCOME:hit",
-      "kind": "effect",
-      "name": "Accumulo",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "RESOLVE",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "Almeno 3 FC investiti: +1 Presenza."
+      "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
     }
   ],
   "scenario": {
-    "branch": "hit",
+    "branch": "miss",
     "initiativeSide": "player",
-    "name": "enclave_accumulo_hit",
+    "name": "enclave_ascensione_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -140,9 +112,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -154,9 +126,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -169,7 +141,7 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:enclave_rinuncia:GENERAL",
+          "noticeId": "reveal:player:enclave_ascensione:GENERAL",
           "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
@@ -206,30 +178,30 @@
               }
             }
           ],
-          "id": "reveal:player:enclave_rinuncia:GENERAL",
+          "id": "reveal:player:enclave_ascensione:GENERAL",
           "kind": "reveal",
-          "name": "Rinuncia al Privilegio",
+          "name": "Ascensione",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "SET_ARMY_BONUS_STATE",
+              "primitive": "MODIFY_STAT",
               "slot": null,
-              "target": "SELF"
+              "target": "OWN_AGENT"
             }
           ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": 1,
+          "presenceDelta": -3,
           "side": "player",
-          "text": "Il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello."
+          "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 0
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -240,72 +212,19 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 0
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:enclave_accumulo:AFTER_DUEL_OUTCOME:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "cues": [],
       "gate": null,
       "kind": "settle",
-      "notices": [
-        {
-          "badgeText": "Risoluzione · Dopo il Duello",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:enclave_accumulo:AFTER_DUEL_OUTCOME:hit",
-          "kind": "effect",
-          "name": "Accumulo",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "RESOLVE",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "Almeno 3 FC investiti: +1 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 0
       },
       "segments": [
         {
@@ -330,12 +249,12 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "SET_ARMY_BONUS_STATE",
+          "primitive": "MODIFY_STAT",
           "source": "ability",
-          "sourceId": "enclave_rinuncia",
-          "sourceName": "Rinuncia al Privilegio",
-          "target": "SELF",
-          "timing": "AFTER_REVEAL"
+          "sourceId": "enclave_ascensione",
+          "sourceName": "Ascensione",
+          "target": "OWN_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

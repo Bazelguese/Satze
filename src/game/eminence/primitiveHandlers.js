@@ -140,15 +140,17 @@ function fullAbilityFields(ability) {
  * proprietario ('duelsWon', 'duelsLost'). Senza `scaleBy` il delta vale una volta.
  */
 const STAT_SCALE_SOURCES = {
-  duelsWon: (persistent) => readDuelRecord(persistent).won,
-  duelsLost: (persistent) => readDuelRecord(persistent).lost,
+  duelsWon: (ctx) => readDuelRecord(ctx.persistent).won,
+  duelsLost: (ctx) => readDuelRecord(ctx.persistent).lost,
+  // Presenza pagata al reveal da un'abilità a costo variabile.
+  presenceSpent: (ctx) => Number(ctx.params?.presenceSpent) || 0,
 };
 
 function statScale(scaleBy, ctx) {
   if (!scaleBy) return 1;
   const source = STAT_SCALE_SOURCES[scaleBy];
   if (!source) throw new Error(`MODIFY_STAT: scaleBy sconosciuto ${scaleBy}`);
-  return source(ctx.persistent);
+  return source(ctx);
 }
 
 const handlers = {

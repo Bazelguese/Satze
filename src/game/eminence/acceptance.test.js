@@ -1530,17 +1530,44 @@ test('Enclave −1: Ascesa deposita ±1 Lega sulla carta e scade al round succes
   assert.deepEqual(next.player.round.temporaryLeagueByCardId, {});
 });
 
-test('Enclave −3: Ascensione deposita SATISFY a Leghe uguali e ARM_VA_TIE_WIN', () => {
-  const { bundle } = playRound({
+test('Enclave −2: Furto di Reliquie sottrae 2 Presenza e ne dà 1, solo in vittoria', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_furto_reliquie',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2, enemy: 3 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  const enemyBefore = matchState.enemy.presence;
+
+  const win = settleEminenceRound(matchState, { winner: SIDES.PLAYER }).matchState;
+  assert.equal(win.player.presence, 1);
+  assert.equal(win.enemy.presence, enemyBefore - 2);
+  // Rubare non è spendere: i contatori di spesa avversari restano fermi.
+  assert.equal(win.enemy.totalPresenceSpent, matchState.enemy.totalPresenceSpent);
+
+  const loss = settleEminenceRound(matchState, { winner: SIDES.ENEMY }).matchState;
+  assert.equal(loss.player.presence, 0);
+  assert.equal(loss.enemy.presence, enemyBefore);
+});
+
+test('Enclave −X: Ascensione richiede 3 Presenza e la spende tutta in POT', () => {
+  const base = createEminenceMatchState({ playerEminenceId: ENCLAVE, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 2;
+  const low = beginEminenceRound(base, { roundNumber: 3 });
+  assert.equal(selectEminenceAbility(low, SIDES.PLAYER, 'enclave_ascensione').ok, false);
+
+  const { matchState, bundle } = playRound({
     playerEminenceId: ENCLAVE,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'enclave_ascensione',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
+    presence: { player: 6 },
   });
-  assert.equal(bundle.triggerRules.equalLeagueSatisfies.length, 1);
-  assert.deepEqual(bundle.triggerRules.equalLeagueSatisfies[0].triggers, ['sfida', 'sopraffare']);
-  assert.deepEqual(bundle.vaTieWinnerSides, [SIDES.PLAYER]);
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(matchState.player.presenceSpentThisRound, 6);
+  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 6);
 });
 
 test('Enclave: Fine Scontro non ribatte i delta già risolti', () => {

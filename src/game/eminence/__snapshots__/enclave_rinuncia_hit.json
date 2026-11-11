@@ -89,9 +89,9 @@
     }
   ],
   "scenario": {
-    "branch": "miss",
+    "branch": "hit",
     "initiativeSide": "player",
-    "name": "enclave_accumulo_miss",
+    "name": "enclave_rinuncia_hit",
     "roundNumber": 3
   },
   "steps": [

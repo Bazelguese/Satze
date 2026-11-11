@@ -374,14 +374,19 @@ export function selectPublicEminenceMatchState(matchState, viewerSide = null) {
  * Costo effettivo di un'abilità: catalogo + delta persistenti dello Scontro.
  * `presenceDeltaMin` è il pavimento del costo effettivo, non del solo extra.
  */
-export function resolveAbilityPresenceDelta(ability, persistent = null) {
+export function resolveAbilityPresenceDelta(ability, persistent = null, presence = null) {
   if (!ability) return 0;
   const extra = persistent?.abilityPresenceDeltas?.[ability.id] || 0;
   const raw = (ability.presenceDelta || 0) + extra;
-  if (typeof ability.presenceDeltaMin === 'number') {
-    return Math.max(ability.presenceDeltaMin, raw);
+  const bounded = typeof ability.presenceDeltaMin === 'number'
+    ? Math.max(ability.presenceDeltaMin, raw)
+    : raw;
+  // «Spendi tutta la tua Presenza»: il delta di catalogo è il minimo richiesto; con la
+  // Presenza nota il costo diventa tutta quella posseduta.
+  if (ability.spendAllPresence && Number.isFinite(presence)) {
+    return -Math.max(presence, -bounded);
   }
-  return raw;
+  return bounded;
 }
 
 /**

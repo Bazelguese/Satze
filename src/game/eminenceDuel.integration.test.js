@@ -649,11 +649,38 @@ describe('Orathai nel Duello', () => {
 });
 
 describe('Lega effettiva e parità VA nel Duello', () => {
-  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE accende solo il lato proprietario a Leghe uguali', () => {
+  // La primitiva non ha più utenti nel catalogo: la si esercita con un segmento diretto.
+  const equalLeagueBundle = () => applyEminenceSegments([
+    {
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_equal_league',
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'SATISFY_TRIGGER_ON_EQUAL_LEAGUE',
+        scope: 'OWN',
+        triggers: ['sfida', 'sopraffare'],
+      },
+    },
+    {
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_equal_league',
+      segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'ARM_VA_TIE_WIN' },
+    },
+  ]);
+
+  it('Ascensione: +1 POT per ogni Presenza spesa, tutta quella posseduta', () => {
     const bundle = bundleForAbility('enclave_ascensione', {
       eminenceId: 'enclave_ascensione',
-      presence: 3,
+      presence: 5,
     });
+    expect(bundle.statDeltas[SIDES.PLAYER].power).toBe(5);
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+    // Il giocatore risponde: Imboscata spenta, quindi 4 di base + 5.
+    expect(battleResult.playerPower).toBe(9);
+  });
+
+  it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE accende solo il lato proprietario a Leghe uguali', () => {
+    const bundle = equalLeagueBundle();
 
     const { battleResult } = computeDuelResolution({
       ...baseInput,
@@ -676,10 +703,7 @@ describe('Lega effettiva e parità VA nel Duello', () => {
   });
 
   it('SATISFY_TRIGGER_ON_EQUAL_LEAGUE non forza Sopraffare se la Lega è inferiore', () => {
-    const bundle = bundleForAbility('enclave_ascensione', {
-      eminenceId: 'enclave_ascensione',
-      presence: 3,
-    });
+    const bundle = equalLeagueBundle();
 
     const { battleResult } = computeDuelResolution({
       ...baseInput,

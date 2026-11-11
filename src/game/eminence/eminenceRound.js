@@ -177,7 +177,7 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
     return { matchState, ok: false, reason: 'INSUFFICIENT_PRESENCE' };
   }
 
-  const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
+  const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent, checkpointPresence);
   return {
     matchState: {
       ...matchState,
@@ -336,7 +336,7 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
 
   for (const { side, ability } of openings) {
     const state = nextMatchState[side];
-    const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
+    const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent, state.presence);
     const { state: paid, event } = changePresence(state, presenceDelta, {
       reason: `reveal:${ability.id}`,
       countsAsSpend: presenceDelta < 0,
@@ -344,7 +344,11 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
       roundNumber: matchState.roundNumber ?? null,
     });
 
-    const { immediate, pending } = collectSegments(ability, side, state.selectedParams);
+    // Un costo variabile resta nei params: gli effetti che scalano sulla Presenza spesa lo leggono.
+    const segmentParams = ability.spendAllPresence
+      ? { ...(state.selectedParams || {}), presenceSpent: -presenceDelta }
+      : state.selectedParams;
+    const { immediate, pending } = collectSegments(ability, side, segmentParams);
     const stamp = (entry) => ({ ...entry, sourceEminenceId: state.eminenceId });
 
     nextMatchState[side] = {

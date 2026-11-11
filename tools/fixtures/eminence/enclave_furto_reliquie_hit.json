@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "enclave_ascensione",
-    "presence": 1,
-    "abilityId": "enclave_rinuncia",
+    "presence": 2,
+    "abilityId": "enclave_furto_reliquie",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -20,7 +20,7 @@
   },
   "enemy": {
     "eminenceId": null,
-    "presence": 1,
+    "presence": 3,
     "abilityId": null,
     "params": null,
     "agent": {
@@ -29,7 +29,7 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 4,
+      "focusInvested": 3,
       "anchored": false
     }
   },
@@ -37,23 +37,23 @@
     "winner": "player",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "enclave_accumulo_miss",
-  "branch": "miss"
+  "name": "enclave_furto_reliquie_hit",
+  "branch": "hit"
 }

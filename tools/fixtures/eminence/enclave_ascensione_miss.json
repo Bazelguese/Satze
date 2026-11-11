@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "enclave_ascensione",
-    "presence": 1,
-    "abilityId": "enclave_rinuncia",
+    "presence": 3,
+    "abilityId": "enclave_ascensione",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -12,7 +12,7 @@
       "power": 3,
       "damage": 2,
       "trigger": "rimonta",
-      "focusInvested": 3,
+      "focusInvested": 2,
       "anchored": false
     },
     "fragments": [],
@@ -29,7 +29,7 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
@@ -54,6 +54,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "enclave_accumulo_hit",
-  "branch": "hit"
+  "name": "enclave_ascensione_miss",
+  "branch": "miss"
 }
