@@ -1075,6 +1075,15 @@ export default function SatzeGame() {
     // Affari verso il giocatore: una sola scelta legale Salasso → auto; altrimenti UI.
     const playerDeals = [];
     for (const deal of pending.filter((entry) => entry.recipientSide === 'player')) {
+      if (deal.mode === 'OFFER' && deal.mustAccept && !deal.choices?.length) {
+        // Offerta obbligata senza varianti: nulla da decidere, e l'altro client la risolve da solo.
+        const resolved = resolvePendingDeal(nextMatch, deal, { dealAccepted: true }, { initiativeSide });
+        nextMatch = resolved.matchState;
+        notices = [...notices, ...(resolved.notices || [])];
+        playerHp += readHpDelta(resolved.bundle, 'player');
+        enemyHp += readHpDelta(resolved.bundle, 'enemy');
+        continue;
+      }
       if (deal.mode === 'CHOOSE_ONE') {
         const presence = nextMatch.player?.presence ?? 0;
         const legal = (deal.deals || []).filter((option) => (
@@ -1711,7 +1720,30 @@ export default function SatzeGame() {
     const ownerEminenceId = eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId;
     const ability = ownerEminenceId ? getEminenceAbility(ownerEminenceId, pendingDeal.source) : null;
     const title = ability?.name || 'Affare';
-    if (pendingDeal.mode === 'CHOOSE_ONE') {
+    if (pendingDeal.mode === 'OFFER') {
+      // Offerta della Corte: si accetta (scegliendo la variante, se ce ne sono) o si rifiuta.
+      // Dopo un rifiuto, l'Offerta del round successivo va accettata.
+      const choices = pendingDeal.choices || [];
+      const accept = choices.length
+        ? choices.map((choice, i) => ({
+          key: `offer-${choice}`,
+          label: pendingDeal.choiceLabels?.[choice] || choice,
+          variant: i === choices.length - 1 ? 'primary' : 'secondary',
+          onClick: () => confirmPendingEminenceDeal({ dealAccepted: true, dealChoice: choice }),
+        }))
+        : [{ key: 'offer-accept', label: 'Accetta', variant: 'primary', waiting: true, onClick: () => confirmPendingEminenceDeal({ dealAccepted: true }) }];
+      portalDecision = {
+        kicker: 'Offerta',
+        name: title,
+        desc: ability?.text || "Accetti l'Offerta?",
+        options: pendingDeal.mustAccept
+          ? accept
+          : [{ key: 'offer-refuse', label: 'Rifiuta', variant: 'secondary', onClick: () => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' }) }, ...accept],
+        note: pendingDeal.mustAccept
+          ? "Hai rifiutato l'Offerta precedente: questa va accettata."
+          : 'Se rifiuti non succede nulla, ma la prossima Offerta andrà accettata.',
+      };
+    } else if (pendingDeal.mode === 'CHOOSE_ONE') {
       const presence = eminenceMatchState?.player?.presence ?? 0;
       const names = ['Primo', 'Secondo'];
       const opts = (pendingDeal.deals || []).slice(0, 2);

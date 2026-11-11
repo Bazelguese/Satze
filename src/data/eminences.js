@@ -785,6 +785,7 @@ export const EMINENCES = {
             primitive: P.PROPOSE_DEAL,
             mode: 'OFFER',
             choices: ['damage', 'power'],
+            choiceLabels: { damage: '+2 DAN', power: '+1 POT' },
             ownerPresenceOnAccept: 1,
             onAccept: [
               {

@@ -604,6 +604,7 @@ const handlers = {
           recipientSide: OPPOSITE_SIDE[ctx.ownerSide],
           source: ctx.source,
           choices: segment.choices ? [...segment.choices] : null,
+          choiceLabels: segment.choiceLabels ? { ...segment.choiceLabels } : null,
           mustAccept,
           deal: { onAccept: segment.onAccept || [], ownerPresenceOnAccept: segment.ownerPresenceOnAccept || 0 },
         });
