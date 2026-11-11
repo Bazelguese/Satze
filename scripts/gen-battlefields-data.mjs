@@ -27,7 +27,7 @@ const ICON_BY_ID = {
   102: 'tower', 103: 'wave', 104: 'flame', 105: 'brick', 106: 'coin', 107: 'castle',
   108: 'bridge', 109: 'block', 110: 'mirror', 111: 'wind', 112: 'tree', 113: 'moon',
   114: 'castle', 115: 'circle', 116: 'scales', 117: 'crown', 118: 'mirror', 119: 'road',
-  120: 'sparkle', 121: 'block',
+  120: 'sparkle', 121: 'block', 122: 'sun',
 };
 
 /** @type {Array<{id:number,name:string,effect:string,category:string,rarita:string,tema:string,minTurn:number}>} */
@@ -156,9 +156,12 @@ const MASTER = [
   [119,'Viale delle Delegazioni','Conquista · FC totali spesi >10 · Entrambi +1 FC','conditional','comune','Mascarada',1],
   [120,'Galleria Bellacqua','Regola · Bonus Armata scambiati tra gli Agenti','limit','special','Mascarada',1],
   [121,'Anfiteatro di Morrowgate','Regola · Effetti Conquista disattivati','limit','raro','Mascarada',1],
+  // Campi d'Eminenza: entrano in gioco solo tramite un'abilità, mai dalla pesca casuale.
+  // Sfondo provvisorio: quello del Meridiano del Sole Verde, finché non c'è l'illustrazione.
+  [122,'Arena del Violento Gaudio','In scontro · Entrambi · +2 POT, +2 DAN','values','raro','Apex',1,{ eminenceOnly: true, bgImage: './campi_bg/campo-89.webp' }],
 ];
 
-const fields = MASTER.map(([id, name, effect, category, rarita, tema, minTurn]) => ({
+const fields = MASTER.map(([id, name, effect, category, rarita, tema, minTurn, flags = {}]) => ({
   id,
   name,
   icon: ICON_BY_ID[id] || 'circle',
@@ -169,6 +172,7 @@ const fields = MASTER.map(([id, name, effect, category, rarita, tema, minTurn]) 
   minTurn,
   flavour: '',
   bgImage: `./campi_bg/campo-${id}.webp`,
+  ...flags,
 }));
 
 fields.sort((a, b) => a.id - b.id);

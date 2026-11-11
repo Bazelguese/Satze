@@ -1,0 +1,251 @@
+{
+  "ability": {
+    "id": "orathai_eco",
+    "name": "Eco",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "In questo Duello, se il Potere dell'Agente nemico si attiva, si attiva anche per il tuo Agente."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "orathai_prezzo_del_canto",
+        "presenceDelta": 1
+      },
+      {
+        "id": "orathai_contrappunto",
+        "presenceDelta": -1
+      },
+      {
+        "id": "orathai_eco",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "orathai_eco"
+  },
+  "eminence": {
+    "army": "Orathai",
+    "id": "orathai_primo_canto",
+    "name": "Il Primo Canto"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:orathai_eco:GENERAL",
+      "kind": "reveal",
+      "name": "Eco",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "ECHO_POWER",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "In questo Duello, se il Potere dell'Agente nemico si attiva, si attiva anche per il tuo Agente."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "orathai_eco_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:orathai_eco:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:orathai_eco:GENERAL",
+          "kind": "reveal",
+          "name": "Eco",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "ECHO_POWER",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "In questo Duello, se il Potere dell'Agente nemico si attiva, si attiva anche per il tuo Agente."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "keys": [
+              "ownActivationSatisfied",
+              "enemyActivationSatisfied"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "orathai_risonanza",
+          "sourceName": "Risonanza",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "ECHO_POWER",
+          "source": "ability",
+          "sourceId": "orathai_eco",
+          "sourceName": "Eco",
+          "target": "OWN_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

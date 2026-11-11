@@ -4,7 +4,7 @@
     "name": "Ascensione",
     "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
+    "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      3,
+      5,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -36,13 +36,17 @@
         "presenceDelta": -1
       },
       {
+        "id": "enclave_furto_reliquie",
+        "presenceDelta": -2
+      },
+      {
         "id": "enclave_ascensione",
         "presenceDelta": -3
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 3,
-    "presenceAvailable": 3,
+    "presenceAfterSelect": 5,
+    "presenceAvailable": 5,
     "presenceDelta": -3,
     "selected": "enclave_ascensione"
   },
@@ -79,22 +83,17 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+          "primitive": "MODIFY_STAT",
           "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "ARM_VA_TIE_WIN",
-          "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         }
       ],
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -3,
+      "presenceDelta": -5,
       "side": "player",
-      "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
+      "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
     }
   ],
   "scenario": {
@@ -113,9 +112,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 5
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 5,
       "timing": null
     },
     {
@@ -127,9 +126,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 5
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 5,
       "timing": null
     },
     {
@@ -185,22 +184,17 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+              "primitive": "MODIFY_STAT",
               "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "ARM_VA_TIE_WIN",
-              "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             }
           ],
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -3,
+          "presenceDelta": -5,
           "side": "player",
-          "text": "In questo Duello, Sfida e Sopraffare del tuo Agente sono soddisfatti anche quando le Leghe sono uguali. In caso di parità di VA, vince il tuo lato."
+          "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
         }
       ],
       "presence": {
@@ -255,25 +249,12 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "SATISFY_TRIGGER_ON_EQUAL_LEAGUE",
+          "primitive": "MODIFY_STAT",
           "source": "ability",
           "sourceId": "enclave_ascensione",
           "sourceName": "Ascensione",
-          "target": null,
+          "target": "OWN_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "ARM_VA_TIE_WIN",
-          "source": "ability",
-          "sourceId": "enclave_ascensione",
-          "sourceName": "Ascensione",
-          "target": null,
-          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

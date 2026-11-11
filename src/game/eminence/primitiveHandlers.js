@@ -17,6 +17,8 @@ import {
   TRIGGER_SCOPES,
 } from './eminenceConstants.js';
 import { createTriggerRules, applyPrimitiveToTriggerRules } from './triggerRulesOverlay.js';
+import { stampComposeParams, cardAbilityOf } from './composeAbilityParams.js';
+import { readDuelRecord } from './eminenceState.js';
 
 /** Accumulatore degli effetti Eminenza di un checkpoint. */
 export function createEffectBundle() {
@@ -54,6 +56,12 @@ export function createEffectBundle() {
     markGains: [],
     deals: [],
     pendingDeals: [],
+    blockedPowerSides: [],
+    echoPowerSides: [],
+    deployConstraints: [],
+    initiativeOverride: null,
+    persistentBonusOverrides: [],
+    debtEscalations: [],
   };
 }
 
@@ -111,13 +119,40 @@ function resolveMarkCardIds(segment, ctx) {
   return [...(segment.cardIds || [])];
 }
 
+const OVERLAY_ABILITY_KEYS = ['effect', 'value', 'minPower', 'minDamage', 'minAssault', 'minHealth', 'stat'];
+
 function overlayAbilityFields(ability) {
   if (!ability || typeof ability !== 'object') return {};
   const overlay = {};
-  for (const key of ['effect', 'value', 'minPower', 'minDamage', 'minAssault', 'minHealth', 'stat']) {
+  for (const key of OVERLAY_ABILITY_KEYS) {
     if (Object.prototype.hasOwnProperty.call(ability, key)) overlay[key] = ability[key];
   }
   return overlay;
+}
+
+/** Tutti i campi dell'effetto, anche quelli assenti: un trapianto non eredita resti del vecchio Potere. */
+function fullAbilityFields(ability) {
+  const overlay = {};
+  for (const key of OVERLAY_ABILITY_KEYS) overlay[key] = ability?.[key];
+  return overlay;
+}
+
+/**
+ * Moltiplicatore di un MODIFY_STAT scalato: `scaleBy` nomina un contatore pubblico del
+ * proprietario ('duelsWon', 'duelsLost'). Senza `scaleBy` il delta vale una volta.
+ */
+const STAT_SCALE_SOURCES = {
+  duelsWon: (ctx) => readDuelRecord(ctx.persistent).won,
+  duelsLost: (ctx) => readDuelRecord(ctx.persistent).lost,
+  // Presenza pagata al reveal da un'abilità a costo variabile.
+  presenceSpent: (ctx) => Number(ctx.params?.presenceSpent) || 0,
+};
+
+function statScale(scaleBy, ctx) {
+  if (!scaleBy) return 1;
+  const source = STAT_SCALE_SOURCES[scaleBy];
+  if (!source) throw new Error(`MODIFY_STAT: scaleBy sconosciuto ${scaleBy}`);
+  return source(ctx);
 }
 
 const handlers = {
@@ -127,7 +162,7 @@ const handlers = {
       if (!(stat in bundle.statDeltas[side])) {
         throw new Error(`Statistica non gestita da MODIFY_STAT: ${stat}`);
       }
-      bundle.statDeltas[side][stat] += segment.delta || 0;
+      bundle.statDeltas[side][stat] += (segment.delta || 0) * statScale(segment.scaleBy, ctx);
       if (Number.isFinite(segment.minimum)) {
         bundle.statMinimums ||= {};
         bundle.statMinimums[side] ||= {};
@@ -255,6 +290,7 @@ const handlers = {
       slot: ctx.params?.slot ?? segment.slot ?? null,
       deltas: { ...(segment.deltas || {}) },
       leagueScaled: Boolean(segment.leagueScaled),
+      invertModifiers: Boolean(segment.invertModifiers),
       persistent: segment.persistent !== false,
       source: ctx.source,
       ownerSide: ctx.ownerSide,
@@ -305,16 +341,29 @@ const handlers = {
   },
 
   [P.REGISTER_END_MATCH_DEBT]: (bundle, segment, ctx) => {
-    const side = inferTargetSide(ctx.params, ctx.agentIdBySide);
-    if (!side) return;
-    bundle.endMatchDebts.push({
-      side,
-      basis: segment.basis ?? 'FINAL_POWER',
-      cardId: ctx.params?.cardId ?? null,
-      amount: segment.amount ?? null,
-      source: ctx.source,
-      ownerSide: ctx.ownerSide,
-    });
+    // Con un bersaglio esplicito il debito ha importo fisso e un debitore noto; senza,
+    // il debitore è il lato dell'Agente scelto e l'importo si registra a fine Duello.
+    const sides = segment.target
+      ? resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)
+      : [inferTargetSide(ctx.params, ctx.agentIdBySide)].filter(Boolean);
+    for (const side of sides) {
+      bundle.endMatchDebts.push({
+        side,
+        basis: segment.basis ?? (segment.target ? 'FIXED' : 'FINAL_POWER'),
+        cardId: segment.target ? null : (ctx.params?.cardId ?? null),
+        amount: segment.amount ?? null,
+        dueAt: segment.dueAt ?? null,
+        source: ctx.source,
+        ownerSide: ctx.ownerSide,
+      });
+    }
+  },
+
+  // Ogni voce già registrata a carico del lato bersaglio aumenta di `delta` PV.
+  [P.ESCALATE_END_MATCH_DEBTS]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.debtEscalations.push({ side, delta: segment.delta || 0, source: ctx.source });
+    }
   },
 
   [P.BLOCK_EMINENCE]: (bundle, segment, ctx) => {
@@ -369,7 +418,9 @@ const handlers = {
     if (cardId == null) return;
 
     const overlay = { ...((bundle.abilityOverlays ||= {})[cardId] || {}) };
-    const params = ctx.params || {};
+    // I params della UI possono portare solo gli id dei Frammenti: il trigger e l'effetto
+    // composti si ricavano qui dalle carte, così il motore non dipende da chi ha scelto.
+    const params = stampComposeParams(ctx.params || {}) || {};
 
     if (Object.prototype.hasOwnProperty.call(params, 'composedTrigger')) {
       overlay.trigger = params.composedTrigger;
@@ -381,12 +432,46 @@ const handlers = {
     }
 
     if (params.composedAbility) {
-      Object.assign(overlay, overlayAbilityFields(params.composedAbility));
+      Object.assign(overlay, fullAbilityFields(params.composedAbility));
     }
 
     if (Object.keys(overlay).length) {
       bundle.abilityOverlays[cardId] = overlay;
     }
+  },
+
+  // Il Potere stampato su un'altra carta prende il posto del Potere oppure del Bonus
+  // dell'Agente schierato, per questo Duello. Nel Bonus è trattato come Bonus.
+  [P.TRANSPLANT_POWER]: (bundle, segment, ctx) => {
+    const params = ctx.params || {};
+    const sourceId = params[segment.sourceParam || 'fragmentCardId'];
+    const ability = cardAbilityOf(Array.isArray(sourceId) ? sourceId[0] : sourceId);
+    if (!ability) return;
+    const into = params[segment.slotParam || 'graftInto'] === 'bonus' ? 'bonus' : 'power';
+
+    if (into === 'bonus') {
+      bundle.armyBonusState[ctx.ownerSide] = {
+        ...(bundle.armyBonusState[ctx.ownerSide] || {}),
+        override: {
+          trigger: ability.trigger ?? null,
+          effects: [overlayAbilityFields(ability)],
+        },
+      };
+      return;
+    }
+
+    const agentId = ctx.agentIdBySide?.[ctx.ownerSide];
+    if (agentId == null) return;
+    bundle.abilityOverlays[agentId] = {
+      ...(bundle.abilityOverlays[agentId] || {}),
+      trigger: ability.trigger ?? null,
+      ...fullAbilityFields(ability),
+    };
+    bundle.triggerRules = applyPrimitiveToTriggerRules(bundle.triggerRules, {
+      primitive: P.REPLACE_TRIGGER,
+      cardIds: [agentId],
+      trigger: ability.trigger ?? null,
+    }, { ownerSide: ctx.ownerSide, source: ctx.source, params });
   },
 
   [P.GRANT_POWER]: (bundle, segment, ctx) => {
@@ -406,6 +491,75 @@ const handlers = {
   [P.GRANT_IMMUNE]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       if (!bundle.immuneSides.includes(side)) bundle.immuneSides.push(side);
+    }
+  },
+
+  // Il Potere dell'Agente non si attiva in questo Duello. Agisce come un Blocca, ma colpisce
+  // solo il Potere: un divieto sul trigger spegnerebbe anche il Bonus, che legge lo stesso
+  // controllo dei trigger.
+  [P.BLOCK_POWER]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (!bundle.blockedPowerSides.includes(side)) bundle.blockedPowerSides.push(side);
+    }
+  },
+
+  // Il Potere (o il Bonus) dell'Agente diventa un'abilità fissata dal segmento, per questo
+  // Duello. Sostituisce, non aggiunge: il Potere originale non si risolve.
+  [P.REPLACE_ABILITY]: (bundle, segment, ctx) => {
+    const ability = segment.ability;
+    if (!ability) throw new Error('REPLACE_ABILITY: abilità mancante');
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (segment.slot === 'bonus') {
+        const override = { trigger: ability.trigger ?? null, effects: [overlayAbilityFields(ability)] };
+        bundle.armyBonusState[side] = { ...(bundle.armyBonusState[side] || {}), override };
+        // Persistente: resta per il resto dello Scontro, o finché il lato non vince un Duello.
+        if (segment.persistent) {
+          bundle.persistentBonusOverrides.push({
+            side,
+            override,
+            until: segment.persistentUntil || null,
+            source: ctx.source,
+          });
+        }
+        continue;
+      }
+      const agentId = ctx.agentIdBySide?.[side];
+      if (agentId == null) continue;
+      bundle.abilityOverlays[agentId] = {
+        ...(bundle.abilityOverlays[agentId] || {}),
+        trigger: ability.trigger ?? null,
+        ...fullAbilityFields(ability),
+      };
+      bundle.triggerRules = applyPrimitiveToTriggerRules(bundle.triggerRules, {
+        primitive: P.REPLACE_TRIGGER,
+        cardIds: [agentId],
+        trigger: ability.trigger ?? null,
+      }, { ownerSide: ctx.ownerSide, source: ctx.source, params: ctx.params });
+    }
+  },
+
+  // Vincola gli Agenti schierabili dal lato bersaglio in questo Duello: la carta indicata dal
+  // parametro diventa imposta (FORCE), vietata (BAN) o di nuovo disponibile (REVIVE).
+  [P.CONSTRAIN_DEPLOY]: (bundle, segment, ctx) => {
+    const raw = ctx.params?.[segment.cardParam || 'cardId'];
+    const cardId = Array.isArray(raw) ? raw[0] : raw;
+    if (cardId == null) return;
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.deployConstraints.push({ side, mode: segment.mode, cardId, source: ctx.source });
+    }
+  },
+
+  // Il lato bersaglio è il primo a scegliere in questo round (Campo e Agente).
+  [P.SET_ROUND_INITIATIVE]: (bundle, segment, ctx) => {
+    const [side] = resolveTargetSides(segment.target, ctx.ownerSide, ctx.params);
+    if (side) bundle.initiativeOverride = side;
+  },
+
+  // Eco: se il Potere dell'Agente nemico si attiva, si attiva anche per l'Agente bersaglio.
+  // La ripetizione la esegue il Duello, che sa quali Poteri si sono attivati.
+  [P.ECHO_POWER]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (!bundle.echoPowerSides.includes(side)) bundle.echoPowerSides.push(side);
     }
   },
 
@@ -491,6 +645,64 @@ const handlers = {
         }, ctx);
       }
     };
+
+    if (mode === 'OFFER') {
+      // Offerta: il destinatario accetta o rifiuta. Rifiutare non ha effetti, ma se il
+      // destinatario aveva rifiutato l'Offerta del round precedente deve accettare.
+      const lastOffer = ctx.persistent?.lastOffer || null;
+      const mustAccept = Boolean(segment.mustAccept) || Boolean(params.mustAccept)
+        || Boolean(lastOffer && !lastOffer.accepted && ctx.roundNumber != null
+          && lastOffer.round === ctx.roundNumber - 1);
+      const hasResponse = Object.prototype.hasOwnProperty.call(params, 'dealAccepted')
+        || Object.prototype.hasOwnProperty.call(params, 'dealResponse');
+      if (!hasResponse) {
+        bundle.pendingDeals.push({
+          mode,
+          ownerSide: ctx.ownerSide,
+          recipientSide: OPPOSITE_SIDE[ctx.ownerSide],
+          source: ctx.source,
+          choices: segment.choices ? [...segment.choices] : null,
+          choiceLabels: segment.choiceLabels ? { ...segment.choiceLabels } : null,
+          // 'CHOICE': l'avversario non accetta né rifiuta, sceglie soltanto fra le varianti.
+          kind: segment.kind || 'OFFER',
+          mustAccept,
+          deal: {
+            onAccept: segment.onAccept || [],
+            onChoice: segment.onChoice || null,
+            ownerPresenceOnAccept: segment.ownerPresenceOnAccept || 0,
+            mustAccept: Boolean(segment.mustAccept),
+            kind: segment.kind || 'OFFER',
+          },
+        });
+        return;
+      }
+      const accepted = mustAccept || (params.dealAccepted !== false
+        && params.dealResponse !== 'refuse'
+        && params.dealResponse !== false);
+      if (accepted) {
+        if (segment.ownerPresenceOnAccept) {
+          bundle.presenceChanges.push({
+            side: ctx.ownerSide,
+            delta: segment.ownerPresenceOnAccept,
+            countsAsSpend: false,
+            source: ctx.source,
+          });
+        }
+        applyDealEffects(segment.onAccept || [], OPPOSITE_SIDE[ctx.ownerSide]);
+        if (params.dealChoice != null) {
+          applyDealEffects(segment.onChoice?.[params.dealChoice] || [], OPPOSITE_SIDE[ctx.ownerSide]);
+        }
+      }
+      bundle.deals.push({
+        mode,
+        accepted,
+        mustAccept,
+        choice: accepted ? (params.dealChoice ?? null) : null,
+        ownerSide: ctx.ownerSide,
+        source: ctx.source,
+      });
+      return;
+    }
 
     if (mode === 'CHOOSE_ONE') {
       const deals = segment.deals || [];
@@ -581,6 +793,23 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
     const inferredSide = inferTargetSide(params, agentIdBySide);
     if (inferredSide && !params.targetSide) params.targetSide = inferredSide;
 
+    // REPLACE_TRIGGER su un Agente schierato: il bersaglio è la carta in campo, e il nuovo
+    // trigger compare anche sul Potere dell'Agente, così il Duello lo legge come proprio.
+    if (
+      segment.primitive === P.REPLACE_TRIGGER
+      && (segment.target === T.OWN_AGENT || segment.target === T.ENEMY_AGENT)
+    ) {
+      const side = segment.target === T.OWN_AGENT ? entry.ownerSide : OPPOSITE_SIDE[entry.ownerSide];
+      const cardId = agentIdBySide[side];
+      if (cardId == null) continue;
+      params.cardIds = [cardId];
+      target.abilityOverlays[cardId] = {
+        ...(target.abilityOverlays[cardId] || {}),
+        trigger: segment.trigger,
+        ...(segment.debtAmount != null ? { debtAmount: segment.debtAmount } : {}),
+      };
+    }
+
     // REPLACE_TRIGGER GLOBAL: entrambi gli Agenti schierati, senza params.cardId.
     if (
       segment.primitive === P.REPLACE_TRIGGER
@@ -604,6 +833,7 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
       persistent: ownerPersistent,
       persistentBySide: applyContext.persistentBySide || null,
       toxinBySide: applyContext.toxinBySide || null,
+      roundNumber: applyContext.roundNumber ?? null,
     };
 
     if (TRIGGER_PRIMITIVES.has(segment.primitive)) {
@@ -635,6 +865,28 @@ export function applyEminenceSegments(queue, bundle = null, applyContext = {}) {
  */
 export function applyPendingDealResponse(pendingDeal, response = {}) {
   if (!pendingDeal) return createEffectBundle();
+  if (pendingDeal.mode === 'OFFER') {
+    return applyEminenceSegments([{
+      segment: {
+        primitive: P.PROPOSE_DEAL,
+        mode: 'OFFER',
+        onAccept: pendingDeal.deal?.onAccept || [],
+        onChoice: pendingDeal.deal?.onChoice || null,
+        ownerPresenceOnAccept: pendingDeal.deal?.ownerPresenceOnAccept || 0,
+        mustAccept: Boolean(pendingDeal.deal?.mustAccept),
+        kind: pendingDeal.deal?.kind || 'OFFER',
+      },
+      ownerSide: pendingDeal.ownerSide,
+      abilityId: pendingDeal.source,
+      params: {
+        dealAccepted: response.dealAccepted !== false
+          && response.dealResponse !== 'refuse'
+          && response.dealResponse !== false,
+        dealChoice: response.dealChoice ?? null,
+        mustAccept: Boolean(pendingDeal.mustAccept),
+      },
+    }]);
+  }
   if (pendingDeal.mode === 'CHOOSE_ONE') {
     const choice = response.dealChoice ?? response.dealId ?? null;
     if (choice == null) {

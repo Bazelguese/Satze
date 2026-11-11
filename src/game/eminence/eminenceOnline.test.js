@@ -118,6 +118,16 @@ function rispondiAffari(c, pendenti, rng, round, altro, iniziativa) {
           c.ms = resolvePendingDeal(c.ms, deal, risposta, { initiativeSide: iniziativa }).matchState;
           continue; // forzato: l'altro client lo risolve da solo
         }
+      } else if (deal.mode === 'OFFER') {
+        if (!dealNeedsRemoteResponse({ ...deal, recipientSide: 'enemy' }, c.ms)) {
+          c.ms = resolvePendingDeal(c.ms, deal, forcedDealResponse(deal, c.ms), { initiativeSide: iniziativa }).matchState;
+          continue; // obbligata e senza varianti: l'altro client la risolve da solo
+        }
+        const accetta = deal.mustAccept || rng() < 0.5;
+        const scelte = deal.choices || [];
+        risposta = accetta
+          ? { dealAccepted: true, dealChoice: scelte.length ? scelte[Math.floor(rng() * scelte.length)] : null }
+          : { dealAccepted: false, dealResponse: 'refuse' };
       } else {
         risposta = rng() < 0.5 ? { dealAccepted: true } : { dealAccepted: false, dealResponse: 'refuse' };
       }
@@ -255,7 +265,7 @@ test('Duello online con Eminenze: i due client restano speculari (ogni armata co
   assert.ok(partite >= 60);
 });
 
-test('Calibri senza abilità legali (Guerra d\'Attrito rincarata, Presenza 0): il round non si blocca', async () => {
+test('Calibri senza abilità legali (Fermo Macchine rincarata, Presenza 0): il round non si blocca', async () => {
   const { mustChooseThisRound, areSelectionsComplete } = await import('./eminenceRound.js');
   const base = createMatchEminenceState({
     format: EMINENCE_FORMAT.REQUIRED, playerDeck: mazzo('Calibri Pesanti'), enemyDeck: mazzo('Kethran'),
@@ -268,7 +278,7 @@ test('Calibri senza abilità legali (Guerra d\'Attrito rincarata, Presenza 0): i
       ...ms.player,
       presence: 0,
       selectionCheckpointPresence: 0,
-      persistent: { ...ms.player.persistent, abilityPresenceDeltas: { calibri_guerra_attrito: -1 } },
+      persistent: { ...ms.player.persistent, abilityPresenceDeltas: { calibri_fermo_macchine: -2 } },
     },
   };
   assert.equal(mustChooseThisRound(ms, 'player'), false);

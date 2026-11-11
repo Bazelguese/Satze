@@ -10,6 +10,12 @@ import {
   createDisabledEminenceView,
   findEminenceViewLeaks,
 } from '../eminence/eminenceAIView.js';
+import { constrainedDeployableCardIds } from '../eminence/eminenceState.js';
+
+/** Nel gioco lo stato Eminenze arriva come `eminenceMatchState`, nei test come `eminenceState`. */
+function deployConstraintState(gameState) {
+  return gameState.eminenceState ?? gameState.eminenceMatchState ?? null;
+}
 
 /**
  * Contesto decisionale IA senza informazioni private del Focus giocatore.
@@ -91,6 +97,7 @@ export function buildAIInformationSet(gameState) {
       toxin: gameState.playerToxin ?? null,
       visibleCard,
       eminence: eminence.player,
+      deployableCardIds: constrainedDeployableCardIds(deployConstraintState(gameState), 'player', playerHand, gameState.playerUsedCards),
     },
 
     ai: {
@@ -102,6 +109,8 @@ export function buildAIInformationSet(gameState) {
       armyBonuses: gameState.enemyArmyBonuses || {},
       toxin: gameState.enemyToxin ?? null,
       eminence: eminence.ai,
+      // Vincoli Eminenza sugli Agenti schierabili in questo Duello (null = nessuno).
+      deployableCardIds: constrainedDeployableCardIds(deployConstraintState(gameState), 'enemy', enemyHand, gameState.enemyUsedCards),
     },
 
     campaignDuelMod: gameState.campaignDuelMod ?? null,
@@ -125,6 +134,7 @@ export function buildPublicDecisionKey(infoSet) {
     infoSet.player.hp,
     (infoSet.ai.usedCardIds || []).join(','),
     (infoSet.player.usedCardIds || []).join(','),
+    (infoSet.ai.deployableCardIds || []).join(','),
     infoSet.playerFieldsConquered,
     infoSet.enemyFieldsConquered,
     buildEminenceHashParts(infoSet.eminence),

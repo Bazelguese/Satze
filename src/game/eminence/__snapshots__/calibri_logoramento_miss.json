@@ -1,0 +1,260 @@
+{
+  "ability": {
+    "id": "calibri_logoramento",
+    "name": "Logoramento",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "Il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "calibri_fermo_macchine",
+        "presenceDelta": 1
+      },
+      {
+        "id": "calibri_guerra_attrito",
+        "presenceDelta": -1
+      },
+      {
+        "id": "calibri_logoramento",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "calibri_logoramento"
+  },
+  "eminence": {
+    "army": "Calibri Pesanti",
+    "id": "calibri_quattro_fronti",
+    "name": "Il Comando dei Quattro Fronti"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:calibri_logoramento:GENERAL",
+      "kind": "reveal",
+      "name": "Logoramento",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "Il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "calibri_logoramento_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:calibri_logoramento:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:calibri_logoramento:GENERAL",
+          "kind": "reveal",
+          "name": "Logoramento",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "Il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
+            "keys": [
+              "duelWinnerRelative",
+              "enemyFinalDamage"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "calibri_tenere_la_linea",
+          "sourceName": "Tenere la Linea",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "MODIFY_STAT",
+          "source": "ability",
+          "sourceId": "calibri_logoramento",
+          "sourceName": "Logoramento",
+          "target": "OWN_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

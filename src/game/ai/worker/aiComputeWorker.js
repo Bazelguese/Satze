@@ -1,3 +1,5 @@
+// Deve restare il primo import: prepara l'ambiente prima che si carichino gli altri moduli.
+import './devWindowShim.js';
 import { chooseAIAction, chooseJointAIAction } from '../index.js';
 import { chooseMonteCarloDecision } from '../mc/mcGameAdapter.js';
 import { chooseTeamOpening, chooseTeamResponse } from '../mcTeam/teamSearch.js';

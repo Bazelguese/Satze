@@ -4,7 +4,7 @@
     "name": "Frenesia della Fame",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
+    "text": "In questo Duello, il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -21,22 +21,22 @@
       2,
       0
     ],
-    "segmentsWithoutCue": 2,
+    "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
   },
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "mounthborn_fame_ricarica",
+        "presenceDelta": 1
+      },
+      {
         "id": "mounthborn_gorgoglio",
-        "presenceDelta": 0
+        "presenceDelta": -1
       },
       {
         "id": "mounthborn_frenesia",
-        "presenceDelta": -2
-      },
-      {
-        "id": "mounthborn_cannibalismo",
         "presenceDelta": -2
       }
     ],
@@ -62,15 +62,12 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
+          "recipe": "PRESENCE_PULSE",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "presence"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "id": "reveal:player:mounthborn_frenesia:GENERAL",
@@ -79,17 +76,12 @@
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "MARK_CARD",
+          "primitive": "REPLACE_ABILITY",
           "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         },
         {
-          "primitive": "UNBLOCKABLE_POWER",
-          "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "SET_ARMY_BONUS_STATE",
+          "primitive": "CHANGE_PRESENCE",
           "slot": null,
           "target": "SELF"
         }
@@ -99,7 +91,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
+      "text": "In questo Duello, il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità."
     },
     {
       "badgeText": "Mancato · Agenti schierati",
@@ -119,9 +111,9 @@
       "outcome": "miss",
       "payoffs": [
         {
-          "primitive": "UNBLOCKABLE_POWER",
+          "primitive": "CHANGE_PRESENCE",
           "slot": null,
-          "target": null
+          "target": "SELF"
         }
       ],
       "phase": "MISS",
@@ -178,15 +170,12 @@
           },
           "holdAnnounce": false,
           "noticeId": "reveal:player:mounthborn_frenesia:GENERAL",
-          "recipe": "LINK_AGENT",
+          "recipe": "PRESENCE_PULSE",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "presence"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         },
         {
           "flight": false,
@@ -212,15 +201,12 @@
                 "type": "card"
               },
               "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
+              "recipe": "PRESENCE_PULSE",
               "to": {
                 "side": "player",
-                "type": "field-agent"
+                "type": "presence"
               },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
+              "waitFor": null
             }
           ],
           "id": "reveal:player:mounthborn_frenesia:GENERAL",
@@ -229,17 +215,12 @@
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "MARK_CARD",
+              "primitive": "REPLACE_ABILITY",
               "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             },
             {
-              "primitive": "UNBLOCKABLE_POWER",
-              "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "SET_ARMY_BONUS_STATE",
+              "primitive": "CHANGE_PRESENCE",
               "slot": null,
               "target": "SELF"
             }
@@ -249,7 +230,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati."
+          "text": "In questo Duello, il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità."
         },
         {
           "badgeText": "Mancato · Agenti schierati",
@@ -269,9 +250,9 @@
           "outcome": "miss",
           "payoffs": [
             {
-              "primitive": "UNBLOCKABLE_POWER",
+              "primitive": "CHANGE_PRESENCE",
               "slot": null,
-              "target": null
+              "target": "SELF"
             }
           ],
           "phase": "MISS",
@@ -314,9 +295,25 @@
       "segments": [
         {
           "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
-              "deployedMarks"
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
             ],
             "status": "deferred"
           },
@@ -330,11 +327,8 @@
         },
         {
           "condition": {
-            "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "true"
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": true,
           "primitive": "MARK_CARD",
@@ -343,22 +337,6 @@
           "sourceName": "Istinto Predatorio",
           "target": "ENEMY_AGENT",
           "timing": "POST_BATTLE"
-        },
-        {
-          "condition": {
-            "detail": "enemyAgentTrigger: \"turbo\" (obs \"glory\") → falsa",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "false"
-          },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
-          "source": "static",
-          "sourceId": "mounthborn_istinto_predatorio",
-          "sourceName": "Istinto Predatorio",
-          "target": "ENEMY_AGENT",
-          "timing": "END_ROUND"
         },
         {
           "condition": {
@@ -378,40 +356,24 @@
             "detail": null,
             "status": "none"
           },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
-          "source": "ability",
-          "sourceId": "mounthborn_frenesia",
-          "sourceName": "Frenesia della Fame",
-          "target": null,
-          "timing": "AFTER_REVEAL"
-        },
-        {
-          "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
-            "keys": [
-              "deployedMarks"
-            ],
-            "status": "deferred"
-          },
           "expectedNoCue": false,
-          "primitive": "UNBLOCKABLE_POWER",
+          "primitive": "REPLACE_ABILITY",
           "source": "ability",
           "sourceId": "mounthborn_frenesia",
           "sourceName": "Frenesia della Fame",
-          "target": null,
+          "target": "OWN_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
         },
         {
           "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
-              "deployedMarks"
+              "enemyMarks"
             ],
             "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "SET_ARMY_BONUS_STATE",
+          "primitive": "CHANGE_PRESENCE",
           "source": "ability",
           "sourceId": "mounthborn_frenesia",
           "sourceName": "Frenesia della Fame",

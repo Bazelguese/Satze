@@ -50,3 +50,37 @@ export function applyInversionFieldFinalization(state, fieldStatDeltas, battleLo
 
   return changed;
 }
+
+/**
+ * Maledizione Inversa: nel Duello combattuto sullo slot maledetto ogni modificatore di POT,
+ * DAN e VA si inverte, per entrambi gli Agenti. Si lavora sul netto rispetto ai valori
+ * stampati sulla carta: stat_finale = base - (stat_corrente - base).
+ * Gli FC non sono modificatori e restano fuori dal conto (entrano nel VA più avanti).
+ * Un lato Immune ignora le riduzioni prodotte dall'inversione.
+ */
+export function applySlotStatInversion(state, { pAgent, eAgent } = {}, battleLog = []) {
+  if (!state?.fullStatInversion) return false;
+  let changed = false;
+  const sides = [
+    { agent: pAgent, immune: state.pImmune, label: 'TU', keys: { power: 'pPower', damage: 'pDamage', assault: 'pAssaultMod' } },
+    { agent: eAgent, immune: state.eImmune, label: 'IA', keys: { power: 'ePower', damage: 'eDamage', assault: 'eAssaultMod' } },
+  ];
+  for (const side of sides) {
+    const bases = {
+      power: Number(side.agent?.power) || 0,
+      damage: Number(side.agent?.damage) || 0,
+      assault: 0,
+    };
+    for (const [stat, key] of Object.entries(side.keys)) {
+      const current = state[key];
+      let inverted = 2 * bases[stat] - current;
+      if (stat === 'damage') inverted = Math.max(0, inverted);
+      if (side.immune && inverted < current) continue;
+      if (inverted === current) continue;
+      state[key] = inverted;
+      battleLog.push?.(`🔄 Maledizione Inversa: ${side.label} ${stat.toUpperCase()} ${current} → ${inverted}`);
+      changed = true;
+    }
+  }
+  return changed;
+}

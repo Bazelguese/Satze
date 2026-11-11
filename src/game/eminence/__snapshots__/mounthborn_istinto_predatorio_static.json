@@ -1,18 +1,18 @@
 {
   "ability": {
-    "id": "mounthborn_gorgoglio",
-    "name": "Gorgoglio terrificante",
-    "presenceDelta": 0,
-    "revealGate": "PRE_AGENT",
-    "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
+    "id": "mounthborn_fame_ricarica",
+    "name": "Fame",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
   },
   "bilance": {
-    "cinematicCues": 3,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 3,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
@@ -21,22 +21,26 @@
       1,
       3
     ],
-    "segmentsWithoutCue": 2,
+    "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
   },
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "mounthborn_fame_ricarica",
+        "presenceDelta": 1
+      },
+      {
         "id": "mounthborn_gorgoglio",
-        "presenceDelta": 0
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 1,
+    "presenceAfterReveal": 2,
     "presenceAfterSelect": 1,
     "presenceAvailable": 1,
-    "presenceDelta": 0,
-    "selected": "mounthborn_gorgoglio"
+    "presenceDelta": 1,
+    "selected": "mounthborn_fame_ricarica"
   },
   "eminence": {
     "army": "Mounthborn",
@@ -45,7 +49,7 @@
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima dell'Agente",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
           "flight": true,
@@ -54,108 +58,31 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
+          "recipe": "HP_TICK",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "hp"
           },
           "waitFor": null
         }
       ],
-      "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
-      "kind": "reveal",
-      "name": "Gorgoglio terrificante",
-      "outcome": null,
-      "payoffs": [
-        {
-          "primitive": "MARK_CARD",
-          "slot": null,
-          "target": null
-        },
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "REVEAL",
-      "phaseDetail": "Prima dell'Agente",
-      "phaseLabel": "Rivelazione",
-      "presenceDelta": 0,
-      "side": "player",
-      "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
-    },
-    {
-      "badgeText": "Verifica · Agenti schierati",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
+      "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
       "kind": "effect",
-      "name": "Gorgoglio terrificante",
+      "name": "Fame",
       "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "LOSE_HP",
           "slot": null,
           "target": "SELF"
         }
       ],
-      "phase": "VERIFY",
-      "phaseDetail": "Agenti schierati",
-      "phaseLabel": "Verifica",
-      "presenceDelta": 2,
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": null,
       "side": "player",
-      "text": "Una Preda è schierata: +2 Presenza."
-    },
-    {
-      "badgeText": "Verifica · Agenti schierati",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
-      "kind": "effect",
-      "name": "Gorgoglio terrificante",
-      "outcome": "hit",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "VERIFY",
-      "phaseDetail": "Agenti schierati",
-      "phaseLabel": "Verifica",
-      "presenceDelta": 2,
-      "side": "player",
-      "text": "Una Preda è schierata: +2 Presenza."
+      "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
     }
   ],
   "scenario": {
@@ -180,121 +107,12 @@
       "timing": null
     },
     {
-      "badge": "Rivelazione · Prima dell'Agente",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Prima dell'Agente",
+      "cues": [],
       "gate": "PRE_AGENT",
       "gateLabel": "Prima dell'Agente",
       "kind": "gate",
-      "notices": [
-        {
-          "badgeText": "Rivelazione · Prima dell'Agente",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "reveal:player:mounthborn_gorgoglio:PRE_AGENT",
-          "kind": "reveal",
-          "name": "Gorgoglio terrificante",
-          "outcome": null,
-          "payoffs": [
-            {
-              "primitive": "MARK_CARD",
-              "slot": null,
-              "target": null
-            },
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "REVEAL",
-          "phaseDetail": "Prima dell'Agente",
-          "phaseLabel": "Rivelazione",
-          "presenceDelta": 0,
-          "side": "player",
-          "text": "Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza."
-        },
-        {
-          "badgeText": "Verifica · Agenti schierati",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
-          "kind": "effect",
-          "name": "Gorgoglio terrificante",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "VERIFY",
-          "phaseDetail": "Agenti schierati",
-          "phaseLabel": "Verifica",
-          "presenceDelta": 2,
-          "side": "player",
-          "text": "Una Preda è schierata: +2 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
         "player": 1
@@ -303,70 +121,17 @@
       "timing": null
     },
     {
-      "badge": "Verifica · Agenti schierati",
-      "cues": [
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
-        }
-      ],
+      "badge": "Prima del Duello",
+      "cues": [],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [
-        {
-          "badgeText": "Verifica · Agenti schierati",
-          "cues": [
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:mounthborn_gorgoglio:BEFORE_TRIGGER_CHECK:hit",
-          "kind": "effect",
-          "name": "Gorgoglio terrificante",
-          "outcome": "hit",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "VERIFY",
-          "phaseDetail": "Agenti schierati",
-          "phaseLabel": "Verifica",
-          "presenceDelta": 2,
-          "side": "player",
-          "text": "Una Preda è schierata: +2 Presenza."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 2
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -383,10 +148,63 @@
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [],
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": null,
       "kind": "settle",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "player",
+                "type": "hp"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Fame",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
+        }
+      ],
       "presence": {
         "enemy": 0,
         "player": 3
@@ -394,9 +212,25 @@
       "segments": [
         {
           "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
-              "deployedMarks"
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
             ],
             "status": "deferred"
           },
@@ -410,11 +244,8 @@
         },
         {
           "condition": {
-            "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "true"
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": true,
           "primitive": "MARK_CARD",
@@ -423,22 +254,6 @@
           "sourceName": "Istinto Predatorio",
           "target": "ENEMY_AGENT",
           "timing": "POST_BATTLE"
-        },
-        {
-          "condition": {
-            "detail": "enemyAgentTrigger: \"turbo\" (obs \"glory\") → falsa",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "false"
-          },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
-          "source": "static",
-          "sourceId": "mounthborn_istinto_predatorio",
-          "sourceName": "Istinto Predatorio",
-          "target": "ENEMY_AGENT",
-          "timing": "END_ROUND"
         },
         {
           "condition": {
@@ -455,32 +270,36 @@
         },
         {
           "condition": {
-            "detail": null,
-            "status": "none"
+            "detail": "duelWinnerRelative: {\"not\":\"self\"} (obs \"opponent\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
           },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
           "source": "ability",
-          "sourceId": "mounthborn_gorgoglio",
-          "sourceName": "Gorgoglio terrificante",
-          "target": null,
-          "timing": "AFTER_REVEAL"
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
         },
         {
           "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
-              "deployedMarks"
+              "duelWinnerRelative",
+              "enemyMarks"
             ],
             "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "LOSE_HP",
           "source": "ability",
-          "sourceId": "mounthborn_gorgoglio",
-          "sourceName": "Gorgoglio terrificante",
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
           "target": "SELF",
-          "timing": "BEFORE_TRIGGER_CHECK"
+          "timing": "AFTER_DUEL_OUTCOME"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

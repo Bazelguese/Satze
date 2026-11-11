@@ -696,7 +696,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 | Slot | Nome | Testo | Budget | Stima |
 |---|---|---|---|---|
 | Statico | Male Crescente *(invariato)* | Quando schieri un Agente con la Lega effettiva più bassa tra quelli che non hai ancora usato, +1 Presenza. In caso di parità, la condizione è soddisfatta. | — | fino a 5 Presenza/Scontro (l'ordine crescente costa Duelli) |
-| +1 | Dono della Megera | In questo Duello l'Agente nemico riceve 1 FC temporaneo. | −0.75 | circa −1.0 ✅ |
+| +1 | Corteggiamento | **Reveal: a inizio round.** In questo Duello l'avversario sceglie se essere il primo o il secondo a scegliere l'Agente. | −0.75 | circa −0.75 ✅ |
 | −1 | Seduzione | **Reveal: prima degli Agenti.** Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello. | 0.75 | circa 0.75 ✅ |
 | −3 | Vendetta oltre la Morte | **Si rivela quando schieri l'Agente.** Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo. | 2.25 | circa 2.0 ✅ 〰️ |
 
@@ -704,6 +704,7 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 
 **Lavoro di implementazione:**
 - Tolte Sussurro, Veleno e Spezzacuore.
+- Corteggiamento: l'avversario sceglie la propria posizione (primo o secondo) per un singolo round; reveal a inizio round. *(Aggiornato l'11 novembre 2026: sostituisce il Dono della Megera, che coincideva con Vendere il Colpo di Mascarada.)*
 - Seduzione: divieto di usare un Agente preciso per un Duello, se non è l'unico disponibile.
 - Vendetta: permettere di schierare un Agente già usato e sconfitto; reveal al momento dello schieramento.
 
@@ -746,3 +747,73 @@ Per ogni Scontro di playtest registrare (in linea con `SATZE_EMINENZE_AUDIT_v1.m
 - Rinomina dell'Eminenza.
 - Costi aggiornati di Devozione, Fama, Cosmo.
 - Maledizione Inversa: estendere `src/game/duel/duelInversionFinalization.js` a tutti i modificatori di POT/DAN/VA, per entrambi i lati, nello slot maledetto.
+
+### 10.12 Apex — Il Sole Verde (approvata)
+
+**Presenza iniziale:** 1 (era 3). **3 abilità attive.**
+
+**Principio di design emerso (vale per tutto il rework):** un'Eminenza deve aggiungere scelte e interazioni nuove; i potenziamenti di statistiche come effetto principale vanno evitati perché accorciano la strada verso la vittoria senza ampliare il gioco. **Correzione di valore:** per le Eminenze +1 POT vale circa 0.75 (il giocatore lo conosce prima di investire gli FC), non 0.50.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Cataclisma Verde | All'inizio del round 5, lo slot aperto subisce Terraformare: Arena del Violento Gaudio. Quando il tuo Bonus d'Armata si attiva, +1 Presenza. | — | circa 3 Presenza/Scontro |
+| +1 | Cielo Smeraldino | In questo Duello il tuo Agente schierato ha −1 DAN. | −0.75 | circa −0.35 ✅ (al limite) |
+| −2 | Disprezzo *(originale)* | Il tuo Agente schierato ignora gli effetti del Campo in questo Duello. | 1.50 | circa 1.5–2.0 quando usato contro Campi pesanti ✅ 〰️ |
+| −3 | Preghiera Ululata | Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA». | 2.25 | circa 2.0–2.5 ✅ 〰️ |
+
+**Nuovo Campo richiesto — «Arena del Violento Gaudio»:**
+- id: nuovo (il catalogo arriva oggi a 121);
+- tema: Apex;
+- effetto: «In scontro · Entrambi · +2 POT, +2 DAN»;
+- esclusivo del Cataclisma Verde: non entra nella pesca casuale dei Campi;
+- il Meridiano del Sole Verde (id 89) resta invariato nel catalogo.
+
+**Lavoro di implementazione:**
+- Aggiungere il Campo a `Documentazione/CAMPI_MASTER.md` e rigenerare `src/data/battlefieldsData.js` con `scripts/gen-battlefields-data.mjs`; escluderlo dalla pesca casuale.
+- Statico: `REPLACE_FIELD` verso il nuovo id al round 5; +1 Presenza all'attivazione del Bonus.
+- Preghiera Ululata: override permanente del Bonus con Attrizione su VA (`assaultValue`, già supportata).
+- Tolte Furia e Ora Verde (abilità).
+
+### 10.13 Mascarada — L'Organizzatore degli Incontri (approvata)
+
+**Presenza iniziale:** 1. **Eccezione allo schema:** 4 abilità attive.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Organizzazione Impeccabile | Gli Agenti vengono scelti e resi noti prima della scelta del Campo. Il pubblico ama le rivalità: quando un Agente attiva un Potere con trigger Gloria o Vendetta, +1 Presenza (una sola volta per Duello). | — | circa 2.5 Presenza/Scontro |
+| +1 | Vendere il Colpo | In questo Duello l'Agente avversario ottiene 1 FC temporaneo. | −0.75 | circa −1.0 ✅ |
+| 0 | Scommessa | Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza. | 0 | circa +0.6 (lieve ⬆️) |
+| −2 | Maschere Invertite | In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa. | 1.50 | circa 0.8 (lieve ⬇️) |
+| −3 | Ego senza Maschere | Finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN». | 2.25 | circa 1.8 ✅ (al limite) 〰️ |
+
+**Motore:** 0.75 + circa 1.9 = circa 2.65 FC.
+
+**Da osservare in playtest:** Scommessa sulla propria sconfitta nei round già persi; durata reale di Ego senza Maschere.
+
+**Lavoro di implementazione:**
+- Statico: +1 Presenza (max una per Duello) all'attivazione di un Potere con trigger Gloria o Vendetta.
+- Vendere il Colpo: FC temporaneo all'Agente avversario.
+- Scommessa: premio da 2 a 1 Presenza.
+- Maschere Invertite: alias dei trigger limitato al proprio lato.
+- Ego senza Maschere: override del Bonus con «Overdrive: +2 POT, +2 DAN», attivo finché il giocatore non vince un Duello.
+- Tolto Incontro Truccato.
+
+## 11. Stato dell'implementazione (11 novembre 2026)
+
+Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e nel motore, con test di accettazione, integrazione nel Duello reale e snapshot del tracer.
+
+### 11.1 Scelte interpretative da confermare
+
+- **Calibri — Tenere la Linea:** «il DAN nemico ti ha tolto 2 PV o meno» è letto come *DAN finale dell'Agente nemico ≤ 2* in un Duello perso.
+- **Orathai — Eco:** l'effetto del Potere nemico si applica anche al tuo Agente dopo che entrambi i Poteri si sono risolti. Non si ripetono i Poteri che agiscono su altri Poteri (Blocca, Copia, Inversione). Se il Potere del tuo Agente è bloccato, anche l'Eco è bloccata.
+- **Ratti — Corteggiamento:** l'avversario sceglie l'iniziativa dell'intero round (chi sceglie per primo Campo e Agente), non solo l'ordine degli Agenti.
+- **Ratti — Vendetta oltre la Morte:** «sconfitto» = ha perso un Duello (il pareggio non conta). La scelta resta sigillata fino al gate generale, ma con un'unica attiva a quel gate l'avversario la deduce quando PRE_AGENT passa senza aperture.
+- **Khemet — Maledizione Inversa:** l'inversione lavora sul netto rispetto ai valori stampati sulla carta (`finale = base − (corrente − base)`); gli FC restano fuori. Un lato Immune non subisce riduzioni dall'inversione. Gli effetti Copia non sono esclusi dal netto.
+- **Apex — Cataclisma Verde:** «subisce Terraformare» è realizzato come sostituzione del Campo all'apertura del round 5, prima della scelta del Campo.
+
+### 11.2 Punti aperti
+
+- **Corte Rossa:** manca l'interfaccia del Registro (voci e totale visibili a entrambi) e l'indicatore «rifiuto disponibile». L'Offerta si risponde dal portale di scelta.
+- **Campo 122:** usa lo sfondo del Meridiano (89) finché non c'è l'illustrazione `campo-122.webp`.
+- **Cinematiche:** le primitive nuove (BLOCK_POWER, ECHO_POWER, REPLACE_ABILITY, CONSTRAIN_DEPLOY, SET_ROUND_INITIATIVE, TRANSPLANT_POWER, ESCALATE_END_MATCH_DEBTS) non hanno ancora un cue cinematico, come diverse primitive già esistenti.
+- **IA:** sceglie le abilità con le euristiche generiche esistenti; alle Offerte e alla Scelta di Corteggiamento risponde sempre accettando la prima opzione.

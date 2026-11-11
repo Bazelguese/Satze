@@ -4,10 +4,10 @@
     "name": "Sacrificio",
     "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
+    "text": "Perdi 2 PV."
   },
   "bilance": {
-    "cinematicCues": 2,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       2,
-      4
+      3
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -34,13 +34,9 @@
       {
         "id": "kethran_elogio",
         "presenceDelta": -1
-      },
-      {
-        "id": "kethran_innesto",
-        "presenceDelta": -2
       }
     ],
-    "presenceAfterReveal": 4,
+    "presenceAfterReveal": 3,
     "presenceAfterSelect": 2,
     "presenceAvailable": 2,
     "presenceDelta": 1,
@@ -68,20 +64,6 @@
             "type": "hp"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
         }
       ],
       "id": "reveal:player:kethran_sacrificio:GENERAL",
@@ -93,16 +75,6 @@
           "primitive": "LOSE_HP",
           "slot": null,
           "target": "SELF"
-        },
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        },
-        {
-          "primitive": "ESCALATE_ABILITY",
-          "slot": null,
-          "target": null
         }
       ],
       "phase": "REVEAL",
@@ -110,7 +82,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": 1,
       "side": "player",
-      "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
+      "text": "Perdi 2 PV."
     }
   ],
   "scenario": {
@@ -165,21 +137,6 @@
             "type": "hp"
           },
           "waitFor": null
-        },
-        {
-          "flight": true,
-          "from": {
-            "side": "player",
-            "type": "card"
-          },
-          "holdAnnounce": false,
-          "noticeId": "reveal:player:kethran_sacrificio:GENERAL",
-          "recipe": "PRESENCE_PULSE",
-          "to": {
-            "side": "player",
-            "type": "presence"
-          },
-          "waitFor": null
         }
       ],
       "gate": "GENERAL",
@@ -202,20 +159,6 @@
                 "type": "hp"
               },
               "waitFor": null
-            },
-            {
-              "flight": true,
-              "from": {
-                "side": "player",
-                "type": "card"
-              },
-              "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
-              "to": {
-                "side": "player",
-                "type": "presence"
-              },
-              "waitFor": null
             }
           ],
           "id": "reveal:player:kethran_sacrificio:GENERAL",
@@ -227,16 +170,6 @@
               "primitive": "LOSE_HP",
               "slot": null,
               "target": "SELF"
-            },
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            },
-            {
-              "primitive": "ESCALATE_ABILITY",
-              "slot": null,
-              "target": null
             }
           ],
           "phase": "REVEAL",
@@ -244,14 +177,14 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": 1,
           "side": "player",
-          "text": "Perdi 2 PV e ottieni +1 Presenza. Il prossimo Sacrificio richiederà 1 PV in più e fornirà 1 Presenza in più."
+          "text": "Perdi 2 PV."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 3
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -262,7 +195,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 3
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -274,7 +207,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 3
       },
       "segments": [
         {
@@ -320,32 +253,6 @@
           "sourceId": "kethran_sacrificio",
           "sourceName": "Sacrificio",
           "target": "SELF",
-          "timing": "AFTER_REVEAL"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
-          "source": "ability",
-          "sourceId": "kethran_sacrificio",
-          "sourceName": "Sacrificio",
-          "target": "SELF",
-          "timing": "AFTER_REVEAL"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "ESCALATE_ABILITY",
-          "source": "ability",
-          "sourceId": "kethran_sacrificio",
-          "sourceName": "Sacrificio",
-          "target": null,
           "timing": "AFTER_REVEAL"
         }
       ],

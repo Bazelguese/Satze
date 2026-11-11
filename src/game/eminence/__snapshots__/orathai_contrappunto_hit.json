@@ -2,9 +2,9 @@
   "ability": {
     "id": "orathai_contrappunto",
     "name": "Contrappunto",
-    "presenceDelta": -2,
+    "presenceDelta": -1,
     "revealGate": "GENERAL",
-    "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
+    "text": "Se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell'Agente nemico."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      3,
-      1
+      1,
+      0
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,22 +28,18 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "orathai_tacet",
-        "presenceDelta": 0
+        "id": "orathai_prezzo_del_canto",
+        "presenceDelta": 1
       },
       {
         "id": "orathai_contrappunto",
-        "presenceDelta": -2
-      },
-      {
-        "id": "orathai_silenzio",
-        "presenceDelta": -3
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 1,
-    "presenceAfterSelect": 3,
-    "presenceAvailable": 3,
-    "presenceDelta": -2,
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": -1,
     "selected": "orathai_contrappunto"
   },
   "eminence": {
@@ -61,16 +57,13 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
-          "recipe": "LINK_AGENT",
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "id": "reveal:player:orathai_contrappunto:GENERAL",
@@ -78,11 +71,6 @@
       "name": "Contrappunto",
       "outcome": null,
       "payoffs": [
-        {
-          "primitive": "UNBLOCKABLE_POWER",
-          "slot": null,
-          "target": null
-        },
         {
           "primitive": "MIRROR_UNSATISFIED_POWER",
           "slot": null,
@@ -92,9 +80,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -2,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
+      "text": "Se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell'Agente nemico."
     }
   ],
   "scenario": {
@@ -113,9 +101,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 1
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -127,9 +115,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 1
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -141,17 +129,14 @@
             "side": "player",
             "type": "card"
           },
-          "holdAnnounce": false,
+          "holdAnnounce": true,
           "noticeId": "reveal:player:orathai_contrappunto:GENERAL",
-          "recipe": "LINK_AGENT",
+          "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
-            "type": "field-agent"
+            "type": "announce"
           },
-          "waitFor": {
-            "side": "player",
-            "type": "field-agent"
-          }
+          "waitFor": null
         }
       ],
       "gate": "GENERAL",
@@ -167,16 +152,13 @@
                 "side": "player",
                 "type": "card"
               },
-              "holdAnnounce": false,
-              "recipe": "LINK_AGENT",
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
               "to": {
                 "side": "player",
-                "type": "field-agent"
+                "type": "announce"
               },
-              "waitFor": {
-                "side": "player",
-                "type": "field-agent"
-              }
+              "waitFor": null
             }
           ],
           "id": "reveal:player:orathai_contrappunto:GENERAL",
@@ -184,11 +166,6 @@
           "name": "Contrappunto",
           "outcome": null,
           "payoffs": [
-            {
-              "primitive": "UNBLOCKABLE_POWER",
-              "slot": null,
-              "target": null
-            },
             {
               "primitive": "MIRROR_UNSATISFIED_POWER",
               "slot": null,
@@ -198,16 +175,16 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -2,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l'Agente avversario non lo soddisferà."
+          "text": "Se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell'Agente nemico."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -218,7 +195,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -230,7 +207,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
       "segments": [
         {
@@ -249,19 +226,6 @@
           "sourceName": "Risonanza",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
-        },
-        {
-          "condition": {
-            "detail": null,
-            "status": "none"
-          },
-          "expectedNoCue": false,
-          "primitive": "UNBLOCKABLE_POWER",
-          "source": "ability",
-          "sourceId": "orathai_contrappunto",
-          "sourceName": "Contrappunto",
-          "target": null,
-          "timing": "BEFORE_TRIGGER_CHECK"
         },
         {
           "condition": {

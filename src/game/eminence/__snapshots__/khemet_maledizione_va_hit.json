@@ -2,9 +2,9 @@
   "ability": {
     "id": "khemet_maledizione_va",
     "name": "Maledizione della Fama",
-    "presenceDelta": -2,
+    "presenceDelta": -1,
     "revealGate": "PRE_FIELD",
-    "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+    "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      2,
+      1,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -29,23 +29,23 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 2
+        "presenceDelta": 0
       },
       {
         "id": "khemet_maledizione_va",
-        "presenceDelta": -2
+        "presenceDelta": -1
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 2,
-    "presenceAvailable": 2,
-    "presenceDelta": -2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": -1,
     "selected": "khemet_maledizione_va"
   },
   "eminence": {
     "army": "Khemet",
     "id": "khemet_maledizioni",
-    "name": "Il Castello dei Sigillatori"
+    "name": "Il Castello degli Arcanisti Nefasti"
   },
   "notices": [
     {
@@ -80,9 +80,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Campo",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -2,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+      "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega. Campo 3."
     }
   ],
   "scenario": {
@@ -147,9 +147,9 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Campo",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -2,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega. Campo 3."
+          "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega. Campo 3."
         }
       ],
       "presence": {

@@ -1,0 +1,269 @@
+{
+  "ability": {
+    "id": "enclave_furto_reliquie",
+    "name": "Furto di Reliquie",
+    "presenceDelta": -2,
+    "revealGate": "GENERAL",
+    "text": "Se vinci il Duello, l'avversario perde 2 Presenza e tu ne ottieni 1."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      2,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "enclave_rinuncia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "enclave_ascesa",
+        "presenceDelta": -1
+      },
+      {
+        "id": "enclave_furto_reliquie",
+        "presenceDelta": -2
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
+    "selected": "enclave_furto_reliquie"
+  },
+  "eminence": {
+    "army": "L'Enclave delle Scaglie",
+    "id": "enclave_ascensione",
+    "name": "L'Enclave dell'Ascensione"
+  },
+  "notices": [
+    {
+      "badgeText": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:enclave_furto_reliquie:AFTER_DUEL_OUTCOME:hit",
+      "kind": "effect",
+      "name": "Furto di Reliquie",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "CHANGE_PRESENCE",
+          "slot": null,
+          "target": "OPPONENT"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": -2,
+      "side": "player",
+      "text": "−2 Presenza."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "enclave_furto_reliquie_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:enclave_furto_reliquie:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Dopo il Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:enclave_furto_reliquie:AFTER_DUEL_OUTCOME:hit",
+          "kind": "effect",
+          "name": "Furto di Reliquie",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "CHANGE_PRESENCE",
+              "slot": null,
+              "target": "OPPONENT"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": -2,
+          "side": "player",
+          "text": "−2 Presenza."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownFocusInvested: (assente) → non ancora valutabile",
+            "keys": [
+              "ownFocusInvested"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "enclave_accumulo",
+          "sourceName": "Accumulo",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"self\" (obs \"self\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "enclave_furto_reliquie",
+          "sourceName": "Furto di Reliquie",
+          "target": "OPPONENT",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: \"self\" (obs \"self\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "ability",
+          "sourceId": "enclave_furto_reliquie",
+          "sourceName": "Furto di Reliquie",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

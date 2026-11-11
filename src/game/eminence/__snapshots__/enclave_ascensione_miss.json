@@ -1,0 +1,263 @@
+{
+  "ability": {
+    "id": "enclave_ascensione",
+    "name": "Ascensione",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "enclave_rinuncia",
+        "presenceDelta": 1
+      },
+      {
+        "id": "enclave_ascesa",
+        "presenceDelta": -1
+      },
+      {
+        "id": "enclave_furto_reliquie",
+        "presenceDelta": -2
+      },
+      {
+        "id": "enclave_ascensione",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "enclave_ascensione"
+  },
+  "eminence": {
+    "army": "L'Enclave delle Scaglie",
+    "id": "enclave_ascensione",
+    "name": "L'Enclave dell'Ascensione"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:enclave_ascensione:GENERAL",
+      "kind": "reveal",
+      "name": "Ascensione",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "enclave_ascensione_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:enclave_ascensione:GENERAL",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:enclave_ascensione:GENERAL",
+          "kind": "reveal",
+          "name": "Ascensione",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Selezionabile solo con almeno 3 Presenza. Spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownFocusInvested: (assente) → non ancora valutabile",
+            "keys": [
+              "ownFocusInvested"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "enclave_accumulo",
+          "sourceName": "Accumulo",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "MODIFY_STAT",
+          "source": "ability",
+          "sourceId": "enclave_ascensione",
+          "sourceName": "Ascensione",
+          "target": "OWN_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

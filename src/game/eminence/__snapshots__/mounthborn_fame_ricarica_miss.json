@@ -1,0 +1,290 @@
+{
+  "ability": {
+    "id": "mounthborn_fame_ricarica",
+    "name": "Fame",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      3
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "mounthborn_fame_ricarica",
+        "presenceDelta": 1
+      },
+      {
+        "id": "mounthborn_gorgoglio",
+        "presenceDelta": -1
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "mounthborn_fame_ricarica"
+  },
+  "eminence": {
+    "army": "Mounthborn",
+    "id": "mounthborn_fame",
+    "name": "La Fame"
+  },
+  "notices": [
+    {
+      "badgeText": "Mancato · Dopo il Duello",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:miss",
+      "kind": "effect",
+      "name": "Fame",
+      "outcome": "miss",
+      "payoffs": [
+        {
+          "primitive": "LOSE_HP",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "MISS",
+      "phaseDetail": "Dopo il Duello",
+      "phaseLabel": "Mancato",
+      "presenceDelta": null,
+      "side": "player",
+      "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "mounthborn_fame_ricarica_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [
+        {
+          "flight": false,
+          "from": null,
+          "holdAnnounce": false,
+          "noticeId": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:miss",
+          "recipe": "MISS_DIM",
+          "to": null,
+          "waitFor": null
+        }
+      ],
+      "gate": null,
+      "kind": "settle",
+      "notices": [
+        {
+          "badgeText": "Mancato · Dopo il Duello",
+          "cues": [
+            {
+              "flight": false,
+              "from": null,
+              "holdAnnounce": false,
+              "recipe": "MISS_DIM",
+              "to": null,
+              "waitFor": null
+            }
+          ],
+          "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:miss",
+          "kind": "effect",
+          "name": "Fame",
+          "outcome": "miss",
+          "payoffs": [
+            {
+              "primitive": "LOSE_HP",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "MISS",
+          "phaseDetail": "Dopo il Duello",
+          "phaseLabel": "Mancato",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "SET_ARMY_BONUS_STATE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "ENEMY_AGENT",
+          "timing": "POST_BATTLE"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static-setup",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": null,
+          "timing": null
+        },
+        {
+          "condition": {
+            "detail": "duelWinnerRelative: {\"not\":\"self\"} (obs \"self\") → falsa",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "duelWinnerRelative",
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
     "name": "Scommessa",
     "presenceDelta": 0,
     "revealGate": "GENERAL",
-    "text": "Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +2 Presenza."
+    "text": "Pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza."
   },
   "bilance": {
     "cinematicCues": 0,
@@ -27,6 +27,10 @@
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
+      {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
       {
         "id": "mascarada_scommessa",
         "presenceDelta": 0
@@ -116,6 +120,22 @@
         "player": 1
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
         {
           "condition": {
             "detail": "duelWinnerRelative: {\"param\":\"pronostico\",\"map\":{\"VITTORIA_PROPRIA\":\"self\",\"VITTORIA_AVVERSARIA\":\"opponent\",\"PAREGGIO\":\"draw\"}} (obs \"self\") → falsa",

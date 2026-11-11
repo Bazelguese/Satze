@@ -1,0 +1,238 @@
+{
+  "ability": {
+    "id": "corte_interessi",
+    "name": "Interessi",
+    "presenceDelta": -3,
+    "revealGate": "PRE_FIELD",
+    "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_prestito",
+        "presenceDelta": 1
+      },
+      {
+        "id": "corte_rinforzo",
+        "presenceDelta": 0
+      },
+      {
+        "id": "corte_debito",
+        "presenceDelta": -1
+      },
+      {
+        "id": "corte_interessi",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "corte_interessi"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:corte_interessi:PRE_FIELD",
+      "kind": "reveal",
+      "name": "Interessi",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "PROPOSE_DEAL",
+          "slot": null,
+          "target": null
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Campo",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
+    }
+  ],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "corte_interessi_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:corte_interessi:PRE_FIELD",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Campo",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:corte_interessi:PRE_FIELD",
+          "kind": "reveal",
+          "name": "Interessi",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "PROPOSE_DEAL",
+              "slot": null,
+              "target": null
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Campo",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Offerta: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»"
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "PROPOSE_DEAL",
+          "source": "ability",
+          "sourceId": "corte_interessi",
+          "sourceName": "Interessi",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}
