@@ -243,19 +243,20 @@ const THEMES = {
       const sc = Math.max(0.42, Math.min(1, Math.min(e.tw, e.th) / 150));
       // vene: un tronco che parte dal bordo, curva dolcemente e si assottiglia, con uno o due rami
       const walk = (x0, y0, a0, len, n, w0) => {
-        let a = a0; let turn = (rnd() - 0.5) * 0.3; let x = x0; let y = y0; const pts = [[x, y, w0]];
-        for (let j = 1; j <= n; j += 1) { turn = turn * 0.6 + (rnd() - 0.5) * 0.34; a += turn; x += Math.cos(a) * (len / n); y += Math.sin(a) * (len / n); pts.push([x, y, w0 * (1 - (j / n) * 0.86), a]); }
+        let a = a0; let turn = (rnd() - 0.5) * 0.5; let x = x0; let y = y0; const pts = [[x, y, w0]];
+        for (let j = 1; j <= n; j += 1) { turn = turn * 0.45 + (rnd() - 0.5) * 0.62; a += turn; x += Math.cos(a) * (len / n); y += Math.sin(a) * (len / n); pts.push([x, y, w0 * (1 - (j / n) * 0.6), a]); }
         return pts;
       };
       e.veins = [];
-      for (let i = 0; i < 9; i += 1) {
-        const [x0, y0, nx, ny] = per((i + 0.15 + rnd() * 0.7) / 9); const d = rnd() * 240; const w0 = (1.5 + rnd() * 1.1) * sc;
-        const trunk = walk(x0, y0, Math.atan2(ny, nx) + (rnd() - 0.5) * 0.7, reach * (0.8 + rnd() * 0.6), 14, w0);
+      for (let i = 0; i < 8; i += 1) {
+        const [x0, y0] = per((i + 0.2 + rnd() * 0.6) / 8); const d = rnd() * 240; const w0 = (1.7 + rnd() * 0.8) * sc;
+        // il tronco punta verso l'interno del bersaglio e serpeggia appena
+        const trunk = walk(x0, y0, Math.atan2(-y0, -x0) + (rnd() - 0.5) * 0.5, reach * (0.75 + rnd() * 0.4), 14, w0);
         e.veins.push({ pts: trunk, d, from: 0 });
-        const twigs = 1 + (rnd() < 0.6 ? 1 : 0);
-        for (let b2 = 0; b2 < twigs; b2 += 1) {
-          const at = 4 + Math.floor(rnd() * 6); const [bx, by, bw, ba] = trunk[at];
-          e.veins.push({ pts: walk(bx, by, ba + (rnd() < 0.5 ? -1 : 1) * (0.5 + rnd() * 0.5), reach * (0.3 + rnd() * 0.3), 8, bw * 0.75), d, from: at / 14 });
+        for (let b2 = 0; b2 < 2; b2 += 1) {
+          // i rami nascono dal tronco, con il suo stesso spessore in quel punto, ad angolo stretto
+          const at = 3 + Math.floor(rnd() * 7); const [bx, by, bw, ba] = trunk[at];
+          e.veins.push({ pts: walk(bx, by, ba + (b2 ? -1 : 1) * (0.5 + rnd() * 0.4), reach * (0.3 + rnd() * 0.25), 8, bw * 0.85), d, from: at / 14 });
         }
       }
       e.sweat = Array.from({ length: Math.round(4 + Math.min(18, (e.tw * e.th) / 3600)) }, () => ({ x: (rnd() - 0.5) * e.tw * 0.84, y: -hh + rnd() * e.th * 0.62, r: (1.6 + rnd() * 2.2) * sc, born: 120 + rnd() * 620, hold: 260 + rnd() * 420, run: 0.5 + rnd() * 0.9 }));
@@ -273,25 +274,29 @@ const THEMES = {
       const vg = ctx.createRadialGradient(e.cx, e.cy, Math.min(hw, hh) * 0.35, e.cx, e.cy, Math.hypot(hw, hh));
       vg.addColorStop(0, rgba(e.c, 0)); vg.addColorStop(1, rgba(e.c, (0.12 + 0.3 * pulse) * a));
       ctx.fillStyle = vg; ctx.fillRect(e.cx - hw, e.cy - hh, e.tw, e.th);
-      // vene: affiorano dal bordo, e a ogni battito un'onda di sangue le percorre dalla radice alla punta
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      // sotto pelle: scure e opache, non luminose; si schiariscono solo al passaggio dell'onda
+      // vene: affiorano dal bordo, e a ogni battito un'onda di sangue le percorre dalla radice alla punta.
+      // Ogni vena è UNA sagoma piena che si assottiglia: tratti sovrapposti la farebbero sembrare tratteggiata.
       ctx.globalCompositeOperation = 'source-over';
-      const deep = mix(e.c2, [58, 10, 52], 0.72); const lit = mix(e.c2, WHITE, 0.12);
-      const wave = (u) => { let w = 0; e.beats.forEach((b) => { const x = (t - b) / 380 - u; if (x > -0.18 && x < 0.18) w = Math.max(w, 1 - Math.abs(x) / 0.18); }); return w; };
-      for (let pass = 0; pass < 2; pass += 1) {
-        e.veins.forEach((v) => {
-          const grown = easeOut((t - v.d) / 700) * 1.25 - v.from; if (grown <= 0) return; const n = v.pts.length - 1;
-          for (let j = 1; j <= n; j += 1) {
-            const u = j / n; if (u > grown) break;
-            const [x1, y1] = v.pts[j - 1]; const [x2, y2, w] = v.pts[j]; const [x3, y3] = v.pts[Math.min(n, j + 1)];
-            const k = wave(v.from + u * (1 - v.from)); const tip = Math.min(1, (grown - u) * 6);
-            ctx.strokeStyle = pass ? rgba(mix(deep, lit, 0.1 + 0.8 * k), (0.5 + 0.35 * k) * a * tip) : rgba(deep, (0.1 + 0.1 * k) * a * tip);
-            ctx.lineWidth = pass ? Math.max(0.45, w * (1 + 0.4 * k)) : w * (2.4 + 0.8 * k);
-            ctx.beginPath(); ctx.moveTo(e.cx + (x1 + x2) / 2, e.cy + (y1 + y2) / 2); ctx.quadraticCurveTo(e.cx + x2, e.cy + y2, e.cx + (x2 + x3) / 2, e.cy + (y2 + y3) / 2); ctx.stroke();
-          }
-        });
-      }
+      const deep = mix(e.c2, [58, 10, 52], 0.72); const lit = mix(e.c2, WHITE, 0.18);
+      const ribbon = (v, u0, u1, swell, bulge = false) => {
+        const n = v.pts.length - 1; const at = (u) => { const f = clamp01(u) * n; const i = Math.min(n - 1, Math.floor(f)); const k = f - i; const p = v.pts[i]; const q = v.pts[i + 1]; return [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k]; };
+        const steps = Math.max(2, Math.ceil((u1 - u0) * n * 2)); const left = []; const right = [];
+        for (let i = 0; i <= steps; i += 1) {
+          const u = u0 + ((u1 - u0) * i) / steps; const [x, y, w] = at(u); const [xa, ya] = at(u - 0.02); const [xb, yb] = at(u + 0.02);
+          const len = Math.hypot(xb - xa, yb - ya) || 1; const nx = -(yb - ya) / len; const ny = (xb - xa) / len;
+          // la punta si chiude a zero, così la vena finisce affusolata
+          // la punta si chiude; un rigonfiamento (l'onda) si chiude a entrambi i capi
+          const half = Math.max(0.25, (w * swell) / 2) * (bulge ? Math.sin((i / steps) * Math.PI) : (i === steps ? 0.1 : 1));
+          left.push([e.cx + x + nx * half, e.cy + y + ny * half]); right.push([e.cx + x - nx * half, e.cy + y - ny * half]);
+        }
+        ctx.beginPath(); left.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); right.reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); ctx.fill();
+      };
+      // col battito si scuriscono e si gonfiano appena, tutte insieme
+      ctx.fillStyle = rgba(mix(deep, lit, 0.35 * Math.min(1, pulse)), (0.5 + 0.3 * Math.min(1, pulse)) * a);
+      e.veins.forEach((v) => {
+        const grown = Math.min(1, easeOut((t - v.d) / 700) * 1.25 - v.from); if (grown <= 0.02) return;
+        ribbon(v, 0, grown, 1 + 0.35 * Math.min(1, pulse));
+      });
       ctx.globalCompositeOperation = 'lighter';
       // fiato caldo dal basso
       e.breath.forEach((b) => { const tt = t - b.d; const k = clamp01(tt / 1100); if (tt <= 0 || k >= 1) return; glow(ctx, e.cx + b.x, e.cy + hh - k * e.th * 0.5, Math.min(hw, hh) * b.r * (0.6 + k), mix(e.c, WHITE, 0.5), 0.1 * (1 - k) * a); });
