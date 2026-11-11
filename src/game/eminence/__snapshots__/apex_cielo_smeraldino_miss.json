@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "apex_cataclisma",
-    "name": "Ora Verde",
-    "presenceDelta": -4,
+    "id": "apex_cielo_smeraldino",
+    "name": "Cielo Smeraldino",
+    "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
+    "text": "In questo Duello il tuo Agente schierato ha −1 DAN."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      4,
-      0
+      1,
+      2
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,23 +28,15 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "apex_furia",
+        "id": "apex_cielo_smeraldino",
         "presenceDelta": 1
-      },
-      {
-        "id": "apex_disprezzo",
-        "presenceDelta": -2
-      },
-      {
-        "id": "apex_cataclisma",
-        "presenceDelta": -4
       }
     ],
-    "presenceAfterReveal": 0,
-    "presenceAfterSelect": 4,
-    "presenceAvailable": 4,
-    "presenceDelta": -4,
-    "selected": "apex_cataclisma"
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "apex_cielo_smeraldino"
   },
   "eminence": {
     "army": "Apex",
@@ -73,13 +65,13 @@
           }
         }
       ],
-      "id": "reveal:player:apex_cataclisma:GENERAL",
+      "id": "reveal:player:apex_cielo_smeraldino:GENERAL",
       "kind": "reveal",
-      "name": "Ora Verde",
+      "name": "Cielo Smeraldino",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "GRANT_POWER",
+          "primitive": "MODIFY_STAT",
           "slot": null,
           "target": "OWN_AGENT"
         }
@@ -87,15 +79,15 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -4,
+      "presenceDelta": 1,
       "side": "player",
-      "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
+      "text": "In questo Duello il tuo Agente schierato ha −1 DAN."
     }
   ],
   "scenario": {
-    "branch": "hit",
+    "branch": "miss",
     "initiativeSide": "player",
-    "name": "apex_cataclisma_hit",
+    "name": "apex_cielo_smeraldino_miss",
     "roundNumber": 3
   },
   "steps": [
@@ -108,9 +100,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -122,9 +114,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 4
+        "player": 1
       },
-      "presenceAfterReveal": 4,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -137,7 +129,7 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "reveal:player:apex_cataclisma:GENERAL",
+          "noticeId": "reveal:player:apex_cielo_smeraldino:GENERAL",
           "recipe": "LINK_AGENT",
           "to": {
             "side": "player",
@@ -174,13 +166,13 @@
               }
             }
           ],
-          "id": "reveal:player:apex_cataclisma:GENERAL",
+          "id": "reveal:player:apex_cielo_smeraldino:GENERAL",
           "kind": "reveal",
-          "name": "Ora Verde",
+          "name": "Cielo Smeraldino",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "GRANT_POWER",
+              "primitive": "MODIFY_STAT",
               "slot": null,
               "target": "OWN_AGENT"
             }
@@ -188,16 +180,16 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -4,
+          "presenceDelta": 1,
           "side": "player",
-          "text": "Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN."
+          "text": "In questo Duello il tuo Agente schierato ha −1 DAN."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -208,7 +200,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -220,7 +212,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "segments": [
         {
@@ -241,14 +233,30 @@
         },
         {
           "condition": {
+            "detail": "ownBonusActivated: (assente) → non ancora valutabile",
+            "keys": [
+              "ownBonusActivated"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma Verde",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
             "detail": null,
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "GRANT_POWER",
+          "primitive": "MODIFY_STAT",
           "source": "ability",
-          "sourceId": "apex_cataclisma",
-          "sourceName": "Ora Verde",
+          "sourceId": "apex_cielo_smeraldino",
+          "sourceName": "Cielo Smeraldino",
           "target": "OWN_AGENT",
           "timing": "AFTER_REVEAL"
         }

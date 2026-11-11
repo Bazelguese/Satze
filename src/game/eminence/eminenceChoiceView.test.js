@@ -27,10 +27,13 @@ import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { commitEminenceSetupChoice } from './eminenceDuelGate.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { EMINENCE_FORMAT, SIDES } from './eminenceConstants.js';
-import { installSyntheticCostsEminence, installSyntheticTargetsEminence } from './eminenceTestSupport.js';
+import { installLegacyApexEminence, installSyntheticCostsEminence, installSyntheticTargetsEminence } from './testing/eminenceTestSupport.js';
 import { inkOn, formatPresenceDelta, relativeLuminance } from '../../components/eminence/eminenceUi.js';
 
-function match(player = 'apex_sole_verde', enemy = 'patto_grande_semaforo') {
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
+
+function match(player = LEGACY_APEX, enemy = 'patto_grande_semaforo') {
   return beginEminenceRound(
     createEminenceMatchState({
       format: EMINENCE_FORMAT.REQUIRED,
@@ -92,7 +95,7 @@ test('vista: due scelte segrete diverse producono la stessa proiezione avversari
 });
 
 test('Patto a 0 Presenza: Verde è l\'unica opzione selezionabile', () => {
-  const view = buildEminenceChoiceView(match('patto_grande_semaforo', 'apex_sole_verde'), SIDES.PLAYER);
+  const view = buildEminenceChoiceView(match('patto_grande_semaforo', LEGACY_APEX), SIDES.PLAYER);
   const green = view.self.options.find((o) => o.id === 'semaforo_verde');
   assert.equal(green.implemented, true);
   assert.equal(green.selectable, true);

@@ -50,6 +50,7 @@ export const CONDITION_KEYS = Object.freeze([
   'enemyPowerResolved',
   'activatedPowerTriggers',
   'activatedTriggers',
+  'ownBonusActivated',
 ]);
 
 /**

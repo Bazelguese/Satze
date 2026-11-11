@@ -170,6 +170,8 @@ export function createEminencePersistentState() {
     duelRecord: { won: 0, lost: 0, draw: 0 },
     // Agenti del lato sconfitti in un Duello (pubblico).
     defeatedCardIds: [],
+    // Bonus d'Armata sostituito per più Duelli: { override, until } oppure null.
+    armyBonusOverride: null,
     custom: {},
   };
 }
@@ -340,6 +342,9 @@ export function selectPublicPersistentState(persistent) {
     abilityEscalation: { ...(persistent.abilityEscalation || {}) },
     duelRecord: readDuelRecord(persistent),
     defeatedCardIds: [...(persistent.defeatedCardIds || [])],
+    armyBonusOverride: persistent.armyBonusOverride
+      ? { ...persistent.armyBonusOverride, override: { ...persistent.armyBonusOverride.override } }
+      : null,
   };
 }
 

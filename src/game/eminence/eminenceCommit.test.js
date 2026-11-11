@@ -22,13 +22,17 @@ import {
 } from './eminenceCommit.js';
 import { createEminenceMatchState, selectPublicEminenceState } from './eminenceState.js';
 import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 const MATCH_ID = 'match-1';
 
 const selection = (overrides = {}) => ({
   matchId: MATCH_ID,
   roundNumber: 1,
-  eminenceId: 'apex_sole_verde',
+  eminenceId: LEGACY_APEX,
   abilityId: 'apex_disprezzo',
   params: null,
   ...overrides,
@@ -162,7 +166,7 @@ test('gate: apertura remota valida accettata', async () => {
   const result = await applyRemoteGateMessage(
     state,
     { type: EMINENCE_MESSAGES.OPEN, matchId: MATCH_ID, roundNumber: 1, gate: REVEAL_GATES.GENERAL, opening: remote.opening },
-    { remotePublicState: publicStateFor('apex_sole_verde', 'apex_furia') }
+    { remotePublicState: publicStateFor(LEGACY_APEX, 'apex_furia') }
   );
 
   assert.equal(result.ok, true);
@@ -210,7 +214,7 @@ test('gate: un\'apertura illegale alla Presenza del checkpoint viene respinta', 
   const result = await applyRemoteGateMessage(
     state,
     { type: EMINENCE_MESSAGES.OPEN, matchId: MATCH_ID, roundNumber: 1, gate: REVEAL_GATES.GENERAL, opening: remote.opening },
-    { remotePublicState: publicStateFor('apex_sole_verde', 'apex_furia') }
+    { remotePublicState: publicStateFor(LEGACY_APEX, 'apex_furia') }
   );
 
   assert.equal(result.reason, 'ILLEGAL_AT_SELECTION');
@@ -223,7 +227,7 @@ test('gate: un\'Eminenza diversa da quella registrata viene respinta', async () 
   const result = await applyRemoteGateMessage(
     state,
     { type: EMINENCE_MESSAGES.OPEN, matchId: MATCH_ID, roundNumber: 1, gate: REVEAL_GATES.PRE_FIELD, opening: remote.opening },
-    { remotePublicState: publicStateFor('apex_sole_verde', 'apex_furia') }
+    { remotePublicState: publicStateFor(LEGACY_APEX, 'apex_furia') }
   );
 
   assert.equal(result.reason, 'EMINENCE_MISMATCH');

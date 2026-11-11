@@ -18,9 +18,12 @@ import {
   REVEAL_GATES,
   SIDES,
 } from './eminenceConstants.js';
-import { installSyntheticTargetsEminence } from './eminenceTestSupport.js';
+import { installLegacyApexEminence, installSyntheticTargetsEminence } from './testing/eminenceTestSupport.js';
 
-function match({ player = 'apex_sole_verde', enemy = null, presence = {} } = {}) {
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
+
+function match({ player = LEGACY_APEX, enemy = null, presence = {} } = {}) {
   let state = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
     playerEminenceId: player,
@@ -95,7 +98,7 @@ test('gate GENERAL bloccato finché una scelta libera resta pendente', () => {
 
 test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
   // Cataclisma costa 4: la Presenza iniziale di Apex è 3, quindi serve un guadagno prima.
-  const state = match({ player: 'apex_sole_verde', presence: { [SIDES.PLAYER]: 4 } });
+  const state = match({ player: LEGACY_APEX, presence: { [SIDES.PLAYER]: 4 } });
   const chosen = choose(state, SIDES.PLAYER, 'apex_cataclisma');
 
   const result = prepareEminenceDuel(chosen, { initiativeSide: SIDES.PLAYER });
@@ -124,7 +127,7 @@ test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non pri
 });
 
 test('preparazione: un gate già superato non si riapre', () => {
-  const state = match({ player: 'apex_sole_verde' });
+  const state = match({ player: LEGACY_APEX });
   const chosen = choose(state, SIDES.PLAYER, 'apex_furia');
 
   const first = prepareEminenceDuel(chosen);
@@ -155,7 +158,7 @@ function withPendingEffect(state, side, timing, segment) {
 }
 
 test('preparazione: i delta di Presenza da effetto non contano come spesa', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_TRIGGER_CHECK', { primitive: P.CHANGE_PRESENCE, target: T.SELF, delta: -1 });
   const chosen = choose(state, SIDES.PLAYER, 'apex_furia');
 
@@ -168,7 +171,7 @@ test('preparazione: i delta di Presenza da effetto non contano come spesa', () =
 });
 
 test('preparazione: lo stato restituito è già pronto per lo snapshot di Presenza', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_TRIGGER_CHECK', { primitive: P.CHANGE_PRESENCE, target: T.SELF, delta: 2 });
   const chosen = choose(state, SIDES.PLAYER, 'apex_disprezzo');
 
@@ -181,7 +184,7 @@ test('preparazione: lo stato restituito è già pronto per lo snapshot di Presen
 
 test('chiusura: un blocco pianificato ricade sul round successivo', () => {
   const state = withPendingEffect(
-    match({ player: 'apex_sole_verde', enemy: 'patto_grande_semaforo' }),
+    match({ player: LEGACY_APEX, enemy: 'patto_grande_semaforo' }),
     SIDES.PLAYER,
     'POST_BATTLE',
     { primitive: P.BLOCK_EMINENCE, target: T.OPPONENT, duration: 'NEXT_ROUND' }
@@ -197,7 +200,7 @@ test('chiusura: un blocco pianificato ricade sul round successivo', () => {
 });
 
 test('chiusura: i checkpoint post-Duello producono un bundle separato', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_CONQUEST', { primitive: P.LOSE_HP, target: T.OPPONENT, amount: 3 });
 
   const { bundle } = settleEminenceRound(state);
@@ -208,7 +211,7 @@ test('chiusura: i checkpoint post-Duello producono un bundle separato', () => {
 });
 
 test('chiusura: senza segmenti post-Duello non produce alcun bundle', () => {
-  assert.equal(settleEminenceRound(match({ player: 'apex_sole_verde' })).bundle, null);
+  assert.equal(settleEminenceRound(match({ player: LEGACY_APEX })).bundle, null);
 });
 
 test('reveal: il lato umano non viene riempito in automatico', () => {
@@ -286,7 +289,7 @@ test('Offerta rifiutata: nessun effetto nel Duello e nessuna Presenza extra', ()
 });
 
 test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', () => {
-  let state = match({ player: 'apex_sole_verde', enemy: 'patto_grande_semaforo' });
+  let state = match({ player: LEGACY_APEX, enemy: 'patto_grande_semaforo' });
   state = choose(state, SIDES.PLAYER, 'apex_furia');
   state = choose(state, SIDES.ENEMY, 'semaforo_verde');
   state = advanceToNextRevealGate(state).matchState;
@@ -305,7 +308,7 @@ test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', ()
 });
 
 test('gate GENERAL: la coda rispetta l\'iniziativa dichiarata', () => {
-  let state = match({ player: 'apex_sole_verde', enemy: 'apex_sole_verde' });
+  let state = match({ player: LEGACY_APEX, enemy: LEGACY_APEX });
   state = choose(state, SIDES.PLAYER, 'apex_furia');
   state = choose(state, SIDES.ENEMY, 'apex_furia');
 

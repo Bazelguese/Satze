@@ -42,8 +42,14 @@ import {
   prepareEminenceDuel,
   notifyHpLossEvents,
   resolvePendingDeal,
+  openEminenceRound,
 } from './eminenceDuelGate.js';
 import { collectSlotCurses } from './slotCurses.js';
+import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 import { powerResolutionFromDuel, isLowestEffectiveLeague } from './eminenceDuelBinding.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -109,74 +115,97 @@ function playRound({
 // Apex — Il Sole Verde
 // ------------------------------------------------------------------
 
-test('Apex +1: +1 POT al proprio Agente e 2 PV di costo al controllore', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'apex_furia',
-    enemyAbility: 'semaforo_verde',
-  });
+const APEX = 'apex_sole_verde';
 
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 1);
-  assert.equal(bundle.statDeltas[SIDES.ENEMY].power, 0);
-
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.PLAYER, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'apex_furia' },
-  ]);
-
-  // Il +1 è un guadagno, non una spesa: non alimenta Manifestazione.
-  assert.equal(matchState.player.presence, 4);
-  assert.equal(matchState.player.presenceSpentThisRound, 0);
-  assert.equal(checkTrigger('manifestazione', duelContext({
-    hasEminence: true,
-    presenceSpent: matchState.player.presenceSpentThisRound,
-  })), false);
+test('Apex: Presenza iniziale 1 e tre attive', () => {
+  const state = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+  assert.deepEqual(
+    EMINENCES[APEX].abilities.map((a) => [a.id, a.presenceDelta]),
+    [['apex_cielo_smeraldino', 1], ['apex_disprezzo', -2], ['apex_preghiera_ululata', -3]],
+  );
 });
 
-test('Apex -2: il proprio Agente ignora il Campo e la spesa alimenta Manifestazione', () => {
+test('Apex statico: al round 5 lo slot aperto diventa l\'Arena del Violento Gaudio', () => {
+  const base = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  const early = openEminenceRound(base, { roundNumber: 4 });
+  assert.equal(early.bundle?.fieldOperations?.length || 0, 0);
+  const r5 = openEminenceRound(base, { roundNumber: 5 });
+  assert.deepEqual(r5.bundle.fieldOperations.map((op) => op.fieldId), [122]);
+  const arena = ALL_BATTLEFIELDS.find((field) => field.id === 122);
+  assert.equal(arena.name, 'Arena del Violento Gaudio');
+  assert.equal(arena.eminenceOnly, true);
+});
+
+test('Apex statico: +1 Presenza quando il proprio Bonus d\'Armata si attiva', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+  const hit = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    bonusActivatedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+  const miss = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    bonusActivatedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: true },
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Apex +1: Cielo Smeraldino toglie 1 DAN al proprio Agente', () => {
   const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: APEX,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'apex_cielo_smeraldino',
+    enemyAbility: 'semaforo_verde',
+  });
+  assert.equal(bundle.statDeltas[SIDES.PLAYER].damage, -1);
+  assert.equal(bundle.statDeltas[SIDES.ENEMY].damage, 0);
+  assert.equal(matchState.player.presence, 2);
+});
+
+test('Apex −2: il proprio Agente ignora il Campo e la spesa alimenta Manifestazione', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_disprezzo',
     enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
   });
 
   assert.deepEqual(bundle.ignoreFieldSides, [SIDES.PLAYER]);
-  assert.equal(matchState.player.presence, 1);
+  assert.equal(matchState.player.presence, 0);
   assert.equal(matchState.player.presenceSpentThisRound, 2);
-
   assert.equal(checkTrigger('manifestazione', duelContext({
     hasEminence: true,
     presenceSpent: matchState.player.presenceSpentThisRound,
   })), true);
-  // Per l'avversario è Blasfemia.
-  assert.equal(checkTrigger('blasfemia', duelContext({
-    enemyHasEminence: true,
-    enemyPresenceSpent: matchState.player.presenceSpentThisRound,
-  })), true);
 });
 
-test('Apex -4: concede un Potere +2 POT e +2 DAN, non un buff di schieramento', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'apex_cataclisma',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 4 },
-  });
+test('Apex −3: Preghiera Ululata sostituisce il Bonus d\'Armata per il resto dello Scontro', () => {
+  const base = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 2 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_preghiera_ululata').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const first = prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+  const expected = {
+    trigger: 'invasione',
+    effects: [{ effect: 'attrition', value: 3, stat: 'assaultValue' }],
+  };
+  assert.deepEqual(first.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+  assert.deepEqual(first.matchState.player.persistent.armyBonusOverride.override, expected);
 
-  assert.deepEqual(bundle.grantedPowers[SIDES.PLAYER], {
-    trigger: null,
-    effects: [
-      { effect: 'power', value: 2 },
-      { effect: 'damage', value: 2 },
-    ],
-    source: 'apex_cataclisma',
-  });
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 0);
-  assert.equal(matchState.player.presence, 0);
-  // Presenza a 0 dopo la spesa: Digiuno è soddisfatto nello stesso round.
-  assert.equal(checkTrigger('digiuno', duelContext({ hasEminence: true, playerPresence: 0 })), true);
+  // Round successivo con un'altra abilità: il Bonus resta sostituito.
+  let next = settleEminenceRound(first.matchState, { winner: SIDES.PLAYER }).matchState;
+  next = beginEminenceRound(next, { roundNumber: 3 });
+  next = selectEminenceAbility(next, SIDES.PLAYER, 'apex_cielo_smeraldino').matchState;
+  next = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const second = prepareEminenceDuel(next, { agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: 302 } });
+  assert.deepEqual(second.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+  assert.equal(second.bundle.armyBonusState[SIDES.ENEMY], undefined);
 });
 
 // ------------------------------------------------------------------
@@ -197,7 +226,7 @@ const semaforoTriggers = (bundle, side) =>
 
 test('Semaforo Verde: nessun force/forbid — i trigger restano naturali', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_verde',
@@ -208,7 +237,7 @@ test('Semaforo Verde: nessun force/forbid — i trigger restano naturali', () =>
 });
 
 test('Semaforo Verde: +1 Presenza se si attiva un Potere o Bonus Turbo o Intervento, una volta', () => {
-  const base = createEminenceMatchState({ playerEminenceId: 'patto_grande_semaforo', enemyEminenceId: 'apex_sole_verde' });
+  const base = createEminenceMatchState({ playerEminenceId: 'patto_grande_semaforo', enemyEminenceId: LEGACY_APEX });
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'semaforo_verde').matchState;
   matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'apex_furia').matchState;
@@ -243,7 +272,7 @@ test('binding: il trigger del Bonus attivato esce dal risultato del Duello', () 
 
 test('Semaforo Giallo: apre Imboscata e Turbo', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_giallo',
@@ -260,7 +289,7 @@ test('Semaforo Giallo: apre Imboscata e Turbo', () => {
 
 test('Semaforo Rosso: inverte il quadro anche contro condizioni naturalmente vere', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_rosso',
@@ -277,7 +306,7 @@ test('Semaforo Rosso: inverte il quadro anche contro condizioni naturalmente ver
 
 test('Semaforo: l\'effetto è simmetrico e colpisce chi lo ha attivato', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_rosso',
@@ -294,7 +323,7 @@ test('Semaforo: l\'effetto è simmetrico e colpisce chi lo ha attivato', () => {
 
 test('Semaforo: agisce a BEFORE_TRIGGER_CHECK, non al reveal', () => {
   const base = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
   });
   base.enemy.presence = 2;
@@ -315,7 +344,7 @@ test('Semaforo: agisce a BEFORE_TRIGGER_CHECK, non al reveal', () => {
 test('checkpoint: un segmento consumato non viene rieseguito', () => {
   const base = createEminenceMatchState({
     playerEminenceId: 'patto_grande_semaforo',
-    enemyEminenceId: 'apex_sole_verde',
+    enemyEminenceId: LEGACY_APEX,
   });
   base.player.presence = 2;
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
@@ -336,7 +365,7 @@ test('checkpoint: un segmento consumato non viene rieseguito', () => {
 
 test('incrocio: il Semaforo Rosso spegne l\'Imboscata di un Agente potenziato da Apex', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_cataclisma',
     enemyAbility: 'semaforo_rosso',
@@ -361,7 +390,7 @@ test('incrocio: il Semaforo Rosso spegne l\'Imboscata di un Agente potenziato da
 
 test('incrocio: l\'iniziativa ordina la risoluzione, non l\'esito del pagamento', () => {
   const args = {
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_disprezzo',
     enemyAbility: 'semaforo_rosso',

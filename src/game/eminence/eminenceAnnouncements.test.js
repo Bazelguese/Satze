@@ -13,6 +13,10 @@ import { openEminenceRound, advanceToNextRevealGate, settleEminenceRound, commit
 import { beginEminenceRound, selectEminenceAbility } from './eminenceRound.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { EMINENCE_FORMAT, REVEAL_GATES, SIDES } from './eminenceConstants.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 function opened(player, enemy, roundNumber = 1) {
   return openEminenceRound(
@@ -64,10 +68,10 @@ test('avviso statico: uno Statico che riordina i gate compare ogni round', () =>
 });
 
 test('avviso statico: uno Statico a condizione compare solo quando il segmento matura', () => {
-  const early = opened('apex_sole_verde', 'patto_grande_semaforo', 4);
+  const early = opened(LEGACY_APEX, 'patto_grande_semaforo', 4);
   assert.equal(noticesFromRoundStart(early.matchState, early.appliedEffects).length, 0);
 
-  const late = opened('apex_sole_verde', 'patto_grande_semaforo', 5);
+  const late = opened(LEGACY_APEX, 'patto_grande_semaforo', 5);
   const notices = noticesFromRoundStart(late.matchState, late.appliedEffects);
   assert.equal(notices.length, 1);
   assert.equal(notices[0].kind, 'static');
@@ -293,7 +297,7 @@ test('sequenza: senza riordino il primo gate resta PRE_FIELD', () => {
   const base = beginEminenceRound(
     createEminenceMatchState({
       format: EMINENCE_FORMAT.REQUIRED,
-      playerEminenceId: 'apex_sole_verde',
+      playerEminenceId: LEGACY_APEX,
       enemyEminenceId: 'patto_grande_semaforo',
     }),
     { roundNumber: 1 },

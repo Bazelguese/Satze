@@ -22,6 +22,10 @@ import {
   isSelectionPubliclyDetermined,
 } from './eminenceRound.js';
 import { selectPublicEminenceState } from './eminenceState.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 const startRound = (playerId, enemyId, roundNumber = 1) =>
   beginEminenceRound(
@@ -88,7 +92,7 @@ test('presenza: 0 può tornare a crescere', () => {
 });
 
 test('presenza: variazione su un lato dello stato di partita', () => {
-  const matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  const matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   const { matchState: next, event } = changeSidePresence(matchState, SIDES.ENEMY, 3, {});
   assert.equal(next.enemy.presence, 3);
   assert.equal(next.player.presence, 3);
@@ -96,7 +100,7 @@ test('presenza: variazione su un lato dello stato di partita', () => {
 });
 
 test('presenza: lo snapshot è simmetrico e già campionato', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = changeSidePresence(matchState, SIDES.ENEMY, 4, {}).matchState;
 
   const snapshot = capturePresenceSnapshot(matchState);
@@ -116,19 +120,19 @@ test('presenza: lo snapshot è simmetrico e già campionato', () => {
 // ------------------------------------------------------------------
 
 test('round: il checkpoint di selezione parte dalla Presenza di inizio round', () => {
-  const matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  const matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   assert.equal(matchState.player.selectionCheckpointPresence, 3);
   assert.equal(matchState.enemy.selectionCheckpointPresence, 0);
 });
 
 test('round: sequenza dei gate normale, Campo prima degli Agenti', () => {
-  const matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  const matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   assert.equal(matchState.gateProgress.sequenceName, 'FIELD_FIRST');
   assert.equal(getNextGate(matchState.gateProgress), REVEAL_GATES.PRE_FIELD);
 });
 
 test('round: lo Statico di Mascarada riordina i gate, Agenti prima del Campo', () => {
-  const matchState = startRound('mascarada_organizzatore', 'apex_sole_verde');
+  const matchState = startRound('mascarada_organizzatore', LEGACY_APEX);
   assert.equal(resolveGateSequenceName(matchState), 'AGENTS_FIRST');
   assert.deepEqual(matchState.gateProgress.sequence, [
     REVEAL_GATES.PRE_AGENT,
@@ -138,7 +142,7 @@ test('round: lo Statico di Mascarada riordina i gate, Agenti prima del Campo', (
 });
 
 test('scelta: un\'abilità a costo superiore alla Presenza è illegale', () => {
-  const matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  const matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   const result = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_cataclisma');
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'INSUFFICIENT_PRESENCE');
@@ -146,7 +150,7 @@ test('scelta: un\'abilità a costo superiore alla Presenza è illegale', () => {
 });
 
 test('scelta: la selezione registra snapshot e prenotazione di costo', () => {
-  const matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  const matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   const { matchState: next, ok } = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_disprezzo');
 
   assert.equal(ok, true);
@@ -159,14 +163,14 @@ test('scelta: la selezione registra snapshot e prenotazione di costo', () => {
 });
 
 test('scelta: non si può scegliere due volte nello stesso round', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_furia').matchState;
   const second = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_disprezzo');
   assert.equal(second.reason, 'ALREADY_SELECTED');
 });
 
 test('scelta: un\'Eminenza bloccata non sceglie e non impedisce il proseguimento', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = {
     ...matchState,
     player: { ...matchState.player, blockedThisRound: true },
@@ -180,7 +184,7 @@ test('scelta: un\'Eminenza bloccata non sceglie e non impedisce il proseguimento
 });
 
 test('scelta: entrambi devono aver scelto prima di qualunque apertura', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_furia').matchState;
 
   assert.equal(areSelectionsComplete(matchState), false);
@@ -194,7 +198,7 @@ test('scelta: entrambi devono aver scelto prima di qualunque apertura', () => {
 // ------------------------------------------------------------------
 
 test('reveal: un gate apre solo i commitment che gli appartengono', () => {
-  let matchState = startRound('khemet_maledizioni', 'apex_sole_verde');
+  let matchState = startRound('khemet_maledizioni', LEGACY_APEX);
   matchState = chooseBoth(matchState, 'khemet_maledizione_va', 'apex_furia');
 
   const { matchState: afterPreField } = completeGate(matchState, REVEAL_GATES.PRE_FIELD, {});
@@ -207,7 +211,7 @@ test('reveal: un gate apre solo i commitment che gli appartengono', () => {
 });
 
 test('reveal: il delta base viene applicato all\'apertura, non alla selezione', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_disprezzo', 'semaforo_verde');
 
   assert.equal(matchState.player.presence, 3);
@@ -223,7 +227,7 @@ test('reveal: il delta base viene applicato all\'apertura, non alla selezione', 
 test('reveal: il pagamento è atomico rispetto allo snapshot delle scelte', () => {
   // Entrambi spendono nella stessa finestra. Chi risolve per primo non deve poter rendere
   // impagabile la scelta dell'altro: i due delta nascono dallo stesso stato pre-gate.
-  let matchState = startRound('apex_sole_verde', 'apex_sole_verde');
+  let matchState = startRound(LEGACY_APEX, LEGACY_APEX);
   matchState = chooseBoth(matchState, 'apex_disprezzo', 'apex_disprezzo');
 
   const withPlayerFirst = completeGeneralGate(matchState, { initiativeSide: SIDES.PLAYER });
@@ -238,7 +242,7 @@ test('reveal: il pagamento è atomico rispetto allo snapshot delle scelte', () =
 });
 
 test('reveal: la risoluzione segue l\'iniziativa anche se il pagamento è simultaneo', () => {
-  let matchState = startRound('apex_sole_verde', 'apex_sole_verde');
+  let matchState = startRound(LEGACY_APEX, LEGACY_APEX);
   matchState = chooseBoth(matchState, 'apex_furia', 'apex_furia');
 
   const playerFirst = completeGeneralGate(matchState, { initiativeSide: SIDES.PLAYER });
@@ -250,7 +254,7 @@ test('reveal: la risoluzione segue l\'iniziativa anche se il pagamento è simult
 });
 
 test('reveal: i segmenti differiti vengono armati, non risolti', () => {
-  let matchState = startRoundWithPresence('patto_grande_semaforo', 'apex_sole_verde', { player: 2 });
+  let matchState = startRoundWithPresence('patto_grande_semaforo', LEGACY_APEX, { player: 2 });
   matchState = chooseBoth(matchState, 'semaforo_giallo', 'apex_furia');
 
   const { matchState: revealed, resolutionQueue } = completeGeneralGate(matchState, {});
@@ -269,16 +273,16 @@ test('reveal: i segmenti differiti vengono armati, non risolti', () => {
 });
 
 test('reveal: i segmenti portano l\'id dell\'Eminenza sorgente', () => {
-  let matchState = startRoundWithPresence('apex_sole_verde', 'patto_grande_semaforo', { player: 4 });
+  let matchState = startRoundWithPresence(LEGACY_APEX, 'patto_grande_semaforo', { player: 4 });
   matchState = chooseBoth(matchState, 'apex_cataclisma', 'semaforo_verde');
 
   const { resolutionQueue } = completeGeneralGate(matchState, {});
   assert.equal(resolutionQueue.length, 1);
-  assert.ok(resolutionQueue.every((entry) => entry.sourceEminenceId === 'apex_sole_verde'));
+  assert.ok(resolutionQueue.every((entry) => entry.sourceEminenceId === LEGACY_APEX));
 });
 
 test('reveal: un gate risulta superato anche quando nessuno apre', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_furia', 'semaforo_verde');
 
   const { matchState: afterPreField, events } = completeGate(matchState, REVEAL_GATES.PRE_FIELD, {});
@@ -288,7 +292,7 @@ test('reveal: un gate risulta superato anche quando nessuno apre', () => {
 });
 
 test('reveal: completare due volte lo stesso gate non ha effetto', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_disprezzo', 'semaforo_verde');
 
   const first = completeGeneralGate(matchState, {});
@@ -303,7 +307,7 @@ test('reveal: completare due volte lo stesso gate non ha effetto', () => {
 // ------------------------------------------------------------------
 
 test('deduzione: a inizio round le ipotesi sono le sole abilità legali al checkpoint', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_furia', 'semaforo_verde');
 
   const playerView = selectPublicEminenceState(matchState.player);
@@ -322,7 +326,7 @@ test('deduzione: a inizio round le ipotesi sono le sole abilità legali al check
 });
 
 test('deduzione: usa la Presenza al checkpoint, non quella corrente', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_furia', 'semaforo_verde');
 
   // Uno Statico avversario porta l'Apex a 6 Presenza dopo la scelta segreta.
@@ -339,7 +343,7 @@ test('deduzione: usa la Presenza al checkpoint, non quella corrente', () => {
 
 test('deduzione: superare un gate senza apertura restringe le ipotesi', () => {
   // Con 3 Presenza tutte e quattro le attive di Mounthborn sono legali.
-  let matchState = startRoundWithPresence('mounthborn_fame', 'apex_sole_verde', { player: 3 });
+  let matchState = startRoundWithPresence('mounthborn_fame', LEGACY_APEX, { player: 3 });
   matchState = chooseBoth(matchState, 'mounthborn_frenesia', 'apex_furia');
 
   const before = getSealedAbilityHypotheses(
@@ -363,7 +367,7 @@ test('deduzione: una curva può rendere la scelta determinata anche senza gate a
   // Mounthborn a 0 Presenza: con la curva +1 / -1 / -2 / -3 resta legale solo Fame, quindi
   // la scelta è pubblica pur avendo due attive a GENERAL.
   // È una proprietà dell'economia, non dei gate, e non la copre l'invariante di catalogo.
-  let matchState = startRoundWithPresence('mounthborn_fame', 'apex_sole_verde', { player: 0 });
+  let matchState = startRoundWithPresence('mounthborn_fame', LEGACY_APEX, { player: 0 });
   matchState = chooseBoth(matchState, 'mounthborn_fame_ricarica', 'apex_furia');
 
   const view = selectPublicEminenceState(matchState.player);
@@ -372,7 +376,7 @@ test('deduzione: una curva può rendere la scelta determinata anche senza gate a
 });
 
 test('deduzione: Khemet è a informazione aperta dopo PRE_FIELD', () => {
-  let matchState = startRound('khemet_maledizioni', 'apex_sole_verde');
+  let matchState = startRound('khemet_maledizioni', LEGACY_APEX);
   matchState = chooseBoth(matchState, 'khemet_devozione', 'apex_furia');
 
   const { matchState: afterPreField } = completeGate(matchState, REVEAL_GATES.PRE_FIELD, {});
@@ -385,7 +389,7 @@ test('deduzione: Khemet è a informazione aperta dopo PRE_FIELD', () => {
 });
 
 test('deduzione: dopo il reveal l\'ipotesi è una sola', () => {
-  let matchState = startRound('apex_sole_verde', 'patto_grande_semaforo');
+  let matchState = startRound(LEGACY_APEX, 'patto_grande_semaforo');
   matchState = chooseBoth(matchState, 'apex_disprezzo', 'semaforo_verde');
 
   const { matchState: revealed } = completeGeneralGate(matchState, {});

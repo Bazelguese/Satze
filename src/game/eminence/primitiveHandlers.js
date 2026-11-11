@@ -60,6 +60,7 @@ export function createEffectBundle() {
     echoPowerSides: [],
     deployConstraints: [],
     initiativeOverride: null,
+    persistentBonusOverrides: [],
     debtEscalations: [],
   };
 }
@@ -509,10 +510,17 @@ const handlers = {
     if (!ability) throw new Error('REPLACE_ABILITY: abilità mancante');
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       if (segment.slot === 'bonus') {
-        bundle.armyBonusState[side] = {
-          ...(bundle.armyBonusState[side] || {}),
-          override: { trigger: ability.trigger ?? null, effects: [overlayAbilityFields(ability)] },
-        };
+        const override = { trigger: ability.trigger ?? null, effects: [overlayAbilityFields(ability)] };
+        bundle.armyBonusState[side] = { ...(bundle.armyBonusState[side] || {}), override };
+        // Persistente: resta per il resto dello Scontro, o finché il lato non vince un Duello.
+        if (segment.persistent) {
+          bundle.persistentBonusOverrides.push({
+            side,
+            override,
+            until: segment.persistentUntil || null,
+            source: ctx.source,
+          });
+        }
         continue;
       }
       const agentId = ctx.agentIdBySide?.[side];

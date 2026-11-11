@@ -258,6 +258,11 @@ export function powerResolutionFromDuel({ battleResult, playerAgent, enemyAgent 
       [SIDES.PLAYER]: playerResolved ? (playerAgent?.ability?.trigger ?? null) : null,
       [SIDES.ENEMY]: enemyResolved ? (enemyAgent?.ability?.trigger ?? null) : null,
     },
+    // Bonus d'Armata effettivamente attivato (soddisfatto e non bloccato).
+    bonusActivatedBySide: {
+      [SIDES.PLAYER]: Boolean(battleResult?.playerHasBonus && !battleResult?.playerBonusBlocked),
+      [SIDES.ENEMY]: Boolean(battleResult?.enemyHasBonus && !battleResult?.enemyBonusBlocked),
+    },
     // Trigger del Bonus d'Armata effettivamente attivato (dopo override e blocchi).
     activatedBonusTriggerBySide: {
       [SIDES.PLAYER]: battleResult?.playerHasBonus && !battleResult?.playerBonusBlocked

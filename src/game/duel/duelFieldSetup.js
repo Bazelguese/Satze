@@ -125,6 +125,12 @@ export function applyDuelFieldSetup(duel, field, battleLog, pAgent, eAgent, play
       pDamage += 2;
       eDamage += 2;
       battleLog.push(`🦁 ${fn}: +2 DAN a entrambi`);
+    } else if (id === 122) {
+      pPower += 2;
+      ePower += 2;
+      pDamage += 2;
+      eDamage += 2;
+      battleLog.push(`☀️ ${fn}: +2 POT, +2 DAN a entrambi`);
     } else if (id === 26) {
       pDamage += 1;
       eDamage += 1;

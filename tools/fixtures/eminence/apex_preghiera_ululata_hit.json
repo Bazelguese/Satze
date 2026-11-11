@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "apex_sole_verde",
-    "presence": 4,
-    "abilityId": "apex_cataclisma",
+    "presence": 3,
+    "abilityId": "apex_preghiera_ululata",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -54,6 +54,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "apex_cataclisma_hit",
+  "name": "apex_preghiera_ululata_hit",
   "branch": "hit"
 }

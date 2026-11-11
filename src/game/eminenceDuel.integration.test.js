@@ -17,6 +17,7 @@ import {
 import { applyEminenceSegments } from './eminence/primitiveHandlers.js';
 import { openEminenceRound } from './eminence/eminenceDuelGate.js';
 import { applyFieldOperations } from './eminence/fieldOperations.js';
+import { installLegacyApexEminence } from './eminence/testing/eminenceTestSupport.js';
 import {
   EFFECT_TIMINGS,
   EMINENCE_FORMAT,
@@ -25,6 +26,9 @@ import {
 } from './eminence/eminenceConstants.js';
 
 const neutralField = ALL_BATTLEFIELDS.find((f) => f.id === 51);
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 function agent(name, army, ability) {
   return { name, army, power: 4, damage: 3, league: 2, ability };
@@ -151,7 +155,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('Apex Furia: +1 POT all\'Agente e 2 PV al controllore', () => {
-    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const bundle = bundleForAbility('apex_furia', { eminenceId: LEGACY_APEX });
     const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
 
     expect(battleResult.playerPower).toBe(5);
@@ -161,7 +165,7 @@ describe('Eminenze nel Duello reale', () => {
 
   it('Apex Cataclisma: +2 POT e +2 DAN arrivano come Potere, non allo schieramento', () => {
     const bundle = bundleForAbility('apex_cataclisma', {
-      eminenceId: 'apex_sole_verde',
+      eminenceId: LEGACY_APEX,
       presence: 4,
     });
     const { battleResult } = computeDuelResolution({
@@ -183,7 +187,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('gli effetti dell\'Eminenza compaiono nel log come eventi di schieramento', () => {
-    const bundle = bundleForAbility('apex_furia', { eminenceId: 'apex_sole_verde' });
+    const bundle = bundleForAbility('apex_furia', { eminenceId: LEGACY_APEX });
     const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
 
     const eminenceEvents = battleResult.events.filter((e) => e.source?.kind === 'eminence');
@@ -273,6 +277,33 @@ describe('ECHO_POWER nel Duello reale', () => {
     // Ora l'avversario risponde: la sua Imboscata è spenta, quella del giocatore accesa.
     expect(battleResult.enemyPower).toBe(4);
     expect(battleResult.playerPower).toBe(6);
+  });
+});
+
+describe('Apex rework nel Duello reale', () => {
+  it('Preghiera Ululata: il Bonus diventa «Invasione: Attrizione 3 VA»', () => {
+    const bundle = bundleForAbility('apex_preghiera_ululata', { eminenceId: 'apex_sole_verde', presence: 3 });
+    const apexAgent = { ...agent('Tu', 'Apex', { trigger: 'glory', effect: 'power', value: 0 }), id: 9101 };
+    const { battleResult } = computeDuelResolution({
+      ...baseInput,
+      selectedAgent: apexAgent,
+      playerArmyBonuses: { Apex: true },
+      playerUsedCards: [9001, 9002],
+      conqueredFields: { 3: { winner: 'player', army: 'Apex' } },
+      eminenceBundle: bundle,
+    });
+    expect(battleResult.playerHasBonus).toBe(true);
+    // Invasione soddisfatta (1 Campo conquistato): +3 VA per ciascuno dei 2 Agenti già usati.
+    expect(battleResult.playerAssaultMod).toBe(6);
+  });
+
+  it('l\'Arena del Violento Gaudio dà +2 POT e +2 DAN a entrambi gli Agenti', () => {
+    const arena = ALL_BATTLEFIELDS.find((f) => f.id === 122);
+    const { battleResult } = computeDuelResolution({ ...baseInput, field: arena });
+    // Il giocatore risponde: la sua Imboscata è spenta, quella avversaria accesa.
+    expect(battleResult.playerPower).toBe(6);
+    expect(battleResult.enemyPower).toBe(8);
+    expect(battleResult.playerDamage).toBe(5);
   });
 });
 
@@ -371,7 +402,7 @@ describe('TRANSPLANT_POWER nel Duello reale', () => {
 
 describe('Disprezzo: portata di “ignora gli effetti del Campo”', () => {
   const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
-  const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: 'apex_sole_verde' });
+  const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: LEGACY_APEX });
 
   it('i modificatori di statistica cadono sul lato velato e restano sull\'altro', () => {
     // Nido dei Grifoni (5): −2 DAN a entrambi.
@@ -473,7 +504,7 @@ describe('Statico: Ora Verde sul tabellone reale', () => {
   function replaceAtRound(roundNumber) {
     const matchState = createEminenceMatchState({
       format: EMINENCE_FORMAT.REQUIRED,
-      playerEminenceId: 'apex_sole_verde',
+      playerEminenceId: LEGACY_APEX,
       enemyEminenceId: 'patto_grande_semaforo',
     });
 

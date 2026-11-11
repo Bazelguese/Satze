@@ -88,7 +88,8 @@ export function pickBattlefieldsByRarity(
     return selected;
   }
 
-  const pool = allBattlefields.filter((b) => b.category !== 'neutral');
+  // I Campi d'Eminenza entrano in gioco solo tramite la loro abilità.
+  const pool = allBattlefields.filter((b) => b.category !== 'neutral' && !b.eminenceOnly);
   const selected = [];
   let raresPlaced = 0;
   let specialPlaced = false;

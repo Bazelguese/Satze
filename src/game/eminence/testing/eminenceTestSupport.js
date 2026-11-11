@@ -1,8 +1,8 @@
-// Solo per i test: Eminenze sintetiche che esercitano meccaniche generiche del motore
+// Solo per i test (fuori dalla cartella del motore, che lo scanner degli id controlla): Eminenze sintetiche che esercitano meccaniche generiche del motore
 // (sorgenti di parametri, gate) senza dipendere da un'abilità reale del catalogo.
 // Il catalogo è un oggetto: registrarle qui non tocca EMINENCE_IDS né le liste derivate.
 
-import { EMINENCES } from '../../data/eminences.js';
+import { EMINENCES } from '../../../data/eminences.js';
 import {
   CHOICE_PARAMS_TIMING,
   EFFECT_TIMINGS,
@@ -10,7 +10,7 @@ import {
   PARAM_SOURCES,
   PRIMITIVE_TARGETS as T,
   REVEAL_GATES,
-} from './eminenceConstants.js';
+} from '../eminenceConstants.js';
 
 export const SYNTHETIC_TARGETS_ID = 'test_bersagli';
 
@@ -92,4 +92,80 @@ export function installSyntheticCostsEminence() {
     ],
   };
   return SYNTHETIC_COSTS_ID;
+}
+
+export const LEGACY_APEX_ID = 'test_apex_legacy';
+
+/**
+ * La vecchia Apex (prima del rework dell'11/11/2026): Presenza 3, Furia +1, Disprezzo −2,
+ * Ora Verde −4 e Statico che sostituisce lo slot del round 5 col Meridiano (89).
+ * Molti test generici del motore la usano come Eminenza di riferimento: la conserviamo qui
+ * così quei test restano su numeri noti, indipendenti dal bilanciamento del catalogo.
+ */
+export function installLegacyApexEminence() {
+  EMINENCES[LEGACY_APEX_ID] = {
+    id: LEGACY_APEX_ID,
+    army: 'Apex (test)',
+    name: 'Il Sole Verde (test)',
+    initialPresence: 3,
+    implemented: true,
+    static: {
+      id: 'ora_verde',
+      name: 'Cataclisma Verde',
+      text: 'All\'inizio del round 5, lo slot aperto viene sostituito dal Meridiano del Sole Verde.',
+      implemented: true,
+      segments: [
+        {
+          timing: EFFECT_TIMINGS.ROUND_START,
+          primitive: P.REPLACE_FIELD,
+          target: T.GLOBAL,
+          fieldId: 89,
+          condition: { roundNumber: 5 },
+        },
+      ],
+    },
+    abilities: [
+      {
+        id: 'apex_furia',
+        name: 'Furia',
+        presenceDelta: 1,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Il tuo Agente schierato ottiene +1 POT. Perdi 2 PV.',
+        segments: [
+          { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: P.MODIFY_STAT, target: T.OWN_AGENT, stat: 'power', delta: 1 },
+          { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: P.LOSE_HP, target: T.SELF, amount: 2, cause: 'EMINENCE_COST' },
+        ],
+      },
+      {
+        id: 'apex_disprezzo',
+        name: 'Disprezzo',
+        presenceDelta: -2,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Il tuo Agente schierato ignora gli effetti del Campo in questo Duello.',
+        segments: [
+          { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: P.IGNORE_FIELD, target: T.OWN_AGENT },
+        ],
+      },
+      {
+        id: 'apex_cataclisma',
+        name: 'Ora Verde',
+        presenceDelta: -4,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Il tuo Agente schierato ottiene Potere: +2 POT, +2 DAN.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.GRANT_POWER,
+            target: T.OWN_AGENT,
+            trigger: null,
+            effects: [{ effect: 'power', value: 2 }, { effect: 'damage', value: 2 }],
+          },
+        ],
+      },
+    ],
+  };
+  return LEGACY_APEX_ID;
 }

@@ -281,6 +281,20 @@ function applyBundleToState(matchState, bundle) {
   state = applyDebtEscalations(state, bundle.debtEscalations);
   state = applyDeployConstraints(state, bundle.deployConstraints);
   if (bundle.initiativeOverride) state = { ...state, roundInitiativeOverride: bundle.initiativeOverride };
+  for (const entry of bundle.persistentBonusOverrides || []) {
+    const current = state[entry.side];
+    if (!current?.persistent) continue;
+    state = {
+      ...state,
+      [entry.side]: {
+        ...current,
+        persistent: {
+          ...current.persistent,
+          armyBonusOverride: { override: entry.override, until: entry.until, source: entry.source },
+        },
+      },
+    };
+  }
 
   return persistAbilityEscalation(
     persistLeagueByCardId(
@@ -932,6 +946,7 @@ export function prepareEminenceDuel(matchState, {
   }
   bundle = mergePersistentReplacements(bundle, collected.matchState);
   bundle = mergeRoundLeagues(bundle, collected.matchState);
+  bundle = mergePersistentBonusOverrides(bundle, collected.matchState);
   const withCurses = attachPersistentSlotCurses(bundle, collected.matchState, currentFieldIndex);
   const evalContextBySide = {
     [SIDES.PLAYER]: {
@@ -1074,6 +1089,24 @@ function paramContextForSide(side, paramContext, agentIdBySide) {
   };
 }
 
+/** Un Bonus sostituito nei Duelli precedenti vale anche in questo, salvo override del round. */
+function mergePersistentBonusOverrides(bundle, matchState) {
+  let next = bundle;
+  for (const side of BOTH_SIDES) {
+    const stored = matchState[side]?.persistent?.armyBonusOverride;
+    if (!stored?.override || next?.armyBonusState?.[side]?.override) continue;
+    next = next || createEffectBundle();
+    next = {
+      ...next,
+      armyBonusState: {
+        ...(next.armyBonusState || {}),
+        [side]: { ...(next.armyBonusState?.[side] || {}), override: { ...stored.override } },
+      },
+    };
+  }
+  return next;
+}
+
 function attachPersistentSlotCurses(bundle, matchState, slot) {
   const curses = collectSlotCurses(matchState, slot);
   if (!curses.length) return bundle;
@@ -1106,6 +1139,7 @@ export function settleEminenceRound(matchState, {
   powerResolvedBySide = null,
   activatedTriggerBySide = null,
   activatedBonusTriggerBySide = null,
+  bonusActivatedBySide = null,
   finalPowerByCardId = null,
   finalPowerBySide = null,
   finalDamageBySide = null,
@@ -1135,6 +1169,7 @@ export function settleEminenceRound(matchState, {
     powerResolvedBySide: powerResolvedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: activatedTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
     activatedBonusTriggerBySide: activatedBonusTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
+    bonusActivatedBySide: bonusActivatedBySide || {},
     finalDamageBySide: finalDamageBySide || {},
     activationSatisfiedBySide: activationMap,
     focusInvestedBySide: focusMap,
@@ -1193,6 +1228,10 @@ function recordDuelOutcome(matchState, winner, agentIdBySide = null) {
           ...current.persistent,
           duelRecord: { ...record, [key]: record[key] + 1 },
           defeatedCardIds: defeated,
+          // «Finché un tuo Agente non vince un Duello»: la vittoria chiude l'override.
+          ...(key === 'won' && current.persistent.armyBonusOverride?.until === 'OWN_WIN'
+            ? { armyBonusOverride: null }
+            : {}),
         },
       },
     };

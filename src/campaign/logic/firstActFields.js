@@ -14,7 +14,7 @@ export function drawFirstActFields(run, node, phase) {
   const rng = mulberry32(seed);
   const hasTower = node.fieldIds.includes(TOWER_ID);
   // Torre occupies the special slot; the remaining fields follow the duel rarity rules.
-  const pool = ALL_BATTLEFIELDS.filter(f => !f.campaignOnly && (!hasTower || getFieldRarita(f) !== 'special'));
+  const pool = ALL_BATTLEFIELDS.filter(f => !f.campaignOnly && !f.eminenceOnly && (!hasTower || getFieldRarita(f) !== 'special'));
   const fields = selectBattlefields('classic', pool, { rng, fieldCount: node.fieldIds.length }).map(f => f.id);
   if (hasTower) fields[3 + Math.floor(rng() * (fields.length - 3))] = TOWER_ID;
   return fields;

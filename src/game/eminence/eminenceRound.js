@@ -476,6 +476,7 @@ export function collectPendingEffects(
     const powerTriggers = BOTH_SIDES.map((s) => extra.activatedTriggerBySide?.[s]).filter(Boolean);
     const bonusTriggers = BOTH_SIDES.map((s) => extra.activatedBonusTriggerBySide?.[s]).filter(Boolean);
     sideExtra.activatedPowerTriggers = powerTriggers;
+    sideExtra.ownBonusActivated = Boolean(extra.bonusActivatedBySide?.[side]);
     sideExtra.activatedTriggers = [...powerTriggers, ...bonusTriggers];
 
     const ownId = extra.agentIdBySide?.[side] ?? null;
