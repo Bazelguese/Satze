@@ -441,15 +441,16 @@ test('avviso: il Sigillo annuncia il Campo scelto al reveal, non l\'effetto in D
   assert.equal(notice.payoffs[0].slot, 2);
 });
 
-test('avviso: Leggerezza parla al controllo Ancorato, non al reveal anticipato', () => {
+test('avviso: Condensazione parla al controllo Ancorato, non al reveal anticipato', () => {
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
   matchState.player.presence = 2;
-  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_verde');
+  matchState.player.presence = 1;
+  const chosen = bothChosen(matchState, 'figli_condensazione', 'semaforo_verde');
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
-  assert.equal(first.notices.some((notice) => notice.name === 'Leggerezza'), false);
+  assert.equal(first.notices.some((notice) => notice.name === 'Condensazione'), false);
 
   const afterAgents = advanceToNextRevealGate(first.matchState, { initiativeSide: SIDES.PLAYER });
-  assert.equal(afterAgents.notices.some((notice) => notice.name === 'Leggerezza'), false);
+  assert.equal(afterAgents.notices.some((notice) => notice.name === 'Condensazione'), false);
 
   const duelOpts = {
     initiativeSide: SIDES.PLAYER,
@@ -458,14 +459,14 @@ test('avviso: Leggerezza parla al controllo Ancorato, non al reveal anticipato',
   };
   const general = advanceToNextRevealGate(afterAgents.matchState, duelOpts);
   assert.equal(general.gate, REVEAL_GATES.GENERAL);
-  const notice = general.notices.find((entry) => entry.name === 'Leggerezza');
+  const notice = general.notices.find((entry) => entry.name === 'Condensazione');
   assert.ok(notice);
   assert.equal(notice.kind, 'effect');
   assert.equal(notice.outcome, 'hit');
   assert.match(notice.text, /Ancorato/i);
 
   const prepared = prepareEminenceDuel(general.matchState, duelOpts);
-  assert.equal(prepared.notices.some((entry) => entry.name === 'Leggerezza'), false);
+  assert.equal(prepared.notices.some((entry) => entry.name === 'Condensazione'), false);
 });
 
 test('avviso: Deriva si legge al GENERAL e non si ripete a fine Duello', () => {
@@ -520,10 +521,10 @@ test('avviso: Risposta dice se l\'Agente è Ancorato al GENERAL, hit o miss', ()
   assert.equal(missNotice.outcome, 'miss');
 });
 
-test('avviso: se GENERAL si apre nel Duello, Leggerezza parla una sola volta', () => {
+test('avviso: se GENERAL si apre nel Duello, Condensazione parla una sola volta', () => {
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
   matchState.player.presence = 2;
-  const chosen = bothChosen(matchState, 'figli_leggerezza', 'semaforo_verde');
+  const chosen = bothChosen(matchState, 'figli_condensazione', 'semaforo_verde');
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -533,7 +534,7 @@ test('avviso: se GENERAL si apre nel Duello, Leggerezza parla una sola volta', (
     focusInvestedBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 0 },
     leagueBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 3 },
   });
-  const notices = prepared.notices.filter((entry) => entry.name === 'Leggerezza');
+  const notices = prepared.notices.filter((entry) => entry.name === 'Condensazione');
   assert.equal(notices.length, 1);
   assert.equal(notices[0].outcome, 'hit');
   assert.match(notices[0].text, /Ancorato/i);

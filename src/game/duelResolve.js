@@ -558,6 +558,16 @@ export function computeDuelResolution({
     };
     if (eminenceBundle?.armyBonusState?.player?.unblockable) state.pBonusBlocked = false;
     if (eminenceBundle?.armyBonusState?.enemy?.unblockable) state.eBonusBlocked = false;
+    for (const side of eminenceBundle?.blockedPowerSides || []) {
+      if (side === 'player' && !state.pAbilityBlocked) {
+        state.pAbilityBlocked = true;
+        battleLog.push('🜂 Eminenza: il Potere del tuo Agente non si attiva in questo Duello');
+      }
+      if (side === 'enemy' && !state.eAbilityBlocked) {
+        state.eAbilityBlocked = true;
+        battleLog.push('🜂 Eminenza: il Potere dell\'Agente avversario non si attiva in questo Duello');
+      }
+    }
 
     applyDuelMainAbilities({
       state,

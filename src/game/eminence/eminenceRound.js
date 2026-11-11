@@ -454,6 +454,9 @@ export function collectPendingEffects(
     if (extra.anchoredBySide) {
       sideExtra.ownAnchored = Boolean(extra.anchoredBySide[side]);
     }
+    if (extra.enemyAnchoredByOwnRuleBySide) {
+      sideExtra.enemyAnchoredByOwnRule = Boolean(extra.enemyAnchoredByOwnRuleBySide[side]);
+    }
     sideExtra.ownFinalDamage = extra.finalDamageBySide?.[side] ?? null;
     sideExtra.enemyFinalDamage = extra.finalDamageBySide?.[OPPOSITE_SIDE[side]] ?? null;
     sideExtra.ownActivationSatisfied = extra.activationSatisfiedBySide?.[side] ?? null;

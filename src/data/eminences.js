@@ -872,7 +872,7 @@ export const EMINENCES = {
     id: 'figli_domanda_senza_fine',
     army: 'Figli dell\'Orizzonte',
     name: 'La Domanda Senza Fine',
-    initialPresence: 2,
+    initialPresence: 1,
     implemented: true,
 
     static: {
@@ -910,33 +910,56 @@ export const EMINENCES = {
         ],
       },
       {
-        id: 'figli_leggerezza',
-        name: 'Leggerezza',
-        presenceDelta: -2,
+        id: 'figli_condensazione',
+        name: 'Condensazione',
+        presenceDelta: -1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se il tuo Agente schierato è Ancorato, il suo trigger è considerato soddisfatto.',
+        text: 'Se il tuo Agente schierato è Ancorato, riceve 1 FC temporaneo in questo Duello. Gli FC temporanei non contano per Ancorato.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.FORCE_TRIGGER,
-            scope: TRIGGER_SCOPES.OWN,
+            primitive: P.GRANT_TEMPORARY_FOCUS,
+            target: T.OWN_AGENT,
+            amount: 1,
             condition: { ownAnchored: true },
+          },
+        ],
+      },
+      {
+        id: 'figli_domanda_si_diffonde',
+        name: 'La Domanda si diffonde',
+        presenceDelta: -2,
+        revealGate: REVEAL_GATES.PRE_AGENT,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'In questo Duello, il Potere dell\'Agente nemico si attiva solo se è Ancorato. Per l\'Agente nemico vale il tuo requisito di Ancorato, aumenti di Deriva compresi.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.BLOCK_POWER,
+            target: T.ENEMY_AGENT,
+            condition: { enemyAnchoredByOwnRule: false },
           },
         ],
       },
       {
         id: 'figli_risposta',
         name: 'Risposta',
-        presenceDelta: -3,
+        presenceDelta: -4,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'All\'inizio dello Scontro, se il tuo Agente schierato è Ancorato, è anche Immune.',
+        text: 'Se il tuo Agente schierato è Ancorato, è Immune e il suo trigger Potere è considerato soddisfatto.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
             primitive: P.GRANT_IMMUNE,
             target: T.OWN_AGENT,
+            condition: { ownAnchored: true },
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.FORCE_TRIGGER,
+            scope: TRIGGER_SCOPES.OWN,
             condition: { ownAnchored: true },
           },
         ],

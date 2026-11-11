@@ -233,6 +233,25 @@ describe('Eminenze nel Duello reale', () => {
  * «Il prossimo Agente ignora tutti gli effetti del Campo» ha una portata delimitata: cade
  * ciò che il Campo fa all'Agente, resta ciò che decide chi vince.
  */
+describe('BLOCK_POWER nel Duello reale', () => {
+  it('blocca il Potere del lato indicato e lascia il Bonus al suo posto', () => {
+    const bundle = applyEminenceSegments([{
+      segment: {
+        timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+        primitive: 'BLOCK_POWER',
+        target: 'ENEMY_AGENT',
+      },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_block_power',
+    }]);
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: bundle });
+
+    // Senza blocco l'avversario (Imboscata) arriverebbe a 6.
+    expect(battleResult.enemyPower).toBe(4);
+    expect(battleResult.playerPower).toBe(4);
+  });
+});
+
 describe('Disprezzo: portata di “ignora gli effetti del Campo”', () => {
   const fieldById = (id) => ALL_BATTLEFIELDS.find((f) => f.id === id);
   const veil = () => bundleForAbility('apex_disprezzo', { eminenceId: 'apex_sole_verde' });

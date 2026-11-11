@@ -54,6 +54,7 @@ export function createEffectBundle() {
     markGains: [],
     deals: [],
     pendingDeals: [],
+    blockedPowerSides: [],
   };
 }
 
@@ -406,6 +407,15 @@ const handlers = {
   [P.GRANT_IMMUNE]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       if (!bundle.immuneSides.includes(side)) bundle.immuneSides.push(side);
+    }
+  },
+
+  // Il Potere dell'Agente non si attiva in questo Duello. Agisce come un Blocca, ma colpisce
+  // solo il Potere: un divieto sul trigger spegnerebbe anche il Bonus, che legge lo stesso
+  // controllo dei trigger.
+  [P.BLOCK_POWER]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (!bundle.blockedPowerSides.includes(side)) bundle.blockedPowerSides.push(side);
     }
   },
 

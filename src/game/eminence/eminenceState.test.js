@@ -160,13 +160,16 @@ test('igiene informativa: Khemet apre tutte e tre le attive a PRE_FIELD', () => 
   ]);
 });
 
-test('igiene informativa: i Figli aprono tutte e tre le attive a GENERAL', () => {
-  const gates = EMINENCES.figli_domanda_senza_fine.abilities.map((a) => a.revealGate);
-  assert.deepEqual(gates, [
-    REVEAL_GATES.GENERAL,
-    REVEAL_GATES.GENERAL,
-    REVEAL_GATES.GENERAL,
-  ]);
+test('igiene informativa: i Figli rivelano prima degli Agenti solo La Domanda si diffonde', () => {
+  const gates = Object.fromEntries(
+    EMINENCES.figli_domanda_senza_fine.abilities.map((a) => [a.id, a.revealGate]),
+  );
+  assert.deepEqual(gates, {
+    figli_deriva: REVEAL_GATES.GENERAL,
+    figli_condensazione: REVEAL_GATES.GENERAL,
+    figli_domanda_si_diffonde: REVEAL_GATES.PRE_AGENT,
+    figli_risposta: REVEAL_GATES.GENERAL,
+  });
 });
 
 // ------------------------------------------------------------------

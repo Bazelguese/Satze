@@ -3,16 +3,16 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "figli_domanda_senza_fine",
-    "presence": 2,
-    "abilityId": "figli_leggerezza",
+    "presence": 1,
+    "abilityId": "figli_condensazione",
     "params": null,
     "agent": {
       "cardId": 231,
-      "league": 3,
+      "league": 4,
       "power": 3,
       "damage": 2,
       "trigger": "rimonta",
-      "focusInvested": 1,
+      "focusInvested": 2,
       "anchored": false
     },
     "fragments": [],
@@ -34,26 +34,26 @@
     }
   },
   "outcome": {
-    "winner": "enemy",
+    "winner": "player",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": true
+      "enemy": false
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": "glory"
+      "enemy": null
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": -3,
+      "player": 0,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "figli_leggerezza_hit",
-  "branch": "hit"
+  "name": "figli_condensazione_miss",
+  "branch": "miss"
 }

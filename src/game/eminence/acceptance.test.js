@@ -941,12 +941,23 @@ function sealUntilGeneral(playerAbility, { presence = 2 } = {}) {
   return matchState;
 }
 
-function prepareFigli(playerAbility, { focus = 0, league = 3, presence = 2 } = {}) {
+function prepareFigli(playerAbility, {
+  focus = 0,
+  league = 3,
+  presence = 2,
+  enemyFocus = 0,
+  enemyLeague = 3,
+} = {}) {
   return prepareEminenceDuel(sealUntilGeneral(playerAbility, { presence }), {
-    focusInvestedBySide: { [SIDES.PLAYER]: focus, [SIDES.ENEMY]: 0 },
-    leagueBySide: { [SIDES.PLAYER]: league, [SIDES.ENEMY]: 3 },
+    focusInvestedBySide: { [SIDES.PLAYER]: focus, [SIDES.ENEMY]: enemyFocus },
+    leagueBySide: { [SIDES.PLAYER]: league, [SIDES.ENEMY]: enemyLeague },
   });
 }
+
+test('Figli: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: FIGLI, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+});
 
 test('Figli +1: Deriva alza il requisito subito e lo tiene per lo Scontro', () => {
   const prepared = prepareFigli('figli_deriva', { focus: 3, league: 3 });
@@ -954,12 +965,43 @@ test('Figli +1: Deriva alza il requisito subito e lo tiene per lo Scontro', () =
   assert.equal(prepared.matchState.player.presence, 3);
 });
 
-test('Figli −2: Leggerezza forza il trigger solo se Ancorato', () => {
-  const hit = prepareFigli('figli_leggerezza', { focus: 3, league: 3, presence: 2 });
-  assert.equal(hit.bundle.triggerRules.forceSatisfied.length, 1);
+test('Figli −1: Condensazione dà 1 FC temporaneo solo se Ancorato', () => {
+  const hit = prepareFigli('figli_condensazione', { focus: 3, league: 3, presence: 1 });
+  assert.equal(hit.bundle.temporaryFocus[SIDES.PLAYER], 1);
 
-  const miss = prepareFigli('figli_leggerezza', { focus: 2, league: 3, presence: 2 });
-  assert.equal(miss.bundle.triggerRules.forceSatisfied.length, 0);
+  const miss = prepareFigli('figli_condensazione', { focus: 2, league: 3, presence: 1 });
+  assert.equal(miss.bundle.temporaryFocus[SIDES.PLAYER], 0);
+});
+
+test('Figli −2: La Domanda si diffonde si rivela prima degli Agenti', () => {
+  const ability = EMINENCES[FIGLI].abilities.find((a) => a.id === 'figli_domanda_si_diffonde');
+  assert.equal(ability.revealGate, REVEAL_GATES.PRE_AGENT);
+});
+
+test('Figli −2: La Domanda si diffonde blocca il Potere nemico non Ancorato con la tua soglia', () => {
+  // Nemico L3: requisito base 3 FC.
+  const blocked = prepareFigli('figli_domanda_si_diffonde', { presence: 2, enemyFocus: 2, enemyLeague: 3 });
+  assert.deepEqual(blocked.bundle.blockedPowerSides, [SIDES.ENEMY]);
+
+  const free = prepareFigli('figli_domanda_si_diffonde', { presence: 2, enemyFocus: 3, enemyLeague: 3 });
+  assert.deepEqual(free.bundle.blockedPowerSides || [], []);
+});
+
+test('Figli −2: La Domanda si diffonde usa gli aumenti di Deriva di chi la impone', () => {
+  const base = createEminenceMatchState({ playerEminenceId: FIGLI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 2;
+  base.player.persistent = { ...base.player.persistent, anchoredThresholdDelta: 2 };
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'figli_domanda_si_diffonde').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  // Nemico L3 con 3 FC: Ancorato per sé, ma non con la soglia dei Figli (3 + 2 = 5).
+  const prepared = prepareEminenceDuel(matchState, {
+    focusInvestedBySide: { [SIDES.PLAYER]: 1, [SIDES.ENEMY]: 3 },
+    leagueBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 3 },
+  });
+  assert.deepEqual(prepared.bundle.blockedPowerSides, [SIDES.ENEMY]);
 });
 
 test('Figli statico: a fine Duello +1 Presenza se Ancorato', () => {
@@ -971,21 +1013,23 @@ test('Figli statico: a fine Duello +1 Presenza se Ancorato', () => {
     winner: SIDES.PLAYER,
     anchoredBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.equal(hit.matchState.player.presence, 3);
+  assert.equal(hit.matchState.player.presence, 2);
 
   const miss = settleEminenceRound(base, {
     winner: SIDES.PLAYER,
     anchoredBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
   });
-  assert.equal(miss.matchState.player.presence, 2);
+  assert.equal(miss.matchState.player.presence, 1);
 });
 
-test('Figli −3: Risposta concede Immune se Ancorato', () => {
-  const hit = prepareFigli('figli_risposta', { focus: 3, league: 3, presence: 3 });
+test('Figli −4: Risposta concede Immune e forza il trigger se Ancorato', () => {
+  const hit = prepareFigli('figli_risposta', { focus: 3, league: 3, presence: 4 });
   assert.deepEqual(hit.bundle.immuneSides, [SIDES.PLAYER]);
+  assert.equal(hit.bundle.triggerRules.forceSatisfied.length, 1);
 
-  const miss = prepareFigli('figli_risposta', { focus: 2, league: 3, presence: 3 });
+  const miss = prepareFigli('figli_risposta', { focus: 2, league: 3, presence: 4 });
   assert.equal((miss.bundle.immuneSides || []).length, 0);
+  assert.equal(miss.bundle.triggerRules.forceSatisfied.length, 0);
 });
 
 // ------------------------------------------------------------------

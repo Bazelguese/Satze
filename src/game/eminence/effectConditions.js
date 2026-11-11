@@ -30,6 +30,7 @@ export const CONDITION_KEYS = Object.freeze([
   'ownPowerResolved',
   'hpLossCause',
   'ownAnchored',
+  'enemyAnchoredByOwnRule',
   'winner',
   'ownFinalDamage',
   'enemyFinalDamage',

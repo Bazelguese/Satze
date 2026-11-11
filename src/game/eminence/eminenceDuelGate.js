@@ -36,7 +36,7 @@ import { getEminence, getEminenceAbility } from '../../data/eminences.js';
 import { ALL_AGENTS } from '../../data/cards.js';
 import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployedMarkResolution } from './eminenceAnnouncements.js';
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
-import { snapshotAnchoredBySide } from './anchored.js';
+import { snapshotAnchoredBySide, snapshotEnemyAnchoredByOwnRule } from './anchored.js';
 import { collectRoundLeagueByCardId } from './eminenceDuelBinding.js';
 import {
   resolveParamsSchema,
@@ -732,6 +732,7 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.REMOVE_TOXIN,
   P.PROPOSE_DEAL,
   P.ESCALATE_ABILITY,
+  P.BLOCK_POWER,
 ]);
 
 function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null) {
@@ -797,6 +798,7 @@ function mergeDuelReplay(bundle, replay) {
     immuneSides: [...new Set([...(target.immuneSides || []), ...(replay.immuneSides || [])])],
     toxinRemovals: [...(target.toxinRemovals || []), ...(replay.toxinRemovals || [])],
     abilityEscalations: [...(target.abilityEscalations || []), ...(replay.abilityEscalations || [])],
+    blockedPowerSides: [...new Set([...(target.blockedPowerSides || []), ...(replay.blockedPowerSides || [])])],
   };
 }
 
@@ -861,14 +863,21 @@ export function prepareEminenceDuel(matchState, {
   }
   const generalWasAlreadyOpen = isGateCompleted(filled.gateProgress, REVEAL_GATES.GENERAL);
   const opened = completeGate(filled, REVEAL_GATES.GENERAL, { initiativeSide });
+  const thresholdDeltaBySide = pendingAnchoredThresholdBySide(opened.matchState, opened.resolutionQueue);
   const anchoredBySide = snapshotAnchoredBySide(opened.matchState, {
     focusInvestedBySide: focusInvestedBySide || {},
     leagueBySide: leagueBySide || {},
-    thresholdDeltaBySide: pendingAnchoredThresholdBySide(opened.matchState, opened.resolutionQueue),
+    thresholdDeltaBySide,
+  });
+  const enemyAnchoredByOwnRuleBySide = snapshotEnemyAnchoredByOwnRule(opened.matchState, {
+    focusInvestedBySide: focusInvestedBySide || {},
+    leagueBySide: leagueBySide || {},
+    thresholdDeltaBySide,
   });
   const collected = collectTimings(opened.matchState, PRE_DUEL_TIMINGS, initiativeSide, {
     agentIdBySide,
     anchoredBySide,
+    enemyAnchoredByOwnRuleBySide,
     deployedIsLowestLeagueBySide: deployedIsLowestLeagueBySide || {},
   });
   const applyContext = {
@@ -888,8 +897,14 @@ export function prepareEminenceDuel(matchState, {
   applyOnDeployTriggerCosts(bundle, { agentIdBySide });
   const withCurses = attachPersistentSlotCurses(bundle, collected.matchState, currentFieldIndex);
   const evalContextBySide = {
-    [SIDES.PLAYER]: { ownAnchored: Boolean(anchoredBySide[SIDES.PLAYER]) },
-    [SIDES.ENEMY]: { ownAnchored: Boolean(anchoredBySide[SIDES.ENEMY]) },
+    [SIDES.PLAYER]: {
+      ownAnchored: Boolean(anchoredBySide[SIDES.PLAYER]),
+      enemyAnchoredByOwnRule: Boolean(enemyAnchoredByOwnRuleBySide[SIDES.PLAYER]),
+    },
+    [SIDES.ENEMY]: {
+      ownAnchored: Boolean(anchoredBySide[SIDES.ENEMY]),
+      enemyAnchoredByOwnRule: Boolean(enemyAnchoredByOwnRuleBySide[SIDES.ENEMY]),
+    },
   };
   const applied = applyBundleAndReactions(collected.matchState, withCurses, { initiativeSide });
 

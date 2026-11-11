@@ -126,6 +126,11 @@ function describeConditionResolution(condition, hit) {
   if (condition.ownAnchored === true) {
     return hit ? "L'Agente è Ancorato" : "L'Agente non è Ancorato";
   }
+  if (condition.enemyAnchoredByOwnRule === false) {
+    return hit
+      ? "L'Agente nemico non è Ancorato secondo il tuo requisito"
+      : "L'Agente nemico è Ancorato secondo il tuo requisito";
+  }
   if (condition.ownActivationSatisfied === true && condition.enemyActivationSatisfied === true) {
     return hit ? 'Entrambi i Poteri soddisfatti' : 'Non entrambi i Poteri';
   }
@@ -153,6 +158,12 @@ function formatPayoff(segment) {
   if (segment.primitive === 'SET_ARMY_BONUS_STATE') {
     if (segment.suppressed) return 'Bonus d\'Armata bloccato';
     return 'Bonus d\'Armata attivo e non bloccabile';
+  }
+  if (segment.primitive === 'BLOCK_POWER') {
+    return segment.target === 'ENEMY_AGENT' ? 'il Potere nemico non si attiva' : 'il Potere non si attiva';
+  }
+  if (segment.primitive === 'GRANT_TEMPORARY_FOCUS' && segment.amount) {
+    return `+${segment.amount} FC temporane${segment.amount === 1 ? 'o' : 'i'}`;
   }
   if (segment.primitive === 'HEAL_HP' && segment.amount) {
     return `Cura ${segment.amount} PV`;

@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "figli_leggerezza",
-    "name": "Leggerezza",
-    "presenceDelta": -2,
+    "id": "figli_condensazione",
+    "name": "Condensazione",
+    "presenceDelta": -1,
     "revealGate": "GENERAL",
-    "text": "Se il tuo Agente schierato è Ancorato, il suo trigger è considerato soddisfatto."
+    "text": "Se il tuo Agente schierato è Ancorato, riceve 1 FC temporaneo in questo Duello. Gli FC temporanei non contano per Ancorato."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      2,
+      1,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -32,15 +32,15 @@
         "presenceDelta": 1
       },
       {
-        "id": "figli_leggerezza",
-        "presenceDelta": -2
+        "id": "figli_condensazione",
+        "presenceDelta": -1
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 2,
-    "presenceAvailable": 2,
-    "presenceDelta": -2,
-    "selected": "figli_leggerezza"
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": -1,
+    "selected": "figli_condensazione"
   },
   "eminence": {
     "army": "Figli dell'Orizzonte",
@@ -49,40 +49,49 @@
   },
   "notices": [
     {
-      "badgeText": "Mancato · Condizione non soddisfatta",
+      "badgeText": "Risoluzione · Prima dei trigger",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
-          "waitFor": null
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
         }
       ],
-      "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+      "id": "effect:player:figli_condensazione:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
-      "name": "Leggerezza",
-      "outcome": "miss",
+      "name": "Condensazione",
+      "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "GRANT_TEMPORARY_FOCUS",
           "slot": null,
-          "target": null
+          "target": "OWN_AGENT"
         }
       ],
-      "phase": "MISS",
-      "phaseDetail": "Condizione non soddisfatta",
-      "phaseLabel": "Mancato",
+      "phase": "RESOLVE",
+      "phaseDetail": "Prima dei trigger",
+      "phaseLabel": "Risoluzione",
       "presenceDelta": null,
       "side": "player",
-      "text": "L'Agente non è Ancorato."
+      "text": "L'Agente è Ancorato: +1 FC temporaneo."
     }
   ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
-    "name": "figli_leggerezza_hit",
+    "name": "figli_condensazione_hit",
     "roundNumber": 3
   },
   "steps": [
@@ -95,9 +104,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -109,22 +118,31 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
-      "badge": "Mancato · Condizione non soddisfatta",
+      "badge": "Risoluzione · Prima dei trigger",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "noticeId": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
-          "waitFor": null
+          "noticeId": "effect:player:figli_condensazione:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "player",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "player",
+            "type": "field-agent"
+          }
         }
       ],
       "gate": "GENERAL",
@@ -132,34 +150,43 @@
       "kind": "gate",
       "notices": [
         {
-          "badgeText": "Mancato · Condizione non soddisfatta",
+          "badgeText": "Risoluzione · Prima dei trigger",
           "cues": [
             {
-              "flight": false,
-              "from": null,
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
               "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
-              "waitFor": null
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "player",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "player",
+                "type": "field-agent"
+              }
             }
           ],
-          "id": "effect:player:figli_leggerezza:BEFORE_TRIGGER_CHECK:miss",
+          "id": "effect:player:figli_condensazione:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
-          "name": "Leggerezza",
-          "outcome": "miss",
+          "name": "Condensazione",
+          "outcome": "hit",
           "payoffs": [
             {
-              "primitive": "FORCE_TRIGGER",
+              "primitive": "GRANT_TEMPORARY_FOCUS",
               "slot": null,
-              "target": null
+              "target": "OWN_AGENT"
             }
           ],
-          "phase": "MISS",
-          "phaseDetail": "Condizione non soddisfatta",
-          "phaseLabel": "Mancato",
+          "phase": "RESOLVE",
+          "phaseDetail": "Prima dei trigger",
+          "phaseLabel": "Risoluzione",
           "presenceDelta": null,
           "side": "player",
-          "text": "L'Agente non è Ancorato."
+          "text": "L'Agente è Ancorato: +1 FC temporaneo."
         }
       ],
       "presence": {
@@ -217,11 +244,11 @@
             "status": "false"
           },
           "expectedNoCue": false,
-          "primitive": "FORCE_TRIGGER",
+          "primitive": "GRANT_TEMPORARY_FOCUS",
           "source": "ability",
-          "sourceId": "figli_leggerezza",
-          "sourceName": "Leggerezza",
-          "target": null,
+          "sourceId": "figli_condensazione",
+          "sourceName": "Condensazione",
+          "target": "OWN_AGENT",
           "timing": "BEFORE_TRIGGER_CHECK"
         }
       ],

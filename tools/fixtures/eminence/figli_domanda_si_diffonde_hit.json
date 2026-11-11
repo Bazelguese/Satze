@@ -4,16 +4,16 @@
   "player": {
     "eminenceId": "figli_domanda_senza_fine",
     "presence": 2,
-    "abilityId": "figli_leggerezza",
+    "abilityId": "figli_domanda_si_diffonde",
     "params": null,
     "agent": {
       "cardId": 231,
-      "league": 3,
+      "league": 4,
       "power": 3,
       "damage": 2,
       "trigger": "rimonta",
-      "focusInvested": 3,
-      "anchored": true
+      "focusInvested": 2,
+      "anchored": false
     },
     "fragments": [],
     "prey": []
@@ -34,26 +34,26 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "figli_leggerezza_miss",
-  "branch": "miss"
+  "name": "figli_domanda_si_diffonde_hit",
+  "branch": "hit"
 }
