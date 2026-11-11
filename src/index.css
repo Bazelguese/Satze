@@ -23,7 +23,11 @@ body.satze-public-build [contenteditable='true'] {
   user-select: text;
 }
 
-/* SatzeCursor: nasconde il cursore di sistema anche dove CSS inline mette pointer/grab */
+/* SatzeCursor: nasconde il cursore di sistema anche dove CSS inline mette pointer/grab.
+   --satze-cursor attraversa lo Shadow DOM (il selettore * no): il bottone sulla spada del logo lo legge. */
+html.satze-custom-cursor {
+  --satze-cursor: none;
+}
 html.satze-custom-cursor,
 html.satze-custom-cursor *,
 body.satze-custom-cursor,
