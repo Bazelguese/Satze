@@ -104,6 +104,8 @@ import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
 import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence/EminenceMarkFlight.jsx';
 import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
+import { useEminenceEffectFx } from '../src/components/eminence/EminenceEffectFx.jsx';
+import { planEffectFx } from '../src/components/eminence/eminenceEffectFx.js';
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
 import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
@@ -737,6 +739,29 @@ export default function SatzeGame() {
     };
   }), []);
 
+  const NOTICE_EFFECT_FX_DELAY_MS = 950;
+  // Effetti d'attivazione: il piano nasce dalle stesse ricette dell'audio, ma qui servono gli
+  // Agenti già in campo (letti dal DOM) e l'armata di chi ha attivato l'abilità.
+  const eminenceEffectFx = useEminenceEffectFx();
+  const playNoticeEffectFxRef = useRef(null);
+  playNoticeEffectFxRef.current = (notice) => {
+    const owner = notice.side === 'player' ? eminenceChoiceView.self : eminenceChoiceView.opponent;
+    const army = owner?.eminence?.army;
+    if (!army || typeof document === 'undefined') return;
+    const accents = { player: playerIdentityColor, enemy: enemyIdentityColor };
+    const cues = resolveNoticeCinematics(notice, {
+      accents,
+      agentsDeployed: {
+        player: Boolean(document.querySelector('[data-field-agent="player"]')),
+        enemy: Boolean(document.querySelector('[data-field-agent="enemy"]')),
+      },
+    });
+    const plans = planEffectFx(cues, { side: notice.side, army, accent: accents[notice.side], abilityName: notice.name });
+    // l'avviso entra con un'animazione di circa 0,8 s: l'effetto parte quando è al suo posto,
+    // altrimenti verrebbe misurato a metà strada
+    if (plans.length) window.setTimeout(() => eminenceEffectFx.play(plans), NOTICE_EFFECT_FX_DELAY_MS);
+  };
+
   const runNoticeSparkQueue = useCallback(async () => {
     if (sparkRunnerBusyRef.current) return;
     sparkRunnerBusyRef.current = true;
@@ -753,6 +778,8 @@ export default function SatzeGame() {
         setActiveSparkNoticeId(next.id);
 
         const cancelNoticeAudio = playNoticeAudioPreview(resolveNoticeCinematics(next));
+        // Effetto a tema sul tavolo: sciame dall'avviso e impatto sul bersaglio dell'abilità.
+        playNoticeEffectFxRef.current?.(next);
 
         await waitAnnounceMs(getEminenceAnnounceHoldMs());
         cancelNoticeAudio();
@@ -7823,6 +7850,7 @@ export default function SatzeGame() {
         />
       )}
       <EminencePresenceSparks flights={presenceLink.flights} />
+      {eminenceEffectFx.layer}
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div
