@@ -996,3 +996,14 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
   background:linear-gradient(90deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 46%,transparent),color-mix(in srgb,var(--em-sel,#d5ecf9) 8%,transparent) 78%) !important;
 }
 .em-zone-enemy .em-rail--portale .em-rail-sel .em-rail-back{background:var(--em-sel,#d5ecf9) !important}
+
+/* Statico a comparsa: sulla carta resta solo il titolo, il testo si apre passando il mouse
+   sull'Eminenza. L'illustrazione resta libera per il resto del tempo. */
+.em-card-static{transition:padding .18s ease,background .18s ease}
+.em-card-static-text{
+  max-height:0;opacity:0;overflow:hidden;margin-top:0 !important;
+  transition:max-height .24s ease,opacity .18s ease,margin-top .18s ease;
+}
+.em-card:hover .em-card-static-text{max-height:340px;opacity:1;margin-top:5px !important}
+.em-card:not(:hover) .em-card-static{padding:6px 10px !important;background:rgba(4,6,12,.72) !important}
+@media(prefers-reduced-motion:reduce){.em-card-static,.em-card-static-text{transition:none}}

@@ -418,7 +418,7 @@ function EminenzaCard({
             >
               {`Statico · ${eminence.staticName}`}
             </div>
-            <div style={{
+            <div className="em-card-static-text" style={{
               marginTop: 5,
               fontFamily: EM_UI_FONT,
               fontSize: 13,
