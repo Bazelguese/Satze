@@ -344,6 +344,42 @@ La modalità Torneo arriva dal `main` (unito nel ramo). Decisioni dell'utente:
 
 **Problema trovato e corretto:** in sviluppo il worker dell'IA non partiva, già prima di questo lavoro. Il runtime del ricaricamento a caldo di `@vitejs/plugin-react` 4.2 usa `window` e `$RefreshReg$`, e ci arriva perché i dati del gioco importano `src/data/icons.jsx`. Senza correzione, in sviluppo l'IA ripiegava in silenzio sul motore precedente. `src/game/ai/worker/devWindowShim.js`, caricato per primo nel worker, definisce quegli alias **solo in sviluppo**; nella build di produzione non c'è.
 
+### Eminenze (formato Standard) — in corso
+
+Il rework delle 12 Eminenze è arrivato nel `main`. Prima di questo lavoro l'IA sceglieva sempre la prima abilità legale (quasi sempre la ricarica) e accettava ogni Offerta con la prima opzione.
+
+**Scelta delle abilità** (`src/game/ai/eminence/aiEminenceChoice.js`):
+
+- valore in FC di ogni abilità (stime di `SATZE_EMINENZE_MATTONI_BASE_v1.md` §10) corretto sullo stato pubblico: PV, Campi, Duelli persi, Frammenti, Prede, Registro;
+- Presenza pianificata sui Duelli che restano (programmazione dinamica);
+- bersagli con regole semplici: Seduzione vieta la carta più forte, Caccia impone la più debole, Gorgoglio e la Preda iniziale prendono la più forte;
+- niente perdite di PV che possono chiudere lo Scontro; Sacrificio vale quando accende Rimonta (Bonus di Kethran);
+- Offerte della Corte: rifiuta le troppo care o letali quando può; Corteggiamento: per seconda nei turni 1-2, per prima dopo (misurato: +12% ±7,7 nei turni 1-2);
+- uguale per tutte le difficoltà e personalità.
+
+**Banco di prova con le Eminenze** (`src/game/sim/headlessEminenceMatch.js`, `npm run selfplay:eminence`): stesse funzioni pure del gioco (apertura del round, gate, Offerte, `prepareEminenceDuel` → `computeDuelResolution` → `settleEminenceRound`, debiti di fine Scontro). Approssimazioni: con Mascarada il Campo è quello deciso insieme all'Agente; i parametri al reveal del lato `player` vengono fissati alla selezione.
+
+**Misure (11/11/2026, IA Normale per le carte, 400 partite, semi 1-200):**
+
+| Confronto | Risultato |
+|---|---|
+| Scelta nuova – scelta vecchia | **65,5%** (60,7–70,0) |
+| Riferimento: vecchia – vecchia | 48,0% |
+
+Per Eminenza (stesse partite, scelta nuova contro vecchia): miglioramenti da +6% (Khemet) a +44% (Calibri). Kethran peggiorava: con la scelta vecchia (Sacrificio a ogni turno) Rimonta, il suo Bonus, resta accesa. Corretto e verificato su 240 partite con Kethran: senza Innesto e Opera Composita vince il 72,5%, con Sacrificio a ogni turno il 60,4%.
+
+**Livelli con le Eminenze** (200 partite per confronto, semi 1-100, scelta nuova per tutti), confrontati con le stesse partite senza Eminenze:
+
+| Confronto | Senza Eminenze | Con Eminenze | Differenza (coppie) |
+|---|---|---|---|
+| Difficile – Normale | 64,0% | 60,0% | −4,0% ±8,8 |
+| Normale – Facile | 72,5% | 62,5% | **−10,0% ±8,9** |
+| Facile – Casuale | 78,5% | 76,0% | −2,5% ±8,0 |
+
+Con le Eminenze il gradino Normale–Facile si accorcia davvero. Probabile causa: la scelta di Agente e FC non simula gli effetti delle Eminenze, quindi il vantaggio di una ricerca più profonda pesa meno.
+
+**Aperti:** Innesto, Opera Composita, slot delle Maledizioni e Ascesa con bersagli predefiniti; Agente e FC che non tengono conto delle Eminenze.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.
