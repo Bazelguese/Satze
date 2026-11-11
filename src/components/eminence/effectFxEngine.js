@@ -223,57 +223,78 @@ const THEMES = {
     },
   },
 
-  // La Fame — le fauci: viticci che afferrano e una bocca tonda a corone di denti che ingoia
+  // La Fame — non un oggetto: una sensazione trasmessa. Il battito accelera, le vene
+  // affiorano dai bordi, il bersaglio suda e fila bava. Niente al centro: resta leggibile.
   mounthborn: {
-    color: (o) => hexRgb(o.accent), color2: [226, 84, 160], count: 12,
-    // larve che si contorcono in volo
+    color: (o) => hexRgb(o.accent), color2: [226, 84, 160], count: 8, stagger: 60,
+    // gocce di bava tese in volo, con il loro filo
     mote(ctx, e, x, y, ang, p, a) {
-      ctx.strokeStyle = rgba(mix(e.c, WHITE, 0.35), a); ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.beginPath();
-      for (let s = 0; s <= 6; s += 1) { const d = s * 3.4; const w = Math.sin(p.u * 34 + s * 1.1 + p.k * 6) * 3.4; ctx[s ? 'lineTo' : 'moveTo'](x - Math.cos(ang) * d + Math.cos(ang + Math.PI / 2) * w, y - Math.sin(ang) * d + Math.sin(ang + Math.PI / 2) * w); }
-      ctx.stroke(); glow(ctx, x, y, 8, e.c, a * 0.6);
+      const len = 16 + 10 * p.k; const g = ctx.createLinearGradient(x - Math.cos(ang) * len, y - Math.sin(ang) * len, x, y);
+      g.addColorStop(0, rgba(e.c, 0)); g.addColorStop(1, rgba(mix(e.c, WHITE, 0.55), 0.7 * a));
+      ctx.strokeStyle = g; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * len, y - Math.sin(ang) * len); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = rgba(mix(e.c, WHITE, 0.6), 0.75 * a); ctx.beginPath(); ctx.ellipse(x, y, 3.4, 2.4, ang, 0, TAU); ctx.fill();
     },
     setup(e, rnd) {
-      e.vines = Array.from({ length: 9 }, (_, i) => ({ a: (i / 9) * TAU + rnd() * 0.5, far: 2.3 + rnd() * 0.9, bend: (rnd() - 0.5) * 1.6, w: 3 + rnd() * 3.5, d: rnd() * 140, ph: rnd() * TAU }));
-      e.rings = [{ n: 15, r: 1, len: 0.3, dir: 1 }, { n: 11, r: 0.7, len: 0.26, dir: -1 }, { n: 7, r: 0.42, len: 0.2, dir: 1 }];
-      e.drool = burst(rnd, 54, { speed: 300, life: 900, size: 2.8, delay: 60 });
+      // battiti sempre più ravvicinati: è adrenalina che sale
+      e.beats = [0, 310, 570, 790, 970, 1120, 1250, 1370];
+      const hw = e.tw / 2; const hh = e.th / 2; const per = (k) => { const u = k * 4; const side = Math.floor(u) % 4; const f = u - Math.floor(u); return side === 0 ? [-hw + f * e.tw, -hh, 0, 1] : side === 1 ? [hw, -hh + f * e.th, -1, 0] : side === 2 ? [hw - f * e.tw, hh, 0, -1] : [-hw, hh - f * e.th, 1, 0]; };
+      const reach = Math.min(e.tw, e.th) * 0.42;
+      // su bersagli piccoli (targa PV, Campo) gocce e fili si rimpiccioliscono
+      const sc = Math.max(0.42, Math.min(1, Math.min(e.tw, e.th) / 150));
+      e.veins = Array.from({ length: 14 }, (_, i) => {
+        const [x0, y0, nx, ny] = per((i + rnd() * 0.7) / 14); let a = Math.atan2(ny, nx); let x = x0; let y = y0; const pts = [[x, y]]; const n = 5 + Math.floor(rnd() * 4);
+        for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.2; const st = (reach / n) * (0.7 + rnd() * 0.7); x += Math.cos(a) * st; y += Math.sin(a) * st; pts.push([x, y]); }
+        return { pts, d: rnd() * 260, w: 0.8 + rnd() * 1.1 };
+      });
+      e.sweat = Array.from({ length: Math.round(4 + Math.min(18, (e.tw * e.th) / 3600)) }, () => ({ x: (rnd() - 0.5) * e.tw * 0.84, y: -hh + rnd() * e.th * 0.62, r: (1.6 + rnd() * 2.2) * sc, born: 120 + rnd() * 620, hold: 260 + rnd() * 420, run: 0.5 + rnd() * 0.9 }));
+      const strands = Math.max(2, Math.min(5, Math.round(e.tw / 60)));
+      e.drool = Array.from({ length: strands }, (_, i) => ({ x: -hw + ((i + 0.3 + rnd() * 0.4) / strands) * e.tw, len: (0.34 + rnd() * 0.3) * Math.max(e.th, 70), d: 160 + rnd() * 320, sway: rnd() * TAU, r: (2.4 + rnd() * 1.6) * sc }));
+      e.breath = Array.from({ length: 4 }, () => ({ x: (rnd() - 0.5) * e.tw * 0.7, d: rnd() * 700, r: 0.5 + rnd() * 0.5 }));
     },
     impact(ctx, t, e) {
-      const a = env(t, 60, 1150, 1750);
-      // viticci: crescono da fuori e si stringono sul bersaglio
-      const grab = easeOut(t / 360);
-      ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'round';
-      e.vines.forEach((v) => {
-        const k = easeOut((t - v.d) / 380); if (k <= 0) return;
-        const x0 = e.cx + Math.cos(v.a) * e.R * v.far; const y0 = e.cy + Math.sin(v.a) * e.R * v.far;
-        const x1 = e.cx + Math.cos(v.a) * e.R * 0.95; const y1 = e.cy + Math.sin(v.a) * e.R * 0.95;
-        const mx = (x0 + x1) / 2 + Math.cos(v.a + Math.PI / 2) * e.R * v.bend * (1 - 0.4 * grab) + Math.sin(t * 0.006 + v.ph) * 6;
-        const my = (y0 + y1) / 2 + Math.sin(v.a + Math.PI / 2) * e.R * v.bend * (1 - 0.4 * grab) + Math.cos(t * 0.006 + v.ph) * 6;
-        for (let pass = 0; pass < 2; pass += 1) {
-          ctx.strokeStyle = pass ? rgba(mix(e.c2, WHITE, 0.35), a * 0.9) : rgba(mix(e.c2, [40, 0, 30], 0.5), a);
-          ctx.lineWidth = pass ? v.w * 0.35 : v.w; ctx.beginPath(); ctx.moveTo(x0, y0);
-          for (let s = 1; s <= 14; s += 1) { const u = (s / 14) * k; const w = 1 - u; ctx.lineTo(w * w * x0 + 2 * w * u * mx + u * u * x1, w * w * y0 + 2 * w * u * my + u * u * y1); }
-          ctx.stroke();
-        }
+      const a = env(t, 80, 1250, 1800); const hw = e.tw / 2; const hh = e.th / 2;
+      // battito: colpo doppio, «tum-tum»
+      let pulse = 0; e.beats.forEach((b) => { [0, 95].forEach((off, n) => { const x = t - b - off; if (x > 0) pulse += (n ? 0.6 : 1) * Math.min(1, x / 14) * Math.exp(-x / 85); }); });
+      pulse = Math.min(1.2, pulse);
+      // la vista si stringe: bordi accesi, centro libero
+      ctx.save(); roundRect(ctx, e.cx - hw, e.cy - hh, e.tw, e.th, 9); ctx.clip();
+      const vg = ctx.createRadialGradient(e.cx, e.cy, Math.min(hw, hh) * 0.35, e.cx, e.cy, Math.hypot(hw, hh));
+      vg.addColorStop(0, rgba(e.c, 0)); vg.addColorStop(1, rgba(e.c, (0.12 + 0.3 * pulse) * a));
+      ctx.fillStyle = vg; ctx.fillRect(e.cx - hw, e.cy - hh, e.tw, e.th);
+      // vene che affiorano dai bordi e pulsano col battito
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      e.veins.forEach((v) => {
+        const k = easeOut((t - v.d) / 560); if (k <= 0) return; const upto = k * (v.pts.length - 1);
+        ctx.strokeStyle = rgba(mix(e.c2, e.c, 0.25), (0.34 + 0.5 * pulse) * a); ctx.lineWidth = v.w * (1 + 0.5 * pulse); ctx.beginPath();
+        v.pts.forEach(([px, py], j) => { if (j > upto + 1) return; const f = j <= upto ? 1 : upto - (j - 1); const [qx, qy] = j ? v.pts[j - 1] : [px, py]; ctx[j ? 'lineTo' : 'moveTo'](e.cx + qx + (px - qx) * f, e.cy + qy + (py - qy) * f); });
+        ctx.stroke();
       });
-      // la bocca: si apre larga, si chiude a scatti (due morsi), poi rilascia
-      const gulp = t < 240 ? 1.5 - 0.72 * easeIn(t / 240) : t < 380 ? 0.78 + 0.2 * Math.sin(((t - 240) / 140) * Math.PI) : t < 520 ? 0.78 - 0.14 * easeIn((t - 380) / 140) : 0.64 + 0.5 * easeInOut((t - 520) / 1100);
-      const R = e.R * gulp;
-      const g = ctx.createRadialGradient(e.cx, e.cy, R * 0.1, e.cx, e.cy, R * 1.12);
-      g.addColorStop(0, rgba([6, 0, 4], 0.96 * a)); g.addColorStop(0.62, rgba([70, 8, 44], 0.9 * a)); g.addColorStop(0.9, rgba(e.c2, 0.85 * a)); g.addColorStop(1, rgba(e.c2, 0));
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e.cx, e.cy, R * 1.12, 0, TAU); ctx.fill();
-      e.rings.forEach((rg, ri) => {
-        const rot = rg.dir * (t * 0.0016 + (1 - gulp) * 1.4) + ri; const rr = R * rg.r; const len = R * rg.len * (1.15 - 0.3 * gulp);
-        for (let i = 0; i < rg.n; i += 1) {
-          const aa = rot + (i / rg.n) * TAU; const half = (Math.PI / rg.n) * 0.62;
-          const tg = ctx.createLinearGradient(e.cx + Math.cos(aa) * rr, e.cy + Math.sin(aa) * rr, e.cx + Math.cos(aa) * (rr - len), e.cy + Math.sin(aa) * (rr - len));
-          tg.addColorStop(0, rgba(mix(e.c, [60, 60, 0], 0.4), a)); tg.addColorStop(1, rgba([250, 255, 220], a));
-          ctx.fillStyle = tg; poly(ctx, [[e.cx + Math.cos(aa - half) * rr, e.cy + Math.sin(aa - half) * rr], [e.cx + Math.cos(aa + half) * rr, e.cy + Math.sin(aa + half) * rr], [e.cx + Math.cos(aa) * (rr - len), e.cy + Math.sin(aa) * (rr - len)]]); ctx.fill();
-        }
+      // fiato caldo dal basso
+      e.breath.forEach((b) => { const tt = t - b.d; const k = clamp01(tt / 1100); if (tt <= 0 || k >= 1) return; glow(ctx, e.cx + b.x, e.cy + hh - k * e.th * 0.5, Math.min(hw, hh) * b.r * (0.6 + k), mix(e.c, WHITE, 0.5), 0.1 * (1 - k) * a); });
+      ctx.globalCompositeOperation = 'source-over';
+      // sudore: le gocce nascono, restano, poi colano lasciando la scia
+      e.sweat.forEach((d) => {
+        const tt = t - d.born; if (tt <= 0) return; const grow = clamp01(tt / 180); const slide = Math.max(0, tt - d.hold); const fall = d.run * slide * slide * 0.00035 * e.th * 0.02 * 50;
+        const y = e.cy + d.y + fall; if (y > e.cy + hh + 4) return;
+        if (fall > 1) { const tg = ctx.createLinearGradient(0, y - Math.min(fall, 46), 0, y); tg.addColorStop(0, rgba(WHITE, 0)); tg.addColorStop(1, rgba(mix(e.c, WHITE, 0.7), 0.4 * a)); ctx.strokeStyle = tg; ctx.lineWidth = d.r * 0.9; ctx.beginPath(); ctx.moveTo(e.cx + d.x, y - Math.min(fall, 46)); ctx.lineTo(e.cx + d.x, y); ctx.stroke(); }
+        const r = d.r * grow;
+        ctx.fillStyle = rgba(mix(e.c, WHITE, 0.72), 0.55 * a); ctx.beginPath(); ctx.ellipse(e.cx + d.x, y, r, r * (1.15 + Math.min(0.6, fall * 0.02)), 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(WHITE, 0.9 * a); ctx.beginPath(); ctx.arc(e.cx + d.x - r * 0.3, y - r * 0.35, r * 0.28, 0, TAU); ctx.fill();
+      });
+      ctx.restore();
+      // bava: fili che si allungano dal bordo alto, tremano col battito, poi cedono
+      e.drool.forEach((d) => {
+        const tt = t - d.d; if (tt <= 0) return; const k = easeOut(tt / 900); const snap = clamp01((tt - 1150) / 260);
+        const len = d.len * k; const x0 = e.cx + d.x; const y0 = e.cy - hh + 2; const sway = Math.sin(t * 0.006 + d.sway) * (3 + 5 * pulse) * k;
+        const x1 = x0 + sway; const y1 = y0 + len + snap * 60;
+        if (snap < 1) { ctx.strokeStyle = rgba(mix(e.c, WHITE, 0.7), 0.6 * a * (1 - snap)); ctx.lineWidth = 1.6 * (1 - 0.6 * k) + 0.4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x0 + sway * 0.2, y0 + len * 0.6, x1, y0 + len); ctx.stroke(); }
+        const r = d.r * (0.5 + 0.5 * k);
+        ctx.fillStyle = rgba(mix(e.c, WHITE, 0.68), 0.7 * a * (1 - snap * 0.6)); ctx.beginPath(); ctx.ellipse(x1, y1, r, r * 1.35, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(WHITE, 0.9 * a * (1 - snap)); ctx.beginPath(); ctx.arc(x1 - r * 0.3, y1 - r * 0.4, r * 0.3, 0, TAU); ctx.fill();
       });
       ctx.globalCompositeOperation = 'lighter';
-      ring(ctx, e.cx, e.cy, R * 1.04, 3, e.c, 0.8 * a);
-      const snap = t - 240; glow(ctx, e.cx, e.cy, e.R * 1.9, e.c, 0.6 * env(snap, 20, 90, 380)); glow(ctx, e.cx, e.cy, e.R * 1.6, e.c2, 0.4 * env(t - 520, 20, 90, 380));
-      e.drool.forEach((p) => { const q = burstAt(p, snap, 520 + e.grav); if (q) glow(ctx, e.cx + q.x, e.cy + q.y, p.size * 2.2, p.hue < 0.5 ? e.c : e.c2, 0.9 * (1 - q.life)); });
+      // il bordo batte: un anello che si allarga a ogni colpo
+      e.beats.forEach((b) => { const x = t - b; if (x <= 0 || x > 420) return; const g2 = 2 + 16 * easeOut(x / 420); ctx.strokeStyle = rgba(e.c, 0.6 * (1 - x / 420) * a); ctx.lineWidth = 1.6; roundRect(ctx, e.cx - hw - g2, e.cy - hh - g2, e.tw + g2 * 2, e.th + g2 * 2, 9 + g2); ctx.stroke(); });
     },
   },
 
