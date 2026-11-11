@@ -34,7 +34,8 @@ export function EminenceEffectLab() {
   const [eminenceId, setEminenceId] = useState(EMINENCE_LIST[0].id);
   const [abilityName, setAbilityName] = useState('');
   const refs = { source: useRef(null), agent: useRef(null), slot: useRef(null), hp: useRef(null) };
-  const { play, layer } = useEminenceEffectFx();
+  // la pagina dei lab sta a z-index 9998: qui l'effetto le passa sopra
+  const { play, layer } = useEminenceEffectFx({ zIndex: 9999 });
   const eminence = EMINENCES[eminenceId];
   const accent = ARMY_COLORS[eminence.army]?.accent || '#d5ecf9';
   const theme = resolveArmyEntrySlug(eminence.army);

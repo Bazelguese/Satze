@@ -45,3 +45,42 @@ test('effetti: il Semaforo prende il colore della luce dal nome dell\'abilità',
 test('effetti: ogni armata ha il suo motivo', () => {
   assert.deepEqual([...EFFECT_FX_THEMES].sort(), [...new Set(Object.values(ARMY_ENTRY))].sort());
 });
+
+// ── motore ────────────────────────────────────────────────────────────
+import { createEffectRun, EFFECT_FX_DURATION_MS, EFFECT_FX_ENGINE_THEMES } from './effectFxEngine.js';
+import { EFFECT_FX_KINDS } from './eminenceEffectFx.js';
+
+/** Contesto finto: accetta qualunque chiamata e conta i disegni. */
+function fakeCtx() {
+  const calls = { n: 0 };
+  const gradient = { addColorStop() {} };
+  const ctx = new Proxy({}, {
+    get(target, key) {
+      if (key in target) return target[key];
+      if (key === 'createRadialGradient' || key === 'createLinearGradient') return () => gradient;
+      return () => { calls.n += 1; };
+    },
+    set(target, key, value) { target[key] = value; return true; },
+  });
+  return { ctx, calls };
+}
+
+test('motore: ogni motivo del piano ha il suo disegno', () => {
+  assert.deepEqual([...EFFECT_FX_ENGINE_THEMES].sort(), [...EFFECT_FX_THEMES].sort());
+});
+
+test('motore: tutti i motivi e i tipi si disegnano dall\'inizio alla fine senza errori', () => {
+  const g = { x1: 200, y1: 700, x2: 800, y2: 400, tw: 190, th: 290 };
+  for (const theme of EFFECT_FX_ENGINE_THEMES) {
+    for (const kind of Object.values(EFFECT_FX_KINDS)) {
+      const run = createEffectRun({ theme, kind, accent: '#e867c3', lamp: '#ffc933', g });
+      const { ctx, calls } = fakeCtx();
+      for (let t = 0; t <= EFFECT_FX_DURATION_MS; t += 40) run.draw(ctx, t);
+      assert.ok(calls.n > 50, `${theme}/${kind} disegna troppo poco (${calls.n})`);
+      const before = calls.n;
+      run.draw(ctx, EFFECT_FX_DURATION_MS + 1);
+      run.draw(ctx, -1);
+      assert.equal(calls.n, before, `${theme}/${kind} disegna fuori dalla sua durata`);
+    }
+  }
+});

@@ -1,26 +1,22 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { queryFlightAnchor } from './eminenceMarkCinematic.js';
 import { EFFECT_FX_KINDS } from './eminenceEffectFx.js';
-import '../../styles/em-effetti.css';
+import { createEffectRun, EFFECT_FX_DURATION_MS } from './effectFxEngine.js';
 
-/** Vita di un effetto nel DOM: volo + impatto + margine. */
-export const EFFECT_FX_LIFE_MS = 2100;
-const MOTES = 9;
 const ANCHOR_TRIES = 24;
+/** Oltre questa densità di pixel il canvas a tutto schermo costa più di quanto renda. */
+const MAX_PIXEL_RATIO = 1.5;
+
+const LAYER_STYLE = { position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' };
 
 function reducedMotion() {
   return typeof window !== 'undefined'
     && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Scarti fissi (niente Math.random: stesso effetto, stesso disegno). */
-function jitter(i, span) {
-  const v = Math.sin((i + 1) * 12.9898) * 43758.5453;
-  return (v - Math.floor(v) - 0.5) * span;
-}
-
-function measure(plan) {
+/** Dove parte e dove arriva l'effetto, in pixel di finestra. */
+export function measureEffectFx(plan) {
   const fromEl = plan.fromEl || queryFlightAnchor(plan.from) || queryFlightAnchor({ type: 'card', side: plan.from?.side });
   if (!fromEl) return null;
   const a = fromEl.getBoundingClientRect();
@@ -36,59 +32,56 @@ function measure(plan) {
     // dalla carta), a cavallo del bordo: al centro coprirebbe il testo.
     const size = Math.min(150, Math.max(84, b.height * 0.62));
     const x = plan.from?.side === 'player' ? b.left + size * 0.2 : b.right - size * 0.2;
-    return { x1, y1, x2: x, y2: b.top + size * 0.15, tw: size, th: size, ang: 0 };
+    return { x1, y1, x2: x, y2: b.top + size * 0.15, tw: size, th: size };
   }
-  const x2 = b.left + b.width / 2;
-  const y2 = b.top + b.height / 2;
   return {
-    x1, y1, x2, y2,
-    tw: Math.max(84, b.width),
-    th: Math.max(84, b.height),
-    ang: Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI),
+    x1, y1,
+    x2: b.left + b.width / 2,
+    y2: b.top + b.height / 2,
+    tw: Math.max(60, b.width),
+    th: Math.max(40, b.height),
   };
-}
-
-function EffectFx({ fx }) {
-  const { plan, g } = fx;
-  const aura = plan.kind === EFFECT_FX_KINDS.AURA;
-  const style = {
-    '--acc': plan.accent,
-    '--x1': `${g.x1}px`, '--y1': `${g.y1}px`,
-    '--x2': `${g.x2}px`, '--y2': `${g.y2}px`,
-    '--dx': `${g.x2 - g.x1}px`, '--dy': `${g.y2 - g.y1}px`,
-    '--tw': `${g.tw}px`, '--th': `${g.th}px`,
-    '--ang': `${g.ang}deg`,
-  };
-  if (plan.lamp) style['--lamp'] = plan.lamp;
-  return (
-    <div className={`em-efx em-efx--${plan.theme} em-efx--${plan.kind}`} style={style} aria-hidden>
-      {!aura && Array.from({ length: MOTES }, (_, i) => (
-        <i
-          key={i}
-          className="em-efx-mote"
-          style={{ '--i': i, '--jx': `${jitter(i, g.tw * 0.5)}px`, '--jy': `${jitter(i + 31, g.th * 0.5)}px` }}
-        >
-          <b />
-        </i>
-      ))}
-      <span className="em-efx-hit"><i /><i /><i /><i /></span>
-    </div>
-  );
 }
 
 /**
- * Effetti d'attivazione delle Eminenze.
- * `play(plans)` accetta i piani di `planEffectFx`; `layer` va reso una volta nella scena.
- * Le ancore possono comparire qualche fotogramma dopo l'avviso: si riprova per poco, poi si rinuncia.
+ * Effetti d'attivazione delle Eminenze: un canvas a tutta finestra, disegnato solo mentre
+ * c'è un effetto in corso. `play(plans)` accetta i piani di `planEffectFx`; `layer` va reso
+ * una volta nella scena. Le ancore possono comparire qualche fotogramma dopo l'avviso:
+ * si riprova per poco, poi si rinuncia.
  */
-export function useEminenceEffectFx() {
-  const [effects, setEffects] = useState([]);
-  const timersRef = useRef(new Set());
-  const seqRef = useRef(0);
+export function useEminenceEffectFx({ zIndex = 400 } = {}) {
+  const canvasRef = useRef(null);
+  const runsRef = useRef([]);
+  const rafRef = useRef(0);
+  const retryRef = useRef(new Set());
+  const seedRef = useRef(1);
+
+  const frame = useCallback(() => {
+    rafRef.current = 0;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ratio = Math.min(MAX_PIXEL_RATIO, window.devicePixelRatio || 1);
+    const w = Math.round(window.innerWidth * ratio);
+    const h = Math.round(window.innerHeight * ratio);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const now = performance.now();
+    runsRef.current = runsRef.current.filter((entry) => now - entry.t0 < EFFECT_FX_DURATION_MS);
+    runsRef.current.forEach((entry) => entry.run.draw(ctx, now - entry.t0));
+    if (runsRef.current.length) rafRef.current = window.requestAnimationFrame(frame);
+  }, []);
 
   useEffect(() => () => {
-    timersRef.current.forEach((t) => { window.clearTimeout(t); window.cancelAnimationFrame(t); });
-    timersRef.current.clear();
+    window.cancelAnimationFrame(rafRef.current);
+    retryRef.current.forEach((id) => window.cancelAnimationFrame(id));
+    retryRef.current.clear();
+    runsRef.current = [];
   }, []);
 
   const play = useCallback((plans) => {
@@ -96,30 +89,28 @@ export function useEminenceEffectFx() {
     (Array.isArray(plans) ? plans : []).forEach((plan) => {
       let tries = 0;
       const attempt = () => {
-        const g = measure(plan);
+        const g = measureEffectFx(plan);
         if (!g) {
           tries += 1;
           if (tries < ANCHOR_TRIES) {
-            const raf = window.requestAnimationFrame(() => { timersRef.current.delete(raf); attempt(); });
-            timersRef.current.add(raf);
+            const id = window.requestAnimationFrame(() => { retryRef.current.delete(id); attempt(); });
+            retryRef.current.add(id);
           }
           return;
         }
-        seqRef.current += 1;
-        const id = seqRef.current;
-        setEffects((prev) => [...prev, { id, plan, g }]);
-        const t = window.setTimeout(() => {
-          timersRef.current.delete(t);
-          setEffects((prev) => prev.filter((fx) => fx.id !== id));
-        }, EFFECT_FX_LIFE_MS);
-        timersRef.current.add(t);
+        seedRef.current += 1;
+        runsRef.current.push({
+          t0: performance.now(),
+          run: createEffectRun({ theme: plan.theme, kind: plan.kind, accent: plan.accent, lamp: plan.lamp, seed: seedRef.current, g }),
+        });
+        if (!rafRef.current) rafRef.current = window.requestAnimationFrame(frame);
       };
       attempt();
     });
-  }, []);
+  }, [frame]);
 
-  const layer = effects.length && typeof document !== 'undefined'
-    ? createPortal(effects.map((fx) => <EffectFx key={fx.id} fx={fx} />), document.body)
+  const layer = typeof document !== 'undefined'
+    ? createPortal(<canvas ref={canvasRef} className="em-efx-canvas" style={{ ...LAYER_STYLE, zIndex }} aria-hidden />, document.body)
     : null;
 
   return { play, layer };
