@@ -108,20 +108,45 @@
   flex: none;
   display: flex;
   transform-origin: center center;
-  filter: drop-shadow(0 26px 40px rgba(0, 0, 0, 0.65));
+  /* prospettiva per il giro di pagina (un filter qui appiattirebbe il 3D) */
+  perspective: 2800px;
 }
-.mn-spread.is-flip-next { animation: mn-flip-next 0.28s ease-out; }
-.mn-spread.is-flip-prev { animation: mn-flip-prev 0.28s ease-out; }
-@keyframes mn-flip-next {
-  from { opacity: 0.2; translate: 46px 0; }
-  to { opacity: 1; translate: 0 0; }
+/* Giro di pagina: il libro sta fermo, ruota solo il foglio attorno alla piega centrale. */
+.mn-leaf {
+  position: absolute;
+  top: 0;
+  width: 740px;
+  height: 1050px;
+  z-index: 3;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  will-change: transform;
 }
-@keyframes mn-flip-prev {
-  from { opacity: 0.2; translate: -46px 0; }
-  to { opacity: 1; translate: 0 0; }
+.mn-leaf.is-next { left: 740px; transform-origin: left center; animation: mn-leaf-next 0.56s cubic-bezier(0.45, 0.05, 0.3, 1) both; }
+.mn-leaf.is-prev { left: 0; transform-origin: right center; animation: mn-leaf-prev 0.56s cubic-bezier(0.45, 0.05, 0.3, 1) both; }
+@keyframes mn-leaf-next { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes mn-leaf-prev { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
+.mn-leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
 }
+.mn-leaf-face.is-back { transform: rotateY(180deg); }
+/* ombra che scurisce il foglio mentre è di taglio */
+.mn-leaf-face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  animation: mn-leaf-shade 0.56s linear both;
+}
+@keyframes mn-leaf-shade { 0%, 100% { opacity: 0; } 50% { opacity: 0.32; } }
 .mn-slot { position: relative; width: 740px; height: 1050px; flex: none; }
 .mn-slot.is-empty { visibility: hidden; }
+.mn-slot:not(.is-empty) { box-shadow: 0 26px 40px rgba(0, 0, 0, 0.6); }
 /* piega centrale */
 .mn-slot.is-left::after,
 .mn-slot.is-right::after {
