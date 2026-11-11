@@ -438,29 +438,34 @@ const THEMES = {
     heart(ctx, x, y, s, rot) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath(); ctx.moveTo(0, s * 0.9); ctx.bezierCurveTo(-s * 1.5, -s * 0.2, -s * 0.7, -s * 1.3, 0, -s * 0.45); ctx.bezierCurveTo(s * 0.7, -s * 1.3, s * 1.5, -s * 0.2, 0, s * 0.9); ctx.closePath(); ctx.restore(); },
     mote(ctx, e, x, y, ang, p, a) { ctx.fillStyle = rgba(mix(e.c2, WHITE, 0.25 * p.k), a); THEMES.ratti.heart(ctx, x, y, 5 + 3 * p.k, Math.sin(p.u * 12 + p.k * 6) * 0.5); ctx.fill(); glow(ctx, x, y, 9, e.c, a * 0.55); },
     /** Labbra: arco di Cupido sopra, labbro pieno sotto. Unità = larghezza/2. */
-    lips(ctx, x, y, w, open) {
+    lips(ctx, x, y, w, open, part = 'both') {
       const h = w * 0.36;
-      ctx.beginPath(); ctx.moveTo(x - w, y);
-      ctx.bezierCurveTo(x - w * 0.6, y - h * 0.9, x - w * 0.3, y - h * 1.45, x - w * 0.12, y - h * 1.05);
-      ctx.quadraticCurveTo(x, y - h * 0.78, x + w * 0.12, y - h * 1.05);
-      ctx.bezierCurveTo(x + w * 0.3, y - h * 1.45, x + w * 0.6, y - h * 0.9, x + w, y);
-      ctx.bezierCurveTo(x + w * 0.5, y - h * open, x - w * 0.5, y - h * open, x - w, y); ctx.closePath();
-      ctx.moveTo(x - w, y);
-      ctx.bezierCurveTo(x - w * 0.5, y + h * open, x + w * 0.5, y + h * open, x + w, y);
-      ctx.bezierCurveTo(x + w * 0.55, y + h * 1.75, x - w * 0.55, y + h * 1.75, x - w, y); ctx.closePath();
+      ctx.beginPath();
+      if (part !== 'lower') {
+        ctx.moveTo(x - w, y);
+        ctx.bezierCurveTo(x - w * 0.6, y - h * 0.9, x - w * 0.3, y - h * 1.45, x - w * 0.12, y - h * 1.05);
+        ctx.quadraticCurveTo(x, y - h * 0.78, x + w * 0.12, y - h * 1.05);
+        ctx.bezierCurveTo(x + w * 0.3, y - h * 1.45, x + w * 0.6, y - h * 0.9, x + w, y);
+        ctx.bezierCurveTo(x + w * 0.5, y - h * open, x - w * 0.5, y - h * open, x - w, y); ctx.closePath();
+      }
+      if (part !== 'upper') {
+        ctx.moveTo(x - w, y);
+        ctx.bezierCurveTo(x - w * 0.5, y + h * open, x + w * 0.5, y + h * open, x + w, y);
+        ctx.bezierCurveTo(x + w * 0.55, y + h * 1.75, x - w * 0.55, y + h * 1.75, x - w, y); ctx.closePath();
+      }
     },
     setup(e, rnd) {
       // vene di veleno: spezzate che si diramano dal bacio
       e.veins = Array.from({ length: 6 }, (_, i) => { let a = (i / 6) * TAU + rnd() * 0.5; let x = Math.cos(a) * 0.5; let y = Math.sin(a) * 0.22; const pts = [[x, y]]; const n = 7 + Math.floor(rnd() * 4); for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.1; const step = 0.16 + rnd() * 0.16; x += Math.cos(a) * step; y += Math.sin(a) * step; pts.push([x, y]); } return { pts, d: rnd() * 260, w: 0.8 + rnd() * 0.9 }; });
       e.hearts = burst(rnd, 7, { speed: 150, life: 1500, size: 6, delay: 380, drag: 1.6 }); e.hearts.forEach((p) => { p.a = -Math.PI / 2 + (rnd() - 0.5) * 1.5; });
-      e.drips = Array.from({ length: 2 }, () => ({ x: (rnd() - 0.5) * 1.3, len: 0.4 + rnd() * 0.7, d: 200 + rnd() * 300 }));
-      // fili di vapore verde che salgono dal contorno delle labbra
-      e.wisps = Array.from({ length: 7 }, (_, i) => ({ x: ((i + rnd() * 0.6) / 7 - 0.5) * 1.9, d: 260 + rnd() * 520, h: 0.7 + rnd() * 0.7, ph: rnd() * TAU, w: 1.2 + rnd() * 1.4 }));
     },
     impact(ctx, t, e) {
       const a = env(t, 40, 1300, 1850); const s = stamp(t / 320); const w = e.R * 1.3 * s; const dark = mix(e.c2, [40, 0, 40], 0.6);
       // lo schiocco: dopo l'impronta le labbra si stringono un istante e si rilassano
-      const smack = env(t - 330, 70, 110, 330); const open = 0.32 - 0.2 * smack; const lw = w * (1 - 0.07 * smack);
+      const smack = env(t - 330, 70, 110, 330); const lw = w * (1 - 0.07 * smack);
+      // poi la bocca si schiude e ne esce la lingua biforcuta: guizza due volte e rientra
+      const part = env(t - 500, 170, 720, 900); const open = 0.32 - 0.2 * smack + 0.36 * part;
+      const out = env(t - 560, 190, 600, 800); const tilt = -0.2;
       // alone verde dietro alle labbra: respira piano
       const breathe = 0.82 + 0.18 * Math.sin(t * 0.008);
       ctx.save(); ctx.translate(e.cx, e.cy); ctx.scale(1, 0.62); glow(ctx, 0, 0, w * 1.7, e.c, 0.6 * a * breathe); ctx.restore();
@@ -478,37 +483,54 @@ const THEMES = {
         });
       }
       ctx.globalCompositeOperation = 'source-over';
-      // colature dal labbro inferiore
-      e.drips.forEach((d) => { const k = easeOut((t - 320 - d.d) / 800); if (k <= 0) return; const x = e.cx + d.x * w * 0.5; const y0 = e.cy + w * 0.55; const len = e.R * d.len * k; ctx.strokeStyle = rgba(dark, a); ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + len); ctx.stroke(); ctx.fillStyle = rgba(e.c2, a); ctx.beginPath(); ctx.arc(x, y0 + len, 3.6, 0, TAU); ctx.fill(); });
+      // le labbra stanno un po' inclinate: tutto quello che le riguarda ruota insieme
+      ctx.save(); ctx.translate(e.cx, e.cy); ctx.rotate(tilt); ctx.translate(-e.cx, -e.cy);
+      const L = THEMES.ratti.lips; const hh = lw * 0.36;
       // contorno verde: prima un bordo largo e sfumato, poi un filo netto, entrambi sotto al colore
       ctx.lineJoin = 'round';
       ctx.shadowColor = rgba(e.c, a); ctx.shadowBlur = 26; ctx.strokeStyle = rgba(e.c, 0.85 * a * breathe); ctx.lineWidth = Math.max(5, lw * 0.11);
-      THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.stroke();
+      L(ctx, e.cx, e.cy, lw, open); ctx.stroke();
       ctx.shadowBlur = 8; ctx.strokeStyle = rgba(mix(e.c, WHITE, 0.55), a); ctx.lineWidth = Math.max(2, lw * 0.035);
-      THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.stroke(); ctx.shadowBlur = 0;
+      L(ctx, e.cx, e.cy, lw, open); ctx.stroke(); ctx.shadowBlur = 0;
+      // l'interno della bocca: buio, con un fondo verde
+      const mg = ctx.createRadialGradient(e.cx, e.cy, 0, e.cx, e.cy, lw * 0.8);
+      mg.addColorStop(0, rgba(mix(e.c, [0, 0, 0], 0.72), a)); mg.addColorStop(1, rgba([14, 2, 14], a));
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.moveTo(e.cx - lw, e.cy); ctx.bezierCurveTo(e.cx - lw * 0.5, e.cy - hh * open, e.cx + lw * 0.5, e.cy - hh * open, e.cx + lw, e.cy); ctx.bezierCurveTo(e.cx + lw * 0.5, e.cy + hh * open, e.cx - lw * 0.5, e.cy + hh * open, e.cx - lw, e.cy); ctx.closePath(); ctx.fill();
       // le labbra
       const g = ctx.createLinearGradient(e.cx, e.cy - lw * 0.55, e.cx, e.cy + lw * 0.65);
       g.addColorStop(0, rgba(mix(e.c2, WHITE, 0.3), a)); g.addColorStop(0.45, rgba(e.c2, a)); g.addColorStop(1, rgba(dark, a));
-      ctx.fillStyle = g; THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.fill();
-      // volume: ombra lungo la bocca e luce sulle parti piene
-      ctx.save(); THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.clip();
-      const sh = ctx.createLinearGradient(0, e.cy - lw * 0.16, 0, e.cy + lw * 0.16);
-      sh.addColorStop(0, rgba(dark, 0)); sh.addColorStop(0.5, rgba(dark, 0.55 * a)); sh.addColorStop(1, rgba(dark, 0));
-      ctx.fillStyle = sh; ctx.fillRect(e.cx - lw, e.cy - lw * 0.16, lw * 2, lw * 0.32);
-      // pieghe
-      // pieghe: brevi e leggere, come prima, solo sul pieno di ciascun labbro
-      ctx.strokeStyle = rgba(dark, 0.3 * a); ctx.lineWidth = 1;
-      for (let i = -3; i <= 3; i += 1) { const x = e.cx + i * lw * 0.17; ctx.beginPath(); ctx.moveTo(x, e.cy - lw * 0.36 + Math.abs(i) * lw * 0.05); ctx.lineTo(x + i * lw * 0.012, e.cy - lw * 0.14); ctx.moveTo(x, e.cy + lw * 0.16); ctx.lineTo(x + i * lw * 0.02, e.cy + lw * 0.5 - Math.abs(i) * lw * 0.06); ctx.stroke(); }
-      // lucido: due riflessi fermi e uno che scorre da sinistra a destra
-      ctx.fillStyle = rgba(WHITE, 0.55 * a); ctx.beginPath(); ctx.ellipse(e.cx - lw * 0.28, e.cy + lw * 0.3, lw * 0.2, lw * 0.055, -0.18, 0, TAU); ctx.fill();
-      ctx.fillStyle = rgba(WHITE, 0.35 * a); ctx.beginPath(); ctx.ellipse(e.cx + lw * 0.3, e.cy - lw * 0.27, lw * 0.1, lw * 0.03, 0.3, 0, TAU); ctx.fill();
-      const sweep = (t - 520) / 520; if (sweep > 0 && sweep < 1) { const sx = e.cx - lw * 1.2 + sweep * lw * 2.4; const sg = ctx.createLinearGradient(sx - lw * 0.22, 0, sx + lw * 0.22, 0); sg.addColorStop(0, rgba(WHITE, 0)); sg.addColorStop(0.5, rgba(WHITE, 0.55 * a)); sg.addColorStop(1, rgba(WHITE, 0)); ctx.fillStyle = sg; ctx.fillRect(sx - lw * 0.22, e.cy - lw, lw * 0.44, lw * 2); }
+      ctx.fillStyle = g; L(ctx, e.cx, e.cy, lw, open); ctx.fill();
+      const shine = () => {
+        // pieghe brevi e leggere, due riflessi fermi e uno che scorre da sinistra a destra
+        ctx.strokeStyle = rgba(dark, 0.3 * a); ctx.lineWidth = 1;
+        for (let i = -3; i <= 3; i += 1) { const x = e.cx + i * lw * 0.17; ctx.beginPath(); ctx.moveTo(x, e.cy - lw * 0.36 + Math.abs(i) * lw * 0.05); ctx.lineTo(x + i * lw * 0.012, e.cy - lw * 0.2); ctx.moveTo(x, e.cy + lw * 0.26); ctx.lineTo(x + i * lw * 0.02, e.cy + lw * 0.5 - Math.abs(i) * lw * 0.06); ctx.stroke(); }
+        ctx.fillStyle = rgba(WHITE, 0.55 * a); ctx.beginPath(); ctx.ellipse(e.cx - lw * 0.28, e.cy + lw * 0.36, lw * 0.2, lw * 0.055, -0.18, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(WHITE, 0.35 * a); ctx.beginPath(); ctx.ellipse(e.cx + lw * 0.3, e.cy - lw * 0.3, lw * 0.1, lw * 0.03, 0.3, 0, TAU); ctx.fill();
+        const sweep = (t - 380) / 480; if (sweep > 0 && sweep < 1) { const sx = e.cx - lw * 1.2 + sweep * lw * 2.4; const sg = ctx.createLinearGradient(sx - lw * 0.22, 0, sx + lw * 0.22, 0); sg.addColorStop(0, rgba(WHITE, 0)); sg.addColorStop(0.5, rgba(WHITE, 0.55 * a)); sg.addColorStop(1, rgba(WHITE, 0)); ctx.fillStyle = sg; ctx.fillRect(sx - lw * 0.22, e.cy - lw, lw * 0.44, lw * 2); }
+      };
+      ctx.save(); L(ctx, e.cx, e.cy, lw, open); ctx.clip(); shine(); ctx.restore();
+      // la lingua biforcuta: esce dal buio, passa sopra il labbro inferiore e guizza
+      if (out > 0.01) {
+        const len = lw * 1.3 * out; const flick = Math.sin(t * 0.032) * 0.6 * out; const wb = lw * 0.1; const n = 20; const fork = 0.6;
+        const spine = (u) => { const sway = Math.sin(u * 4.2 + t * 0.02) * lw * 0.17 * u + flick * lw * 0.34 * u * u; return [e.cx + sway, e.cy - hh * open * 0.2 + len * u]; };
+        const left = []; const right = [];
+        for (let i = 0; i <= n; i += 1) { const u = (i / n) * fork; const [x, y] = spine(u); const [xb, yb] = spine(u + 0.02); const d = Math.hypot(xb - x, yb - y) || 1; const nx = -(yb - y) / d; const ny = (xb - x) / d; const half = wb * (1 - 0.45 * (u / fork)); left.push([x + nx * half, y + ny * half]); right.push([x - nx * half, y - ny * half]); }
+        const [fx, fy] = spine(fork); const [fx2, fy2] = spine(fork + 0.02); const dirA = Math.atan2(fy2 - fy, fx2 - fx); const spread = 0.42 + 0.2 * Math.sin(t * 0.03); const tipLen = len * (1 - fork);
+        const tipL = [fx + Math.cos(dirA + spread) * tipLen, fy + Math.sin(dirA + spread) * tipLen]; const tipR = [fx + Math.cos(dirA - spread) * tipLen, fy + Math.sin(dirA - spread) * tipLen];
+        const tg = ctx.createLinearGradient(e.cx, e.cy, e.cx, e.cy + len);
+        tg.addColorStop(0, rgba([90, 8, 40], a)); tg.addColorStop(0.35, rgba([214, 44, 92], a)); tg.addColorStop(1, rgba([255, 120, 150], a));
+        ctx.fillStyle = tg; ctx.shadowColor = rgba(e.c, 0.9 * a); ctx.shadowBlur = 10; ctx.beginPath();
+        left.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.quadraticCurveTo(fx + Math.cos(dirA + spread * 1.6) * tipLen * 0.5, fy + Math.sin(dirA + spread * 1.6) * tipLen * 0.5, tipL[0], tipL[1]); ctx.lineTo(fx + Math.cos(dirA) * tipLen * 0.12, fy + Math.sin(dirA) * tipLen * 0.12); ctx.lineTo(tipR[0], tipR[1]); ctx.quadraticCurveTo(fx + Math.cos(dirA - spread * 1.6) * tipLen * 0.5, fy + Math.sin(dirA - spread * 1.6) * tipLen * 0.5, right[right.length - 1][0], right[right.length - 1][1]);
+        right.reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        // solco al centro
+        ctx.strokeStyle = rgba([110, 10, 50], 0.7 * a); ctx.lineWidth = Math.max(1, lw * 0.012); ctx.beginPath();
+        for (let i = 0; i <= n; i += 1) { const [x, y] = spine((i / n) * fork); ctx[i ? 'lineTo' : 'moveTo'](x, y); } ctx.stroke();
+        // il labbro superiore torna davanti alla radice della lingua
+        ctx.fillStyle = g; L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.fill();
+        ctx.save(); L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.clip(); shine(); ctx.restore();
+      }
       ctx.restore();
-      // vapore verde che sale dal contorno
-      ctx.lineCap = 'round';
-      e.wisps.forEach((v) => { const tt = t - v.d; const k = clamp01(tt / 900); if (tt <= 0 || k >= 1) return; const x0 = e.cx + v.x * lw * 0.5; const y0 = e.cy - lw * 0.3; const rise = k * e.R * v.h;
-        ctx.strokeStyle = rgba(e.c, 0.5 * (1 - k) * a); ctx.lineWidth = v.w * (1 + k); ctx.beginPath(); ctx.moveTo(x0, y0);
-        for (let i = 1; i <= 8; i += 1) { const u = i / 8; ctx.lineTo(x0 + Math.sin(u * 5 + v.ph + t * 0.004) * 7 * u, y0 - rise * u); } ctx.stroke(); });
       ctx.globalCompositeOperation = 'lighter';
       glow(ctx, e.cx, e.cy, e.R * 1.5, e.c2, 0.45 * env(press, 20, 110, 520));
       ring(ctx, e.cx, e.cy, e.R * (0.6 + 1.3 * easeOut(press / 520)), 2.5, e.c, press > 0 ? 1 - clamp01(press / 520) : 0);
