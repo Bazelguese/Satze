@@ -981,3 +981,18 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
 }
 .em-rail--portale .em-rail-illegal .em-rail-cost > span{color:#6d6b64 !important;text-shadow:none !important}
 .em-rail--portale .em-rail-confirm-hint{letter-spacing:.2em;font-weight:800}
+/* Zona avversaria: la carta sta a sinistra, quindi luce e colore d'armata si specchiano
+   verso di lei. Senza, la fascia nemica sembra un'altra pelle rispetto alla propria. */
+.em-zone-enemy .em-rail--portale .em-rail-hit{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 20%,transparent) 0%,rgba(10,13,19,.95) 26%,rgba(4,6,10,.97) 100%) !important;
+}
+.em-zone-enemy .em-rail--portale .em-rail-back{
+  background:linear-gradient(90deg,var(--em-sel,#d5ecf9) 0%,rgba(180,191,208,.6) 34%,rgba(180,191,208,.28) 100%) !important;
+}
+.em-zone-enemy .em-rail--portale .em-rail-hit::after{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 32%,transparent),transparent 72%);
+}
+.em-zone-enemy .em-rail--portale .em-rail-sel .em-rail-fill{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--em-sel,#d5ecf9) 46%,transparent),color-mix(in srgb,var(--em-sel,#d5ecf9) 8%,transparent) 78%) !important;
+}
+.em-zone-enemy .em-rail--portale .em-rail-sel .em-rail-back{background:var(--em-sel,#d5ecf9) !important}
