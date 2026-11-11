@@ -27,6 +27,7 @@ import { resolveRoundInitiative } from '../../duel/resolveRoundInitiative.js';
 import { getLearnedWeights } from './learnedPolicy.js';
 import { buildFeatureContext } from './mcFeatures.js';
 import { getMcTrait } from './mcTraits.js';
+import { createEminenceDuelResolver, createEminenceRolloutContext } from './mcEminence.js';
 import {
   clampFocusFor,
   createFastPolicyAgent,
@@ -159,10 +160,14 @@ function rollout(view, candidate, seed, params, opponentReply = null) {
     opponent = firstResponseBy(rootPolicy, opponentPolicy);
   }
   const agents = { enemy: scripted(candidate, policy), player: opponent };
+  // Eminenze: il primo Duello della simulazione le risolve (mcEminence.js).
+  const roundOptions = params.eminenceCtx
+    ? { resolveDuel: createEminenceDuelResolver(params.eminenceCtx, seed) }
+    : undefined;
 
   let state = { ...view, selectedAgent: null, enemyAgent: null };
   for (let guard = 0; guard < MAX_ROUNDS; guard += 1) {
-    const { state: after } = playHeadlessRound(state, agents);
+    const { state: after } = playHeadlessRound(state, agents, roundOptions);
     const end = resolveMatchEnd(after, state.roundNumber);
     if (end) return outcomeValue(end, after, params.traitObject);
     state = nextRoundState(after, state.roundNumber);
@@ -338,7 +343,13 @@ function pickWithNoise(ranked, noise, rng) {
  */
 export function chooseMonteCarloAction(view, inputParams, rng) {
   const trait = activeTrait(inputParams);
-  const params = trait ? { ...inputParams, traitObject: trait } : inputParams;
+  // Eminenze nel primo Duello delle simulazioni, salvo simulateEminences: false.
+  const eminenceCtx = inputParams.simulateEminences === false ? null : createEminenceRolloutContext(view);
+  const params = {
+    ...inputParams,
+    ...(trait ? { traitObject: trait } : {}),
+    ...(eminenceCtx ? { eminenceCtx } : {}),
+  };
   const candidates = generateMcCandidates(view).map((c) => ({
     ...c,
     total: 0,

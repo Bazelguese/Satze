@@ -263,8 +263,9 @@ export function resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick, ex
  * Un turno completo.
  * Gli agenti espongono `lead(view)` → { fieldIndex, cardId, focus } e
  * `respond(view)` → { cardId, focus }. `view` è lo stato dal loro punto di vista (IA = `enemy`).
+ * `resolveDuel`: risolutore del Duello (le simulazioni con le Eminenze ne passano uno proprio).
  */
-export function playHeadlessRound(state, agents) {
+export function playHeadlessRound(state, agents, { resolveDuel = resolveHeadlessDuel } = {}) {
   const leader = state.isPlayerFirst ? 'player' : 'enemy';
   const follower = otherSide(leader);
 
@@ -283,7 +284,7 @@ export function playHeadlessRound(state, agents) {
   const enemyPick = leader === 'enemy' ? lead : resp;
   const fieldIndex = lead.fieldIndex;
 
-  const battleResult = resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick);
+  const battleResult = resolveDuel(state, fieldIndex, playerPick, enemyPick);
 
   const after = applyRoundOutcome(withField, battleResult, fieldIndex, playerPick.card, enemyPick.card);
   const record = {
