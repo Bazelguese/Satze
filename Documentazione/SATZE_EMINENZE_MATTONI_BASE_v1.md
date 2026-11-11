@@ -817,3 +817,35 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - **Campo 122:** usa lo sfondo del Meridiano (89) finché non c'è l'illustrazione `campo-122.webp`.
 - **Cinematiche:** le primitive nuove (BLOCK_POWER, ECHO_POWER, REPLACE_ABILITY, CONSTRAIN_DEPLOY, SET_ROUND_INITIATIVE, TRANSPLANT_POWER, ESCALATE_END_MATCH_DEBTS) non hanno ancora un cue cinematico, come diverse primitive già esistenti.
 - **IA:** sceglie le abilità con le euristiche generiche esistenti; alle Offerte e alla Scelta di Corteggiamento risponde sempre accettando la prima opzione.
+
+## 12. Seconde Eminenze
+
+### 12.0 Decisioni generali (11 novembre 2026)
+
+- Ogni Armata avrà una seconda Eminenza, scelta dal giocatore nel deckbuilding.
+- Stessa scala di valore del rework; schema base Statico + ricarica + base + firma, con eccezioni ammesse per l'identità.
+- La seconda Eminenza deve offrire uno stile di gioco opposto alla prima ed essere coerente con la lore dell'Armata.
+- Si procede Armata per Armata, in ordine di `src/data/armies.js`.
+
+### 12.1 Figli dell'Orizzonte — Orrore Nero (approvata)
+
+**Lore:** Vega, il Sofferente, uno dei cuori dell'orrore: attira i Leggeri e li costringe a condividere i dolori della Domanda; più è il dolore, più la Domanda diviene chiara.
+
+**Stile:** opposto alla Domanda Senza Fine. Non precisione sugli FC e controllo delle soglie, ma economia dei PV: restare indietro genera Presenza e il dolore subito torna all'avversario.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Dolore | All'inizio di ogni round, se hai meno PV dell'avversario o se hai perso il Duello precedente, +1 Presenza (una sola volta per round). | — | circa 2.5–2.7 Presenza/Scontro (limite alto) |
+| +1 | Razionalizzazione | In questo Duello l'Agente nemico ottiene +2 DAN. | −0.75 | circa −0.5, alimenta lo Statico ✅ |
+| −1 | Rifiuto | In questo Duello, l'avversario perde metà dei PV che ti infligge (DAN e Danni diretti), arrotondata per eccesso. | 0.75 | circa 0.6 ✅ |
+| −2 | Rabbia | Per il tuo Agente, Ultima Chance, Vendetta e Rimonta valgono l'una per l'altra. | 1.50 | circa 1.3–1.5 ✅ |
+| −3 | Terrore vivo | Il tuo Agente ottiene +1 VA per ogni PV perso in questo Scontro, fino a +10 VA. | 2.25 | circa 2.0 a metà Scontro, 2.8 al massimo 〰️ |
+
+**Note di regola:**
+- Rifiuto conta solo i PV inflitti dall'avversario (DAN della sconfitta e Danni diretti), non i costi propri o il Registro della Corte; la metà si calcola sul totale del Duello.
+- Rabbia è un alias dei trigger limitato al proprio Agente (come Maschere Invertite).
+- «PV persi in questo Scontro» = PV iniziali meno PV attuali; le Cure li riducono.
+
+**Lavoro di implementazione:** condizione «hai meno PV dell'avversario»; riflesso dei PV inflitti a fine Duello; VA scalato sui PV persi con tetto; supporto a due Eminenze per Armata nel deckbuilding.
