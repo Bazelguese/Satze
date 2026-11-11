@@ -344,6 +344,53 @@ La modalità Torneo arriva dal `main` (unito nel ramo). Decisioni dell'utente:
 
 **Problema trovato e corretto:** in sviluppo il worker dell'IA non partiva, già prima di questo lavoro. Il runtime del ricaricamento a caldo di `@vitejs/plugin-react` 4.2 usa `window` e `$RefreshReg$`, e ci arriva perché i dati del gioco importano `src/data/icons.jsx`. Senza correzione, in sviluppo l'IA ripiegava in silenzio sul motore precedente. `src/game/ai/worker/devWindowShim.js`, caricato per primo nel worker, definisce quegli alias **solo in sviluppo**; nella build di produzione non c'è.
 
+### Eminenze (formato Standard) — in corso
+
+Il rework delle 12 Eminenze è arrivato nel `main`. Prima di questo lavoro l'IA sceglieva sempre la prima abilità legale (quasi sempre la ricarica) e accettava ogni Offerta con la prima opzione.
+
+**Scelta delle abilità** (`src/game/ai/eminence/aiEminenceChoice.js`):
+
+- valore in FC di ogni abilità (stime di `SATZE_EMINENZE_MATTONI_BASE_v1.md` §10) corretto sullo stato pubblico: PV, Campi, Duelli persi, Frammenti, Prede, Registro;
+- Presenza pianificata sui Duelli che restano (programmazione dinamica);
+- bersagli con regole semplici: Seduzione vieta la carta più forte, Caccia impone la più debole, Gorgoglio e la Preda iniziale prendono la più forte;
+- niente perdite di PV che possono chiudere lo Scontro; Sacrificio vale quando accende Rimonta (Bonus di Kethran);
+- Offerte della Corte: rifiuta le troppo care o letali quando può; Corteggiamento: per seconda nei turni 1-2, per prima dopo (misurato: +12% ±7,7 nei turni 1-2);
+- uguale per tutte le difficoltà e personalità.
+
+**Banco di prova con le Eminenze** (`src/game/sim/headlessEminenceMatch.js`, `npm run selfplay:eminence`): stesse funzioni pure del gioco (apertura del round, gate, Offerte, `prepareEminenceDuel` → `computeDuelResolution` → `settleEminenceRound`, debiti di fine Scontro). Approssimazioni: con Mascarada il Campo è quello deciso insieme all'Agente; i parametri al reveal del lato `player` vengono fissati alla selezione.
+
+**Misure (11/11/2026, IA Normale per le carte, 400 partite, semi 1-200):**
+
+| Confronto | Risultato |
+|---|---|
+| Scelta nuova – scelta vecchia | **65,5%** (60,7–70,0) |
+| Riferimento: vecchia – vecchia | 48,0% |
+
+Per Eminenza (stesse partite, scelta nuova contro vecchia): miglioramenti da +6% (Khemet) a +44% (Calibri). Kethran peggiorava: con la scelta vecchia (Sacrificio a ogni turno) Rimonta, il suo Bonus, resta accesa. Corretto e verificato su 240 partite con Kethran: senza Innesto e Opera Composita vince il 72,5%, con Sacrificio a ogni turno il 60,4%.
+
+**Livelli con le Eminenze** (200 partite per confronto, semi 1-100, scelta nuova per tutti), confrontati con le stesse partite senza Eminenze:
+
+| Confronto | Senza Eminenze | Con Eminenze | Differenza (coppie) |
+|---|---|---|---|
+| Difficile – Normale | 64,0% | 60,0% | −4,0% ±8,8 |
+| Normale – Facile | 72,5% | 62,5% | **−10,0% ±8,9** |
+| Facile – Casuale | 78,5% | 76,0% | −2,5% ±8,0 |
+
+Con le Eminenze il gradino Normale–Facile si accorcia davvero. Probabile causa: la scelta di Agente e FC non simula gli effetti delle Eminenze, quindi il vantaggio di una ricerca più profonda pesa meno.
+
+**Prova C: Eminenze nelle simulazioni** (`src/game/ai/mc/mcEminence.js`; non attiva nel gioco, si accende con `simulateEminences: true`, per esempio `mc-medium@simulateEminences=true` nel banco di prova). Decisione dell'utente: lasciare così. Ogni simulazione risolve con le Eminenze il primo Duello, quello che l'IA sta decidendo; la scelta segreta dell'avversario si estrae fra le sue abilità legali. Verifiche: nessun ripiego su 2432 Duelli; il vincitore del Duello cambia nell'11,7% dei casi, i PV nel 27%. Costo: decisioni 2-3 volte più lente.
+
+| Confronto | Risultato |
+|---|---|
+| Facile che simula – Facile che non simula (400 partite) | 56,0% (51,1–60,8) |
+| Normale che simula – Normale che non simula (200) | 49,5% (42,6–56,4) |
+| Difficile – Normale, entrambe simulano (200) | 65,0%, +5,0% ±8,6 rispetto a senza |
+| Normale che simula – Facile che non simula (200) | 63,5%, +1,0% ±8,5 rispetto a senza |
+
+Vantaggio piccolo (al massimo circa +6%) e il gradino Normale–Facile non si allarga. Probabile motivo: gran parte degli effetti delle Eminenze sposta allo stesso modo tutte le mosse candidate, e quindi non cambia quale sia la migliore.
+
+**Aperti:** Innesto, Opera Composita, slot delle Maledizioni e Ascesa con bersagli predefiniti; gradino Normale–Facile più corto con le Eminenze.
+
 ### Fase 2 — Avversario e Focus
 
 1. Probabilità delle carte del giocatore pesate su quanto gli convengono, invece che tutte uguali.
@@ -372,4 +419,12 @@ La modalità Torneo arriva dal `main` (unito nel ramo). Decisioni dell'utente:
 
 - Gli obiettivi numerici delle distanze fra i livelli, dopo la misura di partenza.
 - Il budget di tempo esatto per livello, quando ci sarà il timer del duello.
-- Se e quando riportare nell'ambito le Eminenze.
+- ~~Se e quando riportare nell'ambito le Eminenze.~~ Fatto in parte: scelta delle abilità, Offerte e banco di prova (vedi "Eminenze").
+
+## Da fare più avanti
+
+- **C — Agente e FC che tengono conto delle Eminenze** (deciso dall'utente l'11/11/2026: va fatto, non ora). Oggi l'IA sceglie bene l'abilità, ma poi decide Agente e FC come se le Eminenze non ci fossero (per esempio non sa di avere +3 VA da Logoramento). Punto di partenza:
+  - la prova con le Eminenze nel solo primo Duello delle simulazioni è già nel codice (`src/game/ai/mc/mcEminence.js`, `simulateEminences: true`) ma rende poco (circa +5%) e rallenta le decisioni di 2-3 volte;
+  - strade da provare: Eminenze in tutti i Duelli simulati, con una scelta veloce delle abilità nei turni futuri; candidati costruiti sugli effetti (per esempio FC ridotti quando l'abilità dà VA); stime dei FC e del rischio che tengano conto delle abilità rivelate;
+  - insieme a C: bersagli ragionati per le Maledizioni di Khemet, Ascesa, Innesto e Opera Composita;
+  - misura con `npm run selfplay:eminence` contro la scelta attuale, e di nuovo la scala dei livelli (il gradino Normale–Facile con le Eminenze è al 62,5%, senza al 72,5%).

@@ -239,7 +239,6 @@ export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spen
   const strongestOpp = Math.max(0, ...info.oppCards.map(cardStrength));
   const avgOpp = average(info.oppCards.map(cardStrength)) || 1;
   const avgOwn = average(info.ownCards.map(cardStrength)) || 1;
-  const fragments = list(info.own.persistent?.fragmentCardIds).length;
   switch (abilityId) {
     // Apex
     case 'apex_cielo_smeraldino': return info.oppHP <= 4 ? -0.7 : -0.35;
@@ -263,13 +262,13 @@ export function abilityValue(abilityId, info, { duelsLeft = info.duelsLeft, spen
       return loss <= FORBIDDEN ? loss : loss + hpPositionValue(info, 2);
     }
     case 'kethran_elogio': return 0.5;
-    // Frammenti: si ottengono perdendo Duelli (o con Elogio). In un Duello futuro possono esserci.
+    // Innesto e Opera Composita: misurati l'11/11/2026 (240 partite con Kethran, IA Normale),
+    // con i bersagli scelti da chooseAbilityParams non rendono: senza di loro Kethran vince il
+    // 72.5%, con loro il 59.6% (con Innesto nel Potere invece che nel Bonus il 60%). Restano fuori
+    // finché la scelta del Frammento e della composizione non valuta i Poteri.
     case 'kethran_innesto':
-      if (fragments >= 1) return 1.2;
-      return future ? 0.6 : 0;
     case 'kethran_opera_composita':
-      if (fragments >= 2) return 2.25;
-      return future ? (fragments === 1 ? 1.1 : 0.5) : 0;
+      return 0;
     // Mounthborn
     case 'mounthborn_fame_ricarica': {
       const prey = new Set(list(info.own.persistent?.preyCardIds));
