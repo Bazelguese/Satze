@@ -22,7 +22,7 @@ import {
 } from './eminenceConstants.js';
 import { EMINENCES, EMINENCE_IDS } from '../../data/eminences.js';
 import { ALL_AGENTS } from '../../data/cards.js';
-import { createEminenceMatchState } from './eminenceState.js';
+import { createEminenceMatchState, filterDeployableCardIds, readDeployConstraints } from './eminenceState.js';
 import {
   beginEminenceRound,
   selectEminenceAbility,
@@ -764,107 +764,144 @@ test('Fame setup: la scelta di setup marca la Preda e la rende pubblica', () => 
   assert.equal(committed.matchState.player.setupParams, null);
 });
 
-test('Fame +0: marca la Preda al reveal e paga +2 Presenza se viene schierata', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: PREY },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
+function presenceFrom(bundle, source) {
+  return bundle.presenceChanges
+    .filter((change) => change.side === SIDES.PLAYER && change.source === source)
+    .reduce((sum, change) => sum + change.delta, 0);
+}
 
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
-  assert.deepEqual(bundle.presenceChanges, [
-    { side: SIDES.PLAYER, delta: 2, countsAsSpend: false, source: 'mounthborn_gorgoglio' },
-  ]);
-});
-
-test('Fame +0: senza Preda schierata il +2 non parte', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: PREY },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
-  });
-
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
-  assert.deepEqual(bundle.presenceChanges, []);
-});
-
-test('Fame −2 Frenesia: Preda schierata rende Potere e Bonus non bloccabili', () => {
+test('Fame statico: Preda schierata dall\'avversario dà +1 Presenza e Bonus attivo', () => {
   const { bundle } = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_frenesia',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
     prey: { player: [PREY] },
-    playerParams: { preyCardId: 116 },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
   });
-
+  assert.equal(presenceFrom(bundle, 'mounthborn_istinto_predatorio'), 1);
   assert.equal(bundle.armyBonusState[SIDES.PLAYER].forcedActive, true);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].unblockable, true);
-  assert.equal(bundle.triggerRules.unblockable.length, 1);
-});
 
-test('Fame −2 Frenesia: senza Preda schierata il Bonus resta invariato', () => {
-  const { bundle } = playRound({
+  const none = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_frenesia',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
     prey: { player: [PREY] },
-    playerParams: { preyCardId: PREY },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
   });
-
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER], undefined);
-  assert.equal(bundle.triggerRules.unblockable.length, 0);
+  assert.equal(presenceFrom(none.bundle, 'mounthborn_istinto_predatorio'), 0);
+  assert.equal(none.bundle.armyBonusState[SIDES.PLAYER], undefined);
 });
 
-test('Fame −2 Cannibalismo: sconfitta contro Preda cura 3 PV, poi la Preda cade', () => {
+test('Fame statico: la Preda cade dopo aver combattuto, anche se Turbo', () => {
   const { matchState } = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_cannibalismo',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
-    prey: { player: [PREY] },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
-
-  const settled = settleEminenceRound(matchState, {
-    winner: SIDES.ENEMY,
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
-
-  assert.deepEqual(settled.bundle.hpDeltas, [
-    { side: SIDES.PLAYER, amount: 3, cause: HP_LOSS_CAUSES.OTHER, source: 'mounthborn_cannibalismo' },
-  ]);
-  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, []);
-});
-
-test('Fame statico: una Preda Turbo cade a fine round, non dopo il Duello', () => {
-  const { matchState } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: TURBO_PREY },
+    prey: { player: [TURBO_PREY, PREY] },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: TURBO_PREY },
   });
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [TURBO_PREY]);
-
   const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: TURBO_PREY },
   });
-  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, []);
+  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, [PREY]);
+});
+
+test('Fame +1: perdi 2 PV se non hai sconfitto una Preda', () => {
+  const round = (enemyAgent) => playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_fame_ricarica',
+    enemyAbility: 'semaforo_verde',
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: enemyAgent },
+  }).matchState;
+  const hpLost = (enemyAgent, winner) => (settleEminenceRound(round(enemyAgent), {
+    winner,
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: enemyAgent },
+  }).bundle?.hpDeltas || [])
+    .filter((entry) => entry.side === SIDES.PLAYER)
+    .reduce((sum, entry) => sum + entry.amount, 0);
+
+  assert.equal(hpLost(PREY, SIDES.PLAYER), 0);
+  assert.equal(hpLost(PREY, SIDES.ENEMY), -2);
+  assert.equal(hpLost(116, SIDES.PLAYER), -2);
+  assert.equal(hpLost(PREY, 'draw'), -2);
+});
+
+test('Fame −1: Gorgoglio marca la Preda prima degli Agenti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_gorgoglio',
+    enemyAbility: 'semaforo_verde',
+    playerParams: { preyCardId: PREY },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
+  });
+  assert.equal(EMINENCES[FAME].abilities.find((x) => x.id === 'mounthborn_gorgoglio').revealGate, REVEAL_GATES.PRE_AGENT);
+  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
+  assert.equal(matchState.player.presence, 0);
+});
+
+test('Fame −2: Frenesia sostituisce il Potere e rimborsa la Presenza contro una Preda', () => {
+  const hit = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_frenesia',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
+  });
+  assert.deepEqual(
+    { trigger: hit.bundle.abilityOverlays[AGENT_A].trigger, effect: hit.bundle.abilityOverlays[AGENT_A].effect, value: hit.bundle.abilityOverlays[AGENT_A].value },
+    { trigger: 'imboscata', effect: 'powerAndDamage', value: 1 },
+  );
+  assert.equal(hit.bundle.triggerRules.replacementsByCardId[AGENT_A].trigger, 'imboscata');
+  assert.equal(presenceFrom(hit.bundle, 'mounthborn_frenesia'), 2);
+
+  const miss = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_frenesia',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
+  });
+  assert.equal(miss.bundle.abilityOverlays[AGENT_A].effect, 'powerAndDamage');
+  assert.equal(presenceFrom(miss.bundle, 'mounthborn_frenesia'), 0);
+});
+
+test('Fame −3: Caccia marca la Preda e la impone all\'avversario', () => {
+  const base = createEminenceMatchState({ playerEminenceId: FAME, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'mounthborn_caccia', { preyCardId: PREY }).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+
+  assert.equal(matchState.player.revealedAbilityId, 'mounthborn_caccia');
+  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
+  assert.equal(readDeployConstraints(matchState, SIDES.ENEMY).forcedCardId, PREY);
+  assert.deepEqual(filterDeployableCardIds(matchState, SIDES.ENEMY, [PREY, 116, 117], [117]), [PREY]);
+  assert.deepEqual(filterDeployableCardIds(matchState, SIDES.PLAYER, [AGENT_A, 202], []), [AGENT_A, 202]);
+
+  const next = beginEminenceRound(matchState, { roundNumber: 4 });
+  assert.equal(readDeployConstraints(next, SIDES.ENEMY).forcedCardId, null);
+});
+
+test('vincoli di schieramento: vietato salvo ultimo, riusabile, imposto', () => {
+  const state = {
+    player: { round: { deployConstraints: { forcedCardId: null, bannedCardIds: [2], revivedCardIds: [9] } } },
+  };
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.PLAYER, [1, 2, 9], [9]), [1, 9]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.PLAYER, [1, 2], [1]), [2]);
+  assert.deepEqual(filterDeployableCardIds(null, SIDES.PLAYER, [1, 2], [1]), [2]);
 });
 
 // ------------------------------------------------------------------

@@ -55,11 +55,11 @@ test('scelta forzata: con una sola opzione legale viene registrata da sola', () 
   const two = match({ player: 'patto_grande_semaforo' });
   assert.equal(autoSelectForcedChoices(two)[SIDES.PLAYER].selectedAbilityId, null);
 
-  // Mounthborn al round 1 ha 1 Presenza e una sola attiva a costo non negativo.
-  const one = match({ player: 'mounthborn_fame' });
+  // Mounthborn a 0 Presenza ha una sola attiva legale: Fame (+1).
+  const one = match({ player: 'mounthborn_fame', presence: { player: 0 } });
   assert.equal(
     autoSelectForcedChoices(one)[SIDES.PLAYER].selectedAbilityId,
-    'mounthborn_gorgoglio'
+    'mounthborn_fame_ricarica'
   );
 });
 

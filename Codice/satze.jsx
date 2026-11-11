@@ -73,7 +73,7 @@ import {
   getEminenceAnnounceHoldMs,
   getEminenceSparkNoticeGapMs,
 } from '../src/utils/eminenceSystemPreference.js';
-import { isEminenceSubsystemEnabled } from '../src/game/eminence/eminenceState.js';
+import { isEminenceSubsystemEnabled, filterDeployableCardIds } from '../src/game/eminence/eminenceState.js';
 import { waitForFieldAgentEntrance } from '../src/components/eminence/eminenceMarkCinematic.js';
 import { stampComposeParams } from '../src/game/eminence/composeAbilityParams.js';
 import { mergeSlotCurseCounts } from '../src/game/eminence/slotCurses.js';
@@ -486,6 +486,20 @@ export default function SatzeGame() {
   const playerUndeployedCardIds = useMemo(
     () => (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)).map((card) => card.id),
     [playerHand, playerUsedCards],
+  );
+  // Vincoli Eminenza sugli Agenti schierabili in questo Duello (Caccia, Seduzione…).
+  const playerDeployableCardIds = useMemo(
+    () => filterDeployableCardIds(
+      eminenceMatchState,
+      'player',
+      (playerHand || []).map((card) => card.id),
+      playerUsedCards,
+    ),
+    [eminenceMatchState, playerHand, playerUsedCards],
+  );
+  const playerLockedCardIds = useMemo(
+    () => playerUndeployedCardIds.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUndeployedCardIds, playerDeployableCardIds],
   );
   const slotCurseCounts = useMemo(
     () => mergeSlotCurseCounts(
@@ -3279,6 +3293,7 @@ export default function SatzeGame() {
       setGuidedHint(`Per questo step devi schierare: ${expectedName}.`);
       return;
     }
+    if (agent && !playerDeployableCardIds.includes(agent.id)) return;
     setGuidedHint('');
     if (!agent) {
       playGame(GAME_SOUND.CARD_DESELECT);
@@ -3301,7 +3316,7 @@ export default function SatzeGame() {
     const landMs = prefersReducedMotion() ? 0 : via === 'drop' ? (DROP_IMPACT_MS[placeFx] ?? 0) : CLICK_LAND_MS;
     playGameAt(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT, landMs);
     setSelectedAgent(agent);
-  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
+  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, playerDeployableCardIds, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
@@ -4126,6 +4141,8 @@ export default function SatzeGame() {
   const confirmPlayerChoice = () => {
     if (eminenceAnnounceHold || announcePointerGuard) return;
     if (eminenceBlocksMatch) return;
+    // Un vincolo Eminenza arrivato dopo la scelta (es. Caccia) invalida l'Agente già posato.
+    if (!isMultiSeat && selectedAgent && !playerDeployableCardIds.includes(selectedAgent.id)) return;
     if (isMultiSeat) {
       if (!multiSeat.acceptsHumanConfirm) return;
       if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
@@ -6954,6 +6971,7 @@ export default function SatzeGame() {
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
         usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
+        lockedCardIds={playerHandOverride ? [] : playerLockedCardIds}
         fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
         arrivingPreyId={preyFlight.preyLandId}

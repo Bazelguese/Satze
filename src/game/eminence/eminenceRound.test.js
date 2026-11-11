@@ -337,8 +337,7 @@ test('deduzione: usa la Presenza al checkpoint, non quella corrente', () => {
 });
 
 test('deduzione: superare un gate senza apertura restringe le ipotesi', () => {
-  // Mounthborn parte a 1 Presenza, dove solo il +0 è legale: qui serve una Presenza
-  // che renda davvero ambigua la scelta, altrimenti non c'è nulla da restringere.
+  // Con 3 Presenza tutte e quattro le attive di Mounthborn sono legali.
   let matchState = startRoundWithPresence('mounthborn_fame', 'apex_sole_verde', { player: 3 });
   matchState = chooseBoth(matchState, 'mounthborn_frenesia', 'apex_furia');
 
@@ -346,7 +345,7 @@ test('deduzione: superare un gate senza apertura restringe le ipotesi', () => {
     selectPublicEminenceState(matchState.player),
     matchState.gateProgress
   );
-  assert.equal(before.length, 3);
+  assert.equal(before.length, 4);
 
   const { matchState: afterPreAgent } = completeGate(matchState, REVEAL_GATES.PRE_AGENT, {});
   const after = getSealedAbilityHypotheses(
@@ -354,19 +353,20 @@ test('deduzione: superare un gate senza apertura restringe le ipotesi', () => {
     afterPreAgent.gateProgress
   );
 
-  assert.deepEqual(after, ['mounthborn_frenesia', 'mounthborn_cannibalismo']);
+  // Gorgoglio e Caccia si sarebbero rivelate prima degli Agenti.
+  assert.deepEqual(after, ['mounthborn_fame_ricarica', 'mounthborn_frenesia']);
   assert.equal(isSelectionPubliclyDetermined(selectPublicEminenceState(afterPreAgent.player), afterPreAgent.gateProgress), false);
 });
 
 test('deduzione: una curva può rendere la scelta determinata anche senza gate anticipati', () => {
-  // Mounthborn: Presenza iniziale 1 con curva +0 / -2 / -2. Al round 1 esiste una sola
-  // scelta legale, quindi la sua Eminenza è pubblica pur avendo due attive a GENERAL.
+  // Mounthborn a 0 Presenza: con la curva +1 / -1 / -2 / -3 resta legale solo Fame, quindi
+  // la scelta è pubblica pur avendo due attive a GENERAL.
   // È una proprietà dell'economia, non dei gate, e non la copre l'invariante di catalogo.
-  let matchState = startRound('mounthborn_fame', 'apex_sole_verde');
-  matchState = chooseBoth(matchState, 'mounthborn_gorgoglio', 'apex_furia');
+  let matchState = startRoundWithPresence('mounthborn_fame', 'apex_sole_verde', { player: 0 });
+  matchState = chooseBoth(matchState, 'mounthborn_fame_ricarica', 'apex_furia');
 
   const view = selectPublicEminenceState(matchState.player);
-  assert.deepEqual(getSealedAbilityHypotheses(view, matchState.gateProgress), ['mounthborn_gorgoglio']);
+  assert.deepEqual(getSealedAbilityHypotheses(view, matchState.gateProgress), ['mounthborn_fame_ricarica']);
   assert.equal(isSelectionPubliclyDetermined(view, matchState.gateProgress), true);
 });
 

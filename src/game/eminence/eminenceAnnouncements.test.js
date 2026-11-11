@@ -116,14 +116,14 @@ test('avviso reveal: al gate resta la condizione, senza esito', () => {
   assert.equal(notices[0].outcome, null);
   assert.equal(notices[0].name, 'Frenesia della Fame');
   assert.match(notices[0].text, /Preda/i);
-  assert.match(notices[0].text, /Bonus/i);
+  assert.match(notices[0].text, /Potere/i);
 });
 
 test('avviso Preda: l\'esito arriva quando gli Agenti sono noti, non a fine Duello', () => {
   const matchState = {
     player: {
       eminenceId: 'mounthborn_fame',
-      revealedAbilityId: 'mounthborn_gorgoglio',
+      revealedAbilityId: 'mounthborn_frenesia',
       persistent: { preyCardIds: [102], fragmentCardIds: [] },
     },
     enemy: { eminenceId: 'patto_grande_semaforo' },
@@ -136,7 +136,7 @@ test('avviso Preda: l\'esito arriva quando gli Agenti sono noti, non a fine Duel
   assert.equal(hit[0].kind, 'effect');
   assert.equal(hit[0].phase, 'VERIFY');
   assert.equal(hit[0].outcome, 'hit');
-  assert.equal(hit[0].name, 'Gorgoglio terrificante');
+  assert.equal(hit[0].name, 'Frenesia della Fame');
   assert.equal(hit[0].presenceDelta, 2);
   assert.equal(hit[0].markCardId, 102);
   assert.equal(hit[0].payoffs[0].primitive, 'CHANGE_PRESENCE');
@@ -230,7 +230,7 @@ test('sequenza: dopo la scelta lo Statico che riordina apre PRE_AGENT prima di P
   assert.equal(miss.notices.length, 0);
 });
 
-test('sequenza: Gorgoglio mostra la condizione al reveal e l\'esito quando gli Agenti sono noti', () => {
+test('sequenza: Gorgoglio si annuncia prima dell\'Agente e non ha esito da verificare', () => {
   const { matchState: openedState } = opened('mounthborn_fame', 'patto_grande_semaforo', 1);
   const locked = commitEminenceSetupChoice(openedState, SIDES.PLAYER, { preyCardId: 102 });
   assert.equal(locked.ok, true);
@@ -245,9 +245,7 @@ test('sequenza: Gorgoglio mostra la condizione al reveal e l\'esito quando gli A
   assert.equal(preAgent.gate, REVEAL_GATES.PRE_AGENT);
   const condition = preAgent.notices.find((notice) => notice.name === 'Gorgoglio terrificante');
   assert.equal(condition.kind, 'reveal');
-  assert.equal(condition.phase, 'REVEAL');
   assert.equal(condition.phaseDetail, 'Prima dell\'Agente');
-  assert.equal(condition.outcome, null);
   assert.match(condition.text, /Preda/i);
 
   const general = advanceToNextRevealGate(preAgent.matchState, {
@@ -256,54 +254,39 @@ test('sequenza: Gorgoglio mostra la condizione al reveal e l\'esito quando gli A
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 102 },
   });
   assert.equal(general.gate, REVEAL_GATES.GENERAL);
-  const resolution = general.notices.find((notice) => notice.name === 'Gorgoglio terrificante');
-  assert.equal(resolution.kind, 'effect');
-  assert.equal(resolution.phase, 'VERIFY');
-  assert.equal(resolution.outcome, 'hit');
-  assert.match(resolution.text, /\+2/);
+  assert.equal(general.notices.some((notice) => notice.name === 'Gorgoglio terrificante' && notice.kind === 'effect'), false);
 });
 
-test('sequenza: Cannibalismo parla solo a fine Duello, con esito', () => {
+test('sequenza: Fame parla solo a fine Duello', () => {
   const match = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
     playerEminenceId: 'mounthborn_fame',
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  match.player.presence = 2;
   const { matchState: openedState } = openEminenceRound(match, { roundNumber: 1 });
   const locked = commitEminenceSetupChoice(openedState, SIDES.PLAYER, { preyCardId: 102 });
   assert.equal(locked.ok, true);
-  const chosen = bothChosen(locked.matchState, 'mounthborn_cannibalismo', 'semaforo_giallo');
+  const chosen = bothChosen(locked.matchState, 'mounthborn_fame_ricarica', 'semaforo_giallo');
 
   let state = chosen;
   for (let i = 0; i < 3; i += 1) {
     const step = advanceToNextRevealGate(state, {
       initiativeSide: SIDES.PLAYER,
       announceDeployedMarks: true,
-      agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 102 },
+      agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 116 },
     });
-    assert.equal(step.notices.some((notice) => notice.name === 'Cannibalismo'), false);
+    assert.equal(step.notices.some((notice) => notice.name === 'Fame' && notice.kind === 'effect'), false);
     state = step.matchState;
   }
 
-  const hit = settleEminenceRound(state, {
-    initiativeSide: SIDES.PLAYER,
-    winner: SIDES.ENEMY,
-    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 102 },
-  });
-  assert.equal(hit.notices.length, 1);
-  assert.equal(hit.notices[0].name, 'Cannibalismo');
-  assert.equal(hit.notices[0].outcome, 'hit');
-  assert.match(hit.notices[0].text, /Cura 3/);
-
-  const miss = settleEminenceRound(state, {
+  const hungry = settleEminenceRound(state, {
     initiativeSide: SIDES.PLAYER,
     winner: SIDES.PLAYER,
-    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 102 },
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 116 },
   });
-  assert.equal(miss.notices.length, 1);
-  assert.equal(miss.notices[0].name, 'Cannibalismo');
-  assert.equal(miss.notices[0].outcome, 'miss');
+  const fame = hungry.notices.filter((notice) => notice.name === 'Fame');
+  assert.equal(fame.length, 1);
+  assert.equal(fame[0].outcome, 'hit');
 });
 
 test('sequenza: senza riordino il primo gate resta PRE_FIELD', () => {
@@ -318,54 +301,6 @@ test('sequenza: senza riordino il primo gate resta PRE_FIELD', () => {
   const chosen = bothChosen(base, 'apex_furia', 'semaforo_giallo');
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.gate, REVEAL_GATES.PRE_FIELD);
-});
-
-test('avviso Cannibalismo: silenzio al reveal, esito hit o miss a fine Duello', () => {
-  assert.equal(abilityAnnouncesAtReveal({
-    segments: [{ timing: 'AFTER_DUEL_OUTCOME' }],
-  }), false);
-  assert.equal(noticesFromRevealEvents([{
-    type: 'REVEAL',
-    side: SIDES.PLAYER,
-    gate: REVEAL_GATES.GENERAL,
-    eminenceId: 'mounthborn_fame',
-    abilityId: 'mounthborn_cannibalismo',
-    presenceDelta: -2,
-  }]).length, 0);
-
-  const matchState = {
-    player: { eminenceId: 'mounthborn_fame' },
-    enemy: { eminenceId: 'patto_grande_semaforo' },
-  };
-  const segment = {
-    primitive: 'HEAL_HP',
-    amount: 3,
-    condition: { duelWinnerRelative: 'opponent', enemyMarks: { has: 'prey' } },
-  };
-  const hit = noticesFromAppliedEffects(matchState, [{
-    ownerSide: SIDES.PLAYER,
-    abilityId: 'mounthborn_cannibalismo',
-    timing: 'AFTER_DUEL_OUTCOME',
-    segment,
-  }]);
-  assert.equal(hit.length, 1);
-  assert.equal(hit[0].outcome, 'hit');
-  assert.equal(hit[0].name, 'Cannibalismo');
-  assert.equal(hit[0].presenceDelta, null);
-  assert.match(hit[0].text, /Sconfitta contro una Preda/i);
-  assert.match(hit[0].text, /Cura 3/);
-
-  const miss = noticesFromAppliedEffects(matchState, [], {
-    skipped: [{
-      ownerSide: SIDES.PLAYER,
-      abilityId: 'mounthborn_cannibalismo',
-      timing: 'AFTER_DUEL_OUTCOME',
-      segment,
-    }],
-  });
-  assert.equal(miss.length, 1);
-  assert.equal(miss[0].outcome, 'miss');
-  assert.match(miss[0].text, /Nessuna sconfitta contro una Preda/i);
 });
 
 test('avviso effetto: Scommessa si ripete solo se il pronostico è corretto', () => {

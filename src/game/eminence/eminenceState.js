@@ -102,8 +102,45 @@ export function createEminenceRoundState() {
 
     ignoreFieldForCardIds: [],
 
+    // Vincoli sugli Agenti schierabili in questo Duello (Agente imposto, vietato o riusabile).
+    deployConstraints: { forcedCardId: null, bannedCardIds: [], revivedCardIds: [] },
+
     custom: {},
   };
+}
+
+/** Vincoli di schieramento del lato per il Duello corrente. */
+export function readDeployConstraints(matchState, side) {
+  const raw = matchState?.[side]?.round?.deployConstraints || {};
+  return {
+    forcedCardId: raw.forcedCardId ?? null,
+    bannedCardIds: [...(raw.bannedCardIds || [])],
+    revivedCardIds: [...(raw.revivedCardIds || [])],
+  };
+}
+
+/**
+ * Agenti che il lato può schierare in questo Duello, dati la mano e gli Agenti già usati.
+ * Un Agente riusabile torna disponibile anche se usato; un Agente vietato no, salvo che sia
+ * l'unico rimasto; un Agente imposto, se disponibile, è l'unica scelta.
+ *
+ * @param {object} matchState stato Eminenze (null = nessun vincolo)
+ * @param {'player'|'enemy'} side
+ * @param {Array<number|string>} handIds id delle carte in mano
+ * @param {Array<number|string>} usedIds id delle carte già usate
+ */
+export function filterDeployableCardIds(matchState, side, handIds = [], usedIds = []) {
+  const constraints = readDeployConstraints(matchState, side);
+  const used = new Set(usedIds);
+  const revived = new Set(constraints.revivedCardIds);
+  const available = handIds.filter((id) => !used.has(id) || revived.has(id));
+  const banned = new Set(constraints.bannedCardIds);
+  const allowed = available.filter((id) => !banned.has(id));
+  const pool = allowed.length ? allowed : available;
+  if (constraints.forcedCardId != null && pool.includes(constraints.forcedCardId)) {
+    return [constraints.forcedCardId];
+  }
+  return pool;
 }
 
 /** Stato persistente per l'intero Scontro (§4.2). */

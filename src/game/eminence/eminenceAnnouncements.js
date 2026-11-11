@@ -534,5 +534,8 @@ export function noticesFromAppliedEffects(matchState, queue = [], { skipped = []
   for (const entry of queue || []) pushNotice(entry, true);
   for (const entry of skipped || []) pushNotice(entry, false);
 
-  return notices;
+  // Rami alternativi della stessa abilità (es. «1 FC, oppure 2»): se uno è scattato, il
+  // ramo mancato allo stesso checkpoint non è un esito da mostrare.
+  return notices.filter((notice) => notice.outcome !== 'miss'
+    || !seen.has(notice.id.replace(/:miss$/, ':hit')));
 }

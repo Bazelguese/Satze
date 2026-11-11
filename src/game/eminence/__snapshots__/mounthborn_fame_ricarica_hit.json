@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "mounthborn_cannibalismo",
-    "name": "Cannibalismo",
-    "presenceDelta": -2,
+    "id": "mounthborn_fame_ricarica",
+    "name": "Fame",
+    "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Se perdi il Duello contro una Preda, Cura 3 PV."
+    "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,33 +18,29 @@
       0
     ],
     "presencePlayer": [
-      2,
-      0
+      1,
+      2
     ],
-    "segmentsWithoutCue": 1,
-    "segmentsWithoutNotice": 1
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
   },
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
+        "id": "mounthborn_fame_ricarica",
+        "presenceDelta": 1
+      },
+      {
         "id": "mounthborn_gorgoglio",
-        "presenceDelta": 0
-      },
-      {
-        "id": "mounthborn_frenesia",
-        "presenceDelta": -2
-      },
-      {
-        "id": "mounthborn_cannibalismo",
-        "presenceDelta": -2
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 0,
-    "presenceAfterSelect": 2,
-    "presenceAvailable": 2,
-    "presenceDelta": -2,
-    "selected": "mounthborn_cannibalismo"
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "mounthborn_fame_ricarica"
   },
   "eminence": {
     "army": "Mounthborn",
@@ -53,40 +49,46 @@
   },
   "notices": [
     {
-      "badgeText": "Mancato · Dopo il Duello",
+      "badgeText": "Risoluzione · Dopo il Duello",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
           "waitFor": null
         }
       ],
-      "id": "effect:player:mounthborn_cannibalismo:AFTER_DUEL_OUTCOME:miss",
+      "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
       "kind": "effect",
-      "name": "Cannibalismo",
-      "outcome": "miss",
+      "name": "Fame",
+      "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "HEAL_HP",
+          "primitive": "LOSE_HP",
           "slot": null,
           "target": "SELF"
         }
       ],
-      "phase": "MISS",
+      "phase": "RESOLVE",
       "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Mancato",
+      "phaseLabel": "Risoluzione",
       "presenceDelta": null,
       "side": "player",
-      "text": "Nessuna sconfitta contro una Preda."
+      "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
     }
   ],
   "scenario": {
-    "branch": "miss",
+    "branch": "hit",
     "initiativeSide": "player",
-    "name": "mounthborn_cannibalismo_miss",
+    "name": "mounthborn_fame_ricarica_hit",
     "roundNumber": 3
   },
   "steps": [
@@ -99,9 +101,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -113,9 +115,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
-      "presenceAfterReveal": 2,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -127,9 +129,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -140,7 +142,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -148,12 +150,18 @@
       "badge": "Risoluzione · Dopo il Duello",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "noticeId": "effect:player:mounthborn_cannibalismo:AFTER_DUEL_OUTCOME:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
+          "noticeId": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "HP_TICK",
+          "to": {
+            "side": "player",
+            "type": "hp"
+          },
           "waitFor": null
         }
       ],
@@ -161,46 +169,68 @@
       "kind": "settle",
       "notices": [
         {
-          "badgeText": "Mancato · Dopo il Duello",
+          "badgeText": "Risoluzione · Dopo il Duello",
           "cues": [
             {
-              "flight": false,
-              "from": null,
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
               "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
+              "recipe": "HP_TICK",
+              "to": {
+                "side": "player",
+                "type": "hp"
+              },
               "waitFor": null
             }
           ],
-          "id": "effect:player:mounthborn_cannibalismo:AFTER_DUEL_OUTCOME:miss",
+          "id": "effect:player:mounthborn_fame_ricarica:AFTER_DUEL_OUTCOME:hit",
           "kind": "effect",
-          "name": "Cannibalismo",
-          "outcome": "miss",
+          "name": "Fame",
+          "outcome": "hit",
           "payoffs": [
             {
-              "primitive": "HEAL_HP",
+              "primitive": "LOSE_HP",
               "slot": null,
               "target": "SELF"
             }
           ],
-          "phase": "MISS",
+          "phase": "RESOLVE",
           "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Mancato",
+          "phaseLabel": "Risoluzione",
           "presenceDelta": null,
           "side": "player",
-          "text": "Nessuna sconfitta contro una Preda."
+          "text": "Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
       "segments": [
         {
           "condition": {
-            "detail": "deployedMarks: (assente) → non ancora valutabile",
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
-              "deployedMarks"
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
             ],
             "status": "deferred"
           },
@@ -214,11 +244,8 @@
         },
         {
           "condition": {
-            "detail": "enemyAgentTrigger: {\"not\":\"turbo\"} (obs \"glory\") → vera",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "true"
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": true,
           "primitive": "MARK_CARD",
@@ -227,22 +254,6 @@
           "sourceName": "Istinto Predatorio",
           "target": "ENEMY_AGENT",
           "timing": "POST_BATTLE"
-        },
-        {
-          "condition": {
-            "detail": "enemyAgentTrigger: \"turbo\" (obs \"glory\") → falsa",
-            "keys": [
-              "enemyAgentTrigger"
-            ],
-            "status": "false"
-          },
-          "expectedNoCue": true,
-          "primitive": "MARK_CARD",
-          "source": "static",
-          "sourceId": "mounthborn_istinto_predatorio",
-          "sourceName": "Istinto Predatorio",
-          "target": "ENEMY_AGENT",
-          "timing": "END_ROUND"
         },
         {
           "condition": {
@@ -259,6 +270,22 @@
         },
         {
           "condition": {
+            "detail": "duelWinnerRelative: {\"not\":\"self\"} (obs \"opponent\") → vera",
+            "keys": [
+              "duelWinnerRelative"
+            ],
+            "status": "true"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
             "detail": "enemyMarks: (assente) → non ancora valutabile",
             "keys": [
               "duelWinnerRelative",
@@ -267,10 +294,10 @@
             "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "HEAL_HP",
+          "primitive": "LOSE_HP",
           "source": "ability",
-          "sourceId": "mounthborn_cannibalismo",
-          "sourceName": "Cannibalismo",
+          "sourceId": "mounthborn_fame_ricarica",
+          "sourceName": "Fame",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         }

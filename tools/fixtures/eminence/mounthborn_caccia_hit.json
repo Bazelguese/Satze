@@ -3,9 +3,11 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "mounthborn_fame",
-    "presence": 2,
-    "abilityId": "mounthborn_cannibalismo",
-    "params": null,
+    "presence": 3,
+    "abilityId": "mounthborn_caccia",
+    "params": {
+      "preyCardId": 118
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -54,6 +56,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "mounthborn_cannibalismo_hit",
+  "name": "mounthborn_caccia_hit",
   "branch": "hit"
 }

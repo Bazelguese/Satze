@@ -4,10 +4,8 @@
   "player": {
     "eminenceId": "mounthborn_fame",
     "presence": 1,
-    "abilityId": "mounthborn_gorgoglio",
-    "params": {
-      "preyCardId": 118
-    },
+    "abilityId": "mounthborn_fame_ricarica",
+    "params": null,
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -18,7 +16,9 @@
       "anchored": false
     },
     "fragments": [],
-    "prey": []
+    "prey": [
+      118
+    ]
   },
   "enemy": {
     "eminenceId": null,

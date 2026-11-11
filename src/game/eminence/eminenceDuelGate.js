@@ -16,6 +16,7 @@ import {
   PRIMITIVE_TARGETS as T,
   HP_LOSS_CAUSES,
   PARAM_SOURCES,
+  DEPLOY_CONSTRAINTS,
 } from './eminenceConstants.js';
 import {
   areSelectionsComplete,
@@ -278,6 +279,7 @@ function applyBundleToState(matchState, bundle) {
   }
 
   state = applyDebtEscalations(state, bundle.debtEscalations);
+  state = applyDeployConstraints(state, bundle.deployConstraints);
 
   return persistAbilityEscalation(
     persistLeagueByCardId(
@@ -298,6 +300,27 @@ function applyBundleToState(matchState, bundle) {
     ),
     bundle.abilityEscalations,
   );
+}
+
+/** Registra sul lato vincolato gli Agenti imposti, vietati o riusabili in questo Duello. */
+function applyDeployConstraints(matchState, constraints) {
+  if (!constraints?.length) return matchState;
+  let state = matchState;
+  for (const { side, mode, cardId } of constraints) {
+    const current = state[side];
+    if (!current?.round) continue;
+    const prev = current.round.deployConstraints || {};
+    const next = {
+      forcedCardId: prev.forcedCardId ?? null,
+      bannedCardIds: [...(prev.bannedCardIds || [])],
+      revivedCardIds: [...(prev.revivedCardIds || [])],
+    };
+    if (mode === DEPLOY_CONSTRAINTS.FORCE) next.forcedCardId = cardId;
+    if (mode === DEPLOY_CONSTRAINTS.BAN && !next.bannedCardIds.includes(cardId)) next.bannedCardIds.push(cardId);
+    if (mode === DEPLOY_CONSTRAINTS.REVIVE && !next.revivedCardIds.includes(cardId)) next.revivedCardIds.push(cardId);
+    state = { ...state, [side]: { ...current, round: { ...current.round, deployConstraints: next } } };
+  }
+  return state;
 }
 
 /** Ogni voce del Registro a carico del lato indicato cresce del delta. */

@@ -407,7 +407,7 @@ export const EMINENCES = {
     static: {
       id: 'mounthborn_istinto_predatorio',
       name: 'Istinto Predatorio',
-      text: 'All\'inizio dello Scontro scegli un Agente nemico: diventa Preda. Quando viene schierata una Preda, il Bonus del tuo Agente schierato è attivo.',
+      text: 'All\'inizio dello Scontro scegli un Agente nemico: diventa Preda. Quando l\'avversario schiera una Preda, +1 Presenza e il Bonus del tuo Agente schierato è considerato attivo. Una Preda smette di esserlo dopo aver combattuto.',
       implemented: true,
       setupChoice: true,
       setupParamsSchema: {
@@ -423,10 +423,17 @@ export const EMINENCES = {
       segments: [
         {
           timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+          primitive: P.CHANGE_PRESENCE,
+          target: T.SELF,
+          delta: 1,
+          condition: { enemyMarks: { has: 'prey' } },
+        },
+        {
+          timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
           primitive: P.SET_ARMY_BONUS_STATE,
           target: T.SELF,
           forcedActive: true,
-          condition: { deployedMarks: { has: 'prey' } },
+          condition: { enemyMarks: { has: 'prey' } },
         },
         {
           timing: EFFECT_TIMINGS.POST_BATTLE,
@@ -435,44 +442,53 @@ export const EMINENCES = {
           consume: true,
           persistent: true,
           target: T.ENEMY_AGENT,
-          condition: { enemyAgentTrigger: { not: 'turbo' } },
-        },
-        {
-          timing: EFFECT_TIMINGS.END_ROUND,
-          primitive: P.MARK_CARD,
-          mark: 'prey',
-          consume: true,
-          persistent: true,
-          target: T.ENEMY_AGENT,
-          condition: { enemyAgentTrigger: 'turbo' },
         },
       ],
     },
 
     abilities: [
       {
+        id: 'mounthborn_fame_ricarica',
+        name: 'Fame',
+        presenceDelta: 1,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'Alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.LOSE_HP,
+            target: T.SELF,
+            amount: 2,
+            cause: HP_LOSS_CAUSES.EMINENCE_COST,
+            condition: { duelWinnerRelative: { not: 'self' } },
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.LOSE_HP,
+            target: T.SELF,
+            amount: 2,
+            cause: HP_LOSS_CAUSES.EMINENCE_COST,
+            condition: { duelWinnerRelative: 'self', enemyMarks: { not: { has: 'prey' } } },
+          },
+        ],
+      },
+      {
         id: 'mounthborn_gorgoglio',
         name: 'Gorgoglio terrificante',
-        presenceDelta: 0,
+        presenceDelta: -1,
         revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         paramsSchema: {
           preyCardId: { source: PARAM_SOURCES.ENEMY_UNDEPLOYED },
         },
-        text: 'Scegli un Agente nemico non schierato: diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza.',
+        text: 'Scegli un Agente nemico non schierato: diventa Preda.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
             primitive: P.MARK_CARD,
             mark: 'prey',
             persistent: true,
-          },
-          {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.CHANGE_PRESENCE,
-            target: T.SELF,
-            delta: 2,
-            condition: { deployedMarks: { has: 'prey' } },
           },
         ],
       },
@@ -482,10 +498,34 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'In questo Duello, il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l\'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.REPLACE_ABILITY,
+            target: T.OWN_AGENT,
+            slot: 'power',
+            ability: { trigger: 'imboscata', effect: 'powerAndDamage', value: 1 },
+          },
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.CHANGE_PRESENCE,
+            target: T.SELF,
+            delta: 2,
+            condition: { enemyMarks: { has: 'prey' } },
+          },
+        ],
+      },
+      {
+        id: 'mounthborn_caccia',
+        name: 'Caccia',
+        presenceDelta: -3,
+        revealGate: REVEAL_GATES.PRE_AGENT,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
         paramsSchema: {
           preyCardId: { source: PARAM_SOURCES.ENEMY_UNDEPLOYED },
         },
-        text: 'Scegli un Agente nemico non schierato e non Preda: diventa Preda per il resto dello Scontro. Se una Preda è schierata in questo round, il Potere e il Bonus del tuo Agente schierato non possono essere bloccati.',
+        text: 'Scegli un Agente nemico non schierato: diventa Preda e l\'avversario deve schierarlo in questo Duello.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
@@ -494,36 +534,11 @@ export const EMINENCES = {
             persistent: true,
           },
           {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.UNBLOCKABLE_POWER,
-            scope: TRIGGER_SCOPES.OWN,
-            excludeTriggers: ['conquest', 'lastWish'],
-            condition: { deployedMarks: { has: 'prey' } },
-          },
-          {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.SET_ARMY_BONUS_STATE,
-            target: T.SELF,
-            forcedActive: true,
-            unblockable: true,
-            condition: { deployedMarks: { has: 'prey' } },
-          },
-        ],
-      },
-      {
-        id: 'mounthborn_cannibalismo',
-        name: 'Cannibalismo',
-        presenceDelta: -2,
-        revealGate: REVEAL_GATES.GENERAL,
-        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Se perdi il Duello contro una Preda, Cura 3 PV.',
-        segments: [
-          {
-            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
-            primitive: P.HEAL_HP,
-            target: T.SELF,
-            amount: 3,
-            condition: { duelWinnerRelative: 'opponent', enemyMarks: { has: 'prey' } },
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.CONSTRAIN_DEPLOY,
+            target: T.OPPONENT,
+            mode: 'FORCE',
+            cardParam: 'preyCardId',
           },
         ],
       },

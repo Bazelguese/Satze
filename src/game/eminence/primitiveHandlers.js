@@ -58,6 +58,7 @@ export function createEffectBundle() {
     pendingDeals: [],
     blockedPowerSides: [],
     echoPowerSides: [],
+    deployConstraints: [],
     debtEscalations: [],
   };
 }
@@ -494,6 +495,45 @@ const handlers = {
   [P.BLOCK_POWER]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       if (!bundle.blockedPowerSides.includes(side)) bundle.blockedPowerSides.push(side);
+    }
+  },
+
+  // Il Potere (o il Bonus) dell'Agente diventa un'abilità fissata dal segmento, per questo
+  // Duello. Sostituisce, non aggiunge: il Potere originale non si risolve.
+  [P.REPLACE_ABILITY]: (bundle, segment, ctx) => {
+    const ability = segment.ability;
+    if (!ability) throw new Error('REPLACE_ABILITY: abilità mancante');
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (segment.slot === 'bonus') {
+        bundle.armyBonusState[side] = {
+          ...(bundle.armyBonusState[side] || {}),
+          override: { trigger: ability.trigger ?? null, effects: [overlayAbilityFields(ability)] },
+        };
+        continue;
+      }
+      const agentId = ctx.agentIdBySide?.[side];
+      if (agentId == null) continue;
+      bundle.abilityOverlays[agentId] = {
+        ...(bundle.abilityOverlays[agentId] || {}),
+        trigger: ability.trigger ?? null,
+        ...fullAbilityFields(ability),
+      };
+      bundle.triggerRules = applyPrimitiveToTriggerRules(bundle.triggerRules, {
+        primitive: P.REPLACE_TRIGGER,
+        cardIds: [agentId],
+        trigger: ability.trigger ?? null,
+      }, { ownerSide: ctx.ownerSide, source: ctx.source, params: ctx.params });
+    }
+  },
+
+  // Vincola gli Agenti schierabili dal lato bersaglio in questo Duello: la carta indicata dal
+  // parametro diventa imposta (FORCE), vietata (BAN) o di nuovo disponibile (REVIVE).
+  [P.CONSTRAIN_DEPLOY]: (bundle, segment, ctx) => {
+    const raw = ctx.params?.[segment.cardParam || 'cardId'];
+    const cardId = Array.isArray(raw) ? raw[0] : raw;
+    if (cardId == null) return;
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      bundle.deployConstraints.push({ side, mode: segment.mode, cardId, source: ctx.source });
     }
   },
 

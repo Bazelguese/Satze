@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "mounthborn_fame",
-    "presence": 2,
-    "abilityId": "mounthborn_cannibalismo",
+    "presence": 1,
+    "abilityId": "mounthborn_fame_ricarica",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -16,7 +16,9 @@
       "anchored": false
     },
     "fragments": [],
-    "prey": []
+    "prey": [
+      118
+    ]
   },
   "enemy": {
     "eminenceId": null,
@@ -54,6 +56,6 @@
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "mounthborn_cannibalismo_miss",
+  "name": "mounthborn_fame_ricarica_miss",
   "branch": "miss"
 }
