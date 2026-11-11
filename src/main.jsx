@@ -27,8 +27,20 @@ bindAudioUnlock()
 // dispositivo audio si apre ora, a schermata di caricamento, e non al primo tasto nel menù.
 if (window.electronAPI) unlockAudio()
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+// ?manuale=stampa: solo le pagine del libretto, una per foglio. È la sorgente del PDF
+// (scripts/manuale/build-pdf.mjs) e non avvia il gioco.
+const isManualPrint = new URLSearchParams(window.location.search).get('manuale') === 'stampa'
+
+if (isManualPrint) {
+  document.documentElement.classList.add('satze-manual-print')
+  document.getElementById('loading-initial')?.remove()
+  import('./manual/ManualBook.jsx').then(({ ManualPrint }) => {
+    ReactDOM.createRoot(document.getElementById('root')).render(<ManualPrint />)
+  })
+} else {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+}

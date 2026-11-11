@@ -7,7 +7,7 @@ import { OPTION_BLOCKERS } from '../../game/eminence/eminenceChoiceView.js';
 export const PRESENCE_COLOR = '#38bdf8';
 export const GAIN_TOP = '#3fb37c';
 export const GAIN_BOT = '#1c6b48';
-export const DEFAULT_SHAPE = 'nastro';
+export const DEFAULT_SHAPE = 'portale';
 /** Default di gioco (pacchetto ingressi Eminenza): abilità = affondo. */
 export const DEFAULT_APPEARANCE = 'affondo';
 
@@ -129,8 +129,35 @@ function costFill(armyAccent, gain) {
   return `linear-gradient(180deg,${armyAccent},${hexAlpha(armyAccent, 0.74)})`;
 }
 
-/** Sei forme del costruttore. Solo variabili: testo e gerarchia non cambiano. */
+/**
+ * Forme del costruttore. Solo variabili: testo e gerarchia non cambiano.
+ * `portale` è la pelle di gioco: stessa fascia a bandiera di `nastro`, vestita come le schede
+ * del duello (vetro scuro, filo chiaro, numeri bianchi); i dettagli stanno in
+ * satze-eminenza.css sotto `.em-rail--portale`.
+ */
 export const SHAPES = {
+  portale: (ac) => ({
+    '--clip': 'polygon(26px 0,100% 0,calc(100% - 14px) 100%,0 100%)',
+    '--skew': '0deg',
+    '--unskew': '0deg',
+    '--plate': `linear-gradient(270deg,${hexAlpha(ac, 0.2)} 0%,rgba(10,13,19,.95) 26%,rgba(4,6,10,.97) 100%)`,
+    '--backplate': `linear-gradient(270deg,${ac} 0%,rgba(180,191,208,.6) 34%,rgba(180,191,208,.28) 100%)`,
+    '--offx': '0px',
+    '--offy': '0px',
+    '--barw': '0px',
+    '--ink': '#ffffff',
+    '--inkshadow': '0 0 10px rgba(207,216,230,.5),0 1px 2px #000',
+    '--sub': '#cfd8e6',
+    '--subshadow': '0 1px 2px rgba(0,0,0,.9)',
+    '--costw': '104px',
+    '--costbg': 'transparent',
+    '--costfont': "'Chakra Petch',sans-serif",
+    '--costfs': '38px',
+    '--costonplate': 'no',
+    '--costink': '#ffffff',
+    '--costinkgain': '#7ee8b0',
+    '--costshadowtext': `0 0 10px rgba(207,216,230,.45),0 0 26px ${hexAlpha(ac, 0.7)},0 2px 3px #000`,
+  }),
   nastro: (ac, _gain, cost) => ({
     '--clip': 'polygon(26px 0,100% 0,calc(100% - 14px) 100%,0 100%)',
     '--skew': '0deg',
@@ -249,6 +276,7 @@ export function resolveShape(shapeId, armyAccent, gain) {
 
 export function costInk(shape, armyAccent, gain) {
   const base = gain ? GAIN_TOP : armyAccent;
+  if (shape['--costink']) return gain ? (shape['--costinkgain'] || shape['--costink']) : shape['--costink'];
   if (shape['--costonplate'] === 'no') return gain ? '#5ee39f' : armyAccent;
   return inkOn(base);
 }

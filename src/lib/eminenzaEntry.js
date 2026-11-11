@@ -17,6 +17,32 @@ export const EMINENZA_DEFAULTS = {
 };
 
 /**
+ * Due stili d'ingresso della carta Eminenza, entrambi per armata:
+ * - `campo`: il gesto storico (CSS, breve) che riprende la rivelazione del Campo dell'armata;
+ * - `agenti`: l'effetto con cui entrano in campo gli Agenti dell'armata (WebGL, vedi fx/effects).
+ *   Si vede alla prima comparsa nello Scontro; le riaperture successive usano il gesto `campo`.
+ */
+export const EMINENCE_ENTRY_STYLES = Object.freeze({ CAMPO: 'campo', AGENTI: 'agenti' });
+
+/** Stile usato dalle Eminenze che non hanno una scelta propria qui sotto. */
+export const EMINENCE_ENTRY_STYLE_DEFAULT = EMINENCE_ENTRY_STYLES.AGENTI;
+
+/**
+ * Scelta per singola Eminenza (id del catalogo → stile).
+ * Esempio: `khemet_maledizioni: 'campo'` tiene il vecchio ingresso per Khemet.
+ */
+export const EMINENCE_ENTRY_STYLE_BY_ID = Object.freeze({});
+
+const ENTRY_STYLE_VALUES = new Set(Object.values(EMINENCE_ENTRY_STYLES));
+
+/** Stile d'ingresso di un'Eminenza: `override` valido > scelta per id > default. */
+export function resolveEminenceEntryStyle(eminenceId, override = null) {
+  if (ENTRY_STYLE_VALUES.has(override)) return override;
+  const own = eminenceId ? EMINENCE_ENTRY_STYLE_BY_ID[eminenceId] : null;
+  return ENTRY_STYLE_VALUES.has(own) ? own : EMINENCE_ENTRY_STYLE_DEFAULT;
+}
+
+/**
  * Ogni armata entra come entra il suo campo.
  * Include sia slug brevi (pacchetto DS) sia nomi canonici del catalogo.
  */

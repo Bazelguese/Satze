@@ -146,6 +146,7 @@ import {
   TUTORIAL_STEPS_DEFAULT_MODE,
   TUTORIAL_TRACKS,
 } from '../src/components/tutorial';
+import { ManualBook } from '../src/manual/ManualBook.jsx';
 import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
 import { abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
@@ -5507,6 +5508,8 @@ export default function SatzeGame() {
       // chiude subito la partita con l'esito dato (prove del torneo senza giocare ogni duello)
       concludi: (winner) => { setGameResult({ winner, reason: 'hp' }); setGamePhaseRaw('gameOver'); },
       torneo: () => tournament,
+      // host di un torneo online: sostituisce il tabellone (prove con accoppiamenti scelti)
+      torneoImposta: (t) => tnHostCommit(t),
       decidiReclamo: (d) => multiSeat.decideClaim(d),
       // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
       cadiConnessione: () => getMultiplayerManager().ws?.close(),
@@ -5980,6 +5983,7 @@ export default function SatzeGame() {
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', accent: TUTORIAL_ACCENT, onClick: openTutorialSelector },
+      { label: 'MANUALE', sub: 'LIBRETTO', meta: 'ISTRUZIONI · ANCHE IN PDF', accent: TUTORIAL_ACCENT, onClick: () => setGamePhaseFromMainMenu('manual') },
       { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · EMINENZE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
       {
         label: 'STRUMENTI DEV',
@@ -6159,6 +6163,12 @@ export default function SatzeGame() {
   if (gamePhase === 'playtestHistory') {
     return (
       screen('playtestHistory', true, <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />)
+    );
+  }
+
+  if (gamePhase === 'manual') {
+    return (
+      screen('manual', false, <ManualBook onClose={() => setGamePhase('menu')} />)
     );
   }
 
