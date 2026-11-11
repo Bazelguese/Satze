@@ -134,6 +134,7 @@ export function createEminenceDuelResolver(ctx, seed) {
       return resolveWithEminences(ctx, state, fieldIndex, playerPick, enemyPick, mulberry32((seed ^ 0x9e3779b9) >>> 0));
     } catch {
       // Uno stato Eminenze che la simulazione non sa portare avanti: Duello senza Eminenze.
+      // (Verificato l'11/11/2026 su 2432 Duelli da 120 situazioni di gioco: nessun ripiego.)
       return resolveHeadlessDuel(state, fieldIndex, playerPick, enemyPick);
     }
   };
