@@ -43,6 +43,20 @@ export function getAvailableCards(hand, usedCardIds) {
 }
 
 /**
+ * Agenti schierabili in questo Duello: le carte disponibili, ristrette dai vincoli Eminenza
+ * del lato (`deployableCardIds`, assente = nessun vincolo). Solo per scegliere l'Agente: i
+ * conteggi di carte rimaste restano su getAvailableCards.
+ * @param {{ hand?: Array, usedCardIds?: Array, deployableCardIds?: Array|null }} sideState
+ */
+export function getLegalAgentCards(sideState) {
+  const allowed = sideState?.deployableCardIds;
+  if (!Array.isArray(allowed)) return getAvailableCards(sideState?.hand, sideState?.usedCardIds);
+  // I vincoli contano già le carte usate (e quelle tornate disponibili).
+  const allowedSet = new Set(allowed);
+  return (sideState?.hand || []).filter((card) => card && allowedSet.has(card.id));
+}
+
+/**
  * Riserva UI: 1 FC per ogni carta ancora da giocare dopo quella corrente.
  * Firma storica: il primo argomento (pool) è ignorato.
  */
@@ -105,7 +119,7 @@ export function shouldUseExactFocusSearch(context, profile) {
  */
 export function generateActionsForSide(context, side, fieldIndex = null) {
   const sideState = side === 'ai' ? context.ai : context.player;
-  const cards = getAvailableCards(sideState.hand, sideState.usedCardIds);
+  const cards = getLegalAgentCards(sideState);
   const { minFocus, maxFocus } = getLegalFocusRange(context, side);
   const resolvedFieldIndex =
     fieldIndex != null ? fieldIndex : context.currentFieldIndex;
@@ -257,7 +271,7 @@ export function generateStrategicActionsForSide(context, side, profile, fieldInd
     return generateActionsForSide(context, side, fieldIndex);
   }
 
-  const cards = getAvailableCards(context.ai.hand, context.ai.usedCardIds);
+  const cards = getLegalAgentCards(context.ai);
   const resolvedFieldIndex =
     fieldIndex != null ? fieldIndex : context.currentFieldIndex;
   const actions = [];

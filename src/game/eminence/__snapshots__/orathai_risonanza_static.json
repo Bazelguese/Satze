@@ -1,18 +1,18 @@
 {
   "ability": {
-    "id": "orathai_tacet",
-    "name": "Tacet",
-    "presenceDelta": 0,
+    "id": "orathai_prezzo_del_canto",
+    "name": "Il Prezzo del Canto",
+    "presenceDelta": 1,
     "revealGate": "GENERAL",
-    "text": "Se uno dei due Agenti non soddisfa il requisito di attivazione del suo trigger Potere, +2 Presenza."
+    "text": "In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV."
   },
   "bilance": {
-    "cinematicCues": 2,
+    "cinematicCues": 1,
     "fragmentsPlayer": [
       0,
       0
     ],
-    "noticesEmitted": 2,
+    "noticesEmitted": 1,
     "presenceEnemy": [
       0,
       0
@@ -28,15 +28,19 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "orathai_tacet",
-        "presenceDelta": 0
+        "id": "orathai_prezzo_del_canto",
+        "presenceDelta": 1
+      },
+      {
+        "id": "orathai_contrappunto",
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 1,
+    "presenceAfterReveal": 2,
     "presenceAfterSelect": 1,
     "presenceAvailable": 1,
-    "presenceDelta": 0,
-    "selected": "orathai_tacet"
+    "presenceDelta": 1,
+    "selected": "orathai_prezzo_del_canto"
   },
   "eminence": {
     "army": "Orathai",
@@ -54,21 +58,21 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "recipe": "PRESENCE_PULSE",
+          "recipe": "HP_TICK",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "hp"
           },
           "waitFor": null
         }
       ],
-      "id": "effect:player:orathai_risonanza:AFTER_DUEL_OUTCOME:hit",
+      "id": "effect:player:orathai_prezzo_del_canto:AFTER_DUEL_OUTCOME:hit",
       "kind": "effect",
-      "name": "Risonanza",
+      "name": "Il Prezzo del Canto",
       "outcome": "hit",
       "payoffs": [
         {
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "LOSE_HP",
           "slot": null,
           "target": "SELF"
         }
@@ -76,39 +80,9 @@
       "phase": "RESOLVE",
       "phaseDetail": "Dopo il Duello",
       "phaseLabel": "Risoluzione",
-      "presenceDelta": 1,
-      "side": "player",
-      "text": "Entrambi i Poteri soddisfatti: +1 Presenza."
-    },
-    {
-      "badgeText": "Mancato · Dopo il Duello",
-      "cues": [
-        {
-          "flight": false,
-          "from": null,
-          "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
-      "kind": "effect",
-      "name": "Tacet",
-      "outcome": "miss",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "MISS",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Mancato",
       "presenceDelta": null,
       "side": "player",
-      "text": "+2 Presenza."
+      "text": "In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV."
     }
   ],
   "scenario": {
@@ -155,9 +129,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 2
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -168,7 +142,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 2
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -182,21 +156,12 @@
             "type": "card"
           },
           "holdAnnounce": false,
-          "noticeId": "effect:player:orathai_risonanza:AFTER_DUEL_OUTCOME:hit",
-          "recipe": "PRESENCE_PULSE",
+          "noticeId": "effect:player:orathai_prezzo_del_canto:AFTER_DUEL_OUTCOME:hit",
+          "recipe": "HP_TICK",
           "to": {
             "side": "player",
-            "type": "presence"
+            "type": "hp"
           },
-          "waitFor": null
-        },
-        {
-          "flight": false,
-          "from": null,
-          "holdAnnounce": false,
-          "noticeId": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
           "waitFor": null
         }
       ],
@@ -213,21 +178,21 @@
                 "type": "card"
               },
               "holdAnnounce": false,
-              "recipe": "PRESENCE_PULSE",
+              "recipe": "HP_TICK",
               "to": {
                 "side": "player",
-                "type": "presence"
+                "type": "hp"
               },
               "waitFor": null
             }
           ],
-          "id": "effect:player:orathai_risonanza:AFTER_DUEL_OUTCOME:hit",
+          "id": "effect:player:orathai_prezzo_del_canto:AFTER_DUEL_OUTCOME:hit",
           "kind": "effect",
-          "name": "Risonanza",
+          "name": "Il Prezzo del Canto",
           "outcome": "hit",
           "payoffs": [
             {
-              "primitive": "CHANGE_PRESENCE",
+              "primitive": "LOSE_HP",
               "slot": null,
               "target": "SELF"
             }
@@ -235,39 +200,9 @@
           "phase": "RESOLVE",
           "phaseDetail": "Dopo il Duello",
           "phaseLabel": "Risoluzione",
-          "presenceDelta": 1,
-          "side": "player",
-          "text": "Entrambi i Poteri soddisfatti: +1 Presenza."
-        },
-        {
-          "badgeText": "Mancato · Dopo il Duello",
-          "cues": [
-            {
-              "flight": false,
-              "from": null,
-              "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:orathai_tacet:AFTER_DUEL_OUTCOME:miss",
-          "kind": "effect",
-          "name": "Tacet",
-          "outcome": "miss",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "MISS",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Mancato",
           "presenceDelta": null,
           "side": "player",
-          "text": "+2 Presenza."
+          "text": "In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV."
         }
       ],
       "presence": {
@@ -294,17 +229,33 @@
         },
         {
           "condition": {
-            "detail": "activationUnsatisfiedCount: (assente) → non ancora valutabile",
+            "detail": "ownPowerResolved: true (obs false) → falsa",
             "keys": [
-              "activationUnsatisfiedCount"
+              "ownPowerResolved"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "orathai_prezzo_del_canto",
+          "sourceName": "Il Prezzo del Canto",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "enemyPowerResolved: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyPowerResolved"
             ],
             "status": "deferred"
           },
           "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "LOSE_HP",
           "source": "ability",
-          "sourceId": "orathai_tacet",
-          "sourceName": "Tacet",
+          "sourceId": "orathai_prezzo_del_canto",
+          "sourceName": "Il Prezzo del Canto",
           "target": "SELF",
           "timing": "AFTER_DUEL_OUTCOME"
         }

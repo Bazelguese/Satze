@@ -3,7 +3,7 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "enclave_ascensione",
-    "presence": 3,
+    "presence": 5,
     "abilityId": "enclave_ascensione",
     "params": null,
     "agent": {
@@ -11,7 +11,7 @@
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "sfida",
+      "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
@@ -34,21 +34,21 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
-      "player": true,
-      "enemy": false
+      "player": false,
+      "enemy": true
     },
     "activatedTriggerBySide": {
-      "player": "sfida",
-      "enemy": null
+      "player": null,
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,

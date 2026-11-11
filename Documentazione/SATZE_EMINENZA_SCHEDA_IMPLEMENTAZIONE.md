@@ -355,7 +355,7 @@ Compilare esplicitamente prima di `implemented: true`:
 | L'Organizzatore | `mascarada_organizzatore` | 6 | ✅ | ✅ |
 | L'Altare | `kethran_altare` | 6 | ✅ | ✅ |
 | La Fame | `mounthborn_fame` | 4 | ✅ | ✅ |
-| Il Castello dei Sigillatori | `khemet_maledizioni` | 4 | ✅ | ✅ |
+| Il Castello degli Arcanisti Nefasti | `khemet_maledizioni` | 4 | ✅ | ✅ |
 | La Domanda Senza Fine | `figli_domanda_senza_fine` | 4 | ✅ | ✅ |
 | Calibri Pesanti | `calibri_quattro_fronti` | 4 | ❌ | |
 | Enclave | `enclave_ascensione` | 5 | ❌ | |

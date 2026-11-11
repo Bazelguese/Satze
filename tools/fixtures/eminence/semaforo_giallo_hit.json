@@ -3,7 +3,7 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "patto_grande_semaforo",
-    "presence": 0,
+    "presence": 2,
     "abilityId": "semaforo_giallo",
     "params": null,
     "agent": {

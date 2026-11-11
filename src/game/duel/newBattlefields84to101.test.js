@@ -33,8 +33,8 @@ function field(id) {
   return ALL_BATTLEFIELDS.find((f) => f.id === id);
 }
 
-test('catalogo include campi 84–121', () => {
-  assert.equal(ALL_BATTLEFIELDS.length, 121);
+test('catalogo include campi 84–122', () => {
+  assert.equal(ALL_BATTLEFIELDS.length, 122);
   assert.equal(field(84).name, 'Cimitero dei Colossi');
   assert.equal(field(89).tema, 'Apex');
   assert.equal(field(101).name, 'Ponte dei Tre Piloni');
@@ -42,6 +42,28 @@ test('catalogo include campi 84–121', () => {
   assert.equal(field(113).name, 'Lago delle Sette Lune');
   assert.equal(field(114).tema, 'Mascarada');
   assert.equal(field(121).name, 'Anfiteatro di Morrowgate');
+  assert.equal(field(122).name, 'Arena del Violento Gaudio');
+  assert.equal(field(122).eminenceOnly, true);
+});
+
+test('122: Arena del Violento Gaudio dà +2 POT e +2 DAN a entrambi', () => {
+  const duel = baseDuel();
+  const before = { pPower: duel.pPower, ePower: duel.ePower, pDamage: duel.pDamage, eDamage: duel.eDamage };
+  applyDuelFieldSetup(duel, field(122), [], { league: 2 }, { league: 2 }, {}, {});
+  assert.equal(duel.pPower, before.pPower + 2);
+  assert.equal(duel.ePower, before.ePower + 2);
+  assert.equal(duel.pDamage, before.pDamage + 2);
+  assert.equal(duel.eDamage, before.eDamage + 2);
+});
+
+test('122: un Campo d\'Eminenza non esce mai dalla pesca casuale', async () => {
+  const { selectBattlefields } = await import('../fieldLogic.js');
+  for (let seed = 1; seed <= 200; seed += 1) {
+    let x = seed;
+    const rng = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
+    const picked = selectBattlefields('classic', ALL_BATTLEFIELDS, { rng });
+    assert.equal(picked.some((f) => f.eminenceOnly), false);
+  }
 });
 
 test('84: +5 VA a Lega più alta', () => {

@@ -13,8 +13,18 @@ import {
   defaultRng,
   formatAIReasoningEntry,
 } from '../game/ai/index.js';
-import { isAiWorkerSupported, runAiDecisionInWorker } from '../game/ai/aiWorkerClient.js';
-import { getAvailableCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
+import {
+  isAiWorkerSupported,
+  runAiDecisionInWorker,
+  runMcDecisionInWorker,
+} from '../game/ai/aiWorkerClient.js';
+import {
+  buildMcViewFromGameState,
+  isMonteCarloSupported,
+  serializeMcView,
+} from '../game/ai/mc/mcGameAdapter.js';
+import { getMcProfile } from '../game/ai/mc/mcProfiles.js';
+import { getLegalAgentCards, getLegalFocusRange } from '../game/ai/generateAIActions.js';
 
 /**
  * Hook per gestire la logica dell'IA
@@ -80,14 +90,14 @@ export function useAI(gameState) {
   /** La carta in cache deve essere ancora giocabile nella mano IA corrente. */
   const isPendingCardPlayable = useCallback((ctx, card) => {
     if (card == null || card.id == null) return false;
-    const available = getAvailableCards(ctx.ai?.hand, ctx.ai?.usedCardIds);
+    const available = getLegalAgentCards(ctx.ai);
     return available.some((c) => c.id === card.id);
   }, []);
 
   /** Agente+FC minimi se il motore non produce una carta (es. Campo ancora assente). */
   const fallbackAiAgentDecision = useCallback((state) => {
     const ctx = buildAIContext(state);
-    const available = getAvailableCards(ctx.ai?.hand, ctx.ai?.usedCardIds);
+    const available = getLegalAgentCards(ctx.ai);
     const card = available[0] || null;
     if (!card) return null;
     const { maxFocus } = getLegalFocusRange(ctx, 'ai');
@@ -162,13 +172,38 @@ export function useAI(gameState) {
         if (reusable) return reusable;
       }
 
-      const context = buildAIContext(gameStateRef.current);
+      const state = gameStateRef.current;
+      const context = buildAIContext(state);
       const key = buildPublicDecisionKey(context);
 
       const needsJoint = needsJointDecision(context, options);
 
       const rng = options.rng || defaultRng;
-      const decision = await runDecisionEngineAsync(context, needsJoint, rng);
+      let decision = null;
+      // Motore a simulazione (Classico / Mani nude) nel worker; altrimenti, o se fallisce,
+      // il motore precedente.
+      if (isMonteCarloSupported(state) && isAiWorkerSupported()) {
+        try {
+          decision = await runMcDecisionInWorker(
+            serializeMcView(buildMcViewFromGameState(state)),
+            context,
+            state.aiDifficulty,
+            {
+              maxMs: getMcProfile(state.aiDifficulty).maxMs,
+              seed: Math.floor(rng() * 2 ** 32),
+              trait: state.aiPersonality || 'neutral',
+            }
+          );
+        } catch {
+          decision = null;
+        }
+        if (decision?.card && needsJoint === false && context.currentFieldIndex != null) {
+          decision = { ...decision, fieldIndex: context.currentFieldIndex };
+        }
+      }
+      if (!decision?.card) {
+        decision = await runDecisionEngineAsync(context, needsJoint, rng);
+      }
 
       if (decision?.card && options.record !== false) {
         const kind = needsJoint

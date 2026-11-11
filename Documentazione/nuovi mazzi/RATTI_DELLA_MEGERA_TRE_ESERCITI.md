@@ -464,16 +464,19 @@ Il deck contiene:
 
 Grillo e Gondoliere compaiono almeno una volta nel **77,8%** delle mani.
 
-Se il deck vince, l’avversario che ha perso giocherà per primo nello scontro successivo. Il giocatore dei Ratti giocherà quindi nuovamente per secondo.
+L’iniziativa si alterna a ogni scontro, qualunque sia l’esito: dopo uno scontro giocato per secondo, il deck giocherà per primo nel successivo. Vincere da secondo non riporta quindi i Ratti in seconda posizione.
 
-La catena di Intervento è coerente:
+Le risposte di Intervento trovano il loro momento a scontri alterni:
 
 ```text
-vinci da secondo
-→ l’avversario gioca per primo
+giochi per secondo
+→ Intervento
+→ scontro successivo: giochi per primo (alternanza)
+→ scontro dopo ancora: di nuovo per secondo
 → nuovo Intervento
-→ nuova possibilità di controllo
 ```
+
+Grillo e Gondoliere richiedono la seconda posizione, che torna uno scontro sì e uno no: le due carte possono occupare finestre diverse. La Megera non ha una condizione di attivazione e non deve per forza occupare una di quelle finestre.
 
 ### Scelta della negazione
 
@@ -794,7 +797,9 @@ Le due carte chiedono al giocatore di leggere la composizione della mano già al
 
 `Mangiamore` diventa POT 5.
 
-Dato che il giocatore che perde sceglie il Campo successivo e gioca per primo, Mangiamore può essere preparato su un Campo favorevole.
+Chi gioca per primo sceglie anche il Campo, e l’iniziativa si alterna a ogni scontro. Se la perdita arriva in uno scontro giocato per secondo, nel successivo il deck gioca per primo e Mangiamore può essere preparato su un Campo favorevole.
+
+Se la perdita arriva da prima posizione, Mangiamore resta attivo nello scontro successivo, ma il Campo lo sceglie l’avversario.
 
 ### Sacrificio produttivo
 

@@ -1,0 +1,391 @@
+{
+  "ability": {
+    "id": "corte_rinforzo",
+    "name": "Rinforzo",
+    "presenceDelta": 0,
+    "revealGate": "PRE_FIELD",
+    "text": "Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»"
+  },
+  "bilance": {
+    "cinematicCues": 2,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 2,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      0,
+      1
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "corte_prestito",
+        "presenceDelta": 1
+      },
+      {
+        "id": "corte_rinforzo",
+        "presenceDelta": 0
+      }
+    ],
+    "presenceAfterReveal": 1,
+    "presenceAfterSelect": 0,
+    "presenceAvailable": 0,
+    "presenceDelta": 0,
+    "selected": "corte_rinforzo"
+  },
+  "eminence": {
+    "army": "Corte Rossa",
+    "id": "corte_rossa",
+    "name": "Sanguinaccio, il Registro"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "reveal:player:corte_rinforzo:PRE_FIELD",
+      "kind": "reveal",
+      "name": "Rinforzo",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "PROPOSE_DEAL",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "ENEMY_AGENT"
+        },
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "ENEMY_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Campo",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": 0,
+      "side": "player",
+      "text": "Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»"
+    },
+    {
+      "badgeText": "Risoluzione · Prima dei trigger",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "id": "effect:player:corte_rinforzo:BEFORE_TRIGGER_CHECK:hit",
+      "kind": "effect",
+      "name": "Rinforzo",
+      "outcome": "hit",
+      "payoffs": [
+        {
+          "primitive": "MODIFY_STAT",
+          "slot": null,
+          "target": "ENEMY_AGENT"
+        }
+      ],
+      "phase": "RESOLVE",
+      "phaseDetail": "Prima dei trigger",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": null,
+      "side": "player",
+      "text": "Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»"
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "corte_rinforzo_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Rivelazione · Prima del Campo",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "reveal:player:corte_rinforzo:PRE_FIELD",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Campo",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "enemy",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "enemy",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "reveal:player:corte_rinforzo:PRE_FIELD",
+          "kind": "reveal",
+          "name": "Rinforzo",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "PROPOSE_DEAL",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "ENEMY_AGENT"
+            },
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "ENEMY_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Campo",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": 0,
+          "side": "player",
+          "text": "Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»"
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Prima dei trigger",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": false,
+          "noticeId": "effect:player:corte_rinforzo:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "LINK_AGENT",
+          "to": {
+            "side": "enemy",
+            "type": "field-agent"
+          },
+          "waitFor": {
+            "side": "enemy",
+            "type": "field-agent"
+          }
+        }
+      ],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [
+        {
+          "badgeText": "Risoluzione · Prima dei trigger",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": false,
+              "recipe": "LINK_AGENT",
+              "to": {
+                "side": "enemy",
+                "type": "field-agent"
+              },
+              "waitFor": {
+                "side": "enemy",
+                "type": "field-agent"
+              }
+            }
+          ],
+          "id": "effect:player:corte_rinforzo:BEFORE_TRIGGER_CHECK:hit",
+          "kind": "effect",
+          "name": "Rinforzo",
+          "outcome": "hit",
+          "payoffs": [
+            {
+              "primitive": "MODIFY_STAT",
+              "slot": null,
+              "target": "ENEMY_AGENT"
+            }
+          ],
+          "phase": "RESOLVE",
+          "phaseDetail": "Prima dei trigger",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": null,
+          "side": "player",
+          "text": "Offerta: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»"
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "PROPOSE_DEAL",
+          "source": "ability",
+          "sourceId": "corte_rinforzo",
+          "sourceName": "Rinforzo",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": "dealAccepted: (assente) → non ancora valutabile",
+            "keys": [
+              "dealAccepted",
+              "dealChoice"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "MODIFY_STAT",
+          "source": "ability",
+          "sourceId": "corte_rinforzo",
+          "sourceName": "Rinforzo",
+          "target": "ENEMY_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "dealAccepted: (assente) → non ancora valutabile",
+            "keys": [
+              "dealAccepted",
+              "dealChoice"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "MODIFY_STAT",
+          "source": "ability",
+          "sourceId": "corte_rinforzo",
+          "sourceName": "Rinforzo",
+          "target": "ENEMY_AGENT",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

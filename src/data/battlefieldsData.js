@@ -1446,5 +1446,18 @@ export const RAW_BATTLEFIELDS = [
     "minTurn": 1,
     "flavour": "",
     "bgImage": "./campi_bg/campo-121.webp"
+  },
+  {
+    "id": 122,
+    "name": "Arena del Violento Gaudio",
+    "icon": "sun",
+    "effect": "In scontro · Entrambi · +2 POT, +2 DAN",
+    "category": "values",
+    "rarita": "raro",
+    "tema": "Apex",
+    "minTurn": 1,
+    "flavour": "",
+    "bgImage": "./campi_bg/campo-89.webp",
+    "eminenceOnly": true
   }
 ];

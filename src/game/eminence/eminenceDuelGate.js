@@ -16,6 +16,7 @@ import {
   PRIMITIVE_TARGETS as T,
   HP_LOSS_CAUSES,
   PARAM_SOURCES,
+  DEPLOY_CONSTRAINTS,
 } from './eminenceConstants.js';
 import {
   areSelectionsComplete,
@@ -25,18 +26,18 @@ import {
   getNextGate,
   isGateCompleted,
   mustChooseThisRound,
+  revealConditionContext,
   selectEminenceAbility,
   setEminenceAbilityParams,
 } from './eminenceRound.js';
+import { matchesCondition } from './effectConditions.js';
 import { applyEminenceSegments, applyPendingDealResponse, createEffectBundle } from './primitiveHandlers.js';
-import { resolveTriggerState } from './triggerRulesOverlay.js';
 import { changePresence } from './presence.js';
-import { isEminenceSubsystemEnabled, getLegalAbilityIds } from './eminenceState.js';
+import { isEminenceSubsystemEnabled, getLegalAbilityIds, readDuelRecord } from './eminenceState.js';
 import { getEminence, getEminenceAbility } from '../../data/eminences.js';
-import { ALL_AGENTS } from '../../data/cards.js';
 import { noticesFromRevealEvents, noticesFromAppliedEffects, noticesFromDeployedMarkResolution } from './eminenceAnnouncements.js';
 import { appendSlotCurse, collectSlotCurses } from './slotCurses.js';
-import { snapshotAnchoredBySide } from './anchored.js';
+import { snapshotAnchoredBySide, snapshotEnemyAnchoredByOwnRule } from './anchored.js';
 import { collectRoundLeagueByCardId } from './eminenceDuelBinding.js';
 import {
   resolveParamsSchema,
@@ -44,11 +45,6 @@ import {
   pickDefaultSelectionParams,
   selectionParamsReady,
 } from './eminenceParamSchema.js';
-
-/** Costo di schieramento legato al trigger effettivo, non a una singola Eminenza. */
-const DEPLOY_TRIGGER_HP_COSTS = {
-  debt: { amount: 2, cause: HP_LOSS_CAUSES.DEBT },
-};
 
 const BOTH_SIDES = [SIDES.PLAYER, SIDES.ENEMY];
 
@@ -266,6 +262,40 @@ function applyBundleToState(matchState, bundle) {
     state = { ...state, [block.side]: { ...state[block.side], blockedNextRound: true } };
   }
 
+  // Esito dell'Offerta del round: decide se la prossima si potrà rifiutare.
+  for (const deal of bundle.deals || []) {
+    if (deal.mode !== 'OFFER' || !state[deal.ownerSide]) continue;
+    const owner = state[deal.ownerSide];
+    state = {
+      ...state,
+      [deal.ownerSide]: {
+        ...owner,
+        persistent: {
+          ...(owner.persistent || {}),
+          lastOffer: { round: state.roundNumber ?? null, accepted: Boolean(deal.accepted) },
+        },
+      },
+    };
+  }
+
+  state = applyDebtEscalations(state, bundle.debtEscalations);
+  state = applyDeployConstraints(state, bundle.deployConstraints);
+  if (bundle.initiativeOverride) state = { ...state, roundInitiativeOverride: bundle.initiativeOverride };
+  for (const entry of bundle.persistentBonusOverrides || []) {
+    const current = state[entry.side];
+    if (!current?.persistent) continue;
+    state = {
+      ...state,
+      [entry.side]: {
+        ...current,
+        persistent: {
+          ...current.persistent,
+          armyBonusOverride: { override: entry.override, until: entry.until, source: entry.source },
+        },
+      },
+    };
+  }
+
   return persistAbilityEscalation(
     persistLeagueByCardId(
       persistEndMatchDebts(
@@ -285,6 +315,52 @@ function applyBundleToState(matchState, bundle) {
     ),
     bundle.abilityEscalations,
   );
+}
+
+/** Registra sul lato vincolato gli Agenti imposti, vietati o riusabili in questo Duello. */
+function applyDeployConstraints(matchState, constraints) {
+  if (!constraints?.length) return matchState;
+  let state = matchState;
+  for (const { side, mode, cardId } of constraints) {
+    const current = state[side];
+    if (!current?.round) continue;
+    const prev = current.round.deployConstraints || {};
+    const next = {
+      forcedCardId: prev.forcedCardId ?? null,
+      bannedCardIds: [...(prev.bannedCardIds || [])],
+      revivedCardIds: [...(prev.revivedCardIds || [])],
+    };
+    if (mode === DEPLOY_CONSTRAINTS.FORCE) next.forcedCardId = cardId;
+    if (mode === DEPLOY_CONSTRAINTS.BAN && !next.bannedCardIds.includes(cardId)) next.bannedCardIds.push(cardId);
+    if (mode === DEPLOY_CONSTRAINTS.REVIVE && !next.revivedCardIds.includes(cardId)) next.revivedCardIds.push(cardId);
+    state = { ...state, [side]: { ...current, round: { ...current.round, deployConstraints: next } } };
+  }
+  return state;
+}
+
+/** Ogni voce del Registro a carico del lato indicato cresce del delta. */
+function applyDebtEscalations(matchState, escalations) {
+  if (!escalations?.length) return matchState;
+  let state = matchState;
+  for (const escalation of escalations) {
+    for (const holder of BOTH_SIDES) {
+      const debts = state[holder]?.persistent?.endMatchDebts;
+      if (!debts?.length) continue;
+      const next = debts.map((debt) => (
+        debt.side === escalation.side && debt.amount != null
+          ? { ...debt, amount: debt.amount + (escalation.delta || 0) }
+          : debt
+      ));
+      state = {
+        ...state,
+        [holder]: {
+          ...state[holder],
+          persistent: { ...state[holder].persistent, endMatchDebts: next },
+        },
+      };
+    }
+  }
+  return state;
 }
 
 function persistAbilityEscalation(matchState, escalations) {
@@ -416,35 +492,6 @@ function mergePersistentReplacements(bundle, matchState) {
       },
     },
   };
-}
-
-function applyOnDeployTriggerCosts(bundle, { agentIdBySide } = {}) {
-  if (!bundle || !agentIdBySide) return bundle;
-  for (const side of BOTH_SIDES) {
-    const cardId = agentIdBySide[side];
-    if (cardId == null) continue;
-    const card = ALL_AGENTS.find((agent) => agent.id === cardId);
-    const resolved = resolveTriggerState({
-      originalTrigger: card?.ability?.trigger ?? null,
-      card: { id: cardId },
-      side,
-      triggerRules: bundle.triggerRules,
-      context: {},
-    });
-    const cost = DEPLOY_TRIGGER_HP_COSTS[resolved.effectiveTrigger];
-    if (!cost) continue;
-    const already = (bundle.hpDeltas || []).some(
-      (entry) => entry.side === side && entry.cause === cost.cause,
-    );
-    if (already) continue;
-    bundle.hpDeltas.push({
-      side,
-      amount: -Math.abs(cost.amount),
-      cause: cost.cause,
-      source: resolved.source,
-    });
-  }
-  return bundle;
 }
 
 function qualifyingHpLossEvents(hpDeltas) {
@@ -675,6 +722,7 @@ export function advanceToNextRevealGate(matchState, {
     ? applyEminenceSegments(opened.resolutionQueue, null, {
       agentIdBySide,
       toxinBySide,
+      roundNumber: opened.matchState.roundNumber ?? null,
       persistentBySide: {
         [SIDES.PLAYER]: opened.matchState[SIDES.PLAYER]?.persistent,
         [SIDES.ENEMY]: opened.matchState[SIDES.ENEMY]?.persistent,
@@ -732,6 +780,8 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.REMOVE_TOXIN,
   P.PROPOSE_DEAL,
   P.ESCALATE_ABILITY,
+  P.BLOCK_POWER,
+  P.ECHO_POWER,
 ]);
 
 function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null) {
@@ -743,6 +793,7 @@ function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null
     for (const segment of ability?.segments || []) {
       if (segment.timing !== EFFECT_TIMINGS.AFTER_REVEAL) continue;
       if (!DUEL_REPLAY_PRIMITIVES.has(segment.primitive)) continue;
+      if (!matchesCondition(segment.condition, revealConditionContext(matchState, side, current.selectedParams))) continue;
       queue.push({
         abilityId: ability.id,
         ownerSide: side,
@@ -797,6 +848,8 @@ function mergeDuelReplay(bundle, replay) {
     immuneSides: [...new Set([...(target.immuneSides || []), ...(replay.immuneSides || [])])],
     toxinRemovals: [...(target.toxinRemovals || []), ...(replay.toxinRemovals || [])],
     abilityEscalations: [...(target.abilityEscalations || []), ...(replay.abilityEscalations || [])],
+    blockedPowerSides: [...new Set([...(target.blockedPowerSides || []), ...(replay.blockedPowerSides || [])])],
+    echoPowerSides: [...new Set([...(target.echoPowerSides || []), ...(replay.echoPowerSides || [])])],
   };
 }
 
@@ -861,19 +914,27 @@ export function prepareEminenceDuel(matchState, {
   }
   const generalWasAlreadyOpen = isGateCompleted(filled.gateProgress, REVEAL_GATES.GENERAL);
   const opened = completeGate(filled, REVEAL_GATES.GENERAL, { initiativeSide });
+  const thresholdDeltaBySide = pendingAnchoredThresholdBySide(opened.matchState, opened.resolutionQueue);
   const anchoredBySide = snapshotAnchoredBySide(opened.matchState, {
     focusInvestedBySide: focusInvestedBySide || {},
     leagueBySide: leagueBySide || {},
-    thresholdDeltaBySide: pendingAnchoredThresholdBySide(opened.matchState, opened.resolutionQueue),
+    thresholdDeltaBySide,
+  });
+  const enemyAnchoredByOwnRuleBySide = snapshotEnemyAnchoredByOwnRule(opened.matchState, {
+    focusInvestedBySide: focusInvestedBySide || {},
+    leagueBySide: leagueBySide || {},
+    thresholdDeltaBySide,
   });
   const collected = collectTimings(opened.matchState, PRE_DUEL_TIMINGS, initiativeSide, {
     agentIdBySide,
     anchoredBySide,
+    enemyAnchoredByOwnRuleBySide,
     deployedIsLowestLeagueBySide: deployedIsLowestLeagueBySide || {},
   });
   const applyContext = {
     agentIdBySide,
     toxinBySide,
+    roundNumber: collected.matchState.roundNumber ?? null,
     persistentBySide: {
       [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
       [SIDES.ENEMY]: collected.matchState[SIDES.ENEMY]?.persistent,
@@ -885,11 +946,17 @@ export function prepareEminenceDuel(matchState, {
   }
   bundle = mergePersistentReplacements(bundle, collected.matchState);
   bundle = mergeRoundLeagues(bundle, collected.matchState);
-  applyOnDeployTriggerCosts(bundle, { agentIdBySide });
+  bundle = mergePersistentBonusOverrides(bundle, collected.matchState);
   const withCurses = attachPersistentSlotCurses(bundle, collected.matchState, currentFieldIndex);
   const evalContextBySide = {
-    [SIDES.PLAYER]: { ownAnchored: Boolean(anchoredBySide[SIDES.PLAYER]) },
-    [SIDES.ENEMY]: { ownAnchored: Boolean(anchoredBySide[SIDES.ENEMY]) },
+    [SIDES.PLAYER]: {
+      ownAnchored: Boolean(anchoredBySide[SIDES.PLAYER]),
+      enemyAnchoredByOwnRule: Boolean(enemyAnchoredByOwnRuleBySide[SIDES.PLAYER]),
+    },
+    [SIDES.ENEMY]: {
+      ownAnchored: Boolean(anchoredBySide[SIDES.ENEMY]),
+      enemyAnchoredByOwnRule: Boolean(enemyAnchoredByOwnRuleBySide[SIDES.ENEMY]),
+    },
   };
   const applied = applyBundleAndReactions(collected.matchState, withCurses, { initiativeSide });
 
@@ -1022,6 +1089,24 @@ function paramContextForSide(side, paramContext, agentIdBySide) {
   };
 }
 
+/** Un Bonus sostituito nei Duelli precedenti vale anche in questo, salvo override del round. */
+function mergePersistentBonusOverrides(bundle, matchState) {
+  let next = bundle;
+  for (const side of BOTH_SIDES) {
+    const stored = matchState[side]?.persistent?.armyBonusOverride;
+    if (!stored?.override || next?.armyBonusState?.[side]?.override) continue;
+    next = next || createEffectBundle();
+    next = {
+      ...next,
+      armyBonusState: {
+        ...(next.armyBonusState || {}),
+        [side]: { ...(next.armyBonusState?.[side] || {}), override: { ...stored.override } },
+      },
+    };
+  }
+  return next;
+}
+
 function attachPersistentSlotCurses(bundle, matchState, slot) {
   const curses = collectSlotCurses(matchState, slot);
   if (!curses.length) return bundle;
@@ -1053,6 +1138,8 @@ export function settleEminenceRound(matchState, {
   aliasUsedBySide = null,
   powerResolvedBySide = null,
   activatedTriggerBySide = null,
+  activatedBonusTriggerBySide = null,
+  bonusActivatedBySide = null,
   finalPowerByCardId = null,
   finalPowerBySide = null,
   finalDamageBySide = null,
@@ -1081,6 +1168,8 @@ export function settleEminenceRound(matchState, {
     aliasUsedBySide: aliasUsedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     powerResolvedBySide: powerResolvedBySide || { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: activatedTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
+    activatedBonusTriggerBySide: activatedBonusTriggerBySide || { [SIDES.PLAYER]: null, [SIDES.ENEMY]: null },
+    bonusActivatedBySide: bonusActivatedBySide || {},
     finalDamageBySide: finalDamageBySide || {},
     activationSatisfiedBySide: activationMap,
     focusInvestedBySide: focusMap,
@@ -1090,7 +1179,7 @@ export function settleEminenceRound(matchState, {
     statReductionOccurred,
   };
   const collected = collectTimings(recorded, POST_DUEL_TIMINGS, initiativeSide, context);
-  const debtQueue = storedDebtsToHpQueue(recorded);
+  const debtQueue = storedDebtsToHpQueue(recorded, { includeEndMatch: false });
   const queue = [...collected.queue, ...debtQueue];
   const persistentBySide = {
     [SIDES.PLAYER]: collected.matchState[SIDES.PLAYER]?.persistent,
@@ -1099,10 +1188,12 @@ export function settleEminenceRound(matchState, {
   const bundle = queue.length
     ? applyEminenceSegments(queue, null, { agentIdBySide: context.agentIdBySide, persistentBySide })
     : null;
-  const stateAfterDebts = debtQueue.length ? clearEndMatchDebts(collected.matchState) : collected.matchState;
+  const stateAfterDebts = debtQueue.length
+    ? clearEndMatchDebts(collected.matchState, { includeEndMatch: false })
+    : collected.matchState;
   const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
   return {
-    matchState: applied.matchState,
+    matchState: recordDuelOutcome(applied.matchState, winner, agentIdBySide),
     bundle,
     notices: [
       ...noticesFromAppliedEffects(collected.matchState, queue, {
@@ -1111,6 +1202,41 @@ export function settleEminenceRound(matchState, {
       ...applied.notices,
     ],
   };
+}
+
+/**
+ * Annota l'esito del Duello appena chiuso nel registro di ciascun lato. Va fatto dopo i
+ * checkpoint post-Duello: per gli effetti di questo round il registro conta solo i
+ * Duelli precedenti.
+ */
+function recordDuelOutcome(matchState, winner, agentIdBySide = null) {
+  if (winner !== SIDES.PLAYER && winner !== SIDES.ENEMY && winner !== 'draw') return matchState;
+  let state = matchState;
+  for (const side of BOTH_SIDES) {
+    const current = state[side];
+    if (!current?.persistent) continue;
+    const record = readDuelRecord(current.persistent);
+    const key = winner === 'draw' ? 'draw' : (winner === side ? 'won' : 'lost');
+    const defeated = [...(current.persistent.defeatedCardIds || [])];
+    const ownAgent = agentIdBySide?.[side];
+    if (key === 'lost' && ownAgent != null && !defeated.includes(ownAgent)) defeated.push(ownAgent);
+    state = {
+      ...state,
+      [side]: {
+        ...current,
+        persistent: {
+          ...current.persistent,
+          duelRecord: { ...record, [key]: record[key] + 1 },
+          defeatedCardIds: defeated,
+          // «Finché un tuo Agente non vince un Duello»: la vittoria chiude l'override.
+          ...(key === 'won' && current.persistent.armyBonusOverride?.until === 'OWN_WIN'
+            ? { armyBonusOverride: null }
+            : {}),
+        },
+      },
+    };
+  }
+  return state;
 }
 
 function recordEndMatchDebtAmounts(matchState, { finalPowerByCardId, finalPowerBySide, agentIdBySide } = {}) {
@@ -1160,9 +1286,10 @@ function collectStoredEndMatchDebts(matchState) {
   return debts;
 }
 
-function storedDebtsToHpQueue(matchState) {
+function storedDebtsToHpQueue(matchState, { includeEndMatch = true } = {}) {
   return collectStoredEndMatchDebts(matchState)
     .filter((debt) => (debt.amount || 0) > 0)
+    .filter((debt) => includeEndMatch || debt.dueAt !== 'END_MATCH')
     .map((debt) => {
       const ownerSide = debt.ownerSide;
       const victimSide = debt.side;
@@ -1181,16 +1308,20 @@ function storedDebtsToHpQueue(matchState) {
     });
 }
 
-function clearEndMatchDebts(matchState) {
+function clearEndMatchDebts(matchState, { includeEndMatch = true } = {}) {
   let state = matchState;
   for (const side of BOTH_SIDES) {
     const current = state[side];
     if (!current?.persistent?.endMatchDebts?.length) continue;
+    // Le voci del Registro restano fino alla Fine dello Scontro.
+    const kept = includeEndMatch
+      ? []
+      : current.persistent.endMatchDebts.filter((debt) => debt.dueAt === 'END_MATCH' || !(debt.amount > 0));
     state = {
       ...state,
       [side]: {
         ...current,
-        persistent: { ...current.persistent, endMatchDebts: [] },
+        persistent: { ...current.persistent, endMatchDebts: kept },
       },
     };
   }
@@ -1340,7 +1471,22 @@ export function resolvePendingDeal(matchState, pendingDeal, response = {}, {
 
   const recipientPresence = matchState[pendingDeal.recipientSide]?.presence;
   let normalized;
-  if (pendingDeal.mode === 'CHOOSE_ONE') {
+  if (pendingDeal.mode === 'OFFER') {
+    const hasExplicitResponse = Object.prototype.hasOwnProperty.call(response, 'dealAccepted')
+      || Object.prototype.hasOwnProperty.call(response, 'dealResponse');
+    if (!hasExplicitResponse && !pendingDeal.mustAccept) {
+      throw new Error('resolvePendingDeal: dealAccepted/dealResponse obbligatorio');
+    }
+    const accepted = Boolean(pendingDeal.mustAccept) || (response.dealAccepted !== false
+      && response.dealResponse !== 'refuse'
+      && response.dealResponse !== false);
+    const choices = pendingDeal.choices || null;
+    const choice = response.dealChoice ?? null;
+    if (accepted && choices?.length && !choices.includes(choice)) {
+      throw new Error(`resolvePendingDeal: scelta dell'Offerta obbligatoria fra ${choices.join(', ')}`);
+    }
+    normalized = { dealAccepted: accepted, dealChoice: accepted ? choice : null };
+  } else if (pendingDeal.mode === 'CHOOSE_ONE') {
     if (response.dealChoice == null && response.dealId == null) {
       throw new Error('resolvePendingDeal: dealChoice obbligatorio');
     }
@@ -1376,6 +1522,9 @@ export function resolvePendingDeal(matchState, pendingDeal, response = {}, {
 /** Risposta automatica dell'IA (o unica scelta legale Salasso). */
 export function autoResponseForPendingDeal(pendingDeal, matchState) {
   if (!pendingDeal) return {};
+  if (pendingDeal.mode === 'OFFER') {
+    return { dealAccepted: true, dealChoice: pendingDeal.choices?.[0] ?? null };
+  }
   if (pendingDeal.mode === 'CHOOSE_ONE') {
     const presence = matchState[pendingDeal.recipientSide]?.presence ?? 0;
     const deals = pendingDeal.deals || [];

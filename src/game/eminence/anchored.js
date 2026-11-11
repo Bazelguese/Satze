@@ -41,3 +41,30 @@ export function snapshotAnchoredBySide(matchState, {
   }
   return snapshot;
 }
+
+/**
+ * Ancorato dell'Agente avversario misurato con la soglia del lato che legge.
+ *
+ * Serve agli effetti che impongono all'avversario la propria regola di Ancorato: la Lega e gli
+ * FC sono quelli dell'Agente nemico, gli aumenti cumulativi del requisito sono quelli di chi
+ * impone la regola.
+ */
+export function snapshotEnemyAnchoredByOwnRule(matchState, {
+  focusInvestedBySide = {},
+  leagueBySide = {},
+  thresholdDeltaBySide = {},
+} = {}) {
+  const snapshot = {};
+  for (const side of BOTH_SIDES) {
+    const other = side === SIDES.PLAYER ? SIDES.ENEMY : SIDES.PLAYER;
+    const thresholdDelta = thresholdDeltaBySide[side]
+      ?? matchState?.[side]?.persistent?.anchoredThresholdDelta
+      ?? 0;
+    snapshot[side] = isAnchored({
+      focusInvested: focusInvestedBySide[other] ?? 0,
+      league: leagueBySide[other] ?? 0,
+      thresholdDelta,
+    });
+  }
+  return snapshot;
+}

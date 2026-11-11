@@ -28,11 +28,15 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "orathai_tacet",
-        "presenceDelta": 0
+        "id": "orathai_prezzo_del_canto",
+        "presenceDelta": 1
       },
       {
         "id": "orathai_contrappunto",
+        "presenceDelta": -1
+      },
+      {
+        "id": "orathai_eco",
         "presenceDelta": -2
       },
       {

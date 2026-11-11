@@ -6,7 +6,7 @@
     "presence": 1,
     "abilityId": "mascarada_scommessa",
     "params": {
-      "pronostico": "win"
+      "pronostico": "VITTORIA_AVVERSARIA"
     },
     "agent": {
       "cardId": 231,

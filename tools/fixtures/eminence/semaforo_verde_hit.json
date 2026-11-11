@@ -28,7 +28,7 @@
       "league": 4,
       "power": 5,
       "damage": 3,
-      "trigger": "glory",
+      "trigger": "intervention",
       "focusInvested": 3,
       "anchored": false
     }
@@ -41,7 +41,7 @@
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": "glory"
+      "enemy": "intervention"
     },
     "aliasUsedBySide": {
       "player": false,

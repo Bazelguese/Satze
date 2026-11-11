@@ -4,7 +4,7 @@
   "player": {
     "eminenceId": "figli_domanda_senza_fine",
     "presence": 2,
-    "abilityId": "figli_leggerezza",
+    "abilityId": "figli_deriva",
     "params": null,
     "agent": {
       "cardId": 231,

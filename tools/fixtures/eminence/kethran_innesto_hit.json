@@ -6,7 +6,8 @@
     "presence": 2,
     "abilityId": "kethran_innesto",
     "params": {
-      "fragmentCardId": 231
+      "fragmentCardId": 231,
+      "graftInto": "power"
     },
     "agent": {
       "cardId": 231,
@@ -17,7 +18,9 @@
       "focusInvested": 2,
       "anchored": false
     },
-    "fragments": [],
+    "fragments": [
+      231
+    ],
     "prey": []
   },
   "enemy": {

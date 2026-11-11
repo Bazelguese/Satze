@@ -17,6 +17,7 @@ import {
   resetEminenceMatchRound,
   getLegalAbilityIds,
   resolveAbilityPresenceDelta,
+  readDuelRecord,
 } from './eminenceState.js';
 import { changePresence } from './presence.js';
 import { createConditionContext, matchesCondition } from './effectConditions.js';
@@ -121,6 +122,8 @@ export function beginEminenceRound(matchState, { roundNumber = 1 } = {}) {
   return {
     ...withStatics,
     roundNumber,
+    // Iniziativa del round imposta da un effetto (es. Corteggiamento); null = quella normale.
+    roundInitiativeOverride: null,
     gateProgress: createGateProgress(resolveGateSequenceName(reset)),
   };
 }
@@ -176,7 +179,7 @@ export function selectEminenceAbility(matchState, side, abilityId, params = null
     return { matchState, ok: false, reason: 'INSUFFICIENT_PRESENCE' };
   }
 
-  const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
+  const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent, checkpointPresence);
   return {
     matchState: {
       ...matchState,
@@ -246,6 +249,22 @@ export function areSelectionsComplete(matchState) {
 // ------------------------------------------------------------------
 // Reveal a un gate
 // ------------------------------------------------------------------
+
+/**
+ * Termini di condizione noti al reveal, prima del Duello: round, params dell'abilità e
+ * registro dei Duelli già chiusi. Gli esiti del Duello corrente non esistono ancora.
+ */
+export function revealConditionContext(matchState, side, params = null) {
+  const duelRecord = readDuelRecord(matchState?.[side]?.persistent);
+  return createConditionContext(matchState, {
+    params,
+    dealAccepted: Boolean(params?.dealAccepted),
+    dealChoice: params?.dealChoice ?? null,
+    ownDuelsWon: duelRecord.won,
+    ownDuelsLost: duelRecord.lost,
+    ownDuelsWonLead: duelRecord.won - duelRecord.lost,
+  });
+}
 
 function collectSegments(ability, ownerSide, params = null) {
   if (!ability?.segments) return { immediate: [], pending: [] };
@@ -319,7 +338,7 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
 
   for (const { side, ability } of openings) {
     const state = nextMatchState[side];
-    const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent);
+    const presenceDelta = resolveAbilityPresenceDelta(ability, state.persistent, state.presence);
     const { state: paid, event } = changePresence(state, presenceDelta, {
       reason: `reveal:${ability.id}`,
       countsAsSpend: presenceDelta < 0,
@@ -327,7 +346,11 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
       roundNumber: matchState.roundNumber ?? null,
     });
 
-    const { immediate, pending } = collectSegments(ability, side, state.selectedParams);
+    // Un costo variabile resta nei params: gli effetti che scalano sulla Presenza spesa lo leggono.
+    const segmentParams = ability.spendAllPresence
+      ? { ...(state.selectedParams || {}), presenceSpent: -presenceDelta }
+      : state.selectedParams;
+    const { immediate, pending } = collectSegments(ability, side, segmentParams);
     const stamp = (entry) => ({ ...entry, sourceEminenceId: state.eminenceId });
 
     nextMatchState[side] = {
@@ -351,7 +374,10 @@ export function completeGate(matchState, gate, { initiativeSide = SIDES.PLAYER }
     });
     if (event) events.push({ ...event, side });
 
-    resolutionQueue.push(...immediate.map(stamp));
+    const revealContext = revealConditionContext(matchState, side, state.selectedParams);
+    resolutionQueue.push(...immediate
+      .filter((entry) => matchesCondition(entry.segment.condition, revealContext))
+      .map(stamp));
   }
 
   // Passo 3 — il gate risulta superato anche se nessuno ha aperto: è informazione pubblica.
@@ -444,7 +470,14 @@ export function collectPendingEffects(
     if (knownWinner) sideExtra.duelWinnerRelative = relativeDuelOutcome(extra.winner, side);
     sideExtra.aliasUsed = Boolean(extra.aliasUsedBySide?.[side]);
     sideExtra.ownPowerResolved = Boolean(extra.powerResolvedBySide?.[side]);
+    sideExtra.enemyPowerResolved = Boolean(extra.powerResolvedBySide?.[OPPOSITE_SIDE[side]]);
     sideExtra.ownActivatedTrigger = extra.activatedTriggerBySide?.[side] ?? null;
+    // Trigger attivati da entrambi gli Agenti nel Duello: solo Poteri, e Poteri più Bonus.
+    const powerTriggers = BOTH_SIDES.map((s) => extra.activatedTriggerBySide?.[s]).filter(Boolean);
+    const bonusTriggers = BOTH_SIDES.map((s) => extra.activatedBonusTriggerBySide?.[s]).filter(Boolean);
+    sideExtra.activatedPowerTriggers = powerTriggers;
+    sideExtra.ownBonusActivated = Boolean(extra.bonusActivatedBySide?.[side]);
+    sideExtra.activatedTriggers = [...powerTriggers, ...bonusTriggers];
 
     const ownId = extra.agentIdBySide?.[side] ?? null;
     const enemyId = extra.agentIdBySide?.[OPPOSITE_SIDE[side]] ?? null;
@@ -453,6 +486,9 @@ export function collectPendingEffects(
     sideExtra.enemyAgentTrigger = agentTriggerOf(enemyId);
     if (extra.anchoredBySide) {
       sideExtra.ownAnchored = Boolean(extra.anchoredBySide[side]);
+    }
+    if (extra.enemyAnchoredByOwnRuleBySide) {
+      sideExtra.enemyAnchoredByOwnRule = Boolean(extra.enemyAnchoredByOwnRuleBySide[side]);
     }
     sideExtra.ownFinalDamage = extra.finalDamageBySide?.[side] ?? null;
     sideExtra.enemyFinalDamage = extra.finalDamageBySide?.[OPPOSITE_SIDE[side]] ?? null;
@@ -464,22 +500,35 @@ export function collectPendingEffects(
     sideExtra.activationUnsatisfiedCount = extra.activationUnsatisfiedCount ?? null;
     sideExtra.totalFocusPlayed = extra.totalFocusPlayed ?? null;
     if (extra.markGained != null) sideExtra.markGained = extra.markGained;
+    const duelRecord = readDuelRecord(state.persistent);
+    sideExtra.ownDuelsWon = duelRecord.won;
+    sideExtra.ownDuelsLost = duelRecord.lost;
+    sideExtra.ownDuelsWonLead = duelRecord.won - duelRecord.lost;
 
     const remaining = [];
     for (const entry of state.round.pendingEffects) {
       if (!entry.consumed && entry.timing === timing) {
+        // La risposta a un'Offerta arriva dopo il reveal e vive sui params correnti
+        // dell'abilità: il segmento armato al reveal deve leggerla da lì.
+        const params = entry.abilityId && entry.abilityId === state.revealedAbilityId
+          ? { ...(entry.params || {}), ...(state.selectedParams || {}) }
+          : (entry.params ?? null);
         const entryContext = createConditionContext(matchState, {
           ...sideExtra,
-          params: entry.params ?? null,
+          params,
+          dealAccepted: Boolean(params?.dealAccepted),
+          dealChoice: params?.dealChoice ?? null,
         });
         if (matchesCondition(entry.segment?.condition, entryContext)) {
           queue.push({
             ...entry,
+            params,
             agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
           });
         } else if (entry.segment?.condition) {
           skipped.push({
             ...entry,
+            params,
             agentIdBySide: extra.agentIdBySide || entry.agentIdBySide || null,
           });
         }

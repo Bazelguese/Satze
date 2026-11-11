@@ -54,7 +54,7 @@ import { applyDuelBlockPrescan } from './duel/duelBlockPrescan.js';
 import { previewDisabledSources } from './duel/duelImmunitySources.js';
 import { applyDuelMainAbilities } from './duel/duelMainAbilities.js';
 import { applyDuelArmyBonusPhases } from './duel/duelArmyBonusPhases.js';
-import { applyInversionFieldFinalization } from './duel/duelInversionFinalization.js';
+import { applyInversionFieldFinalization, applySlotStatInversion } from './duel/duelInversionFinalization.js';
 import { createEmptyFieldStatDeltas } from './duel/duelFieldStatTracking.js';
 import { runDuelAssaultCalculation } from './duel/duelAssaultPhase.js';
 import { resolveDuelWinnerByAssault } from './duel/duelWinnerResolve.js';
@@ -360,6 +360,7 @@ export function computeDuelResolution({
       player: pAgent.league || 0,
       enemy: eAgent.league || 0,
     }, slotCurseStatDeltas);
+    duel.fullStatInversion = (eminenceBundle?.slotModifiers || []).some((curse) => curse?.invertModifiers);
     veilContextModifiers(veiledSides, playerContext, enemyContext);
     if (eminenceBundle?.triggerRules) {
       snapshotXorActivation(eminenceBundle.triggerRules, {
@@ -558,6 +559,21 @@ export function computeDuelResolution({
     };
     if (eminenceBundle?.armyBonusState?.player?.unblockable) state.pBonusBlocked = false;
     if (eminenceBundle?.armyBonusState?.enemy?.unblockable) state.eBonusBlocked = false;
+    for (const side of eminenceBundle?.blockedPowerSides || []) {
+      if (side === 'player' && !state.pAbilityBlocked) {
+        state.pAbilityBlocked = true;
+        battleLog.push('🜂 Eminenza: il Potere del tuo Agente non si attiva in questo Duello');
+      }
+      if (side === 'enemy' && !state.eAbilityBlocked) {
+        state.eAbilityBlocked = true;
+        battleLog.push('🜂 Eminenza: il Potere dell\'Agente avversario non si attiva in questo Duello');
+      }
+    }
+
+    for (const side of eminenceBundle?.echoPowerSides || []) {
+      if (side === 'player') state.pEchoEnemyPower = true;
+      if (side === 'enemy') state.eEchoEnemyPower = true;
+    }
 
     applyDuelMainAbilities({
       state,
@@ -666,6 +682,7 @@ export function computeDuelResolution({
       state.slotCurseStatDeltas,
       battleLog
     );
+    const slotInversionChanged = applySlotStatInversion(state, { pAgent, eAgent }, battleLog);
     emitDuelFieldSetupEvents(
       battleLog,
       field,
@@ -682,7 +699,8 @@ export function computeDuelResolution({
       statsBeforeField.playerDamage !== statsAfterField.playerDamage ||
       statsBeforeField.enemyDamage !== statsAfterField.enemyDamage ||
       inversionFieldChanged ||
-      immuneSlotCurseChanged
+      immuneSlotCurseChanged ||
+      slotInversionChanged
     ) {
       visualRecorder.pushField(state);
     }

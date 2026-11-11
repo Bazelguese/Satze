@@ -21,7 +21,8 @@ import {
   SIDES,
 } from './eminenceConstants.js';
 import { EMINENCES, EMINENCE_IDS } from '../../data/eminences.js';
-import { createEminenceMatchState } from './eminenceState.js';
+import { ALL_AGENTS } from '../../data/cards.js';
+import { createEminenceMatchState, filterDeployableCardIds, readDeployConstraints } from './eminenceState.js';
 import {
   beginEminenceRound,
   selectEminenceAbility,
@@ -40,8 +41,15 @@ import {
   needsEminenceSetup,
   prepareEminenceDuel,
   notifyHpLossEvents,
+  resolvePendingDeal,
+  openEminenceRound,
 } from './eminenceDuelGate.js';
 import { collectSlotCurses } from './slotCurses.js';
+import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 import { powerResolutionFromDuel, isLowestEffectiveLeague } from './eminenceDuelBinding.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -107,74 +115,97 @@ function playRound({
 // Apex — Il Sole Verde
 // ------------------------------------------------------------------
 
-test('Apex +1: +1 POT al proprio Agente e 2 PV di costo al controllore', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'apex_furia',
-    enemyAbility: 'semaforo_verde',
-  });
+const APEX = 'apex_sole_verde';
 
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 1);
-  assert.equal(bundle.statDeltas[SIDES.ENEMY].power, 0);
-
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.PLAYER, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'apex_furia' },
-  ]);
-
-  // Il +1 è un guadagno, non una spesa: non alimenta Manifestazione.
-  assert.equal(matchState.player.presence, 4);
-  assert.equal(matchState.player.presenceSpentThisRound, 0);
-  assert.equal(checkTrigger('manifestazione', duelContext({
-    hasEminence: true,
-    presenceSpent: matchState.player.presenceSpentThisRound,
-  })), false);
+test('Apex: Presenza iniziale 1 e tre attive', () => {
+  const state = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+  assert.deepEqual(
+    EMINENCES[APEX].abilities.map((a) => [a.id, a.presenceDelta]),
+    [['apex_cielo_smeraldino', 1], ['apex_disprezzo', -2], ['apex_preghiera_ululata', -3]],
+  );
 });
 
-test('Apex -2: il proprio Agente ignora il Campo e la spesa alimenta Manifestazione', () => {
+test('Apex statico: al round 5 lo slot aperto diventa l\'Arena del Violento Gaudio', () => {
+  const base = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  const early = openEminenceRound(base, { roundNumber: 4 });
+  assert.equal(early.bundle?.fieldOperations?.length || 0, 0);
+  const r5 = openEminenceRound(base, { roundNumber: 5 });
+  assert.deepEqual(r5.bundle.fieldOperations.map((op) => op.fieldId), [122]);
+  const arena = ALL_BATTLEFIELDS.find((field) => field.id === 122);
+  assert.equal(arena.name, 'Arena del Violento Gaudio');
+  assert.equal(arena.eminenceOnly, true);
+});
+
+test('Apex statico: +1 Presenza quando il proprio Bonus d\'Armata si attiva', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+  const hit = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    bonusActivatedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
+  });
+  assert.equal(hit.matchState.player.presence, 2);
+  const miss = settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    bonusActivatedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: true },
+  });
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Apex +1: Cielo Smeraldino toglie 1 DAN al proprio Agente', () => {
   const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: APEX,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'apex_cielo_smeraldino',
+    enemyAbility: 'semaforo_verde',
+  });
+  assert.equal(bundle.statDeltas[SIDES.PLAYER].damage, -1);
+  assert.equal(bundle.statDeltas[SIDES.ENEMY].damage, 0);
+  assert.equal(matchState.player.presence, 2);
+});
+
+test('Apex −2: il proprio Agente ignora il Campo e la spesa alimenta Manifestazione', () => {
+  const { matchState, bundle } = playRound({
+    playerEminenceId: APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_disprezzo',
     enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
   });
 
   assert.deepEqual(bundle.ignoreFieldSides, [SIDES.PLAYER]);
-  assert.equal(matchState.player.presence, 1);
+  assert.equal(matchState.player.presence, 0);
   assert.equal(matchState.player.presenceSpentThisRound, 2);
-
   assert.equal(checkTrigger('manifestazione', duelContext({
     hasEminence: true,
     presenceSpent: matchState.player.presenceSpentThisRound,
   })), true);
-  // Per l'avversario è Blasfemia.
-  assert.equal(checkTrigger('blasfemia', duelContext({
-    enemyHasEminence: true,
-    enemyPresenceSpent: matchState.player.presenceSpentThisRound,
-  })), true);
 });
 
-test('Apex -4: concede un Potere +2 POT e +2 DAN, non un buff di schieramento', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'apex_cataclisma',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 4 },
-  });
+test('Apex −3: Preghiera Ululata sostituisce il Bonus d\'Armata per il resto dello Scontro', () => {
+  const base = createEminenceMatchState({ playerEminenceId: APEX, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 2 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_preghiera_ululata').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const first = prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+  const expected = {
+    trigger: 'invasione',
+    effects: [{ effect: 'attrition', value: 3, stat: 'assaultValue' }],
+  };
+  assert.deepEqual(first.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+  assert.deepEqual(first.matchState.player.persistent.armyBonusOverride.override, expected);
 
-  assert.deepEqual(bundle.grantedPowers[SIDES.PLAYER], {
-    trigger: null,
-    effects: [
-      { effect: 'power', value: 2 },
-      { effect: 'damage', value: 2 },
-    ],
-    source: 'apex_cataclisma',
-  });
-  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 0);
-  assert.equal(matchState.player.presence, 0);
-  // Presenza a 0 dopo la spesa: Digiuno è soddisfatto nello stesso round.
-  assert.equal(checkTrigger('digiuno', duelContext({ hasEminence: true, playerPresence: 0 })), true);
+  // Round successivo con un'altra abilità: il Bonus resta sostituito.
+  let next = settleEminenceRound(first.matchState, { winner: SIDES.PLAYER }).matchState;
+  next = beginEminenceRound(next, { roundNumber: 3 });
+  next = selectEminenceAbility(next, SIDES.PLAYER, 'apex_cielo_smeraldino').matchState;
+  next = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const second = prepareEminenceDuel(next, { agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: 302 } });
+  assert.deepEqual(second.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+  assert.equal(second.bundle.armyBonusState[SIDES.ENEMY], undefined);
 });
 
 // ------------------------------------------------------------------
@@ -195,7 +226,7 @@ const semaforoTriggers = (bundle, side) =>
 
 test('Semaforo Verde: nessun force/forbid — i trigger restano naturali', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_verde',
@@ -205,12 +236,47 @@ test('Semaforo Verde: nessun force/forbid — i trigger restano naturali', () =>
   assert.equal(bundle.triggerRules.forceForbidden.length, 0);
 });
 
+test('Semaforo Verde: +1 Presenza se si attiva un Potere o Bonus Turbo o Intervento, una volta', () => {
+  const base = createEminenceMatchState({ playerEminenceId: 'patto_grande_semaforo', enemyEminenceId: LEGACY_APEX });
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'semaforo_verde').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'apex_furia').matchState;
+  matchState = prepareEminenceDuel(matchState).matchState;
+  assert.equal(matchState.player.presence, 0);
+  const settle = (activatedTriggerBySide, activatedBonusTriggerBySide = null) => settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    activatedTriggerBySide,
+    activatedBonusTriggerBySide,
+  }).matchState.player.presence;
+
+  assert.equal(settle({ [SIDES.PLAYER]: 'intervention', [SIDES.ENEMY]: null }), 1);
+  // Anche il Potere avversario conta, e due attivazioni pagano comunque una volta.
+  assert.equal(settle({ [SIDES.PLAYER]: 'turbo', [SIDES.ENEMY]: 'intervention' }), 1);
+  assert.equal(settle({ [SIDES.PLAYER]: null, [SIDES.ENEMY]: null }, { [SIDES.PLAYER]: null, [SIDES.ENEMY]: 'turbo' }), 1);
+  assert.equal(settle({ [SIDES.PLAYER]: 'imboscata', [SIDES.ENEMY]: 'glory' }), 0);
+});
+
+test('binding: il trigger del Bonus attivato esce dal risultato del Duello', () => {
+  const resolved = powerResolutionFromDuel({
+    battleResult: {
+      playerHasBonus: true,
+      playerBonusBlocked: false,
+      playerEffectiveArmyBonus: { trigger: 'intervention' },
+      enemyHasBonus: true,
+      enemyBonusBlocked: true,
+      enemyEffectiveArmyBonus: { trigger: 'turbo' },
+    },
+  });
+  assert.deepEqual(resolved.activatedBonusTriggerBySide, { [SIDES.PLAYER]: 'intervention', [SIDES.ENEMY]: null });
+});
+
 test('Semaforo Giallo: apre Imboscata e Turbo', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_giallo',
+    presence: { enemy: 2 },
   });
 
   assert.deepEqual(semaforoTriggers(bundle, SIDES.PLAYER), {
@@ -223,7 +289,7 @@ test('Semaforo Giallo: apre Imboscata e Turbo', () => {
 
 test('Semaforo Rosso: inverte il quadro anche contro condizioni naturalmente vere', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_rosso',
@@ -240,7 +306,7 @@ test('Semaforo Rosso: inverte il quadro anche contro condizioni naturalmente ver
 
 test('Semaforo: l\'effetto è simmetrico e colpisce chi lo ha attivato', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_rosso',
@@ -257,9 +323,10 @@ test('Semaforo: l\'effetto è simmetrico e colpisce chi lo ha attivato', () => {
 
 test('Semaforo: agisce a BEFORE_TRIGGER_CHECK, non al reveal', () => {
   const base = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
   });
+  base.enemy.presence = 2;
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_furia').matchState;
   matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_giallo').matchState;
@@ -277,8 +344,9 @@ test('Semaforo: agisce a BEFORE_TRIGGER_CHECK, non al reveal', () => {
 test('checkpoint: un segmento consumato non viene rieseguito', () => {
   const base = createEminenceMatchState({
     playerEminenceId: 'patto_grande_semaforo',
-    enemyEminenceId: 'apex_sole_verde',
+    enemyEminenceId: LEGACY_APEX,
   });
+  base.player.presence = 2;
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'semaforo_giallo').matchState;
   matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'apex_furia').matchState;
@@ -297,7 +365,7 @@ test('checkpoint: un segmento consumato non viene rieseguito', () => {
 
 test('incrocio: il Semaforo Rosso spegne l\'Imboscata di un Agente potenziato da Apex', () => {
   const { bundle } = playRound({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_cataclisma',
     enemyAbility: 'semaforo_rosso',
@@ -322,7 +390,7 @@ test('incrocio: il Semaforo Rosso spegne l\'Imboscata di un Agente potenziato da
 
 test('incrocio: l\'iniziativa ordina la risoluzione, non l\'esito del pagamento', () => {
   const args = {
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_disprezzo',
     enemyAbility: 'semaforo_rosso',
@@ -387,6 +455,7 @@ test('Mascarada -2: Gloria↔Vendetta e Conquista↔Ultimo Desiderio sono alias,
   });
   assert.equal(lastWishViaConquest.naturalSatisfied, true);
 
+  // Solo il proprio Agente: per l'avversario Gloria resta Gloria.
   const enemyGlory = resolveTriggerState({
     originalTrigger: 'glory',
     context: duelContext({ lostPrevious: true }),
@@ -394,63 +463,61 @@ test('Mascarada -2: Gloria↔Vendetta e Conquista↔Ultimo Desiderio sono alias,
     side: SIDES.ENEMY,
     triggerRules: bundle.triggerRules,
   });
-  assert.equal(enemyGlory.naturalSatisfied, true);
+  assert.equal(Boolean(enemyGlory.naturalSatisfied), false);
+  assert.equal(Boolean(enemyGlory.aliasUsed), false);
 });
 
-test('Mascarada -4: forza il Potere proprio e lo rende non bloccabile, senza toccare la Conquista', () => {
-  const { bundle } = playRound({
+test('Mascarada statico: +1 Presenza, una volta, se si attiva un Potere Gloria o Vendetta', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: 'mascarada_organizzatore', enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 3 },
+  );
+  const presence = (activatedTriggerBySide) => settleEminenceRound(base, {
+    winner: SIDES.PLAYER,
+    activatedTriggerBySide,
+  }).matchState.player.presence;
+  assert.equal(presence({ [SIDES.PLAYER]: null, [SIDES.ENEMY]: 'vendetta' }), 2);
+  assert.equal(presence({ [SIDES.PLAYER]: 'glory', [SIDES.ENEMY]: 'vendetta' }), 2);
+  assert.equal(presence({ [SIDES.PLAYER]: 'conquest', [SIDES.ENEMY]: 'turbo' }), 1);
+});
+
+test('Mascarada +1: Vendere il Colpo dà 1 FC temporaneo all\'Agente avversario', () => {
+  const { matchState, bundle } = playRound({
     playerEminenceId: 'mascarada_organizzatore',
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mascarada_incontro_truccato',
+    playerAbility: 'mascarada_vendere_il_colpo',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 4 },
   });
-
-  const ownGlory = resolveTriggerState({
-    originalTrigger: 'glory',
-    context: duelContext(),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-    powerBlocked: true,
-  });
-  assert.equal(ownGlory.forced, true);
-  assert.equal(ownGlory.satisfied, true);
-  assert.equal(ownGlory.unblockable, true);
-  assert.equal(ownGlory.resolves, true);
-
-  const ownConquest = resolveTriggerState({
-    originalTrigger: 'conquest',
-    context: duelContext({ won: false }),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-  });
-  assert.equal(ownConquest.forced, false);
-  assert.equal(ownConquest.satisfied, false);
-
-  const enemyTurbo = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext(),
-    card: { id: 2 },
-    side: SIDES.ENEMY,
-    triggerRules: bundle.triggerRules,
-  });
-  assert.equal(enemyTurbo.forced, false);
-
-  const disabled = resolveTriggerState({
-    originalTrigger: 'glory',
-    context: duelContext(),
-    card: { id: 1 },
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
-    powerDisabled: true,
-  });
-  assert.equal(disabled.forced, true);
-  assert.equal(disabled.resolves, false);
+  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 1);
+  assert.equal(bundle.temporaryFocus[SIDES.PLAYER], 0);
+  assert.equal(matchState.player.presence, 2);
 });
 
-test('Mascarada +0: pronostico corretto vale +2 Presenza dopo il Duello', () => {
+test('Mascarada −3: Ego senza Maschere sostituisce il Bonus finché non vinci un Duello', () => {
+  const base = createEminenceMatchState({ playerEminenceId: 'mascarada_organizzatore', enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 2 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'mascarada_ego').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const expected = { trigger: 'overdrive', effects: [{ effect: 'powerAndDamage', value: 2 }] };
+  const first = prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+  assert.deepEqual(first.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+
+  // Persa: il Bonus resta sostituito nel Duello successivo.
+  let next = settleEminenceRound(first.matchState, { winner: SIDES.ENEMY }).matchState;
+  assert.deepEqual(next.player.persistent.armyBonusOverride.override, expected);
+  next = beginEminenceRound(next, { roundNumber: 3 });
+  next = selectEminenceAbility(next, SIDES.PLAYER, 'mascarada_vendere_il_colpo').matchState;
+  next = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const second = prepareEminenceDuel(next, { agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: 302 } });
+  assert.deepEqual(second.bundle.armyBonusState[SIDES.PLAYER].override, expected);
+
+  // Vinta: da qui il Bonus torna quello dell'Armata.
+  const won = settleEminenceRound(second.matchState, { winner: SIDES.PLAYER }).matchState;
+  assert.equal(won.player.persistent.armyBonusOverride, null);
+});
+
+test('Mascarada 0: pronostico corretto vale +1 Presenza dopo il Duello', () => {
   const { matchState } = playRound({
     playerEminenceId: 'mascarada_organizzatore',
     enemyEminenceId: 'patto_grande_semaforo',
@@ -464,8 +531,8 @@ test('Mascarada +0: pronostico corretto vale +2 Presenza dopo il Duello', () => 
   assert.equal(matchState.player.presence, 1);
 
   const settled = settleEminenceRound(matchState, { winner: 'player' });
-  assert.equal(settled.matchState.player.presence, 3);
-  assert.equal(settled.bundle.presenceChanges[0].delta, 2);
+  assert.equal(settled.matchState.player.presence, 2);
+  assert.equal(settled.bundle.presenceChanges[0].delta, 1);
   assert.equal(settled.bundle.presenceChanges[0].countsAsSpend, false);
 });
 
@@ -489,7 +556,7 @@ test('Mascarada +0: pronostico sbagliato non paga; il pareggio sì se era il pro
     playerParams: { pronostico: 'PAREGGIO' },
   });
   const afterDraw = settleEminenceRound(drawBet.matchState, { winner: 'draw' });
-  assert.equal(afterDraw.matchState.player.presence, 3);
+  assert.equal(afterDraw.matchState.player.presence, 2);
 });
 
 test('Mascarada +0: senza pronostico il segmento non scatta; senza vincitore fallisce rumorosamente', () => {
@@ -562,7 +629,12 @@ test('Altare statico: una sconfitta marca l\'Agente come Frammento; vittoria e p
   assert.deepEqual(afterDraw.matchState.player.persistent.fragmentCardIds, []);
 });
 
-test('Altare +1 Sacrificio: immediato −2 PV / +1 Presenza e scala all\'uso successivo', () => {
+test('Altare: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+});
+
+test('Altare +1 Sacrificio: perdi 2 PV e basta, senza crescita', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: ALTAR,
     enemyEminenceId: 'patto_grande_semaforo',
@@ -570,13 +642,13 @@ test('Altare +1 Sacrificio: immediato −2 PV / +1 Presenza e scala all\'uso suc
     enemyAbility: 'semaforo_verde',
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A },
   });
-  // Reveal +1 (presenceDelta) sulla Presenza iniziale 2 → 3; l'effetto +1 è nel bundle.
-  assert.equal(matchState.player.presence, 3);
+  // Reveal +1 sulla Presenza iniziale 1 → 2; nessuna Presenza extra dall'effetto.
+  assert.equal(matchState.player.presence, 2);
   assert.deepEqual(bundle.hpDeltas, [
     { side: SIDES.PLAYER, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'kethran_sacrificio' },
   ]);
-  assert.ok(bundle.presenceChanges.some((c) => c.delta === 1 && c.source === 'kethran_sacrificio'));
-  assert.ok(bundle.abilityEscalations.some((e) => e.key === 'sacrificio'));
+  assert.equal(bundle.presenceChanges.length, 0);
+  assert.equal(bundle.abilityEscalations.length, 0);
 });
 
 test('Altare statico: ottenere un Frammento (sconfitta) dà +1 Presenza', () => {
@@ -593,7 +665,7 @@ test('Altare statico: ottenere un Frammento (sconfitta) dà +1 Presenza', () => 
   });
   assert.deepEqual(afterLoss.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
   // +1 da ON_MARK_GAIN sul Frammento (in più al reveal già contato nello stato di partenza).
-  assert.equal(afterLoss.matchState.player.presence, 4);
+  assert.equal(afterLoss.matchState.player.presence, 3);
 });
 
 test('Altare statico: un Frammento già presente non ripaga +1 Presenza', () => {
@@ -620,48 +692,92 @@ test('Altare statico: un Frammento già presente non ripaga +1 Presenza', () => 
   assert.equal(afterLoss.matchState.player.presence, 2);
 });
 
-test('Altare −2: l\'alias usa il trigger del Frammento; il Frammento si consuma solo se l\'alternativa scatta', () => {
-  const { matchState, bundle } = playRound({
+test('Altare −2 Innesto: non è selezionabile senza Frammenti', () => {
+  let matchState = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  matchState.player.presence = 3;
+  matchState = beginEminenceRound(matchState, { roundNumber: 2 });
+  const attempt = selectEminenceAbility(matchState, SIDES.PLAYER, 'kethran_innesto', { fragmentCardId: AGENT_A });
+  assert.equal(attempt.ok, false);
+});
+
+test('Altare −2 Innesto nel Potere: il Potere del Frammento sostituisce quello dell\'Agente', () => {
+  const fragment = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const { bundle } = playRound({
     playerEminenceId: ALTAR,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'kethran_innesto',
     enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
     fragments: { player: [AGENT_A] },
-    playerParams: { fragmentCardId: AGENT_A, fragmentTrigger: 'imboscata' },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'power' },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
+  const overlay = bundle.abilityOverlays[AGENT_B];
+  assert.equal(overlay.trigger, fragment.ability.trigger ?? null);
+  assert.equal(overlay.effect, fragment.ability.effect);
+  assert.equal(overlay.value, fragment.ability.value);
+  assert.equal(bundle.triggerRules.replacementsByCardId[AGENT_B].trigger, fragment.ability.trigger ?? null);
+  assert.equal(bundle.armyBonusState[SIDES.PLAYER], undefined);
+});
 
-  const aliased = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext({ isFirst: true, roundNumber: 3 }),
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
+test('Altare −2 Innesto nel Bonus: il Potere del Frammento diventa il Bonus, il Potere resta', () => {
+  const fragment = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const { bundle } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_innesto',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    fragments: { player: [AGENT_A] },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'bonus' },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
-  assert.equal(aliased.naturalSatisfied, true);
-  assert.equal(aliased.aliasUsed, true);
+  assert.equal(bundle.abilityOverlays[AGENT_B], undefined);
+  const override = bundle.armyBonusState[SIDES.PLAYER].override;
+  assert.equal(override.trigger, fragment.ability.trigger ?? null);
+  assert.equal(override.effects[0].effect, fragment.ability.effect);
+});
 
-  const ownTrigger = resolveTriggerState({
-    originalTrigger: 'turbo',
-    context: duelContext({ isFirst: false, roundNumber: 1 }),
-    side: SIDES.PLAYER,
-    triggerRules: bundle.triggerRules,
+test('Altare −2 Innesto: il Frammento non si consuma', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_innesto',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    fragments: { player: [AGENT_A] },
+    playerParams: { fragmentCardId: AGENT_A, graftInto: 'power' },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
   });
-  assert.equal(ownTrigger.aliasUsed, false);
-  assert.equal(ownTrigger.naturalSatisfied, true);
-
-  const consumed = settleEminenceRound(matchState, {
+  const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
     agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
-    aliasUsedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.deepEqual(consumed.matchState.player.persistent.fragmentCardIds, []);
+  assert.deepEqual(settled.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
+});
 
-  const kept = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_B },
-    aliasUsedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+test('Altare −3 Opera Composita: richiede 2 Frammenti e compone trigger ed effetto', () => {
+  let lonely = createEminenceMatchState({ playerEminenceId: ALTAR, enemyEminenceId: 'patto_grande_semaforo' });
+  lonely.player.presence = 3;
+  lonely.player.persistent.fragmentCardIds = [AGENT_A];
+  lonely = beginEminenceRound(lonely, { roundNumber: 3 });
+  assert.equal(selectEminenceAbility(lonely, SIDES.PLAYER, 'kethran_opera_composita').ok, false);
+
+  const triggerCard = ALL_AGENTS.find((agent) => agent.id === AGENT_A);
+  const effectCard = ALL_AGENTS.find((agent) => agent.id === AGENT_B);
+  const { bundle } = playRound({
+    playerEminenceId: ALTAR,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'kethran_opera_composita',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 3 },
+    fragments: { player: [AGENT_A, AGENT_B] },
+    playerParams: { fragmentCardId: [AGENT_A, AGENT_B] },
+    agentIdBySide: { [SIDES.PLAYER]: 103 },
   });
-  assert.deepEqual(kept.matchState.player.persistent.fragmentCardIds, [AGENT_A]);
+  const overlay = bundle.abilityOverlays[103];
+  assert.equal(overlay.trigger, triggerCard.ability.trigger);
+  assert.equal(overlay.effect, effectCard.ability.effect);
 });
 
 test('Altare −1 Elogio: in vittoria l\'Agente diventa Frammento e lo Statico dà +1 Presenza', () => {
@@ -713,111 +829,148 @@ test('Fame setup: la scelta di setup marca la Preda e la rende pubblica', () => 
   assert.equal(committed.matchState.player.setupParams, null);
 });
 
-test('Fame +0: marca la Preda al reveal e paga +2 Presenza se viene schierata', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: PREY },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
+function presenceFrom(bundle, source) {
+  return bundle.presenceChanges
+    .filter((change) => change.side === SIDES.PLAYER && change.source === source)
+    .reduce((sum, change) => sum + change.delta, 0);
+}
 
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
-  assert.deepEqual(bundle.presenceChanges, [
-    { side: SIDES.PLAYER, delta: 2, countsAsSpend: false, source: 'mounthborn_gorgoglio' },
-  ]);
-});
-
-test('Fame +0: senza Preda schierata il +2 non parte', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: PREY },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
-  });
-
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
-  assert.deepEqual(bundle.presenceChanges, []);
-});
-
-test('Fame −2 Frenesia: Preda schierata rende Potere e Bonus non bloccabili', () => {
+test('Fame statico: Preda schierata dall\'avversario dà +1 Presenza e Bonus attivo', () => {
   const { bundle } = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_frenesia',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
     prey: { player: [PREY] },
-    playerParams: { preyCardId: 116 },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
   });
-
+  assert.equal(presenceFrom(bundle, 'mounthborn_istinto_predatorio'), 1);
   assert.equal(bundle.armyBonusState[SIDES.PLAYER].forcedActive, true);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].unblockable, true);
-  assert.equal(bundle.triggerRules.unblockable.length, 1);
-});
 
-test('Fame −2 Frenesia: senza Preda schierata il Bonus resta invariato', () => {
-  const { bundle } = playRound({
+  const none = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_frenesia',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
     prey: { player: [PREY] },
-    playerParams: { preyCardId: PREY },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
   });
-
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER], undefined);
-  assert.equal(bundle.triggerRules.unblockable.length, 0);
+  assert.equal(presenceFrom(none.bundle, 'mounthborn_istinto_predatorio'), 0);
+  assert.equal(none.bundle.armyBonusState[SIDES.PLAYER], undefined);
 });
 
-test('Fame −2 Cannibalismo: sconfitta contro Preda cura 3 PV, poi la Preda cade', () => {
+test('Fame statico: la Preda cade dopo aver combattuto, anche se Turbo', () => {
   const { matchState } = playRound({
     playerEminenceId: FAME,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_cannibalismo',
+    playerAbility: 'mounthborn_fame_ricarica',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
-    prey: { player: [PREY] },
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
-
-  const settled = settleEminenceRound(matchState, {
-    winner: SIDES.ENEMY,
-    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
-  });
-
-  assert.deepEqual(settled.bundle.hpDeltas, [
-    { side: SIDES.PLAYER, amount: 3, cause: HP_LOSS_CAUSES.OTHER, source: 'mounthborn_cannibalismo' },
-  ]);
-  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, []);
-});
-
-test('Fame statico: una Preda Turbo cade a fine round, non dopo il Duello', () => {
-  const { matchState } = playRound({
-    playerEminenceId: FAME,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'mounthborn_gorgoglio',
-    enemyAbility: 'semaforo_verde',
-    playerParams: { preyCardId: TURBO_PREY },
+    prey: { player: [TURBO_PREY, PREY] },
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: TURBO_PREY },
   });
-  assert.deepEqual(matchState.player.persistent.preyCardIds, [TURBO_PREY]);
-
   const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
     agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: TURBO_PREY },
   });
-  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, []);
+  assert.deepEqual(settled.matchState.player.persistent.preyCardIds, [PREY]);
+});
+
+test('Fame +1: perdi 2 PV se non hai sconfitto una Preda', () => {
+  const round = (enemyAgent) => playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_fame_ricarica',
+    enemyAbility: 'semaforo_verde',
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: enemyAgent },
+  }).matchState;
+  const hpLost = (enemyAgent, winner) => (settleEminenceRound(round(enemyAgent), {
+    winner,
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: enemyAgent },
+  }).bundle?.hpDeltas || [])
+    .filter((entry) => entry.side === SIDES.PLAYER)
+    .reduce((sum, entry) => sum + entry.amount, 0);
+
+  assert.equal(hpLost(PREY, SIDES.PLAYER), 0);
+  assert.equal(hpLost(PREY, SIDES.ENEMY), -2);
+  assert.equal(hpLost(116, SIDES.PLAYER), -2);
+  assert.equal(hpLost(PREY, 'draw'), -2);
+});
+
+test('Fame −1: Gorgoglio marca la Preda prima degli Agenti', () => {
+  const { matchState } = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_gorgoglio',
+    enemyAbility: 'semaforo_verde',
+    playerParams: { preyCardId: PREY },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
+  });
+  assert.equal(EMINENCES[FAME].abilities.find((x) => x.id === 'mounthborn_gorgoglio').revealGate, REVEAL_GATES.PRE_AGENT);
+  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
+  assert.equal(matchState.player.presence, 0);
+});
+
+test('Fame −2: Frenesia sostituisce il Potere e rimborsa la Presenza contro una Preda', () => {
+  const hit = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_frenesia',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: PREY },
+  });
+  assert.deepEqual(
+    { trigger: hit.bundle.abilityOverlays[AGENT_A].trigger, effect: hit.bundle.abilityOverlays[AGENT_A].effect, value: hit.bundle.abilityOverlays[AGENT_A].value },
+    { trigger: 'imboscata', effect: 'powerAndDamage', value: 1 },
+  );
+  assert.equal(hit.bundle.triggerRules.replacementsByCardId[AGENT_A].trigger, 'imboscata');
+  assert.equal(presenceFrom(hit.bundle, 'mounthborn_frenesia'), 2);
+
+  const miss = playRound({
+    playerEminenceId: FAME,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'mounthborn_frenesia',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+    prey: { player: [PREY] },
+    agentIdBySide: { [SIDES.PLAYER]: AGENT_A, [SIDES.ENEMY]: 116 },
+  });
+  assert.equal(miss.bundle.abilityOverlays[AGENT_A].effect, 'powerAndDamage');
+  assert.equal(presenceFrom(miss.bundle, 'mounthborn_frenesia'), 0);
+});
+
+test('Fame −3: Caccia marca la Preda e la impone all\'avversario', () => {
+  const base = createEminenceMatchState({ playerEminenceId: FAME, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'mounthborn_caccia', { preyCardId: PREY }).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+
+  assert.equal(matchState.player.revealedAbilityId, 'mounthborn_caccia');
+  assert.deepEqual(matchState.player.persistent.preyCardIds, [PREY]);
+  assert.equal(readDeployConstraints(matchState, SIDES.ENEMY).forcedCardId, PREY);
+  assert.deepEqual(filterDeployableCardIds(matchState, SIDES.ENEMY, [PREY, 116, 117], [117]), [PREY]);
+  assert.deepEqual(filterDeployableCardIds(matchState, SIDES.PLAYER, [AGENT_A, 202], []), [AGENT_A, 202]);
+
+  const next = beginEminenceRound(matchState, { roundNumber: 4 });
+  assert.equal(readDeployConstraints(next, SIDES.ENEMY).forcedCardId, null);
+});
+
+test('vincoli di schieramento: vietato salvo ultimo, riusabile, imposto', () => {
+  const state = {
+    player: { round: { deployConstraints: { forcedCardId: null, bannedCardIds: [2], revivedCardIds: [9] } } },
+  };
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.PLAYER, [1, 2, 9], [9]), [1, 9]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.PLAYER, [1, 2], [1]), [2]);
+  assert.deepEqual(filterDeployableCardIds(null, SIDES.PLAYER, [1, 2], [1]), [2]);
 });
 
 // ------------------------------------------------------------------
-// Khemet — Il Castello dei Sigillatori
+// Khemet — Il Castello degli Arcanisti Nefasti
 // ------------------------------------------------------------------
 
 const KHEMET = 'khemet_maledizioni';
@@ -887,15 +1040,15 @@ test('Khemet: attaccare le maledizioni al Duello non le riscrive nello stato', (
   assert.equal((otherSlot.bundle?.slotModifiers || []).filter((entry) => entry.leagueScaled).length, 0);
 });
 
-test('Khemet +2: Devozione al cervello deposita SWAP_POWER_BONUS_TRIGGERS', () => {
+test('Khemet 0: Devozione al cervello deposita SWAP_POWER_BONUS_TRIGGERS', () => {
   const { matchState, bundle } = playRound({
     playerEminenceId: KHEMET,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'khemet_devozione',
     enemyAbility: 'semaforo_verde',
   });
-  // presenceDelta +2 sulla Presenza iniziale 2.
-  assert.equal(matchState.player.presence, 4);
+  // Costo 0 sulla Presenza iniziale 1.
+  assert.equal(matchState.player.presence, 1);
   assert.equal(bundle.triggerRules.powerBonusSwaps.length, 1);
   assert.equal(bundle.triggerRules.powerBonusSwaps[0].scope, TRIGGER_SCOPES.OWN);
 });
@@ -912,14 +1065,42 @@ test('Khemet statico: Cattura-Energia paga +2 Presenza su Overdrive realmente at
     powerResolvedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
     activatedTriggerBySide: { [SIDES.PLAYER]: 'overdrive', [SIDES.ENEMY]: null },
   });
-  assert.equal(hit.matchState.player.presence, 6);
+  assert.equal(hit.matchState.player.presence, 3);
   assert.equal(hit.bundle.presenceChanges[0].source, 'khemet_rito_overdrive');
   assert.equal(hit.bundle.presenceChanges[0].delta, 2);
 
   const miss = settleEminenceRound(matchState, {
     activatedTriggerBySide: { [SIDES.PLAYER]: 'imboscata', [SIDES.ENEMY]: null },
   });
-  assert.equal(miss.matchState.player.presence, 4);
+  assert.equal(miss.matchState.player.presence, 1);
+});
+
+test('Khemet: nuovo nome, Presenza iniziale 1 e costi aggiornati', () => {
+  assert.equal(EMINENCES[KHEMET].name, 'Il Castello degli Arcanisti Nefasti');
+  assert.equal(EMINENCES[KHEMET].initialPresence, 1);
+  const costs = Object.fromEntries(EMINENCES[KHEMET].abilities.map((a) => [a.id, a.presenceDelta]));
+  assert.deepEqual(costs, {
+    khemet_devozione: 0,
+    khemet_maledizione_va: -1,
+    khemet_maledizione_stat: -2,
+    khemet_maledizione_inversa: -3,
+  });
+});
+
+test('Khemet −3: Maledizione Inversa marca lo slot con l\'inversione, per entrambi i lati', () => {
+  const { matchState } = playRound({
+    playerEminenceId: KHEMET,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'khemet_maledizione_inversa',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 3 },
+    playerParams: { slot: 2 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  const curses = collectSlotCurses(matchState, 2);
+  assert.equal(curses.length, 1);
+  assert.equal(curses[0].invertModifiers, true);
+  assert.deepEqual(curses[0].deltas, {});
 });
 
 const FIGLI = 'figli_domanda_senza_fine';
@@ -941,12 +1122,23 @@ function sealUntilGeneral(playerAbility, { presence = 2 } = {}) {
   return matchState;
 }
 
-function prepareFigli(playerAbility, { focus = 0, league = 3, presence = 2 } = {}) {
+function prepareFigli(playerAbility, {
+  focus = 0,
+  league = 3,
+  presence = 2,
+  enemyFocus = 0,
+  enemyLeague = 3,
+} = {}) {
   return prepareEminenceDuel(sealUntilGeneral(playerAbility, { presence }), {
-    focusInvestedBySide: { [SIDES.PLAYER]: focus, [SIDES.ENEMY]: 0 },
-    leagueBySide: { [SIDES.PLAYER]: league, [SIDES.ENEMY]: 3 },
+    focusInvestedBySide: { [SIDES.PLAYER]: focus, [SIDES.ENEMY]: enemyFocus },
+    leagueBySide: { [SIDES.PLAYER]: league, [SIDES.ENEMY]: enemyLeague },
   });
 }
+
+test('Figli: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: FIGLI, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+});
 
 test('Figli +1: Deriva alza il requisito subito e lo tiene per lo Scontro', () => {
   const prepared = prepareFigli('figli_deriva', { focus: 3, league: 3 });
@@ -954,12 +1146,43 @@ test('Figli +1: Deriva alza il requisito subito e lo tiene per lo Scontro', () =
   assert.equal(prepared.matchState.player.presence, 3);
 });
 
-test('Figli −2: Leggerezza forza il trigger solo se Ancorato', () => {
-  const hit = prepareFigli('figli_leggerezza', { focus: 3, league: 3, presence: 2 });
-  assert.equal(hit.bundle.triggerRules.forceSatisfied.length, 1);
+test('Figli −1: Condensazione dà 1 FC temporaneo solo se Ancorato', () => {
+  const hit = prepareFigli('figli_condensazione', { focus: 3, league: 3, presence: 1 });
+  assert.equal(hit.bundle.temporaryFocus[SIDES.PLAYER], 1);
 
-  const miss = prepareFigli('figli_leggerezza', { focus: 2, league: 3, presence: 2 });
-  assert.equal(miss.bundle.triggerRules.forceSatisfied.length, 0);
+  const miss = prepareFigli('figli_condensazione', { focus: 2, league: 3, presence: 1 });
+  assert.equal(miss.bundle.temporaryFocus[SIDES.PLAYER], 0);
+});
+
+test('Figli −2: La Domanda si diffonde si rivela prima degli Agenti', () => {
+  const ability = EMINENCES[FIGLI].abilities.find((a) => a.id === 'figli_domanda_si_diffonde');
+  assert.equal(ability.revealGate, REVEAL_GATES.PRE_AGENT);
+});
+
+test('Figli −2: La Domanda si diffonde blocca il Potere nemico non Ancorato con la tua soglia', () => {
+  // Nemico L3: requisito base 3 FC.
+  const blocked = prepareFigli('figli_domanda_si_diffonde', { presence: 2, enemyFocus: 2, enemyLeague: 3 });
+  assert.deepEqual(blocked.bundle.blockedPowerSides, [SIDES.ENEMY]);
+
+  const free = prepareFigli('figli_domanda_si_diffonde', { presence: 2, enemyFocus: 3, enemyLeague: 3 });
+  assert.deepEqual(free.bundle.blockedPowerSides || [], []);
+});
+
+test('Figli −2: La Domanda si diffonde usa gli aumenti di Deriva di chi la impone', () => {
+  const base = createEminenceMatchState({ playerEminenceId: FIGLI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 2;
+  base.player.persistent = { ...base.player.persistent, anchoredThresholdDelta: 2 };
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'figli_domanda_si_diffonde').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  // Nemico L3 con 3 FC: Ancorato per sé, ma non con la soglia dei Figli (3 + 2 = 5).
+  const prepared = prepareEminenceDuel(matchState, {
+    focusInvestedBySide: { [SIDES.PLAYER]: 1, [SIDES.ENEMY]: 3 },
+    leagueBySide: { [SIDES.PLAYER]: 3, [SIDES.ENEMY]: 3 },
+  });
+  assert.deepEqual(prepared.bundle.blockedPowerSides, [SIDES.ENEMY]);
 });
 
 test('Figli statico: a fine Duello +1 Presenza se Ancorato', () => {
@@ -971,21 +1194,23 @@ test('Figli statico: a fine Duello +1 Presenza se Ancorato', () => {
     winner: SIDES.PLAYER,
     anchoredBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.equal(hit.matchState.player.presence, 3);
+  assert.equal(hit.matchState.player.presence, 2);
 
   const miss = settleEminenceRound(base, {
     winner: SIDES.PLAYER,
     anchoredBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
   });
-  assert.equal(miss.matchState.player.presence, 2);
+  assert.equal(miss.matchState.player.presence, 1);
 });
 
-test('Figli −3: Risposta concede Immune se Ancorato', () => {
-  const hit = prepareFigli('figli_risposta', { focus: 3, league: 3, presence: 3 });
+test('Figli −4: Risposta concede Immune e forza il trigger se Ancorato', () => {
+  const hit = prepareFigli('figli_risposta', { focus: 3, league: 3, presence: 4 });
   assert.deepEqual(hit.bundle.immuneSides, [SIDES.PLAYER]);
+  assert.equal(hit.bundle.triggerRules.forceSatisfied.length, 1);
 
-  const miss = prepareFigli('figli_risposta', { focus: 2, league: 3, presence: 3 });
+  const miss = prepareFigli('figli_risposta', { focus: 2, league: 3, presence: 4 });
   assert.equal((miss.bundle.immuneSides || []).length, 0);
+  assert.equal(miss.bundle.triggerRules.forceSatisfied.length, 0);
 });
 
 // ------------------------------------------------------------------
@@ -996,142 +1221,137 @@ const CORTE = 'corte_rossa';
 const CORTE_AGENT = 201;
 const CORTE_ENEMY = 301;
 
-function sealCorte(playerAbility, { presence = 1, playerParams = null } = {}) {
-  const base = createEminenceMatchState({
+/**
+ * Apre un round con la Corte sul lato giocatore: l'Offerta si rivela al primo gate.
+ * Restituisce lo stato subito dopo il reveal e l'Offerta in attesa di risposta.
+ */
+function openCorteOffer(playerAbility, { presence = 3, roundNumber = 3, base = null } = {}) {
+  const start = base || createEminenceMatchState({
     playerEminenceId: CORTE,
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  base.player.presence = presence;
-  let matchState = beginEminenceRound(base, { roundNumber: 3 });
-  const player = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility, playerParams);
-  assert.equal(player.ok, true, player.reason);
-  const enemy = selectEminenceAbility(player.matchState, SIDES.ENEMY, 'semaforo_verde');
-  assert.equal(enemy.ok, true, enemy.reason);
-  matchState = enemy.matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  return matchState;
+  start.player.presence = presence;
+  let matchState = beginEminenceRound(start, { roundNumber });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  const revealed = advanceToNextRevealGate(matchState);
+  assert.equal(revealed.gate, REVEAL_GATES.PRE_FIELD);
+  return { matchState: revealed.matchState, pending: revealed.bundle?.pendingDeals?.[0] ?? null };
 }
 
-function prepareCorte(playerAbility, {
-  presence = 1,
-  playerParams = null,
-  agentIdBySide = { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-} = {}) {
-  return prepareEminenceDuel(sealCorte(playerAbility, { presence, playerParams }), { agentIdBySide });
+function answerAndPrepare(opened, response) {
+  let matchState = opened.matchState;
+  if (opened.pending) {
+    matchState = resolvePendingDeal(matchState, opened.pending, response).matchState;
+  }
+  matchState = advanceToNextRevealGate(matchState).matchState;
+  return prepareEminenceDuel(matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
+  });
 }
 
-test('Corte +0: Accordo senza risposta resta pending (niente auto-accept)', () => {
-  const { bundle } = prepareCorte('corte_accordo');
-  assert.equal(bundle.pendingDeals?.length, 1);
-  assert.equal(bundle.pendingDeals[0].mode, 'ACCEPT_OR_SELF');
-  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 0);
-  assert.deepEqual(bundle.hpDeltas, []);
+function registro(matchState) {
+  return (matchState.player.persistent.endMatchDebts || []).map((debt) => ({
+    side: debt.side,
+    amount: debt.amount,
+    source: debt.source,
+  }));
+}
+
+test('Corte: Presenza iniziale 0 e tutte le attive sono Offerte rivelate al primo gate', () => {
+  const state = createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 0);
+  for (const ability of EMINENCES[CORTE].abilities) {
+    assert.equal(ability.revealGate, REVEAL_GATES.PRE_FIELD, ability.id);
+    assert.equal(ability.segments[0].mode, 'OFFER', ability.id);
+  }
 });
 
-test('Corte +0: Accordo accettato esplicitamente → −2 PV e 1 FC temp all\'avversario', () => {
-  const { matchState, bundle } = prepareCorte('corte_accordo', {
-    playerParams: { dealAccepted: true },
-  });
-  assert.equal(bundle.temporaryFocus[SIDES.ENEMY], 1);
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -2, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_accordo' },
-  ]);
-  assert.equal(matchState.player.presence, 2);
+test('Corte: l\'Offerta resta in attesa finché l\'avversario non risponde', () => {
+  const opened = openCorteOffer('corte_prestito');
+  assert.equal(opened.pending.mode, 'OFFER');
+  assert.equal(opened.pending.recipientSide, SIDES.ENEMY);
+  assert.equal(opened.pending.mustAccept, false);
 });
 
-test('Corte −2: Salasso senza scelta resta pending', () => {
-  const { bundle } = prepareCorte('corte_salasso', { presence: 3 });
-  assert.equal(bundle.pendingDeals?.length, 1);
-  assert.equal(bundle.pendingDeals[0].mode, 'CHOOSE_ONE');
-  assert.deepEqual(bundle.hpDeltas, []);
-});
-
-test('Corte −2: Salasso con dealChoice hp_for_presence applica l\'Affare', () => {
-  const { matchState, bundle } = prepareCorte('corte_salasso', {
-    presence: 3,
-    playerParams: { dealChoice: 'hp_for_presence' },
-  });
-  assert.deepEqual(bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -3, cause: HP_LOSS_CAUSES.EMINENCE_COST, source: 'corte_salasso' },
-  ]);
-  assert.ok(bundle.presenceChanges.some((c) => c.side === SIDES.ENEMY && c.delta === 2));
-  assert.equal(matchState.player.presence, 2);
-  assert.equal(matchState.player.presenceSpentThisRound, 2);
-});
-
-test('Corte statico: il DAN da sconfitta non paga Presenza', () => {
-  const base = beginEminenceRound(
-    createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' }),
-    { roundNumber: 3 },
-  );
-  const reacted = notifyHpLossEvents(base, [
-    { side: SIDES.PLAYER, amount: -4, cause: HP_LOSS_CAUSES.DUEL_DEFEAT_DAMAGE },
-  ]);
-  assert.equal(reacted.matchState.player.presence, 1);
-  assert.equal(reacted.bundle, null);
-});
-
-test('Corte +1: Debito sostituisce il trigger in Debito e al schieramento costa 2 PV', () => {
-  const first = prepareCorte('corte_debito', {
-    presence: 1,
-    playerParams: { cardId: CORTE_AGENT },
-    agentIdBySide: { [SIDES.PLAYER]: 202, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
-  assert.equal(first.bundle.triggerRules.persistentReplacementsByCardId[CORTE_AGENT].trigger, 'debt');
-  assert.equal(first.matchState.player.persistent.triggerReplacementsByCardId[CORTE_AGENT].trigger, 'debt');
-  assert.equal(first.bundle.hpDeltas.length, 0);
-  assert.equal(first.matchState.player.presence, 2);
-
-  const nextBase = beginEminenceRound(first.matchState, { roundNumber: 4 });
-  const enemy = selectEminenceAbility(nextBase, SIDES.ENEMY, 'semaforo_verde');
-  const player = selectEminenceAbility(enemy.matchState, SIDES.PLAYER, 'corte_accordo');
-  let matchState = advanceToNextRevealGate(player.matchState).matchState;
-  matchState = advanceToNextRevealGate(matchState).matchState;
-  const deployed = prepareEminenceDuel(matchState, {
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
-  const debt = resolveTriggerState({
-    originalTrigger: 'intervention',
-    context: {},
-    card: { id: CORTE_AGENT },
-    side: SIDES.PLAYER,
-    triggerRules: deployed.bundle.triggerRules,
-  });
-  assert.equal(debt.effectiveTrigger, 'debt');
-  assert.equal(debt.satisfied, true);
-  assert.ok(deployed.bundle.hpDeltas.some((entry) => (
-    entry.side === SIDES.PLAYER && entry.amount === -2 && entry.cause === HP_LOSS_CAUSES.DEBT
-  )));
-});
-
-test('Corte −4: Brutto Affare dà 2 FC e riscuote ceil(POT/2) a fine Duello', () => {
-  const prepared = prepareCorte('corte_brutto_affare', {
-    presence: 4,
-    playerParams: { cardId: CORTE_ENEMY, targetSide: SIDES.ENEMY },
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-  });
+test('Corte +1 Prestito accettato: 2 FC temporanei all\'Agente nemico, voce di 2 PV nel Registro, +1 Presenza', () => {
+  const opened = openCorteOffer('corte_prestito', { presence: 0 });
+  // Reveal +1 Presenza.
+  assert.equal(opened.matchState.player.presence, 1);
+  const prepared = answerAndPrepare(opened, { dealAccepted: true });
+  assert.equal(prepared.matchState.player.presence, 2);
   assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 2);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts.length, 1);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].basis, 'HALF_FINAL_POWER_CEIL');
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].side, SIDES.ENEMY);
-  assert.equal(prepared.matchState.player.persistent.endMatchDebts[0].cardId, CORTE_ENEMY);
+  assert.deepEqual(registro(prepared.matchState), [{ side: SIDES.ENEMY, amount: 2, source: 'corte_prestito' }]);
+});
 
-  assert.equal(prepared.notices.some((notice) => notice.name === 'Brutto Affare'), true);
+test('Corte +1 Prestito rifiutato: nessun effetto e nessuna Presenza extra', () => {
+  const opened = openCorteOffer('corte_prestito', { presence: 0 });
+  const prepared = answerAndPrepare(opened, { dealAccepted: false });
+  assert.equal(prepared.matchState.player.presence, 1);
+  assert.equal(prepared.bundle.temporaryFocus[SIDES.ENEMY], 0);
+  assert.deepEqual(registro(prepared.matchState), []);
+});
 
-  const settled = settleEminenceRound(prepared.matchState, {
-    winner: SIDES.PLAYER,
-    agentIdBySide: { [SIDES.PLAYER]: CORTE_AGENT, [SIDES.ENEMY]: CORTE_ENEMY },
-    finalPowerByCardId: { [CORTE_ENEMY]: 5 },
-  });
-  assert.deepEqual(settled.bundle.hpDeltas, [
-    { side: SIDES.ENEMY, amount: -3, cause: HP_LOSS_CAUSES.END_MATCH_DEBT, source: 'corte_brutto_affare' },
-  ]);
-  assert.equal(settled.matchState.player.presence, 1);
-  assert.deepEqual(settled.matchState.player.persistent.endMatchDebts, []);
+test('Corte 0 Rinforzo: l\'avversario sceglie +2 DAN o +1 POT', () => {
+  const damage = answerAndPrepare(openCorteOffer('corte_rinforzo'), { dealAccepted: true, dealChoice: 'damage' });
+  assert.equal(damage.bundle.statDeltas[SIDES.ENEMY].damage, 2);
+  assert.equal(damage.bundle.statDeltas[SIDES.ENEMY].power, 0);
+  assert.deepEqual(registro(damage.matchState), [{ side: SIDES.ENEMY, amount: 1, source: 'corte_rinforzo' }]);
 
-  const closed = settleEminenceMatch(settled.matchState);
-  assert.equal(closed.bundle, null);
+  const power = answerAndPrepare(openCorteOffer('corte_rinforzo'), { dealAccepted: true, dealChoice: 'power' });
+  assert.equal(power.bundle.statDeltas[SIDES.ENEMY].power, 1);
+  assert.equal(power.bundle.statDeltas[SIDES.ENEMY].damage, 0);
+});
+
+test('Corte 0 Rinforzo: accettare senza scegliere è un errore', () => {
+  const opened = openCorteOffer('corte_rinforzo');
+  assert.throws(() => resolvePendingDeal(opened.matchState, opened.pending, { dealAccepted: true }), /scelta/);
+});
+
+test('Corte −1 Debito accettato: il Potere nemico diventa Debito 2', () => {
+  const prepared = answerAndPrepare(openCorteOffer('corte_debito'), { dealAccepted: true });
+  assert.equal(prepared.bundle.abilityOverlays[CORTE_ENEMY].trigger, 'debt');
+  assert.equal(prepared.bundle.abilityOverlays[CORTE_ENEMY].debtAmount, 2);
+  assert.equal(prepared.bundle.triggerRules.replacementsByCardId[CORTE_ENEMY].trigger, 'debt');
+  // Nessun costo allo schieramento: il Debito si paga solo se il Potere si attiva.
+  assert.deepEqual(prepared.bundle.hpDeltas, []);
+});
+
+test('Corte −3 Interessi: ogni voce del Registro aumenta di 2 PV', () => {
+  const base = createEminenceMatchState({ playerEminenceId: CORTE, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.persistent.endMatchDebts = [
+    { side: SIDES.ENEMY, amount: 2, basis: 'FIXED', dueAt: 'END_MATCH', source: 'corte_prestito', ownerSide: SIDES.PLAYER },
+    { side: SIDES.ENEMY, amount: 1, basis: 'FIXED', dueAt: 'END_MATCH', source: 'corte_rinforzo', ownerSide: SIDES.PLAYER },
+  ];
+  const prepared = answerAndPrepare(openCorteOffer('corte_interessi', { base }), { dealAccepted: true });
+  assert.deepEqual(registro(prepared.matchState).map((entry) => entry.amount), [4, 3]);
+});
+
+test('Corte: rifiutata un\'Offerta, la successiva va accettata', () => {
+  const refused = answerAndPrepare(openCorteOffer('corte_prestito', { roundNumber: 2 }), { dealAccepted: false });
+  const settled = settleEminenceRound(refused.matchState, { winner: SIDES.PLAYER });
+
+  const opened = openCorteOffer('corte_rinforzo', { roundNumber: 3, base: settled.matchState });
+  assert.equal(opened.pending.mustAccept, true);
+  const prepared = answerAndPrepare(opened, { dealAccepted: false, dealChoice: 'power' });
+  assert.equal(prepared.bundle.statDeltas[SIDES.ENEMY].power, 1);
+});
+
+test('Corte: dopo un\'Offerta accettata il rifiuto torna disponibile', () => {
+  const accepted = answerAndPrepare(openCorteOffer('corte_prestito', { roundNumber: 2 }), { dealAccepted: true });
+  const settled = settleEminenceRound(accepted.matchState, { winner: SIDES.PLAYER });
+  const opened = openCorteOffer('corte_prestito', { roundNumber: 3, base: settled.matchState });
+  assert.equal(opened.pending.mustAccept, false);
+});
+
+test('Corte: il Registro non si paga a fine round ma alla Fine dello Scontro', () => {
+  const prepared = answerAndPrepare(openCorteOffer('corte_prestito'), { dealAccepted: true });
+  const settled = settleEminenceRound(prepared.matchState, { winner: SIDES.PLAYER });
+  assert.deepEqual(registro(settled.matchState).map((entry) => entry.amount), [2]);
+
+  const ended = settleEminenceMatch(settled.matchState);
+  assert.ok(ended.bundle.hpDeltas.some((delta) => delta.side === SIDES.ENEMY && delta.amount === -2));
+  assert.deepEqual(registro(ended.matchState), []);
 });
 
 // ------------------------------------------------------------------
@@ -1140,7 +1360,23 @@ test('Corte −4: Brutto Affare dà 2 FC e riscuote ceil(POT/2) a fine Duello', 
 
 const CALIBRI = 'calibri_quattro_fronti';
 
-test('Calibri statico: +1 Presenza se il DAN nemico finale è ≤ 2 (anche in vittoria)', () => {
+function calibriDuel(playerAbility, { presence = 4, duelRecord = null } = {}) {
+  const base = createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = presence;
+  if (duelRecord) base.player.persistent.duelRecord = { won: 0, lost: 0, draw: 0, ...duelRecord };
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility).matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_verde').matchState;
+  return prepareEminenceDuel(matchState, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 } });
+}
+
+test('Calibri: Presenza iniziale 1', () => {
+  const state = createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' });
+  assert.equal(state.player.presence, 1);
+  assert.equal(EMINENCES[CALIBRI].abilities.some((a) => a.id === 'calibri_contenimento'), false);
+});
+
+test('Calibri statico: +1 Presenza solo in sconfitta con DAN nemico ≤ 2', () => {
   const base = beginEminenceRound(
     createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' }),
     { roundNumber: 3 },
@@ -1150,67 +1386,59 @@ test('Calibri statico: +1 Presenza se il DAN nemico finale è ≤ 2 (anche in vi
     winner: SIDES.ENEMY,
     finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 2 },
   });
-  assert.equal(hitLoss.matchState.player.presence, 3);
+  assert.equal(hitLoss.matchState.player.presence, 2);
 
   const missHigh = settleEminenceRound(base, {
     winner: SIDES.ENEMY,
     finalDamageBySide: { [SIDES.PLAYER]: 5, [SIDES.ENEMY]: 3 },
   });
-  assert.equal(missHigh.matchState.player.presence, 2);
+  assert.equal(missHigh.matchState.player.presence, 1);
 
-  const hitWin = settleEminenceRound(base, {
+  const missWin = settleEminenceRound(base, {
     winner: SIDES.PLAYER,
     finalDamageBySide: { [SIDES.PLAYER]: 1, [SIDES.ENEMY]: 1 },
   });
-  assert.equal(hitWin.matchState.player.presence, 3);
+  assert.equal(missWin.matchState.player.presence, 1);
 });
 
-test('Calibri +0: Guerra d\'Attrito dà 1 FC al pool e alza il costo solo se vinci', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: CALIBRI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'calibri_guerra_attrito',
-    enemyAbility: 'semaforo_verde',
-  });
-
-  assert.equal(bundle.poolFocus[SIDES.PLAYER], 1);
-  assert.equal(bundle.temporaryFocus[SIDES.PLAYER], 0);
-  assert.equal(matchState.player.presence, 2);
-  assert.equal(matchState.player.presenceSpentThisRound, 0);
-
-  const afterWin = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
-  assert.equal(afterWin.matchState.player.persistent.abilityPresenceDeltas.calibri_guerra_attrito, -1);
-
-  const afterLoss = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
-  assert.deepEqual(afterLoss.matchState.player.persistent.abilityPresenceDeltas, {});
-
-  const next = beginEminenceRound(afterWin.matchState, { roundNumber: 4 });
-  const enemy = selectEminenceAbility(next, SIDES.ENEMY, 'semaforo_verde');
-  const replay = selectEminenceAbility(enemy.matchState, SIDES.PLAYER, 'calibri_guerra_attrito');
-  assert.equal(replay.ok, true);
-  assert.equal(replay.matchState.player.committedPresenceCost, 1);
+test('Calibri: la chiusura del round annota vittorie, sconfitte e pareggi per lato', () => {
+  const base = beginEminenceRound(
+    createEminenceMatchState({ playerEminenceId: CALIBRI, enemyEminenceId: 'patto_grande_semaforo' }),
+    { roundNumber: 1 },
+  );
+  const lost = settleEminenceRound(base, { winner: SIDES.ENEMY }).matchState;
+  assert.deepEqual(lost.player.persistent.duelRecord, { won: 0, lost: 1, draw: 0 });
+  assert.deepEqual(lost.enemy.persistent.duelRecord, { won: 1, lost: 0, draw: 0 });
+  const drawn = settleEminenceRound(beginEminenceRound(lost, { roundNumber: 2 }), { winner: 'draw' }).matchState;
+  assert.deepEqual(drawn.player.persistent.duelRecord, { won: 0, lost: 1, draw: 1 });
 });
 
-test('Calibri −2: Contenimento registra la conversione DAN e +2 Presenza in vittoria', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: CALIBRI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'calibri_contenimento',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
-  });
+test('Calibri +1: Fermo Macchine blocca il proprio Potere', () => {
+  const prepared = calibriDuel('calibri_fermo_macchine', { presence: 1 });
+  assert.equal(prepared.blocked, null);
+  assert.equal(prepared.matchState.player.presence, 2);
+  assert.deepEqual(prepared.bundle.blockedPowerSides, [SIDES.PLAYER]);
+});
 
-  assert.equal(bundle.statConverts.length, 1);
-  assert.equal(bundle.statConverts[0].stat, 'damage');
-  assert.equal(bundle.statConverts[0].dest, 'DIRECT_DAMAGE');
-  assert.equal(bundle.statConverts[0].zeroStat, true);
-  assert.equal(matchState.player.presence, 1);
+test('Calibri −1: Guerra d\'Attrito dà 1 FC, 2 se hai vinto meno Duelli', () => {
+  const pari = calibriDuel('calibri_guerra_attrito', { presence: 1, duelRecord: { won: 1, lost: 1 } });
+  assert.equal(pari.matchState.player.presence, 0);
+  assert.equal(pari.bundle.poolFocus[SIDES.PLAYER], 1);
 
-  const win = settleEminenceRound(matchState, { winner: SIDES.PLAYER });
-  assert.equal(win.matchState.player.presence, 3);
+  const indietro = calibriDuel('calibri_guerra_attrito', { presence: 1, duelRecord: { won: 0, lost: 2 } });
+  assert.equal(indietro.bundle.poolFocus[SIDES.PLAYER], 2);
 
-  const lose = settleEminenceRound(matchState, { winner: SIDES.ENEMY });
-  assert.equal(lose.matchState.player.presence, 1);
+  // Il costo è fisso: vincere non lo rincara.
+  const settled = settleEminenceRound(pari.matchState, { winner: SIDES.PLAYER });
+  assert.deepEqual(settled.matchState.player.persistent.abilityPresenceDeltas, {});
+});
+
+test('Calibri −2: Logoramento dà +3 VA per ogni Duello perso', () => {
+  const zero = calibriDuel('calibri_logoramento', { presence: 2 });
+  assert.equal(zero.bundle.statDeltas[SIDES.PLAYER].assaultValue, 0);
+  const tre = calibriDuel('calibri_logoramento', { presence: 2, duelRecord: { won: 1, lost: 3 } });
+  assert.equal(tre.bundle.statDeltas[SIDES.PLAYER].assaultValue, 9);
+  assert.equal(tre.bundle.statDeltas[SIDES.ENEMY].assaultValue, 0);
 });
 
 test('Calibri −4: Terra Bruciata arma la distruzione Campo solo in sconfitta', () => {
@@ -1265,45 +1493,43 @@ test('Orathai statico: +1 Presenza solo se entrambi i requisiti sono soddisfatti
   assert.equal(missOne.matchState.player.presence, 1);
 });
 
-test('Orathai +0: Tacet paga +2 se almeno uno non soddisfa', () => {
+test('Orathai +1: Il Prezzo del Canto costa 1 PV per ogni Potere attivato', () => {
   const { matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'orathai_tacet',
+    playerAbility: 'orathai_prezzo_del_canto',
     enemyAbility: 'semaforo_verde',
   });
-  assert.equal(matchState.player.presence, 1);
-
-  const hitBoth = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
-  });
-  assert.equal(hitBoth.matchState.player.presence, 3);
-
-  const hitOne = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
-  });
-  assert.equal(hitOne.matchState.player.presence, 3);
-
-  const miss = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true },
-  });
-  // Tacet non paga, ma lo Statico Risonanza sì (+1).
-  assert.equal(miss.matchState.player.presence, 2);
+  assert.equal(matchState.player.presence, 2);
+  const lost = (powerResolvedBySide) => settleEminenceRound(matchState, { winner: SIDES.PLAYER, powerResolvedBySide })
+    .bundle?.hpDeltas.filter((e) => e.side === SIDES.PLAYER).reduce((sum, e) => sum + e.amount, 0) ?? 0;
+  assert.equal(lost({ [SIDES.PLAYER]: true, [SIDES.ENEMY]: true }), -2);
+  assert.equal(lost({ [SIDES.PLAYER]: false, [SIDES.ENEMY]: true }), -1);
+  assert.equal(lost({ [SIDES.PLAYER]: true, [SIDES.ENEMY]: false }), -1);
+  assert.equal(lost({ [SIDES.PLAYER]: false, [SIDES.ENEMY]: false }), 0);
 });
 
-test('Orathai −2: Contrappunto deposita UNBLOCKABLE + MIRROR_UNSATISFIED', () => {
-  const { bundle } = playRound({
+test('Orathai −1: Contrappunto è solo lo specchio, senza immunità ai Blocca', () => {
+  const { bundle, matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'orathai_contrappunto',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
   });
-  assert.equal(bundle.triggerRules.unblockable.length, 1);
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(bundle.triggerRules.unblockable.length, 0);
   assert.equal(bundle.triggerRules.mirrorUnsatisfied.length, 1);
+});
+
+test('Orathai −2: Eco arma la ripetizione del Potere nemico sul proprio Agente', () => {
+  const { bundle } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_eco',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+  });
+  assert.deepEqual(bundle.echoPowerSides, [SIDES.PLAYER]);
 });
 
 test('Orathai −3: Silenzio sostituisce i trigger Potere con Magnanimo', () => {
@@ -1323,12 +1549,12 @@ test('Orathai: Fine Scontro non ribatte i delta già risolti', () => {
   const { matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'orathai_tacet',
+    playerAbility: 'orathai_prezzo_del_canto',
     enemyAbility: 'semaforo_verde',
   });
   const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+    powerResolvedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true },
   });
   const closed = settleEminenceMatch(settled.matchState);
   assert.equal(closed.bundle, null);
@@ -1397,17 +1623,44 @@ test('Enclave −1: Ascesa deposita ±1 Lega sulla carta e scade al round succes
   assert.deepEqual(next.player.round.temporaryLeagueByCardId, {});
 });
 
-test('Enclave −3: Ascensione deposita SATISFY a Leghe uguali e ARM_VA_TIE_WIN', () => {
-  const { bundle } = playRound({
+test('Enclave −2: Furto di Reliquie sottrae 2 Presenza e ne dà 1, solo in vittoria', () => {
+  const { matchState } = playRound({
+    playerEminenceId: ENCLAVE,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'enclave_furto_reliquie',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2, enemy: 3 },
+  });
+  assert.equal(matchState.player.presence, 0);
+  const enemyBefore = matchState.enemy.presence;
+
+  const win = settleEminenceRound(matchState, { winner: SIDES.PLAYER }).matchState;
+  assert.equal(win.player.presence, 1);
+  assert.equal(win.enemy.presence, enemyBefore - 2);
+  // Rubare non è spendere: i contatori di spesa avversari restano fermi.
+  assert.equal(win.enemy.totalPresenceSpent, matchState.enemy.totalPresenceSpent);
+
+  const loss = settleEminenceRound(matchState, { winner: SIDES.ENEMY }).matchState;
+  assert.equal(loss.player.presence, 0);
+  assert.equal(loss.enemy.presence, enemyBefore);
+});
+
+test('Enclave −X: Ascensione richiede 3 Presenza e la spende tutta in POT', () => {
+  const base = createEminenceMatchState({ playerEminenceId: ENCLAVE, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 2;
+  const low = beginEminenceRound(base, { roundNumber: 3 });
+  assert.equal(selectEminenceAbility(low, SIDES.PLAYER, 'enclave_ascensione').ok, false);
+
+  const { matchState, bundle } = playRound({
     playerEminenceId: ENCLAVE,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'enclave_ascensione',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
+    presence: { player: 6 },
   });
-  assert.equal(bundle.triggerRules.equalLeagueSatisfies.length, 1);
-  assert.deepEqual(bundle.triggerRules.equalLeagueSatisfies[0].triggers, ['sfida', 'sopraffare']);
-  assert.deepEqual(bundle.vaTieWinnerSides, [SIDES.PLAYER]);
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(matchState.player.presenceSpentThisRound, 6);
+  assert.equal(bundle.statDeltas[SIDES.PLAYER].power, 6);
 });
 
 test('Enclave: Fine Scontro non ribatte i delta già risolti', () => {
@@ -1431,13 +1684,13 @@ test('Enclave: Fine Scontro non ribatte i delta già risolti', () => {
 
 const RATTI = 'ratti_bella_malelabbra';
 
-function sealRatti(playerAbility, { presence } = {}) {
+function sealRatti(playerAbility, { presence, params = null, base = null } = {}) {
   let matchState = beginEminenceRound(
-    createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' }),
+    base || createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' }),
     { roundNumber: 3 },
   );
   if (presence != null) matchState.player.presence = presence;
-  const p = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility);
+  const p = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility, params);
   assert.equal(p.ok, true, p.reason);
   const e = selectEminenceAbility(p.matchState, SIDES.ENEMY, 'semaforo_verde');
   assert.equal(e.ok, true, e.reason);
@@ -1456,82 +1709,90 @@ test('lega minima: pareggio e ultima carta pagano, una Lega più bassa in mano n
   );
 });
 
+function rattiAfterAgentGate(playerAbility, options) {
+  let state = sealRatti(playerAbility, options);
+  state = advanceToNextRevealGate(state).matchState;
+  return advanceToNextRevealGate(state).matchState;
+}
+
 test('Ratti statico: Male Crescente paga solo se l\'Agente schierato ha la Lega minima', () => {
-  const sealed = sealRatti('ratti_sussurro');
+  const sealed = rattiAfterAgentGate('ratti_seduzione', { params: { cardId: 301 } });
 
   const hit = prepareEminenceDuel(sealed, {
     deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.equal(hit.matchState.player.presence, 2);
+  assert.equal(hit.matchState.player.presence, 1);
 
   const miss = prepareEminenceDuel(sealed, {
     deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
   });
-  assert.equal(miss.matchState.player.presence, 1);
+  assert.equal(miss.matchState.player.presence, 0);
 });
 
-test('Ratti +0: Sussurro paga una sola volta se c\'è stata una riduzione', () => {
-  const { matchState } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_sussurro',
-    enemyAbility: 'semaforo_verde',
-  });
+test('Ratti +1: Corteggiamento fa scegliere all\'avversario se essere primo o secondo', () => {
+  const sealed = sealRatti('ratti_corteggiamento');
+  const opened = advanceToNextRevealGate(sealed, { initiativeSide: SIDES.PLAYER });
+  assert.equal(opened.gate, REVEAL_GATES.PRE_FIELD);
+  const pending = opened.bundle.pendingDeals[0];
+  assert.equal(pending.recipientSide, SIDES.ENEMY);
+  assert.equal(pending.kind, 'CHOICE');
+  assert.equal(pending.mustAccept, true);
+  assert.deepEqual(pending.choices, ['first', 'second']);
+  assert.equal(opened.matchState.player.presence, 2);
 
-  const hit = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: true,
-  });
-  assert.equal(hit.matchState.player.presence, 2);
+  const first = resolvePendingDeal(opened.matchState, pending, { dealAccepted: true, dealChoice: 'first' });
+  assert.equal(first.matchState.roundInitiativeOverride, SIDES.ENEMY);
+  // Una scelta, non un'Offerta: nessuna Presenza extra per l'accettazione.
+  assert.equal(first.matchState.player.presence, 2);
 
-  const miss = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: false,
-  });
-  assert.equal(miss.matchState.player.presence, 1);
+  const second = resolvePendingDeal(opened.matchState, pending, { dealChoice: 'second' });
+  assert.equal(second.matchState.roundInitiativeOverride, SIDES.PLAYER);
+
+  assert.throws(() => resolvePendingDeal(opened.matchState, pending, {}), /scelta/);
+  const next = beginEminenceRound(first.matchState, { roundNumber: 4 });
+  assert.equal(next.roundInitiativeOverride, null);
 });
 
-test('Ratti −2: Veleno sopprime il Bonus e deposita Tossina sull\'avversario', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_veleno',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
-  });
-  assert.equal(matchState.player.presence, 0);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].suppressed, true);
-  assert.deepEqual(bundle.toxinApplications, [
-    { side: SIDES.ENEMY, value: 1, minHealth: 10, source: 'ratti_veleno' },
-  ]);
+test('Ratti −1: Seduzione vieta un Agente avversario, salvo che sia l\'ultimo', () => {
+  const sealed = sealRatti('ratti_seduzione', { params: { cardId: 301 } });
+  let state = advanceToNextRevealGate(sealed).matchState;
+  state = advanceToNextRevealGate(state).matchState;
+  assert.equal(state.player.revealedAbilityId, 'ratti_seduzione');
+  assert.deepEqual(readDeployConstraints(state, SIDES.ENEMY).bannedCardIds, [301]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.ENEMY, [301, 302, 303], [303]), [302]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.ENEMY, [301, 302], [302]), [301]);
 });
 
-test('Ratti −3: Spezzacuore rimuove Tossina e overridea il Bonus in danni diretti', () => {
-  const { bundle } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_spezzacuore',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
-    playerParams: { removedToxinValue: 2 },
-  });
-  assert.equal(bundle.toxinRemovals.length, 1);
-  assert.equal(bundle.toxinRemovals[0].removedValue, 2);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].override.value, 4);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].override.effect, 'directDamage');
+test('Ratti −3: Vendetta oltre la Morte rende di nuovo schierabile un Agente sconfitto', () => {
+  const base = createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 1 });
+  // Senza Agenti sconfitti non è selezionabile.
+  assert.equal(selectEminenceAbility(matchState, SIDES.PLAYER, 'ratti_vendetta', { cardId: 201 }).ok, false);
+
+  matchState = settleEminenceRound(matchState, {
+    winner: SIDES.ENEMY,
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  }).matchState;
+  assert.deepEqual(matchState.player.persistent.defeatedCardIds, [201]);
+  assert.deepEqual(matchState.enemy.persistent.defeatedCardIds, []);
+
+  const sealed = sealRatti('ratti_vendetta', { base: matchState, presence: 3, params: { cardId: 201 } });
+  // Sigillata: l'Agente torna disponibile solo per chi l'ha scelta, prima del reveal.
+  assert.equal(sealed.player.revealedAbilityId ?? null, null);
+  assert.deepEqual(filterDeployableCardIds(sealed, SIDES.PLAYER, [201, 202, 203], [201]), [201, 202, 203]);
+  const prepared = prepareEminenceDuel(sealed, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 302 } });
+  assert.equal(prepared.blocked, null);
+  assert.equal(prepared.matchState.player.revealedAbilityId, 'ratti_vendetta');
+  assert.equal(prepared.matchState.player.presence, 0);
 });
 
 test('Ratti: Fine Scontro non ribatte i delta già risolti', () => {
-  const { matchState } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_sussurro',
-    enemyAbility: 'semaforo_verde',
+  const sealed = rattiAfterAgentGate('ratti_seduzione', { params: { cardId: 301 } });
+  const prepared = prepareEminenceDuel(sealed, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  const settled = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: true,
-  });
+  const settled = settleEminenceRound(prepared.matchState, { winner: SIDES.PLAYER });
   const closed = settleEminenceMatch(settled.matchState);
   assert.equal(closed.bundle, null);
 });

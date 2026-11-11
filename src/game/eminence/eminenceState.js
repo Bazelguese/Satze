@@ -6,9 +6,10 @@
 import {
   EMINENCE_ELIGIBILITY_THRESHOLD,
   EMINENCE_FORMAT,
+  PARAM_SOURCES,
   SIDES,
 } from './eminenceConstants.js';
-import { EMINENCES, getEminence, getEminenceForArmy } from '../../data/eminences.js';
+import { EMINENCES, getEminence, getEminenceAbility, getEminenceForArmy } from '../../data/eminences.js';
 import { cloneSlotCurses } from './slotCurses.js';
 
 // ------------------------------------------------------------------
@@ -101,8 +102,73 @@ export function createEminenceRoundState() {
 
     ignoreFieldForCardIds: [],
 
+    // Vincoli sugli Agenti schierabili in questo Duello (Agente imposto, vietato o riusabile).
+    deployConstraints: { forcedCardId: null, bannedCardIds: [], revivedCardIds: [] },
+
     custom: {},
   };
+}
+
+/** Vincoli di schieramento del lato per il Duello corrente. */
+export function readDeployConstraints(matchState, side) {
+  const state = matchState?.[side];
+  const raw = state?.round?.deployConstraints || {};
+  const revived = [...(raw.revivedCardIds || [])];
+  // Un'abilità ancora sigillata può già concedere un Agente al suo proprietario (es. Vendetta
+  // oltre la Morte, che si rivela solo allo schieramento). La scelta è privata: la vede solo
+  // chi ha accesso alla selezione del lato.
+  const grant = getEminenceAbility(state?.eminenceId, state?.selectedAbilityId)?.deployGrant;
+  if (grant?.mode === 'REVIVE') {
+    const chosen = state?.selectedParams?.[grant.cardParam || 'cardId'];
+    const cardId = Array.isArray(chosen) ? chosen[0] : chosen;
+    if (cardId != null && !revived.includes(cardId)) revived.push(cardId);
+  }
+  return {
+    forcedCardId: raw.forcedCardId ?? null,
+    bannedCardIds: [...(raw.bannedCardIds || [])],
+    revivedCardIds: revived,
+  };
+}
+
+/**
+ * Come filterDeployableCardIds, ma null se il lato non ha vincoli: chi lo riceve può
+ * continuare a usare le sole carte non usate. `hand` accetta carte o id.
+ */
+export function constrainedDeployableCardIds(matchState, side, hand = [], usedIds = []) {
+  if (!matchState) return null;
+  const constraints = readDeployConstraints(matchState, side);
+  const constrained = constraints.forcedCardId != null
+    || constraints.bannedCardIds.length > 0
+    || constraints.revivedCardIds.length > 0;
+  if (!constrained) return null;
+  const handIds = (hand || [])
+    .map((card) => (card && typeof card === 'object' ? card.id : card))
+    .filter((id) => id != null);
+  return filterDeployableCardIds(matchState, side, handIds, Array.isArray(usedIds) ? usedIds : []);
+}
+
+/**
+ * Agenti che il lato può schierare in questo Duello, dati la mano e gli Agenti già usati.
+ * Un Agente riusabile torna disponibile anche se usato; un Agente vietato no, salvo che sia
+ * l'unico rimasto; un Agente imposto, se disponibile, è l'unica scelta.
+ *
+ * @param {object} matchState stato Eminenze (null = nessun vincolo)
+ * @param {'player'|'enemy'} side
+ * @param {Array<number|string>} handIds id delle carte in mano
+ * @param {Array<number|string>} usedIds id delle carte già usate
+ */
+export function filterDeployableCardIds(matchState, side, handIds = [], usedIds = []) {
+  const constraints = readDeployConstraints(matchState, side);
+  const used = new Set(usedIds);
+  const revived = new Set(constraints.revivedCardIds);
+  const available = handIds.filter((id) => !used.has(id) || revived.has(id));
+  const banned = new Set(constraints.bannedCardIds);
+  const allowed = available.filter((id) => !banned.has(id));
+  const pool = allowed.length ? allowed : available;
+  if (constraints.forcedCardId != null && pool.includes(constraints.forcedCardId)) {
+    return [constraints.forcedCardId];
+  }
+  return pool;
 }
 
 /** Stato persistente per l'intero Scontro (§4.2). */
@@ -117,7 +183,23 @@ export function createEminencePersistentState() {
     slotCurses: {},
     abilityPresenceDeltas: {},
     abilityEscalation: {},
+    // Esiti dei Duelli già chiusi in questo Scontro, dal punto di vista del lato.
+    duelRecord: { won: 0, lost: 0, draw: 0 },
+    // Agenti del lato sconfitti in un Duello (pubblico).
+    defeatedCardIds: [],
+    // Bonus d'Armata sostituito per più Duelli: { override, until } oppure null.
+    armyBonusOverride: null,
     custom: {},
+  };
+}
+
+/** Esiti dei Duelli del lato; i salvataggi senza registro valgono come nessun Duello. */
+export function readDuelRecord(persistent) {
+  const record = persistent?.duelRecord || {};
+  return {
+    won: record.won || 0,
+    lost: record.lost || 0,
+    draw: record.draw || 0,
   };
 }
 
@@ -275,6 +357,11 @@ export function selectPublicPersistentState(persistent) {
     slotCurses: cloneSlotCurses(persistent.slotCurses),
     abilityPresenceDeltas: { ...(persistent.abilityPresenceDeltas || {}) },
     abilityEscalation: { ...(persistent.abilityEscalation || {}) },
+    duelRecord: readDuelRecord(persistent),
+    defeatedCardIds: [...(persistent.defeatedCardIds || [])],
+    armyBonusOverride: persistent.armyBonusOverride
+      ? { ...persistent.armyBonusOverride, override: { ...persistent.armyBonusOverride.override } }
+      : null,
   };
 }
 
@@ -323,14 +410,19 @@ export function selectPublicEminenceMatchState(matchState, viewerSide = null) {
  * Costo effettivo di un'abilità: catalogo + delta persistenti dello Scontro.
  * `presenceDeltaMin` è il pavimento del costo effettivo, non del solo extra.
  */
-export function resolveAbilityPresenceDelta(ability, persistent = null) {
+export function resolveAbilityPresenceDelta(ability, persistent = null, presence = null) {
   if (!ability) return 0;
   const extra = persistent?.abilityPresenceDeltas?.[ability.id] || 0;
   const raw = (ability.presenceDelta || 0) + extra;
-  if (typeof ability.presenceDeltaMin === 'number') {
-    return Math.max(ability.presenceDeltaMin, raw);
+  const bounded = typeof ability.presenceDeltaMin === 'number'
+    ? Math.max(ability.presenceDeltaMin, raw)
+    : raw;
+  // «Spendi tutta la tua Presenza»: il delta di catalogo è il minimo richiesto; con la
+  // Presenza nota il costo diventa tutta quella posseduta.
+  if (ability.spendAllPresence && Number.isFinite(presence)) {
+    return -Math.max(presence, -bounded);
   }
-  return raw;
+  return bounded;
 }
 
 /**
@@ -358,10 +450,29 @@ export function getLegalAbilityIds(eminenceId, presence, persistent = null, opti
   return eminence.abilities
     .filter((ability) => {
       if (forbidConsecutive && lastId && ability.id === lastId) return false;
+      if (!persistentTargetsAvailable(ability, persistent)) return false;
       const delta = resolveAbilityPresenceDelta(ability, persistent);
       return delta >= 0 || presence >= Math.abs(delta);
     })
     .map((ability) => ability.id);
+}
+
+/**
+ * Un'abilità che sceglie fra i propri Frammenti non è selezionabile se non ne esistono
+ * abbastanza. Il conteggio è pubblico, quindi vale anche per le deduzioni dell'IA.
+ */
+function persistentTargetsAvailable(ability, persistent) {
+  for (const spec of Object.values(ability?.paramsSchema || {})) {
+    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) continue;
+    if (spec.source === PARAM_SOURCES.OWN_FRAGMENTS) {
+      const owned = persistent?.fragmentCardIds?.length || 0;
+      if (owned < (spec.min ?? 1)) return false;
+    }
+    if (spec.source === PARAM_SOURCES.OWN_DEFEATED) {
+      if (!(persistent?.defeatedCardIds?.length > 0)) return false;
+    }
+  }
+  return true;
 }
 
 export function isAbilitySelectable(eminenceId, abilityId, presence, persistent = null, options = {}) {

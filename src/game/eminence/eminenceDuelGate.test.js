@@ -18,8 +18,12 @@ import {
   REVEAL_GATES,
   SIDES,
 } from './eminenceConstants.js';
+import { installLegacyApexEminence, installSyntheticTargetsEminence } from './testing/eminenceTestSupport.js';
 
-function match({ player = 'apex_sole_verde', enemy = null, presence = {} } = {}) {
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
+
+function match({ player = LEGACY_APEX, enemy = null, presence = {} } = {}) {
   let state = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
     playerEminenceId: player,
@@ -50,15 +54,15 @@ test('sottosistema spento: la preparazione è trasparente', () => {
 });
 
 test('scelta forzata: con una sola opzione legale viene registrata da sola', () => {
-  // Patto parte da 0 Presenza: Rosso (-2) è illegale, restano Verde (+1) e Giallo (0).
-  const two = match({ player: 'patto_grande_semaforo' });
+  // Patto a 2 Presenza: Verde, Giallo e Rosso sono tutte legali.
+  const two = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   assert.equal(autoSelectForcedChoices(two)[SIDES.PLAYER].selectedAbilityId, null);
 
-  // Mounthborn al round 1 ha 1 Presenza e una sola attiva a costo non negativo.
-  const one = match({ player: 'mounthborn_fame' });
+  // Mounthborn a 0 Presenza ha una sola attiva legale: Fame (+1).
+  const one = match({ player: 'mounthborn_fame', presence: { player: 0 } });
   assert.equal(
     autoSelectForcedChoices(one)[SIDES.PLAYER].selectedAbilityId,
-    'mounthborn_gorgoglio'
+    'mounthborn_fame_ricarica'
   );
 });
 
@@ -68,7 +72,7 @@ test('scelta forzata: un\'unica legale con parametri AT_SELECTION resta da decid
 });
 
 test('placeholder: con più opzioni legali prende la prima e sblocca il Duello', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const sealed = autoSelectFirstLegalAbility(state, SIDES.PLAYER);
 
   assert.equal(sealed[SIDES.PLAYER].selectedAbilityId, 'semaforo_verde');
@@ -85,7 +89,7 @@ test('placeholder: su Khemet la prima legale è +0 e non richiede slot', () => {
 });
 
 test('gate GENERAL bloccato finché una scelta libera resta pendente', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const result = prepareEminenceDuel(state);
 
   assert.equal(result.blocked, 'SELECTIONS_INCOMPLETE');
@@ -94,7 +98,7 @@ test('gate GENERAL bloccato finché una scelta libera resta pendente', () => {
 
 test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
   // Cataclisma costa 4: la Presenza iniziale di Apex è 3, quindi serve un guadagno prima.
-  const state = match({ player: 'apex_sole_verde', presence: { [SIDES.PLAYER]: 4 } });
+  const state = match({ player: LEGACY_APEX, presence: { [SIDES.PLAYER]: 4 } });
   const chosen = choose(state, SIDES.PLAYER, 'apex_cataclisma');
 
   const result = prepareEminenceDuel(chosen, { initiativeSide: SIDES.PLAYER });
@@ -111,7 +115,7 @@ test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
 });
 
 test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non prima', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const chosen = choose(state, SIDES.PLAYER, 'semaforo_giallo');
 
   const result = prepareEminenceDuel(chosen);
@@ -123,7 +127,7 @@ test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non pri
 });
 
 test('preparazione: un gate già superato non si riapre', () => {
-  const state = match({ player: 'apex_sole_verde' });
+  const state = match({ player: LEGACY_APEX });
   const chosen = choose(state, SIDES.PLAYER, 'apex_furia');
 
   const first = prepareEminenceDuel(chosen);
@@ -154,7 +158,7 @@ function withPendingEffect(state, side, timing, segment) {
 }
 
 test('preparazione: i delta di Presenza da effetto non contano come spesa', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_TRIGGER_CHECK', { primitive: P.CHANGE_PRESENCE, target: T.SELF, delta: -1 });
   const chosen = choose(state, SIDES.PLAYER, 'apex_furia');
 
@@ -167,7 +171,7 @@ test('preparazione: i delta di Presenza da effetto non contano come spesa', () =
 });
 
 test('preparazione: lo stato restituito è già pronto per lo snapshot di Presenza', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_TRIGGER_CHECK', { primitive: P.CHANGE_PRESENCE, target: T.SELF, delta: 2 });
   const chosen = choose(state, SIDES.PLAYER, 'apex_disprezzo');
 
@@ -180,7 +184,7 @@ test('preparazione: lo stato restituito è già pronto per lo snapshot di Presen
 
 test('chiusura: un blocco pianificato ricade sul round successivo', () => {
   const state = withPendingEffect(
-    match({ player: 'apex_sole_verde', enemy: 'patto_grande_semaforo' }),
+    match({ player: LEGACY_APEX, enemy: 'patto_grande_semaforo' }),
     SIDES.PLAYER,
     'POST_BATTLE',
     { primitive: P.BLOCK_EMINENCE, target: T.OPPONENT, duration: 'NEXT_ROUND' }
@@ -196,7 +200,7 @@ test('chiusura: un blocco pianificato ricade sul round successivo', () => {
 });
 
 test('chiusura: i checkpoint post-Duello producono un bundle separato', () => {
-  const state = withPendingEffect(match({ player: 'apex_sole_verde' }), SIDES.PLAYER,
+  const state = withPendingEffect(match({ player: LEGACY_APEX }), SIDES.PLAYER,
     'BEFORE_CONQUEST', { primitive: P.LOSE_HP, target: T.OPPONENT, amount: 3 });
 
   const { bundle } = settleEminenceRound(state);
@@ -207,18 +211,17 @@ test('chiusura: i checkpoint post-Duello producono un bundle separato', () => {
 });
 
 test('chiusura: senza segmenti post-Duello non produce alcun bundle', () => {
-  assert.equal(settleEminenceRound(match({ player: 'apex_sole_verde' })).bundle, null);
+  assert.equal(settleEminenceRound(match({ player: LEGACY_APEX })).bundle, null);
 });
 
 test('reveal: il lato umano non viene riempito in automatico', () => {
   const base = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
-    playerEminenceId: 'corte_rossa',
+    playerEminenceId: installSyntheticTargetsEminence(),
     enemyEminenceId: 'patto_grande_semaforo',
   });
-  base.player.presence = 4;
   let state = beginEminenceRound(base, { roundNumber: 1 });
-  state = choose(state, SIDES.PLAYER, 'corte_brutto_affare');
+  state = choose(state, SIDES.PLAYER, 'test_confermato');
   state = choose(state, SIDES.ENEMY, 'semaforo_verde');
 
   const prepared = prepareEminenceDuel(state, {
@@ -232,12 +235,11 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
   const base = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
     playerEminenceId: 'patto_grande_semaforo',
-    enemyEminenceId: 'corte_rossa',
+    enemyEminenceId: installSyntheticTargetsEminence(),
   });
-  base.enemy.presence = 4;
   let state = beginEminenceRound(base, { roundNumber: 1 });
-  state = choose(state, SIDES.PLAYER, 'semaforo_giallo');
-  state = choose(state, SIDES.ENEMY, 'corte_brutto_affare');
+  state = choose(state, SIDES.PLAYER, 'semaforo_verde');
+  state = choose(state, SIDES.ENEMY, 'test_confermato');
 
   const prepared = prepareEminenceDuel(state, {
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
@@ -246,55 +248,48 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
   assert.equal(prepared.matchState.enemy.selectedParams.cardId, 301);
 });
 
-test('GENERAL già aperto: Accordo e Salasso tengono i delta Affare nel Duello', () => {
-  let salasso = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 3 } });
-  salasso = choose(salasso, SIDES.PLAYER, 'corte_salasso', { dealChoice: 'hp_for_presence' });
-  salasso = choose(salasso, SIDES.ENEMY, 'semaforo_verde');
-  salasso = advanceToNextRevealGate(salasso).matchState;
-  salasso = advanceToNextRevealGate(salasso).matchState;
-  salasso = advanceToNextRevealGate(salasso).matchState;
-  const salassoDuel = prepareEminenceDuel(salasso, {
-    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
-  });
-  assert.ok(salassoDuel.bundle.hpDeltas.some((e) => e.side === SIDES.ENEMY && e.amount === -3));
-  // Verde (+1) + Affare Salasso (+2); la Presenza è già nello stato all'apertura GENERAL.
-  assert.equal(salassoDuel.matchState.enemy.presence, 3);
-  assert.equal(salassoDuel.matchState.player.presence, 2);
-
-  let accordo = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
-  accordo = choose(accordo, SIDES.PLAYER, 'corte_accordo', { dealAccepted: true });
-  accordo = choose(accordo, SIDES.ENEMY, 'semaforo_verde');
-  accordo = advanceToNextRevealGate(accordo).matchState;
-  accordo = advanceToNextRevealGate(accordo).matchState;
-  accordo = advanceToNextRevealGate(accordo).matchState;
-  const accordoDuel = prepareEminenceDuel(accordo, {
-    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
-  });
-  assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.ENEMY], 1);
-  assert.equal(accordoDuel.bundle.temporaryFocus[SIDES.PLAYER], 0);
-});
-
-test('Accordo pending: resolvePendingDeal sigilla i params e il Duello applica l\'Affare', () => {
-  let state = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo' });
-  state = choose(state, SIDES.PLAYER, 'corte_accordo');
+test('Offerta pending: resolvePendingDeal sigilla la risposta e il Duello applica l\'effetto', () => {
+  let state = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 0 } });
+  state = choose(state, SIDES.PLAYER, 'corte_prestito');
   state = choose(state, SIDES.ENEMY, 'semaforo_verde');
-  state = advanceToNextRevealGate(state).matchState;
-  state = advanceToNextRevealGate(state).matchState;
   const opened = advanceToNextRevealGate(state);
+  assert.equal(opened.gate, REVEAL_GATES.PRE_FIELD);
   assert.equal(opened.bundle.pendingDeals?.length, 1);
   const pending = opened.bundle.pendingDeals[0];
+  assert.equal(pending.mode, 'OFFER');
+
   const resolved = resolvePendingDeal(opened.matchState, pending, { dealAccepted: true });
   assert.equal(resolved.matchState.player.selectedParams.dealAccepted, true);
-  assert.ok(resolved.bundle.hpDeltas.some((e) => e.side === SIDES.ENEMY && e.amount === -2));
-  const duel = prepareEminenceDuel(resolved.matchState, {
+  // +1 dall'abilità, +1 dall'accettazione.
+  assert.equal(resolved.matchState.player.presence, 2);
+
+  let rest = resolved.matchState;
+  rest = advanceToNextRevealGate(rest).matchState;
+  rest = advanceToNextRevealGate(rest).matchState;
+  const duel = prepareEminenceDuel(rest, {
     agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
   });
-  assert.equal(duel.bundle.temporaryFocus[SIDES.ENEMY], 1);
+  assert.equal(duel.bundle.temporaryFocus[SIDES.ENEMY], 2);
+  assert.equal(duel.bundle.temporaryFocus[SIDES.PLAYER], 0);
   assert.equal(duel.bundle.pendingDeals?.length || 0, 0);
 });
 
+test('Offerta rifiutata: nessun effetto nel Duello e nessuna Presenza extra', () => {
+  let state = match({ player: 'corte_rossa', enemy: 'patto_grande_semaforo', presence: { player: 0 } });
+  state = choose(state, SIDES.PLAYER, 'corte_prestito');
+  state = choose(state, SIDES.ENEMY, 'semaforo_verde');
+  const opened = advanceToNextRevealGate(state);
+  const resolved = resolvePendingDeal(opened.matchState, opened.bundle.pendingDeals[0], { dealAccepted: false });
+  assert.equal(resolved.matchState.player.presence, 1);
+  const duel = prepareEminenceDuel(resolved.matchState, {
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  });
+  assert.equal(duel.bundle.temporaryFocus[SIDES.ENEMY], 0);
+  assert.deepEqual(duel.matchState.player.persistent.endMatchDebts || [], []);
+});
+
 test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', () => {
-  let state = match({ player: 'apex_sole_verde', enemy: 'patto_grande_semaforo' });
+  let state = match({ player: LEGACY_APEX, enemy: 'patto_grande_semaforo' });
   state = choose(state, SIDES.PLAYER, 'apex_furia');
   state = choose(state, SIDES.ENEMY, 'semaforo_verde');
   state = advanceToNextRevealGate(state).matchState;
@@ -313,7 +308,7 @@ test('GENERAL già aperto: PV e FC del reveal restano nel bundle del Duello', ()
 });
 
 test('gate GENERAL: la coda rispetta l\'iniziativa dichiarata', () => {
-  let state = match({ player: 'apex_sole_verde', enemy: 'apex_sole_verde' });
+  let state = match({ player: LEGACY_APEX, enemy: LEGACY_APEX });
   state = choose(state, SIDES.PLAYER, 'apex_furia');
   state = choose(state, SIDES.ENEMY, 'apex_furia');
 

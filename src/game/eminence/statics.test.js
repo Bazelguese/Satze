@@ -10,8 +10,12 @@ import { createEminenceMatchState } from './eminenceState.js';
 import { beginEminenceRound, collectPendingEffects } from './eminenceRound.js';
 import { openEminenceRound } from './eminenceDuelGate.js';
 import { ALL_BATTLEFIELDS } from '../../data/battlefields.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
 
-const APEX = 'apex_sole_verde';
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
+
+const APEX = LEGACY_APEX;
 const PATTO = 'patto_grande_semaforo';
 
 const fixedRng = (value = 0) => () => value;

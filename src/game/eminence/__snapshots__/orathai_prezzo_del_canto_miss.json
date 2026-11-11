@@ -1,0 +1,176 @@
+{
+  "ability": {
+    "id": "orathai_prezzo_del_canto",
+    "name": "Il Prezzo del Canto",
+    "presenceDelta": 1,
+    "revealGate": "GENERAL",
+    "text": "In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV."
+  },
+  "bilance": {
+    "cinematicCues": 0,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 0,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      1,
+      2
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "orathai_prezzo_del_canto",
+        "presenceDelta": 1
+      },
+      {
+        "id": "orathai_contrappunto",
+        "presenceDelta": -1
+      }
+    ],
+    "presenceAfterReveal": 2,
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": 1,
+    "selected": "orathai_prezzo_del_canto"
+  },
+  "eminence": {
+    "army": "Orathai",
+    "id": "orathai_primo_canto",
+    "name": "Il Primo Canto"
+  },
+  "notices": [],
+  "scenario": {
+    "branch": "miss",
+    "initiativeSide": "player",
+    "name": "orathai_prezzo_del_canto_miss",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "presenceAfterReveal": 1,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "presenceAfterReveal": 2,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 2
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "ownActivationSatisfied: (assente) → non ancora valutabile",
+            "keys": [
+              "ownActivationSatisfied",
+              "enemyActivationSatisfied"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "orathai_risonanza",
+          "sourceName": "Risonanza",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "ownPowerResolved: true (obs false) → falsa",
+            "keys": [
+              "ownPowerResolved"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "orathai_prezzo_del_canto",
+          "sourceName": "Il Prezzo del Canto",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": "enemyPowerResolved: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyPowerResolved"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "LOSE_HP",
+          "source": "ability",
+          "sourceId": "orathai_prezzo_del_canto",
+          "sourceName": "Il Prezzo del Canto",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

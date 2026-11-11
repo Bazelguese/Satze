@@ -1,0 +1,266 @@
+{
+  "ability": {
+    "id": "apex_preghiera_ululata",
+    "name": "Preghiera Ululata",
+    "presenceDelta": -3,
+    "revealGate": "GENERAL",
+    "text": "Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA»."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      0
+    ],
+    "segmentsWithoutCue": 0,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "apex_cielo_smeraldino",
+        "presenceDelta": 1
+      },
+      {
+        "id": "apex_disprezzo",
+        "presenceDelta": -2
+      },
+      {
+        "id": "apex_preghiera_ululata",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "apex_preghiera_ululata"
+  },
+  "eminence": {
+    "army": "Apex",
+    "id": "apex_sole_verde",
+    "name": "Il Sole Verde"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:apex_preghiera_ululata:GENERAL",
+      "kind": "reveal",
+      "name": "Preghiera Ululata",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "REPLACE_ABILITY",
+          "slot": null,
+          "target": "OWN_AGENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA»."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "apex_preghiera_ululata_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Prima dell'Agente",
+      "cues": [],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:apex_preghiera_ululata:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:apex_preghiera_ululata:GENERAL",
+          "kind": "reveal",
+          "name": "Preghiera Ululata",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "REPLACE_ABILITY",
+              "slot": null,
+              "target": "OWN_AGENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA»."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "roundNumber: 5 (obs 3) → falsa",
+            "keys": [
+              "roundNumber"
+            ],
+            "status": "false"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_FIELD",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma Verde",
+          "target": "GLOBAL",
+          "timing": "ROUND_START"
+        },
+        {
+          "condition": {
+            "detail": "ownBonusActivated: (assente) → non ancora valutabile",
+            "keys": [
+              "ownBonusActivated"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "ora_verde",
+          "sourceName": "Cataclisma Verde",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "REPLACE_ABILITY",
+          "source": "ability",
+          "sourceId": "apex_preghiera_ululata",
+          "sourceName": "Preghiera Ululata",
+          "target": "OWN_AGENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}
