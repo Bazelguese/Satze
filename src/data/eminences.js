@@ -141,19 +141,27 @@ export const EMINENCES = {
       {
         id: 'semaforo_verde',
         name: 'Verde',
-        presenceDelta: 1,
+        presenceDelta: 0,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Tutti i trigger seguono le condizioni normali.',
-        segments: [],
+        text: 'Se in questo Duello un Agente attiva un Potere o un Bonus con trigger Turbo o Intervento, +1 Presenza (una sola volta per Duello).',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.CHANGE_PRESENCE,
+            target: T.SELF,
+            delta: 1,
+            condition: { activatedTriggers: { any: ['turbo', 'intervention'] } },
+          },
+        ],
       },
       {
         id: 'semaforo_giallo',
         name: 'Giallo',
-        presenceDelta: 0,
+        presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Imboscata e Turbo sono considerati soddisfatti in questo round.',
+        text: 'Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
@@ -169,7 +177,7 @@ export const EMINENCES = {
         presenceDelta: -2,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round.',
+        text: 'Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori.',
         segments: [
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,

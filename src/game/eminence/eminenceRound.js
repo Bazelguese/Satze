@@ -472,6 +472,11 @@ export function collectPendingEffects(
     sideExtra.ownPowerResolved = Boolean(extra.powerResolvedBySide?.[side]);
     sideExtra.enemyPowerResolved = Boolean(extra.powerResolvedBySide?.[OPPOSITE_SIDE[side]]);
     sideExtra.ownActivatedTrigger = extra.activatedTriggerBySide?.[side] ?? null;
+    // Trigger attivati da entrambi gli Agenti nel Duello: solo Poteri, e Poteri più Bonus.
+    const powerTriggers = BOTH_SIDES.map((s) => extra.activatedTriggerBySide?.[s]).filter(Boolean);
+    const bonusTriggers = BOTH_SIDES.map((s) => extra.activatedBonusTriggerBySide?.[s]).filter(Boolean);
+    sideExtra.activatedPowerTriggers = powerTriggers;
+    sideExtra.activatedTriggers = [...powerTriggers, ...bonusTriggers];
 
     const ownId = extra.agentIdBySide?.[side] ?? null;
     const enemyId = extra.agentIdBySide?.[OPPOSITE_SIDE[side]] ?? null;

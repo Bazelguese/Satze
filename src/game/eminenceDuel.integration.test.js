@@ -143,7 +143,7 @@ describe('Eminenze nel Duello reale', () => {
   it('Semaforo Giallo accende Imboscata su chi non ha l\'iniziativa', () => {
     const { battleResult } = computeDuelResolution({
       ...baseInput,
-      eminenceBundle: bundleForAbility('semaforo_giallo'),
+      eminenceBundle: bundleForAbility('semaforo_giallo', { presence: 2 }),
     });
 
     expect(battleResult.playerPower).toBe(6);
@@ -222,7 +222,7 @@ describe('Eminenze nel Duello reale', () => {
   });
 
   it('il lato si legge dal contesto: un overlay non travasa fra i due agenti', () => {
-    const bundle = bundleForAbility('semaforo_giallo');
+    const bundle = bundleForAbility('semaforo_giallo', { presence: 2 });
     // Regole di ambito globale: devono valere per entrambi i lati, non per il solo autore.
     expect(bundle.triggerRules.forceSatisfied).toHaveLength(1);
     expect(bundle.triggerRules.forceSatisfied[0].ownerSide).toBe(SIDES.PLAYER);

@@ -48,6 +48,8 @@ export const CONDITION_KEYS = Object.freeze([
   'ownDuelsLost',
   'ownDuelsWonLead',
   'enemyPowerResolved',
+  'activatedPowerTriggers',
+  'activatedTriggers',
 ]);
 
 /**
@@ -57,6 +59,7 @@ export const CONDITION_KEYS = Object.freeze([
  * - array              → appartenenza                   `{ winner: ['player', 'draw'] }`
  * - `{ min, max }`     → intervallo numerico inclusivo  `{ roundNumber: { min: 3 } }`
  * - `{ not }`          → negazione della forma interna  `{ winner: { not: 'draw' } }`
+ * - `{ has }` / `{ any }` → l'elenco contiene il valore / almeno uno dei valori
  * - `{ param, map }`   → valore scelto dal giocatore    `{ duelWinnerRelative: { param: 'pronostico', map: { … } } }`
  *
  * `{ param, map }` confronta il termine del checkpoint con il parametro fissato alla
@@ -79,6 +82,10 @@ function matchesValue(expected, actual, context = {}) {
 
     if ('has' in expected) {
       return Array.isArray(actual) && actual.includes(expected.has);
+    }
+
+    if ('any' in expected) {
+      return Array.isArray(actual) && actual.some((value) => expected.any.includes(value));
     }
 
     if ('min' in expected || 'max' in expected) {

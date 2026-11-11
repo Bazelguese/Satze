@@ -51,8 +51,8 @@ test('sottosistema spento: la preparazione è trasparente', () => {
 });
 
 test('scelta forzata: con una sola opzione legale viene registrata da sola', () => {
-  // Patto parte da 0 Presenza: Rosso (-2) è illegale, restano Verde (+1) e Giallo (0).
-  const two = match({ player: 'patto_grande_semaforo' });
+  // Patto a 2 Presenza: Verde, Giallo e Rosso sono tutte legali.
+  const two = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   assert.equal(autoSelectForcedChoices(two)[SIDES.PLAYER].selectedAbilityId, null);
 
   // Mounthborn a 0 Presenza ha una sola attiva legale: Fame (+1).
@@ -69,7 +69,7 @@ test('scelta forzata: un\'unica legale con parametri AT_SELECTION resta da decid
 });
 
 test('placeholder: con più opzioni legali prende la prima e sblocca il Duello', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const sealed = autoSelectFirstLegalAbility(state, SIDES.PLAYER);
 
   assert.equal(sealed[SIDES.PLAYER].selectedAbilityId, 'semaforo_verde');
@@ -86,7 +86,7 @@ test('placeholder: su Khemet la prima legale è +0 e non richiede slot', () => {
 });
 
 test('gate GENERAL bloccato finché una scelta libera resta pendente', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const result = prepareEminenceDuel(state);
 
   assert.equal(result.blocked, 'SELECTIONS_INCOMPLETE');
@@ -112,7 +112,7 @@ test('preparazione: apre il gate, paga la Presenza e compone il bundle', () => {
 });
 
 test('preparazione: i segmenti differiti arrivano al proprio checkpoint, non prima', () => {
-  const state = match({ player: 'patto_grande_semaforo' });
+  const state = match({ player: 'patto_grande_semaforo', presence: { player: 2 } });
   const chosen = choose(state, SIDES.PLAYER, 'semaforo_giallo');
 
   const result = prepareEminenceDuel(chosen);
@@ -235,7 +235,7 @@ test('reveal: il lato senza UI riceve l\'Agente confermato mancante', () => {
     enemyEminenceId: installSyntheticTargetsEminence(),
   });
   let state = beginEminenceRound(base, { roundNumber: 1 });
-  state = choose(state, SIDES.PLAYER, 'semaforo_giallo');
+  state = choose(state, SIDES.PLAYER, 'semaforo_verde');
   state = choose(state, SIDES.ENEMY, 'test_confermato');
 
   const prepared = prepareEminenceDuel(state, {

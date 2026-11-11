@@ -201,7 +201,7 @@ test('avviso reveal: un\'abilità che agisce nel Duello si annuncia al gate, con
 
 test('sequenza: dopo la scelta lo Statico che riordina apre PRE_AGENT prima di PRE_FIELD', () => {
   const { matchState: openedState } = opened('mascarada_organizzatore', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(openedState, 'mascarada_scommessa', 'semaforo_giallo', {
+  const chosen = bothChosen(openedState, 'mascarada_scommessa', 'semaforo_verde', {
     pronostico: 'VITTORIA_PROPRIA',
   });
 
@@ -234,7 +234,7 @@ test('sequenza: Gorgoglio si annuncia prima dell\'Agente e non ha esito da verif
   const { matchState: openedState } = opened('mounthborn_fame', 'patto_grande_semaforo', 1);
   const locked = commitEminenceSetupChoice(openedState, SIDES.PLAYER, { preyCardId: 102 });
   assert.equal(locked.ok, true);
-  const chosen = bothChosen(locked.matchState, 'mounthborn_gorgoglio', 'semaforo_giallo', {
+  const chosen = bothChosen(locked.matchState, 'mounthborn_gorgoglio', 'semaforo_verde', {
     preyCardId: 116,
   });
 
@@ -266,7 +266,7 @@ test('sequenza: Fame parla solo a fine Duello', () => {
   const { matchState: openedState } = openEminenceRound(match, { roundNumber: 1 });
   const locked = commitEminenceSetupChoice(openedState, SIDES.PLAYER, { preyCardId: 102 });
   assert.equal(locked.ok, true);
-  const chosen = bothChosen(locked.matchState, 'mounthborn_fame_ricarica', 'semaforo_giallo');
+  const chosen = bothChosen(locked.matchState, 'mounthborn_fame_ricarica', 'semaforo_verde');
 
   let state = chosen;
   for (let i = 0; i < 3; i += 1) {
@@ -298,7 +298,7 @@ test('sequenza: senza riordino il primo gate resta PRE_FIELD', () => {
     }),
     { roundNumber: 1 },
   );
-  const chosen = bothChosen(base, 'apex_furia', 'semaforo_giallo');
+  const chosen = bothChosen(base, 'apex_furia', 'semaforo_verde');
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.gate, REVEAL_GATES.PRE_FIELD);
 });
@@ -365,7 +365,7 @@ test('avviso: la Cattura-Energia parla solo quando Overdrive si è attivato', ()
 test('avviso: il Sigillo annuncia il Campo scelto al reveal, non l\'effetto in Duello', () => {
   const { matchState } = opened('khemet_maledizioni', 'patto_grande_semaforo', 1);
   matchState.player.presence = 2;
-  const chosen = bothChosen(matchState, 'khemet_maledizione_va', 'semaforo_giallo', { slot: 2 });
+  const chosen = bothChosen(matchState, 'khemet_maledizione_va', 'semaforo_verde', { slot: 2 });
   const first = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   assert.equal(first.gate, REVEAL_GATES.PRE_FIELD);
   const notice = first.notices.find((entry) => entry.name === 'Maledizione della Fama');
@@ -406,7 +406,7 @@ test('avviso: Condensazione parla al controllo Ancorato, non al reveal anticipat
 
 test('avviso: Deriva si legge al GENERAL e non si ripete a fine Duello', () => {
   const { matchState } = opened('figli_domanda_senza_fine', 'patto_grande_semaforo', 1);
-  const chosen = bothChosen(matchState, 'figli_deriva', 'semaforo_giallo');
+  const chosen = bothChosen(matchState, 'figli_deriva', 'semaforo_verde');
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -477,7 +477,7 @@ test('avviso: se GENERAL si apre nel Duello, Condensazione parla una sola volta'
 
 test('avviso: Male Crescente parla al prepare, hit o miss', () => {
   const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
-  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_giallo', { cardId: 301 });
+  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_verde', { cardId: 301 });
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -502,7 +502,7 @@ test('avviso: Male Crescente parla al prepare, hit o miss', () => {
 
 test('avviso: Seduzione si annuncia prima dell\'Agente nominando il divieto', () => {
   const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
-  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_giallo', { cardId: 301 });
+  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_verde', { cardId: 301 });
   const preField = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
   const preAgent = advanceToNextRevealGate(preField.matchState, { initiativeSide: SIDES.PLAYER });
   assert.equal(preAgent.gate, REVEAL_GATES.PRE_AGENT);

@@ -207,12 +207,47 @@ test('Semaforo Verde: nessun force/forbid — i trigger restano naturali', () =>
   assert.equal(bundle.triggerRules.forceForbidden.length, 0);
 });
 
+test('Semaforo Verde: +1 Presenza se si attiva un Potere o Bonus Turbo o Intervento, una volta', () => {
+  const base = createEminenceMatchState({ playerEminenceId: 'patto_grande_semaforo', enemyEminenceId: 'apex_sole_verde' });
+  let matchState = beginEminenceRound(base, { roundNumber: 3 });
+  matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'semaforo_verde').matchState;
+  matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'apex_furia').matchState;
+  matchState = prepareEminenceDuel(matchState).matchState;
+  assert.equal(matchState.player.presence, 0);
+  const settle = (activatedTriggerBySide, activatedBonusTriggerBySide = null) => settleEminenceRound(matchState, {
+    winner: SIDES.PLAYER,
+    activatedTriggerBySide,
+    activatedBonusTriggerBySide,
+  }).matchState.player.presence;
+
+  assert.equal(settle({ [SIDES.PLAYER]: 'intervention', [SIDES.ENEMY]: null }), 1);
+  // Anche il Potere avversario conta, e due attivazioni pagano comunque una volta.
+  assert.equal(settle({ [SIDES.PLAYER]: 'turbo', [SIDES.ENEMY]: 'intervention' }), 1);
+  assert.equal(settle({ [SIDES.PLAYER]: null, [SIDES.ENEMY]: null }, { [SIDES.PLAYER]: null, [SIDES.ENEMY]: 'turbo' }), 1);
+  assert.equal(settle({ [SIDES.PLAYER]: 'imboscata', [SIDES.ENEMY]: 'glory' }), 0);
+});
+
+test('binding: il trigger del Bonus attivato esce dal risultato del Duello', () => {
+  const resolved = powerResolutionFromDuel({
+    battleResult: {
+      playerHasBonus: true,
+      playerBonusBlocked: false,
+      playerEffectiveArmyBonus: { trigger: 'intervention' },
+      enemyHasBonus: true,
+      enemyBonusBlocked: true,
+      enemyEffectiveArmyBonus: { trigger: 'turbo' },
+    },
+  });
+  assert.deepEqual(resolved.activatedBonusTriggerBySide, { [SIDES.PLAYER]: 'intervention', [SIDES.ENEMY]: null });
+});
+
 test('Semaforo Giallo: apre Imboscata e Turbo', () => {
   const { bundle } = playRound({
     playerEminenceId: 'apex_sole_verde',
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'apex_furia',
     enemyAbility: 'semaforo_giallo',
+    presence: { enemy: 2 },
   });
 
   assert.deepEqual(semaforoTriggers(bundle, SIDES.PLAYER), {
@@ -262,6 +297,7 @@ test('Semaforo: agisce a BEFORE_TRIGGER_CHECK, non al reveal', () => {
     playerEminenceId: 'apex_sole_verde',
     enemyEminenceId: 'patto_grande_semaforo',
   });
+  base.enemy.presence = 2;
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'apex_furia').matchState;
   matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'semaforo_giallo').matchState;
@@ -281,6 +317,7 @@ test('checkpoint: un segmento consumato non viene rieseguito', () => {
     playerEminenceId: 'patto_grande_semaforo',
     enemyEminenceId: 'apex_sole_verde',
   });
+  base.player.presence = 2;
   let matchState = beginEminenceRound(base, { roundNumber: 3 });
   matchState = selectEminenceAbility(matchState, SIDES.PLAYER, 'semaforo_giallo').matchState;
   matchState = selectEminenceAbility(matchState, SIDES.ENEMY, 'apex_furia').matchState;

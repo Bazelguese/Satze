@@ -91,11 +91,14 @@ test('vista: due scelte segrete diverse producono la stessa proiezione avversari
   assert.equal(viewA.opponent.hasSealedSelection, true);
 });
 
-test('giallo a segmenti vuoti resta un\'opzione implementata', () => {
+test('Patto a 0 Presenza: Verde è l\'unica opzione selezionabile', () => {
   const view = buildEminenceChoiceView(match('patto_grande_semaforo', 'apex_sole_verde'), SIDES.PLAYER);
+  const green = view.self.options.find((o) => o.id === 'semaforo_verde');
+  assert.equal(green.implemented, true);
+  assert.equal(green.selectable, true);
   const yellow = view.self.options.find((o) => o.id === 'semaforo_giallo');
-  assert.equal(yellow.implemented, true);
-  assert.equal(yellow.selectable, true);
+  assert.equal(yellow.selectable, false);
+  assert.equal(yellow.blocker, OPTION_BLOCKERS.INSUFFICIENT_PRESENCE);
 });
 
 test('vista: il costo mostrato segue i delta persistenti', () => {
@@ -340,7 +343,7 @@ test('vista tavolo: il peek non ritarda la comparsa e dopo il lock si può riapr
   const both = selectEminenceAbility(
     selectEminenceAbility(match(), SIDES.PLAYER, 'apex_disprezzo').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const done = buildEminenceChoiceView(both, SIDES.PLAYER);
   const afterLock = shouldShowEminenceLayer(done, { gamePhase: 'selectField' });
@@ -367,7 +370,7 @@ test('rail: dopo un avviso non torna da sola se la scelta è già sigillata', ()
   const both = selectEminenceAbility(
     selectEminenceAbility(match(), SIDES.PLAYER, 'apex_disprezzo').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const locked = buildEminenceChoiceView(both, SIDES.PLAYER);
   assert.equal(isAwaitingEminenceChoice(locked), false);
@@ -438,7 +441,7 @@ test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', (
   const sealed = selectEminenceAbility(
     selectEminenceAbility(opened, SIDES.PLAYER, 'test_confermato').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
   const beforeAgents = buildEminenceChoiceView(sealed, SIDES.PLAYER);
   assert.equal(isAwaitingRevealParams(beforeAgents), false);
@@ -479,7 +482,7 @@ test('tabellone: dopo params slot pronti i click non restano in modalità Maledi
   const sealed = selectEminenceAbility(
     selectEminenceAbility(opened, SIDES.PLAYER, 'khemet_maledizione_va').matchState,
     SIDES.ENEMY,
-    'semaforo_giallo',
+    'semaforo_verde',
   ).matchState;
 
   const awaiting = buildEminenceChoiceView(sealed, SIDES.PLAYER, { slotCount: 5 });

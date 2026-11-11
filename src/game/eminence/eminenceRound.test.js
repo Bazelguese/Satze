@@ -215,7 +215,8 @@ test('reveal: il delta base viene applicato all\'apertura, non alla selezione', 
   const { matchState: revealed } = completeGeneralGate(matchState, {});
   assert.equal(revealed.player.presence, 1);
   assert.equal(revealed.player.presenceSpentThisRound, 2);
-  assert.equal(revealed.enemy.presence, 1);
+  // Verde costa 0: la Presenza del Patto non si muove al reveal.
+  assert.equal(revealed.enemy.presence, 0);
   assert.equal(revealed.enemy.presenceSpentThisRound, 0);
 });
 
@@ -249,7 +250,7 @@ test('reveal: la risoluzione segue l\'iniziativa anche se il pagamento è simult
 });
 
 test('reveal: i segmenti differiti vengono armati, non risolti', () => {
-  let matchState = startRound('patto_grande_semaforo', 'apex_sole_verde');
+  let matchState = startRoundWithPresence('patto_grande_semaforo', 'apex_sole_verde', { player: 2 });
   matchState = chooseBoth(matchState, 'semaforo_giallo', 'apex_furia');
 
   const { matchState: revealed, resolutionQueue } = completeGeneralGate(matchState, {});
@@ -312,11 +313,11 @@ test('deduzione: a inizio round le ipotesi sono le sole abilità legali al check
     ['apex_furia', 'apex_disprezzo']
   );
 
-  // Il Grande Semaforo a 0 Presenza non poteva scegliere Rosso.
+  // Il Grande Semaforo a 0 Presenza non poteva scegliere Giallo né Rosso (−2).
   const enemyView = selectPublicEminenceState(matchState.enemy);
   assert.deepEqual(
     getSealedAbilityHypotheses(enemyView, matchState.gateProgress),
-    ['semaforo_verde', 'semaforo_giallo']
+    ['semaforo_verde']
   );
 });
 
