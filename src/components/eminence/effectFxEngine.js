@@ -432,7 +432,8 @@ const THEMES = {
     },
   },
 
-  // Bella Malelabbra — il bacio avvelenato: l'impronta delle labbra, poi il veleno si dirama
+  // Bella Malelabbra — il bacio avvelenato: labbra inclinate col contorno verde; poi la bocca
+  // si schiude e ne sbuca un topo
   ratti: {
     color: (o) => hexRgb(o.accent), color2: [232, 84, 178], count: 12,
     heart(ctx, x, y, s, rot) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath(); ctx.moveTo(0, s * 0.9); ctx.bezierCurveTo(-s * 1.5, -s * 0.2, -s * 0.7, -s * 1.3, 0, -s * 0.45); ctx.bezierCurveTo(s * 0.7, -s * 1.3, s * 1.5, -s * 0.2, 0, s * 0.9); ctx.closePath(); ctx.restore(); },
@@ -463,9 +464,9 @@ const THEMES = {
       const a = env(t, 40, 1300, 1850); const s = stamp(t / 320); const w = e.R * 1.3 * s; const dark = mix(e.c2, [40, 0, 40], 0.6);
       // lo schiocco: dopo l'impronta le labbra si stringono un istante e si rilassano
       const smack = env(t - 330, 70, 110, 330); const lw = w * (1 - 0.07 * smack);
-      // poi la bocca si schiude e ne esce la lingua biforcuta: guizza due volte e rientra
-      const part = env(t - 500, 170, 720, 900); const open = 0.32 - 0.2 * smack + 0.36 * part;
-      const out = env(t - 560, 190, 600, 800); const tilt = -0.2;
+      // poi la bocca si schiude e ne sbuca un topo: annusa, si guarda attorno e rientra
+      const part = env(t - 500, 170, 760, 940); const open = 0.32 - 0.2 * smack + 0.5 * part;
+      const out = easeInOut(env(t - 560, 220, 640, 840)); const tilt = -0.2;
       // alone verde dietro alle labbra: respira piano
       const breathe = 0.82 + 0.18 * Math.sin(t * 0.008);
       ctx.save(); ctx.translate(e.cx, e.cy); ctx.scale(1, 0.62); glow(ctx, 0, 0, w * 1.7, e.c, 0.6 * a * breathe); ctx.restore();
@@ -509,24 +510,39 @@ const THEMES = {
         const sweep = (t - 380) / 480; if (sweep > 0 && sweep < 1) { const sx = e.cx - lw * 1.2 + sweep * lw * 2.4; const sg = ctx.createLinearGradient(sx - lw * 0.22, 0, sx + lw * 0.22, 0); sg.addColorStop(0, rgba(WHITE, 0)); sg.addColorStop(0.5, rgba(WHITE, 0.55 * a)); sg.addColorStop(1, rgba(WHITE, 0)); ctx.fillStyle = sg; ctx.fillRect(sx - lw * 0.22, e.cy - lw, lw * 0.44, lw * 2); }
       };
       ctx.save(); L(ctx, e.cx, e.cy, lw, open); ctx.clip(); shine(); ctx.restore();
-      // la lingua biforcuta: esce dal buio, passa sopra il labbro inferiore e guizza
+      // il topo: sbuca dal buio tra le labbra, annusa, si guarda attorno e rientra
       if (out > 0.01) {
-        const len = lw * 1.3 * out; const flick = Math.sin(t * 0.032) * 0.6 * out; const wb = lw * 0.1; const n = 20; const fork = 0.6;
-        const spine = (u) => { const sway = Math.sin(u * 4.2 + t * 0.02) * lw * 0.17 * u + flick * lw * 0.34 * u * u; return [e.cx + sway, e.cy - hh * open * 0.2 + len * u]; };
-        const left = []; const right = [];
-        for (let i = 0; i <= n; i += 1) { const u = (i / n) * fork; const [x, y] = spine(u); const [xb, yb] = spine(u + 0.02); const d = Math.hypot(xb - x, yb - y) || 1; const nx = -(yb - y) / d; const ny = (xb - x) / d; const half = wb * (1 - 0.45 * (u / fork)); left.push([x + nx * half, y + ny * half]); right.push([x - nx * half, y - ny * half]); }
-        const [fx, fy] = spine(fork); const [fx2, fy2] = spine(fork + 0.02); const dirA = Math.atan2(fy2 - fy, fx2 - fx); const spread = 0.42 + 0.2 * Math.sin(t * 0.03); const tipLen = len * (1 - fork);
-        const tipL = [fx + Math.cos(dirA + spread) * tipLen, fy + Math.sin(dirA + spread) * tipLen]; const tipR = [fx + Math.cos(dirA - spread) * tipLen, fy + Math.sin(dirA - spread) * tipLen];
-        const tg = ctx.createLinearGradient(e.cx, e.cy, e.cx, e.cy + len);
-        tg.addColorStop(0, rgba([90, 8, 40], a)); tg.addColorStop(0.35, rgba([214, 44, 92], a)); tg.addColorStop(1, rgba([255, 120, 150], a));
-        ctx.fillStyle = tg; ctx.shadowColor = rgba(e.c, 0.9 * a); ctx.shadowBlur = 10; ctx.beginPath();
-        left.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-        ctx.quadraticCurveTo(fx + Math.cos(dirA + spread * 1.6) * tipLen * 0.5, fy + Math.sin(dirA + spread * 1.6) * tipLen * 0.5, tipL[0], tipL[1]); ctx.lineTo(fx + Math.cos(dirA) * tipLen * 0.12, fy + Math.sin(dirA) * tipLen * 0.12); ctx.lineTo(tipR[0], tipR[1]); ctx.quadraticCurveTo(fx + Math.cos(dirA - spread * 1.6) * tipLen * 0.5, fy + Math.sin(dirA - spread * 1.6) * tipLen * 0.5, right[right.length - 1][0], right[right.length - 1][1]);
-        right.reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
-        // solco al centro
-        ctx.strokeStyle = rgba([110, 10, 50], 0.7 * a); ctx.lineWidth = Math.max(1, lw * 0.012); ctx.beginPath();
-        for (let i = 0; i <= n; i += 1) { const [x, y] = spine((i / n) * fork); ctx[i ? 'lineTo' : 'moveTo'](x, y); } ctx.stroke();
-        // il labbro superiore torna davanti alla radice della lingua
+        const hw2 = lw * 0.2; const hl = lw * 0.52; // mezza larghezza e lunghezza del muso
+        const look = Math.sin(t * 0.011) * 0.16 * out; const sniff = Math.sin(t * 0.06) * lw * 0.012;
+        const fur = [74, 64, 84]; const furD = [30, 24, 38]; const pink = [244, 150, 190];
+        ctx.save(); ctx.translate(e.cx + lw * 0.04, e.cy - hh * open * 0.55 - hl * 0.55 + hl * 0.86 * out); ctx.rotate(look);
+        // orecchie (dietro alla testa): spuntano per ultime
+        [-1, 1].forEach((d) => { const tw2 = Math.sin(t * 0.03 + d) * 0.06; ctx.save(); ctx.translate(d * hw2 * 0.86, hl * 0.06); ctx.rotate(d * (0.25 + tw2));
+          ctx.fillStyle = rgba(furD, a); ctx.beginPath(); ctx.ellipse(0, 0, hw2 * 0.5, hw2 * 0.58, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = rgba(pink, 0.85 * a); ctx.beginPath(); ctx.ellipse(0, hw2 * 0.04, hw2 * 0.3, hw2 * 0.38, 0, 0, TAU); ctx.fill(); ctx.restore(); });
+        // testa a pera: guance larghe in alto, muso che si stringe verso il basso
+        const hg = ctx.createLinearGradient(0, 0, 0, hl); hg.addColorStop(0, rgba(furD, a)); hg.addColorStop(0.45, rgba(fur, a)); hg.addColorStop(1, rgba(mix(fur, WHITE, 0.22), a));
+        ctx.fillStyle = hg; ctx.shadowColor = rgba(e.c, 0.9 * a); ctx.shadowBlur = 9; ctx.beginPath(); ctx.moveTo(-hw2, hl * 0.2);
+        ctx.bezierCurveTo(-hw2 * 1.05, -hl * 0.12, hw2 * 1.05, -hl * 0.12, hw2, hl * 0.2);
+        ctx.bezierCurveTo(hw2 * 0.95, hl * 0.6, hw2 * 0.34, hl * 0.92, 0, hl + sniff);
+        ctx.bezierCurveTo(-hw2 * 0.34, hl * 0.92, -hw2 * 0.95, hl * 0.6, -hw2, hl * 0.2); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        // occhi verdi accesi, con una palpebra che batte una volta
+        const blink = 1 - env(t - 1010, 40, 70, 140) * 0.9;
+        [-1, 1].forEach((d) => { const ex = d * hw2 * 0.46; const ey = hl * 0.36; ctx.globalCompositeOperation = 'lighter'; glow(ctx, ex, ey, hw2 * 0.5, e.c, 0.8 * a); ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = rgba(mix(e.c, WHITE, 0.35), a); ctx.beginPath(); ctx.ellipse(ex, ey, hw2 * 0.15, hw2 * 0.17 * blink, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = rgba([6, 16, 8], a); ctx.beginPath(); ctx.ellipse(ex, ey, hw2 * 0.055, hw2 * 0.13 * blink, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = rgba(WHITE, 0.9 * a); ctx.beginPath(); ctx.arc(ex - hw2 * 0.05, ey - hw2 * 0.06, hw2 * 0.035, 0, TAU); ctx.fill(); });
+        // naso, incisivi e baffi che fremono
+        const ny2 = hl * 0.93 + sniff;
+        ctx.fillStyle = rgba([250, 246, 232], a); ctx.fillRect(-hw2 * 0.09, ny2 + hw2 * 0.08, hw2 * 0.08, hw2 * 0.2); ctx.fillRect(hw2 * 0.01, ny2 + hw2 * 0.08, hw2 * 0.08, hw2 * 0.2);
+        ctx.fillStyle = rgba(pink, a); ctx.beginPath(); ctx.ellipse(0, ny2, hw2 * 0.17, hw2 * 0.13, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = rgba([236, 230, 240], 0.8 * a); ctx.lineWidth = Math.max(0.8, lw * 0.006); ctx.lineCap = 'round';
+        [-1, 1].forEach((d) => { for (let i = -1; i <= 1; i += 1) { const wa = i * 0.3 + Math.sin(t * 0.05 + i) * 0.07; ctx.beginPath(); ctx.moveTo(d * hw2 * 0.16, ny2 - hw2 * 0.08); ctx.lineTo(d * (hw2 * 0.16 + Math.cos(wa) * hw2 * 1.05), ny2 - hw2 * 0.08 + Math.sin(wa) * hw2 * 1.05); ctx.stroke(); } });
+        ctx.restore();
+        // zampine rosa aggrappate al labbro inferiore
+        [-1, 1].forEach((d) => { const px = e.cx + lw * 0.04 + d * hw2 * 1.25; const py = e.cy + hh * open * 0.7 + (1 - out) * lw * 0.1; ctx.fillStyle = rgba(pink, a * Math.min(1, out * 1.6));
+          for (let f = -1; f <= 1; f += 1) { ctx.beginPath(); ctx.ellipse(px + f * hw2 * 0.13, py + Math.abs(f) * hw2 * 0.03, hw2 * 0.065, hw2 * 0.17, f * 0.2, 0, TAU); ctx.fill(); } });
+        // il labbro superiore torna davanti: il topo esce da sotto
         ctx.fillStyle = g; L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.fill();
         ctx.save(); L(ctx, e.cx, e.cy, lw, open, 'upper'); ctx.clip(); shine(); ctx.restore();
       }
