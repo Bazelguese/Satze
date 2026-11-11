@@ -913,7 +913,7 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 | −3 | La Guerra dell'Ultimo Giorno | Infliggi il tuo DAN anche se perdi il Duello; se vinci, l'avversario perde altri 3 PV. | 2.25 | circa 1.8–2.0 ✅ (caso peggiore 6 PV perdendo con DAN 6) |
 
 **Note di regola:**
-- Artiglieria Pesante vale per gli effetti di Danni diretti del Potere e del Bonus dei tuoi Agenti; non è cumulabile con se stessa oltre quanto scelto dal giocatore (ogni uso aggiunge +1).
+- Artiglieria Pesante vale per gli effetti di Danni diretti del Potere e del Bonus dei tuoi Agenti. **Da decidere:** se un secondo uso nello stesso Scontro si somma (+2) o non ha effetto.
 - La versione con «1 Danno diretto per ogni FC oltre il terzo» è stata scartata: al round 2 si possono investire 10–12 FC su un Agente (18 FC iniziali, riserva di 1 FC per Agente da giocare), e con il Titano Corazzato MK-IV darebbe 13 PV in un solo round.
 
 **Lavoro di implementazione:** modificatore persistente ai Danni diretti dei propri Agenti; DAN inflitto anche in sconfitta; PV extra in vittoria.
