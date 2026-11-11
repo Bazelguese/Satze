@@ -57,6 +57,7 @@ export function createEffectBundle() {
     deals: [],
     pendingDeals: [],
     blockedPowerSides: [],
+    echoPowerSides: [],
     debtEscalations: [],
   };
 }
@@ -493,6 +494,14 @@ const handlers = {
   [P.BLOCK_POWER]: (bundle, segment, ctx) => {
     for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
       if (!bundle.blockedPowerSides.includes(side)) bundle.blockedPowerSides.push(side);
+    }
+  },
+
+  // Eco: se il Potere dell'Agente nemico si attiva, si attiva anche per l'Agente bersaglio.
+  // La ripetizione la esegue il Duello, che sa quali Poteri si sono attivati.
+  [P.ECHO_POWER]: (bundle, segment, ctx) => {
+    for (const side of resolveTargetSides(segment.target, ctx.ownerSide, ctx.params)) {
+      if (!bundle.echoPowerSides.includes(side)) bundle.echoPowerSides.push(side);
     }
   },
 

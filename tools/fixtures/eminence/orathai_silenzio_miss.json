@@ -11,7 +11,7 @@
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "imboscata",
+      "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
@@ -28,7 +28,7 @@
       "league": 4,
       "power": 5,
       "damage": 3,
-      "trigger": "imboscata",
+      "trigger": "glory",
       "focusInvested": 3,
       "anchored": false
     }

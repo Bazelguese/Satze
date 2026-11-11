@@ -1363,45 +1363,43 @@ test('Orathai statico: +1 Presenza solo se entrambi i requisiti sono soddisfatti
   assert.equal(missOne.matchState.player.presence, 1);
 });
 
-test('Orathai +0: Tacet paga +2 se almeno uno non soddisfa', () => {
+test('Orathai +1: Il Prezzo del Canto costa 1 PV per ogni Potere attivato', () => {
   const { matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'orathai_tacet',
+    playerAbility: 'orathai_prezzo_del_canto',
     enemyAbility: 'semaforo_verde',
   });
-  assert.equal(matchState.player.presence, 1);
-
-  const hitBoth = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
-  });
-  assert.equal(hitBoth.matchState.player.presence, 3);
-
-  const hitOne = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
-  });
-  assert.equal(hitOne.matchState.player.presence, 3);
-
-  const miss = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true },
-  });
-  // Tacet non paga, ma lo Statico Risonanza sì (+1).
-  assert.equal(miss.matchState.player.presence, 2);
+  assert.equal(matchState.player.presence, 2);
+  const lost = (powerResolvedBySide) => settleEminenceRound(matchState, { winner: SIDES.PLAYER, powerResolvedBySide })
+    .bundle?.hpDeltas.filter((e) => e.side === SIDES.PLAYER).reduce((sum, e) => sum + e.amount, 0) ?? 0;
+  assert.equal(lost({ [SIDES.PLAYER]: true, [SIDES.ENEMY]: true }), -2);
+  assert.equal(lost({ [SIDES.PLAYER]: false, [SIDES.ENEMY]: true }), -1);
+  assert.equal(lost({ [SIDES.PLAYER]: true, [SIDES.ENEMY]: false }), -1);
+  assert.equal(lost({ [SIDES.PLAYER]: false, [SIDES.ENEMY]: false }), 0);
 });
 
-test('Orathai −2: Contrappunto deposita UNBLOCKABLE + MIRROR_UNSATISFIED', () => {
-  const { bundle } = playRound({
+test('Orathai −1: Contrappunto è solo lo specchio, senza immunità ai Blocca', () => {
+  const { bundle, matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
     playerAbility: 'orathai_contrappunto',
     enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
   });
-  assert.equal(bundle.triggerRules.unblockable.length, 1);
+  assert.equal(matchState.player.presence, 0);
+  assert.equal(bundle.triggerRules.unblockable.length, 0);
   assert.equal(bundle.triggerRules.mirrorUnsatisfied.length, 1);
+});
+
+test('Orathai −2: Eco arma la ripetizione del Potere nemico sul proprio Agente', () => {
+  const { bundle } = playRound({
+    playerEminenceId: ORATHAI,
+    enemyEminenceId: 'patto_grande_semaforo',
+    playerAbility: 'orathai_eco',
+    enemyAbility: 'semaforo_verde',
+    presence: { player: 2 },
+  });
+  assert.deepEqual(bundle.echoPowerSides, [SIDES.PLAYER]);
 });
 
 test('Orathai −3: Silenzio sostituisce i trigger Potere con Magnanimo', () => {
@@ -1421,12 +1419,12 @@ test('Orathai: Fine Scontro non ribatte i delta già risolti', () => {
   const { matchState } = playRound({
     playerEminenceId: ORATHAI,
     enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'orathai_tacet',
+    playerAbility: 'orathai_prezzo_del_canto',
     enemyAbility: 'semaforo_verde',
   });
   const settled = settleEminenceRound(matchState, {
     winner: SIDES.PLAYER,
-    activationSatisfiedBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
+    powerResolvedBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: true },
   });
   const closed = settleEminenceMatch(settled.matchState);
   assert.equal(closed.bundle, null);

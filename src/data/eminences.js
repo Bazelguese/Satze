@@ -645,44 +645,59 @@ export const EMINENCES = {
 
     abilities: [
       {
-        id: 'orathai_tacet',
-        name: 'Tacet',
-        presenceDelta: 0,
+        id: 'orathai_prezzo_del_canto',
+        name: 'Il Prezzo del Canto',
+        presenceDelta: 1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        announceAtReveal: false,
-        text: 'Se uno dei due Agenti non soddisfa il requisito di attivazione del suo trigger Potere, +2 Presenza.',
+        text: 'In questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
-            primitive: P.CHANGE_PRESENCE,
+            primitive: P.LOSE_HP,
             target: T.SELF,
-            delta: 2,
-            condition: {
-              activationUnsatisfiedCount: { min: 1 },
-            },
+            amount: 1,
+            cause: HP_LOSS_CAUSES.EMINENCE_COST,
+            condition: { ownPowerResolved: true },
+          },
+          {
+            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
+            primitive: P.LOSE_HP,
+            target: T.SELF,
+            amount: 1,
+            cause: HP_LOSS_CAUSES.EMINENCE_COST,
+            condition: { enemyPowerResolved: true },
           },
         ],
       },
       {
         id: 'orathai_contrappunto',
         name: 'Contrappunto',
-        presenceDelta: -2,
+        presenceDelta: -1,
         revealGate: REVEAL_GATES.GENERAL,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Il tuo Agente schierato è immune dagli effetti Blocca. Se il tuo Agente schierato non soddisfa i requisiti del suo trigger Potere, anche l\'Agente avversario non lo soddisferà.',
+        text: 'Se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell\'Agente nemico.',
         segments: [
-          {
-            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
-            primitive: P.UNBLOCKABLE_POWER,
-            scope: TRIGGER_SCOPES.OWN,
-            excludeTriggers: ['conquest', 'lastWish'],
-          },
           {
             timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
             primitive: P.MIRROR_UNSATISFIED_POWER,
             scope: TRIGGER_SCOPES.ENEMY,
             excludeTriggers: ['conquest', 'lastWish'],
+          },
+        ],
+      },
+      {
+        id: 'orathai_eco',
+        name: 'Eco',
+        presenceDelta: -2,
+        revealGate: REVEAL_GATES.GENERAL,
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
+        text: 'In questo Duello, se il Potere dell\'Agente nemico si attiva, si attiva anche per il tuo Agente.',
+        segments: [
+          {
+            timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK,
+            primitive: P.ECHO_POWER,
+            target: T.OWN_AGENT,
           },
         ],
       },

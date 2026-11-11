@@ -4,7 +4,7 @@
   "player": {
     "eminenceId": "orathai_primo_canto",
     "presence": 1,
-    "abilityId": "orathai_tacet",
+    "abilityId": "orathai_prezzo_del_canto",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -52,12 +52,8 @@
       "enemy": 0
     },
     "finalPowerBySide": null,
-    "finalPowerByCardId": null,
-    "activationSatisfiedBySide": {
-      "player": false,
-      "enemy": false
-    }
+    "finalPowerByCardId": null
   },
-  "name": "orathai_tacet_hit",
-  "branch": "hit"
+  "name": "orathai_prezzo_del_canto_miss",
+  "branch": "miss"
 }

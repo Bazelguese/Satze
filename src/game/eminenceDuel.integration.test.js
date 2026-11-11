@@ -252,6 +252,30 @@ describe('BLOCK_POWER nel Duello reale', () => {
   });
 });
 
+describe('ECHO_POWER nel Duello reale', () => {
+  function echo() {
+    return applyEminenceSegments([{
+      segment: { timing: EFFECT_TIMINGS.BEFORE_TRIGGER_CHECK, primitive: 'ECHO_POWER', target: 'OWN_AGENT' },
+      ownerSide: SIDES.PLAYER,
+      abilityId: 'test_echo',
+    }]);
+  }
+
+  it('se il Potere nemico si attiva, si attiva anche per il proprio Agente', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, eminenceBundle: echo() });
+    // L'avversario (Imboscata: +2 POT) si attiva; l'Eco lo ripete per il giocatore.
+    expect(battleResult.enemyPower).toBe(6);
+    expect(battleResult.playerPower).toBe(6);
+  });
+
+  it('se il Potere nemico non si attiva, non c\'è nulla da ripetere', () => {
+    const { battleResult } = computeDuelResolution({ ...baseInput, isPlayerFirst: true, eminenceBundle: echo() });
+    // Ora l'avversario risponde: la sua Imboscata è spenta, quella del giocatore accesa.
+    expect(battleResult.enemyPower).toBe(4);
+    expect(battleResult.playerPower).toBe(6);
+  });
+});
+
 describe('TRANSPLANT_POWER nel Duello reale', () => {
   function transplant(graftInto) {
     return applyEminenceSegments([{
@@ -592,13 +616,13 @@ describe('Conversioni e override Conquista nel Duello', () => {
 });
 
 describe('Orathai nel Duello', () => {
-  it('Contrappunto deposita UNBLOCKABLE proprio e MIRROR sull\'avversario', () => {
+  it('Contrappunto deposita solo il MIRROR sull\'avversario', () => {
     const bundle = bundleForAbility('orathai_contrappunto', {
       eminenceId: 'orathai_primo_canto',
       presence: 2,
     });
 
-    expect(bundle.triggerRules.unblockable.length).toBeGreaterThan(0);
+    expect(bundle.triggerRules.unblockable.length).toBe(0);
     expect(bundle.triggerRules.mirrorUnsatisfied.length).toBeGreaterThan(0);
 
     const { battleResult } = computeDuelResolution({

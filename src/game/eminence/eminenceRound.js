@@ -464,6 +464,7 @@ export function collectPendingEffects(
     if (knownWinner) sideExtra.duelWinnerRelative = relativeDuelOutcome(extra.winner, side);
     sideExtra.aliasUsed = Boolean(extra.aliasUsedBySide?.[side]);
     sideExtra.ownPowerResolved = Boolean(extra.powerResolvedBySide?.[side]);
+    sideExtra.enemyPowerResolved = Boolean(extra.powerResolvedBySide?.[OPPOSITE_SIDE[side]]);
     sideExtra.ownActivatedTrigger = extra.activatedTriggerBySide?.[side] ?? null;
 
     const ownId = extra.agentIdBySide?.[side] ?? null;

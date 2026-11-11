@@ -75,6 +75,9 @@ export function applyDuelMainAbilities({
     }
   }
 
+  // Poteri risolti in questo passaggio, per gli effetti Eminenza che ne dipendono (Eco).
+  const powerActivated = { player: false, enemy: false };
+
   for (const sideKey of sides) {
     const side = getDuelSideBundle(sideKey, bundleArgs);
     const agent = side.agent;
@@ -94,6 +97,7 @@ export function applyDuelMainAbilities({
           : ability.value;
       const abilitySource = `${side.labelSelf} (${agent.name})`;
       applyEffect(ability.effect, abilityValue, sideKey, abilitySource, battleLog, opt(ability));
+      powerActivated[sideKey] = true;
       // Debito X: il Potere si attiva senza bisogno del trigger, e chi lo controlla paga X PV
       // quando si attiva. Un Potere bloccato non arriva qui, quindi non si paga.
       if (ability.trigger === 'debt') {
@@ -139,4 +143,25 @@ export function applyDuelMainAbilities({
       visualRecorder?.pushPowerBlocked(sideKey, state);
     }
   }
+
+  // Eco (Eminenza): se il Potere dell'Agente nemico si è attivato, si attiva anche per il
+  // tuo Agente. Si risolve dopo entrambi i Poteri, così l'iniziativa non conta. I Poteri che
+  // agiscono su altri Poteri (Blocca, Copia, Inversione) non hanno nulla da ripetere.
+  for (const sideKey of sides) {
+    const echoFlag = sideKey === 'player' ? 'pEchoEnemyPower' : 'eEchoEnemyPower';
+    if (!state[echoFlag]) continue;
+    const side = getDuelSideBundle(sideKey, bundleArgs);
+    const enemySide = sideKey === 'player' ? 'enemy' : 'player';
+    const sourceAgent = sideKey === 'player' ? eAgent : pAgent;
+    const echoed = sourceAgent?.ability;
+    if (!powerActivated[enemySide] || !echoed || state[side.abilityBlocked]) continue;
+    if (ECHO_SKIPPED_EFFECTS.has(echoed.effect)) continue;
+    const echoedValue = echoed.trigger === 'conquest'
+      ? scaleConquestEffectValue(echoed.value, fieldOptions)
+      : echoed.value;
+    applyEffect(echoed.effect, echoedValue, sideKey, `${side.labelSelf} (Eco: ${sourceAgent.name})`, battleLog, opt(echoed));
+    visualRecorder?.pushPower(sideKey, state);
+  }
 }
+
+const ECHO_SKIPPED_EFFECTS = new Set(['blockAbility', 'blockBonus', 'inversion', 'copyAbility', 'copyBonus']);

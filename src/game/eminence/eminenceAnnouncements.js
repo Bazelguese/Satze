@@ -162,6 +162,9 @@ function formatPayoff(segment) {
   if (segment.primitive === 'BLOCK_POWER') {
     return segment.target === 'ENEMY_AGENT' ? 'il Potere nemico non si attiva' : 'il Potere non si attiva';
   }
+  if (segment.primitive === 'ECHO_POWER') {
+    return 'il Potere nemico si attiva anche per il tuo Agente';
+  }
   if (segment.primitive === 'GRANT_TEMPORARY_FOCUS' && segment.amount) {
     return `+${segment.amount} FC temporane${segment.amount === 1 ? 'o' : 'i'}`;
   }

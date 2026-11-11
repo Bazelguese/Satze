@@ -743,6 +743,7 @@ const DUEL_REPLAY_PRIMITIVES = new Set([
   P.PROPOSE_DEAL,
   P.ESCALATE_ABILITY,
   P.BLOCK_POWER,
+  P.ECHO_POWER,
 ]);
 
 function replayOpenedGeneralCombat(matchState, agentIdBySide, toxinBySide = null) {
@@ -810,6 +811,7 @@ function mergeDuelReplay(bundle, replay) {
     toxinRemovals: [...(target.toxinRemovals || []), ...(replay.toxinRemovals || [])],
     abilityEscalations: [...(target.abilityEscalations || []), ...(replay.abilityEscalations || [])],
     blockedPowerSides: [...new Set([...(target.blockedPowerSides || []), ...(replay.blockedPowerSides || [])])],
+    echoPowerSides: [...new Set([...(target.echoPowerSides || []), ...(replay.echoPowerSides || [])])],
   };
 }
 

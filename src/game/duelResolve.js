@@ -569,6 +569,11 @@ export function computeDuelResolution({
       }
     }
 
+    for (const side of eminenceBundle?.echoPowerSides || []) {
+      if (side === 'player') state.pEchoEnemyPower = true;
+      if (side === 'enemy') state.eEchoEnemyPower = true;
+    }
+
     applyDuelMainAbilities({
       state,
       pAgent,
