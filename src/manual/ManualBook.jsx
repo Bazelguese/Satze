@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MANUAL_PAGES, ManualPage } from './manualPages.jsx';
 import { playUiClick } from '../audio/soundBus';
+import { getDisplaySettings } from '../settings/displaySettings';
 import './manual.css';
 
 /** Percorso del PDF generato da scripts/manuale/build-pdf.mjs. */
@@ -17,6 +18,8 @@ export const MANUAL_PDF_URL = './manuale/SATZE-Manuale.pdf';
 
 const SPREAD_W = 1480;
 const SPREAD_H = 1050;
+/** Durata del giro di pagina: uguale all'animazione .mn-leaf in manual.css. */
+const FLIP_MS = 560;
 
 /** Doppie pagine: [null, 0], [1, 2], [3, 4], … ; l'ultima pagina sta a sinistra da sola. */
 function buildSpreads(count) {
@@ -29,19 +32,29 @@ export function ManualBook({ onClose, initialPage = 0 }) {
   const spreads = useMemo(() => buildSpreads(MANUAL_PAGES.length), []);
   const spreadOfPage = useCallback((pageIndex) => Math.max(0, spreads.findIndex((s) => s.includes(pageIndex))), [spreads]);
   const [spread, setSpread] = useState(() => spreadOfPage(initialPage));
-  const [dir, setDir] = useState('next');
+  // Pagina che sta girando: { from, to, id }. Il libro resta fermo, si muove solo il foglio.
+  const [flip, setFlip] = useState(null);
   const [scale, setScale] = useState(0.9);
   const stageRef = useRef(null);
+  const spreadRef = useRef(spread);
+  const flipTimerRef = useRef(0);
+  const flipIdRef = useRef(0);
 
   const go = useCallback((next) => {
-    setSpread((cur) => {
-      const target = Math.min(spreads.length - 1, Math.max(0, typeof next === 'function' ? next(cur) : next));
-      if (target === cur) return cur;
-      setDir(target > cur ? 'next' : 'prev');
-      playUiClick();
-      return target;
-    });
+    const cur = spreadRef.current;
+    const target = Math.min(spreads.length - 1, Math.max(0, typeof next === 'function' ? next(cur) : next));
+    if (target === cur) return;
+    spreadRef.current = target;
+    playUiClick();
+    window.clearTimeout(flipTimerRef.current);
+    setSpread(target);
+    if (getDisplaySettings().reduceMotion) { setFlip(null); return; }
+    flipIdRef.current += 1;
+    setFlip({ from: cur, to: target, id: flipIdRef.current });
+    flipTimerRef.current = window.setTimeout(() => setFlip(null), FLIP_MS);
   }, [spreads.length]);
+
+  useEffect(() => () => window.clearTimeout(flipTimerRef.current), []);
 
   const goToPage = useCallback((pageIndex) => go(spreadOfPage(pageIndex)), [go, spreadOfPage]);
   const indexSpread = useMemo(() => spreadOfPage(MANUAL_PAGES.findIndex((p) => p.id === 'indice')), [spreadOfPage]);
@@ -79,6 +92,15 @@ export function ManualBook({ onClose, initialPage = 0 }) {
   const [left, right] = spreads[spread];
   const label = [left, right].filter((n) => n != null).map((n) => n + 1).join('–');
 
+  // Durante il giro: sotto restano la pagina vecchia dal lato da cui si parte e quella nuova
+  // dal lato che si scopre; il foglio porta sul fronte la pagina che lascia e sul retro quella che arriva.
+  const forward = flip ? flip.to > flip.from : true;
+  const [fromL, fromR] = flip ? spreads[flip.from] : [left, right];
+  const baseLeft = flip ? (forward ? fromL : left) : left;
+  const baseRight = flip ? (forward ? right : fromR) : right;
+  const leafFront = flip ? (forward ? fromR : fromL) : null;
+  const leafBack = flip ? (forward ? left : right) : null;
+
   return (
     <div className="mn-root mn-viewer" role="dialog" aria-label="Manuale di istruzioni">
       <div className="mn-desk" />
@@ -98,14 +120,20 @@ export function ManualBook({ onClose, initialPage = 0 }) {
       </div>
 
       <div className="mn-stage" ref={stageRef}>
-        <div key={spread} className={`mn-spread is-flip-${dir}`} style={{ scale: String(scale) }}>
+        <div className="mn-spread" style={{ scale: String(scale) }}>
           <button type="button" className="mn-hit is-prev" aria-label="Pagina precedente" disabled={spread === 0} onClick={() => go((c) => c - 1)}><span>‹</span></button>
-          <div className={`mn-slot is-left${left == null ? ' is-empty' : ''}`}>
-            {left != null ? <ManualPage index={left} goTo={goToPage} /> : null}
+          <div className={`mn-slot is-left${baseLeft == null ? ' is-empty' : ''}`}>
+            {baseLeft != null ? <ManualPage index={baseLeft} goTo={goToPage} /> : null}
           </div>
-          <div className={`mn-slot is-right${right == null ? ' is-empty' : ''}`}>
-            {right != null ? <ManualPage index={right} goTo={goToPage} /> : null}
+          <div className={`mn-slot is-right${baseRight == null ? ' is-empty' : ''}`}>
+            {baseRight != null ? <ManualPage index={baseRight} goTo={goToPage} /> : null}
           </div>
+          {flip ? (
+            <div key={flip.id} className={`mn-leaf ${forward ? 'is-next' : 'is-prev'}`} aria-hidden="true">
+              <div className="mn-leaf-face is-front">{leafFront != null ? <ManualPage index={leafFront} /> : null}</div>
+              <div className="mn-leaf-face is-back">{leafBack != null ? <ManualPage index={leafBack} /> : null}</div>
+            </div>
+          ) : null}
           <button type="button" className="mn-hit is-next" aria-label="Pagina successiva" disabled={spread === spreads.length - 1} onClick={() => go((c) => c + 1)}><span>›</span></button>
         </div>
       </div>

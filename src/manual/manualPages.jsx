@@ -650,7 +650,7 @@ const CORE_PAGES_A = [
     body: () => (
       <>
         <Title lead="Nel formato Standard ogni comandante è affiancato da un'Eminenza.">Le Eminenze</Title>
-        <Fig src="eminenza.jpg" n="9" w={88} caption="Inizio turno, «Comando». In alto l'Eminenza avversaria, in basso la tua con le tre abilità." />
+        <Fig src="eminenza.jpg" n="9" w={88} caption="Inizio turno, «Comando». L'Eminenza avversaria mostra Statico e Presenza; subito dopo scegli la tua abilità." />
         <ul className="mn-list">
           <li><b>Quale Eminenza.</b> Quella dell'armata di cui hai <b>almeno 5 carte</b> nell'esercito da 10. Senza un'armata con 5 carte, giochi senza Eminenza.</li>
           <li><b>Statico.</b> Un effetto passivo, sempre attivo.</li>
