@@ -451,15 +451,19 @@ const THEMES = {
     },
     setup(e, rnd) {
       // vene di veleno: spezzate che si diramano dal bacio
-      e.veins = Array.from({ length: 11 }, (_, i) => { let a = (i / 11) * TAU + rnd() * 0.4; let x = Math.cos(a) * 0.5; let y = Math.sin(a) * 0.22; const pts = [[x, y]]; const n = 7 + Math.floor(rnd() * 4); for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.1; const step = 0.16 + rnd() * 0.16; x += Math.cos(a) * step; y += Math.sin(a) * step; pts.push([x, y]); } return { pts, d: rnd() * 260, w: 1.2 + rnd() * 1.8 }; });
-      e.hearts = burst(rnd, 16, { speed: 150, life: 1500, size: 6, delay: 380, drag: 1.6 }); e.hearts.forEach((p) => { p.a = -Math.PI / 2 + (rnd() - 0.5) * 1.5; });
-      e.drips = Array.from({ length: 4 }, () => ({ x: (rnd() - 0.5) * 1.3, len: 0.4 + rnd() * 0.7, d: 200 + rnd() * 300 }));
-      e.mist = Array.from({ length: 6 }, () => ({ x: (rnd() - 0.5) * 1.5, y: (rnd() - 0.5) * 0.9, r: 0.7 + rnd() * 0.6 }));
+      e.veins = Array.from({ length: 6 }, (_, i) => { let a = (i / 6) * TAU + rnd() * 0.5; let x = Math.cos(a) * 0.5; let y = Math.sin(a) * 0.22; const pts = [[x, y]]; const n = 7 + Math.floor(rnd() * 4); for (let j = 0; j < n; j += 1) { a += (rnd() - 0.5) * 1.1; const step = 0.16 + rnd() * 0.16; x += Math.cos(a) * step; y += Math.sin(a) * step; pts.push([x, y]); } return { pts, d: rnd() * 260, w: 0.8 + rnd() * 0.9 }; });
+      e.hearts = burst(rnd, 7, { speed: 150, life: 1500, size: 6, delay: 380, drag: 1.6 }); e.hearts.forEach((p) => { p.a = -Math.PI / 2 + (rnd() - 0.5) * 1.5; });
+      e.drips = Array.from({ length: 2 }, () => ({ x: (rnd() - 0.5) * 1.3, len: 0.4 + rnd() * 0.7, d: 200 + rnd() * 300 }));
+      // fili di vapore verde che salgono dal contorno delle labbra
+      e.wisps = Array.from({ length: 7 }, (_, i) => ({ x: ((i + rnd() * 0.6) / 7 - 0.5) * 1.9, d: 260 + rnd() * 520, h: 0.7 + rnd() * 0.7, ph: rnd() * TAU, w: 1.2 + rnd() * 1.4 }));
     },
     impact(ctx, t, e) {
-      const a = env(t, 40, 1200, 1800); const s = stamp(t / 320); const w = e.R * 1.05 * s; const dark = mix(e.c2, [40, 0, 40], 0.6);
-      // foschia verde, tenue: resta sotto al bacio
-      e.mist.forEach((m, i) => glow(ctx, e.cx + m.x * e.R + Math.sin(t * 0.002 + i) * 8, e.cy + m.y * e.R - t * 0.014, e.R * m.r * (0.6 + 0.6 * easeOut(t / 1000)), e.c, 0.1 * a));
+      const a = env(t, 40, 1300, 1850); const s = stamp(t / 320); const w = e.R * 1.3 * s; const dark = mix(e.c2, [40, 0, 40], 0.6);
+      // lo schiocco: dopo l'impronta le labbra si stringono un istante e si rilassano
+      const smack = env(t - 330, 70, 110, 330); const open = 0.32 - 0.2 * smack; const lw = w * (1 - 0.07 * smack);
+      // alone verde dietro alle labbra: respira piano
+      const breathe = 0.82 + 0.18 * Math.sin(t * 0.008);
+      ctx.save(); ctx.translate(e.cx, e.cy); ctx.scale(1, 0.62); glow(ctx, 0, 0, w * 1.7, e.c, 0.6 * a * breathe); ctx.restore();
       // il veleno si dirama
       const press = t - 180;
       if (press > 0) {
@@ -467,7 +471,7 @@ const THEMES = {
         e.veins.forEach((v) => {
           const k = easeOut((press - v.d) / 620); if (k <= 0) return; const upto = k * (v.pts.length - 1);
           for (let pass = 0; pass < 2; pass += 1) {
-            ctx.strokeStyle = pass ? rgba(mix(e.c, WHITE, 0.45), 0.9 * a) : rgba(e.c, 0.5 * a); ctx.lineWidth = pass ? v.w : v.w * 3.4; ctx.beginPath();
+            ctx.strokeStyle = pass ? rgba(mix(e.c, WHITE, 0.35), 0.5 * a) : rgba(e.c, 0.2 * a); ctx.lineWidth = pass ? v.w : v.w * 3; ctx.beginPath();
             v.pts.forEach(([px, py], j) => { if (j > upto + 1) return; const f = j <= upto ? 1 : upto - (j - 1); const [qx, qy] = j ? v.pts[j - 1] : [px, py]; const x = e.cx + (qx + (px - qx) * f) * e.R; const y = e.cy + (qy + (py - qy) * f) * e.R; ctx[j ? 'lineTo' : 'moveTo'](x, y); });
             ctx.stroke();
           }
@@ -475,16 +479,36 @@ const THEMES = {
       }
       ctx.globalCompositeOperation = 'source-over';
       // colature dal labbro inferiore
-      e.drips.forEach((d) => { const k = easeOut((t - 320 - d.d) / 800); if (k <= 0) return; const x = e.cx + d.x * w * 0.6; const y0 = e.cy + w * 0.5; const len = e.R * d.len * k; ctx.strokeStyle = rgba(dark, a); ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + len); ctx.stroke(); ctx.fillStyle = rgba(e.c2, a); ctx.beginPath(); ctx.arc(x, y0 + len, 3.6, 0, TAU); ctx.fill(); });
-      // l'impronta delle labbra
-      ctx.shadowColor = rgba(e.c, a); ctx.shadowBlur = 20;
-      const g = ctx.createLinearGradient(e.cx, e.cy - w * 0.55, e.cx, e.cy + w * 0.65);
+      e.drips.forEach((d) => { const k = easeOut((t - 320 - d.d) / 800); if (k <= 0) return; const x = e.cx + d.x * w * 0.5; const y0 = e.cy + w * 0.55; const len = e.R * d.len * k; ctx.strokeStyle = rgba(dark, a); ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + len); ctx.stroke(); ctx.fillStyle = rgba(e.c2, a); ctx.beginPath(); ctx.arc(x, y0 + len, 3.6, 0, TAU); ctx.fill(); });
+      // contorno verde: prima un bordo largo e sfumato, poi un filo netto, entrambi sotto al colore
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = rgba(e.c, a); ctx.shadowBlur = 26; ctx.strokeStyle = rgba(e.c, 0.85 * a * breathe); ctx.lineWidth = Math.max(5, lw * 0.11);
+      THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.stroke();
+      ctx.shadowBlur = 8; ctx.strokeStyle = rgba(mix(e.c, WHITE, 0.55), a); ctx.lineWidth = Math.max(2, lw * 0.035);
+      THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.stroke(); ctx.shadowBlur = 0;
+      // le labbra
+      const g = ctx.createLinearGradient(e.cx, e.cy - lw * 0.55, e.cx, e.cy + lw * 0.65);
       g.addColorStop(0, rgba(mix(e.c2, WHITE, 0.3), a)); g.addColorStop(0.45, rgba(e.c2, a)); g.addColorStop(1, rgba(dark, a));
-      ctx.fillStyle = g; THEMES.ratti.lips(ctx, e.cx, e.cy, w, 0.32); ctx.fill(); ctx.shadowBlur = 0;
-      // pieghe e lucido
-      ctx.strokeStyle = rgba(dark, 0.55 * a); ctx.lineWidth = 1;
-      for (let i = -3; i <= 3; i += 1) { const x = e.cx + i * w * 0.17; ctx.beginPath(); ctx.moveTo(x, e.cy - w * 0.36 + Math.abs(i) * w * 0.05); ctx.lineTo(x + i * w * 0.012, e.cy - w * 0.12); ctx.moveTo(x, e.cy + w * 0.14); ctx.lineTo(x + i * w * 0.02, e.cy + w * 0.52 - Math.abs(i) * w * 0.06); ctx.stroke(); }
-      ctx.fillStyle = rgba(WHITE, 0.5 * a); ctx.beginPath(); ctx.ellipse(e.cx - w * 0.3, e.cy + w * 0.3, w * 0.18, w * 0.05, -0.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = g; THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.fill();
+      // volume: ombra lungo la bocca e luce sulle parti piene
+      ctx.save(); THEMES.ratti.lips(ctx, e.cx, e.cy, lw, open); ctx.clip();
+      const sh = ctx.createLinearGradient(0, e.cy - lw * 0.16, 0, e.cy + lw * 0.16);
+      sh.addColorStop(0, rgba(dark, 0)); sh.addColorStop(0.5, rgba(dark, 0.55 * a)); sh.addColorStop(1, rgba(dark, 0));
+      ctx.fillStyle = sh; ctx.fillRect(e.cx - lw, e.cy - lw * 0.16, lw * 2, lw * 0.32);
+      // pieghe
+      // pieghe: brevi e leggere, come prima, solo sul pieno di ciascun labbro
+      ctx.strokeStyle = rgba(dark, 0.3 * a); ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i += 1) { const x = e.cx + i * lw * 0.17; ctx.beginPath(); ctx.moveTo(x, e.cy - lw * 0.36 + Math.abs(i) * lw * 0.05); ctx.lineTo(x + i * lw * 0.012, e.cy - lw * 0.14); ctx.moveTo(x, e.cy + lw * 0.16); ctx.lineTo(x + i * lw * 0.02, e.cy + lw * 0.5 - Math.abs(i) * lw * 0.06); ctx.stroke(); }
+      // lucido: due riflessi fermi e uno che scorre da sinistra a destra
+      ctx.fillStyle = rgba(WHITE, 0.55 * a); ctx.beginPath(); ctx.ellipse(e.cx - lw * 0.28, e.cy + lw * 0.3, lw * 0.2, lw * 0.055, -0.18, 0, TAU); ctx.fill();
+      ctx.fillStyle = rgba(WHITE, 0.35 * a); ctx.beginPath(); ctx.ellipse(e.cx + lw * 0.3, e.cy - lw * 0.27, lw * 0.1, lw * 0.03, 0.3, 0, TAU); ctx.fill();
+      const sweep = (t - 520) / 520; if (sweep > 0 && sweep < 1) { const sx = e.cx - lw * 1.2 + sweep * lw * 2.4; const sg = ctx.createLinearGradient(sx - lw * 0.22, 0, sx + lw * 0.22, 0); sg.addColorStop(0, rgba(WHITE, 0)); sg.addColorStop(0.5, rgba(WHITE, 0.55 * a)); sg.addColorStop(1, rgba(WHITE, 0)); ctx.fillStyle = sg; ctx.fillRect(sx - lw * 0.22, e.cy - lw, lw * 0.44, lw * 2); }
+      ctx.restore();
+      // vapore verde che sale dal contorno
+      ctx.lineCap = 'round';
+      e.wisps.forEach((v) => { const tt = t - v.d; const k = clamp01(tt / 900); if (tt <= 0 || k >= 1) return; const x0 = e.cx + v.x * lw * 0.5; const y0 = e.cy - lw * 0.3; const rise = k * e.R * v.h;
+        ctx.strokeStyle = rgba(e.c, 0.5 * (1 - k) * a); ctx.lineWidth = v.w * (1 + k); ctx.beginPath(); ctx.moveTo(x0, y0);
+        for (let i = 1; i <= 8; i += 1) { const u = i / 8; ctx.lineTo(x0 + Math.sin(u * 5 + v.ph + t * 0.004) * 7 * u, y0 - rise * u); } ctx.stroke(); });
       ctx.globalCompositeOperation = 'lighter';
       glow(ctx, e.cx, e.cy, e.R * 1.5, e.c2, 0.45 * env(press, 20, 110, 520));
       ring(ctx, e.cx, e.cy, e.R * (0.6 + 1.3 * easeOut(press / 520)), 2.5, e.c, press > 0 ? 1 - clamp01(press / 520) : 0);
