@@ -9,7 +9,7 @@ import {
   PARAM_SOURCES,
   SIDES,
 } from './eminenceConstants.js';
-import { EMINENCES, getEminence, getEminenceForArmy } from '../../data/eminences.js';
+import { EMINENCES, getEminence, getEminenceAbility, getEminenceForArmy } from '../../data/eminences.js';
 import { cloneSlotCurses } from './slotCurses.js';
 
 // ------------------------------------------------------------------
@@ -111,11 +111,22 @@ export function createEminenceRoundState() {
 
 /** Vincoli di schieramento del lato per il Duello corrente. */
 export function readDeployConstraints(matchState, side) {
-  const raw = matchState?.[side]?.round?.deployConstraints || {};
+  const state = matchState?.[side];
+  const raw = state?.round?.deployConstraints || {};
+  const revived = [...(raw.revivedCardIds || [])];
+  // Un'abilità ancora sigillata può già concedere un Agente al suo proprietario (es. Vendetta
+  // oltre la Morte, che si rivela solo allo schieramento). La scelta è privata: la vede solo
+  // chi ha accesso alla selezione del lato.
+  const grant = getEminenceAbility(state?.eminenceId, state?.selectedAbilityId)?.deployGrant;
+  if (grant?.mode === 'REVIVE') {
+    const chosen = state?.selectedParams?.[grant.cardParam || 'cardId'];
+    const cardId = Array.isArray(chosen) ? chosen[0] : chosen;
+    if (cardId != null && !revived.includes(cardId)) revived.push(cardId);
+  }
   return {
     forcedCardId: raw.forcedCardId ?? null,
     bannedCardIds: [...(raw.bannedCardIds || [])],
-    revivedCardIds: [...(raw.revivedCardIds || [])],
+    revivedCardIds: revived,
   };
 }
 
@@ -157,6 +168,8 @@ export function createEminencePersistentState() {
     abilityEscalation: {},
     // Esiti dei Duelli già chiusi in questo Scontro, dal punto di vista del lato.
     duelRecord: { won: 0, lost: 0, draw: 0 },
+    // Agenti del lato sconfitti in un Duello (pubblico).
+    defeatedCardIds: [],
     custom: {},
   };
 }
@@ -326,6 +339,7 @@ export function selectPublicPersistentState(persistent) {
     abilityPresenceDeltas: { ...(persistent.abilityPresenceDeltas || {}) },
     abilityEscalation: { ...(persistent.abilityEscalation || {}) },
     duelRecord: readDuelRecord(persistent),
+    defeatedCardIds: [...(persistent.defeatedCardIds || [])],
   };
 }
 
@@ -428,9 +442,13 @@ export function getLegalAbilityIds(eminenceId, presence, persistent = null, opti
 function persistentTargetsAvailable(ability, persistent) {
   for (const spec of Object.values(ability?.paramsSchema || {})) {
     if (!spec || typeof spec !== 'object' || Array.isArray(spec)) continue;
-    if (spec.source !== PARAM_SOURCES.OWN_FRAGMENTS) continue;
-    const owned = persistent?.fragmentCardIds?.length || 0;
-    if (owned < (spec.min ?? 1)) return false;
+    if (spec.source === PARAM_SOURCES.OWN_FRAGMENTS) {
+      const owned = persistent?.fragmentCardIds?.length || 0;
+      if (owned < (spec.min ?? 1)) return false;
+    }
+    if (spec.source === PARAM_SOURCES.OWN_DEFEATED) {
+      if (!(persistent?.defeatedCardIds?.length > 0)) return false;
+    }
   }
   return true;
 }

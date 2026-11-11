@@ -759,6 +759,22 @@ describe('Lega effettiva e parità VA nel Duello', () => {
   });
 });
 
+/** Spezzacuore non è più nel catalogo: REMOVE_TOXIN con override del Bonus, diretto. */
+function spezzacuoreBundle(removedToxinValue) {
+  return applyEminenceSegments([{
+    ownerSide: SIDES.PLAYER,
+    abilityId: 'test_spezzacuore',
+    params: { removedToxinValue },
+    segment: {
+      timing: EFFECT_TIMINGS.AFTER_REVEAL,
+      primitive: 'REMOVE_TOXIN',
+      target: 'OPPONENT',
+      bonusOverrideFactor: 2,
+      bonusOverrideEffect: 'directDamage',
+    },
+  }]);
+}
+
 describe('Riduzioni in Duello e Tossina del bundle', () => {
   it('una maledizione di slot che abbassa il DAN marca la riduzione', () => {
     const { battleResult } = computeDuelResolution({
@@ -777,10 +793,19 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('APPLY_TOXIN deposita Tossina sull\'avversario e sopprime il Bonus proprio', () => {
-    const bundle = bundleForAbility('ratti_veleno', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 2,
-    });
+    // Veleno non è più nel catalogo: le sue primitive si esercitano con segmenti diretti.
+    const bundle = applyEminenceSegments([
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_veleno',
+        segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'SET_ARMY_BONUS_STATE', target: 'SELF', suppressed: true },
+      },
+      {
+        ownerSide: SIDES.PLAYER,
+        abilityId: 'test_veleno',
+        segment: { timing: EFFECT_TIMINGS.AFTER_REVEAL, primitive: 'APPLY_TOXIN', target: 'OPPONENT', value: 1, minHealth: 10 },
+      },
+    ]);
     const { battleResult } = computeDuelResolution({
       ...baseInput,
       selectedAgent: {
@@ -798,11 +823,7 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('Spezzacuore rimuove Tossina avversaria e converte il Bonus in danni diretti ×2', () => {
-    const bundle = bundleForAbility('ratti_spezzacuore', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 3,
-      params: { removedToxinValue: 2 },
-    });
+    const bundle = spezzacuoreBundle(2);
     expect(bundle.toxinRemovals?.[0]?.removedValue).toBe(2);
     expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override).toEqual(
       expect.objectContaining({ effect: 'directDamage', value: 4 }),
@@ -824,11 +845,7 @@ describe('Riduzioni in Duello e Tossina del bundle', () => {
   });
 
   it('Spezzacuore senza Tossina da rimuovere non inventa danni da Bonus', () => {
-    const bundle = bundleForAbility('ratti_spezzacuore', {
-      eminenceId: 'ratti_bella_malelabbra',
-      presence: 3,
-      params: { removedToxinValue: 0 },
-    });
+    const bundle = spezzacuoreBundle(0);
     expect(bundle.armyBonusState?.[SIDES.PLAYER]?.override?.value ?? 0).toBe(0);
 
     const { battleResult } = computeDuelResolution({

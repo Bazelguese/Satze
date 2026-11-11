@@ -487,6 +487,14 @@ export default function SatzeGame() {
     () => (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)).map((card) => card.id),
     [playerHand, playerUsedCards],
   );
+  // Iniziativa del round imposta da un'Eminenza (Corteggiamento): sostituisce quella normale
+  // per questo round; il round successivo riparte dall'alternanza consueta.
+  const roundInitiativeOverride = eminenceMatchState?.roundInitiativeOverride ?? null;
+  useEffect(() => {
+    if (!roundInitiativeOverride) return;
+    setIsPlayerFirst(roundInitiativeOverride === 'player');
+  }, [roundInitiativeOverride, setIsPlayerFirst]);
+
   // Vincoli Eminenza sugli Agenti schierabili in questo Duello (Caccia, Seduzione…).
   const playerDeployableCardIds = useMemo(
     () => filterDeployableCardIds(
@@ -500,6 +508,12 @@ export default function SatzeGame() {
   const playerLockedCardIds = useMemo(
     () => playerUndeployedCardIds.filter((id) => !playerDeployableCardIds.includes(id)),
     [playerUndeployedCardIds, playerDeployableCardIds],
+  );
+  // Carte usate ma di nuovo schierabili in questo Duello (Vendetta oltre la Morte): per la
+  // mano e il trascinamento non contano come usate.
+  const playerHandUsedCards = useMemo(
+    () => playerUsedCards.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUsedCards, playerDeployableCardIds],
   );
   const slotCurseCounts = useMemo(
     () => mergeSlotCurseCounts(
@@ -1746,16 +1760,19 @@ export default function SatzeGame() {
           onClick: () => confirmPendingEminenceDeal({ dealAccepted: true, dealChoice: choice }),
         }))
         : [{ key: 'offer-accept', label: 'Accetta', variant: 'primary', waiting: true, onClick: () => confirmPendingEminenceDeal({ dealAccepted: true }) }];
+      const isChoice = pendingDeal.kind === 'CHOICE';
       portalDecision = {
-        kicker: 'Offerta',
+        kicker: isChoice ? 'Scelta' : 'Offerta',
         name: title,
         desc: ability?.text || "Accetti l'Offerta?",
         options: pendingDeal.mustAccept
           ? accept
           : [{ key: 'offer-refuse', label: 'Rifiuta', variant: 'secondary', onClick: () => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' }) }, ...accept],
-        note: pendingDeal.mustAccept
-          ? "Hai rifiutato l'Offerta precedente: questa va accettata."
-          : 'Se rifiuti non succede nulla, ma la prossima Offerta andrà accettata.',
+        note: isChoice
+          ? 'Scegli una delle opzioni.'
+          : pendingDeal.mustAccept
+            ? "Hai rifiutato l'Offerta precedente: questa va accettata."
+            : 'Se rifiuti non succede nulla, ma la prossima Offerta andrà accettata.',
       };
     } else if (pendingDeal.mode === 'CHOOSE_ONE') {
       const presence = eminenceMatchState?.player?.presence ?? 0;
@@ -3322,7 +3339,7 @@ export default function SatzeGame() {
     gamePhase,
     isPlayerFirst,
     enemyAgent,
-    playerUsedCards,
+    playerUsedCards: playerHandUsedCards,
     onAgentSelect: handleAgentSelect,
     selectedAgent,
     gameState,
@@ -6970,7 +6987,7 @@ export default function SatzeGame() {
       <div className="imp-hand imp-hand-player" ref={playerHandWrapRef}>
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
-        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
+        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerHandUsedCards}
         lockedCardIds={playerHandOverride ? [] : playerLockedCardIds}
         fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}

@@ -280,6 +280,7 @@ function applyBundleToState(matchState, bundle) {
 
   state = applyDebtEscalations(state, bundle.debtEscalations);
   state = applyDeployConstraints(state, bundle.deployConstraints);
+  if (bundle.initiativeOverride) state = { ...state, roundInitiativeOverride: bundle.initiativeOverride };
 
   return persistAbilityEscalation(
     persistLeagueByCardId(
@@ -1155,7 +1156,7 @@ export function settleEminenceRound(matchState, {
     : collected.matchState;
   const applied = applyBundleAndReactions(stateAfterDebts, bundle, { initiativeSide });
   return {
-    matchState: recordDuelOutcome(applied.matchState, winner),
+    matchState: recordDuelOutcome(applied.matchState, winner, agentIdBySide),
     bundle,
     notices: [
       ...noticesFromAppliedEffects(collected.matchState, queue, {
@@ -1171,7 +1172,7 @@ export function settleEminenceRound(matchState, {
  * checkpoint post-Duello: per gli effetti di questo round il registro conta solo i
  * Duelli precedenti.
  */
-function recordDuelOutcome(matchState, winner) {
+function recordDuelOutcome(matchState, winner, agentIdBySide = null) {
   if (winner !== SIDES.PLAYER && winner !== SIDES.ENEMY && winner !== 'draw') return matchState;
   let state = matchState;
   for (const side of BOTH_SIDES) {
@@ -1179,11 +1180,18 @@ function recordDuelOutcome(matchState, winner) {
     if (!current?.persistent) continue;
     const record = readDuelRecord(current.persistent);
     const key = winner === 'draw' ? 'draw' : (winner === side ? 'won' : 'lost');
+    const defeated = [...(current.persistent.defeatedCardIds || [])];
+    const ownAgent = agentIdBySide?.[side];
+    if (key === 'lost' && ownAgent != null && !defeated.includes(ownAgent)) defeated.push(ownAgent);
     state = {
       ...state,
       [side]: {
         ...current,
-        persistent: { ...current.persistent, duelRecord: { ...record, [key]: record[key] + 1 } },
+        persistent: {
+          ...current.persistent,
+          duelRecord: { ...record, [key]: record[key] + 1 },
+          defeatedCardIds: defeated,
+        },
       },
     };
   }

@@ -4,20 +4,17 @@
   "player": {
     "eminenceId": "ratti_bella_malelabbra",
     "presence": 1,
-    "abilityId": "ratti_sussurro",
+    "abilityId": "ratti_corteggiamento",
     "params": null,
     "agent": {
       "cardId": 231,
-      "league": 3,
+      "league": 4,
       "power": 3,
       "damage": 2,
       "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
-    "remainingHand": [
-      { "id": 400, "league": 1 }
-    ],
     "fragments": [],
     "prey": []
   },
@@ -32,32 +29,31 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
-    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "ratti_male_crescente_miss",
-  "branch": "miss"
+  "name": "ratti_corteggiamento_hit",
+  "branch": "hit"
 }

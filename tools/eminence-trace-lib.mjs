@@ -378,6 +378,9 @@ export function runTrace(scenario) {
   if (scenario.player?.fragments) {
     matchState.player.persistent.fragmentCardIds = [...scenario.player.fragments];
   }
+  if (scenario.player?.defeated) {
+    matchState.player.persistent.defeatedCardIds = [...scenario.player.defeated];
+  }
   if (scenario.player?.prey) {
     matchState.player.persistent.preyCardIds = [...scenario.player.prey];
   }

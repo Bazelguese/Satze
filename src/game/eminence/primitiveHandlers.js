@@ -59,6 +59,7 @@ export function createEffectBundle() {
     blockedPowerSides: [],
     echoPowerSides: [],
     deployConstraints: [],
+    initiativeOverride: null,
     debtEscalations: [],
   };
 }
@@ -539,6 +540,12 @@ const handlers = {
     }
   },
 
+  // Il lato bersaglio è il primo a scegliere in questo round (Campo e Agente).
+  [P.SET_ROUND_INITIATIVE]: (bundle, segment, ctx) => {
+    const [side] = resolveTargetSides(segment.target, ctx.ownerSide, ctx.params);
+    if (side) bundle.initiativeOverride = side;
+  },
+
   // Eco: se il Potere dell'Agente nemico si attiva, si attiva anche per l'Agente bersaglio.
   // La ripetizione la esegue il Duello, che sa quali Poteri si sono attivati.
   [P.ECHO_POWER]: (bundle, segment, ctx) => {
@@ -634,7 +641,7 @@ const handlers = {
       // Offerta: il destinatario accetta o rifiuta. Rifiutare non ha effetti, ma se il
       // destinatario aveva rifiutato l'Offerta del round precedente deve accettare.
       const lastOffer = ctx.persistent?.lastOffer || null;
-      const mustAccept = Boolean(params.mustAccept)
+      const mustAccept = Boolean(segment.mustAccept) || Boolean(params.mustAccept)
         || Boolean(lastOffer && !lastOffer.accepted && ctx.roundNumber != null
           && lastOffer.round === ctx.roundNumber - 1);
       const hasResponse = Object.prototype.hasOwnProperty.call(params, 'dealAccepted')
@@ -647,8 +654,16 @@ const handlers = {
           source: ctx.source,
           choices: segment.choices ? [...segment.choices] : null,
           choiceLabels: segment.choiceLabels ? { ...segment.choiceLabels } : null,
+          // 'CHOICE': l'avversario non accetta né rifiuta, sceglie soltanto fra le varianti.
+          kind: segment.kind || 'OFFER',
           mustAccept,
-          deal: { onAccept: segment.onAccept || [], ownerPresenceOnAccept: segment.ownerPresenceOnAccept || 0 },
+          deal: {
+            onAccept: segment.onAccept || [],
+            onChoice: segment.onChoice || null,
+            ownerPresenceOnAccept: segment.ownerPresenceOnAccept || 0,
+            mustAccept: Boolean(segment.mustAccept),
+            kind: segment.kind || 'OFFER',
+          },
         });
         return;
       }
@@ -665,6 +680,9 @@ const handlers = {
           });
         }
         applyDealEffects(segment.onAccept || [], OPPOSITE_SIDE[ctx.ownerSide]);
+        if (params.dealChoice != null) {
+          applyDealEffects(segment.onChoice?.[params.dealChoice] || [], OPPOSITE_SIDE[ctx.ownerSide]);
+        }
       }
       bundle.deals.push({
         mode,
@@ -844,7 +862,10 @@ export function applyPendingDealResponse(pendingDeal, response = {}) {
         primitive: P.PROPOSE_DEAL,
         mode: 'OFFER',
         onAccept: pendingDeal.deal?.onAccept || [],
+        onChoice: pendingDeal.deal?.onChoice || null,
         ownerPresenceOnAccept: pendingDeal.deal?.ownerPresenceOnAccept || 0,
+        mustAccept: Boolean(pendingDeal.deal?.mustAccept),
+        kind: pendingDeal.deal?.kind || 'OFFER',
       },
       ownerSide: pendingDeal.ownerSide,
       abilityId: pendingDeal.source,

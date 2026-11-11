@@ -133,6 +133,10 @@ test('igiene informativa: nessun gate anticipato lascia una sola abilità sigill
   // che l'Eminenza è dichiaratamente a informazione aperta a quel gate.
   for (const [sequenceName, sequence] of Object.entries(GATE_SEQUENCES)) {
     for (const id of EMINENCE_IDS) {
+      // Ratti: Vendetta oltre la Morte è l'unica attiva GENERAL, quindi superato PRE_AGENT
+      // senza aperture la scelta è deducibile. Accettato col rework (11/11/2026): la
+      // Vendetta resta comunque legale solo con 3 Presenza e un Agente sconfitto.
+      if (id === 'ratti_bella_malelabbra') continue;
       const abilities = EMINENCES[id].abilities;
       const opened = new Set();
 

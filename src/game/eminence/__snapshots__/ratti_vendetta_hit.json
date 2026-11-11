@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "ratti_sussurro",
-    "name": "Sussurro",
-    "presenceDelta": 0,
+    "id": "ratti_vendetta",
+    "name": "Vendetta oltre la Morte",
+    "presenceDelta": -3,
     "revealGate": "GENERAL",
-    "text": "Se durante il Duello almeno un Agente subisce una riduzione a POT, DAN o VA, +1 Presenza."
+    "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      1,
-      2
+      3,
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,15 +28,19 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "ratti_sussurro",
-        "presenceDelta": 0
+        "id": "ratti_corteggiamento",
+        "presenceDelta": 1
+      },
+      {
+        "id": "ratti_seduzione",
+        "presenceDelta": -1
       }
     ],
-    "presenceAfterReveal": 1,
-    "presenceAfterSelect": 1,
-    "presenceAvailable": 1,
-    "presenceDelta": 0,
-    "selected": "ratti_sussurro"
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "ratti_vendetta"
   },
   "eminence": {
     "army": "Ratti della Megera",
@@ -44,6 +48,42 @@
     "name": "Bella Malelabbra"
   },
   "notices": [
+    {
+      "badgeText": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:ratti_vendetta:GENERAL",
+      "kind": "reveal",
+      "name": "Vendetta oltre la Morte",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "CONSTRAIN_DEPLOY",
+          "slot": null,
+          "target": "SELF"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima del Duello",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
+    },
     {
       "badgeText": "Risoluzione · Prima dei trigger",
       "cues": [
@@ -79,42 +119,12 @@
       "presenceDelta": 1,
       "side": "player",
       "text": "Lega effettiva più bassa: +1 Presenza."
-    },
-    {
-      "badgeText": "Mancato · Dopo il Duello",
-      "cues": [
-        {
-          "flight": false,
-          "from": null,
-          "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
-          "waitFor": null
-        }
-      ],
-      "id": "effect:player:ratti_sussurro:AFTER_DUEL_OUTCOME:miss",
-      "kind": "effect",
-      "name": "Sussurro",
-      "outcome": "miss",
-      "payoffs": [
-        {
-          "primitive": "CHANGE_PRESENCE",
-          "slot": null,
-          "target": "SELF"
-        }
-      ],
-      "phase": "MISS",
-      "phaseDetail": "Dopo il Duello",
-      "phaseLabel": "Mancato",
-      "presenceDelta": null,
-      "side": "player",
-      "text": "Nessuna riduzione."
     }
   ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
-    "name": "ratti_male_crescente_hit",
+    "name": "ratti_vendetta_hit",
     "roundNumber": 3
   },
   "steps": [
@@ -127,9 +137,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
@@ -141,23 +151,76 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 3
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 3,
       "timing": null
     },
     {
-      "badge": "Prima del Duello",
-      "cues": [],
+      "badge": "Rivelazione · Prima del Duello",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:ratti_vendetta:GENERAL",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
       "gate": "GENERAL",
       "gateLabel": "Prima del Duello",
       "kind": "gate",
-      "notices": [],
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima del Duello",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:ratti_vendetta:GENERAL",
+          "kind": "reveal",
+          "name": "Vendetta oltre la Morte",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "CONSTRAIN_DEPLOY",
+              "slot": null,
+              "target": "SELF"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima del Duello",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Si rivela quando schieri l'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo."
+        }
+      ],
       "presence": {
         "enemy": 0,
-        "player": 1
+        "player": 0
       },
-      "presenceAfterReveal": 1,
+      "presenceAfterReveal": 0,
       "timing": null
     },
     {
@@ -221,60 +284,19 @@
       ],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
     {
       "badge": "Risoluzione · Dopo il Duello",
-      "cues": [
-        {
-          "flight": false,
-          "from": null,
-          "holdAnnounce": false,
-          "noticeId": "effect:player:ratti_sussurro:AFTER_DUEL_OUTCOME:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
-          "waitFor": null
-        }
-      ],
+      "cues": [],
       "gate": null,
       "kind": "settle",
-      "notices": [
-        {
-          "badgeText": "Mancato · Dopo il Duello",
-          "cues": [
-            {
-              "flight": false,
-              "from": null,
-              "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
-              "waitFor": null
-            }
-          ],
-          "id": "effect:player:ratti_sussurro:AFTER_DUEL_OUTCOME:miss",
-          "kind": "effect",
-          "name": "Sussurro",
-          "outcome": "miss",
-          "payoffs": [
-            {
-              "primitive": "CHANGE_PRESENCE",
-              "slot": null,
-              "target": "SELF"
-            }
-          ],
-          "phase": "MISS",
-          "phaseDetail": "Dopo il Duello",
-          "phaseLabel": "Mancato",
-          "presenceDelta": null,
-          "side": "player",
-          "text": "Nessuna riduzione."
-        }
-      ],
+      "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 2
+        "player": 1
       },
       "segments": [
         {
@@ -295,19 +317,16 @@
         },
         {
           "condition": {
-            "detail": "statReductionOccurred: (assente) → non ancora valutabile",
-            "keys": [
-              "statReductionOccurred"
-            ],
-            "status": "deferred"
+            "detail": null,
+            "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "CHANGE_PRESENCE",
+          "primitive": "CONSTRAIN_DEPLOY",
           "source": "ability",
-          "sourceId": "ratti_sussurro",
-          "sourceName": "Sussurro",
+          "sourceId": "ratti_vendetta",
+          "sourceName": "Vendetta oltre la Morte",
           "target": "SELF",
-          "timing": "AFTER_DUEL_OUTCOME"
+          "timing": "AFTER_REVEAL"
         }
       ],
       "timing": "AFTER_DUEL_OUTCOME"

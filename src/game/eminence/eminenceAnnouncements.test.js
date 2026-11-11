@@ -475,40 +475,9 @@ test('avviso: se GENERAL si apre nel Duello, Condensazione parla una sola volta'
   assert.match(notices[0].text, /Ancorato/i);
 });
 
-test('avviso: Sussurro parla solo a fine Duello, con esito', () => {
-  const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
-  const chosen = bothChosen(matchState, 'ratti_sussurro', 'semaforo_giallo');
-  let state = chosen;
-  for (let i = 0; i < 3; i += 1) {
-    const step = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER });
-    assert.equal(step.notices.some((notice) => notice.name === 'Sussurro'), false);
-    state = step.matchState;
-  }
-
-  const hit = settleEminenceRound(state, {
-    initiativeSide: SIDES.PLAYER,
-    winner: SIDES.PLAYER,
-    statReductionOccurred: true,
-  });
-  const hitNotice = hit.notices.find((entry) => entry.name === 'Sussurro');
-  assert.ok(hitNotice);
-  assert.equal(hitNotice.outcome, 'hit');
-  assert.match(hitNotice.text, /Riduzione/);
-
-  const miss = settleEminenceRound(state, {
-    initiativeSide: SIDES.PLAYER,
-    winner: SIDES.PLAYER,
-    statReductionOccurred: false,
-  });
-  const missNotice = miss.notices.find((entry) => entry.name === 'Sussurro');
-  assert.ok(missNotice);
-  assert.equal(missNotice.outcome, 'miss');
-  assert.match(missNotice.text, /Nessuna riduzione/);
-});
-
 test('avviso: Male Crescente parla al prepare, hit o miss', () => {
   const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
-  const chosen = bothChosen(matchState, 'ratti_sussurro', 'semaforo_giallo');
+  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_giallo', { cardId: 301 });
   let state = chosen;
   for (let i = 0; i < 2; i += 1) {
     state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
@@ -531,19 +500,14 @@ test('avviso: Male Crescente parla al prepare, hit o miss', () => {
   assert.match(missNotice.text, /non la più bassa/);
 });
 
-test('avviso: Veleno al GENERAL nomina Bonus e Tossina', () => {
+test('avviso: Seduzione si annuncia prima dell\'Agente nominando il divieto', () => {
   const { matchState } = opened('ratti_bella_malelabbra', 'patto_grande_semaforo', 3);
-  matchState.player.presence = 2;
-  matchState.player.selectionCheckpointPresence = 2;
-  const chosen = bothChosen(matchState, 'ratti_veleno', 'semaforo_giallo');
-  let state = chosen;
-  for (let i = 0; i < 2; i += 1) {
-    state = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER }).matchState;
-  }
-  const general = advanceToNextRevealGate(state, { initiativeSide: SIDES.PLAYER });
-  const notice = general.notices.find((entry) => entry.name === 'Veleno');
+  const chosen = bothChosen(matchState, 'ratti_seduzione', 'semaforo_giallo', { cardId: 301 });
+  const preField = advanceToNextRevealGate(chosen, { initiativeSide: SIDES.PLAYER });
+  const preAgent = advanceToNextRevealGate(preField.matchState, { initiativeSide: SIDES.PLAYER });
+  assert.equal(preAgent.gate, REVEAL_GATES.PRE_AGENT);
+  const notice = preAgent.notices.find((entry) => entry.name === 'Seduzione');
   assert.ok(notice);
   assert.equal(notice.kind, 'reveal');
-  assert.match(notice.text, /Bonus/);
-  assert.match(notice.text, /Tossina/);
+  assert.match(notice.text, /non può usarlo/);
 });

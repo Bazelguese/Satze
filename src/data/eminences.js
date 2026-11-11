@@ -996,7 +996,7 @@ export const EMINENCES = {
     static: {
       id: 'ratti_male_crescente',
       name: 'Male Crescente',
-      text: 'Quando schieri un Agente con la Lega effettiva più bassa tra quelli che ti restano in mano, +1 Presenza. In caso di parità, la condizione è soddisfatta.',
+      text: 'Quando schieri un Agente con la Lega effettiva più bassa tra quelli che non hai ancora usato, +1 Presenza. In caso di parità, la condizione è soddisfatta.',
       implemented: true,
       segments: [
         {
@@ -1011,60 +1011,68 @@ export const EMINENCES = {
 
     abilities: [
       {
-        id: 'ratti_sussurro',
-        name: 'Sussurro',
-        presenceDelta: 0,
-        revealGate: REVEAL_GATES.GENERAL,
+        id: 'ratti_corteggiamento',
+        name: 'Corteggiamento',
+        presenceDelta: 1,
+        revealGate: REVEAL_GATES.PRE_FIELD,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        announceAtReveal: false,
-        text: 'Se durante il Duello almeno un Agente subisce una riduzione a POT, DAN o VA, +1 Presenza.',
+        text: 'In questo Duello l\'avversario sceglie se essere il primo o il secondo a scegliere l\'Agente.',
         segments: [
           {
-            timing: EFFECT_TIMINGS.AFTER_DUEL_OUTCOME,
-            primitive: P.CHANGE_PRESENCE,
-            target: T.SELF,
-            delta: 1,
-            condition: { statReductionOccurred: true },
+            timing: EFFECT_TIMINGS.AFTER_REVEAL,
+            primitive: P.PROPOSE_DEAL,
+            mode: 'OFFER',
+            kind: 'CHOICE',
+            mustAccept: true,
+            choices: ['first', 'second'],
+            choiceLabels: { first: 'Primo', second: 'Secondo' },
+            onChoice: {
+              first: [{ primitive: P.SET_ROUND_INITIATIVE, target: T.SELF }],
+              second: [{ primitive: P.SET_ROUND_INITIATIVE, target: T.OPPONENT }],
+            },
           },
         ],
       },
       {
-        id: 'ratti_veleno',
-        name: 'Veleno',
-        presenceDelta: -2,
-        revealGate: REVEAL_GATES.GENERAL,
+        id: 'ratti_seduzione',
+        name: 'Seduzione',
+        presenceDelta: -1,
+        revealGate: REVEAL_GATES.PRE_AGENT,
         choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Blocca il Bonus d\'Armata del tuo Agente schierato in questo Duello; applica Tossina 1 (min 10) all\'avversario.',
+        paramsSchema: {
+          cardId: { source: PARAM_SOURCES.ENEMY_UNDEPLOYED },
+        },
+        text: 'Scegli un Agente dell\'avversario non ancora utilizzato: se non è l\'unico disponibile, non può usarlo in questo Duello.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.SET_ARMY_BONUS_STATE,
-            target: T.SELF,
-            suppressed: true,
-          },
-          {
-            timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.APPLY_TOXIN,
+            primitive: P.CONSTRAIN_DEPLOY,
             target: T.OPPONENT,
-            value: 1,
-            minHealth: 10,
+            mode: 'BAN',
+            cardParam: 'cardId',
           },
         ],
       },
       {
-        id: 'ratti_spezzacuore',
-        name: 'Spezzacuore',
+        id: 'ratti_vendetta',
+        name: 'Vendetta oltre la Morte',
         presenceDelta: -3,
         revealGate: REVEAL_GATES.GENERAL,
-        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_REVEAL,
-        text: 'Ad inizio Duello, rimuovi Tossina dall\'avversario. Il Bonus del tuo Agente schierato diventa «X Danni diretti» dove X è pari al numero di Tossina rimossa ×2.',
+        choiceParamsTiming: CHOICE_PARAMS_TIMING.AT_SELECTION,
+        paramsSchema: {
+          cardId: { source: PARAM_SOURCES.OWN_DEFEATED },
+        },
+        // La scelta resta sigillata fino allo schieramento, ma l'Agente torna subito
+        // disponibile per chi l'ha scelta.
+        deployGrant: { mode: 'REVIVE', cardParam: 'cardId' },
+        text: 'Si rivela quando schieri l\'Agente. Scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo.',
         segments: [
           {
             timing: EFFECT_TIMINGS.AFTER_REVEAL,
-            primitive: P.REMOVE_TOXIN,
-            target: T.OPPONENT,
-            bonusOverrideFactor: 2,
-            bonusOverrideEffect: 'directDamage',
+            primitive: P.CONSTRAIN_DEPLOY,
+            target: T.SELF,
+            mode: 'REVIVE',
+            cardParam: 'cardId',
           },
         ],
       },

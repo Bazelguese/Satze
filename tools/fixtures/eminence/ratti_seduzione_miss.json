@@ -4,8 +4,10 @@
   "player": {
     "eminenceId": "ratti_bella_malelabbra",
     "presence": 1,
-    "abilityId": "ratti_sussurro",
-    "params": null,
+    "abilityId": "ratti_seduzione",
+    "params": {
+      "cardId": 231
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -15,9 +17,6 @@
       "focusInvested": 2,
       "anchored": false
     },
-    "remainingHand": [
-      { "id": 400, "league": 1 }
-    ],
     "fragments": [],
     "prey": []
   },
@@ -32,7 +31,7 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
@@ -54,10 +53,9 @@
       "player": 0,
       "enemy": 0
     },
-    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "ratti_sussurro_miss",
+  "name": "ratti_seduzione_miss",
   "branch": "miss"
 }

@@ -3,9 +3,11 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "ratti_bella_malelabbra",
-    "presence": 2,
-    "abilityId": "ratti_veleno",
-    "params": null,
+    "presence": 1,
+    "abilityId": "ratti_seduzione",
+    "params": {
+      "cardId": 231
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
@@ -15,9 +17,6 @@
       "focusInvested": 2,
       "anchored": false
     },
-    "remainingHand": [
-      { "id": 400, "league": 1 }
-    ],
     "fragments": [],
     "prey": []
   },
@@ -32,32 +31,31 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
       "player": false,
-      "enemy": false
+      "enemy": true
     },
     "activatedTriggerBySide": {
       "player": null,
-      "enemy": null
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
-    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "ratti_veleno_hit",
+  "name": "ratti_seduzione_hit",
   "branch": "hit"
 }

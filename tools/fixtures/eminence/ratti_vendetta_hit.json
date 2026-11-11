@@ -4,22 +4,24 @@
   "player": {
     "eminenceId": "ratti_bella_malelabbra",
     "presence": 3,
-    "abilityId": "ratti_spezzacuore",
-    "params": null,
+    "abilityId": "ratti_vendetta",
+    "params": {
+      "cardId": 231
+    },
     "agent": {
       "cardId": 231,
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "conquest",
+      "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
-    "remainingHand": [
-      { "id": 400, "league": 1 }
-    ],
     "fragments": [],
-    "prey": []
+    "prey": [],
+    "defeated": [
+      231
+    ]
   },
   "enemy": {
     "eminenceId": null,
@@ -32,32 +34,31 @@
       "power": 5,
       "damage": 3,
       "trigger": "glory",
-      "focusInvested": 2,
+      "focusInvested": 3,
       "anchored": false
     }
   },
   "outcome": {
     "winner": "enemy",
     "powerResolvedBySide": {
-      "player": true,
-      "enemy": false
+      "player": false,
+      "enemy": true
     },
     "activatedTriggerBySide": {
-      "player": "conquest",
-      "enemy": null
+      "player": null,
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
-    "statReductionOccurred": false,
     "finalPowerBySide": null,
     "finalPowerByCardId": null
   },
-  "name": "ratti_spezzacuore_hit",
+  "name": "ratti_vendetta_hit",
   "branch": "hit"
 }

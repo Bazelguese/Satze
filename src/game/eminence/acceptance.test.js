@@ -1591,13 +1591,13 @@ test('Enclave: Fine Scontro non ribatte i delta già risolti', () => {
 
 const RATTI = 'ratti_bella_malelabbra';
 
-function sealRatti(playerAbility, { presence } = {}) {
+function sealRatti(playerAbility, { presence, params = null, base = null } = {}) {
   let matchState = beginEminenceRound(
-    createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' }),
+    base || createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' }),
     { roundNumber: 3 },
   );
   if (presence != null) matchState.player.presence = presence;
-  const p = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility);
+  const p = selectEminenceAbility(matchState, SIDES.PLAYER, playerAbility, params);
   assert.equal(p.ok, true, p.reason);
   const e = selectEminenceAbility(p.matchState, SIDES.ENEMY, 'semaforo_verde');
   assert.equal(e.ok, true, e.reason);
@@ -1616,82 +1616,90 @@ test('lega minima: pareggio e ultima carta pagano, una Lega più bassa in mano n
   );
 });
 
+function rattiAfterAgentGate(playerAbility, options) {
+  let state = sealRatti(playerAbility, options);
+  state = advanceToNextRevealGate(state).matchState;
+  return advanceToNextRevealGate(state).matchState;
+}
+
 test('Ratti statico: Male Crescente paga solo se l\'Agente schierato ha la Lega minima', () => {
-  const sealed = sealRatti('ratti_sussurro');
+  const sealed = rattiAfterAgentGate('ratti_seduzione', { params: { cardId: 301 } });
 
   const hit = prepareEminenceDuel(sealed, {
     deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  assert.equal(hit.matchState.player.presence, 2);
+  assert.equal(hit.matchState.player.presence, 1);
 
   const miss = prepareEminenceDuel(sealed, {
     deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: false, [SIDES.ENEMY]: false },
   });
-  assert.equal(miss.matchState.player.presence, 1);
+  assert.equal(miss.matchState.player.presence, 0);
 });
 
-test('Ratti +0: Sussurro paga una sola volta se c\'è stata una riduzione', () => {
-  const { matchState } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_sussurro',
-    enemyAbility: 'semaforo_verde',
-  });
+test('Ratti +1: Corteggiamento fa scegliere all\'avversario se essere primo o secondo', () => {
+  const sealed = sealRatti('ratti_corteggiamento');
+  const opened = advanceToNextRevealGate(sealed, { initiativeSide: SIDES.PLAYER });
+  assert.equal(opened.gate, REVEAL_GATES.PRE_FIELD);
+  const pending = opened.bundle.pendingDeals[0];
+  assert.equal(pending.recipientSide, SIDES.ENEMY);
+  assert.equal(pending.kind, 'CHOICE');
+  assert.equal(pending.mustAccept, true);
+  assert.deepEqual(pending.choices, ['first', 'second']);
+  assert.equal(opened.matchState.player.presence, 2);
 
-  const hit = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: true,
-  });
-  assert.equal(hit.matchState.player.presence, 2);
+  const first = resolvePendingDeal(opened.matchState, pending, { dealAccepted: true, dealChoice: 'first' });
+  assert.equal(first.matchState.roundInitiativeOverride, SIDES.ENEMY);
+  // Una scelta, non un'Offerta: nessuna Presenza extra per l'accettazione.
+  assert.equal(first.matchState.player.presence, 2);
 
-  const miss = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: false,
-  });
-  assert.equal(miss.matchState.player.presence, 1);
+  const second = resolvePendingDeal(opened.matchState, pending, { dealChoice: 'second' });
+  assert.equal(second.matchState.roundInitiativeOverride, SIDES.PLAYER);
+
+  assert.throws(() => resolvePendingDeal(opened.matchState, pending, {}), /scelta/);
+  const next = beginEminenceRound(first.matchState, { roundNumber: 4 });
+  assert.equal(next.roundInitiativeOverride, null);
 });
 
-test('Ratti −2: Veleno sopprime il Bonus e deposita Tossina sull\'avversario', () => {
-  const { matchState, bundle } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_veleno',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 2 },
-  });
-  assert.equal(matchState.player.presence, 0);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].suppressed, true);
-  assert.deepEqual(bundle.toxinApplications, [
-    { side: SIDES.ENEMY, value: 1, minHealth: 10, source: 'ratti_veleno' },
-  ]);
+test('Ratti −1: Seduzione vieta un Agente avversario, salvo che sia l\'ultimo', () => {
+  const sealed = sealRatti('ratti_seduzione', { params: { cardId: 301 } });
+  let state = advanceToNextRevealGate(sealed).matchState;
+  state = advanceToNextRevealGate(state).matchState;
+  assert.equal(state.player.revealedAbilityId, 'ratti_seduzione');
+  assert.deepEqual(readDeployConstraints(state, SIDES.ENEMY).bannedCardIds, [301]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.ENEMY, [301, 302, 303], [303]), [302]);
+  assert.deepEqual(filterDeployableCardIds(state, SIDES.ENEMY, [301, 302], [302]), [301]);
 });
 
-test('Ratti −3: Spezzacuore rimuove Tossina e overridea il Bonus in danni diretti', () => {
-  const { bundle } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_spezzacuore',
-    enemyAbility: 'semaforo_verde',
-    presence: { player: 3 },
-    playerParams: { removedToxinValue: 2 },
-  });
-  assert.equal(bundle.toxinRemovals.length, 1);
-  assert.equal(bundle.toxinRemovals[0].removedValue, 2);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].override.value, 4);
-  assert.equal(bundle.armyBonusState[SIDES.PLAYER].override.effect, 'directDamage');
+test('Ratti −3: Vendetta oltre la Morte rende di nuovo schierabile un Agente sconfitto', () => {
+  const base = createEminenceMatchState({ playerEminenceId: RATTI, enemyEminenceId: 'patto_grande_semaforo' });
+  base.player.presence = 3;
+  let matchState = beginEminenceRound(base, { roundNumber: 1 });
+  // Senza Agenti sconfitti non è selezionabile.
+  assert.equal(selectEminenceAbility(matchState, SIDES.PLAYER, 'ratti_vendetta', { cardId: 201 }).ok, false);
+
+  matchState = settleEminenceRound(matchState, {
+    winner: SIDES.ENEMY,
+    agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 301 },
+  }).matchState;
+  assert.deepEqual(matchState.player.persistent.defeatedCardIds, [201]);
+  assert.deepEqual(matchState.enemy.persistent.defeatedCardIds, []);
+
+  const sealed = sealRatti('ratti_vendetta', { base: matchState, presence: 3, params: { cardId: 201 } });
+  // Sigillata: l'Agente torna disponibile solo per chi l'ha scelta, prima del reveal.
+  assert.equal(sealed.player.revealedAbilityId ?? null, null);
+  assert.deepEqual(filterDeployableCardIds(sealed, SIDES.PLAYER, [201, 202, 203], [201]), [201, 202, 203]);
+  const prepared = prepareEminenceDuel(sealed, { agentIdBySide: { [SIDES.PLAYER]: 201, [SIDES.ENEMY]: 302 } });
+  assert.equal(prepared.blocked, null);
+  assert.equal(prepared.matchState.player.revealedAbilityId, 'ratti_vendetta');
+  assert.equal(prepared.matchState.player.presence, 0);
 });
 
 test('Ratti: Fine Scontro non ribatte i delta già risolti', () => {
-  const { matchState } = playRound({
-    playerEminenceId: RATTI,
-    enemyEminenceId: 'patto_grande_semaforo',
-    playerAbility: 'ratti_sussurro',
-    enemyAbility: 'semaforo_verde',
+  const sealed = rattiAfterAgentGate('ratti_seduzione', { params: { cardId: 301 } });
+  const prepared = prepareEminenceDuel(sealed, {
+    deployedIsLowestLeagueBySide: { [SIDES.PLAYER]: true, [SIDES.ENEMY]: false },
   });
-  const settled = settleEminenceRound(matchState, {
-    winner: SIDES.PLAYER,
-    statReductionOccurred: true,
-  });
+  const settled = settleEminenceRound(prepared.matchState, { winner: SIDES.PLAYER });
   const closed = settleEminenceMatch(settled.matchState);
   assert.equal(closed.bundle, null);
 });

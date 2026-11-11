@@ -1,10 +1,10 @@
 {
   "ability": {
-    "id": "ratti_spezzacuore",
-    "name": "Spezzacuore",
-    "presenceDelta": -3,
-    "revealGate": "GENERAL",
-    "text": "Ad inizio Duello, rimuovi Tossina dall'avversario. Il Bonus del tuo Agente schierato diventa «X Danni diretti» dove X è pari al numero di Tossina rimossa ×2."
+    "id": "ratti_seduzione",
+    "name": "Seduzione",
+    "presenceDelta": -1,
+    "revealGate": "PRE_AGENT",
+    "text": "Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello."
   },
   "bilance": {
     "cinematicCues": 2,
@@ -18,8 +18,8 @@
       0
     ],
     "presencePlayer": [
-      3,
-      0
+      1,
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -28,23 +28,19 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "ratti_sussurro",
-        "presenceDelta": 0
+        "id": "ratti_corteggiamento",
+        "presenceDelta": 1
       },
       {
-        "id": "ratti_veleno",
-        "presenceDelta": -2
-      },
-      {
-        "id": "ratti_spezzacuore",
-        "presenceDelta": -3
+        "id": "ratti_seduzione",
+        "presenceDelta": -1
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 3,
-    "presenceAvailable": 3,
-    "presenceDelta": -3,
-    "selected": "ratti_spezzacuore"
+    "presenceAfterSelect": 1,
+    "presenceAvailable": 1,
+    "presenceDelta": -1,
+    "selected": "ratti_seduzione"
   },
   "eminence": {
     "army": "Ratti della Megera",
@@ -53,7 +49,7 @@
   },
   "notices": [
     {
-      "badgeText": "Rivelazione · Prima del Duello",
+      "badgeText": "Rivelazione · Prima dell'Agente",
       "cues": [
         {
           "flight": true,
@@ -70,40 +66,46 @@
           "waitFor": null
         }
       ],
-      "id": "reveal:player:ratti_spezzacuore:GENERAL",
+      "id": "reveal:player:ratti_seduzione:PRE_AGENT",
       "kind": "reveal",
-      "name": "Spezzacuore",
+      "name": "Seduzione",
       "outcome": null,
       "payoffs": [
         {
-          "primitive": "REMOVE_TOXIN",
+          "primitive": "CONSTRAIN_DEPLOY",
           "slot": null,
           "target": "OPPONENT"
         }
       ],
       "phase": "REVEAL",
-      "phaseDetail": "Prima del Duello",
+      "phaseDetail": "Prima dell'Agente",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -3,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Ad inizio Duello, rimuovi Tossina dall'avversario. Il Bonus del tuo Agente schierato diventa «X Danni diretti» dove X è pari al numero di Tossina rimossa ×2."
+      "text": "Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello."
     },
     {
-      "badgeText": "Mancato · Condizione non soddisfatta",
+      "badgeText": "Risoluzione · Prima dei trigger",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "recipe": "MISS_DIM",
-          "to": null,
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
-      "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+      "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
       "kind": "effect",
       "name": "Male Crescente",
-      "outcome": "miss",
+      "outcome": "hit",
       "payoffs": [
         {
           "primitive": "CHANGE_PRESENCE",
@@ -111,18 +113,18 @@
           "target": "SELF"
         }
       ],
-      "phase": "MISS",
-      "phaseDetail": "Condizione non soddisfatta",
-      "phaseLabel": "Mancato",
-      "presenceDelta": null,
+      "phase": "RESOLVE",
+      "phaseDetail": "Prima dei trigger",
+      "phaseLabel": "Risoluzione",
+      "presenceDelta": 1,
       "side": "player",
-      "text": "Lega non la più bassa."
+      "text": "Lega effettiva più bassa: +1 Presenza."
     }
   ],
   "scenario": {
     "branch": "hit",
     "initiativeSide": "player",
-    "name": "ratti_spezzacuore_hit",
+    "name": "ratti_seduzione_hit",
     "roundNumber": 3
   },
   "steps": [
@@ -135,27 +137,13 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 3
+        "player": 1
       },
-      "presenceAfterReveal": 3,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
-      "badge": "Prima dell'Agente",
-      "cues": [],
-      "gate": "PRE_AGENT",
-      "gateLabel": "Prima dell'Agente",
-      "kind": "gate",
-      "notices": [],
-      "presence": {
-        "enemy": 0,
-        "player": 3
-      },
-      "presenceAfterReveal": 3,
-      "timing": null
-    },
-    {
-      "badge": "Rivelazione · Prima del Duello",
+      "badge": "Rivelazione · Prima dell'Agente",
       "cues": [
         {
           "flight": true,
@@ -164,7 +152,7 @@
             "type": "card"
           },
           "holdAnnounce": true,
-          "noticeId": "reveal:player:ratti_spezzacuore:GENERAL",
+          "noticeId": "reveal:player:ratti_seduzione:PRE_AGENT",
           "recipe": "REVEAL_OPEN",
           "to": {
             "side": "player",
@@ -173,12 +161,12 @@
           "waitFor": null
         }
       ],
-      "gate": "GENERAL",
-      "gateLabel": "Prima del Duello",
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
       "kind": "gate",
       "notices": [
         {
-          "badgeText": "Rivelazione · Prima del Duello",
+          "badgeText": "Rivelazione · Prima dell'Agente",
           "cues": [
             {
               "flight": true,
@@ -195,23 +183,23 @@
               "waitFor": null
             }
           ],
-          "id": "reveal:player:ratti_spezzacuore:GENERAL",
+          "id": "reveal:player:ratti_seduzione:PRE_AGENT",
           "kind": "reveal",
-          "name": "Spezzacuore",
+          "name": "Seduzione",
           "outcome": null,
           "payoffs": [
             {
-              "primitive": "REMOVE_TOXIN",
+              "primitive": "CONSTRAIN_DEPLOY",
               "slot": null,
               "target": "OPPONENT"
             }
           ],
           "phase": "REVEAL",
-          "phaseDetail": "Prima del Duello",
+          "phaseDetail": "Prima dell'Agente",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -3,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Ad inizio Duello, rimuovi Tossina dall'avversario. Il Bonus del tuo Agente schierato diventa «X Danni diretti» dove X è pari al numero di Tossina rimossa ×2."
+          "text": "Scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello."
         }
       ],
       "presence": {
@@ -222,15 +210,35 @@
       "timing": null
     },
     {
-      "badge": "Mancato · Condizione non soddisfatta",
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Risoluzione · Prima dei trigger",
       "cues": [
         {
-          "flight": false,
-          "from": null,
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
           "holdAnnounce": false,
-          "noticeId": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
-          "recipe": "MISS_DIM",
-          "to": null,
+          "noticeId": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
+          "recipe": "PRESENCE_PULSE",
+          "to": {
+            "side": "player",
+            "type": "presence"
+          },
           "waitFor": null
         }
       ],
@@ -238,21 +246,27 @@
       "kind": "checkpoint",
       "notices": [
         {
-          "badgeText": "Mancato · Condizione non soddisfatta",
+          "badgeText": "Risoluzione · Prima dei trigger",
           "cues": [
             {
-              "flight": false,
-              "from": null,
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
               "holdAnnounce": false,
-              "recipe": "MISS_DIM",
-              "to": null,
+              "recipe": "PRESENCE_PULSE",
+              "to": {
+                "side": "player",
+                "type": "presence"
+              },
               "waitFor": null
             }
           ],
-          "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:miss",
+          "id": "effect:player:ratti_male_crescente:BEFORE_TRIGGER_CHECK:hit",
           "kind": "effect",
           "name": "Male Crescente",
-          "outcome": "miss",
+          "outcome": "hit",
           "payoffs": [
             {
               "primitive": "CHANGE_PRESENCE",
@@ -260,17 +274,17 @@
               "target": "SELF"
             }
           ],
-          "phase": "MISS",
-          "phaseDetail": "Condizione non soddisfatta",
-          "phaseLabel": "Mancato",
-          "presenceDelta": null,
+          "phase": "RESOLVE",
+          "phaseDetail": "Prima dei trigger",
+          "phaseLabel": "Risoluzione",
+          "presenceDelta": 1,
           "side": "player",
-          "text": "Lega non la più bassa."
+          "text": "Lega effettiva più bassa: +1 Presenza."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -282,7 +296,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "segments": [
         {
@@ -307,10 +321,10 @@
             "status": "none"
           },
           "expectedNoCue": false,
-          "primitive": "REMOVE_TOXIN",
+          "primitive": "CONSTRAIN_DEPLOY",
           "source": "ability",
-          "sourceId": "ratti_spezzacuore",
-          "sourceName": "Spezzacuore",
+          "sourceId": "ratti_seduzione",
+          "sourceName": "Seduzione",
           "target": "OPPONENT",
           "timing": "AFTER_REVEAL"
         }

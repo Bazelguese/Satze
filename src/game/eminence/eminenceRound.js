@@ -122,6 +122,8 @@ export function beginEminenceRound(matchState, { roundNumber = 1 } = {}) {
   return {
     ...withStatics,
     roundNumber,
+    // Iniziativa del round imposta da un effetto (es. Corteggiamento); null = quella normale.
+    roundInitiativeOverride: null,
     gateProgress: createGateProgress(resolveGateSequenceName(reset)),
   };
 }
