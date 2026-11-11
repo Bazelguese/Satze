@@ -60,10 +60,11 @@ import {
 
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
-import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
+import { needsEminenceRoundOpen, openEminenceRound, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
 import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
 import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setupMessage as eminenceSetupMessage, dealMessage as eminenceDealMessage, applyRemoteChoice, applyRemoteSetup, dealNeedsRemoteResponse, forcedDealResponse } from '../src/game/eminence/eminenceOnline.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
+import { chooseAiEminenceSelection, chooseAiDealResponse, orderSetupPreyCandidates } from '../src/game/ai/eminence/aiEminenceChoice.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { getEminenceAbility } from '../src/data/eminences.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
@@ -412,6 +413,12 @@ export default function SatzeGame() {
   const remoteChoiceByRoundRef = useRef(new Map());
   const openedEminenceGatesRef = useRef(new Set());
   const agentsLockedThisRoundRef = useRef(false);
+  /** Stato pubblico per le scelte Eminenza dell'IA (letto nei callback senza allargarne le dipendenze). */
+  const aiEminenceGameRef = useRef(null);
+  aiEminenceGameRef.current = {
+    playerHand, enemyHand, playerUsedCards, enemyUsedCards, playerHP, enemyHP,
+    conqueredFields, battlefields, roundNumber, isPlayerFirst, playerArmyBonuses, enemyArmyBonuses,
+  };
 
   /**
    * Apertura del round Eminenza.
@@ -444,7 +451,8 @@ export default function SatzeGame() {
     // Il giocatore sceglie dalla rail, anche se resta una sola abilità legale.
     if (aiDifficulty !== 'multiplayer') {
       next = selectConcordiaAbility(next, { hand: enemyHand, usedCards: enemyUsedCards, choosesSecond: isPlayerFirst, roundNumber });
-      next = autoSelectFirstLegalAbility(next, 'enemy', {
+      next = chooseAiEminenceSelection(next, 'enemy', {
+        game: aiEminenceGameRef.current,
         paramContext: {
           // Contesto dal punto di vista giocatore; autoSelect lo ruota per l'IA.
           ownUndeployedCardIds: (playerHand || [])
@@ -906,12 +914,14 @@ export default function SatzeGame() {
     if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
     if (aiDifficulty === 'multiplayer') return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
-    setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', playerUndeployedCardIds));
+    // Preda iniziale dell'IA: la carta più forte del giocatore.
+    setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', orderSetupPreyCandidates(playerUndeployedCardIds, playerHand)));
   }, [
     gamePhase,
     aiDifficulty,
     eminenceMatchState,
     playerUndeployedCardIds,
+    playerHand,
     setEminenceMatchState,
   ]);
 
@@ -1095,7 +1105,7 @@ export default function SatzeGame() {
     // Online risponde l'altro giocatore: si aspetta il suo messaggio, salvo le scelte forzate.
     for (const deal of pending.filter((entry) => entry.recipientSide === 'enemy')) {
       let response;
-      if (aiDifficulty !== 'multiplayer') response = autoResponseForPendingDeal(deal, nextMatch);
+      if (aiDifficulty !== 'multiplayer') response = chooseAiDealResponse(deal, nextMatch, aiEminenceGameRef.current);
       else if (!dealNeedsRemoteResponse(deal, nextMatch)) response = forcedDealResponse(deal, nextMatch);
       else if (earlyEminenceDealResponsesRef.current.length) response = earlyEminenceDealResponsesRef.current.shift().response || {};
       else {
