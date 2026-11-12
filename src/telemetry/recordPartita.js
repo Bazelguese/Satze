@@ -115,6 +115,7 @@ export function partitaDuello({
     motivo: motivo(gameResult),
     roundGiocati: round.length,
     giocatore: {
+      ...(giocatore.nomeOnline ? { nomeOnline: giocatore.nomeOnline } : {}),
       armata: giocatore.armata ?? null,
       esercito: giocatore.esercito ?? null,
       carteEsercito: giocatore.carteEsercito ?? null,

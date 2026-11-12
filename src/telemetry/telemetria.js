@@ -92,7 +92,8 @@ const FORMATI = { standard: 'Standard', noEminenza: 'No Eminenza', maniNude: 'Ma
 /** Una riga leggibile per il canale Discord; i dati completi sono nel file allegato. */
 export function riepilogoPartita(r) {
   const parti = [
-    `**${r.giocatore?.nome || 'Senza nome'}**`,
+    // Online: nome del profilo e, tra parentesi, quello usato nella stanza.
+    `**${r.giocatore?.nome || 'Senza nome'}**${r.giocatore?.nomeOnline ? ` (${r.giocatore.nomeOnline})` : ''}`,
     [MODALITA[r.modalita] || r.modalita, FORMATI[r.formato]].filter(Boolean).join(' '),
     `${r.giocatore?.armata || '?'} vs ${(r.avversari || []).map((a) => a.armata || '?').join(' / ') || '?'}`,
     `${ESITI[r.esito] || r.esito}${r.motivo ? ` (${r.motivo})` : ''}`,

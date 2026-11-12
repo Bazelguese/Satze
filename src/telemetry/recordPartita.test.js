@@ -145,3 +145,18 @@ test('partitaDuello del Torneo: modalità Torneo con incontro e numero di partit
   // Senza torneo il campo resta vuoto.
   assert.equal(partitaDuello({ idPartita: 'P-4', inizio: null, fine: 1, round: [], gameResult: {}, online: null, gameMode: 'classic', eminenze: {}, giocatore: {}, avversario: {} }).torneo, null);
 });
+
+test('partite online: nome del profilo e, tra parentesi, quello della stanza', () => {
+  const p = partitaDuello({
+    idPartita: 'P-5', inizio: null, fine: 1, round: [], gameResult: { winner: 'player', reason: 'hp' },
+    online: { stanza: 'XYZ789' }, gameMode: 'classic', eminenze: { enabled: false },
+    giocatore: { nomeOnline: 'Dado' }, avversario: { nome: 'Luca' },
+  });
+  assert.equal(p.giocatore.nomeOnline, 'Dado');
+  const riga = riepilogoPartita({ ...p, versione: '0.1.1', giocatore: { nome: 'Davide', ...p.giocatore } });
+  assert.match(riga, /^\*\*Davide\*\* \(Dado\)/);
+  // In locale niente parentesi.
+  const locale = partitaDuello({ idPartita: 'P-6', inizio: null, fine: 1, round: [], gameResult: {}, online: null, gameMode: 'classic', eminenze: {}, giocatore: { nomeOnline: null }, avversario: {} });
+  assert.equal('nomeOnline' in locale.giocatore, false);
+  assert.match(riepilogoPartita({ ...locale, giocatore: { nome: 'Davide', ...locale.giocatore } }), /^\*\*Davide\*\* ·/);
+});

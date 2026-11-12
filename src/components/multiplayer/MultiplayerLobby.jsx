@@ -13,6 +13,7 @@ import {
 import { IS_PUBLIC_PLAYTEST_BUILD } from '../../config/buildProfile';
 import { injectSatzeUiFonts } from '../../theme/hudOratorioPalette';
 import { playUiClick } from '../../audio/soundBus';
+import { getNomeGiocatore } from '../../telemetry/telemetria.js';
 
 function waitForMessage(manager, predicate, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
@@ -42,7 +43,8 @@ const ACCENT = MULTIPLAYER_ACCENT;
 
 export function MultiplayerLobby({ onStartGame, onClose }) {
   const [mode, setMode] = useState('menu');
-  const [playerName, setPlayerName] = useState('');
+  // Già compilato con il nome dato al primo avvio (si può cambiare: è il nome che vedono gli altri).
+  const [playerName, setPlayerName] = useState(() => getNomeGiocatore().slice(0, 20));
   const [roomIdInput, setRoomIdInput] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');

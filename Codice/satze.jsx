@@ -3841,8 +3841,12 @@ export default function SatzeGame() {
     if (guidedMatch?.active || selectedMode === 'campaign' || gameMode === 'campaign' || gameResult.test || devDialogueDuelActive || spectating) return;
     try {
       const fine = Date.now();
+      // Partite online (Duello, 2v2, Re della collina, Torneo online): anche il nome usato nella stanza.
+      const online = isOnlinePvP || multiSeat.isOnline || Boolean(tournamentGameActive && tournament?.online);
+      const nomeOnline = online ? (multiplayerSession?.playerName?.trim() || null) : null;
       if (gameResult.telemetria) {
-        registraPartita(partitaMultiPosto({ idPartita: t.idPartita, inizio: t.inizio, fine, gameResult, telemetria: gameResult.telemetria }));
+        const record = partitaMultiPosto({ idPartita: t.idPartita, inizio: t.inizio, fine, gameResult, telemetria: gameResult.telemetria });
+        registraPartita(nomeOnline ? { ...record, giocatore: { ...record.giocatore, nomeOnline } } : record);
         return;
       }
       const customId = typeof selectedDeckKey === 'string' && selectedDeckKey.startsWith('custom_')
@@ -3863,6 +3867,7 @@ export default function SatzeGame() {
         gameMode,
         eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
         giocatore: {
+          nomeOnline,
           armata: selectedArmy || playerHand?.[0]?.army || null,
           esercito: custom ? `personalizzato: ${custom.name || customId}` : (typeof selectedDeckKey === 'string' ? `${selectedDeckKey} · ${ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.name || ''}`.trim() : null),
           carteEsercito: custom?.cards ?? null,
@@ -3884,6 +3889,7 @@ export default function SatzeGame() {
     gamePhase, gameResult, guidedMatch?.active, selectedMode, gameMode, devDialogueDuelActive, selectedDeckKey,
     isOnlinePvP, multiplayerSession?.roomCode, aiDifficulty, eminenceMatchState, selectedArmy, playerHand, playerHP,
     onlinePeerName, enemyHand, duelDeckKeys?.enemy, enemyHP, spectating, tournamentGameActive, tournamentGameInfo,
+    multiSeat.isOnline, tournament?.online, multiplayerSession?.playerName,
   ]);
 
   // Rotella mouse sui FC - funziona su panel, sulla carta posizionata e sulla carta in mano
