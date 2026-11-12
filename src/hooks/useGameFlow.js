@@ -258,7 +258,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     }
     
     // Estensioni campagna: numero Campi e PV per missione (default 5 / 25)
-    const fields = campaignDuelMod?.fixedFields ?? selectBattlefields(mode, allBattlefields, {
+    // `battlefields`: Campi già scelti da chi avvia (serie di torneo: li sceglie prima per precaricarli).
+    const fields = startOptions?.battlefields ?? campaignDuelMod?.fixedFields ?? selectBattlefields(mode, allBattlefields, {
       fieldCount: campaignDuelMod?.fields ?? undefined,
     });
     setBattlefields(fields);

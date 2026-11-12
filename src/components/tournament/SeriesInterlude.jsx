@@ -4,6 +4,7 @@
 // Nel torneo la serie si gioca tutta sullo stesso tavolo: finita una
 // partita le mani escono di scena, questo cartello dice che partita
 // comincia e quali carte arrivano, poi parte la nuova distribuzione.
+// I movimenti del tavolo stanno in src/styles/satze-torneo-tavolo.css.
 // ============================================================
 
 const RULE_TEXT = {
@@ -40,14 +41,8 @@ export function SeriesInterlude({ roundName, gameNumber, rule, score, stage, acc
         .sil.is-leaving .sil-plate { animation: sil-out .34s cubic-bezier(.6,0,.9,.4) forwards; }
         @keyframes sil-out { to { opacity: 0; transform: skewX(-22deg) rotate(-2deg) translateX(220px); } }
 
-        /* le mani della partita finita lasciano il tavolo: l'avversario verso l'alto, tu verso il basso */
-        .satze-scene.trn-hands-out .imp-hand-enemy { animation: sil-hand-up .7s cubic-bezier(.6,0,.9,.4) forwards; }
-        .satze-scene.trn-hands-out .imp-hand-player { animation: sil-hand-down .7s cubic-bezier(.6,0,.9,.4) forwards; }
-        @keyframes sil-hand-up { to { translate: -120px -420px; opacity: 0; } }
-        @keyframes sil-hand-down { to { translate: 120px 420px; opacity: 0; } }
-
         @media (prefers-reduced-motion: reduce) {
-          .sil-plate, .sil.is-leaving .sil-plate, .satze-scene.trn-hands-out .imp-hand-enemy, .satze-scene.trn-hands-out .imp-hand-player { animation: none; }
+          .sil-plate, .sil.is-leaving .sil-plate { animation: none; }
         }
       `}</style>
     </div>
