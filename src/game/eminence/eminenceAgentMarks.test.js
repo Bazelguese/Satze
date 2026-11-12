@@ -31,10 +31,9 @@ test('segni: sul proprio Agente e su quello nemico', () => {
   assert.deepEqual(words(swap.enemy), ['Potere sostituito']);
 });
 
-test('segni: regole del round valgono per entrambi (Semaforo)', () => {
+test('segni: le regole del round (Semaforo) non stanno sugli Agenti ma sulla targa del round', () => {
   const marks = buildAgentMarks(state('player', 'Il Grande Semaforo', 'Rosso'));
-  assert.deepEqual(words(marks.player), ['Trigger soddisfatto', 'Trigger vietato']);
-  assert.deepEqual(words(marks.enemy), ['Trigger soddisfatto', 'Trigger vietato']);
+  assert.deepEqual(marks, { player: [], enemy: [] });
 });
 
 test('segni: le Offerte contano solo se accettate, e nella variante scelta', () => {

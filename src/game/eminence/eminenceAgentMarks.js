@@ -45,7 +45,7 @@ const other = (side) => (side === 'enemy' ? 'player' : 'enemy');
 
 /** Lati degli Agenti toccati da un segmento, visti da chi ha giocato l'abilità. */
 function sidesOf(seg, owner) {
-  if (seg.scope === 'GLOBAL') return ['player', 'enemy'];
+  if (seg.scope === 'GLOBAL') return []; // vale per tutti: lo dice la regola del round (eminenceRoundRules)
   if (seg.scope === 'ENEMY') return [other(owner)];
   if (seg.scope === 'OWN') return [owner];
   if (seg.target === 'ENEMY_AGENT' || seg.target === 'OPPONENT') return [other(owner)];
