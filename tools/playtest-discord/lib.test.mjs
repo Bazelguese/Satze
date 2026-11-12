@@ -19,7 +19,7 @@ function serverFinto({ forumVietati = false } = {}) {
   let prossimoId = 100;
   let orologio = 0;
   const nuovoId = () => String(prossimoId++);
-  const conteggi = { postCreati: 0, postCancellati: 0, ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0 };
+  const conteggi = { postCreati: 0, postCancellati: 0, ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0, reazioni: 0, spostamenti: 0, fileCaricati: 0 };
 
   const ruoli = new Cache();
   const canali = new Cache();
@@ -30,6 +30,7 @@ function serverFinto({ forumVietati = false } = {}) {
       id: nuovoId(),
       name: opts.name,
       type: opts.type,
+      position: opts.position ?? 50,
       parentId: opts.parent?.id ?? null,
       topic: opts.topic ?? null,
       availableTags: (opts.availableTags ?? []).map((t) => ({ ...t, id: t.id ?? nuovoId() })),
@@ -44,26 +45,36 @@ function serverFinto({ forumVietati = false } = {}) {
       thread: [],
       threads: {
         fetchAll: async () => canale.thread.filter((t) => !t.cancellato),
-        async create({ name, content }) {
+        async create({ name, content, file }) {
           conteggi.postCreati++;
           const t = canaleFinto({ name, type: ChannelType.PublicThread, parent: canale });
           t.ownerId = BOT;
           t.archived = false;
           t.locked = false;
-          await t.send({ content });
+          t.pinned = false;
+          await t.send({ content, file });
           canale.thread.push(t);
           return t;
         },
       },
       async delete() { canale.cancellato = true; conteggi.postCancellati++; },
-      async send({ content }) {
+      async send({ content, file }) {
         conteggi.messaggiInviati++;
+        if (file) conteggi.fileCaricati++;
         const m = {
           id: nuovoId(),
           content,
+          haAllegati: Boolean(file),
           author: { id: BOT },
           createdTimestamp: ++orologio,
-          async edit({ content: c }) { conteggi.messaggiModificati++; m.content = c; return m; },
+          reazioniDelBot: [],
+          async react(emoji) { conteggi.reazioni++; m.reazioniDelBot.push(emoji); },
+          async edit({ content: c, file }) {
+            conteggi.messaggiModificati++;
+            m.content = c;
+            if (file) { conteggi.fileCaricati++; m.haAllegati = true; }
+            return m;
+          },
           async delete() { conteggi.messaggiCancellati++; messaggi.delete(m.id); },
         };
         messaggi.set(m.id, m);
@@ -89,6 +100,10 @@ function serverFinto({ forumVietati = false } = {}) {
     channels: {
       cache: canali,
       async fetch() {},
+      async setPositions(lista) {
+        conteggi.spostamenti++;
+        for (const { channel, position } of lista) canali.get(channel).position = position;
+      },
       async create(o) {
         if (forumVietati && o.type === ChannelType.GuildForum) throw new Error('Forum non disponibili');
         conteggi.canaliCreati++;
@@ -285,4 +300,59 @@ test('i canali esistenti non vengono toccati, salvo aggiornaCanali', async () =>
   await allestisci(guild, BOT, CFG, muto, { stato, aggiornaCanali: true });
   assert.notEqual(bug.permissionOverwrites, mie);
   assert.ok(bug.topic.includes('Versione:'));
+});
+
+test('ingresso: visibile a tutti, in cima solo alla creazione, una sola reazione del bot', async () => {
+  const ids = { everyoneId: 'e', devId: 'd', playtesterId: 'p' };
+  const ingresso = permessiPer('ingresso', ids);
+  const tutti = ingresso.find((o) => o.id === 'e');
+  assert.ok(tutti.allow.includes(P.ViewChannel), 'chi entra senza ruolo vede il canale');
+  assert.ok(tutti.deny.includes(P.SendMessages) && tutti.deny.includes(P.AddReactions), 'si clicca solo la reazione del bot');
+  assert.equal(ingresso.find((o) => o.id === 'p'), undefined, 'i Playtester continuano a vederlo, per togliere la reazione');
+
+  const { guild, conteggi, canali } = serverFinto();
+  const categoriaEsistente = { id: 'vecchia', name: 'Generale', type: ChannelType.GuildCategory, position: 0 };
+  canali.set(categoriaEsistente.id, categoriaEsistente);
+  const { stato } = await allestisci(guild, BOT, CFG, muto);
+  const categoria = canaleDiNome(canali, '👋 SATZE · INGRESSO');
+  assert.equal(categoria.position, 0, 'appena creata va in cima');
+  assert.equal(categoriaEsistente.position, 1);
+  const inizia = canaleDiNome(canali, 'inizia-qui');
+  assert.equal(inizia.parentId, categoria.id);
+  const [messaggio] = [...inizia.messaggi.values()];
+  assert.deepEqual(messaggio.reazioniDelBot, ['🎮']);
+  assert.ok(messaggio.content.includes(`<#${canaleDiNome(canali, 'download').id}>`));
+
+  // Spostata a mano: il secondo avvio non la rimette in cima e non duplica la reazione.
+  categoria.position = 7;
+  await allestisci(guild, BOT, CFG, muto, { stato });
+  assert.equal(categoria.position, 7);
+  assert.equal(conteggi.spostamenti, 1);
+  assert.equal(conteggi.reazioni, 1);
+});
+
+test('manuale PDF: post fissato in cima a #guida, file caricato una volta e ricaricato se cambia', async () => {
+  const { guild, conteggi, canali } = serverFinto();
+  await allestisci(guild, BOT, CFG, muto);
+  const guida = canaleDiNome(canali, 'guida');
+  const post = guida.thread.filter((t) => !t.cancellato);
+  const manuale = post.find((t) => t.name === '📄 Manuale in PDF');
+  assert.ok(manuale, 'il post del manuale esiste');
+  assert.equal(manuale.pinned, true);
+  assert.equal(post.filter((t) => t.pinned).length, 1, 'un solo post fissato');
+  assert.equal(post.at(-1), manuale, 'creato per ultimo: in cima anche ordinando per data');
+  assert.equal(conteggi.fileCaricati, 1);
+  const download = [...canaleDiNome(canali, 'download').messaggi.values()].map((m) => m.content).join('\n');
+  assert.ok(download.includes(`<#${guida.id}>`), '#download rimanda a #guida');
+
+  // Secondo avvio: niente da ricaricare.
+  await allestisci(guild, BOT, CFG, muto);
+  assert.equal(conteggi.fileCaricati, 1);
+
+  // PDF cambiato (impronta diversa nel testo): il file si ricarica sullo stesso messaggio.
+  const [primo] = [...manuale.messaggi.values()];
+  primo.content = primo.content.replace(/· \w+$/, '· vecchia');
+  await allestisci(guild, BOT, CFG, muto);
+  assert.equal(conteggi.fileCaricati, 2);
+  assert.equal(conteggi.postCancellati, 0, 'nessun post ricreato');
 });

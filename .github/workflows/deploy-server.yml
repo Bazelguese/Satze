@@ -1,0 +1,72 @@
+name: Deploy server su Fly
+
+# Pubblica il server multiplayer (e il bot del ruolo Playtester) su Fly.io.
+# Parte da solo quando cambiano i file del server, oppure a mano da Actions → "Deploy server su Fly" → Run workflow.
+#
+# Segreti del repository (Settings → Secrets and variables → Actions):
+#   FLY_API_TOKEN      — token di deploy dell'app satze-ws (fly.io → app satze-ws → Tokens).
+#   DISCORD_BOT_TOKEN  — token del bot Discord (Developer Portal → Bot). Facoltativo: se c'è,
+#                        viene salvato come segreto di Fly e il bot dei ruoli si accende.
+
+on:
+  push:
+    branches: [main, claude/bold-cori-vy3jdc]
+    paths:
+      - 'server/**'
+      - 'Dockerfile'
+      - 'fly.toml'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-fly
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+    steps:
+      - name: Controlla i segreti
+        id: segreti
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::warning::Manca il segreto FLY_API_TOKEN: deploy saltato."
+            echo "pronto=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "pronto=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.segreti.outputs.pronto == 'si'
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.segreti.outputs.pronto == 'si'
+
+      - name: Token del bot Discord come segreto di Fly
+        if: steps.segreti.outputs.pronto == 'si'
+        run: |
+          if [ -n "$DISCORD_BOT_TOKEN" ]; then
+            flyctl secrets set --stage DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN"
+            echo "Token del bot salvato su Fly (sarà attivo con questo deploy)."
+          else
+            echo "::warning::Manca il segreto DISCORD_BOT_TOKEN: il bot dei ruoli resta spento."
+          fi
+
+      - name: Deploy
+        if: steps.segreti.outputs.pronto == 'si'
+        run: flyctl deploy --remote-only
+
+      - name: Stato del bot dei ruoli
+        if: steps.segreti.outputs.pronto == 'si'
+        run: |
+          sleep 30
+          flyctl status
+          echo "--- righe del bot dei ruoli ---"
+          flyctl logs --no-tail | grep -E "ruoli Discord|in ascolto" | tail -n 20 || echo "(nessuna riga ancora)"

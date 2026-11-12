@@ -4,6 +4,7 @@
 // Non cancella mai canali, ruoli o messaggi che non ha creato lei.
 // ============================================
 
+import { existsSync, statSync } from 'node:fs';
 import { ChannelType, PermissionFlagsBits as P, SortOrderType, ForumLayoutType } from 'discord.js';
 import { STRUTTURA, RUOLI, messaggi, lineeGuida, post as postDelForum } from './contenuti.mjs';
 
@@ -14,6 +15,7 @@ export const LIMITI = {
   nomeTag: 20,
   tagPerForum: 20,
   titoloPost: 100,
+  file: 10 * 1024 * 1024,
 };
 
 const TIPI = {
@@ -28,6 +30,18 @@ const PARLARE = [P.Connect, P.Speak, P.Stream, P.UseVAD];
 
 /** Permessi della categoria (e dei suoi canali) in base al tipo di accesso. */
 export function permessiPer(accesso, { everyoneId, devId, playtesterId }) {
+  if (accesso === 'ingresso') {
+    // Visibile a tutti, anche senza ruolo. Senza «Aggiungi reazioni» si può comunque cliccare
+    // una reazione già presente: quella del bot.
+    return [
+      {
+        id: everyoneId,
+        allow: [P.ViewChannel, P.ReadMessageHistory],
+        deny: [P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads, P.CreatePrivateThreads, P.AddReactions],
+      },
+      { id: devId, allow: [...LEGGERE, ...SCRIVERE, P.ManageMessages] },
+    ];
+  }
   // @everyone non vede né scrive (Davide ha tolto anche la scrittura nei forum di feedback, 2026-11-08).
   const permessi = [
     { id: everyoneId, deny: accesso === 'feedback' ? [P.ViewChannel, P.SendMessages] : [P.ViewChannel] },
@@ -104,6 +118,10 @@ export function verificaContenuti(cfg) {
         const lista = postDelForum(cfg)[c.post];
         if (!lista?.length) errori.push(`${dove}: post "${c.post}" non trovati`);
         else lista.forEach((p) => {
+          if (p.allegato) {
+            if (!existsSync(p.allegato.percorso)) errori.push(`${dove} › ${p.titolo}: file ${p.allegato.percorso} non trovato`);
+            else if (statSync(p.allegato.percorso).size > LIMITI.file) errori.push(`${dove} › ${p.titolo}: ${p.allegato.nome} supera i 10 MiB consentiti ai bot`);
+          }
           if (!p.titolo || p.titolo.length > LIMITI.titoloPost) errori.push(`${dove}: titolo del post "${p.titolo}" vuoto o oltre ${LIMITI.titoloPost} caratteri`);
           p.messaggi.forEach((m, i) => {
             if (m.length > LIMITI.messaggio) errori.push(`${dove} › ${p.titolo}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
@@ -189,6 +207,30 @@ function etichetta(tipo) {
   return 'canale';
 }
 
+/** Sposta la categoria sopra tutte le altre (Discord ordina le categorie per posizione). */
+async function portaInCima(guild, categoria, ctx) {
+  const categorie = [...guild.channels.cache.values()]
+    .filter((c) => c.type === ChannelType.GuildCategory && c.id !== categoria.id)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  await guild.channels.setPositions([categoria, ...categorie].map((c, i) => ({ channel: c.id, position: i })));
+  ctx.log(`  ↑ categoria ${categoria.name} spostata in cima`);
+}
+
+/** Mette la reazione del bot sull'ultimo suo messaggio del canale (quella che gli utenti cliccano). */
+async function reazioneDelBot(canale, emoji, botId, log) {
+  const recenti = await canale.messages.fetch({ limit: 100 });
+  const ultimo = [...recenti.values()]
+    .filter((m) => m.author?.id === botId)
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)[0];
+  if (!ultimo) return;
+  if (ultimo.reazioniDelBot?.includes(emoji)) {
+    log(`    = reazione ${emoji} già presente in #${canale.name}`);
+    return;
+  }
+  await ultimo.react(emoji);
+  log(`    + reazione ${emoji} in #${canale.name}`);
+}
+
 /**
  * Allinea i messaggi del bot in un canale ai testi voluti.
  * Stesso numero di messaggi → li modifica; numero diverso → cancella i suoi e li ripubblica.
@@ -247,9 +289,13 @@ async function sincronizzaPost(forum, posts, botId, collega, log) {
       const miei = messaggiPerPost.get(p.titolo);
       for (let i = 0; i < p.messaggi.length; i++) {
         const testo = collega(p.messaggi[i]);
-        if (miei[i].content !== testo) { await miei[i].edit({ content: testo }); cambiati++; }
+        // Il file sta sul primo messaggio: si ricarica se il testo (che ne contiene l'impronta) è cambiato
+        // o se l'allegato non c'è più.
+        const file = i === 0 && p.allegato && (miei[i].content !== testo || !miei[i].haAllegati) ? p.allegato : undefined;
+        if (miei[i].content !== testo || file) { await miei[i].edit({ content: testo, file }); cambiati++; }
       }
-      await perTitolo.get(p.titolo).edit({ locked: true });
+      const t = perTitolo.get(p.titolo);
+      await t.edit({ locked: true, ...(p.fissato && !t.pinned ? { pinned: true } : {}) });
     }
     log(`    ${cambiati ? `✎ ${cambiati} messaggi aggiornati` : '= post già aggiornati'} in #${forum.name}`);
     return;
@@ -258,9 +304,9 @@ async function sincronizzaPost(forum, posts, botId, collega, log) {
   for (const t of esistenti) await t.delete();
   for (const p of [...posts].reverse()) {
     const [primo, ...altri] = p.messaggi.map(collega);
-    const t = await forum.threads.create({ name: p.titolo, content: primo });
+    const t = await forum.threads.create({ name: p.titolo, content: primo, file: p.allegato });
     for (const testo of altri) await t.send({ content: testo });
-    await t.edit({ locked: true });
+    await t.edit({ locked: true, ...(p.fissato ? { pinned: true } : {}) });
   }
   log(`    ✉ ${posts.length} post pubblicati in #${forum.name}`);
 }
@@ -312,8 +358,12 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
   for (const gruppo of STRUTTURA) {
     log(`\n${gruppo.categoria}`);
     const permessi = permessiPer(gruppo.accesso, ids);
+    const giaCreata = Boolean(ctx.stato.canali[gruppo.categoria])
+      || Boolean(guild.channels.cache.find((x) => x.name === gruppo.categoria && x.type === ChannelType.GuildCategory));
     const categoria = await trovaOCreaCanale(guild, { chiave: gruppo.categoria, nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, ctx);
     if (!categoria) continue;
+    // Solo appena creata: se poi la sposti a mano, lo script non la rimette in cima.
+    if (gruppo.inCima && !giaCreata) await portaInCima(guild, categoria, ctx);
 
     for (const c of gruppo.canali) {
       const nome = nomeDiscord(c.nome, c.tipo);
@@ -351,7 +401,7 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
       }
       if (!canale) continue;
       idPerNome.set(nome, canale.id);
-      if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi] });
+      if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi], reazione: c.reazioneBot });
       if (c.post) {
         const lista = postDelForum(cfg)[c.post];
         if (canale.type === ChannelType.GuildForum) conPost.push({ canale, posts: lista });
@@ -362,8 +412,9 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
   }
 
   log('\nMessaggi');
-  for (const { canale, testi: lista } of conMessaggi) {
+  for (const { canale, testi: lista, reazione } of conMessaggi) {
     await sincronizzaMessaggi(canale, lista.map((t) => collegaCanali(t, idPerNome)), botId, log);
+    if (reazione) await reazioneDelBot(canale, reazione, botId, log);
   }
   for (const { canale, posts } of conPost) {
     await sincronizzaPost(canale, posts, botId, (t) => collegaCanali(t, idPerNome), log);

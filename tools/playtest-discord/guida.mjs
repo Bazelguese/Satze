@@ -10,7 +10,7 @@ export function guida(cfg) {
   const v = cfg.versione;
   return [
     {
-      titolo: '📖 Indice e legenda',
+      titolo: "📖 Indice e legenda",
       messaggi: [
         `# Guida di SATZE · v${v}
 Regolamento e riferimento tecnico della build di playtest. Un post per argomento, da leggere in quest'ordine:
@@ -30,19 +30,21 @@ Regolamento e riferimento tecnico della build di playtest. Un post per argomento
 13. Modalità, formati e IA
 14. 2v2 ad abbinamenti segreti
 15. Re della collina
-16. Multiplayer online
-17. Eserciti, Tutorial, Galleria, Opzioni
-18. Limiti noti di questa build
+16. Torneo
+17. Multiplayer online
+18. Eserciti, Tutorial, Manuale, Galleria, Opzioni
+19. Limiti noti di questa build
 
 ## Stato delle funzioni
 - ✅ **Stabile**: Duello 1v1 e regole base, Campi, 2v2, Re della collina, Multiplayer.
+- 🆕 **Nuovo in questa build**: **Torneo** (anche online) e **personalità dell'IA**.
 - 🧪 **In test, non bilanciato**: **Eminenze**. Sono una meccanica secondaria: le regole possono cambiare e i valori non sono ancora bilanciati.
 - ✏️ **In bozza**: stili grafici alternativi delle carte **Eldritch** e **Arcana**.
 - 📝 **Testi provvisori**: i **testi descrittivi delle carte** (flavour text) e le **informazioni nelle schermate delle armate** sono segnaposto. Non descrivono le regole: per quelle vale questa guida.
 - 🚧 **Non giocabile**: **Campagna**. È visibile nel menu ma è in via di definizione.
 
 ## Note
-- La guida descrive il comportamento reale del gioco. Se il Glossario o il Tutorial in gioco dicono una cosa diversa, vale la guida: segnalalo in <#bug> con il tag **regole / effetti**.
+- La guida descrive il comportamento reale del gioco. Se il Glossario, il Manuale o il Tutorial in gioco dicono una cosa diversa, vale la guida: segnalalo in <#bug> con il tag **regole / effetti**.
 - Abbreviazioni: **PV** punti vita · **FC** Focus Coin · **POT** Potenza · **DAN** Danno · **VA** Valore Assalto · **nem.** nemico.`,
       ],
     },
@@ -306,13 +308,14 @@ Il testo dopo i due punti.
     },
 
     {
-      titolo: '9 · Campi: come funzionano',
+      titolo: "9 · Campi: come funzionano",
       messaggi: [
         `# Campi di battaglia
 ## Estrazione
 - Ogni partita ha **5 Campi**, estratti a caso in base alla rarità: **comune**, **raro**, **speciale**.
   - Al massimo **1 speciale** per partita, e solo negli ultimi due posti.
   - Alcuni Campi non possono uscire nei primi 3 posti: sono quelli segnati **T2** nell'elenco.
+  - I **Campi d'Eminenza** (segnati **E**) non vengono mai estratti: entrano in gioco solo con un'abilità d'Eminenza.
 - **3 scoperti** all'inizio, **1 in più** alla fine di ogni round.
 
 ## Scelta e conquista
@@ -335,10 +338,10 @@ L'etichetta all'inizio dell'effetto lo dice:
     },
 
     {
-      titolo: '10 · Campi: elenco completo',
+      titolo: "10 · Campi: elenco completo",
       messaggi: [
-        `# Campi · elenco (121)
-Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2** = non esce nei primi 3 posti.
+        `# Campi · elenco (122)
+Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2** = non esce nei primi 3 posti · **E** = Campo d'Eminenza, mai estratto.
 
 **Generici (1/2)**
 - **Gran Corno** — In scontro · Entrambi · +4 POT · r
@@ -385,16 +388,16 @@ Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2*
 - **Foresta Pietrificata** — Regola · POT finale massimo 7 · r
 - **Lago delle Sette Lune** — Post-scontro · Perdente · +1 FC e +1 PV · r
 
-**Neutri** (solo Mani nude, nessun effetto): La Piana della Torre Caduta · Ignoto inarrivabile · Il Bastione del Nono Mondo · Il Ponte dell'Ultimo Campione · Le Ceneri del Mondo Senza Nome
-
-**Figli dell'Orizzonte**
+**Neutri** (solo Mani nude, nessun effetto): La Piana della Torre Caduta · Ignoto inarrivabile · Il Bastione del Nono Mondo · Il Ponte dell'Ultimo Campione · Le Ceneri del Mondo Senza Nome`,
+        `**Figli dell'Orizzonte**
 - **Nebulosa dei Ricordi** — In scontro · Entrambi · +1 POT · c
 - **Orlo del Buco Nero** — In scontro · Entrambi · POT e DAN invertiti · s
 - **Cimitero di Stelle** — In scontro · Entrambi · −2 VA · c
 - **Frammento Oscurato** — In scontro · Entrambi · −2 POT, −2 DAN · r
 - **Il Pozzo Gravitazionale** — Regola · FC investiti max 3 · s
-- **Trono Solare** — Conquista · +1 PV · c · T2`,
-        `**Kethran**
+- **Trono Solare** — Conquista · +1 PV · c · T2
+
+**Kethran**
 - **Fondamenta della Torre** — Gloria e Vendetta sempre attivi · r · T2
 - **Ziqqurat Spezzata** — Post-scontro · Perdente +1 FC · Conquista −1 FC · c
 - **Biblioteca delle Lingue Perdute** — Regola · Effetti Blocca disattivati · r
@@ -470,6 +473,7 @@ Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2*
 - **Canyon Ghiacciato** — In scontro · Chi ha meno Campi conquistati · −1 POT · c · T2
 - **Vulcano Dormiente Innevato** — Regola · Invasione sempre attivo · r
 - **Meridiano del Sole Verde** — Regola · Bonus → Invasione: +2 POT, +1 DAN · r
+- **Arena del Violento Gaudio** — In scontro · Entrambi · +2 POT, +2 DAN · r · **E** (solo dall'Eminenza Apex)
 
 **Mascarada**
 - **Grande Arena di Ilesca** — Regola · Effetti Overdrive disattivati · r
@@ -486,129 +490,29 @@ Tutti i Campi si consultano anche in gioco: **Galleria → Campi**.`,
     },
 
     {
-      titolo: '11 · Eminenze: come funzionano 🧪',
+      titolo: "11 · Eminenze: come funzionano 🧪",
       messaggi: [
-        `# Eminenze · 🧪 in test, non bilanciate
-Meccanica **secondaria e sperimentale**: regole e valori possono cambiare tra una build e l'altra. Ci sono solo nel **Duello** in formato **Standard**.
-
-## Che cos'è
-- La figura sotto cui combatte l'armata. Sta **fuori dal mazzo**: non si schiera e non ha POT, DAN o VA.
-- Ha tre parti:
-  - **Presenza iniziale**;
-  - uno **Statico**, una regola sempre attiva;
-  - **3 abilità attive** (la Corte Rossa ne ha 4).
-- **Presenza**: risorsa pubblica, resta da un round all'altro, non ha massimo e non scende sotto 0. Si guadagna con le abilità "+N" e con gli Statici, si spende con le abilità "−N".
-
-## Quale Eminenza ricevi
-- Non si sceglie: la decide il **mazzo**.
-- Ricevi l'Eminenza dell'armata con **almeno 5 carte** nel tuo esercito di 10. Se ce ne sono due a pari merito (5-5), vale l'ordine alfabetico interno delle armate.
-- Un esercito senza 5 carte della stessa armata gioca **senza Eminenza**.
-- Gli eserciti precostruiti B-E del Patto degli Indocili ricevono l'Eminenza dell'altra armata del mix: B La Fame, C Sanguinaccio, D L'Enclave dell'Ascensione, E Il Primo Canto.`,
-        `## Il round con le Eminenze
-1. **Scelta segreta.** A inizio round ogni giocatore sceglie **esattamente una** abilità; non si può passare.
-   - Un'abilità "−N" si può scegliere solo se hai almeno N Presenza in quel momento.
-   - Le abilità "+N" e "+0" sono sempre disponibili.
-   - Se c'è una sola abilità valida, il gioco la sceglie da solo.
-2. **Rivelazione.** L'abilità resta coperta fino all'ultimo momento utile:
-   - **Prima del Campo**: tutte le abilità Khemet.
-   - **Prima dell'Agente**: Gorgoglio (Mounthborn), Debito (Corte Rossa), Ascesa / Declassamento (Enclave).
-   - **Generale**: dopo che Campo, Agenti e FC sono confermati, per tutte le altre.
-   - Se un momento di rivelazione passa senza che tu riveli niente, l'avversario può dedurre che non hai scelto quelle abilità.
-3. **Pagamento.** Alla rivelazione si applica il ±N di Presenza. Gli effetti si risolvono in ordine di iniziativa, subito o nel momento indicato dal testo.
-
-## Eccezioni
-- **Mascarada**: gli Agenti si scelgono e si rivelano **prima** del Campo.
-- **Mounthborn**: all'inizio della partita sceglie la prima Preda.
-- **Corte Rossa**: non può scegliere la stessa abilità due round di fila. Alcune sue abilità propongono all'avversario un **Affare**, con le scelte Accetta / Rifiuta oppure Primo / Secondo.
-
-## Cosa vede l'avversario
-Eminenza, Statico, testi e costi, Presenza e i segnalini (Preda, Frammento, Debito, Maledizioni). La scelta resta coperta fino alla rivelazione.
-
-Non disponibili in 2v2, Re della collina e Multiplayer online.`,
+        "# Eminenze · 🧪 in test, non bilanciate\nMeccanica **secondaria e sperimentale**: regole e valori possono cambiare tra una build e l'altra.\n\n## Dove ci sono\n- **Duello** in formato **Standard**, in locale e online.\n- **Torneo** in formato **Standard**, nelle partite giocate da una persona. Le serie tra IA del tabellone si giocano senza Eminenze.\n- Mai nei formati **No Eminenza** e **Mani nude**, né in **2v2** e **Re della collina**.\n\n## Parole dei testi\nNei testi delle Eminenze **Duello** è lo scontro di un round (post 4) e **Scontro** è l'intera partita: \"per il resto dello Scontro\" vuol dire fino a fine partita.\n\n## Che cos'è\n- La figura sotto cui combatte l'armata. Sta **fuori dal mazzo**: non si schiera e non ha POT, DAN o VA.\n- Ha tre parti:\n  - **Presenza iniziale** (0 o 1);\n  - uno **Statico**, una regola sempre attiva;\n  - **3 o 4 abilità**: ne usi una per round.\n- **Presenza**: risorsa pubblica, resta da un round all'altro, non ha massimo e non scende sotto 0. Si guadagna con le abilità \"+N\" e con gli Statici, si spende con le abilità \"−N\".\n\n## Quale Eminenza ricevi\n- Non si sceglie: la decide il **mazzo**. Ogni armata ha **una sola** Eminenza.\n- Ricevi l'Eminenza dell'armata con **almeno 5 carte** nel tuo esercito di 10.\n- In un esercito 5-5 vale l'ordine alfabetico del nome dell'armata.\n- Un esercito senza 5 carte della stessa armata gioca **senza Eminenza**.\n- Eserciti precostruiti del Patto degli Indocili: A Il Grande Semaforo · B (5 Patto, 5 Mounthborn) La Fame · C Sanguinaccio, il Registro · D L'Enclave dell'Ascensione · E Il Primo Canto.",
+        "## Il round con le Eminenze\n1. **Scelta segreta.** A inizio round, prima del Campo, ogni giocatore sceglie **esattamente una** abilità (clic per sceglierla, secondo clic per confermare). Non si può passare.\n   - Un'abilità \"−N\" si può scegliere solo se a inizio round hai almeno N Presenza. Una scelta confermata resta valida anche se la Presenza cambia prima della rivelazione.\n   - Le abilità \"+N\" e \"±0\" sono sempre disponibili.\n   - Requisiti in più: Innesto (1 Frammento), Opera Composita (2 Frammenti), Vendetta oltre la Morte (un tuo Agente sconfitto).\n   - Se hai una sola abilità valida, il gioco la sceglie da solo.\n   - Se l'abilità chiede un bersaglio (slot, Agente, Frammento), lo indichi prima che si riveli. Scommessa e Vendetta oltre la Morte fissano la loro scelta subito.\n2. **Rivelazione.** L'abilità resta coperta fino al momento scritto sull'abilità:\n   - **Pre Campo**, prima della scelta del Campo: tutte le abilità di Khemet e della Corte Rossa, Corteggiamento (Ratti).\n   - **Pre Agente**, prima della scelta degli Agenti: La Domanda si diffonde (Figli), Gorgoglio terrificante e Caccia (Mounthborn), Ascesa / Declassamento (Enclave), Seduzione (Ratti).\n   - **Generale** (annunciata come «Prima del Duello»): dopo che Agenti e FC sono confermati. Vale per tutte le altre; Vendetta oltre la Morte si rivela quando schieri l'Agente.\n   - Se un momento di rivelazione passa senza che tu riveli niente, l'avversario può dedurre che non hai scelto quelle abilità.\n3. **Pagamento.** Alla rivelazione si applica il ±N di Presenza. Se i due giocatori rivelano nello stesso momento, pagano insieme. Gli effetti si risolvono in ordine di iniziativa, subito o nel momento indicato dal testo.",
+        "## Regole speciali\n- **Mascarada**: gli Agenti si scelgono e si rivelano **prima** del Campo, per entrambi i giocatori. Il momento Pre Agente viene quindi prima di Pre Campo.\n- **Mounthborn**: all'inizio dello Scontro sceglie un Agente nemico, che diventa la prima **Preda**. Una Preda smette di esserlo dopo aver combattuto.\n- **Corte Rossa**: ogni sua abilità è un'**Offerta** all'avversario, rivelata a inizio round (Pre Campo).\n  - L'avversario **Accetta** o **Rifiuta**. Rifiutare non ha effetti, ma chi ha rifiutato l'Offerta del round precedente deve accettare.\n  - Ogni Offerta accettata dà **+1 Presenza** alla Corte. Il ±N dell'abilità la Corte lo applica comunque alla rivelazione.\n  - I PV promessi \"alla Fine dello Scontro\" vanno nel **Registro** dell'avversario, una voce per Offerta, e si pagano a fine partita, **prima** di decidere il vincitore.\n- **Corteggiamento** (Ratti) non si rifiuta: l'avversario sceglie solo **Primo** o **Secondo**.\n\n## Cosa vede l'avversario\nEminenza, Statico, testi e costi, Presenza e i segnalini: Preda, Frammenti, Debito, Maledizioni sugli slot, voci del Registro. La scelta resta coperta fino alla rivelazione.\n\nI testi completi si consultano anche in gioco: **Galleria → Eminenze**. L'elenco è nel post 12.",
       ],
     },
 
     {
-      titolo: '12 · Eminenze: elenco completo 🧪',
+      titolo: "12 · Eminenze: elenco completo 🧪",
       messaggi: [
-        `# Eminenze · elenco
-🧪 In test, non bilanciate. Formato: **Statico**, poi le abilità con il loro costo in Presenza. I testi sono quelli del gioco.
-
-**Apex — Il Sole Verde** (Presenza iniziale 3)
-- Statico *Cataclisma Verde*: all'inizio del round 5 lo slot aperto diventa il Meridiano del Sole Verde.
-- **+1 Furia**: il tuo Agente ottiene +1 POT. Perdi 2 PV.
-- **−2 Disprezzo**: il tuo Agente ignora gli effetti del Campo in questo scontro.
-- **−4 Ora Verde**: il tuo Agente ottiene Potere: +2 POT, +2 DAN.
-
-**Patto degli Indocili — Il Grande Semaforo** (0)
-- Statico *Multa per eccesso di Caos*: se alla fine dello scontro sono stati giocati almeno 8 FC, +2 Presenza.
-- **+1 Verde**: tutti i trigger seguono le condizioni normali.
-- **+0 Giallo**: Imboscata e Turbo sono soddisfatti in questo round.
-- **−2 Rosso**: Imboscata e Turbo non possono attivarsi; Intervento e Ultima Chance sono soddisfatti. Vale per entrambi.
-
-**Mascarada — L'Organizzatore degli Incontri** (1)
-- Statico *Organizzazione Impeccabile*: gli Agenti vengono scelti e resi noti prima del Campo.
-- **+0 Scommessa**: pronostica in segreto l'esito (vittoria tua / avversaria / pareggio). Se indovini, +2 Presenza.
-- **−2 Maschere Invertite**: Gloria vale anche come Vendetta e viceversa; Conquista anche come Ultimo Desiderio e viceversa.
-- **−4 Incontro Truccato**: il trigger del tuo Agente è soddisfatto e il suo Potere non può essere bloccato (non vale per Conquista e Ultimo Desiderio).
-
-**Kethran — L'Altare della Ricomposizione** (2)
-- Statico *Ricomposizione*: quando il tuo Agente perde, diventa un Frammento; ogni Frammento ottenuto dà +1 Presenza.
-- **+1 Sacrificio**: perdi 2 PV e ottieni Presenza. Ogni Sacrificio successivo costa 1 PV in più e dà 1 Presenza in più.
-- **−1 Elogio al trionfo**: se il tuo Agente vince, diventa un Frammento.
-- **−2 Innesto**: scegli un Frammento; il Potere del tuo Agente può attivarsi con il proprio trigger o con quello del Frammento (che viene consumato).`,
-        `**Mounthborn — La Fame** (1)
-- Statico *Istinto Predatorio*: all'inizio della partita scegli un Agente nemico, che diventa **Preda**. Quando viene schierata una Preda, il Bonus del tuo Agente è attivo.
-- **+0 Gorgoglio terrificante** (prima dell'Agente): un Agente nemico non schierato diventa Preda. Se una Preda viene schierata in questo round, +2 Presenza.
-- **−2 Frenesia della Fame**: un Agente nemico non schierato diventa Preda per il resto della partita. Se una Preda è schierata in questo round, Potere e Bonus del tuo Agente non possono essere bloccati.
-- **−2 Cannibalismo**: se perdi lo scontro contro una Preda, Cura 3 PV.
-
-**Khemet — Il Castello dei Sigillatori** (2 · tutte rivelate prima del Campo)
-- Statico *Cattura-Energia*: quando il tuo Agente attiva Overdrive, +2 Presenza.
-- **+2 Devozione al cervello**: il tuo Agente scambia il trigger del Potere con quello del Bonus.
-- **−2 Maledizione della Fama**: scegli uno slot; per il resto della partita gli Agenti schierati lì subiscono −VA pari alla loro Lega.
-- **−3 Maledizione del Cosmo**: scegli uno slot; per il resto della partita gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA.
-- Le Maledizioni appartengono allo slot e valgono per entrambi i giocatori.
-
-**Orathai — Il Primo Canto** (1)
-- Statico *Risonanza*: se entrambi gli Agenti soddisfano il trigger del Potere, +1 Presenza.
-- **+0 Tacet**: se uno dei due Agenti non soddisfa il trigger del Potere, +2 Presenza.
-- **−2 Contrappunto**: il tuo Agente è immune ai Blocca; se il tuo Agente non soddisfa il trigger del Potere, non lo soddisfa nemmeno quello avversario.
-- **−3 Silenzio**: il trigger del Potere di entrambi gli Agenti diventa Magnanimo.`,
-        `**Corte Rossa — Sanguinaccio, il Registro** (1 · 4 abilità, mai la stessa due round di fila)
-- Statico *Pagare i Debiti*: ogni volta che un giocatore perde PV per una causa diversa dal normale DAN della sconfitta, +1 Presenza (conta l'evento, non i PV).
-- **+0 Accordo Unilaterale**: all'avversario si propone l'Affare «Perdi 2 PV; in questo scontro il tuo Agente riceve 1 FC temporaneo». Se rifiuta, l'effetto si risolve come se l'avessi accettato tu.
-- **+1 Debito** (prima dell'Agente): scegli un Agente non schierato, tuo o avversario. Il suo trigger diventa Debito: chi lo schiera perde 2 PV, poi il Potere si attiva.
-- **−2 Salasso**: l'avversario sceglie tra «Perdi 3 PV; +2 Presenza» e «Perdi 3 Presenza; Cura 2 PV».
-- **−4 Brutto Affare**: uno dei due Agenti confermati riceve 2 FC temporanei. A fine partita il suo giocatore perde PV pari a metà della POT finale registrata, arrotondata per eccesso.
-
-**Figli dell'Orizzonte — La Domanda Senza Fine** (2)
-- Statico *Ancorato*: il tuo Agente è Ancorato se hai investito almeno 6 − Lega FC reali (Lega 5: 1, Lega 4: 2, Lega 3: 3, Lega 2: 4), più gli aumenti di Deriva. A fine scontro, se era Ancorato, +1 Presenza.
-- **+1 Deriva**: il requisito di Ancorato sale di 1, per il resto della partita.
-- **−2 Leggerezza**: se il tuo Agente è Ancorato, il suo trigger è soddisfatto.
-- **−3 Risposta**: se il tuo Agente è Ancorato, è anche Immune.`,
-        `**Ratti della Megera — Bella Malelabbra** (1)
-- Statico *Male Crescente*: quando schieri l'Agente con la Lega più bassa tra quelli che ti restano (parità compresa), +1 Presenza.
-- **+0 Sussurro**: se durante lo scontro almeno un Agente subisce una riduzione di POT, DAN o VA, +1 Presenza.
-- **−2 Veleno**: il Bonus Armata del tuo Agente è bloccato; applichi Tossina 1 (min 10) all'avversario.
-- **−3 Spezzacuore**: a inizio scontro rimuovi la Tossina dall'avversario; il Bonus del tuo Agente diventa «X Danni diretti», con X = Tossina rimossa ×2.
-
-**L'Enclave delle Scaglie — L'Enclave dell'Ascensione** (1)
-- Statico *Accumulo*: quando investi almeno 3 FC reali, +1 Presenza.
-- **+1 Rinuncia al Privilegio**: il Bonus Armata del tuo Agente è bloccato in questo scontro.
-- **−1 Ascesa / Declassamento** (prima dell'Agente): scegli pubblicamente un tuo Agente non schierato e alza o abbassa la sua Lega di 1 per questo round.
-- **−3 Ascensione**: Sfida e Sopraffare del tuo Agente sono soddisfatti anche a Leghe uguali; a parità di VA vince il tuo lato.
-
-**Calibri Pesanti — Il Comando dei Quattro Fronti** (2)
-- Statico *Tenere la Linea*: se il DAN finale dell'Agente nemico è 2 o meno, +1 Presenza.
-- **0 Guerra d'Attrito**: ottieni 1 FC nella riserva. Il costo in Presenza aumenta con le vittorie (fino a −4).
-- **−2 Protocollo di Contenimento**: dopo i Bonus registri il DAN del tuo Agente come X; il suo DAN diventa 0 e l'avversario subisce X/2 Danni diretti (per eccesso). Se vinci, +2 Presenza.
-- **−4 Protocollo Terra Bruciata**: se perdi, il Campo viene distrutto prima della Conquista: nessuno lo conquista e nessun effetto Conquista si attiva.`,
+        "# Eminenze · elenco\n🧪 In test, non bilanciate. Per ogni Eminenza: Presenza iniziale, **Statico**, poi le abilità con la Presenza che danno (+) o costano (−). Tra parentesi il momento di rivelazione, se non è Generale. I testi sono quelli del gioco. **Duello** = scontro del round, **Scontro** = intera partita.\n\n**Figli dell'Orizzonte — La Domanda Senza Fine** · Presenza iniziale 1\n- Statico *Ancorato*: il tuo Agente è Ancorato se ha investito almeno 6 − Lega effettiva FC reali, più gli aumenti di Deriva (Lega 5: 1 FC, 4: 2, 3: 3, 2: 4, 1: 5). Gli FC temporanei non contano. A fine Duello, se era Ancorato, +1 Presenza.\n- **+1 Deriva**: aumenta di 1 il requisito di Ancorato, cumulativamente per il resto dello Scontro, già da questo round.\n- **−1 Condensazione**: se il tuo Agente schierato è Ancorato, riceve 1 FC temporaneo in questo Duello. Gli FC temporanei non contano per Ancorato.\n- **−2 La Domanda si diffonde** (Pre Agente): in questo Duello il Potere dell'Agente nemico si attiva solo se è Ancorato. Per l'Agente nemico vale il tuo requisito di Ancorato, aumenti di Deriva compresi.\n- **−4 Risposta**: se il tuo Agente schierato è Ancorato, è Immune e il suo trigger Potere è considerato soddisfatto.",
+        "**Kethran — L'Altare della Ricomposizione** · Presenza iniziale 1\n- Statico *Ricomposizione*: quando il tuo Agente perde un Duello, diventa un **Frammento** per il resto dello Scontro. Ogni Frammento ottenuto: +1 Presenza. I Frammenti non vengono consumati.\n- **+1 Sacrificio**: perdi 2 PV.\n- **−1 Elogio al trionfo**: se il tuo Agente schierato vince il Duello, diventa un Frammento per il resto dello Scontro.\n- **−2 Innesto** (serve almeno 1 Frammento): scegli un tuo Frammento: in questo Duello il suo Potere, con trigger ed effetto, sostituisce a tua scelta il Potere oppure il Bonus del tuo Agente schierato. Se sostituisce il Bonus, è trattato come Bonus.\n- **−3 Opera Composita** (servono almeno 2 Frammenti): scegli due tuoi Frammenti: in questo Duello il Potere del tuo Agente schierato è sostituito da un Potere composto dal trigger di uno e dall'effetto dell'altro.\n\n**Corte Rossa — Sanguinaccio, il Registro** · Presenza iniziale 0 · tutte Pre Campo\n- Statico *Il Registro*: ogni abilità è un'**Offerta** all'avversario, che la accetta o la rifiuta (se ha rifiutato quella del round precedente, deve accettare). Offerta accettata: +1 Presenza. I PV da pagare a fine Scontro vanno nel Registro dell'avversario, una voce per Offerta, e si pagano prima di determinare il vincitore. Dettagli nel post 11.\n- **+1 Prestito**: «Il tuo Agente riceve 2 FC temporanei in questo Duello; alla Fine dello Scontro perdi 2 PV.»\n- **±0 Rinforzo**: «Il tuo Agente ottiene +2 DAN oppure +1 POT in questo Duello, a tua scelta; alla Fine dello Scontro perdi 1 PV.»\n- **−1 Debito**: «Il trigger Potere del tuo Agente diventa Debito 2 in questo Duello.» (Con Debito il Potere si attiva senza trigger e chi lo controlla perde 2 PV quando si attiva.)\n- **−3 Interessi**: «Gli interessi maturano: ogni voce del tuo Registro aumenta di 2 PV.»",
+        "**Calibri Pesanti — Il Comando dei Quattro Fronti** · Presenza iniziale 1\n- Statico *Tenere la Linea*: quando perdi un Duello, se il DAN nemico ti ha tolto 2 PV o meno, +1 Presenza.\n- **+1 Fermo Macchine**: il Potere del tuo Agente non si attiva in questo Duello.\n- **−1 Guerra d'Attrito**: ottieni 1 FC. Se hai vinto meno Duelli dell'avversario, ottieni invece 2 FC.\n- **−2 Logoramento**: il tuo Agente ottiene +3 VA per ogni Duello che hai perso in questo Scontro.\n- **−4 Protocollo Terra Bruciata**: se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale.\n\n**Orathai — Il Primo Canto** · Presenza iniziale 1\n- Statico *Risonanza*: se entrambi gli Agenti soddisfano il requisito di attivazione del proprio Potere nello stesso Duello, +1 Presenza.\n- **+1 Il Prezzo del Canto**: in questo Duello, per ogni Potere che si attiva, tuo o nemico, perdi 1 PV.\n- **−1 Contrappunto**: se il trigger Potere del tuo Agente non è soddisfatto, non lo è nemmeno quello dell'Agente nemico.\n- **−2 Eco**: in questo Duello, se il Potere dell'Agente nemico si attiva, si attiva anche per il tuo Agente.\n- **−3 Silenzio**: il trigger Potere di entrambi gli Agenti schierati diventa Magnanimo.",
+        "**Mounthborn — La Fame** · Presenza iniziale 1\n- Statico *Istinto Predatorio*: all'inizio dello Scontro scegli un Agente nemico: diventa **Preda**. Quando l'avversario schiera una Preda, +1 Presenza e il Bonus del tuo Agente schierato è considerato attivo. Una Preda smette di esserlo dopo aver combattuto.\n- **+1 Fame**: alla fine del Duello, se non hai sconfitto una Preda, perdi 2 PV.\n- **−1 Gorgoglio terrificante** (Pre Agente): scegli un Agente nemico non schierato: diventa Preda.\n- **−2 Frenesia della Fame**: in questo Duello il Potere del tuo Agente diventa «Imboscata: +1 POT, +1 DAN». Se l'Agente nemico è una Preda, recuperi la Presenza spesa per questa abilità.\n- **−3 Caccia** (Pre Agente): scegli un Agente nemico non schierato: diventa Preda e l'avversario deve schierarlo in questo Duello.\n\n**L'Enclave delle Scaglie — L'Enclave dell'Ascensione** · Presenza iniziale 1\n- Statico *Accumulo*: quando investi almeno 3 FC reali sul tuo Agente in un Duello, +1 Presenza. Gli FC temporanei non contano.\n- **+1 Rinuncia al Privilegio**: il Bonus d'Armata del tuo Agente schierato è bloccato in questo Duello.\n- **−1 Ascesa / Declassamento** (Pre Agente): scegli pubblicamente un tuo Agente non schierato e aumenta oppure diminuisci la sua Lega di 1 per questo round.\n- **−2 Furto di Reliquie**: se vinci il Duello, l'avversario perde 2 Presenza e tu ne ottieni 1.\n- **−3 Ascensione** (serve almeno 3 Presenza): spendi tutta la tua Presenza: il tuo Agente ottiene +1 POT per ogni Presenza spesa.",
+        "**Ratti della Megera — Bella Malelabbra** · Presenza iniziale 1\n- Statico *Male Crescente*: quando schieri un Agente con la Lega effettiva più bassa tra quelli che non hai ancora usato, +1 Presenza. In caso di parità, la condizione è soddisfatta.\n- **+1 Corteggiamento** (Pre Campo): in questo Duello l'avversario sceglie se essere il primo o il secondo a scegliere l'Agente.\n- **−1 Seduzione** (Pre Agente): scegli un Agente dell'avversario non ancora utilizzato: se non è l'unico disponibile, non può usarlo in questo Duello.\n- **−3 Vendetta oltre la Morte** (si rivela quando schieri l'Agente; serve un tuo Agente sconfitto): scegli un tuo Agente che è stato sconfitto: in questo Duello puoi usarlo di nuovo.\n\n**Patto degli Indocili — Il Grande Semaforo** · Presenza iniziale 0\n- Statico *Multa per eccesso di Caos*: se alla fine del Duello sono stati giocati almeno 8 FC, +2 Presenza.\n- **±0 Verde**: se in questo Duello un Agente attiva un Potere o un Bonus con trigger Turbo o Intervento, +1 Presenza (una sola volta per Duello).\n- **−2 Giallo**: Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori.\n- **−2 Rosso**: Imboscata e Turbo non possono attivarsi. Intervento e Ultima Chance sono considerati soddisfatti in questo round, per entrambi i giocatori.",
+        "**Khemet — Il Castello degli Arcanisti Nefasti** · Presenza iniziale 1 · tutte Pre Campo\n- Statico *Cattura-Energia*: quando il tuo Agente attiva Overdrive, +2 Presenza.\n- **±0 Devozione al cervello**: il tuo Agente schierato inverte il trigger del suo Potere con quello del suo Bonus.\n- **−1 Maledizione della Fama**: scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega.\n- **−2 Maledizione del Cosmo**: scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA.\n- **−3 Maledizione Inversa**: scegli uno slot: nel Duello combattuto lì, tutti i modificatori di POT, DAN e VA si invertono, per entrambi gli Agenti. I + diventano −, i − diventano +, e i minimi non si applicano.\n- Le Maledizioni appartengono allo slot: valgono per entrambi i giocatori e restano anche se il Campo viene sostituito.\n\n**Apex — Il Sole Verde** · Presenza iniziale 1\n- Statico *Cataclisma Verde*: all'inizio del round 5 lo slot aperto subisce Terraformare e diventa l'**Arena del Violento Gaudio** (entrambi +2 POT, +2 DAN). Quando il tuo Bonus d'Armata si attiva, +1 Presenza.\n- **+1 Cielo Smeraldino**: in questo Duello il tuo Agente schierato ha −1 DAN.\n- **−2 Disprezzo**: il tuo Agente schierato ignora gli effetti del Campo in questo Duello.\n- **−3 Preghiera Ululata**: per il resto dello Scontro, il tuo Bonus d'Armata diventa «Invasione: Attrizione 3 VA».",
+        "**Mascarada — L'Organizzatore degli Incontri** · Presenza iniziale 1\n- Statico *Organizzazione Impeccabile*: gli Agenti vengono scelti e resi noti prima della scelta del Campo. Quando un Agente attiva un Potere con trigger Gloria o Vendetta, +1 Presenza (una sola volta per Duello).\n- **+1 Vendere il Colpo**: in questo Duello l'Agente avversario ottiene 1 FC temporaneo.\n- **±0 Scommessa** (il pronostico si fissa quando la scegli): pronostica segretamente l'esito del Duello: vittoria tua / vittoria avversaria / pareggio. Se il pronostico è corretto, +1 Presenza.\n- **−2 Maschere Invertite**: in questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa.\n- **−3 Ego senza Maschere**: finché un tuo Agente non vince un Duello, il Bonus del tuo Agente schierato diventa «Overdrive: +2 POT, +2 DAN».",
       ],
     },
 
     {
-      titolo: '13 · Modalità, formati e IA',
+      titolo: "13 · Modalità, formati e IA",
       messaggi: [
         `# Modalità, formati e IA
 ## Come si avvia una partita locale
@@ -618,11 +522,12 @@ Non disponibili in 2v2, Re della collina e Multiplayer online.`,
 - **Duello**: 1 contro 1. È il gioco base descritto nei post 1-5.
 - **2v2**: ad abbinamenti segreti, due squadre da due (post 14).
 - **Re della collina**: tutti contro tutti, 3 o 4 giocatori (post 15).
+- **Torneo**: voce a parte del menu principale, 12 eserciti a eliminazione diretta (post 16).
 
-In locale gli altri posti sono IA. Online tutte e tre le modalità si giocano con altre persone (post 16).
+In locale gli altri posti sono IA. Online tutte queste modalità si giocano anche con altre persone (post 17).
 
 ## Formati
-- **Standard**: Eminenze e Campi attivi. Solo nel Duello, anche online.
+- **Standard**: Eminenze e Campi attivi. Solo nel Duello e nel Torneo, anche online.
 - **No Eminenza**: Campi attivi, senza Eminenze.
 - **Mani nude**: niente Eminenze ed effetti dei Campi; si usano i 5 Campi neutri, tutti scoperti. Nel 2v2, che ha 10 Campi, ogni Campo neutro compare due volte.
 
@@ -633,17 +538,33 @@ In locale gli altri posti sono IA. Online tutte e tre le modalità si giocano co
 ## Difficoltà
 - **Senza occhi** (Facile): gioca correttamente, ma pianifica poco e sbaglia tatticamente.
 - **Mezzo ubriaco** (Normale, predefinita): valuta trigger, Campi e risorse in modo equilibrato.
-- **Sfavorito** (Difficile): analizza le risposte visibili, conserva risorse e punisce gli errori.
+- **Sfavorito** (Difficile): analizza le risposte visibili, conserva risorse e punisce gli errori.`,
+        `## Personalità
+Ultima riga del popup: lo stile dell'IA. Non cambia la difficoltà.
+- **Neutrale** (predefinita): gioca al meglio, senza preferenze.
+- **Impetuoso**: tanti FC e carte forti nei primi turni.
+- **Paziente**: cede volentieri i primi scontri e tiene FC e carte migliori per il finale.
+- **Conquistatore**: punta alla maggioranza dei Campi.
+- **Spietato**: punta ai tuoi PV, poco interesse per i Campi.
+- **Avaro**: spende il minimo indispensabile.
+- **Temerario**: mosse tutto-o-niente e puntate audaci.
+- **Casuale**: un tratto a sorpresa, svelato nella schermata VS.
 
-L'IA del Duello non vede i FC che investi. Nel 2v2 e nel Re della collina le IA usano una logica più semplice e scelgono il Campo a caso tra quelli validi.`,
+Nel 2v2 e nel Re della collina la riga si chiama **Avversari** e vale per tutte le IA avversarie; con Casuale ognuna estrae il suo tratto. Il compagno del 2v2 si sceglie nella riga **Compagno** (post 14).
+
+## Come gioca l'IA
+- L'IA del Duello non vede i FC che investi.
+- In locale (Duello, 2v2, Re della collina, Torneo) usa un motore a simulazione: valuta carte, FC e Campi.
+- Online, nei posti vuoti di 2v2 e Re della collina, gioca l'IA precedente, più semplice: sceglie il Campo a caso tra quelli validi.
+- Nel formato Standard sceglie le abilità d'Eminenza, ma per Agente, FC e Campo ragiona come se le Eminenze non ci fossero.`,
       ],
     },
 
     {
-      titolo: '14 · 2v2 ad abbinamenti segreti',
+      titolo: "14 · 2v2 ad abbinamenti segreti",
       messaggi: [
         `# 2v2 ad abbinamenti segreti
-In locale: tu e un compagno IA contro due IA. Online anche con altre persone (post 16). Formati: No Eminenza e Mani nude.
+In locale: tu e un compagno IA contro due IA. Online anche con altre persone (post 17). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **50 PV di squadra**, condivisi (massimo 50).
@@ -661,11 +582,11 @@ In locale: tu e un compagno IA contro due IA. Online anche con altre persone (po
 ## Risoluzione
 - Ogni fronte è un Duello 1v1 sul proprio Campo; l'Agente di chi apre ha l'iniziativa.
 - I fronti leggono i PV di inizio turno; le variazioni si sommano alla fine.
-- Le Tossine colpiscono i PV di squadra con soglia raddoppiata.
-
-## Il compagno IA
+- Le Tossine colpiscono i PV di squadra con soglia raddoppiata.`,
+        `## Il compagno IA
+- Lo scegli nella riga **Compagno** di Imposta la partita: una delle 7 personalità del post 13 (Casuale esclusa).
 - Propone carta, FC e Campo: sul tavolo appare come **proposta**, con una frase che la spiega.
-- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li accetta secondo il suo carattere: **Stratega** 70%, **Assaltatore** 50%, **Custode** 80%, **Calcolatore** 60%.
+- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li segue con una probabilità che dipende dalla personalità: **Neutrale** 70%, **Impetuoso** 50%, **Paziente** 80%, **Conquistatore** 65%, **Spietato** 50%, **Avaro** 75%, **Temerario** 45%.
 - In risposta la disposizione la decidi tu, nel pannello Fronti.
 - **Online** niente consigli. In due persone ognuno sceglie la sua carta; se aprite sullo stesso Campo, il secondo lo cambia. Disposizione e reclamo li decide il primo della squadra.
 
@@ -677,10 +598,10 @@ In locale: tu e un compagno IA contro due IA. Online anche con altre persone (po
     },
 
     {
-      titolo: '15 · Re della collina',
+      titolo: "15 · Re della collina",
       messaggi: [
         `# Re della collina
-Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; online gli altri posti possono essere persone (post 16). Formati: No Eminenza e Mani nude.
+Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; online gli altri posti possono essere persone (post 17). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **25 PV** e **18 FC** a testa.
@@ -703,33 +624,77 @@ Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; onlin
     },
 
     {
-      titolo: '16 · Multiplayer online (beta)',
+      titolo: "16 · Torneo",
+      messaggi: [
+        `# Torneo
+Voce **TORNEO** del menu principale. Eliminazione diretta a **12 eserciti**, ogni incontro **al meglio delle 3**. In locale sei tu contro 11 IA; online possono giocare da 2 a 4 persone (sotto).
+
+## Iscrizione
+- **TORNEO** → armata → esercito → popup **Imposta il torneo**: formato (Standard, No Eminenza, Mani nude), difficoltà e personalità delle IA (post 13).
+- Le 11 IA sono **una per armata**, ognuna con un esercito precostruito a caso. Se giochi con una delle 12 armate, le IA prendono le altre 11; con un esercito personalizzato una delle 12 resta fuori a sorte.
+- La personalità di ogni IA resta la stessa per tutto il torneo e si vede sul tabellone.
+- Il tuo esercito è **bloccato**: se lo modifichi nel costruttore, nel torneo restano le carte iscritte.
+- Un torneo locale alla volta, salvato su questo PC: dal menu **TORNEO** (IN CORSO) riprendi da dove eri.
+
+## Tabellone
+- 16 posti con **4 passaggi diretti** sorteggiati: agli **Ottavi** giocano 8 eserciti e 4 passano il turno, poi **Quarti**, **Semifinali** e **Finale**.
+- Se perdi una serie sei **eliminato**: il torneo prosegue senza di te fino al Campione.
+
+## La serie
+- Ogni partita è un Duello normale (post 1-5): PV e FC ripartono da capo, i Campi si estraggono di nuovo.
+- La mano esce dalle 10 carte dell'esercito:
+  - **Partita 1**: 5 carte a caso;
+  - **Partita 2**: le 5 carte rimaste fuori nella partita 1;
+  - **Partita 3** (spareggio): esercito rimischiato, 5 carte a caso.
+- Passa il turno chi arriva a **2 vittorie**. I pareggi non contano: se dopo 3 partite nessuno è avanti si gioca ancora, con la regola dello spareggio.
+- Una partita lasciata a metà si rigioca con la **stessa mano**.`,
+        `## Le serie tra IA
+- Si giocano davvero, con il motore del gioco, ma **senza Eminenze** anche nel formato Standard: le Eminenze ci sono solo nelle partite delle persone.
+- Seleziona un incontro sul tabellone:
+  - **GUARDA LA SERIE**: la vedi sul tavolo, con la fascia SPETTATORE (**AUTO** e **FINE PARTITA ▸▸**);
+  - **CONCLUDI IL TURNO**: le serie del turno si giocano subito, senza mostrarle;
+  - a serie finita: **RIEPILOGO A TURNI** e **RIVEDI AL TAVOLO**.
+- Comandi: Invio azione principale, Esc indietro. **✕ ABBANDONA** (finché sei in corsa) cancella il tabellone; a torneo finito c'è **NUOVO TORNEO**.
+
+## Torneo online
+- Nella stanza (post 17) l'host sceglie la modalità **Torneo**: da 2 a 4 persone, gli altri posti fino a 12 li prendono le IA. Formati Standard, No Eminenza o Mani nude; l'host sceglie la difficoltà delle IA, che giocano con personalità Neutrale.
+- Quando tutti sono pronti l'host preme **Avvia torneo**.
+- Contro un'IA giochi sul tuo PC. Contro un'altra persona è un Duello online: si parte quando entrambi premete **SFIDA · PARTITA N**.
+- Le serie tra IA le gioca l'host in sottofondo: il turno avanza quando tutte le serie sono chiuse.
+- Chi esce dal torneo viene sostituito da un'IA con il suo esercito. Se la stanza si chiude, ognuno prosegue **in locale** contro le IA.
+- Il torneo online non prende il posto di quello locale salvato.`,
+      ],
+    },
+
+    {
+      titolo: "17 · Multiplayer online (beta)",
       messaggi: [
         `# Multiplayer online · beta
 Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
 
 ## Stanza
 1. **Multiplayer** → inserisci un nome (massimo 20 caratteri).
-2. **Crea stanza**: ricevi un codice di **6 caratteri** da mandare agli altri, ad esempio in <#cerco-partita>.
-3. Oppure **Entra con codice**. Errori possibili: "Stanza non trovata" e "Stanza già piena". Una stanza ospita fino a **4 persone**.
-4. Ognuno sceglie armata ed esercito. L'host sceglie modalità, formato e difficoltà dell'IA; gli altri le vedono.
+2. **Crea stanza**, oppure **Entra con codice** (6 caratteri). Errori possibili: "Stanza non trovata" e "Stanza già piena". Una stanza ospita fino a **4 persone**.
+3. Ognuno sceglie armata ed esercito ed entra nella stanza. **COPIA CODICE** (o il tasto **C**) mette il codice negli appunti, da mandare agli altri, ad esempio in <#cerco-partita>. Esc torna alla scelta dell'esercito.
+4. L'host sceglie modalità, formato e, nelle modalità con IA, la difficoltà; gli altri le vedono. Invio = **Pronto**.
 
 ## Modalità
 - **Duello**: 2 persone. Formati Standard (con Eminenze 🧪), No Eminenza o Mani nude. La partita parte quando entrambi siete pronti. A fine partita: **rivincita** con lo stesso esercito, oppure cambio di esercito.
 - **2v2**: da 2 a 4 persone; i posti vuoti li gioca l'IA. Squadre in ordine di ingresso: host e terzo contro secondo e quarto.
 - **Re della collina**: da 2 a 4 persone, tavolo da 3 o 4; i posti vuoti li gioca l'IA.
+- **Torneo**: da 2 a 4 persone più le IA fino a 12 eserciti; formati Standard, No Eminenza o Mani nude (post 16).
 
-2v2 e Re della collina: No Eminenza o Mani nude. Quando tutti sono pronti l'host preme **Avvia partita**. A fine partita si torna al menu: per giocarne un'altra serve una nuova stanza.
-
-## Disconnessioni
+2v2 e Re della collina: No Eminenza o Mani nude. Quando tutti sono pronti l'host preme **Avvia partita** (nel Torneo **Avvia torneo**). A fine partita di 2v2 e Re della collina si torna al menu: per giocarne un'altra serve una nuova stanza.`,
+        `## Disconnessioni
 - **Se cade la tua connessione**: c'è un tentativo automatico di riconnessione, poi il riquadro "Connessione persa" con **Riconnetti** o **Abbandona**. Al rientro la partita riprende da dove era.
 - **Se cade quella di un altro**: vedi "In attesa". Il server aspetta fino a **5 minuti**; se l'host non torna la stanza si chiude.
-- Nel Duello, dopo un crash, la lobby può proporre **"Partita in sospeso"**. Nel 2v2 e nel Re della collina no: se qualcuno chiude il gioco o esce dalla stanza, la partita non può continuare.`,
+- Nel Duello, dopo un crash, la lobby può proporre **"Partita in sospeso"**. Nel 2v2 e nel Re della collina no: se qualcuno chiude il gioco o esce dalla stanza, la partita non può continuare.
+- Nel Torneo chi esce viene sostituito da un'IA; se la stanza si chiude, il torneo prosegue in locale contro le IA.`,
       ],
     },
 
     {
-      titolo: '17 · Eserciti, Tutorial, Galleria, Opzioni',
+      titolo: "18 · Eserciti, Tutorial, Manuale, Galleria, Opzioni",
       messaggi: [
         `# Gestione eserciti
 - **Precostruiti**: 3 per armata (A, B, C), 5 per il Patto (A-E). Non si modificano.
@@ -746,11 +711,15 @@ Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
 - **Introduttivo** (6-8 minuti): partita guidata Calibri Pesanti contro Kethran. Round 1-3 guidati, 4-5 liberi.
 - **Avanzato** (10-12 minuti): FC, tempi dei trigger e chiusura al round 5. Consigliato dopo l'Introduttivo.
 
-# Galleria
+# Manuale
+- Voce **MANUALE** del menu: il libretto di istruzioni da sfogliare, lo stesso del PDF fissato in cima a questo forum.
+- Comandi: ←→ pagina, Home / Fine prima e ultima pagina, **I** indice, Esc chiude. **SCARICA PDF** salva il file.
+- Non descrive ancora Torneo, personalità dell'IA e modalità online a più posti: per queste vale la guida.`,
+        `# Galleria
 - **Agenti**: tutte le carte.
 - **Alternative**: illustrazioni alternative di alcune carte, negli stili **Eldritch** e **Arcana**. ✏️ **Stili in bozza**: grafica non definitiva.
 - **Eminenze**: le 12 Eminenze.
-- **Campi**: i 121 Campi.
+- **Campi**: i 122 Campi, compreso quello d'Eminenza.
 - Comandi: Q / E cambiano sezione, le frecce scorrono.
 
 # Opzioni
@@ -765,19 +734,22 @@ Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
     },
 
     {
-      titolo: '18 · Limiti noti di questa build',
+      titolo: "19 · Limiti noti di questa build",
       messaggi: [
         `# Limiti noti · v${v}
 Già noti, non serve segnalarli di nuovo.
 
 - **Eminenze** 🧪: in test e non bilanciate. Alcuni testi possono non corrispondere esattamente all'effetto. In questo caso segnalalo, citando l'Eminenza e cosa è successo.
-- **Multiplayer**: 2v2 e Re della collina online sono senza Eminenze e senza rivincita; se qualcuno lascia la partita, non si può continuare.
+- **IA ed Eminenze**: nel formato Standard l'IA sceglie le abilità d'Eminenza, ma per Agente, FC e Campo ragiona come se le Eminenze non ci fossero. Nelle serie tra IA del Torneo le Eminenze non ci sono.
+- **Multiplayer**: 2v2 e Re della collina online sono senza Eminenze e senza rivincita; se qualcuno lascia la partita, non si può continuare. I loro posti vuoti li gioca l'IA precedente, più semplice di quella locale.
 - **Eserciti personalizzati**: dall'interfaccia non si possono eliminare.
 - **Tutorial breve**: usa carte d'esempio che non esistono nel gioco. Se qualcosa nel gioco non torna con questa guida, segnalalo: vale la guida.
+- **Manuale**: non descrive ancora Torneo, personalità dell'IA e modalità online a più posti. Vale la guida.
 - **Testi provvisori** 📝: i testi descrittivi delle carte (flavour text) e le informazioni nelle schermate delle armate sono segnaposto. Alcune descrizioni lì non sono corrette: ad esempio Rimonta e Resa dei conti (quelle giuste sono nel post 6) e "nessun bonus armata" per gli eserciti personalizzati, che invece il Bonus ce l'hanno.
 - **Campagna** 🚧 e **stili Eldritch / Arcana** ✏️: in bozza, fuori dal test.
 - Non serve segnalare refusi o incongruenze nei testi provvisori.`,
       ],
     },
+
   ];
 }

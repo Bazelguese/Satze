@@ -9,6 +9,15 @@ primary_region = 'fra'
 [build]
   dockerfile = 'Dockerfile'
 
+# Bot del ruolo Playtester (server/discordRuoli.mjs). Il token NON va qui:
+#   fly secrets set DISCORD_BOT_TOKEN=...
+# Gli id non sono segreti: server Discord, canale #inizia-qui, ruolo Playtester.
+[env]
+  SATZE_RUOLI_SERVER = '1565311514313756712'
+  SATZE_RUOLI_CANALE = '1570379394185437304'
+  SATZE_RUOLI_RUOLO = '1568987790484709426'
+  SATZE_RUOLI_EMOJI = '🎮'
+
 [http_service]
   internal_port = 3847
   force_https = true
