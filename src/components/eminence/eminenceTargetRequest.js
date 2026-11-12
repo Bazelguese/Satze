@@ -1,19 +1,22 @@
 // Scelta di un bersaglio sul tavolo (carta o Campo) per le abilità delle Eminenze:
 // dallo schema dei parametri dice che cosa si clicca e quale eventuale opzione segue.
 
-const CARD_KEYS = ['preyCardId', 'cardId'];
+const CARD_KEYS = ['preyCardId', 'cardId', 'fragmentCardId'];
 const SLOT_KEY = 'slot';
-/** Chiavi che la scelta sul tavolo non gestisce (Frammenti e composizioni restano nel menù). */
-const UNSUPPORTED_KEYS = ['fragmentCardId', 'composeComponent', 'graftInto'];
+const LIMITS_KEY = '__limits';
+/** Chiavi che la scelta sul tavolo non gestisce (la composizione di due Frammenti resta nel menù). */
+const UNSUPPORTED_KEYS = ['composeComponent'];
 
 const OPTION_LABELS = {
   leagueDelta: { 1: '+1 Lega', '-1': '−1 Lega' },
+  graftInto: { power: 'Al posto del Potere', bonus: 'Al posto del Bonus' },
 };
 
 /** Parole per il segno sul bersaglio scelto e per la guida sotto il portale. */
 const COPY = {
   preyCardId: { mark: 'Preda', guide: 'Scegli la Preda' },
   cardId: { mark: 'Scelto', guide: 'Scegli un Agente' },
+  fragmentCardId: { mark: 'Frammento', guide: 'Scegli un Frammento' },
   slot: { mark: 'Scelto', guide: 'Scegli un Campo' },
 };
 
@@ -29,6 +32,8 @@ function enumKeys(schema) {
 export function resolveTargetRequest(schema) {
   const keys = enumKeys(schema);
   if (!keys.length || keys.some((key) => UNSUPPORTED_KEYS.includes(key))) return null;
+  // più bersagli insieme (es. due Frammenti da comporre) non si scelgono con un clic solo
+  if (Object.values(schema?.[LIMITS_KEY] || {}).some((limit) => (limit?.max ?? 1) > 1)) return null;
   const targetKey = CARD_KEYS.find((key) => keys.includes(key)) || (keys.includes(SLOT_KEY) ? SLOT_KEY : null);
   if (!targetKey) return null;
   const rest = keys.filter((key) => key !== targetKey);

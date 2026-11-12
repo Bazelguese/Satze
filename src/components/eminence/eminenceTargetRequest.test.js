@@ -22,10 +22,20 @@ test('bersaglio con opzione: Ascesa / Declassamento', () => {
   assert.deepEqual(targetParams(req, 8, -1), { cardId: 8, leagueDelta: -1 });
 });
 
-test('resta al menù: niente bersagli, sole opzioni, Frammenti, più opzioni', () => {
+test('resta al menù: niente bersagli, sole opzioni, due Frammenti da comporre, più opzioni', () => {
   assert.equal(resolveTargetRequest(null), null);
   assert.equal(resolveTargetRequest({ preyCardId: [] }), null);
   assert.equal(resolveTargetRequest({ pronostico: ['A', 'B'] }), null);
-  assert.equal(resolveTargetRequest({ fragmentCardId: [1, 2], graftInto: ['power', 'bonus'] }), null);
+  assert.equal(resolveTargetRequest({ fragmentCardId: [1, 2], composeComponent: ['TRIGGER', 'EFFECT'] }), null);
+  assert.equal(resolveTargetRequest({ fragmentCardId: [1, 2], __limits: { fragmentCardId: { min: 2, max: 2 } } }), null);
   assert.equal(resolveTargetRequest({ cardId: [1], a: [1, 2], b: [3, 4] }), null);
+});
+
+test('Innesto: un Frammento, poi al posto del Potere o del Bonus', () => {
+  const req = resolveTargetRequest({ fragmentCardId: [21, 22], graftInto: ['power', 'bonus'] });
+  assert.equal(req.targetType, 'card');
+  assert.equal(req.mark, 'Frammento');
+  assert.equal(req.guide, 'Scegli un Frammento');
+  assert.deepEqual(req.options.map((o) => o.label), ['Al posto del Potere', 'Al posto del Bonus']);
+  assert.deepEqual(targetParams(req, 22, 'bonus'), { fragmentCardId: 22, graftInto: 'bonus' });
 });

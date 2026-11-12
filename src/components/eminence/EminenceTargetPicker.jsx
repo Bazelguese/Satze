@@ -223,7 +223,8 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
       <div className="em-bersaglio-guide" style={{ left: portalCx, top: portalBottom + 58 }}>
         <div className="em-bersaglio-kicker">{pick.name}</div>
         <div className="em-bersaglio-title">{request.guide}</div>
-        <p className="em-bersaglio-text">{pick.text}</p>
+        {/* a bersaglio scelto il testo lascia posto ai pulsanti, che possono cadergli sopra */}
+        {chosen == null && <p className="em-bersaglio-text">{pick.text}</p>}
         {pick.canCancel && (
           <button type="button" className="em-bersaglio-pill" onClick={() => onCancel?.()}>Annulla</button>
         )}
