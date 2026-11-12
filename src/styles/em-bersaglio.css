@@ -73,3 +73,11 @@
   .em-bersaglio-hot,.em-bersaglio-beam-line,.em-bersaglio-act{animation:none !important}
   .em-bersaglio-hot,[data-em-pick],.em-bersaglio-spot,.em-bersaglio-guide{transition:none !important}
 }
+
+/* più bersagli (Opera Composita): che cosa esce dai due Frammenti scelti */
+.em-bersaglio-preview{margin:10px auto 14px;display:inline-block;padding:6px 16px;font-weight:700;font-size:17px;letter-spacing:.04em;color:var(--em-b-ink);background:var(--em-b-acc);clip-path:polygon(9px 0,100% 0,calc(100% - 9px) 100%,0 100%)}
+/* un Frammento è una carta già usata: mentre la si sceglie torna leggibile */
+[data-em-pick="legal"] .satze-hand-outcome-loser,[data-em-pick="focus"] .satze-hand-outcome-loser,[data-em-pick="chosen"] .satze-hand-outcome-loser{filter:none}
+[data-em-pick="legal"] .satze-hand-outcome-dim,[data-em-pick="focus"] .satze-hand-outcome-dim,[data-em-pick="chosen"] .satze-hand-outcome-dim,
+[data-em-pick="legal"] .satze-hand-outcome-diamond,[data-em-pick="focus"] .satze-hand-outcome-diamond,[data-em-pick="chosen"] .satze-hand-outcome-diamond,
+[data-em-pick="legal"] .satze-hand-outcome-label,[data-em-pick="focus"] .satze-hand-outcome-label,[data-em-pick="chosen"] .satze-hand-outcome-label{opacity:0}

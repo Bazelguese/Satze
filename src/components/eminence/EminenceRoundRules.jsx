@@ -23,7 +23,10 @@ function portalRect(scene, selector) {
   const sr = scene.getBoundingClientRect();
   const r = el.getBoundingClientRect();
   const k = sr.width / (scene.offsetWidth || sr.width) || 1;
-  return { x: (r.left - sr.left + r.width / 2) / k, y: (r.top - sr.top) / k };
+  // il nome del Campo gira attorno al portale e sporge sopra: la targa parte da sopra il nome
+  const name = el.querySelector('.satze-bf-portal-name')?.getBoundingClientRect();
+  const top = name && name.width > 2 ? Math.min(r.top, name.top) : r.top;
+  return { x: (r.left - sr.left + r.width / 2) / k, y: (top - sr.top) / k };
 }
 
 // esito a Duello deciso: per un guadagno «riuscita/mancata», per una perdita «scattata/evitata»
@@ -57,7 +60,7 @@ export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelect
   return (
     <div ref={rootRef} className={`em-regole${hidden ? ' is-hidden' : ''}${(stakes || []).some((stake) => stake.outcome) ? ' has-outcome' : ''}`}>
       {pos && (
-        <ul className="em-regole-list" style={{ left: pos.x, top: pos.y - 40 }}>
+        <ul className="em-regole-list" style={{ left: pos.x, top: pos.y - 16 }}>
           {(rules || []).map((rule) => {
             const accent = ARMY_COLORS[rule.army]?.accent || '#f5c451';
             const lamp = semaforoLamp(rule.abilityName);
@@ -107,8 +110,7 @@ export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelect
                 <span className="em-regole-stake-side">{SIDE_LABELS[stake.ownerSide]}</span>
                 <span className="em-regole-stake-name">{stake.abilityName}</span>
                 <span className="em-regole-stake-if">{stake.condition}</span>
-                <i aria-hidden="true">→</i>
-                <strong>{stake.payoff}</strong>
+                <strong className="em-regole-stake-payoff">{stake.payoff}</strong>
                 {stake.outcome && (
                   <span key={stake.outcome} className="em-regole-stake-esito">
                     {OUTCOME_COPY[stake.tone][stake.outcome]}

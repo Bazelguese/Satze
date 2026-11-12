@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ARMY_COLORS } from '../../data/armies.js';
 import { inkOn } from './eminenceUi.js';
-import { targetSelector } from './eminenceTargetRequest.js';
+import { describeTargets, targetSelector } from './eminenceTargetRequest.js';
 import '../../styles/em-bersaglio.css';
 
 /**
@@ -37,15 +37,20 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
   const rootRef = useRef(null);
   const [layout, setLayout] = useState(null);
   const [focus, setFocus] = useState(null);
-  const [chosen, setChosen] = useState(null);
+  // bersagli cliccati, nell'ordine; di norma uno solo, due per i Frammenti da comporre
+  const [picks, setPicks] = useState([]);
   const pickId = pick?.id ?? null;
   const request = pick?.request ?? null;
+  const count = request?.count || 1;
+  const complete = picks.length >= count;
+  const chosen = complete ? picks[picks.length - 1] : null;
+  const isPicked = (value) => picks.some((v) => String(v) === String(value));
   const missingRef = useRef(onMissing);
   missingRef.current = onMissing;
 
   useLayoutEffect(() => {
     setFocus(null);
-    setChosen(null);
+    setPicks([]);
     setLayout(null);
   }, [pickId]);
 
@@ -107,27 +112,27 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
       const value = request.targetType === 'slot' ? el.getAttribute('data-field-slot') : el.getAttribute('data-hand-agent');
       const isLegal = legal.has(String(value));
       const state = !isLegal ? 'off'
-        : String(chosen) === String(value) ? 'chosen'
-          : String(focus) === String(value) ? 'focus'
-            : (chosen != null || focus != null) ? 'dim' : 'legal';
+        : picks.some((v) => String(v) === String(value)) ? 'chosen'
+          : (!complete && String(focus) === String(value)) ? 'focus'
+            : (complete || focus != null) ? 'dim' : 'legal';
       el.setAttribute('data-em-pick', state);
       el.setAttribute('data-em-pick-type', request.targetType);
       marked.push(el);
     });
     return () => marked.forEach((el) => { el.removeAttribute('data-em-pick'); el.removeAttribute('data-em-pick-type'); });
-  }, [request, layout, focus, chosen]);
+  }, [request, layout, focus, picks, complete]);
 
   const confirm = useCallback((optionValue = null) => {
-    if (chosen == null) return;
-    onConfirm?.(chosen, optionValue);
-  }, [chosen, onConfirm]);
+    if (!complete) return;
+    onConfirm?.(count > 1 ? picks : picks[0], optionValue);
+  }, [complete, count, picks, onConfirm]);
 
   // Invio conferma (quando non c'è un'opzione da scegliere), Esc annulla o deseleziona.
   useEffect(() => {
     if (!request) return undefined;
     const onKey = (event) => {
       if (event.key === 'Escape') {
-        if (chosen != null) { event.preventDefault(); setChosen(null); } else if (pick?.canCancel) { event.preventDefault(); onCancel?.(); }
+        if (picks.length) { event.preventDefault(); setPicks((list) => list.slice(0, -1)); } else if (pick?.canCancel) { event.preventDefault(); onCancel?.(); }
       } else if (event.key === 'Enter' && chosen != null && !request.optionKey && !event.target?.closest?.('button')) {
         event.preventDefault();
         confirm();
@@ -135,10 +140,16 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [request, chosen, pick?.canCancel, onCancel, confirm]);
+  }, [request, chosen, picks.length, pick?.canCancel, onCancel, confirm]);
 
   if (!pick || !request) return null;
 
+  const described = describeTargets(request, picks);
+  const toggle = (value) => setPicks((list) => {
+    if (list.some((v) => String(v) === String(value))) return list.filter((v) => String(v) !== String(value));
+    if (count === 1) return [value];
+    return list.length >= count ? list : [...list, value];
+  });
   const accent = (pick.eminence && ARMY_COLORS[pick.eminence.army]?.accent) || '#f5c451';
   const isSlot = request.targetType === 'slot';
   const active = chosen ?? focus;
@@ -188,7 +199,7 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
         </svg>
       )}
       {layout?.targets.map((target) => {
-        const isChosen = String(chosen) === String(target.value);
+        const isChosen = isPicked(target.value);
         const isFocus = String(focus) === String(target.value);
         const enter = () => setFocus(target.value);
         const leave = () => setFocus((v) => (String(v) === String(target.value) ? null : v));
@@ -196,7 +207,7 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
           <button
             key={String(target.value)}
             type="button"
-            className={`em-bersaglio-hot${isChosen ? ' is-chosen' : ''}${isFocus && chosen == null ? ' is-focus' : ''}${chosen != null && !isChosen ? ' is-dim' : ''}`}
+            className={`em-bersaglio-hot${isChosen ? ' is-chosen' : ''}${isFocus && !complete && !isChosen ? ' is-focus' : ''}${complete && !isChosen ? ' is-dim' : ''}`}
             style={{ left: target.rect.x, top: target.rect.y, width: target.rect.w, height: target.rect.h }}
             aria-pressed={isChosen}
             aria-label={isSlot ? `Campo ${Number(target.value) + 1}` : `Carta ${target.value}`}
@@ -205,9 +216,9 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
             onMouseLeave={leave}
             onFocus={enter}
             onBlur={leave}
-            onClick={() => setChosen((v) => (String(v) === String(target.value) ? null : target.value))}
+            onClick={() => toggle(target.value)}
           >
-            {isChosen && <span className="em-bersaglio-mark">{request.mark}</span>}
+            {isChosen && <span className="em-bersaglio-mark">{described.marks[String(target.value)] || request.mark}</span>}
           </button>
         );
       })}
@@ -222,7 +233,8 @@ export function EminenceTargetPicker({ pick, onConfirm, onCancel, onMissing, anc
       )}
       <div className="em-bersaglio-guide" style={{ left: portalCx, top: portalBottom + 58 }}>
         <div className="em-bersaglio-kicker">{pick.name}</div>
-        <div className="em-bersaglio-title">{request.guide}</div>
+        <div className="em-bersaglio-title">{request.guide}{count > 1 && !complete ? ` · ${picks.length}/${count}` : ''}</div>
+        {described.preview && <p className="em-bersaglio-preview">{described.preview}</p>}
         {/* a bersaglio scelto il testo lascia posto ai pulsanti, che possono cadergli sopra */}
         {chosen == null && <p className="em-bersaglio-text">{pick.text}</p>}
         {pick.canCancel && (
