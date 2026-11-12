@@ -15,6 +15,7 @@
     "test:unit": "node --test \"src/game/duel/*.test.js\" \"src/game/eminence/*.test.js\" \"src/game/ai/generateAIActions.test.js\" \"src/game/ai/aiProfiles.test.js\" \"src/game/ai/focusBudget.test.js\" \"src/game/ai/opponentScenarios.test.js\" \"src/game/ai/hiddenFocusPolicy.test.js\" \"src/game/ai/chooseAIAction.test.js\" \"src/game/ai/projectPostDuelState.test.js\" \"src/game/ai/initiativeCalendar.test.js\" \"src/campaign/logic/*.test.js\" \"src/campaign/state/*.test.js\" \"src/game/triggerLogic.test.js\" \"src/game/tournament/tournamentLogic.test.js\" \"src/data/campaignSaves.test.js\" \"src/data/battlefields.test.js\" \"src/config/duelVisualTimeline.test.js\" \"src/collection/*.test.js\" \"src/telemetry/*.test.js\"",
     "test:integration": "vitest run",
     "test:server": "node --test server/index.test.mjs",
+    "smoke:offerta": "node scripts/smoke-offerta-iniziativa-ia.mjs",
     "validate:campagna": "node tools/validate-campagna.mjs src/campaign/data/atto1.js --cards src/data/cards.js",
     "bench:ai": "vite-node scripts/ai-planner-benchmark.mjs",
     "selfplay:ai": "vite-node scripts/ai-selfplay.mjs",

@@ -8,6 +8,9 @@ import {
   shouldHoldDuelForEminence,
   canSelectBattlefield,
   canAdvanceEminenceGeneralGate,
+  canOpenEminenceGate,
+  canEnterBattlePhase,
+  REVEAL_GATES,
   shouldShowEminenceAbilityRail,
   shouldShowEminenceSideZone,
   shouldShowEminenceLayer,
@@ -434,6 +437,13 @@ test('hold: il tendone R5 e il round non aperto bloccano Campo e Agenti', () => 
   assert.equal(shouldHoldDuelForEminence({ awaitingRevealParams: true }), true);
 });
 
+test("hold: un Affare senza risposta ferma Campo e Agenti anche ad annuncio chiuso", () => {
+  // Offerta della Corte al gate pre-Campo con l'IA all'iniziativa: l'annuncio si chiude da
+  // solo, ma finché il giocatore non risponde l'IA non deve scegliere il Campo.
+  assert.equal(shouldHoldDuelForEminence({ announceHold: false, pendingDeals: true }), true);
+  assert.equal(shouldHoldDuelForEminence({ pendingDeals: false }), false);
+});
+
 test('reveal: dopo il lock Agenti i bersagli confermati restano da scegliere', () => {
   const base = createEminenceMatchState({
     format: EMINENCE_FORMAT.REQUIRED,
@@ -550,4 +560,28 @@ test('GENERAL: non si apre prima del Campo, anche con gli Agenti già lockati', 
   assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: true, fieldIndex: 0 }), true);
   assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: true, fieldIndex: null }), false);
   assert.equal(canAdvanceEminenceGeneralGate({ agentsLocked: false, fieldIndex: 1 }), false);
+});
+
+test('gate: GENERAL non si apre senza entrambi gli Agenti, nemmeno a Campo fissato due volte', () => {
+  // Il secondo «Campo fissato» dello stesso round trova GENERAL come prossimo gate.
+  assert.equal(canOpenEminenceGate({ gate: REVEAL_GATES.GENERAL, agentsReady: false }), false);
+  assert.equal(canOpenEminenceGate({ gate: REVEAL_GATES.GENERAL, agentsReady: true }), true);
+  // I gate che precedono gli Agenti non li richiedono.
+  assert.equal(canOpenEminenceGate({ gate: REVEAL_GATES.PRE_FIELD, agentsReady: false }), true);
+  assert.equal(canOpenEminenceGate({ gate: REVEAL_GATES.PRE_AGENT, agentsReady: false }), true);
+});
+
+test('gate: nessun gate si apre sopra un Affare ancora senza risposta', () => {
+  for (const gate of [REVEAL_GATES.PRE_FIELD, REVEAL_GATES.PRE_AGENT, REVEAL_GATES.GENERAL]) {
+    assert.equal(canOpenEminenceGate({ gate, agentsReady: true, pendingDeals: true }), false);
+  }
+});
+
+test('battle: la fase di scontro richiede entrambi gli Agenti', () => {
+  assert.equal(canEnterBattlePhase({ playerAgentId: null, enemyAgentId: null }), false);
+  assert.equal(canEnterBattlePhase({ playerAgentId: 905, enemyAgentId: null }), false);
+  assert.equal(canEnterBattlePhase({ playerAgentId: null, enemyAgentId: 301 }), false);
+  assert.equal(canEnterBattlePhase({ playerAgentId: 905, enemyAgentId: 301 }), true);
+  assert.equal(canEnterBattlePhase({ playerAgentId: 0, enemyAgentId: 301 }), true);
+  assert.equal(canEnterBattlePhase(), false);
 });
