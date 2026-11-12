@@ -20,20 +20,21 @@ function useDealProgress(cards, onDealProgress) {
  * Stile classico (motore senza controller): mischiata in loop dallo scramble alla prima
  * carta in mano, poi un suono per ogni carta consegnata.
  */
-function useClassicShuffleSound(cards, sound, startMs) {
+function useClassicShuffleSound(cards, sound, startMs, dealOnly = false) {
   const dealt = cards.reduce((n, c) => n + (c.dealt ? 1 : 0), 0);
   const stopRef = useRef(null);
   const dealtRef = useRef(0);
   useEffect(() => {
     if (!sound) return undefined;
     dealtRef.current = 0;
-    const t = setTimeout(() => { stopRef.current = startShuffleSound(); }, startMs);
+    // solo consegna: nessuna mischiata da far sentire, restano i suoni delle carte servite
+    const t = dealOnly ? null : setTimeout(() => { stopRef.current = startShuffleSound(); }, startMs);
     return () => {
       clearTimeout(t);
       stopRef.current?.(300);
       stopRef.current = null;
     };
-  }, [sound, startMs]);
+  }, [sound, startMs, dealOnly]);
   useEffect(() => {
     if (!sound || dealt <= dealtRef.current) {
       dealtRef.current = dealt;
@@ -58,6 +59,7 @@ function ClassicShuffleStage({
   deckIntroFadeMs,
   deckIntroBeatMs,
   sound,
+  dealOnly,
 }) {
   const { cards, showReplay, play } = useCardShuffleDealAnimation(deck, layout, {
     autoPlay,
@@ -65,10 +67,11 @@ function ClassicShuffleStage({
     onComplete,
     deckIntroFadeMs,
     deckIntroBeatMs,
+    dealOnly,
   });
   useDealProgress(cards, onDealProgress);
   const introMs = deckIntroFadeMs > 0 ? deckIntroFadeMs + deckIntroBeatMs : 0;
-  useClassicShuffleSound(cards, sound, introMs + SHUFFLE_DEAL_TIMING.scrambleStartMs);
+  useClassicShuffleSound(cards, sound, introMs + SHUFFLE_DEAL_TIMING.scrambleStartMs, dealOnly);
   const deckArmies = useMemo(
     () => getDeckArmies(deck, { fallbackArmy: deck?.[0]?.army }),
     [deck]
@@ -188,8 +191,10 @@ export function CardShuffleDealStage({
   deckIntroBeatMs = 0,
   /** Suoni di mischiata e smazzata (solo la mischiata vera, un mazzo). */
   sound = false,
+  /** Solo consegna, senza mischiata (usa sempre il motore classico). */
+  dealOnly = false,
 }) {
-  const isClassic = shuffleKind === CLASSIC_SHUFFLE_KIND;
+  const isClassic = dealOnly || shuffleKind === CLASSIC_SHUFFLE_KIND;
   const stageProps = {
     deck,
     layout,
@@ -202,6 +207,7 @@ export function CardShuffleDealStage({
     deckIntroFadeMs,
     deckIntroBeatMs,
     sound,
+    dealOnly,
   };
 
   return (

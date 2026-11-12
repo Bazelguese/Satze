@@ -10,7 +10,7 @@ img{user-select:none;-webkit-user-drag:none}.spiral canvas{display:none}
 .letters img{transform:scale(.87)}.letters{filter:drop-shadow(0 4px 5px #000c)}
 .sword{transform-origin:50% 34%;will-change:transform;opacity:0}.sword-art{position:absolute;inset:0;transform:scale(.78,.88);transform-origin:50% 48%}
 .sword-art img,.blade-fx{position:absolute;inset:0}.sword-art img{filter:drop-shadow(0 2px 4px #0009)}
-.hit{position:absolute;left:46%;top:11%;width:8%;height:79%;min-width:32px;padding:0;border:0;background:transparent;touch-action:manipulation;pointer-events:auto;color:inherit;cursor:pointer}
+.hit{position:absolute;left:46%;top:11%;width:8%;height:79%;min-width:32px;padding:0;border:0;background:transparent;touch-action:manipulation;pointer-events:auto;color:inherit;cursor:var(--satze-cursor, pointer)}
 .fallback{display:none}
 .hit:focus-visible{outline:1px solid #e2bfd6;outline-offset:4px;border-radius:40%}
 :host([layer="spiral"]) .letters,:host([layer="spiral"]) .sword,:host([layer="spiral"]) .hit{visibility:hidden}

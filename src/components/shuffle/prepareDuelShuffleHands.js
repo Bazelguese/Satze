@@ -38,12 +38,10 @@ export function computeShuffleDealFromSets(playerSet, enemySet, playerArmy, enem
   let enemyHand;
 
   if (useFixed) {
-    const playerHandIndices = playerSet.map((card, i) => i).filter((i) =>
-      fixedHands.playerHand.some((c) => c.id === playerSet[i].id)
-    );
-    const enemyHandIndices = enemySet.map((card, i) => i).filter((i) =>
-      fixedHands.enemyHand.some((c) => c.id === enemySet[i].id)
-    );
+    // Nell'ordine della mano, non del mazzo: la distribuzione animata serve le carte nello
+    // stesso ordine in cui poi restano in mano, altrimenti a fine animazione cambiano posto.
+    const playerHandIndices = fixedHands.playerHand.map((c) => playerSet.findIndex((d) => d.id === c.id));
+    const enemyHandIndices = fixedHands.enemyHand.map((c) => enemySet.findIndex((d) => d.id === c.id));
     playerFinalOrder = buildFinalOrderFromHand(playerSet.length, playerHandIndices);
     enemyFinalOrder = buildFinalOrderFromHand(enemySet.length, enemyHandIndices);
     playerHand = fixedHands.playerHand.map((card) => ({ ...card, army: card.army || playerArmy }));
@@ -148,4 +146,26 @@ export function prepareDuelShuffleHands(config = {}) {
 /** Duello casuale: armata + mazzo random per entrambi i giocatori. */
 export function prepareRandomDuelShuffleHands() {
   return prepareDuelShuffleHands();
+}
+
+/**
+ * Distribuzione per la partita successiva di una serie (torneo), sul tavolo già aperto.
+ * `seriesDeal`:
+ *  - 'remainder' → si servono le 5 carte rimaste, senza mischiata: il mazzetto è la mano;
+ *  - 'reshuffle' → mischiata normale dell'intero esercito.
+ * In entrambi i casi il tavolo non si riscopre da capo.
+ */
+export function seriesContinuationSetup(setup, seriesDeal) {
+  if (!setup || !seriesDeal) return setup;
+  if (seriesDeal !== 'remainder') return { ...setup, skipReveal: true };
+  const identity = (hand) => hand.map((_, i) => i);
+  return {
+    ...setup,
+    skipReveal: true,
+    dealOnly: true,
+    playerSet: setup.playerHand,
+    enemySet: setup.enemyHand,
+    playerFinalOrder: identity(setup.playerHand),
+    enemyFinalOrder: identity(setup.enemyHand),
+  };
 }

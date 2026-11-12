@@ -687,8 +687,14 @@ export const BattlefieldPanel = ({
     }
     if (decision?.options?.length) {
       portalActions.length = 0;
-      const spans = decision.options.length === 2 ? [[156, 96], [84, 24]] : [[128, 52]];
-      decision.options.forEach((o, i) => portalActions.push({ variant: 'secondary', ...o, dL: spans[i][0], dR: spans[i][1] }));
+      // tre opzioni: Offerta con due varianti più il rifiuto (stessi archi di Menù / Mazzo / Rematch)
+      const spans = decision.options.length === 2 ? [[156, 96], [84, 24]]
+        : decision.options.length === 3 ? [[176, 134], [128, 84], [78, 22]]
+          : [[128, 52]];
+      decision.options.forEach((o, i) => {
+        const [dL, dR] = spans[i] || spans[spans.length - 1];
+        portalActions.push({ variant: 'secondary', ...o, dL, dR });
+      });
     }
   }
   const [riepilogoRect, setRiepilogoRect] = useState(null);

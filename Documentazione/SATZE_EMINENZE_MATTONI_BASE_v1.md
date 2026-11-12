@@ -816,4 +816,126 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - **Corte Rossa:** manca l'interfaccia del Registro (voci e totale visibili a entrambi) e l'indicatore «rifiuto disponibile». L'Offerta si risponde dal portale di scelta.
 - **Campo 122:** usa lo sfondo del Meridiano (89) finché non c'è l'illustrazione `campo-122.webp`.
 - **Cinematiche:** le primitive nuove (BLOCK_POWER, ECHO_POWER, REPLACE_ABILITY, CONSTRAIN_DEPLOY, SET_ROUND_INITIATIVE, TRANSPLANT_POWER, ESCALATE_END_MATCH_DEBTS) non hanno ancora un cue cinematico, come diverse primitive già esistenti.
-- **IA:** sceglie le abilità con le euristiche generiche esistenti; alle Offerte e alla Scelta di Corteggiamento risponde sempre accettando la prima opzione.
+- **IA:** sceglie l'abilità con i valori della §10 corretti sullo stato della partita e pianifica la Presenza sui Duelli che restano (`src/game/ai/eminence/aiEminenceChoice.js`). Rifiuta le Offerte troppo care o letali quando può; al Corteggiamento sceglie per seconda nei turni 1-2 e per prima dopo (misurato). Restano aperti: la scelta di Agente e FC non tiene conto degli effetti delle Eminenze; slot delle Maledizioni, Ascesa e Opera Composita usano i bersagli predefiniti; nessuna misura di forza con le Eminenze (manca il banco di prova).
+
+## 12. Seconde Eminenze
+
+### 12.0 Decisioni generali (11 novembre 2026)
+
+- Ogni Armata avrà una seconda Eminenza, scelta dal giocatore nel deckbuilding.
+- Stessa scala di valore del rework; schema base Statico + ricarica + base + firma, con eccezioni ammesse per l'identità.
+- La seconda Eminenza deve offrire uno stile di gioco opposto alla prima ed essere coerente con la lore dell'Armata.
+- Si procede Armata per Armata, in ordine di `src/data/armies.js`.
+- Le Eminenze non sono Agenti né personaggi delle carte: sono entità, istituzioni o forze che stanno al di sopra del tavolo. Nomi e lore non si legano mai a un Agente.
+
+### 12.1 Figli dell'Orizzonte — Orrore Nero (approvata)
+
+**Lore:** l'orrore della Nebula che attira i Leggeri e li costringe a condividere i dolori della Domanda; più è il dolore, più la Domanda diviene chiara.
+
+**Stile:** opposto alla Domanda Senza Fine. Non precisione sugli FC e controllo delle soglie, ma economia dei PV: restare indietro genera Presenza e il dolore subito torna all'avversario.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Dolore | All'inizio di ogni round, se hai meno PV dell'avversario o se hai perso il Duello precedente, +1 Presenza (una sola volta per round). | — | circa 2.5–2.7 Presenza/Scontro (limite alto) |
+| +1 | Razionalizzazione | In questo Duello l'Agente nemico ottiene +2 DAN. | −0.75 | circa −0.5, alimenta lo Statico ✅ |
+| −1 | Rifiuto | In questo Duello, l'avversario perde metà dei PV che ti infligge (DAN e Danni diretti), arrotondata per eccesso. | 0.75 | circa 0.6 ✅ |
+| −2 | Rabbia | Per il tuo Agente, Ultima Chance, Vendetta e Rimonta valgono l'una per l'altra. | 1.50 | circa 1.3–1.5 ✅ |
+| −3 | Terrore vivo | Il tuo Agente ottiene +1 VA per ogni PV perso in questo Scontro, fino a +10 VA. | 2.25 | circa 2.0 a metà Scontro, 2.8 al massimo 〰️ |
+
+**Note di regola:**
+- Rifiuto conta solo i PV inflitti dall'avversario (DAN della sconfitta e Danni diretti), non i costi propri o il Registro della Corte; la metà si calcola sul totale del Duello.
+- Rabbia è un alias dei trigger limitato al proprio Agente (come Maschere Invertite).
+- «PV persi in questo Scontro» = PV iniziali meno PV attuali; le Cure li riducono.
+
+**Lavoro di implementazione:** condizione «hai meno PV dell'avversario»; riflesso dei PV inflitti a fine Duello; VA scalato sui PV persi con tetto; supporto a due Eminenze per Armata nel deckbuilding.
+
+### 12.2 Kethran — Istituto della caccia agli angeli (approvata)
+
+**Lore:** i Kethran prima della caduta, l'impero costruttore di Keth Vahar ossessionato dall'altezza e dal cielo.
+
+**Stile:** opposto all'Altare della Ricomposizione. Non si cresce perdendo, si costruisce: i Livelli dell'Istituto salgono con le vittorie e con l'Organizzazione, e si incassano con la Parata.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | L'Ossessione dell'Altezza | Quando vinci un Duello, l'Istituto sale di 1 Livello e +1 Presenza. Quando perdi due Duelli di fila, scende di 1 Livello. | — | circa 2.5 Presenza/Scontro |
+| +1 | Tributo al popolo | Se vinci il Duello, perdi PV pari al DAN dell'Agente nemico. | −0.75 | circa −0.8 ✅ |
+| −1 | Organizzazione anticielo | L'Istituto sale di 1 Livello; se perdi questo Duello, sale di 2. | 0.75 | circa 1.1 〰️ (sopra il budget, accettato) |
+| −2 | Festa della grande serpe | Il trigger del Bonus del tuo Agente diventa, a tua scelta, Gloria o Magnanimo. | 1.50 | circa 1.5 ✅ |
+| −3 | Parata dei cadaveri volanti | Il tuo Agente ottiene +1 DAN e +2 VA per ogni Livello dell'Istituto. | 2.25 | circa 1.8 con 2 Livelli, 2.7 con 3 ✅ 〰️ |
+
+**Note di regola:**
+- I Livelli partono da 0, non scendono sotto 0 e sono pubblici.
+- «Due Duelli di fila» persi: la seconda sconfitta consecutiva toglie 1 Livello; una vittoria o un pareggio interrompe la serie.
+- Festa: la scelta fra Gloria e Magnanimo si fa al momento della scelta dell'abilità.
+
+**Lavoro di implementazione:** contatore persistente dei Livelli con serie di sconfitte; alias o sostituzione del trigger del Bonus con scelta; statistiche scalate sui Livelli.
+
+### 12.3 Corte Rossa — Corona del desiderio (approvata)
+
+**Lore:** l'Estrazione, l'eccezione al Codice dell'Offerta: quando la Corte tira i fili dei contratti non offre, prende, e toglie al nemico capacità e risorse («tranne la capacità di dire no»).
+
+**Stile:** opposto al Registro. Niente consenso né debiti differiti: negazione immediata e decisa da te, su Poteri, Bonus e FC dell'avversario.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Inginocchiati | Quando il Potere dell'Agente nemico non si attiva, +1 Presenza; +2 se è stato bloccato dal tuo Agente. | — | circa 2.3–2.5 Presenza/Scontro |
+| +1 | Opulenza | In questo Duello l'Agente nemico è Immune. | −0.75 | circa −0.7 ✅ |
+| −1 | In esilio | Scegli un Agente nemico non schierato: quando verrà schierato in questo Scontro, il suo Bonus d'Armata è bloccato. | 0.75 | circa 0.8 ✅ |
+| −2 | Prezzo del fardello | **Prima degli Agenti.** In questo Duello l'avversario può investire al massimo 4 FC sul suo Agente. | 1.50 | circa 1.3–1.8 ✅ |
+| −3 | Editto di intolleranza | **Prima degli Agenti.** Scegli un trigger: in questo Duello e nel prossimo, i Poteri dell'avversario con quel trigger non si attivano. | 2.25 | circa 2.0–2.4 ✅ |
+
+**Note di regola:**
+- Inginocchiati: il +2 vale solo se il Potere nemico è bloccato dal Potere o dal Bonus del tuo Agente; un blocco prodotto da questa Eminenza (Editto) dà +1.
+- Il tetto di 4 FC nega Overdrive e i colpi da 5+ FC: misurato in autoplay, le IA del gioco investono 5+ FC in circa metà dei Duelli e quasi sempre con carte Overdrive e Conquista.
+
+**Lavoro di implementazione:** fonte del blocco del Potere nel risultato del Duello; marchio persistente che blocca il Bonus allo schieramento; tetto agli FC investibili rispettato da interfaccia, IA e online; divieto di trigger per due Duelli.
+
+### 12.4 Calibri Pesanti — Le Bombe Nere (approvata)
+
+**Lore:** le armi della Guerra dell'Ultimo Giorno, costruite perché nessuno le usasse: «se tutti potevano distruggere tutti, nessuno avrebbe distrutto nessuno. La teoria era sbagliata».
+
+**Stile:** opposto al Comando dei Quattro Fronti. Non conta quanto subisci ma quanto infliggi: corsa ai PV, danni anche nella sconfitta, mazzi costruiti sui Danni diretti.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Nessun vincitore | Alla fine del Duello, se l'avversario ha perso PV in questo Duello, +1 Presenza. | — | circa 2.5–2.8 Presenza/Scontro |
+| +1 | Deterrenza | In questo Duello il tuo Agente ha −2 DAN. | −0.75 | circa −0.55 ✅ |
+| −1 | Ricaduta | Se perdi il Duello, l'avversario perde PV pari a metà del tuo DAN, arrotondata per eccesso. | 0.75 | circa 0.75 ✅ (caso peggiore 3 PV) |
+| −2 | Artiglieria Pesante | Per il resto dello Scontro, gli effetti di Danni diretti dei tuoi Agenti infliggono 1 danno in più. | 1.50 | circa 1.0–1.3 con un mazzo di Danni diretti (anche bi-armata), meno altrimenti 〰️ |
+| −3 | La Guerra dell'Ultimo Giorno | Infliggi il tuo DAN anche se perdi il Duello; se vinci, l'avversario perde altri 3 PV. | 2.25 | circa 1.8–2.0 ✅ (caso peggiore 6 PV perdendo con DAN 6) |
+
+**Note di regola:**
+- Artiglieria Pesante vale per gli effetti di Danni diretti del Potere e del Bonus dei tuoi Agenti. **Da decidere:** se un secondo uso nello stesso Scontro si somma (+2) o non ha effetto.
+- La versione con «1 Danno diretto per ogni FC oltre il terzo» è stata scartata: al round 2 si possono investire 10–12 FC su un Agente (18 FC iniziali, riserva di 1 FC per Agente da giocare), e con il Titano Corazzato MK-IV darebbe 13 PV in un solo round.
+
+**Lavoro di implementazione:** modificatore persistente ai Danni diretti dei propri Agenti; DAN inflitto anche in sconfitta; PV extra in vittoria.
+
+### 12.5 Orathai — Agatosh, l'albero etereo (approvata)
+
+**Stile:** opposto al Primo Canto e di supporto all'Armata. Gli Orathai sono un'Armata da finale (DAN bassa, Cure, Magnanimo, Bonus su Resa dei conti); questa Eminenza li tiene in piedi nei primi round spostando il loro Bonus su Turbo, prolungando Turbo a piacere e offrendo un modo diverso di vincere il Duello.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Consumo di linfa | I tuoi trigger Resa dei conti sono Turbo. Alla fine del Duello, se il DAN finale del tuo Agente supera quello dell'Agente nemico, +1 Presenza. | — | circa 2.0–2.5 Presenza/Scontro |
+| +1 | Pioggia di vigore | In questo Duello il trigger Potere dell'Agente nemico è considerato soddisfatto. | −0.75 | circa −0.75 ✅ |
+| −1 | Sovrastimolazione | Per il resto dello Scontro, Turbo è soddisfatto per te per un round in più (round 1–3; con un secondo uso round 1–4, e così via). | 0.75 | circa 0.7–1.0 per uso ✅ |
+| −2 | Benedetto da Agatosh | Sostituisci il trigger del tuo Potere o del tuo Bonus con Sopraffare o Magnanimo. | 1.50 | circa 1.2–1.5 ✅ |
+| −4 | Lettura d'animo | **Prima degli Agenti.** In questo Duello vince chi ha la somma di POT e DAN finali più alta, indipendentemente dal VA. Gli FC investiti si spendono comunque. | 3.00 | circa 3.0 ✅ |
+
+**Note di regola:**
+- Consumo di linfa converte in Turbo i trigger Resa dei conti del Potere e del Bonus dei tuoi Agenti (Bonus Orathai «+2 DAN» compreso): attivi nei round 1–2 e non più dal 3, salvo Sovrastimolazione.
+- Sovrastimolazione è cumulativa e permanente: ogni uso aggiunge un round alla finestra di Turbo per te.
+- Benedetto da Agatosh: la scelta di slot e trigger si fa al reveal, con gli Agenti noti. Sovrapposizione parziale con la Festa della grande serpe (Istituto della caccia agli angeli), accettata.
+- Lettura d'animo: parità risolta come per il VA (Lega minore, poi POT minore, poi chi ha giocato per secondo).
+
+**Lavoro di implementazione:** conversione di trigger Resa dei conti → Turbo per lato; finestra di Turbo estendibile per lato; sostituzione del trigger di Potere o Bonus a scelta; condizione di vittoria alternativa (POT + DAN) al posto del VA.
