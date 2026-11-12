@@ -10,7 +10,7 @@ export function guida(cfg) {
   const v = cfg.versione;
   return [
     {
-      titolo: '📖 Indice e legenda',
+      titolo: "📖 Indice e legenda",
       messaggi: [
         `# Guida di SATZE · v${v}
 Regolamento e riferimento tecnico della build di playtest. Un post per argomento, da leggere in quest'ordine:
@@ -30,19 +30,21 @@ Regolamento e riferimento tecnico della build di playtest. Un post per argomento
 13. Modalità, formati e IA
 14. 2v2 ad abbinamenti segreti
 15. Re della collina
-16. Multiplayer online
-17. Eserciti, Tutorial, Galleria, Opzioni
-18. Limiti noti di questa build
+16. Torneo
+17. Multiplayer online
+18. Eserciti, Tutorial, Manuale, Galleria, Opzioni
+19. Limiti noti di questa build
 
 ## Stato delle funzioni
 - ✅ **Stabile**: Duello 1v1 e regole base, Campi, 2v2, Re della collina, Multiplayer.
+- 🆕 **Nuovo in questa build**: **Torneo** (anche online) e **personalità dell'IA**.
 - 🧪 **In test, non bilanciato**: **Eminenze**. Sono una meccanica secondaria: le regole possono cambiare e i valori non sono ancora bilanciati.
 - ✏️ **In bozza**: stili grafici alternativi delle carte **Eldritch** e **Arcana**.
 - 📝 **Testi provvisori**: i **testi descrittivi delle carte** (flavour text) e le **informazioni nelle schermate delle armate** sono segnaposto. Non descrivono le regole: per quelle vale questa guida.
 - 🚧 **Non giocabile**: **Campagna**. È visibile nel menu ma è in via di definizione.
 
 ## Note
-- La guida descrive il comportamento reale del gioco. Se il Glossario o il Tutorial in gioco dicono una cosa diversa, vale la guida: segnalalo in <#bug> con il tag **regole / effetti**.
+- La guida descrive il comportamento reale del gioco. Se il Glossario, il Manuale o il Tutorial in gioco dicono una cosa diversa, vale la guida: segnalalo in <#bug> con il tag **regole / effetti**.
 - Abbreviazioni: **PV** punti vita · **FC** Focus Coin · **POT** Potenza · **DAN** Danno · **VA** Valore Assalto · **nem.** nemico.`,
       ],
     },
@@ -306,13 +308,14 @@ Il testo dopo i due punti.
     },
 
     {
-      titolo: '9 · Campi: come funzionano',
+      titolo: "9 · Campi: come funzionano",
       messaggi: [
         `# Campi di battaglia
 ## Estrazione
 - Ogni partita ha **5 Campi**, estratti a caso in base alla rarità: **comune**, **raro**, **speciale**.
   - Al massimo **1 speciale** per partita, e solo negli ultimi due posti.
   - Alcuni Campi non possono uscire nei primi 3 posti: sono quelli segnati **T2** nell'elenco.
+  - I **Campi d'Eminenza** (segnati **E**) non vengono mai estratti: entrano in gioco solo con un'abilità d'Eminenza.
 - **3 scoperti** all'inizio, **1 in più** alla fine di ogni round.
 
 ## Scelta e conquista
@@ -335,10 +338,10 @@ L'etichetta all'inizio dell'effetto lo dice:
     },
 
     {
-      titolo: '10 · Campi: elenco completo',
+      titolo: "10 · Campi: elenco completo",
       messaggi: [
-        `# Campi · elenco (121)
-Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2** = non esce nei primi 3 posti.
+        `# Campi · elenco (122)
+Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2** = non esce nei primi 3 posti · **E** = Campo d'Eminenza, mai estratto.
 
 **Generici (1/2)**
 - **Gran Corno** — In scontro · Entrambi · +4 POT · r
@@ -385,16 +388,16 @@ Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2*
 - **Foresta Pietrificata** — Regola · POT finale massimo 7 · r
 - **Lago delle Sette Lune** — Post-scontro · Perdente · +1 FC e +1 PV · r
 
-**Neutri** (solo Mani nude, nessun effetto): La Piana della Torre Caduta · Ignoto inarrivabile · Il Bastione del Nono Mondo · Il Ponte dell'Ultimo Campione · Le Ceneri del Mondo Senza Nome
-
-**Figli dell'Orizzonte**
+**Neutri** (solo Mani nude, nessun effetto): La Piana della Torre Caduta · Ignoto inarrivabile · Il Bastione del Nono Mondo · Il Ponte dell'Ultimo Campione · Le Ceneri del Mondo Senza Nome`,
+        `**Figli dell'Orizzonte**
 - **Nebulosa dei Ricordi** — In scontro · Entrambi · +1 POT · c
 - **Orlo del Buco Nero** — In scontro · Entrambi · POT e DAN invertiti · s
 - **Cimitero di Stelle** — In scontro · Entrambi · −2 VA · c
 - **Frammento Oscurato** — In scontro · Entrambi · −2 POT, −2 DAN · r
 - **Il Pozzo Gravitazionale** — Regola · FC investiti max 3 · s
-- **Trono Solare** — Conquista · +1 PV · c · T2`,
-        `**Kethran**
+- **Trono Solare** — Conquista · +1 PV · c · T2
+
+**Kethran**
 - **Fondamenta della Torre** — Gloria e Vendetta sempre attivi · r · T2
 - **Ziqqurat Spezzata** — Post-scontro · Perdente +1 FC · Conquista −1 FC · c
 - **Biblioteca delle Lingue Perdute** — Regola · Effetti Blocca disattivati · r
@@ -470,6 +473,7 @@ Formato: **Nome** — effetto · rarità (c comune, r raro, s speciale) · **T2*
 - **Canyon Ghiacciato** — In scontro · Chi ha meno Campi conquistati · −1 POT · c · T2
 - **Vulcano Dormiente Innevato** — Regola · Invasione sempre attivo · r
 - **Meridiano del Sole Verde** — Regola · Bonus → Invasione: +2 POT, +1 DAN · r
+- **Arena del Violento Gaudio** — In scontro · Entrambi · +2 POT, +2 DAN · r · **E** (solo dall'Eminenza Apex)
 
 **Mascarada**
 - **Grande Arena di Ilesca** — Regola · Effetti Overdrive disattivati · r
@@ -508,7 +512,7 @@ Tutti i Campi si consultano anche in gioco: **Galleria → Campi**.`,
     },
 
     {
-      titolo: '13 · Modalità, formati e IA',
+      titolo: "13 · Modalità, formati e IA",
       messaggi: [
         `# Modalità, formati e IA
 ## Come si avvia una partita locale
@@ -518,11 +522,12 @@ Tutti i Campi si consultano anche in gioco: **Galleria → Campi**.`,
 - **Duello**: 1 contro 1. È il gioco base descritto nei post 1-5.
 - **2v2**: ad abbinamenti segreti, due squadre da due (post 14).
 - **Re della collina**: tutti contro tutti, 3 o 4 giocatori (post 15).
+- **Torneo**: voce a parte del menu principale, 12 eserciti a eliminazione diretta (post 16).
 
-In locale gli altri posti sono IA. Online tutte e tre le modalità si giocano con altre persone (post 16).
+In locale gli altri posti sono IA. Online tutte queste modalità si giocano anche con altre persone (post 17).
 
 ## Formati
-- **Standard**: Eminenze e Campi attivi. Solo nel Duello, anche online.
+- **Standard**: Eminenze e Campi attivi. Solo nel Duello e nel Torneo, anche online.
 - **No Eminenza**: Campi attivi, senza Eminenze.
 - **Mani nude**: niente Eminenze ed effetti dei Campi; si usano i 5 Campi neutri, tutti scoperti. Nel 2v2, che ha 10 Campi, ogni Campo neutro compare due volte.
 
@@ -533,17 +538,33 @@ In locale gli altri posti sono IA. Online tutte e tre le modalità si giocano co
 ## Difficoltà
 - **Senza occhi** (Facile): gioca correttamente, ma pianifica poco e sbaglia tatticamente.
 - **Mezzo ubriaco** (Normale, predefinita): valuta trigger, Campi e risorse in modo equilibrato.
-- **Sfavorito** (Difficile): analizza le risposte visibili, conserva risorse e punisce gli errori.
+- **Sfavorito** (Difficile): analizza le risposte visibili, conserva risorse e punisce gli errori.`,
+        `## Personalità
+Ultima riga del popup: lo stile dell'IA. Non cambia la difficoltà.
+- **Neutrale** (predefinita): gioca al meglio, senza preferenze.
+- **Impetuoso**: tanti FC e carte forti nei primi turni.
+- **Paziente**: cede volentieri i primi scontri e tiene FC e carte migliori per il finale.
+- **Conquistatore**: punta alla maggioranza dei Campi.
+- **Spietato**: punta ai tuoi PV, poco interesse per i Campi.
+- **Avaro**: spende il minimo indispensabile.
+- **Temerario**: mosse tutto-o-niente e puntate audaci.
+- **Casuale**: un tratto a sorpresa, svelato nella schermata VS.
 
-L'IA del Duello non vede i FC che investi. Nel 2v2 e nel Re della collina le IA usano una logica più semplice e scelgono il Campo a caso tra quelli validi.`,
+Nel 2v2 e nel Re della collina la riga si chiama **Avversari** e vale per tutte le IA avversarie; con Casuale ognuna estrae il suo tratto. Il compagno del 2v2 si sceglie nella riga **Compagno** (post 14).
+
+## Come gioca l'IA
+- L'IA del Duello non vede i FC che investi.
+- In locale (Duello, 2v2, Re della collina, Torneo) usa un motore a simulazione: valuta carte, FC e Campi.
+- Online, nei posti vuoti di 2v2 e Re della collina, gioca l'IA precedente, più semplice: sceglie il Campo a caso tra quelli validi.
+- Nel formato Standard sceglie le abilità d'Eminenza, ma per Agente, FC e Campo ragiona come se le Eminenze non ci fossero.`,
       ],
     },
 
     {
-      titolo: '14 · 2v2 ad abbinamenti segreti',
+      titolo: "14 · 2v2 ad abbinamenti segreti",
       messaggi: [
         `# 2v2 ad abbinamenti segreti
-In locale: tu e un compagno IA contro due IA. Online anche con altre persone (post 16). Formati: No Eminenza e Mani nude.
+In locale: tu e un compagno IA contro due IA. Online anche con altre persone (post 17). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **50 PV di squadra**, condivisi (massimo 50).
@@ -561,11 +582,11 @@ In locale: tu e un compagno IA contro due IA. Online anche con altre persone (po
 ## Risoluzione
 - Ogni fronte è un Duello 1v1 sul proprio Campo; l'Agente di chi apre ha l'iniziativa.
 - I fronti leggono i PV di inizio turno; le variazioni si sommano alla fine.
-- Le Tossine colpiscono i PV di squadra con soglia raddoppiata.
-
-## Il compagno IA
+- Le Tossine colpiscono i PV di squadra con soglia raddoppiata.`,
+        `## Il compagno IA
+- Lo scegli nella riga **Compagno** di Imposta la partita: una delle 7 personalità del post 13 (Casuale esclusa).
 - Propone carta, FC e Campo: sul tavolo appare come **proposta**, con una frase che la spiega.
-- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li accetta secondo il suo carattere: **Stratega** 70%, **Assaltatore** 50%, **Custode** 80%, **Calcolatore** 60%.
+- Puoi **consigliargli** una carta, un Campo (in apertura) e un investimento basso, medio o alto. Li segue con una probabilità che dipende dalla personalità: **Neutrale** 70%, **Impetuoso** 50%, **Paziente** 80%, **Conquistatore** 65%, **Spietato** 50%, **Avaro** 75%, **Temerario** 45%.
 - In risposta la disposizione la decidi tu, nel pannello Fronti.
 - **Online** niente consigli. In due persone ognuno sceglie la sua carta; se aprite sullo stesso Campo, il secondo lo cambia. Disposizione e reclamo li decide il primo della squadra.
 
@@ -577,10 +598,10 @@ In locale: tu e un compagno IA contro due IA. Online anche con altre persone (po
     },
 
     {
-      titolo: '15 · Re della collina',
+      titolo: "15 · Re della collina",
       messaggi: [
         `# Re della collina
-Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; online gli altri posti possono essere persone (post 16). Formati: No Eminenza e Mani nude.
+Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; online gli altri posti possono essere persone (post 17). Formati: No Eminenza e Mani nude.
 
 ## Risorse
 - **25 PV** e **18 FC** a testa.
@@ -603,33 +624,77 @@ Tutti contro tutti, **3 o 4 giocatori**. In locale sei tu contro 2 o 3 IA; onlin
     },
 
     {
-      titolo: '16 · Multiplayer online (beta)',
+      titolo: "16 · Torneo",
+      messaggi: [
+        `# Torneo
+Voce **TORNEO** del menu principale. Eliminazione diretta a **12 eserciti**, ogni incontro **al meglio delle 3**. In locale sei tu contro 11 IA; online possono giocare da 2 a 4 persone (sotto).
+
+## Iscrizione
+- **TORNEO** → armata → esercito → popup **Imposta il torneo**: formato (Standard, No Eminenza, Mani nude), difficoltà e personalità delle IA (post 13).
+- Le 11 IA sono **una per armata**, ognuna con un esercito precostruito a caso. Se giochi con una delle 12 armate, le IA prendono le altre 11; con un esercito personalizzato una delle 12 resta fuori a sorte.
+- La personalità di ogni IA resta la stessa per tutto il torneo e si vede sul tabellone.
+- Il tuo esercito è **bloccato**: se lo modifichi nel costruttore, nel torneo restano le carte iscritte.
+- Un torneo locale alla volta, salvato su questo PC: dal menu **TORNEO** (IN CORSO) riprendi da dove eri.
+
+## Tabellone
+- 16 posti con **4 passaggi diretti** sorteggiati: agli **Ottavi** giocano 8 eserciti e 4 passano il turno, poi **Quarti**, **Semifinali** e **Finale**.
+- Se perdi una serie sei **eliminato**: il torneo prosegue senza di te fino al Campione.
+
+## La serie
+- Ogni partita è un Duello normale (post 1-5): PV e FC ripartono da capo, i Campi si estraggono di nuovo.
+- La mano esce dalle 10 carte dell'esercito:
+  - **Partita 1**: 5 carte a caso;
+  - **Partita 2**: le 5 carte rimaste fuori nella partita 1;
+  - **Partita 3** (spareggio): esercito rimischiato, 5 carte a caso.
+- Passa il turno chi arriva a **2 vittorie**. I pareggi non contano: se dopo 3 partite nessuno è avanti si gioca ancora, con la regola dello spareggio.
+- Una partita lasciata a metà si rigioca con la **stessa mano**.`,
+        `## Le serie tra IA
+- Si giocano davvero, con il motore del gioco, ma **senza Eminenze** anche nel formato Standard: le Eminenze ci sono solo nelle partite delle persone.
+- Seleziona un incontro sul tabellone:
+  - **GUARDA LA SERIE**: la vedi sul tavolo, con la fascia SPETTATORE (**AUTO** e **FINE PARTITA ▸▸**);
+  - **CONCLUDI IL TURNO**: le serie del turno si giocano subito, senza mostrarle;
+  - a serie finita: **RIEPILOGO A TURNI** e **RIVEDI AL TAVOLO**.
+- Comandi: Invio azione principale, Esc indietro. **✕ ABBANDONA** (finché sei in corsa) cancella il tabellone; a torneo finito c'è **NUOVO TORNEO**.
+
+## Torneo online
+- Nella stanza (post 17) l'host sceglie la modalità **Torneo**: da 2 a 4 persone, gli altri posti fino a 12 li prendono le IA. Formati Standard, No Eminenza o Mani nude; l'host sceglie la difficoltà delle IA, che giocano con personalità Neutrale.
+- Quando tutti sono pronti l'host preme **Avvia torneo**.
+- Contro un'IA giochi sul tuo PC. Contro un'altra persona è un Duello online: si parte quando entrambi premete **SFIDA · PARTITA N**.
+- Le serie tra IA le gioca l'host in sottofondo: il turno avanza quando tutte le serie sono chiuse.
+- Chi esce dal torneo viene sostituito da un'IA con il suo esercito. Se la stanza si chiude, ognuno prosegue **in locale** contro le IA.
+- Il torneo online non prende il posto di quello locale salvato.`,
+      ],
+    },
+
+    {
+      titolo: "17 · Multiplayer online (beta)",
       messaggi: [
         `# Multiplayer online · beta
 Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
 
 ## Stanza
 1. **Multiplayer** → inserisci un nome (massimo 20 caratteri).
-2. **Crea stanza**: ricevi un codice di **6 caratteri** da mandare agli altri, ad esempio in <#cerco-partita>.
-3. Oppure **Entra con codice**. Errori possibili: "Stanza non trovata" e "Stanza già piena". Una stanza ospita fino a **4 persone**.
-4. Ognuno sceglie armata ed esercito. L'host sceglie modalità, formato e difficoltà dell'IA; gli altri le vedono.
+2. **Crea stanza**, oppure **Entra con codice** (6 caratteri). Errori possibili: "Stanza non trovata" e "Stanza già piena". Una stanza ospita fino a **4 persone**.
+3. Ognuno sceglie armata ed esercito ed entra nella stanza. **COPIA CODICE** (o il tasto **C**) mette il codice negli appunti, da mandare agli altri, ad esempio in <#cerco-partita>. Esc torna alla scelta dell'esercito.
+4. L'host sceglie modalità, formato e, nelle modalità con IA, la difficoltà; gli altri le vedono. Invio = **Pronto**.
 
 ## Modalità
 - **Duello**: 2 persone. Formati Standard (con Eminenze 🧪), No Eminenza o Mani nude. La partita parte quando entrambi siete pronti. A fine partita: **rivincita** con lo stesso esercito, oppure cambio di esercito.
 - **2v2**: da 2 a 4 persone; i posti vuoti li gioca l'IA. Squadre in ordine di ingresso: host e terzo contro secondo e quarto.
 - **Re della collina**: da 2 a 4 persone, tavolo da 3 o 4; i posti vuoti li gioca l'IA.
+- **Torneo**: da 2 a 4 persone più le IA fino a 12 eserciti; formati Standard, No Eminenza o Mani nude (post 16).
 
-2v2 e Re della collina: No Eminenza o Mani nude. Quando tutti sono pronti l'host preme **Avvia partita**. A fine partita si torna al menu: per giocarne un'altra serve una nuova stanza.
-
-## Disconnessioni
+2v2 e Re della collina: No Eminenza o Mani nude. Quando tutti sono pronti l'host preme **Avvia partita** (nel Torneo **Avvia torneo**). A fine partita di 2v2 e Re della collina si torna al menu: per giocarne un'altra serve una nuova stanza.`,
+        `## Disconnessioni
 - **Se cade la tua connessione**: c'è un tentativo automatico di riconnessione, poi il riquadro "Connessione persa" con **Riconnetti** o **Abbandona**. Al rientro la partita riprende da dove era.
 - **Se cade quella di un altro**: vedi "In attesa". Il server aspetta fino a **5 minuti**; se l'host non torna la stanza si chiude.
-- Nel Duello, dopo un crash, la lobby può proporre **"Partita in sospeso"**. Nel 2v2 e nel Re della collina no: se qualcuno chiude il gioco o esce dalla stanza, la partita non può continuare.`,
+- Nel Duello, dopo un crash, la lobby può proporre **"Partita in sospeso"**. Nel 2v2 e nel Re della collina no: se qualcuno chiude il gioco o esce dalla stanza, la partita non può continuare.
+- Nel Torneo chi esce viene sostituito da un'IA; se la stanza si chiude, il torneo prosegue in locale contro le IA.`,
       ],
     },
 
     {
-      titolo: '17 · Eserciti, Tutorial, Galleria, Opzioni',
+      titolo: "18 · Eserciti, Tutorial, Manuale, Galleria, Opzioni",
       messaggi: [
         `# Gestione eserciti
 - **Precostruiti**: 3 per armata (A, B, C), 5 per il Patto (A-E). Non si modificano.
@@ -646,11 +711,15 @@ Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
 - **Introduttivo** (6-8 minuti): partita guidata Calibri Pesanti contro Kethran. Round 1-3 guidati, 4-5 liberi.
 - **Avanzato** (10-12 minuti): FC, tempi dei trigger e chiusura al round 5. Consigliato dopo l'Introduttivo.
 
-# Galleria
+# Manuale
+- Voce **MANUALE** del menu: il libretto di istruzioni da sfogliare, lo stesso del PDF fissato in cima a questo forum.
+- Comandi: ←→ pagina, Home / Fine prima e ultima pagina, **I** indice, Esc chiude. **SCARICA PDF** salva il file.
+- Non descrive ancora Torneo, personalità dell'IA e modalità online a più posti: per queste vale la guida.`,
+        `# Galleria
 - **Agenti**: tutte le carte.
 - **Alternative**: illustrazioni alternative di alcune carte, negli stili **Eldritch** e **Arcana**. ✏️ **Stili in bozza**: grafica non definitiva.
 - **Eminenze**: le 12 Eminenze.
-- **Campi**: i 121 Campi.
+- **Campi**: i 122 Campi, compreso quello d'Eminenza.
 - Comandi: Q / E cambiano sezione, le frecce scorrono.
 
 # Opzioni
@@ -665,19 +734,22 @@ Serve la connessione a internet. Sono ammessi anche gli eserciti personalizzati.
     },
 
     {
-      titolo: '18 · Limiti noti di questa build',
+      titolo: "19 · Limiti noti di questa build",
       messaggi: [
         `# Limiti noti · v${v}
 Già noti, non serve segnalarli di nuovo.
 
 - **Eminenze** 🧪: in test e non bilanciate. Alcuni testi possono non corrispondere esattamente all'effetto. In questo caso segnalalo, citando l'Eminenza e cosa è successo.
-- **Multiplayer**: 2v2 e Re della collina online sono senza Eminenze e senza rivincita; se qualcuno lascia la partita, non si può continuare.
+- **IA ed Eminenze**: nel formato Standard l'IA sceglie le abilità d'Eminenza, ma per Agente, FC e Campo ragiona come se le Eminenze non ci fossero. Nelle serie tra IA del Torneo le Eminenze non ci sono.
+- **Multiplayer**: 2v2 e Re della collina online sono senza Eminenze e senza rivincita; se qualcuno lascia la partita, non si può continuare. I loro posti vuoti li gioca l'IA precedente, più semplice di quella locale.
 - **Eserciti personalizzati**: dall'interfaccia non si possono eliminare.
 - **Tutorial breve**: usa carte d'esempio che non esistono nel gioco. Se qualcosa nel gioco non torna con questa guida, segnalalo: vale la guida.
+- **Manuale**: non descrive ancora Torneo, personalità dell'IA e modalità online a più posti. Vale la guida.
 - **Testi provvisori** 📝: i testi descrittivi delle carte (flavour text) e le informazioni nelle schermate delle armate sono segnaposto. Alcune descrizioni lì non sono corrette: ad esempio Rimonta e Resa dei conti (quelle giuste sono nel post 6) e "nessun bonus armata" per gli eserciti personalizzati, che invece il Bonus ce l'hanno.
 - **Campagna** 🚧 e **stili Eldritch / Arcana** ✏️: in bozza, fuori dal test.
 - Non serve segnalare refusi o incongruenze nei testi provvisori.`,
       ],
     },
+
   ];
 }

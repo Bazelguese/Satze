@@ -37,8 +37,8 @@ Il libretto del gioco, lo stesso che si sfoglia dal menu **Manuale**: regole, ca
 ## Note per il playtest
 - **Campagna** 🚧: nel manuale è descritta come modalità giocabile, ma per questo test è **in bozza** e non fa parte del playtest.
 - **Eminenze** 🧪: meccanica secondaria **in test e non bilanciata**: valori e testi possono cambiare.
-- **Multiplayer online** e **Torneo**: il manuale non è aggiornato. Online si giocano anche 2v2 e Re della collina: vale questa guida.
-- In caso di dubbio fa fede il **Glossario** in partita, poi questa guida.
+- **Torneo**, **personalità dell'IA** e **multiplayer online** (anche 2v2 e Re della collina): il manuale non li descrive ancora, vedi i post 13, 16 e 17.
+- Se il manuale e questa guida non coincidono, **vale la guida**: segnalalo in <#bug> con il tag **regole / effetti**.
 
 -# File: ${MANUALE_PDF.nome} · ${impronta(MANUALE_PDF.percorso)}`,
     ],
