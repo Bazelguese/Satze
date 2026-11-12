@@ -917,3 +917,25 @@ Tutte le 12 Eminenze della §10 sono nel catalogo (`src/data/eminences.js`) e ne
 - La versione con «1 Danno diretto per ogni FC oltre il terzo» è stata scartata: al round 2 si possono investire 10–12 FC su un Agente (18 FC iniziali, riserva di 1 FC per Agente da giocare), e con il Titano Corazzato MK-IV darebbe 13 PV in un solo round.
 
 **Lavoro di implementazione:** modificatore persistente ai Danni diretti dei propri Agenti; DAN inflitto anche in sconfitta; PV extra in vittoria.
+
+### 12.5 Orathai — Agatosh, l'albero etereo (approvata)
+
+**Stile:** opposto al Primo Canto e di supporto all'Armata. Gli Orathai sono un'Armata da finale (DAN bassa, Cure, Magnanimo, Bonus su Resa dei conti); questa Eminenza li tiene in piedi nei primi round spostando il loro Bonus su Turbo, prolungando Turbo a piacere e offrendo un modo diverso di vincere il Duello.
+
+**Presenza iniziale:** 1.
+
+| Slot | Nome | Testo | Budget | Stima |
+|---|---|---|---|---|
+| Statico | Consumo di linfa | I tuoi trigger Resa dei conti sono Turbo. Alla fine del Duello, se il DAN finale del tuo Agente supera quello dell'Agente nemico, +1 Presenza. | — | circa 2.0–2.5 Presenza/Scontro |
+| +1 | Pioggia di vigore | In questo Duello il trigger Potere dell'Agente nemico è considerato soddisfatto. | −0.75 | circa −0.75 ✅ |
+| −1 | Sovrastimolazione | Per il resto dello Scontro, Turbo è soddisfatto per te per un round in più (round 1–3; con un secondo uso round 1–4, e così via). | 0.75 | circa 0.7–1.0 per uso ✅ |
+| −2 | Benedetto da Agatosh | Sostituisci il trigger del tuo Potere o del tuo Bonus con Sopraffare o Magnanimo. | 1.50 | circa 1.2–1.5 ✅ |
+| −4 | Lettura d'animo | **Prima degli Agenti.** In questo Duello vince chi ha la somma di POT e DAN finali più alta, indipendentemente dal VA. Gli FC investiti si spendono comunque. | 3.00 | circa 3.0 ✅ |
+
+**Note di regola:**
+- Consumo di linfa converte in Turbo i trigger Resa dei conti del Potere e del Bonus dei tuoi Agenti (Bonus Orathai «+2 DAN» compreso): attivi nei round 1–2 e non più dal 3, salvo Sovrastimolazione.
+- Sovrastimolazione è cumulativa e permanente: ogni uso aggiunge un round alla finestra di Turbo per te.
+- Benedetto da Agatosh: la scelta di slot e trigger si fa al reveal, con gli Agenti noti. Sovrapposizione parziale con la Festa della grande serpe (Istituto della caccia agli angeli), accettata.
+- Lettura d'animo: parità risolta come per il VA (Lega minore, poi POT minore, poi chi ha giocato per secondo).
+
+**Lavoro di implementazione:** conversione di trigger Resa dei conti → Turbo per lato; finestra di Turbo estendibile per lato; sostituzione del trigger di Potere o Bonus a scelta; condizione di vittoria alternativa (POT + DAN) al posto del VA.
