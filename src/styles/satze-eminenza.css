@@ -1060,3 +1060,9 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
   0%{opacity:0;transform:translateY(10px) scale(.7)}14%{opacity:1;transform:translateY(0) scale(1.15)}26%{transform:scale(1)}
   78%{opacity:1;transform:translateY(-26px)}100%{opacity:0;transform:translateY(-40px)}
 }
+
+/* ── Avviso dell'abilità: fuori dal centro del tavolo ─────────────────────
+   Centrato sulla carta Eminenza finiva sopra l'Agente schierato. Si allinea al bordo
+   della carta lontano dal tavolo: in basso per il giocatore, in alto per l'avversario. */
+.em-zone-player .em-stage > .em-announce{align-self:flex-end}
+.em-zone-enemy .em-stage > .em-announce{align-self:flex-start}

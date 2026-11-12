@@ -7965,7 +7965,7 @@ export default function SatzeGame() {
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
       <EminenceAgentMarks marks={eminenceAgentMarks} hidden={showEminenceLayer || eminenceAnnounceHold} />
-      <EminenceLastingStates states={eminenceLastingStates} hidden={Boolean(eminenceChoiceScreen)} />
+      <EminenceLastingStates states={eminenceLastingStates} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
       <EminenceRoundRules rules={eminenceRoundRules} stakes={eminencePendingStakes} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
       <EminenceChoicePortal choice={eminenceChoiceScreen} />
       <EminenceTargetPicker
