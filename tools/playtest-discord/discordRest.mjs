@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // ============================================
 // Accesso a Discord via API REST (niente connessione gateway).
 // Espone un oggetto "guild" con la stessa forma che usa lib.mjs,
@@ -17,9 +18,11 @@ export function creaClient(token) {
   async function chiama(metodo, percorso, corpo, motivo) {
     for (let tentativo = 0; tentativo < 5; tentativo++) {
       const headers = { Authorization: `Bot ${token}`, 'User-Agent': 'DiscordBot (satze-playtest-setup, 1.0)' };
-      if (corpo !== undefined) headers['Content-Type'] = 'application/json';
+      const multipart = typeof FormData !== 'undefined' && corpo instanceof FormData;
+      if (corpo !== undefined && !multipart) headers['Content-Type'] = 'application/json';
       if (motivo) headers['X-Audit-Log-Reason'] = encodeURIComponent(motivo);
-      const r = await fetch(API + percorso, { method: metodo, headers, body: corpo === undefined ? undefined : JSON.stringify(corpo) });
+      const body = corpo === undefined ? undefined : multipart ? corpo : JSON.stringify(corpo);
+      const r = await fetch(API + percorso, { method: metodo, headers, body });
       if (r.status === 429) {
         const info = await r.json().catch(() => ({}));
         await new Promise((ok) => setTimeout(ok, Math.ceil((info.retry_after ?? 1) * 1000) + 100));
@@ -38,6 +41,17 @@ export function creaClient(token) {
     throw new Error(`${metodo} ${percorso}: troppi limiti di frequenza, riprova fra poco`);
   }
   return { chiama };
+}
+
+/**
+ * Corpo multipart con un file allegato (`file`: { percorso, nome, tipo }).
+ * `costruisci(allegati)` riceve la lista `attachments` da mettere nel JSON.
+ */
+function conFile(file, costruisci) {
+  const form = new FormData();
+  form.append('payload_json', JSON.stringify(costruisci([{ id: 0, filename: file.nome }])));
+  form.append('files[0]', new Blob([readFileSync(file.percorso)], { type: file.tipo }), file.nome);
+  return form;
 }
 
 const somma = (flag = []) => flag.reduce((tot, f) => tot | BigInt(f), 0n).toString();
@@ -68,6 +82,7 @@ export function inFormatoApi(o) {
   if (o.defaultForumLayout !== undefined) api.default_forum_layout = o.defaultForumLayout;
   if (o.archived !== undefined) api.archived = o.archived;
   if (o.locked !== undefined) api.locked = o.locked;
+  if (o.pinned !== undefined) api.flags = o.pinned ? 2 : 0; // PINNED: un solo post fissato per forum
   return api;
 }
 
@@ -83,7 +98,11 @@ export function creaGuild({ chiama }, guildId) {
       createdTimestamp: Date.parse(m.timestamp),
       reazioniDelBot: (m.reactions ?? []).filter((r) => r.me && !r.emoji?.id).map((r) => r.emoji.name),
       react: (emoji) => chiama('PUT', `/channels/${canaleId}/messages/${m.id}/reactions/${encodeURIComponent(emoji)}/@me`),
-      edit: ({ content }) => chiama('PATCH', `/channels/${canaleId}/messages/${m.id}`, { content, allowed_mentions: { parse: [] } }),
+      haAllegati: (m.attachments ?? []).length > 0,
+      edit: ({ content, file }) => chiama('PATCH', `/channels/${canaleId}/messages/${m.id}`, file
+        // Con `attachments` elencati, quelli vecchi non elencati vengono sostituiti dal nuovo file.
+        ? conFile(file, (attachments) => ({ content, attachments, allowed_mentions: { parse: [] } }))
+        : { content, allowed_mentions: { parse: [] } }),
       delete: () => chiama('DELETE', `/channels/${canaleId}/messages/${m.id}`),
     };
   }
@@ -99,6 +118,7 @@ export function creaGuild({ chiama }, guildId) {
           position: dati.position ?? 0,
           ownerId: dati.owner_id ?? null,
           archived: Boolean(dati.thread_metadata?.archived),
+          pinned: Boolean((dati.flags ?? 0) & 2),
           topic: dati.topic ?? null,
           availableTags: (dati.available_tags ?? []).map((t) => ({
             id: t.id,
@@ -136,12 +156,13 @@ export function creaGuild({ chiama }, guildId) {
           }
           return [...attivi, ...archiviati].map(canale);
         },
-        async create({ name, content }) {
-          return canale(await chiama('POST', `/channels/${oggetto.id}/threads`, {
+        async create({ name, content, file }) {
+          const corpo = (attachments) => ({
             name,
             auto_archive_duration: 10080,
-            message: { content, allowed_mentions: { parse: [] } },
-          }, 'Playtest SATZE'));
+            message: { content, allowed_mentions: { parse: [] }, ...(attachments ? { attachments } : {}) },
+          });
+          return canale(await chiama('POST', `/channels/${oggetto.id}/threads`, file ? conFile(file, corpo) : corpo(), 'Playtest SATZE'));
         },
       },
     };

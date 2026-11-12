@@ -4,6 +4,7 @@
 // Non cancella mai canali, ruoli o messaggi che non ha creato lei.
 // ============================================
 
+import { existsSync, statSync } from 'node:fs';
 import { ChannelType, PermissionFlagsBits as P, SortOrderType, ForumLayoutType } from 'discord.js';
 import { STRUTTURA, RUOLI, messaggi, lineeGuida, post as postDelForum } from './contenuti.mjs';
 
@@ -14,6 +15,7 @@ export const LIMITI = {
   nomeTag: 20,
   tagPerForum: 20,
   titoloPost: 100,
+  file: 10 * 1024 * 1024,
 };
 
 const TIPI = {
@@ -116,6 +118,10 @@ export function verificaContenuti(cfg) {
         const lista = postDelForum(cfg)[c.post];
         if (!lista?.length) errori.push(`${dove}: post "${c.post}" non trovati`);
         else lista.forEach((p) => {
+          if (p.allegato) {
+            if (!existsSync(p.allegato.percorso)) errori.push(`${dove} › ${p.titolo}: file ${p.allegato.percorso} non trovato`);
+            else if (statSync(p.allegato.percorso).size > LIMITI.file) errori.push(`${dove} › ${p.titolo}: ${p.allegato.nome} supera i 10 MiB consentiti ai bot`);
+          }
           if (!p.titolo || p.titolo.length > LIMITI.titoloPost) errori.push(`${dove}: titolo del post "${p.titolo}" vuoto o oltre ${LIMITI.titoloPost} caratteri`);
           p.messaggi.forEach((m, i) => {
             if (m.length > LIMITI.messaggio) errori.push(`${dove} › ${p.titolo}: il messaggio ${i + 1} ha ${m.length} caratteri (max ${LIMITI.messaggio})`);
@@ -283,9 +289,13 @@ async function sincronizzaPost(forum, posts, botId, collega, log) {
       const miei = messaggiPerPost.get(p.titolo);
       for (let i = 0; i < p.messaggi.length; i++) {
         const testo = collega(p.messaggi[i]);
-        if (miei[i].content !== testo) { await miei[i].edit({ content: testo }); cambiati++; }
+        // Il file sta sul primo messaggio: si ricarica se il testo (che ne contiene l'impronta) è cambiato
+        // o se l'allegato non c'è più.
+        const file = i === 0 && p.allegato && (miei[i].content !== testo || !miei[i].haAllegati) ? p.allegato : undefined;
+        if (miei[i].content !== testo || file) { await miei[i].edit({ content: testo, file }); cambiati++; }
       }
-      await perTitolo.get(p.titolo).edit({ locked: true });
+      const t = perTitolo.get(p.titolo);
+      await t.edit({ locked: true, ...(p.fissato && !t.pinned ? { pinned: true } : {}) });
     }
     log(`    ${cambiati ? `✎ ${cambiati} messaggi aggiornati` : '= post già aggiornati'} in #${forum.name}`);
     return;
@@ -294,9 +304,9 @@ async function sincronizzaPost(forum, posts, botId, collega, log) {
   for (const t of esistenti) await t.delete();
   for (const p of [...posts].reverse()) {
     const [primo, ...altri] = p.messaggi.map(collega);
-    const t = await forum.threads.create({ name: p.titolo, content: primo });
+    const t = await forum.threads.create({ name: p.titolo, content: primo, file: p.allegato });
     for (const testo of altri) await t.send({ content: testo });
-    await t.edit({ locked: true });
+    await t.edit({ locked: true, ...(p.fissato ? { pinned: true } : {}) });
   }
   log(`    ✉ ${posts.length} post pubblicati in #${forum.name}`);
 }

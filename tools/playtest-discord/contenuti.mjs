@@ -4,7 +4,46 @@
 // Lo script aggiorna i canali esistenti invece di duplicarli.
 // ============================================
 
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { guida } from './guida.mjs';
+
+/**
+ * Il manuale del gioco in PDF (lo stesso libretto che si sfoglia dal menu Manuale).
+ * Pubblicato come post fissato in cima a #guida. Il limite di Discord per i file dei bot è 10 MiB.
+ */
+export const MANUALE_PDF = {
+  percorso: fileURLToPath(new URL('../../public/manuale/SATZE-Manuale.pdf', import.meta.url)),
+  nome: 'SATZE-Manuale.pdf',
+  tipo: 'application/pdf',
+};
+
+/** Impronta breve del file: se il PDF cambia, cambia il testo del post e lo script ricarica il file. */
+function impronta(percorso) {
+  if (!existsSync(percorso)) return 'mancante';
+  return createHash('sha256').update(readFileSync(percorso)).digest('hex').slice(0, 8);
+}
+
+function postManuale() {
+  return {
+    titolo: '📄 Manuale in PDF',
+    fissato: true,
+    allegato: MANUALE_PDF,
+    messaggi: [
+      `# Manuale di istruzioni · PDF
+Il libretto del gioco, lo stesso che si sfoglia dal menu **Manuale**: regole, carta Agente, turno e scontro, Campi, trigger ed effetti, Eminenze, le dodici armate, modalità, comandi. Il file è allegato qui sotto.
+
+## Note per il playtest
+- **Campagna** 🚧: nel manuale è descritta come modalità giocabile, ma per questo test è **in bozza** e non fa parte del playtest.
+- **Eminenze** 🧪: meccanica secondaria **in test e non bilanciata**: valori e testi possono cambiare.
+- **Multiplayer online** e **Torneo**: il manuale non è aggiornato. Online si giocano anche 2v2 e Re della collina: vale questa guida.
+- In caso di dubbio fa fede il **Glossario** in partita, poi questa guida.
+
+-# File: ${MANUALE_PDF.nome} · ${impronta(MANUALE_PDF.percorso)}`,
+    ],
+  };
+}
 
 /** Le 12 armate giocabili (da src/data/cards.js → ARMY_SETS). */
 export const ARMATE = [
@@ -75,6 +114,9 @@ In basso a sinistra nel menu principale: \`PLAYTEST · SATZE · LA GRANDE GUERRA
 **Dati di gioco**
 Al primo avvio il gioco chiede un nome. A fine partita invia automaticamente a Davide i dati della partita: nome, modalità e formato, armate, carte giocate, FC investiti, Campi, esito e durata. Servono per bilanciare il gioco; non vengono raccolti altri dati dal PC.
 
+**Manuale**
+Il libretto di istruzioni in PDF è nel post fissato in cima a <#guida>; in gioco si sfoglia dal menu **Manuale**.
+
 **Disinstallazione**
 Impostazioni di Windows → App → **SATZE Playtest** → Disinstalla.
 
@@ -86,7 +128,7 @@ Post in <#bug> con il tag **installazione** o **crash**: versione di Windows, me
 
 /** Post dei forum di sola lettura (oggi solo la guida del gioco). */
 export function post(cfg) {
-  return { guida: guida(cfg) };
+  return { guida: [postManuale(), ...guida(cfg)] };
 }
 
 /** Linee guida dei forum (Discord le mostra in cima al canale; massimo 4096 caratteri). */
