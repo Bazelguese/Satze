@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PALETTE, HUD_ORATORIO_FONT_UI } from '../../theme/hudOratorioPalette';
+import { formatPresenceChange, usePresenceDelta } from '../eminence/usePresenceDelta.js';
 
 const STATS_FONT = "'Chakra Petch', 'Segoe UI', system-ui, sans-serif";
 const DEFAULT_ACCENT = '#c8c8c8';
@@ -69,6 +70,26 @@ function HpBursts({ bursts, side, cell = null }) {
   ));
 }
 
+/** Presenza dell'Eminenza: resta in vista per tutto il round; a ogni variazione il numero scorre e se ne stacca il «+1» / «−2». */
+function PresenceCell({ presence, side }) {
+  const change = usePresenceDelta(presence);
+  return (
+    <div
+      className={`satze-stats-cell satze-stats-cell--presence${change ? (change.delta > 0 ? ' is-gain' : ' is-loss') : ''}`}
+      data-em-presence-hud={side}
+      title="Presenza dell'Eminenza"
+    >
+      <span className="satze-stats-cell__label">PR</span>
+      <span className="satze-stats-cell__value satze-stats-cell__value--presence"><RollingValue value={presence} /></span>
+      {change && (
+        <span key={change.key} className={`satze-stats-presence-delta satze-stats-presence-delta--${side}`} aria-live="polite">
+          {formatPresenceChange(change.delta)} Presenza
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ToxinBadge({ toxin, hp, showAnimation, side }) {
   const canApply = hp >= toxin.minHealth;
 
@@ -116,6 +137,8 @@ export const StatsPanel = React.memo(({
   hpBursts = null,
   /** Raffiche di FC aggiunte, una per fonte, accanto alla cella FC */
   fcBursts = null,
+  /** Presenza dell'Eminenza (null = partita senza Eminenze: la cella non c'è) */
+  presence = null,
 }) => {
   const [showToxinAnimation, setShowToxinAnimation] = useState(false);
   const [previousToxinValue, setPreviousToxinValue] = useState(null);
@@ -199,6 +222,13 @@ export const StatsPanel = React.memo(({
         <StatCell label="FC" value={<RollingValue value={focus} />} valueClass="satze-stats-cell__value--fc" dataEmFc={side}>
           <HpBursts bursts={fcBursts} side={side} cell="fc" />
         </StatCell>
+
+        {presence != null && (
+          <>
+            <span className="satze-stats-panel__divider" aria-hidden />
+            <PresenceCell presence={presence} side={side} />
+          </>
+        )}
 
         {isToxinActive && (
           <>

@@ -107,7 +107,9 @@ export function EminencePresenceSparks({ flights }) {
       let di = 0;
       flightsRef.current.forEach((f) => {
         const banner = document.querySelector(`[data-em-announce="${f.side}"]`);
-        const counter = document.querySelector(`.em-zone-${f.side} [data-em-presence]`);
+        // contatore sulla carta se la zona è in vista, altrimenti quello nella targa PV/FC
+        const onCard = document.querySelector(`.em-layer:not(.is-stowed) .em-zone-${f.side} [data-em-presence]`);
+        const counter = onCard || document.querySelector(`[data-em-presence-hud="${f.side}"]`);
         const ra = banner?.getBoundingClientRect();
         const rp = counter?.getBoundingClientRect();
         if (!ra?.width || !rp?.width) return;

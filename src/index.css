@@ -2348,6 +2348,48 @@ button:disabled {
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
 }
 
+/* Presenza dell'Eminenza nella targa: stesso azzurro del contatore sulla carta */
+.satze-stats-cell--presence { position: relative; transition: filter 200ms ease; }
+.satze-stats-cell__value--presence {
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+.satze-stats-cell--presence.is-gain .satze-stats-cell__value--presence { animation: satzePresenceBump 520ms ease-out both; }
+.satze-stats-cell--presence.is-loss .satze-stats-cell__value--presence { animation: satzePresenceDrop 520ms ease-out both; }
+@keyframes satzePresenceBump { 0% { scale: 1; } 35% { scale: 1.5; color: #e0f2fe; text-shadow: 0 0 18px #38bdf8; } 100% { scale: 1; } }
+@keyframes satzePresenceDrop { 0% { scale: 1; } 35% { scale: 0.72; color: #f87171; text-shadow: 0 0 14px #f87171; } 100% { scale: 1; } }
+/* il «+1 Presenza» si stacca dal numero: verso il tavolo, cioè sotto la targa in alto e sopra quella in basso */
+.satze-stats-presence-delta {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #04121c;
+  background: #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+  pointer-events: none;
+  animation: satzePresenceDelta 1700ms ease-out both;
+}
+.satze-stats-cell--presence.is-loss .satze-stats-presence-delta { background: #f87171; box-shadow: 0 0 14px rgba(248, 113, 113, 0.6); }
+.satze-stats-presence-delta--enemy { top: calc(100% + 12px); --pd: 22px; }
+.satze-stats-presence-delta--player { bottom: calc(100% + 12px); --pd: -22px; }
+@keyframes satzePresenceDelta {
+  0% { opacity: 0; transform: translateY(calc(var(--pd) * -0.5)) scale(0.7); }
+  14% { opacity: 1; transform: translateY(0) scale(1.12); }
+  26% { transform: translateY(0) scale(1); }
+  78% { opacity: 1; transform: translateY(var(--pd)); }
+  100% { opacity: 0; transform: translateY(calc(var(--pd) * 1.6)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .satze-stats-cell--presence .satze-stats-cell__value--presence { animation: none !important; }
+  .satze-stats-presence-delta { animation-duration: 1ms; animation-fill-mode: none; }
+}
+
 /* PV che scorrono un punto alla volta (risultato del duello) */
 .satze-stats-roll {
   position: relative;

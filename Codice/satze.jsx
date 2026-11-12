@@ -8681,6 +8681,7 @@ export default function SatzeGame() {
         position="top-left"
         gamePhase={gamePhase}
         accentColor={ARMY_COLORS[enemyHand?.[0]?.army]?.accent}
+        presence={eminenceChoiceView?.enabled && eminenceChoiceView.opponent?.eminence ? presenceLink.presence.enemy : null}
       />
 
       {/* ============================================ */}
@@ -8698,6 +8699,7 @@ export default function SatzeGame() {
         position="bottom-right"
         gamePhase={gamePhase}
         accentColor={playerIdentityColor}
+        presence={eminenceChoiceView?.enabled && eminenceChoiceView.self?.eminence ? presenceLink.presence.player : null}
       />
 
       {/* ============================================ */}

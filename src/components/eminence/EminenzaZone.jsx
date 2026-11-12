@@ -30,6 +30,7 @@ import {
   resolveEminenceEntryStyle,
   useEminenzaEntry,
 } from '../../lib/eminenzaEntry.js';
+import { formatPresenceChange, usePresenceDelta } from './usePresenceDelta.js';
 import { ElementFx } from '../fx/ElementFx.jsx';
 import { armyEntryFor } from '../fx/effects/index.js';
 import { prefersReducedMotion } from '../battle/placeHandoff.js';
@@ -301,6 +302,7 @@ function EminenzaCard({
   holdHidden = false,
   onMarkFocus,
 }) {
+  const presenceChange = usePresenceDelta(presence);
   const artUrl = getEminenceArtUrl(eminence);
   const frame = getEminenceArtFrame(eminence.id);
   const x = artX ?? frame.artX;
@@ -434,6 +436,7 @@ function EminenzaCard({
             </div>
           )}
           <div style={{
+            position: 'relative',
             flex: 'none',
             marginTop: 8,
             display: 'flex',
@@ -457,6 +460,11 @@ function EminenzaCard({
             >
               Presenza
             </span>
+            {presenceChange && (
+              <span key={presenceChange.key} className={`em-presence-delta${presenceChange.delta < 0 ? ' is-loss' : ''}`}>
+                {formatPresenceChange(presenceChange.delta)}
+              </span>
+            )}
             <span
               key={`presence-${presencePulse}`}
               data-em-presence
