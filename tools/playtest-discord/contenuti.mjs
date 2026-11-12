@@ -36,6 +36,19 @@ export const RUOLI = {
 export function messaggi(cfg) {
   const v = cfg.versione;
   return {
+    // Bozza di Claude, da rivedere: è il primo messaggio che vede chi entra nel server.
+    ingresso: [
+      `# Benvenuto nel playtest di SATZE 🃏
+SATZE è un gioco di carte strategico ancora in sviluppo: in questo server lo proviamo insieme prima che sia finito.
+
+**Per entrare nel playtest clicca la reazione 🎮 qui sotto.** Entro qualche secondo ricevi il ruolo **Playtester** e si aprono gli altri canali:
+- <#benvenuto> per iniziare;
+- <#download> per scaricare il gioco;
+- <#guida> per le regole;
+- <#bug> e <#idee> per le segnalazioni.
+
+Se togli la reazione, il ruolo viene tolto e i canali si richiudono.`,
+    ],
     download: [
       `## Installazione · SATZE Playtest v${v}
 
@@ -109,8 +122,19 @@ Scegliete uno o più tag. Il tag ✅ risolto lo metto io quando è sistemato.`,
  *  - 'feedback'  → i playtester aprono post e rispondono
  *  - 'libero'    → i playtester scrivono e parlano
  *  - 'privato'   → solo tu
+ *  - 'ingresso'  → tutti leggono, nessuno scrive né aggiunge reazioni nuove (si clicca quella del bot)
  */
 export const STRUTTURA = [
+  {
+    // L'unica categoria visibile a chi entra: la reazione dà il ruolo Playtester
+    // (la assegna il bot che gira sul server multiplayer, vedi server/discordRuoli.mjs).
+    categoria: '👋 SATZE · INGRESSO',
+    accesso: 'ingresso',
+    inCima: true,
+    canali: [
+      { nome: 'inizia-qui', tipo: 'testo', descrizione: 'Clicca 🎮 sotto il messaggio per entrare nel playtest.', messaggi: 'ingresso', reazioneBot: '🎮' },
+    ],
+  },
   {
     categoria: '📌 SATZE · INFO',
     accesso: 'lettura',

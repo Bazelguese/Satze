@@ -81,6 +81,8 @@ export function creaGuild({ chiama }, guildId) {
       content: m.content,
       author: { id: m.author?.id },
       createdTimestamp: Date.parse(m.timestamp),
+      reazioniDelBot: (m.reactions ?? []).filter((r) => r.me && !r.emoji?.id).map((r) => r.emoji.name),
+      react: (emoji) => chiama('PUT', `/channels/${canaleId}/messages/${m.id}/reactions/${encodeURIComponent(emoji)}/@me`),
       edit: ({ content }) => chiama('PATCH', `/channels/${canaleId}/messages/${m.id}`, { content, allowed_mentions: { parse: [] } }),
       delete: () => chiama('DELETE', `/channels/${canaleId}/messages/${m.id}`),
     };
@@ -94,6 +96,7 @@ export function creaGuild({ chiama }, guildId) {
           name: dati.name,
           type: dati.type,
           parentId: dati.parent_id ?? null,
+          position: dati.position ?? 0,
           ownerId: dati.owner_id ?? null,
           archived: Boolean(dati.thread_metadata?.archived),
           topic: dati.topic ?? null,
@@ -172,6 +175,9 @@ export function creaGuild({ chiama }, guildId) {
       async fetch() {
         canali.clear();
         for (const c of await chiama('GET', `/guilds/${guildId}/channels`)) canali.set(c.id, canale(c));
+      },
+      async setPositions(lista) {
+        await chiama('PATCH', `/guilds/${guildId}/channels`, lista.map((x) => ({ id: x.channel, position: x.position })));
       },
       async create(o) {
         const c = canale(await chiama('POST', `/guilds/${guildId}/channels`, inFormatoApi(o), o.reason));

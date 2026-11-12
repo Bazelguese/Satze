@@ -34,7 +34,7 @@ Struttura e testi tecnici sono in `contenuti.mjs`, la guida del gioco in `guida.
 
 ## Passo 1 · Crea il bot (una volta sola, 5 minuti)
 
-Il bot serve solo per lanciare lo script: alla fine lo togli dal server.
+Il bot serve per lanciare lo script e per dare il ruolo Playtester a chi clicca 🎮 in #inizia-qui: resta nel server (Passo 4).
 
 1. Vai su <https://discord.com/developers/applications> e clicca **New Application**. Chiamala ad esempio `SATZE Setup` e accetta i termini.
 2. Nella pagina **General Information** copia l'**Application ID**: ti serve al punto 4.
@@ -93,9 +93,22 @@ npm run setup
 
 Se qualcosa si interrompe a metà, rilancialo: riprende senza duplicare.
 
-## Passo 4 · Togli il bot
+## Passo 4 · Il ruolo con la reazione 🎮
 
-Sul server: tasto destro sul bot nella lista membri → **Espelli**. Quando ti serve di nuovo (nuova versione, link del sondaggio) lo reinviti con lo stesso link del Passo 1 e rilanci `npm run setup`.
+Chi entra nel server vede solo **👋 SATZE · INGRESSO → #inizia-qui**: cliccando la reazione 🎮 sotto il messaggio del bot riceve il ruolo **Playtester** e si aprono gli altri canali; togliendola il ruolo viene tolto.
+
+Il ruolo lo assegna lo stesso bot, collegato a Discord dal server multiplayer su Fly (`server/discordRuoli.mjs`). Gli id di server, canale e ruolo sono in `fly.toml`; il token no, è un segreto di Fly.
+
+1. **Il bot resta nel server.** Non espellerlo.
+2. **Ruolo del bot sopra Playtester:** Impostazioni server → **Ruoli** → trascina **Satze setup** sopra **Playtester**. Altrimenti Discord non gli permette di assegnarlo.
+3. **Token su Fly** (una volta sola), dalla cartella principale del repository:
+   ```bash
+   fly secrets set DISCORD_BOT_TOKEN=IL_TOKEN_DEL_BOT
+   ```
+   Il token è quello del Passo 1 (Developer Portal → **Bot**). Se lo rigeneri con **Reset Token**, il vecchio smette di funzionare ovunque: aggiornalo anche qui con lo stesso comando.
+4. Ripubblica il server con `fly deploy`. Nei log (`fly logs`) compare `[ruoli Discord] collegato come Satze setup`.
+
+Se il server su Fly è spento, chi clicca 🎮 riceve il ruolo appena il server torna su: all'avvio il bot ricontrolla le reazioni già presenti.
 
 ---
 
@@ -109,7 +122,7 @@ Se il file è grande, Google Drive al download mostra l'avviso "impossibile eseg
 
 ## Aggiungere i playtester senza ID
 
-Puoi anche farlo a mano: invita gli amici nel server, poi **Impostazioni server → Membri** (oppure tasto destro sul nome) → **Ruoli** → **Playtester**.
+Di norma basta la reazione 🎮 in #inizia-qui (Passo 4). Puoi anche farlo a mano: invita gli amici nel server, poi **Impostazioni server → Membri** (oppure tasto destro sul nome) → **Ruoli** → **Playtester**.
 
 ## Se i forum non si possono creare
 

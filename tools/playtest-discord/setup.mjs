@@ -96,7 +96,7 @@ try {
   writeFileSync(percorsoStato, JSON.stringify(archivio, null, 2));
   console.log('\n✔ Fatto.');
   if (avvisi.length) console.log(`\nAvvisi:\n  - ${avvisi.join('\n  - ')}`);
-  console.log('\nOra puoi togliere il bot dal server (vedi README, ultimo passo).\n');
+  console.log('\nLascia il bot nel server: è lui che dà il ruolo Playtester a chi clicca 🎮 in #inizia-qui (vedi README, Passo 4).\n');
 } catch (e) {
   console.error(e);
   esci(`Qualcosa è andato storto: ${e.message}\nPuoi rilanciare lo script: riprende da dove si è fermato senza duplicare niente.`);

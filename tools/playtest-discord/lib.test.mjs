@@ -19,7 +19,7 @@ function serverFinto({ forumVietati = false } = {}) {
   let prossimoId = 100;
   let orologio = 0;
   const nuovoId = () => String(prossimoId++);
-  const conteggi = { postCreati: 0, postCancellati: 0, ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0 };
+  const conteggi = { postCreati: 0, postCancellati: 0, ruoliCreati: 0, canaliCreati: 0, messaggiInviati: 0, messaggiModificati: 0, messaggiCancellati: 0, reazioni: 0, spostamenti: 0 };
 
   const ruoli = new Cache();
   const canali = new Cache();
@@ -30,6 +30,7 @@ function serverFinto({ forumVietati = false } = {}) {
       id: nuovoId(),
       name: opts.name,
       type: opts.type,
+      position: opts.position ?? 50,
       parentId: opts.parent?.id ?? null,
       topic: opts.topic ?? null,
       availableTags: (opts.availableTags ?? []).map((t) => ({ ...t, id: t.id ?? nuovoId() })),
@@ -63,6 +64,8 @@ function serverFinto({ forumVietati = false } = {}) {
           content,
           author: { id: BOT },
           createdTimestamp: ++orologio,
+          reazioniDelBot: [],
+          async react(emoji) { conteggi.reazioni++; m.reazioniDelBot.push(emoji); },
           async edit({ content: c }) { conteggi.messaggiModificati++; m.content = c; return m; },
           async delete() { conteggi.messaggiCancellati++; messaggi.delete(m.id); },
         };
@@ -89,6 +92,10 @@ function serverFinto({ forumVietati = false } = {}) {
     channels: {
       cache: canali,
       async fetch() {},
+      async setPositions(lista) {
+        conteggi.spostamenti++;
+        for (const { channel, position } of lista) canali.get(channel).position = position;
+      },
       async create(o) {
         if (forumVietati && o.type === ChannelType.GuildForum) throw new Error('Forum non disponibili');
         conteggi.canaliCreati++;
@@ -285,4 +292,33 @@ test('i canali esistenti non vengono toccati, salvo aggiornaCanali', async () =>
   await allestisci(guild, BOT, CFG, muto, { stato, aggiornaCanali: true });
   assert.notEqual(bug.permissionOverwrites, mie);
   assert.ok(bug.topic.includes('Versione:'));
+});
+
+test('ingresso: visibile a tutti, in cima solo alla creazione, una sola reazione del bot', async () => {
+  const ids = { everyoneId: 'e', devId: 'd', playtesterId: 'p' };
+  const ingresso = permessiPer('ingresso', ids);
+  const tutti = ingresso.find((o) => o.id === 'e');
+  assert.ok(tutti.allow.includes(P.ViewChannel), 'chi entra senza ruolo vede il canale');
+  assert.ok(tutti.deny.includes(P.SendMessages) && tutti.deny.includes(P.AddReactions), 'si clicca solo la reazione del bot');
+  assert.equal(ingresso.find((o) => o.id === 'p'), undefined, 'i Playtester continuano a vederlo, per togliere la reazione');
+
+  const { guild, conteggi, canali } = serverFinto();
+  const categoriaEsistente = { id: 'vecchia', name: 'Generale', type: ChannelType.GuildCategory, position: 0 };
+  canali.set(categoriaEsistente.id, categoriaEsistente);
+  const { stato } = await allestisci(guild, BOT, CFG, muto);
+  const categoria = canaleDiNome(canali, '👋 SATZE · INGRESSO');
+  assert.equal(categoria.position, 0, 'appena creata va in cima');
+  assert.equal(categoriaEsistente.position, 1);
+  const inizia = canaleDiNome(canali, 'inizia-qui');
+  assert.equal(inizia.parentId, categoria.id);
+  const [messaggio] = [...inizia.messaggi.values()];
+  assert.deepEqual(messaggio.reazioniDelBot, ['🎮']);
+  assert.ok(messaggio.content.includes(`<#${canaleDiNome(canali, 'download').id}>`));
+
+  // Spostata a mano: il secondo avvio non la rimette in cima e non duplica la reazione.
+  categoria.position = 7;
+  await allestisci(guild, BOT, CFG, muto, { stato });
+  assert.equal(categoria.position, 7);
+  assert.equal(conteggi.spostamenti, 1);
+  assert.equal(conteggi.reazioni, 1);
 });

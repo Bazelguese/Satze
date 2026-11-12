@@ -28,6 +28,18 @@ const PARLARE = [P.Connect, P.Speak, P.Stream, P.UseVAD];
 
 /** Permessi della categoria (e dei suoi canali) in base al tipo di accesso. */
 export function permessiPer(accesso, { everyoneId, devId, playtesterId }) {
+  if (accesso === 'ingresso') {
+    // Visibile a tutti, anche senza ruolo. Senza «Aggiungi reazioni» si può comunque cliccare
+    // una reazione già presente: quella del bot.
+    return [
+      {
+        id: everyoneId,
+        allow: [P.ViewChannel, P.ReadMessageHistory],
+        deny: [P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads, P.CreatePrivateThreads, P.AddReactions],
+      },
+      { id: devId, allow: [...LEGGERE, ...SCRIVERE, P.ManageMessages] },
+    ];
+  }
   // @everyone non vede né scrive (Davide ha tolto anche la scrittura nei forum di feedback, 2026-11-08).
   const permessi = [
     { id: everyoneId, deny: accesso === 'feedback' ? [P.ViewChannel, P.SendMessages] : [P.ViewChannel] },
@@ -189,6 +201,30 @@ function etichetta(tipo) {
   return 'canale';
 }
 
+/** Sposta la categoria sopra tutte le altre (Discord ordina le categorie per posizione). */
+async function portaInCima(guild, categoria, ctx) {
+  const categorie = [...guild.channels.cache.values()]
+    .filter((c) => c.type === ChannelType.GuildCategory && c.id !== categoria.id)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  await guild.channels.setPositions([categoria, ...categorie].map((c, i) => ({ channel: c.id, position: i })));
+  ctx.log(`  ↑ categoria ${categoria.name} spostata in cima`);
+}
+
+/** Mette la reazione del bot sull'ultimo suo messaggio del canale (quella che gli utenti cliccano). */
+async function reazioneDelBot(canale, emoji, botId, log) {
+  const recenti = await canale.messages.fetch({ limit: 100 });
+  const ultimo = [...recenti.values()]
+    .filter((m) => m.author?.id === botId)
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)[0];
+  if (!ultimo) return;
+  if (ultimo.reazioniDelBot?.includes(emoji)) {
+    log(`    = reazione ${emoji} già presente in #${canale.name}`);
+    return;
+  }
+  await ultimo.react(emoji);
+  log(`    + reazione ${emoji} in #${canale.name}`);
+}
+
 /**
  * Allinea i messaggi del bot in un canale ai testi voluti.
  * Stesso numero di messaggi → li modifica; numero diverso → cancella i suoi e li ripubblica.
@@ -312,8 +348,12 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
   for (const gruppo of STRUTTURA) {
     log(`\n${gruppo.categoria}`);
     const permessi = permessiPer(gruppo.accesso, ids);
+    const giaCreata = Boolean(ctx.stato.canali[gruppo.categoria])
+      || Boolean(guild.channels.cache.find((x) => x.name === gruppo.categoria && x.type === ChannelType.GuildCategory));
     const categoria = await trovaOCreaCanale(guild, { chiave: gruppo.categoria, nome: gruppo.categoria, tipo: ChannelType.GuildCategory, permessi }, ctx);
     if (!categoria) continue;
+    // Solo appena creata: se poi la sposti a mano, lo script non la rimette in cima.
+    if (gruppo.inCima && !giaCreata) await portaInCima(guild, categoria, ctx);
 
     for (const c of gruppo.canali) {
       const nome = nomeDiscord(c.nome, c.tipo);
@@ -351,7 +391,7 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
       }
       if (!canale) continue;
       idPerNome.set(nome, canale.id);
-      if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi] });
+      if (c.messaggi) conMessaggi.push({ canale, testi: testi[c.messaggi], reazione: c.reazioneBot });
       if (c.post) {
         const lista = postDelForum(cfg)[c.post];
         if (canale.type === ChannelType.GuildForum) conPost.push({ canale, posts: lista });
@@ -362,8 +402,9 @@ export async function allestisci(guild, botId, cfg, log = console.log, opzioni =
   }
 
   log('\nMessaggi');
-  for (const { canale, testi: lista } of conMessaggi) {
+  for (const { canale, testi: lista, reazione } of conMessaggi) {
     await sincronizzaMessaggi(canale, lista.map((t) => collegaCanali(t, idPerNome)), botId, log);
+    if (reazione) await reazioneDelBot(canale, reazione, botId, log);
   }
   for (const { canale, posts } of conPost) {
     await sincronizzaPost(canale, posts, botId, (t) => collegaCanali(t, idPerNome), log);

@@ -10,12 +10,15 @@
  *   HOST — bind (default 0.0.0.0).
  *   SATZE_RECONNECT_GRACE_MS — attesa del ritorno di un giocatore disconnesso (default 300000 = 5 minuti).
  *   SATZE_ROOMS_DIR — cartella del file stanze persistito (default ./data).
+ *   DISCORD_BOT_TOKEN, SATZE_RUOLI_* — bot del ruolo Playtester su Discord (vedi discordRuoli.mjs).
+ *     Facoltativo: senza token non parte.
  */
 import http from 'http';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WebSocketServer } from 'ws';
+import { avviaRuoliDiscord, configDaAmbiente } from './discordRuoli.mjs';
 
 const PORT = Number(process.env.PORT || process.env.SATZE_WS_PORT || 3847);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -366,3 +369,11 @@ loadPersistedRooms();
 server.listen(PORT, HOST, () => {
   console.log(`[SATZE] WebSocket in ascolto su ws://${HOST === '0.0.0.0' ? '0.0.0.0 (tutte le interfacce)' : HOST}:${PORT}`);
 });
+
+// Bot del ruolo Playtester: un suo errore non deve mai fermare il server multiplayer.
+try {
+  const cfgRuoli = configDaAmbiente();
+  if (cfgRuoli) avviaRuoliDiscord(cfgRuoli);
+} catch (e) {
+  console.log(`[ruoli Discord] spento: ${e.message}`);
+}
