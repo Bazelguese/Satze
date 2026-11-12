@@ -67,6 +67,8 @@ import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { getEminence, getEminenceAbility } from '../src/data/eminences.js';
 import { EminenceChoicePortal } from '../src/components/eminence/EminenceChoicePortal.jsx';
+import { EminenceTargetPicker } from '../src/components/eminence/EminenceTargetPicker.jsx';
+import { resolveTargetRequest, targetParams } from '../src/components/eminence/eminenceTargetRequest.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
 import { noticesFromRoundStart, noticesFromSetupPending } from '../src/game/eminence/eminenceAnnouncements.js';
@@ -389,6 +391,8 @@ export default function SatzeGame() {
   const [pendingEminenceDeals, setPendingEminenceDeals] = useState([]);
   /** Abilità propria che chiede una scelta tra opzioni (es. il pronostico della Scommessa): { abilityId, key, values }. */
   const [emOptionChoice, setEmOptionChoice] = useState(null);
+  /** Scelta sul tavolo non praticabile per questa richiesta (bersagli non in vista): si torna al menù delle abilità. */
+  const [emTargetFallbackId, setEmTargetFallbackId] = useState(null);
   const campaignAssetsSlotRef = useRef(null);
   const [campaignEntryRun,setCampaignEntryRun] = useState(null);
   const [campaignActionError,setCampaignActionError] = useState('');
@@ -672,6 +676,30 @@ export default function SatzeGame() {
     shown: [displayPlayerNotice, displayEnemyNotice],
     live: { player: eminenceChoiceView.self?.presence ?? 0, enemy: eminenceChoiceView.opponent?.presence ?? 0 },
   });
+  // Scelta di un bersaglio sul tavolo (carta o Campo): Statico da preparare, parametri alla
+  // rivelazione di un'abilità già sigillata, oppure abilità in bozza che li vuole subito.
+  const eminenceTargetPick = (() => {
+    if (r5Cinematic || eminenceAnnounceHold || preyFlight.busy || !eminenceChoiceView?.enabled) return null;
+    const self = eminenceChoiceView.self;
+    let source = null;
+    if (self?.setup?.pending) {
+      source = { mode: 'setup', key: 'setup', schema: self.setup.paramsSchema, name: self.setup.name || 'Statico', text: self.setup.text || '' };
+    } else if (awaitingRevealParams) {
+      const option = self.options?.find((entry) => entry.id === self.selectedAbilityId);
+      if (option) source = { mode: 'reveal', key: option.id, abilityId: option.id, schema: option.paramsSchema, name: option.name, text: option.text };
+    } else if (emDraftId && self?.state === CHOICE_STATES.CHOOSING) {
+      const option = self.options?.find((entry) => entry.id === emDraftId);
+      // nel menù il bersaglio si sceglie insieme all'abilità, qualunque sia il momento in cui verrà rivelata
+      if (option && !option.blocker) {
+        source = { mode: 'select', key: option.id, abilityId: option.id, schema: option.paramsSchema, name: option.name, text: option.text };
+      }
+    }
+    const request = source ? resolveTargetRequest(source.schema) : null;
+    if (!request) return null;
+    const id = `${source.mode}:${roundNumber}:${source.key}`;
+    if (emTargetFallbackId === id) return null;
+    return { id, mode: source.mode, abilityId: source.abilityId, eminence: self.eminence, name: source.name, text: source.text, canCancel: source.mode === 'select', request };
+  })();
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
     !r5Cinematic
@@ -680,7 +708,8 @@ export default function SatzeGame() {
       || preyFlight.busy
       || shouldShowEminenceLayer(eminenceChoiceView, { gamePhase })
     );
-  const showEminenceLayer = resolveEminenceChromeVisible({
+  // mentre si sceglie un bersaglio il tavolo resta in vista: le zone Eminenza si ripongono
+  const showEminenceLayer = eminenceTargetPick ? false : resolveEminenceChromeVisible({
     forced: forcedEminenceView,
     peekCampo: eminenceAnnounceHold ? false : peekCampo,
     peekEminence,
@@ -1905,7 +1934,8 @@ export default function SatzeGame() {
     const option = (eminenceChoiceView.self?.options || []).find((entry) => entry.id === abilityId);
     const keys = Object.keys(option?.paramsSchema || {});
     const values = keys.length === 1 ? option.paramsSchema[keys[0]] : null;
-    if (option && !option.blocker && Array.isArray(values) && values.length) {
+    const optionsOnly = option?.choiceParamsTiming === 'AT_SELECTION' && !resolveTargetRequest(option.paramsSchema);
+    if (option && !option.blocker && optionsOnly && Array.isArray(values) && values.length) {
       setEmOptionChoice({ abilityId, key: keys[0], values });
       return;
     }
@@ -7918,6 +7948,18 @@ export default function SatzeGame() {
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
       <EminenceChoicePortal choice={eminenceChoiceScreen} />
+      <EminenceTargetPicker
+        pick={eminenceChoiceScreen ? null : eminenceTargetPick}
+        onConfirm={(value, optionValue) => {
+          const pick = eminenceTargetPick;
+          if (!pick) return;
+          const params = targetParams(pick.request, value, optionValue);
+          if (pick.mode === 'setup') confirmEminenceSetup(params);
+          else confirmEminenceAbility(pick.abilityId, params);
+        }}
+        onCancel={() => { setEmDraftId(null); setEmDraftParams(null); }}
+        onMissing={() => setEmTargetFallbackId(eminenceTargetPick?.id ?? null)}
+      />
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div

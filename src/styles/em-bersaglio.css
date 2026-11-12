@@ -1,0 +1,75 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — SCELTA DI UN BERSAGLIO SUL TAVOLO
+   Componente: EminenceTargetPicker.jsx. Coordinate di scena (1920×1080).
+   --em-b-acc colore dell'Eminenza · --em-b-ink inchiostro leggibile su quel colore
+   ═════════════════════════════════════════════════════════════════ */
+.em-bersaglio{position:absolute;inset:0;z-index:58;pointer-events:none;font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif}
+
+/* faro: tutto il tavolo si spegne tranne la zona interessata */
+.em-bersaglio-spot{position:absolute;border-radius:12px;box-shadow:0 0 0 3000px rgba(6,4,8,.78);opacity:0;transition:opacity .4s ease}
+.em-bersaglio.is-on .em-bersaglio-spot{opacity:1}
+
+/* bersagli: un bottone trasparente sopra la carta o il Campo veri, che ne disegna il bordo acceso */
+.em-bersaglio-hot{
+  position:absolute;padding:0;border:0;background:none;border-radius:9px;cursor:pointer;pointer-events:auto;
+  transform:none !important;transition:scale .16s cubic-bezier(.2,.8,.2,1),translate .16s cubic-bezier(.2,.8,.2,1),box-shadow .16s ease,opacity .16s ease;
+  box-shadow:0 0 0 2.5px var(--em-b-acc),0 0 18px color-mix(in srgb,var(--em-b-acc) 60%,transparent);
+  animation:emBersaglioCall 1.6s ease-in-out infinite;
+}
+@keyframes emBersaglioCall{50%{box-shadow:0 0 0 2.5px var(--em-b-acc),0 0 32px var(--em-b-acc)}}
+.em-bersaglio-hot.is-focus,.em-bersaglio-hot:focus-visible{animation:none;outline:none;z-index:2;scale:1.14;translate:0 -8px;box-shadow:0 0 0 3.5px #fff,0 0 40px var(--em-b-acc)}
+.em-bersaglio-hot.is-chosen{animation:none;z-index:3;scale:1.18;translate:0 -10px;box-shadow:0 0 0 5px var(--em-b-acc),0 0 46px var(--em-b-acc)}
+.em-bersaglio-hot.is-dim{animation:none;opacity:.45}
+.em-bersaglio.is-slot .em-bersaglio-hot.is-focus,.em-bersaglio.is-slot .em-bersaglio-hot:focus-visible{scale:1.05;translate:-18px 0}
+.em-bersaglio.is-slot .em-bersaglio-hot.is-chosen{scale:1.07;translate:-24px 0}
+.em-bersaglio-mark{
+  position:absolute;left:50%;bottom:-13px;translate:-50% 0;padding:4px 12px;white-space:nowrap;
+  background:var(--em-b-acc);color:var(--em-b-ink);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+}
+
+/* gli elementi veri seguono lo stato: crescono con il loro bordo, si spengono se non validi */
+[data-em-pick]{transition:scale .16s cubic-bezier(.2,.8,.2,1),translate .16s cubic-bezier(.2,.8,.2,1),filter .16s ease}
+[data-em-pick="focus"]{scale:1.14;translate:0 -8px;z-index:40 !important}
+[data-em-pick="chosen"]{scale:1.18;translate:0 -10px;z-index:41 !important}
+[data-em-pick="dim"]{filter:brightness(.5) saturate(.6)}
+[data-em-pick="off"]{filter:grayscale(1) brightness(.28)}
+[data-em-pick-type="slot"][data-em-pick="focus"]{scale:1.05;translate:-18px 0}
+[data-em-pick-type="slot"][data-em-pick="chosen"]{scale:1.07;translate:-24px 0}
+
+/* fascio dal portale al bersaglio a fuoco */
+.em-bersaglio-beam{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.em-bersaglio-beam path{fill:none;stroke:var(--em-b-acc);stroke-linecap:round;opacity:0;transition:opacity .2s ease}
+.em-bersaglio-beam-glow{stroke-width:11;filter:blur(6px)}
+.em-bersaglio-beam-line{stroke-width:2.6;stroke-dasharray:4 11;animation:emBersaglioFlow .7s linear infinite}
+.em-bersaglio-beam.is-on .em-bersaglio-beam-glow{opacity:.5}
+.em-bersaglio-beam.is-on .em-bersaglio-beam-line{opacity:1}
+.em-bersaglio-beam.is-chosen .em-bersaglio-beam-line{stroke-width:4;stroke-dasharray:none;animation:none}
+@keyframes emBersaglioFlow{to{stroke-dashoffset:-15}}
+
+/* alone sul portale: resta il punto da cui parte la richiesta */
+.em-bersaglio-portal{position:absolute;border-radius:50%;box-shadow:0 0 0 2px var(--em-b-acc),0 0 36px var(--em-b-acc),inset 0 0 26px color-mix(in srgb,var(--em-b-acc) 45%,transparent);animation:emBersaglioCall 1.6s ease-in-out infinite}
+
+/* guida sotto il portale */
+.em-bersaglio-guide{position:absolute;translate:-50% 0;width:460px;text-align:center;color:#fff;opacity:0;transition:opacity .3s ease .2s}
+.em-bersaglio.is-on .em-bersaglio-guide{opacity:1;pointer-events:auto}
+.em-bersaglio-kicker{font-weight:700;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--em-b-acc)}
+.em-bersaglio-title{margin-top:6px;font-weight:700;font-size:27px;line-height:1.1;letter-spacing:.07em;text-transform:uppercase;text-shadow:0 2px 10px #000}
+.em-bersaglio-text{margin:9px auto 14px;max-width:420px;font-weight:500;font-size:16px;line-height:1.4;color:#e6dfe9;text-shadow:0 1px 6px #000}
+
+.em-bersaglio-pill{
+  /* `translate`/`scale`, non `transform`: lo stile globale dei pulsanti premuti usa `transform` */
+  transform:none !important;pointer-events:auto;cursor:pointer;margin:0 5px;padding:11px 26px;
+  font:700 15px/1 'Chakra Petch','Segoe UI',sans-serif;letter-spacing:.14em;text-transform:uppercase;
+  color:#f0d8a4;background:rgba(18,10,8,.94);border:1.5px solid #c9a86a;clip-path:polygon(6% 0,100% 0,94% 100%,0 100%);
+  transition:filter .15s ease,scale .15s ease;
+}
+.em-bersaglio-pill.is-yes{color:var(--em-b-ink);background:var(--em-b-acc);border-color:var(--em-b-acc)}
+.em-bersaglio-pill:hover,.em-bersaglio-pill:focus-visible{filter:brightness(1.2);scale:1.05;outline:none}
+.em-bersaglio-act{position:absolute;z-index:5;display:flex;translate:-50% -50%;animation:emBersaglioAct .25s cubic-bezier(.2,1.3,.3,1) both}
+.em-bersaglio.is-slot .em-bersaglio-act{translate:-100% -50%}
+@keyframes emBersaglioAct{from{opacity:0;scale:.8}to{opacity:1;scale:1}}
+
+@media (prefers-reduced-motion:reduce){
+  .em-bersaglio-hot,.em-bersaglio-beam-line,.em-bersaglio-act{animation:none !important}
+  .em-bersaglio-hot,[data-em-pick],.em-bersaglio-spot,.em-bersaglio-guide{transition:none !important}
+}
