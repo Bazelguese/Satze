@@ -24,7 +24,9 @@ export function BattlefieldShuffleDealOverlay({
 }) {
   const playerKind = setup?.playerShuffleKind ?? shuffleKind ?? getShuffleStyle();
   const enemyKind = setup?.enemyShuffleKind ?? pickRandomEnemyShuffleKind(playerKind);
-  const [entrancePhase, setEntrancePhase] = useState('hold');
+  // Partita successiva di una serie (torneo): il tavolo è già scoperto, si passa subito alle carte.
+  const skipReveal = Boolean(setup?.skipReveal);
+  const [entrancePhase, setEntrancePhase] = useState(skipReveal ? 'shuffle' : 'hold');
   const [playerDone, setPlayerDone] = useState(false);
   const [enemyDone, setEnemyDone] = useState(false);
   const onCompleteRef = useRef(onComplete);
@@ -59,11 +61,12 @@ export function BattlefieldShuffleDealOverlay({
   useEffect(() => {
     if (!setup) return undefined;
 
-    setEntrancePhase('hold');
+    setEntrancePhase(skipReveal ? 'shuffle' : 'hold');
     setPlayerDone(false);
     setEnemyDone(false);
     dealtRef.current = { player: 0, enemy: 0 };
     onDealProgressRef.current?.(0);
+    if (skipReveal) return undefined;
 
     const revealTimer = setTimeout(() => setEntrancePhase('reveal'), holdMs);
     const fallbackTimer = setTimeout(handleRevealComplete, holdMs + DUEL_REVEAL_MS + 80);
@@ -72,7 +75,7 @@ export function BattlefieldShuffleDealOverlay({
       clearTimeout(revealTimer);
       clearTimeout(fallbackTimer);
     };
-  }, [setup, launchRevealHoldMs, sessionKey, holdMs, handleRevealComplete]);
+  }, [setup, launchRevealHoldMs, sessionKey, holdMs, handleRevealComplete, skipReveal]);
 
   useEffect(() => {
     onRevealPhaseChangeRef.current?.(entrancePhase);
@@ -111,6 +114,7 @@ export function BattlefieldShuffleDealOverlay({
             cardBackSrc={setup.enemyCardBack}
             onComplete={handleEnemyComplete}
             onDealProgress={handleEnemyDealt}
+            dealOnly={Boolean(setup.dealOnly)}
             battlefield
             autoPlay
             deckIntroFadeMs={DUEL_DECK_INTRO_FADE_MS}
@@ -125,6 +129,7 @@ export function BattlefieldShuffleDealOverlay({
             cardBackSrc={setup.playerCardBack}
             onComplete={handlePlayerComplete}
             onDealProgress={handlePlayerDealt}
+            dealOnly={Boolean(setup.dealOnly)}
             battlefield
             autoPlay
             sound

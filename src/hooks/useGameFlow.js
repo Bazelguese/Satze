@@ -11,7 +11,7 @@ import { DIFFICULTY_NAMES, shuffleArray } from '../utils';
 import { loadCustomDeck, attachShuffleDealVisuals, buildDeckVisualIdentity } from '../utils/deckManager';
 import { calcInitialBonuses, normalizeOnlineMatchPayload, buildShuffleDealSetupFromMatch } from '../utils/onlineMatch';
 import { resolveShuffleKindsForDuel } from '../utils/shuffleStylePreference';
-import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShuffleHands';
+import { computeShuffleDealFromSets, seriesContinuationSetup } from '../components/shuffle/prepareDuelShuffleHands';
 import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { createMatchEminenceState, resolveEminenceFormat } from '../game/eminence/eminenceSetup';
 import { EMINENCE_FORMAT } from '../game/eminence/eminenceConstants.js';
@@ -229,7 +229,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
 
     if (!skipShuffleDeal) {
       const { playerShuffleKind, enemyShuffleKind } = resolveShuffleKindsForDuel();
-      setShuffleDealSetup(attachShuffleDealVisuals({
+      setShuffleDealSetup(seriesContinuationSetup(attachShuffleDealVisuals({
         playerSet: deal.playerSet,
         enemySet: deal.enemySet,
         playerFinalOrder: deal.playerFinalOrder,
@@ -244,7 +244,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
         enemyCardBack,
         playerShuffleKind,
         enemyShuffleKind,
-      }, ARMY_COLORS));
+      }, ARMY_COLORS), startOptions?.seriesDeal ?? null));
       setPlayerArmyBonuses({});
       setEnemyArmyBonuses({});
       setPlayerHand([]);
@@ -350,7 +350,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setLogs(prev => [...prev, `[R1] ${startLog}`]);
     
     const entryPhase = skipShuffleDeal ? 'selectField' : 'shuffleDeal';
-    const campaignReady = mode === 'campaign' && startOptions?.campaignAssetsReady === true;
+    // Partita successiva di una serie (torneo): si resta sul tavolo, senza la schermata VS.
+    const campaignReady = (mode === 'campaign' && startOptions?.campaignAssetsReady === true) || Boolean(startOptions?.seriesDeal);
     setPendingDuelPhase(campaignReady ? null : entryPhase);
     setGamePhase(campaignReady ? entryPhase : 'duelLoading');
   }, [
@@ -448,7 +449,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       });
 
       if (shuffleSetup) {
-        const enriched = attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS);
+        const enriched = seriesContinuationSetup(attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS), opts.seriesDeal ?? null);
         setShuffleDealSetup(enriched);
         setPlayerDeckVisual(enriched.playerDeckVisual);
         setEnemyDeckVisual(enriched.enemyDeckVisual);
@@ -535,8 +536,14 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setIsPlayerFirst(isPlayerFirst);
       // Online il mazzo avversario per il VS arriva dal messaggio «pronto», non da ARMY_DECKS.
       setDuelDeckKeys?.(null);
-      setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
-      setGamePhase('duelLoading');
+      if (opts.seriesDeal) {
+        // serie di torneo tra due giocatori: partita successiva sul tavolo, senza la schermata VS
+        setPendingDuelPhase(null);
+        setGamePhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+      } else {
+        setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+        setGamePhase('duelLoading');
+      }
     },
     [
       setShowClaimVictoryChoice,

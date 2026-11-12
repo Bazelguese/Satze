@@ -56,6 +56,8 @@ export function useCardShuffleDealAnimation(deck, layout, options = {}) {
     fixedFinalOrder = null,
     deckIntroFadeMs = 0,
     deckIntroBeatMs = 0,
+    // Solo consegna: niente ventaglio né mischiata (torneo, partita 2: si servono le carte rimaste).
+    dealOnly = false,
     onComplete,
   } = options;
 
@@ -117,7 +119,7 @@ export function useCardShuffleDealAnimation(deck, layout, options = {}) {
     const deckSize = deck.length;
     const deckOrigin = resolveDeckOrigin(activeLayout);
 
-    after(introOffset + SHUFFLE_DEAL_TIMING.fanOutMs, () => {
+    if (!dealOnly) after(introOffset + SHUFFLE_DEAL_TIMING.fanOutMs, () => {
       deck.forEach((_, deckIndex) => {
         const animIdx = deckIndexToAnimIdx(initial, deckIndex);
         if (animIdx < 0) return;
@@ -164,8 +166,9 @@ export function useCardShuffleDealAnimation(deck, layout, options = {}) {
       });
     };
 
-    let t = introOffset + SHUFFLE_DEAL_TIMING.scrambleStartMs;
-    const rounds = SHUFFLE_DEAL_TIMING.scrambleRounds;
+    let t = introOffset + (dealOnly ? 260 : SHUFFLE_DEAL_TIMING.scrambleStartMs);
+    const rounds = dealOnly ? 0 : SHUFFLE_DEAL_TIMING.scrambleRounds;
+    if (dealOnly && Array.isArray(fixedFinalOrder) && fixedFinalOrder.length === deckSize) slotOrder = fixedFinalOrder.slice();
 
     for (let round = 0; round < rounds; round++) {
       const isLastRound = round === rounds - 1;
@@ -282,7 +285,7 @@ export function useCardShuffleDealAnimation(deck, layout, options = {}) {
       setIsPlaying(false);
       onCompleteRef.current?.(getDealtHandIndices(finalOrder, handSize));
     });
-  }, [deck, layout, handSize, fixedFinalOrder, deckIntroFadeMs, deckIntroBeatMs, clearTimers, after, setCard]);
+  }, [deck, layout, handSize, fixedFinalOrder, deckIntroFadeMs, deckIntroBeatMs, dealOnly, clearTimers, after, setCard]);
 
   useEffect(() => {
     if (!autoPlay) return undefined;

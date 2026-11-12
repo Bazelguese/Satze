@@ -334,6 +334,7 @@ In caso di VA identico:
   - **Partita 1:** ogni giocatore pesca 5 carte a caso dal proprio Deck.
   - **Partita 2:** ogni giocatore gioca le **5 carte non pescate** nella partita 1.
   - **Partita 3 (spareggio):** il Deck viene rimischiato e si pescano 5 carte a caso.
+- **Serie sullo stesso tavolo:** finita una partita, se la serie non e decisa si resta sul tavolo: le mani escono, un cartello annuncia la partita successiva e le nuove carte vengono servite (partita 2 senza mischiata, spareggio con mischiata). Al tabellone si torna a serie conclusa, o volendo con il tasto Tabellone.
 - **PV e FC** ripartono da 25 e 18 a ogni partita; i Campi di Battaglia vengono rigenerati a ogni partita.
 - **Primo giocatore:** sempre chi ha la Lega totale piu bassa in mano (parita: casuale).
 - **Pareggio:** una partita pareggiata non assegna vittorie; se dopo 3 partite la serie e pari si continua con altri spareggi a Deck rimischiato.
