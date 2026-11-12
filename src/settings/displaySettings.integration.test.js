@@ -11,7 +11,7 @@ import {
   resolveOverdriveVariantForQuality,
   applyVfxQualityToDuelConfig,
 } from './vfxQualityProfile.js';
-import { computeViewportScale } from './viewportScale.js';
+import { computeViewportScale, viewportScaledCanvasStyle } from './viewportScale.js';
 
 const memoryStore = new Map();
 const localStorageMock = {
@@ -143,5 +143,14 @@ describe('computeViewportScale', () => {
     expect(computeViewportScale(vw, vh, W, H, 1)).toBeCloseTo(fit);
     expect(computeViewportScale(vw, vh, W, H, 1.25)).toBeCloseTo(fit);
     expect(computeViewportScale(vw, vh, W, H, 0.8)).toBeCloseTo(fit);
+  });
+
+  it('disegna il canvas con zoom, così il testo non viene ricampionato', () => {
+    const style = viewportScaledCanvasStyle(W, H, fit);
+    expect(style.zoom).toBe(fit);
+    expect(style.width).toBe(W);
+    expect(style.height).toBe(H);
+    expect(style.contain).toBe('paint');
+    expect(style.transform).toBeUndefined();
   });
 });

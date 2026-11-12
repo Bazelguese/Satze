@@ -7,7 +7,7 @@ import {
   getDisplaySettings,
   setDisplaySettings,
 } from '../settings/displaySettings';
-import { computeViewportScale } from '../settings/viewportScale';
+import { computeViewportScale, viewportScaledCanvasStyle } from '../settings/viewportScale';
 
 const DESKTOP_W = 1920;
 const DESKTOP_H = 1080;
@@ -15,7 +15,8 @@ const DESKTOP_H = 1080;
 /**
  * Wrapper che scala il gioco a tutto schermo (contain).
  * Canvas logico 1920×1080 sempre interamente visibile.
- * La "Scala interfaccia" non zoomma questo viewport: è densità nei menù.
+ * La scala è `zoom`, non `transform`: il testo resta nitido anche quando
+ * il fattore non è intero. La "Scala interfaccia" non zoomma questo viewport.
  */
 export function GameViewport({ children }) {
   const layout = useViewportLayout();
@@ -89,20 +90,10 @@ export function GameViewport({ children }) {
           height: layoutH,
           position: 'relative',
           flexShrink: 0,
+          overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: gameW,
-            height: gameH,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            overflow: 'hidden',
-          }}
-        >
+        <div style={viewportScaledCanvasStyle(gameW, gameH, scale)}>
           {children}
         </div>
       </div>

@@ -27,7 +27,7 @@ import { DuelVersusScreen } from './versus/DuelVersusScreen';
 import { MultiVersusScreen } from './versus/MultiVersusScreen.jsx';
 import { ROULETTE_STOP_MAX_MS } from './versus/VersusRoulette.jsx';
 import { peekVersusHandoff, clearVersusHandoff } from './versus/versusHandoff.js';
-import { computeViewportScale } from '../settings/viewportScale';
+import { computeViewportScale, viewportScaledCanvasStyle } from '../settings/viewportScale';
 import { LoadingScreen } from './LoadingScreen';
 import './cosmic/cosmic-transitions.css';
 import './eminenceLab/eminenceArtLab.css';
@@ -92,19 +92,8 @@ function VersusViewport({ leaving, children }) {
         transition: `opacity ${VS_LEAVE_MS}ms ease-in`,
       }}
     >
-      <div style={{ position: 'relative', width: CANVAS_W * scale, height: CANVAS_H * scale, flexShrink: 0 }}>
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: CANVAS_W,
-            height: CANVAS_H,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            overflow: 'hidden',
-          }}
-        >
+      <div style={{ position: 'relative', width: CANVAS_W * scale, height: CANVAS_H * scale, flexShrink: 0, overflow: 'hidden' }}>
+        <div style={viewportScaledCanvasStyle(CANVAS_W, CANVAS_H, scale)}>
           {children}
         </div>
       </div>
