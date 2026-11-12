@@ -111,18 +111,12 @@ const SCENES = {
         const v = (t - t0[i] - 720) / 1000;
         if (v > 0) { glow(h[0], h[1], 90 + 420 * eo(v), '#ff7a1a', 0.95 * (1 - cl(v * 1.1))); glow(h[0], h[1], 40 + 160 * eo(v), '#fff4c8', 1 - cl(v * 2.2)); ring(h[0], h[1], 40 + 520 * eo(v), (40 + 520 * eo(v)) * 0.45, '#ffc27a', 0.8 * (1 - cl(v)), 5); }
       });
-      // i focolai restano accesi dove sono caduti i colpi
-      hit.forEach((h, i) => { const f = env(t, t0[i] + 900, t0[i] + 1300, 3500, D); if (f > 0) for (let k = 0; k < 6; k += 1) { const w = Math.sin(t / 90 + k * 1.7 + i); glow(h[0] + (k - 2.5) * 22, h[1] - 10 - (k % 3) * 16 - 10 * w, 46 + 14 * w, k % 2 ? '#ff7a1a' : '#ffc45a', 0.5 * f); } });
+      // i focolai restano accesi su portale e terreno; la riga del Campo resta pulita per il timbro
+      hit.forEach((h, i) => { const f = i === 2 ? 0 : env(t, t0[i] + 900, t0[i] + 1300, 3500, D); if (f > 0) for (let k = 0; k < 6; k += 1) { const w = Math.sin(t / 90 + k * 1.7 + i); glow(h[0] + (k - 2.5) * 22, h[1] - 10 - (k % 3) * 16 - 10 * w, 46 + 14 * w, k % 2 ? '#ff7a1a' : '#ffc45a', 0.5 * f); } });
       S.deb.forEach((d) => { const v = (t - t0[d.i] - 720) / 1000; if (v > 0 && v < d.l) { const h = hit[d.i]; const x = h[0] + Math.cos(d.a) * d.v * v; const y = h[1] + Math.sin(d.a) * d.v * v * 0.6 + 420 * v * v - 90 * v; C.fillStyle = rgba('#2a1a10', 1 - v / d.l); C.fillRect(x, y, d.s * 2, d.s * 2); glow(x, y, d.s * 3, '#ff8a2a', 0.7 * (1 - v / d.l)); } });
-      // la riga del Campo brucia e resta carbone
+      // la striscia di fuoco attraversa la riga del Campo, senza lasciarci sopra niente
       const b = cl((t - 1300) / 1300);
-      if (b > 0) {
-        const w = SLOT[2] * eo(b);
-        C.save(); C.globalAlpha = env(t, 1300, 1500, 3700, D); C.fillStyle = 'rgba(12,9,8,.93)'; C.fillRect(SLOT[0], SLOT[1], w, SLOT[3]);
-        for (let k = 0; k < 7; k += 1) { C.strokeStyle = 'rgba(255,120,40,.35)'; C.lineWidth = 1; C.beginPath(); C.moveTo(SLOT[0] + w * (k / 7), SLOT[1] + 4 + ((k * 37) % 30)); C.lineTo(SLOT[0] + w * (k / 7) + 22, SLOT[1] + 10 + ((k * 53) % 28)); C.stroke(); }
-        C.restore();
-        if (b < 1) { glow(SLOT[0] + w, cy(SLOT), 60, '#ff8a2a', 0.9); for (let k = 0; k < 5; k += 1) glow(SLOT[0] + w - 6, SLOT[1] + k * 10, 14 + 8 * Math.sin(t / 50 + k), '#ffe08a', 0.8); }
-      }
+      if (b > 0 && b < 1) { const w = SLOT[2] * eo(b); glow(SLOT[0] + w, cy(SLOT), 60, '#ff8a2a', 0.9); for (let k = 0; k < 5; k += 1) glow(SLOT[0] + w - 6, SLOT[1] + k * 10, 14 + 8 * Math.sin(t / 50 + k), '#ffe08a', 0.8); }
       S.emb.forEach((e) => { const v = (t - 900 - e.d) / 1000; if (v > 0) { const a = env(t, 900 + e.d, 1200 + e.d, 3400, D); glow(e.x + 18 * Math.sin(v * 2 + e.p), e.y * g.h - e.v * v, e.s * 3, '#ff9a3a', 0.8 * a); } });
       const st = (t - 2500) / 260;
       if (st > 0) {
