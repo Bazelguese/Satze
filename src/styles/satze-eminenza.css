@@ -1044,3 +1044,7 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
    di sovrapposizione, e ne restava fuori un triangolino. Rientrano quanto basta a coprirlo. */
 .em-zone-enemy .em-rail--portale,
 .em-zone-enemy .em-rail--nastro{margin-left:-36px}
+
+/* L'avviso si legge davanti alla carta: a riposo sta più avanti di lei (la carta è a 2px);
+   entra da dietro ed esce dietro, come già fanno le sue animazioni. */
+.em-stage > .em-announce{--em-tilt:translateZ(10px);z-index:3}

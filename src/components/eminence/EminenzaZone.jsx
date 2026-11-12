@@ -1316,6 +1316,8 @@ export function EminenzaZone({
     accent,
   });
   const [entryRevealed, setEntryRevealed] = useState(Boolean(skipCardEntrance));
+  /** L'ingresso della carta è finito: solo allora compaiono le fasce delle abilità, che altrimenti restano sospese nel vuoto. */
+  const [entryDone, setEntryDone] = useState(Boolean(skipCardEntrance));
 
   // Ingresso «agenti»: la carta entra con l'effetto d'armata dei suoi Agenti, una volta per Scontro.
   const armyFx = useMemo(() => {
@@ -1339,6 +1341,7 @@ export function EminenzaZone({
 
   useLayoutEffect(() => {
     setEntryRevealed(Boolean(skipCardEntrance || announceOnly || !eminence));
+    setEntryDone(Boolean(skipCardEntrance || announceOnly || !eminence));
   }, [eminence?.id, skipCardEntrance, announceOnly]);
 
   useLayoutEffect(() => {
@@ -1356,24 +1359,30 @@ export function EminenzaZone({
       const start = window.setTimeout(() => setArmyFx('playing'), startAt);
       // Se l'effetto non chiude (foto in ritardo, WebGL assente) la carta non resta appesa.
       const guard = window.setTimeout(
-        () => setArmyFx('done'),
+        () => { setArmyFx('done'); setEntryDone(true); },
         startAt + (armyFx.defaults?.durationMs ?? 3000) + ARMY_FX_GUARD_MS,
       );
       return () => {
         window.clearTimeout(start);
         window.clearTimeout(guard);
         // interrotto a metà (avviso, zona riposta): non si riprende da capo
-        if (armyFxPhaseRef.current === 'playing') setArmyFx('done');
+        if (armyFxPhaseRef.current === 'playing') { setArmyFx('done'); setEntryDone(true); }
       };
     }
     const delay = side === 'enemy' ? 780 : 0;
     // Gesto su misura dell'Eminenza: solo alla prima comparsa, poi quello breve d'armata.
     const gesture = ownGestureSeenRef.current === eminence.id ? null : resolveEminenceEntryGesture(eminence.id);
+    let fallback = 0;
     const t = window.setTimeout(() => {
       if (gesture) ownGestureSeenRef.current = eminence.id;
-      play(gesture ? { layer: layerRef.current, slug: gesture.slug, dur: gesture.dur } : { layer: layerRef.current });
+      const done = () => setEntryDone(true);
+      const ms = play(gesture
+        ? { layer: layerRef.current, slug: gesture.slug, dur: gesture.dur, onDone: done }
+        : { layer: layerRef.current, onDone: done });
+      // se il gesto non parte o non segnala la fine, le fasce arrivano comunque
+      fallback = window.setTimeout(done, (ms || 0) + 260);
     }, delay);
-    return () => window.clearTimeout(t);
+    return () => { window.clearTimeout(t); window.clearTimeout(fallback); };
   }, [eminence?.id, side, skipCardEntrance, announceOnly, play, layerRef, armyFx]);
 
   if (!eminence) return null;
@@ -1467,7 +1476,7 @@ export function EminenzaZone({
                   params={armyFxParams}
                   captureKey={`em-entry-${eminence.id}`}
                   snapshotTimeoutMs={ARMY_FX_SNAPSHOT_TIMEOUT_MS}
-                  onComplete={() => { if (armyFxPhaseRef.current === 'playing') setArmyFx('done'); }}
+                  onComplete={() => { if (armyFxPhaseRef.current === 'playing') setArmyFx('done'); setEntryDone(true); }}
                 >
                   {cardNode}
                 </ElementFx>
@@ -1492,7 +1501,7 @@ export function EminenzaZone({
               onDismiss={onDismissAnnounce}
             />
           ) : (
-            !hideRail && (
+            !hideRail && entryDone && (
               <EminenzaRail
                 options={railOptions}
                 armyAccent={accent}

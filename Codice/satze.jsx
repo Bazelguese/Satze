@@ -65,7 +65,8 @@ import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceA
 import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setupMessage as eminenceSetupMessage, dealMessage as eminenceDealMessage, applyRemoteChoice, applyRemoteSetup, dealNeedsRemoteResponse, forcedDealResponse } from '../src/game/eminence/eminenceOnline.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
-import { getEminenceAbility } from '../src/data/eminences.js';
+import { getEminence, getEminenceAbility } from '../src/data/eminences.js';
+import { EminenceChoicePortal } from '../src/components/eminence/EminenceChoicePortal.jsx';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
 import { noticesFromRoundStart, noticesFromSetupPending } from '../src/game/eminence/eminenceAnnouncements.js';
@@ -284,6 +285,13 @@ function formatEminenceDealEffect(effect) {
   return null;
 }
 
+/** Etichette delle opzioni che si scelgono nella schermata di scelta (parametri a elenco). */
+const EMINENCE_OPTION_LABELS = {
+  VITTORIA_PROPRIA: 'Vinco io',
+  VITTORIA_AVVERSARIA: "Vince l'altro",
+  PAREGGIO: 'Pareggio',
+};
+
 function formatEminenceDealEffects(effects) {
   return (effects || []).map(formatEminenceDealEffect).filter(Boolean).join('; ');
 }
@@ -379,6 +387,8 @@ export default function SatzeGame() {
   const [eminenceNotices, setEminenceNotices] = useState([]);
   const [pendingEminencePhase, setPendingEminencePhase] = useState(null);
   const [pendingEminenceDeals, setPendingEminenceDeals] = useState([]);
+  /** Abilità propria che chiede una scelta tra opzioni (es. il pronostico della Scommessa): { abilityId, key, values }. */
+  const [emOptionChoice, setEmOptionChoice] = useState(null);
   const campaignAssetsSlotRef = useRef(null);
   const [campaignEntryRun,setCampaignEntryRun] = useState(null);
   const [campaignActionError,setCampaignActionError] = useState('');
@@ -1846,6 +1856,62 @@ export default function SatzeGame() {
   } else if (commandChoosing) {
     portalDecision = { kicker: 'Scelta', name: 'Comando', desc: "Abilità dell'Eminenza", note: "Scegli un'abilità dell'Eminenza e confermala" };
   }
+
+  // Schermata di scelta: il portale si espande. Vale per ogni scelta tra opzioni; il portale
+  // piccolo sotto resta a dire che c'è una scelta in sospeso, senza i suoi archi.
+  let eminenceChoiceScreen = null;
+  if (pendingDeal && portalDecision?.options?.length) {
+    const owner = getEminence(eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId);
+    eminenceChoiceScreen = {
+      id: `deal:${roundNumber}:${pendingDeal.ownerSide}:${pendingDeal.source}:${pendingEminenceDeals.length}`,
+      eminence: owner,
+      kicker: owner?.name ? `${portalDecision.kicker} · ${owner.name}` : portalDecision.kicker,
+      name: portalDecision.name,
+      text: portalDecision.desc,
+      note: portalDecision.note,
+      options: portalDecision.options.map((option) => ({
+        key: option.key,
+        label: option.label,
+        kind: /refuse$/.test(option.key) ? 'refuse' : 'accept',
+        disabled: option.disabled,
+        onClick: option.onClick,
+      })),
+    };
+    portalDecision = { kicker: portalDecision.kicker, name: portalDecision.name, desc: 'Scelta in sospeso' };
+  } else if (emOptionChoice && commandChoosing && !eminenceAnnounceHold) {
+    const ability = (eminenceChoiceView.self?.options || []).find((option) => option.id === emOptionChoice.abilityId);
+    if (ability) {
+      eminenceChoiceScreen = {
+        id: `option:${roundNumber}:${emOptionChoice.abilityId}`,
+        eminence: eminenceChoiceView.self?.eminence,
+        kicker: `Scelta · ${eminenceChoiceView.self?.eminence?.name || 'Eminenza'}`,
+        name: ability.name,
+        text: ability.text,
+        note: "La scelta resta segreta fino alla rivelazione.",
+        options: [
+          { key: 'option-refuse', label: 'Annulla', kind: 'refuse', onClick: () => setEmOptionChoice(null) },
+          ...emOptionChoice.values.map((value) => ({
+            key: `option-${value}`,
+            label: EMINENCE_OPTION_LABELS[value] || String(value),
+            kind: 'accept',
+            onClick: () => { setEmOptionChoice(null); confirmEminenceAbility(emOptionChoice.abilityId, { [emOptionChoice.key]: value }); },
+          })),
+        ],
+      };
+    }
+  }
+  // Scegliere un'abilità nel menù: se le serve solo una scelta tra opzioni, si apre la schermata.
+  const pickEminenceAbility = (abilityId) => {
+    const option = (eminenceChoiceView.self?.options || []).find((entry) => entry.id === abilityId);
+    const keys = Object.keys(option?.paramsSchema || {});
+    const values = keys.length === 1 ? option.paramsSchema[keys[0]] : null;
+    if (option && !option.blocker && Array.isArray(values) && values.length) {
+      setEmOptionChoice({ abilityId, key: keys[0], values });
+      return;
+    }
+    setEmOptionChoice(null);
+    setEmDraftId(abilityId);
+  };
 
   const duelHpColors = useMemo(() => ({ player: playerIdentityColor, enemy: enemyIdentityColor }), [playerIdentityColor, enemyIdentityColor]);
   const duelFocusGlow = (side) => {
@@ -7831,7 +7897,7 @@ export default function SatzeGame() {
           focusedMarkId={focusedMark?.source === 'player' ? focusedMark.id : null}
           onMarkFocus={(cardId, kind) => focusMarkToken(cardId, 'player', kind)}
           onSetupConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceSetup}
-          onPick={eminenceAnnounceHold || preyFlight.busy ? undefined : setEmDraftId}
+          onPick={eminenceAnnounceHold || preyFlight.busy ? undefined : pickEminenceAbility}
           onConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceAbility}
           draftParams={emDraftParams}
           onDraftParams={setEmDraftParams}
@@ -7851,6 +7917,7 @@ export default function SatzeGame() {
       )}
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
+      <EminenceChoicePortal choice={eminenceChoiceScreen} />
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div
