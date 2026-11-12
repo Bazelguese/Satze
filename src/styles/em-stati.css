@@ -1,0 +1,26 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — STATI CHE DURANO
+   Componente: EminenceLastingStates.jsx. Coordinate di scena (1920×1080).
+   --em-t-acc colore dell'Eminenza che ha lasciato lo stato
+   ═════════════════════════════════════════════════════════════════ */
+.em-stati{position:absolute;inset:0;z-index:24;pointer-events:none;font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;transition:opacity .25s ease}
+.em-stati.is-hidden{opacity:0}
+.em-stati-list{position:absolute;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.em-stati-list--enemy{align-items:flex-start}
+.em-stati-list--player{translate:-100% -100%;align-items:flex-end;flex-direction:column-reverse}
+.em-stati-chip{
+  display:flex;align-items:center;gap:8px;padding:4px 14px 4px 0;pointer-events:auto;white-space:nowrap;
+  background:linear-gradient(90deg,rgba(10,13,19,.96),rgba(6,8,12,.9));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--em-t-acc) 70%,transparent),0 4px 10px rgba(0,0,0,.55);
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  animation:emStatoIn .5s cubic-bezier(.2,1.3,.3,1) calc(var(--i) * 90ms) both;
+}
+.em-stati-label{
+  flex:none;align-self:stretch;display:grid;place-items:center;padding:0 9px 0 14px;
+  background:var(--em-t-acc);color:var(--em-t-ink);font-weight:800;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+}
+.em-stati-word{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.em-stati-chip--debt .em-stati-word{color:#ff8a8a}
+.em-stati-chip--blocked .em-stati-word{color:#c9ced8}
+@keyframes emStatoIn{0%{opacity:0;transform:scale(1.25);filter:brightness(2.4)}60%{opacity:1;filter:brightness(1.5)}100%{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.em-stati-chip{animation:none}}

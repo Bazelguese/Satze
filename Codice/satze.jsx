@@ -72,6 +72,8 @@ import { EminenceAgentMarks } from '../src/components/eminence/EminenceAgentMark
 import { buildAgentMarks } from '../src/game/eminence/eminenceAgentMarks.js';
 import { EminenceRoundRules } from '../src/components/eminence/EminenceRoundRules.jsx';
 import { buildRoundRules } from '../src/game/eminence/eminenceRoundRules.js';
+import { EminenceLastingStates } from '../src/components/eminence/EminenceLastingStates.jsx';
+import { buildLastingStates } from '../src/game/eminence/eminenceLastingStates.js';
 import { resolveTargetRequest, targetParams } from '../src/components/eminence/eminenceTargetRequest.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
@@ -707,6 +709,7 @@ export default function SatzeGame() {
   // Segni sugli Agenti in gioco: cosa ha cambiato loro un'abilità rivelata, per tutto il Duello
   const eminenceAgentMarks = useMemo(() => buildAgentMarks(eminenceMatchState), [eminenceMatchState]);
   const eminenceRoundRules = useMemo(() => buildRoundRules(eminenceMatchState), [eminenceMatchState]);
+  const eminenceLastingStates = useMemo(() => buildLastingStates(eminenceMatchState), [eminenceMatchState]);
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
     !r5Cinematic
@@ -7955,6 +7958,7 @@ export default function SatzeGame() {
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
       <EminenceAgentMarks marks={eminenceAgentMarks} hidden={showEminenceLayer || eminenceAnnounceHold} />
+      <EminenceLastingStates states={eminenceLastingStates} hidden={Boolean(eminenceChoiceScreen)} />
       <EminenceRoundRules rules={eminenceRoundRules} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
       <EminenceChoicePortal choice={eminenceChoiceScreen} />
       <EminenceTargetPicker
