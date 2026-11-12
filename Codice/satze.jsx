@@ -74,6 +74,7 @@ import { EminenceRoundRules } from '../src/components/eminence/EminenceRoundRule
 import { buildRoundRules } from '../src/game/eminence/eminenceRoundRules.js';
 import { EminenceLastingStates } from '../src/components/eminence/EminenceLastingStates.jsx';
 import { buildLastingStates } from '../src/game/eminence/eminenceLastingStates.js';
+import { buildPendingStakes } from '../src/game/eminence/eminencePendingStakes.js';
 import { resolveTargetRequest, targetParams } from '../src/components/eminence/eminenceTargetRequest.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
@@ -709,6 +710,7 @@ export default function SatzeGame() {
   // Segni sugli Agenti in gioco: cosa ha cambiato loro un'abilità rivelata, per tutto il Duello
   const eminenceAgentMarks = useMemo(() => buildAgentMarks(eminenceMatchState), [eminenceMatchState]);
   const eminenceRoundRules = useMemo(() => buildRoundRules(eminenceMatchState), [eminenceMatchState]);
+  const eminencePendingStakes = useMemo(() => buildPendingStakes(eminenceMatchState), [eminenceMatchState]);
   const eminenceLastingStates = useMemo(() => buildLastingStates(eminenceMatchState), [eminenceMatchState]);
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
@@ -7959,7 +7961,7 @@ export default function SatzeGame() {
       {eminenceEffectFx.layer}
       <EminenceAgentMarks marks={eminenceAgentMarks} hidden={showEminenceLayer || eminenceAnnounceHold} />
       <EminenceLastingStates states={eminenceLastingStates} hidden={Boolean(eminenceChoiceScreen)} />
-      <EminenceRoundRules rules={eminenceRoundRules} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
+      <EminenceRoundRules rules={eminenceRoundRules} stakes={eminencePendingStakes} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
       <EminenceChoicePortal choice={eminenceChoiceScreen} />
       <EminenceTargetPicker
         pick={eminenceChoiceScreen ? null : eminenceTargetPick}

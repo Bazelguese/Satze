@@ -7,6 +7,7 @@ import '../../styles/em-regole.css';
 /**
  * Regole del round: targa sopra il portale che tiene scritto ciò che un'abilità ha cambiato
  * per entrambi i giocatori (luce del Grande Semaforo, Silenzio) finché vale.
+ * Sotto, le condizioni ancora in sospeso («se vince il Duello → +1 Presenza») da `buildPendingStakes`.
  * Le regole arrivano da `buildRoundRules`. Coordinate di scena (1920×1080).
  */
 const LINE_COPY = {
@@ -25,10 +26,12 @@ function portalRect(scene, selector) {
   return { x: (r.left - sr.left + r.width / 2) / k, y: (r.top - sr.top) / k };
 }
 
-export function EminenceRoundRules({ rules, hidden = false, anchorSelector = '.satze-bf-portal' }) {
+const SIDE_LABELS = { player: 'Tu', enemy: 'Nemico' };
+
+export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelector = '.satze-bf-portal' }) {
   const rootRef = useRef(null);
   const [pos, setPos] = useState(null);
-  const any = Boolean(rules?.length);
+  const any = Boolean(rules?.length || stakes?.length);
 
   useEffect(() => {
     if (!any) return undefined;
@@ -50,7 +53,7 @@ export function EminenceRoundRules({ rules, hidden = false, anchorSelector = '.s
     <div ref={rootRef} className={`em-regole${hidden ? ' is-hidden' : ''}`}>
       {pos && (
         <ul className="em-regole-list" style={{ left: pos.x, top: pos.y - 40 }}>
-          {rules.map((rule) => {
+          {(rules || []).map((rule) => {
             const accent = ARMY_COLORS[rule.army]?.accent || '#f5c451';
             const lamp = semaforoLamp(rule.abilityName);
             const lit = lamp ? String(rule.abilityName).trim().toLowerCase() : null;
@@ -84,6 +87,23 @@ export function EminenceRoundRules({ rules, hidden = false, anchorSelector = '.s
                     );
                   })}
                 </span>
+              </li>
+            );
+          })}
+          {(stakes || []).map((stake, i) => {
+            const accent = ARMY_COLORS[stake.army]?.accent || '#f5c451';
+            return (
+              <li
+                key={stake.key}
+                className={`em-regole-stake em-regole-stake--${stake.tone}`}
+                style={{ '--em-r-acc': accent, '--em-r-ink': inkOn(accent), '--i': i }}
+                title={`${stake.abilityName}: ${stake.text}`}
+              >
+                <span className="em-regole-stake-side">{SIDE_LABELS[stake.ownerSide]}</span>
+                <span className="em-regole-stake-name">{stake.abilityName}</span>
+                <span className="em-regole-stake-if">{stake.condition}</span>
+                <i aria-hidden="true">→</i>
+                <strong>{stake.payoff}</strong>
               </li>
             );
           })}
