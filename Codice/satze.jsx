@@ -209,7 +209,9 @@ import { registraPartita, nuovoIdPartita, telemetriaAttiva, svuotaCoda, serveNom
 import { roundDuello, partitaDuello, partitaMultiPosto } from '../src/telemetry/recordPartita.js';
 import NomeGiocatoreModal from '../src/components/playtest/NomeGiocatoreModal.jsx';
 import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
-import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
+import { resolvePublicAssetUrl, preloadBattlefieldImages } from '../src/utils/preloadAssets';
+import { selectBattlefields } from '../src/game/fieldLogic';
+import { useTweenedNumber } from '../src/components/tournament/useTweenedNumber.js';
 import { preloadCardImagesForAgents } from '../src/data/images.js';
 import { getCardSprite } from '../src/utils/cardUtils.js';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
@@ -1736,6 +1738,17 @@ export default function SatzeGame() {
   const shownPlayerFC = duelHp.displayFC ? duelHp.displayFC.player : playerFocus;
   const shownEnemyFC = duelHp.displayFC ? duelHp.displayFC.enemy : enemyFocus;
   const shownPlayerToxin = duelHp.displayToxin ? duelHp.displayToxin.player : playerToxin;
+  // Tra una partita e l'altra di una serie PV e FC risalgono contando invece di scattare.
+  /**
+   * Torneo, passaggio alla partita successiva della stessa serie senza lasciare il tavolo:
+   * { roundName, gameNumber, rule, score, stage: 'out'|'in'|'leaving' } (vedi runSeriesInterlude).
+   */
+  const [seriesInterlude, setSeriesInterlude] = useState(null);
+  const seriesRefill = seriesInterlude?.stage === 'in';
+  const hudPlayerHP = useTweenedNumber(shownPlayerHP, seriesRefill);
+  const hudEnemyHP = useTweenedNumber(shownEnemyHP, seriesRefill);
+  const hudPlayerFC = useTweenedNumber(shownPlayerFC, seriesRefill);
+  const hudEnemyFC = useTweenedNumber(shownEnemyFC, seriesRefill);
   const shownEnemyToxin = duelHp.displayToxin ? duelHp.displayToxin.enemy : enemyToxin;
   // Conta scenica delle FC: partenza e atterraggio delle monete, bagliore e Overdrive sulla carta
   const duelStamp = gamePhase === 'result' && battleResult
@@ -2505,16 +2518,29 @@ export default function SatzeGame() {
    * escono, un cartello dice che partita è e quali carte arrivano, poi la nuova distribuzione.
    * { roundName, gameNumber, rule, score, stage: 'out'|'in'|'leaving' }
    */
-  const [seriesInterlude, setSeriesInterlude] = useState(null);
+
   const seriesInterludeTimersRef = useRef([]);
-  const runSeriesInterlude = useCallback((info, launch) => {
+  const seriesInterludeRunRef = useRef(0);
+  const runSeriesInterlude = useCallback((info, launch, fields = null) => {
     seriesInterludeTimersRef.current.forEach(clearTimeout);
+    seriesInterludeTimersRef.current = [];
+    const run = ++seriesInterludeRunRef.current;
+    const later = (fn, ms) => new Promise((resolve) => {
+      seriesInterludeTimersRef.current.push(setTimeout(() => { fn?.(); resolve(); }, ms));
+    });
     setSeriesInterlude({ ...info, stage: 'out' });
-    seriesInterludeTimersRef.current = [
-      setTimeout(() => { setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'in' } : prev)); launch(); }, 850),
-      setTimeout(() => setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'leaving' } : prev)), 2500),
-      setTimeout(() => setSeriesInterlude(null), 2850),
-    ];
+    // Mentre le carte escono si caricano gli sfondi dei Campi della partita dopo (qui non c'è
+    // la schermata VS a farlo); se tardano non si aspetta oltre un paio di secondi.
+    const assets = fields?.length
+      ? Promise.race([preloadBattlefieldImages(fields).catch(() => {}), later(null, 2400)])
+      : Promise.resolve();
+    Promise.all([assets, later(null, 850)]).then(() => {
+      if (run !== seriesInterludeRunRef.current) return;
+      setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'in' } : prev));
+      launch();
+      later(() => setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'leaving' } : prev)), 1650);
+      later(() => setSeriesInterlude(null), 2000);
+    });
   }, []);
   useEffect(() => () => seriesInterludeTimersRef.current.forEach(clearTimeout), []);
   const seriesDealOf = (gameNumber) => (gameNumber === 2 ? 'remainder' : 'reshuffle');
@@ -2528,6 +2554,8 @@ export default function SatzeGame() {
     // Online le mani le serve l'host; contro un altro giocatore la partita la avvia la sfida.
     if (tournament.online && tnOnlineRef.current.challenge?.()) return;
     const stay = continuation === true;
+    // serie che continua: i Campi si scelgono subito, così si precaricano mentre le carte escono
+    const nextFields = stay ? selectBattlefields(tournament.settings?.mode || 'classic', ALL_BATTLEFIELDS) : null;
     const prepared = tournament.online ? tournament : prepareHumanGame(tournament);
     const info = describeHumanMatch(prepared);
     const game = info ? getPendingGame(info.match) : null;
@@ -2574,6 +2602,7 @@ export default function SatzeGame() {
         aiPersonality: info.opponent.aiTrait || 'neutral',
         // serie che continua: nuova distribuzione sul tavolo, senza schermata VS
         seriesDeal: stay ? seriesDealOf(info.gameNumber) : null,
+        ...(nextFields ? { battlefields: nextFields } : {}),
         fixedHands: {
           playerHand: resolveTournamentCards(game.hands[info.side]),
           enemyHand: resolveTournamentCards(game.hands[otherSide]),
@@ -2582,7 +2611,7 @@ export default function SatzeGame() {
     );
     };
     if (stay) {
-      runSeriesInterlude({ roundName: info.roundName, gameNumber: info.gameNumber, rule: info.handRule, score: `${info.humanWins}–${info.opponentWins}` }, launch);
+      runSeriesInterlude({ roundName: info.roundName, gameNumber: info.gameNumber, rule: info.handRule, score: `${info.humanWins}–${info.opponentWins}` }, launch, nextFields);
     } else {
       // cortina sul tabellone, poi il VS: niente stacco netto verso il tavolo
       runCurtain({ label: info.opponent.deckName, kicker: `${info.roundName.toUpperCase()} · PARTITA ${info.gameNumber}`, accent: ARMY_COLORS[human.army]?.accent }, launch);
@@ -2670,7 +2699,7 @@ export default function SatzeGame() {
     );
     };
     if (continuation) {
-      runSeriesInterlude({ roundName: ROUND_NAMES[match.round], gameNumber: gameIndex + 1, rule: gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${earlier.filter((g) => g.winner === 'a').length}–${earlier.filter((g) => g.winner === 'b').length}` }, launch);
+      runSeriesInterlude({ roundName: ROUND_NAMES[match.round], gameNumber: gameIndex + 1, rule: gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${earlier.filter((g) => g.winner === 'a').length}–${earlier.filter((g) => g.winner === 'b').length}` }, launch, battlefields);
     } else {
       runCurtain({ label: `${sideA.deckName} – ${sideB.deckName}`, kicker: `SPETTATORE · PARTITA ${gameIndex + 1}` }, launch);
     }
@@ -2918,7 +2947,7 @@ export default function SatzeGame() {
     if (stay) {
       const series = match?.series || { winsA: 0, winsB: 0 };
       const mine = msg.side === 'a' ? [series.winsA, series.winsB] : [series.winsB, series.winsA];
-      runSeriesInterlude({ roundName: ROUND_NAMES[match?.round ?? 0], gameNumber: msg.gameIndex + 1, rule: msg.gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${mine[0]}–${mine[1]}` }, launch);
+      runSeriesInterlude({ roundName: ROUND_NAMES[match?.round ?? 0], gameNumber: msg.gameIndex + 1, rule: msg.gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${mine[0]}–${mine[1]}` }, launch, Array.isArray(msg.match?.battlefields) ? msg.match.battlefields.filter((f) => f && typeof f === 'object') : null);
     } else {
       runCurtain({ label: peer?.deckName || 'SFIDA', kicker: `${ROUND_NAMES[match?.round ?? 0].toUpperCase()} · CONTRO ${(peer?.playerName || 'AVVERSARIO').toUpperCase()}` }, launch);
     }
@@ -7040,7 +7069,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}${seriesInterlude?.stage === 'out' ? ' trn-hands-out' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}${seriesInterlude?.stage === 'out' ? ' trn-hands-out' : ''}${seriesInterlude?.stage === 'in' ? ' trn-table-in' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -7487,7 +7516,7 @@ export default function SatzeGame() {
               </div>
             );
             return (
-              <div className="flex justify-between gap-4 mb-1">
+              <div className="flex justify-between gap-4 mb-1 imp-conquest-slots">
                 <div className="flex-1 min-w-0">
                   <Row count={enemyConqueredCount} accent={enemyIdentityColor} />
                 </div>
@@ -7501,9 +7530,14 @@ export default function SatzeGame() {
           {(() => {
             const holdOldVictory = victoryCondFx === 'hold';
             const showAnnihilate = roundNumber >= 5 && !holdOldVictory;
+            // Partita finita: metà del riquadro prende il colore dell'esercito che ha vinto, dal suo
+            // lato (avversario a sinistra, giocatore a destra, come le caselle dei Campi qui sopra).
+            const wonSide = gamePhase === 'gameOver' && !isMultiSeat && (gameResult?.winner === 'player' || gameResult?.winner === 'enemy')
+              ? gameResult.winner
+              : null;
             return (
           <div 
-            className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}`}
+            className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}${wonSide ? ' imp-victory--won' : ''}`}
             style={{
               background: 'rgba(56, 189, 248, 0.08)',
               border: '1px solid rgba(56, 189, 248, 0.28)',
@@ -7528,6 +7562,14 @@ export default function SatzeGame() {
                 (Vince chi alla fine del turno ha più PV)
               </div>
             )}
+            {/* in coda e non <div>: gli stili del riquadro contano le righe di testo per posizione */}
+            {wonSide ? (
+              <span
+                className={`imp-victory-win is-${wonSide}`}
+                style={{ '--win-color': wonSide === 'player' ? playerIdentityColor : enemyIdentityColor }}
+                aria-hidden="true"
+              />
+            ) : null}
           </div>
             );
           })()}
@@ -8653,12 +8695,12 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpEnemyLabel}
-        hp={shownEnemyHP}
+        hp={hudEnemyHP}
         hpBursts={duelHp.bursts.enemy}
         fcBursts={duelHp.fcBursts.enemy}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={shownEnemyFC}
+        focus={hudEnemyFC}
         toxin={shownEnemyToxin}
         position="top-left"
         gamePhase={gamePhase}
@@ -8670,12 +8712,12 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpSelfLabel}
-        hp={shownPlayerHP}
+        hp={hudPlayerHP}
         hpBursts={duelHp.bursts.player}
         fcBursts={duelHp.fcBursts.player}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={shownPlayerFC}
+        focus={hudPlayerFC}
         toxin={shownPlayerToxin}
         position="bottom-right"
         gamePhase={gamePhase}

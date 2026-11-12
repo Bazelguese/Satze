@@ -1,0 +1,61 @@
+/* ============================================================
+   Tavolo: esito sul riquadro della condizione di vittoria e
+   passaggio tra una partita e l'altra di una serie (torneo).
+   Solo trasformazioni e opacità.
+   ============================================================ */
+
+/* ── Esito: metà del riquadro prende il colore dell'esercito che ha vinto ── */
+.imp-victory-win {
+  /* sotto le righe di testo del riquadro (z-index 2), sopra il suo fondo */
+  display: block; position: absolute !important; z-index: 1 !important; top: 0; bottom: 0; width: 56%; pointer-events: none;
+  background: var(--win-color, #a288fb);
+  animation: imp-victory-win-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.25s both;
+}
+/* lato del giocatore: destra · lato dell'avversario: sinistra (come le caselle dei Campi sopra) */
+.imp-victory-win.is-player { right: 0; transform-origin: right center; clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%); }
+.imp-victory-win.is-enemy { left: 0; transform-origin: left center; clip-path: polygon(0 0, 100% 0, 78% 100%, 0 100%); }
+@keyframes imp-victory-win-in { from { transform: scaleX(0); } }
+
+/* sul colore il testo deve restare leggibile: pieno e con il bordo nero */
+.imp-victory--won > div {
+  opacity: 1 !important;
+  -webkit-text-stroke: 2.5px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 0 2px #000, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000 !important;
+}
+
+/* ── Serie di torneo: la partita finita lascia il tavolo ── */
+.satze-scene.trn-hands-out .imp-hand-enemy { animation: trn-hand-up 0.7s cubic-bezier(0.6, 0, 0.9, 0.4) forwards; }
+.satze-scene.trn-hands-out .imp-hand-player { animation: trn-hand-down 0.7s cubic-bezier(0.6, 0, 0.9, 0.4) forwards; }
+@keyframes trn-hand-up { to { translate: -120px -420px; opacity: 0; } }
+@keyframes trn-hand-down { to { translate: 120px 420px; opacity: 0; } }
+
+/* i Campi escono uno alla volta, il colore dell'esito si ritira */
+.satze-scene.trn-hands-out .imp-fields .imp-row { animation: trn-row-out 0.4s cubic-bezier(0.6, 0, 0.9, 0.4) both; }
+.satze-scene.trn-hands-out .imp-fields .imp-row:nth-child(2) { animation-delay: 0.07s; }
+.satze-scene.trn-hands-out .imp-fields .imp-row:nth-child(3) { animation-delay: 0.14s; }
+.satze-scene.trn-hands-out .imp-fields .imp-row:nth-child(4) { animation-delay: 0.21s; }
+.satze-scene.trn-hands-out .imp-fields .imp-row:nth-child(5) { animation-delay: 0.28s; }
+@keyframes trn-row-out { to { translate: 90px 0; opacity: 0; } }
+.satze-scene.trn-hands-out .imp-victory-win { animation: imp-victory-win-out 0.45s ease-in forwards; }
+@keyframes imp-victory-win-out { to { transform: scaleX(0); } }
+.satze-scene.trn-hands-out .imp-conquest-slots { animation: trn-fade-out 0.45s ease forwards; }
+@keyframes trn-fade-out { to { opacity: 0; } }
+
+/* ── …e la nuova si apparecchia: Campi nuovi in fila, caselle vuote, PV e FC che risalgono ── */
+.satze-scene.trn-table-in .imp-fields .imp-row { animation: trn-row-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.satze-scene.trn-table-in .imp-fields .imp-row:nth-child(2) { animation-delay: 0.08s; }
+.satze-scene.trn-table-in .imp-fields .imp-row:nth-child(3) { animation-delay: 0.16s; }
+.satze-scene.trn-table-in .imp-fields .imp-row:nth-child(4) { animation-delay: 0.24s; }
+.satze-scene.trn-table-in .imp-fields .imp-row:nth-child(5) { animation-delay: 0.32s; }
+@keyframes trn-row-in { from { translate: -90px 0; opacity: 0; } }
+.satze-scene.trn-table-in .imp-conquest-slots { animation: trn-fade-in 0.5s ease 0.2s both; }
+@keyframes trn-fade-in { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .imp-victory-win,
+  .satze-scene.trn-hands-out .imp-hand-enemy, .satze-scene.trn-hands-out .imp-hand-player,
+  .satze-scene.trn-hands-out .imp-fields .imp-row, .satze-scene.trn-table-in .imp-fields .imp-row,
+  .satze-scene.trn-hands-out .imp-victory-win, .satze-scene.trn-hands-out .imp-conquest-slots,
+  .satze-scene.trn-table-in .imp-conquest-slots { animation: none; }
+}
