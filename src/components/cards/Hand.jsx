@@ -252,6 +252,7 @@ export const Hand = React.memo(({
               ref={isSelected && selectedCardRef ? selectedCardRef : undefined}
               className={`absolute${slotFx}`}
               data-hand-agent={agent.id}
+              data-hand-side={battleOutcomeSide || undefined}
               style={cardStyle}
             >
               <HandCard

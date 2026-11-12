@@ -31,7 +31,31 @@ export const EMINENCE_ENTRY_STYLE_DEFAULT = EMINENCE_ENTRY_STYLES.AGENTI;
  * Scelta per singola Eminenza (id del catalogo → stile).
  * Esempio: `khemet_maledizioni: 'campo'` tiene il vecchio ingresso per Khemet.
  */
-export const EMINENCE_ENTRY_STYLE_BY_ID = Object.freeze({});
+export const EMINENCE_ENTRY_STYLE_BY_ID = Object.freeze({
+  apex_sole_verde: 'campo',
+  patto_grande_semaforo: 'campo',
+  mascarada_organizzatore: 'campo',
+  kethran_altare: 'campo',
+  khemet_maledizioni: 'campo',
+  figli_domanda_senza_fine: 'campo',
+  enclave_ascensione: 'campo',
+  calibri_quattro_fronti: 'campo',
+});
+
+/**
+ * Gesto `campo` su misura per una singola Eminenza, al posto di quello della sua armata.
+ * Si vede alla prima comparsa nello Scontro; le riaperture usano il gesto breve d'armata.
+ * `slug` → classi `em-arm-<slug>` / `em-fx-<slug>` in em-card-armate.css; `dur` in secondi.
+ */
+export const EMINENCE_ENTRY_GESTURE_BY_ID = Object.freeze({
+  apex_sole_verde: { slug: 'soleverde', dur: 1.7 },
+  patto_grande_semaforo: { slug: 'semaforo', dur: 1.9 },
+});
+
+/** Gesto su misura dell'Eminenza, o null se usa quello della sua armata. */
+export function resolveEminenceEntryGesture(eminenceId) {
+  return (eminenceId && EMINENCE_ENTRY_GESTURE_BY_ID[eminenceId]) || null;
+}
 
 const ENTRY_STYLE_VALUES = new Set(Object.values(EMINENCE_ENTRY_STYLES));
 
@@ -144,6 +168,15 @@ function makeLiteCardPiece(card) {
 
 function fillEffectLayer(fx, slug, card) {
   fx.innerHTML = '';
+  if (slug === 'semaforo') {
+    // tre luci, accese in ordine rosso → giallo → verde, sopra quelle dell'illustrazione
+    for (const lamp of ['r', 'y', 'g']) {
+      const el = document.createElement('i');
+      el.className = `em-lamp em-lamp-${lamp}`;
+      fx.appendChild(el);
+    }
+    return;
+  }
   if (!card || (slug !== 'kethran' && slug !== 'khemet')) return;
 
   if (slug === 'kethran') {
@@ -342,7 +375,7 @@ export function useEminenzaEntry(opts = {}) {
       return dur * 1000;
     }
 
-    const slug = resolveArmyEntrySlug(merged.army);
+    const slug = merged.slug || resolveArmyEntrySlug(merged.army);
     const nextCardClass = `em-arm em-arm-${slug}`;
     const nextFxClass = `em-fx-${slug}`;
     setCardArmClass(nextCardClass);

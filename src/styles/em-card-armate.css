@@ -262,3 +262,70 @@
   [class*="em-arm-"],[class*="em-fx-"]{animation:none!important;opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important;-webkit-mask-image:none!important;mask-image:none!important}
   .em-arm::before,.em-arm::after,.em-arm-fx::before,.em-arm-fx::after,[class*="em-fx-"]::before,[class*="em-fx-"]::after{animation:none!important;opacity:0!important}
 }
+
+/* ═════════════════════════════════════════════════════════════════
+   GESTI SU MISURA PER SINGOLA EMINENZA
+   Stessa grammatica dei gesti d'armata (classi em-arm-<slug> / em-fx-<slug>), ma legati
+   a un'Eminenza: vedi EMINENCE_ENTRY_GESTURE_BY_ID in lib/eminenzaEntry.js.
+   Sulla carta UNA sola animazione emArm*: la prima che finisce chiude il gesto.
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ── Il Sole Verde · Irradiazione ──────────────────────────────────────
+   Si accende il sole (50% 24% della carta), la luce verde si allarga e scopre
+   il resto dell'illustrazione, poi l'alone e i raggi si dissolvono. */
+@keyframes emArmSoleVerde{
+  0%{opacity:0;clip-path:circle(0% at 50% 24%);filter:brightness(3) saturate(1.8)}
+  6%{opacity:1}
+  30%{clip-path:circle(17% at 50% 24%);filter:brightness(2.6) saturate(1.8)}
+  62%{clip-path:circle(118% at 50% 24%);filter:brightness(1.7) saturate(1.4)}
+  100%{opacity:1;clip-path:circle(150% at 50% 24%);filter:none}
+}
+.em-arm-soleverde{animation:emArmSoleVerde var(--em-a-dur) cubic-bezier(.3,.1,.2,1) both}
+/* l'irradiazione esce dal riquadro della carta: è luce, non un pezzo della carta */
+.em-arm-fx.em-fx-soleverde{overflow:visible !important}
+.em-fx-soleverde::before,.em-fx-soleverde::after{inset:-40%;transform-origin:50% 35.6%;mix-blend-mode:screen}
+@keyframes emArmSoleGlow{
+  0%{opacity:0;transform:scale(.15)}
+  30%{opacity:1;transform:scale(.55)}
+  62%{opacity:.9;transform:scale(1.25)}
+  100%{opacity:0;transform:scale(1.75)}
+}
+.em-fx-soleverde::before{
+  background:radial-gradient(circle at 50% 35.6%,#fff 0,#c4ffd6 16px,#38f07a 44px,rgba(56,240,122,.36) 96px,transparent 196px);
+  animation:emArmSoleGlow var(--em-a-dur) ease-out both;
+}
+@keyframes emArmSoleRays{
+  0%,26%{opacity:0;transform:scale(.7) rotate(0deg)}
+  46%{opacity:.85}
+  100%{opacity:0;transform:scale(1.35) rotate(16deg)}
+}
+.em-fx-soleverde::after{
+  background:repeating-conic-gradient(from 0deg at 50% 35.6%,rgba(130,255,170,.6) 0 2.5deg,transparent 2.5deg 15deg);
+  -webkit-mask-image:radial-gradient(circle at 50% 35.6%,transparent 26px,#000 46px,transparent 206px);
+  mask-image:radial-gradient(circle at 50% 35.6%,transparent 26px,#000 46px,transparent 206px);
+  animation:emArmSoleRays var(--em-a-dur) ease-out both;
+}
+
+/* ── Il Grande Semaforo · Partenza ─────────────────────────────────────
+   La carta arriva al buio; si accendono in ordine rosso, giallo, verde sopra le
+   luci dell'illustrazione; al verde la carta prende luce di colpo. */
+@keyframes emArmSemaforo{
+  0%{opacity:0;filter:brightness(.1) saturate(.2)}
+  8%{opacity:1;filter:brightness(.16) saturate(.2);transform:none}
+  64%{filter:brightness(.22) saturate(.3);transform:none}
+  71%{filter:brightness(2.1) saturate(1.5);transform:scale(1.035)}
+  85%{filter:brightness(1.2) saturate(1.1);transform:scale(.996)}
+  100%{opacity:1;filter:none;transform:none}
+}
+.em-arm-semaforo{animation:emArmSemaforo var(--em-a-dur) linear both}
+.em-fx-semaforo .em-lamp{
+  position:absolute;width:50%;aspect-ratio:1;margin:-25% 0 0 -25%;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,#fff 0,var(--c) 26%,color-mix(in srgb,var(--c) 42%,transparent) 50%,transparent 70%);
+  mix-blend-mode:screen;animation:var(--k) var(--em-a-dur) ease-out both;
+}
+.em-fx-semaforo .em-lamp-r{left:49%;top:56%;--c:#ff3b3b;--k:emArmLampR}
+.em-fx-semaforo .em-lamp-y{left:51%;top:35%;--c:#ffc933;--k:emArmLampY}
+.em-fx-semaforo .em-lamp-g{left:52%;top:11%;--c:#38f07a;--k:emArmLampG}
+@keyframes emArmLampR{0%,9%{opacity:0;transform:scale(.4)}14%{opacity:1;transform:scale(1.2)}22%{opacity:.85;transform:scale(1)}48%{opacity:.85}56%,100%{opacity:0;transform:scale(.9)}}
+@keyframes emArmLampY{0%,28%{opacity:0;transform:scale(.4)}33%{opacity:1;transform:scale(1.2)}41%{opacity:.85;transform:scale(1)}56%{opacity:.85}64%,100%{opacity:0;transform:scale(.9)}}
+@keyframes emArmLampG{0%,48%{opacity:0;transform:scale(.4)}53%{opacity:1;transform:scale(1.2)}64%{opacity:.9;transform:scale(1)}74%{opacity:.9;transform:scale(4.4)}100%{opacity:0;transform:scale(6)}}

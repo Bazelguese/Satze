@@ -26,6 +26,7 @@ import {
   EMINENCE_ENTRY_STYLES,
   EMINENZA_DEFAULTS,
   entryLayerStyle,
+  resolveEminenceEntryGesture,
   resolveEminenceEntryStyle,
   useEminenzaEntry,
 } from '../../lib/eminenzaEntry.js';
@@ -1326,6 +1327,8 @@ export function EminenzaZone({
   /** pending: mai visto · playing: effetto in corso · done: già visto, da qui gesto breve. */
   const [armyFxPhase, setArmyFxPhase] = useState('pending');
   const armyFxPhaseRef = useRef('pending');
+  /** id dell'Eminenza il cui gesto su misura è già stato visto in questo Scontro. */
+  const ownGestureSeenRef = useRef(null);
   const setArmyFx = (phase) => {
     armyFxPhaseRef.current = phase;
     setArmyFxPhase(phase);
@@ -1364,8 +1367,11 @@ export function EminenzaZone({
       };
     }
     const delay = side === 'enemy' ? 780 : 0;
+    // Gesto su misura dell'Eminenza: solo alla prima comparsa, poi quello breve d'armata.
+    const gesture = ownGestureSeenRef.current === eminence.id ? null : resolveEminenceEntryGesture(eminence.id);
     const t = window.setTimeout(() => {
-      play({ layer: layerRef.current });
+      if (gesture) ownGestureSeenRef.current = eminence.id;
+      play(gesture ? { layer: layerRef.current, slug: gesture.slug, dur: gesture.dur } : { layer: layerRef.current });
     }, delay);
     return () => window.clearTimeout(t);
   }, [eminence?.id, side, skipCardEntrance, announceOnly, play, layerRef, armyFx]);
