@@ -66,7 +66,17 @@ import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setup
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
 import { chooseAiEminenceSelection, chooseAiDealResponse, orderSetupPreyCandidates } from '../src/game/ai/eminence/aiEminenceChoice.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
-import { getEminenceAbility } from '../src/data/eminences.js';
+import { getEminence, getEminenceAbility } from '../src/data/eminences.js';
+import { EminenceChoicePortal } from '../src/components/eminence/EminenceChoicePortal.jsx';
+import { EminenceTargetPicker } from '../src/components/eminence/EminenceTargetPicker.jsx';
+import { EminenceAgentMarks } from '../src/components/eminence/EminenceAgentMarks.jsx';
+import { buildAgentMarks } from '../src/game/eminence/eminenceAgentMarks.js';
+import { EminenceRoundRules } from '../src/components/eminence/EminenceRoundRules.jsx';
+import { buildRoundRules } from '../src/game/eminence/eminenceRoundRules.js';
+import { EminenceLastingStates } from '../src/components/eminence/EminenceLastingStates.jsx';
+import { buildLastingStates } from '../src/game/eminence/eminenceLastingStates.js';
+import { buildPendingStakes } from '../src/game/eminence/eminencePendingStakes.js';
+import { resolveTargetRequest, targetParams } from '../src/components/eminence/eminenceTargetRequest.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
 import { noticesFromRoundStart, noticesFromSetupPending } from '../src/game/eminence/eminenceAnnouncements.js';
@@ -109,6 +119,8 @@ import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence
 import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
 import { useEminenceEffectFx } from '../src/components/eminence/EminenceEffectFx.jsx';
 import { planEffectFx } from '../src/components/eminence/eminenceEffectFx.js';
+import { sceneForNotice, scenesForDuelResult, sceneForDebtEscalation } from '../src/components/eminence/abilitySceneTriggers.js';
+import { getEminenceArtUrl } from '../src/data/eminenceArt.js';
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
 import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
@@ -291,6 +303,13 @@ function formatEminenceDealEffect(effect) {
   return null;
 }
 
+/** Etichette delle opzioni che si scelgono nella schermata di scelta (parametri a elenco). */
+const EMINENCE_OPTION_LABELS = {
+  VITTORIA_PROPRIA: 'Vinco io',
+  VITTORIA_AVVERSARIA: "Vince l'altro",
+  PAREGGIO: 'Pareggio',
+};
+
 function formatEminenceDealEffects(effects) {
   return (effects || []).map(formatEminenceDealEffect).filter(Boolean).join('; ');
 }
@@ -386,6 +405,10 @@ export default function SatzeGame() {
   const [eminenceNotices, setEminenceNotices] = useState([]);
   const [pendingEminencePhase, setPendingEminencePhase] = useState(null);
   const [pendingEminenceDeals, setPendingEminenceDeals] = useState([]);
+  /** Abilità propria che chiede una scelta tra opzioni (es. il pronostico della Scommessa): { abilityId, key, values }. */
+  const [emOptionChoice, setEmOptionChoice] = useState(null);
+  /** Scelta sul tavolo non praticabile per questa richiesta (bersagli non in vista): si torna al menù delle abilità. */
+  const [emTargetFallbackId, setEmTargetFallbackId] = useState(null);
   const campaignAssetsSlotRef = useRef(null);
   const [campaignEntryRun,setCampaignEntryRun] = useState(null);
   const [campaignActionError,setCampaignActionError] = useState('');
@@ -677,6 +700,34 @@ export default function SatzeGame() {
     shown: [displayPlayerNotice, displayEnemyNotice],
     live: { player: eminenceChoiceView.self?.presence ?? 0, enemy: eminenceChoiceView.opponent?.presence ?? 0 },
   });
+  // Scelta di un bersaglio sul tavolo (carta o Campo): Statico da preparare, parametri alla
+  // rivelazione di un'abilità già sigillata, oppure abilità in bozza che li vuole subito.
+  const eminenceTargetPick = (() => {
+    if (r5Cinematic || eminenceAnnounceHold || preyFlight.busy || !eminenceChoiceView?.enabled) return null;
+    const self = eminenceChoiceView.self;
+    let source = null;
+    if (self?.setup?.pending) {
+      source = { mode: 'setup', key: 'setup', schema: self.setup.paramsSchema, name: self.setup.name || 'Statico', text: self.setup.text || '' };
+    } else if (awaitingRevealParams) {
+      const option = self.options?.find((entry) => entry.id === self.selectedAbilityId);
+      if (option) source = { mode: 'reveal', key: option.id, abilityId: option.id, schema: option.paramsSchema, name: option.name, text: option.text };
+    } else if (emDraftId && self?.state === CHOICE_STATES.CHOOSING) {
+      const option = self.options?.find((entry) => entry.id === emDraftId);
+      // nel menù il bersaglio si sceglie insieme all'abilità, qualunque sia il momento in cui verrà rivelata
+      if (option && !option.blocker) {
+        source = { mode: 'select', key: option.id, abilityId: option.id, schema: option.paramsSchema, name: option.name, text: option.text };
+      }
+    }
+    const request = source ? resolveTargetRequest(source.schema) : null;
+    if (!request) return null;
+    const id = `${source.mode}:${roundNumber}:${source.key}`;
+    if (emTargetFallbackId === id) return null;
+    return { id, mode: source.mode, abilityId: source.abilityId, eminence: self.eminence, name: source.name, text: source.text, canCancel: source.mode === 'select', request };
+  })();
+  // Segni sugli Agenti in gioco: cosa ha cambiato loro un'abilità rivelata, per tutto il Duello
+  const eminenceAgentMarks = useMemo(() => buildAgentMarks(eminenceMatchState), [eminenceMatchState]);
+  const eminenceRoundRules = useMemo(() => buildRoundRules(eminenceMatchState), [eminenceMatchState]);
+  const eminenceLastingStates = useMemo(() => buildLastingStates(eminenceMatchState), [eminenceMatchState]);
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
     !r5Cinematic
@@ -685,7 +736,8 @@ export default function SatzeGame() {
       || preyFlight.busy
       || shouldShowEminenceLayer(eminenceChoiceView, { gamePhase })
     );
-  const showEminenceLayer = resolveEminenceChromeVisible({
+  // mentre si sceglie un bersaglio il tavolo resta in vista: le zone Eminenza si ripongono
+  const showEminenceLayer = eminenceTargetPick ? false : resolveEminenceChromeVisible({
     forced: forcedEminenceView,
     peekCampo: eminenceAnnounceHold ? false : peekCampo,
     peekEminence,
@@ -775,7 +827,34 @@ export default function SatzeGame() {
     // l'avviso entra con un'animazione di circa 0,8 s: l'effetto parte quando è al suo posto,
     // altrimenti verrebbe misurato a metà strada
     if (plans.length) window.setTimeout(() => eminenceEffectFx.play(plans), NOTICE_EFFECT_FX_DELAY_MS);
+    // Abilità maggiori: oltre all'effetto comune, la scena dedicata.
+    const scene = sceneForNotice(notice, {
+      matchState: eminenceMatchState,
+      agentPowerBySide: { player: selectedAgent?.power ?? null, enemy: enemyAgent?.power ?? null },
+      currentFieldIndex,
+    });
+    if (scene) window.setTimeout(() => playAbilitySceneRef.current?.(scene), NOTICE_EFFECT_FX_DELAY_MS);
   };
+  // Scena dedicata di un'abilità maggiore; l'illustrazione dell'Eminenza serve alle scene che la mostrano.
+  const sceneArtRef = useRef(new Map());
+  const playAbilitySceneRef = useRef(null);
+  playAbilitySceneRef.current = (scene) => {
+    const eminenceId = eminenceMatchState?.[scene.side]?.eminenceId;
+    let art = null;
+    if (eminenceId && typeof Image !== 'undefined') {
+      art = sceneArtRef.current.get(eminenceId) || null;
+      if (!art) { art = new Image(); art.src = getEminenceArtUrl(eminenceId); sceneArtRef.current.set(eminenceId, art); }
+    }
+    return eminenceEffectFx.playScene(scene.id, { ...scene, data: { ...(scene.data || {}), art } });
+  };
+  // Interessi: quando tutte le voci del Registro crescono insieme.
+  const debtSceneStateRef = useRef(null);
+  useEffect(() => {
+    const prev = debtSceneStateRef.current;
+    debtSceneStateRef.current = eminenceMatchState;
+    const scene = prev ? sceneForDebtEscalation(prev, eminenceMatchState) : null;
+    if (scene) playAbilitySceneRef.current?.(scene);
+  }, [eminenceMatchState]);
 
   const runNoticeSparkQueue = useCallback(async () => {
     if (sparkRunnerBusyRef.current) return;
@@ -1721,6 +1800,23 @@ export default function SatzeGame() {
     showClashAnimation, setShowClashAnimation,
     rainbowTime: _unusedRainbowTime, setRainbowTime,
   } = animations;
+  // Scene dedicate legate al Duello: Maledizione Inversa quando parte il calcolo, Terra Bruciata a Duello deciso.
+  const duelScenesPlayedRef = useRef({ result: null, start: false, end: false });
+  useEffect(() => {
+    if (gamePhase !== 'result' || !battleResult) return;
+    const played = duelScenesPlayedRef.current;
+    if (played.result !== battleResult) duelScenesPlayedRef.current = { result: battleResult, start: false, end: false };
+    const state = duelScenesPlayedRef.current;
+    const scenes = scenesForDuelResult(battleResult, eminenceMatchState);
+    if (!state.start && duelPhase >= 1) { state.start = true; scenes.start.forEach((scene) => playAbilitySceneRef.current?.(scene)); }
+    if (!state.end && duelPhase >= 5) { state.end = true; scenes.end.forEach((scene) => playAbilitySceneRef.current?.(scene)); }
+  }, [gamePhase, duelPhase, battleResult, eminenceMatchState]);
+  // Condizioni in sospeso delle Eminenze: l'esito si scopre solo a Duello deciso (come gli avvisi di esito).
+  const eminenceStakeOutcomes = gamePhase === 'result' && duelPhase >= 5 ? (battleResult?.eminenceStakeOutcomes || null) : null;
+  const eminencePendingStakes = useMemo(
+    () => buildPendingStakes(eminenceMatchState, eminenceStakeOutcomes),
+    [eminenceMatchState, eminenceStakeOutcomes],
+  );
   void _unusedRainbowTime;
 
   /** Round 5: tiene la vecchia condizione finché non parte il flip reveal. */
@@ -1900,6 +1996,63 @@ export default function SatzeGame() {
   } else if (commandChoosing) {
     portalDecision = { kicker: 'Scelta', name: 'Comando', desc: "Abilità dell'Eminenza", note: "Scegli un'abilità dell'Eminenza e confermala" };
   }
+
+  // Schermata di scelta: il portale si espande. Vale per ogni scelta tra opzioni; il portale
+  // piccolo sotto resta a dire che c'è una scelta in sospeso, senza i suoi archi.
+  let eminenceChoiceScreen = null;
+  if (pendingDeal && portalDecision?.options?.length) {
+    const owner = getEminence(eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId);
+    eminenceChoiceScreen = {
+      id: `deal:${roundNumber}:${pendingDeal.ownerSide}:${pendingDeal.source}:${pendingEminenceDeals.length}`,
+      eminence: owner,
+      kicker: owner?.name ? `${portalDecision.kicker} · ${owner.name}` : portalDecision.kicker,
+      name: portalDecision.name,
+      text: portalDecision.desc,
+      note: portalDecision.note,
+      options: portalDecision.options.map((option) => ({
+        key: option.key,
+        label: option.label,
+        kind: /refuse$/.test(option.key) ? 'refuse' : 'accept',
+        disabled: option.disabled,
+        onClick: option.onClick,
+      })),
+    };
+    portalDecision = { kicker: portalDecision.kicker, name: portalDecision.name, desc: 'Scelta in sospeso' };
+  } else if (emOptionChoice && commandChoosing && !eminenceAnnounceHold) {
+    const ability = (eminenceChoiceView.self?.options || []).find((option) => option.id === emOptionChoice.abilityId);
+    if (ability) {
+      eminenceChoiceScreen = {
+        id: `option:${roundNumber}:${emOptionChoice.abilityId}`,
+        eminence: eminenceChoiceView.self?.eminence,
+        kicker: `Scelta · ${eminenceChoiceView.self?.eminence?.name || 'Eminenza'}`,
+        name: ability.name,
+        text: ability.text,
+        note: "La scelta resta segreta fino alla rivelazione.",
+        options: [
+          { key: 'option-refuse', label: 'Annulla', kind: 'refuse', onClick: () => setEmOptionChoice(null) },
+          ...emOptionChoice.values.map((value) => ({
+            key: `option-${value}`,
+            label: EMINENCE_OPTION_LABELS[value] || String(value),
+            kind: 'accept',
+            onClick: () => { setEmOptionChoice(null); confirmEminenceAbility(emOptionChoice.abilityId, { [emOptionChoice.key]: value }); },
+          })),
+        ],
+      };
+    }
+  }
+  // Scegliere un'abilità nel menù: se le serve solo una scelta tra opzioni, si apre la schermata.
+  const pickEminenceAbility = (abilityId) => {
+    const option = (eminenceChoiceView.self?.options || []).find((entry) => entry.id === abilityId);
+    const keys = Object.keys(option?.paramsSchema || {});
+    const values = keys.length === 1 ? option.paramsSchema[keys[0]] : null;
+    const optionsOnly = option?.choiceParamsTiming === 'AT_SELECTION' && !resolveTargetRequest(option.paramsSchema);
+    if (option && !option.blocker && optionsOnly && Array.isArray(values) && values.length) {
+      setEmOptionChoice({ abilityId, key: keys[0], values });
+      return;
+    }
+    setEmOptionChoice(null);
+    setEmDraftId(abilityId);
+  };
 
   const duelHpColors = useMemo(() => ({ player: playerIdentityColor, enemy: enemyIdentityColor }), [playerIdentityColor, enemyIdentityColor]);
   const duelFocusGlow = (side) => {
@@ -7984,7 +8137,7 @@ export default function SatzeGame() {
           focusedMarkId={focusedMark?.source === 'player' ? focusedMark.id : null}
           onMarkFocus={(cardId, kind) => focusMarkToken(cardId, 'player', kind)}
           onSetupConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceSetup}
-          onPick={eminenceAnnounceHold || preyFlight.busy ? undefined : setEmDraftId}
+          onPick={eminenceAnnounceHold || preyFlight.busy ? undefined : pickEminenceAbility}
           onConfirm={eminenceAnnounceHold || preyFlight.busy ? undefined : confirmEminenceAbility}
           draftParams={emDraftParams}
           onDraftParams={setEmDraftParams}
@@ -8004,6 +8157,22 @@ export default function SatzeGame() {
       )}
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
+      <EminenceAgentMarks marks={eminenceAgentMarks} hidden={showEminenceLayer || eminenceAnnounceHold} />
+      <EminenceLastingStates states={eminenceLastingStates} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
+      <EminenceRoundRules rules={eminenceRoundRules} stakes={eminencePendingStakes} hidden={showEminenceLayer || eminenceAnnounceHold || Boolean(eminenceChoiceScreen)} />
+      <EminenceChoicePortal choice={eminenceChoiceScreen} />
+      <EminenceTargetPicker
+        pick={eminenceChoiceScreen ? null : eminenceTargetPick}
+        onConfirm={(value, optionValue) => {
+          const pick = eminenceTargetPick;
+          if (!pick) return;
+          const params = targetParams(pick.request, value, optionValue);
+          if (pick.mode === 'setup') confirmEminenceSetup(params);
+          else confirmEminenceAbility(pick.abilityId, params);
+        }}
+        onCancel={() => { setEmDraftId(null); setEmDraftParams(null); }}
+        onMissing={() => setEmTargetFallbackId(eminenceTargetPick?.id ?? null)}
+      />
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div
@@ -8734,6 +8903,7 @@ export default function SatzeGame() {
         position="top-left"
         gamePhase={gamePhase}
         accentColor={ARMY_COLORS[enemyHand?.[0]?.army]?.accent}
+        presence={eminenceChoiceView?.enabled && eminenceChoiceView.opponent?.eminence ? presenceLink.presence.enemy : null}
       />
 
       {/* ============================================ */}
@@ -8751,6 +8921,7 @@ export default function SatzeGame() {
         position="bottom-right"
         gamePhase={gamePhase}
         accentColor={playerIdentityColor}
+        presence={eminenceChoiceView?.enabled && eminenceChoiceView.self?.eminence ? presenceLink.presence.player : null}
       />
 
       {/* ============================================ */}

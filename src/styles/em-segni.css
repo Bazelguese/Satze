@@ -1,0 +1,31 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — SEGNI SUGLI AGENTI IN GIOCO
+   Componente: EminenceAgentMarks.jsx. Coordinate di scena (1920×1080).
+   --em-s-acc colore dell'Eminenza che ha lasciato il segno
+   ═════════════════════════════════════════════════════════════════ */
+.em-segni{position:absolute;inset:0;z-index:24;pointer-events:none;font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;transition:opacity .25s ease}
+.em-segni.is-hidden{opacity:0}
+.em-segni-list{position:absolute;translate:-50% 0;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;align-items:center;gap:5px}
+/* stessa lastra di vetro delle fasce abilità (.em-rail--portale) */
+.em-segni-chip{
+  position:relative;display:flex;align-items:center;gap:10px;pointer-events:auto;white-space:nowrap;
+  background:
+    linear-gradient(90deg,color-mix(in srgb,var(--em-s-acc) 22%,transparent),transparent 40%),
+    linear-gradient(180deg,rgba(16,20,29,.94),rgba(5,7,11,.94));
+  box-shadow:inset 0 0 0 1px rgba(180,191,208,.3),0 5px 12px rgba(0,0,0,.6);
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  max-width:100%;padding:6px 18px 6px 16px;
+  animation:emSegnoIn .5s cubic-bezier(.2,1.3,.3,1) calc(var(--i) * 90ms) both;
+}
+.em-segni-chip::before{content:'';position:absolute;left:24px;right:40px;top:0;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);opacity:.7;}
+.em-segni-row{flex:none;padding:3px 8px;border:1px solid currentColor;border-radius:999px;line-height:1;color:var(--em-s-acc);font-weight:800;font-size:9px;letter-spacing:.14em;text-transform:uppercase;}
+.em-segni-word{font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:#fff}
+.em-segni-word::after{content:'';display:inline-block;width:6px;height:6px;margin-left:9px;border-radius:50%;vertical-align:middle;background:var(--em-s-acc);box-shadow:0 0 8px var(--em-s-acc),0 0 2px #fff;}
+.em-segni-from{font-weight:600;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9aa6b8;overflow:hidden;text-overflow:ellipsis}
+/* in forse: dipende da cosa succede nel Duello — lastra spenta, nodo vuoto */
+.em-segni-chip.is-conditional{background:linear-gradient(180deg,rgba(16,20,29,.94),rgba(5,7,11,.94))}
+.em-segni-chip.is-conditional .em-segni-word{color:#cfd8e6}
+.em-segni-chip.is-conditional .em-segni-word::after{background:transparent;box-shadow:inset 0 0 0 1.5px var(--em-s-acc)}
+@keyframes emSegnoIn{0%{opacity:0;transform:translateY(-10px) scale(1.25);filter:brightness(2.4)}60%{opacity:1;filter:brightness(1.5)}100%{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.em-segni-chip{animation:none}}

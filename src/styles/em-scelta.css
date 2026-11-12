@@ -1,0 +1,94 @@
+/* ═════════════════════════════════════════════════════════════════
+   SATZE · Eminenza — SCHERMATA DI SCELTA (il portale che si espande)
+   Componente: EminenceChoicePortal.jsx. Coordinate di scena (1920×1080).
+   --em-sc-acc  colore dell'Eminenza che propone la scelta
+   --em-sc-ink  inchiostro leggibile su quel colore
+   ═════════════════════════════════════════════════════════════════ */
+.em-scelta{position:absolute;inset:0;z-index:60;pointer-events:none;font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif}
+.em-scelta-dim{position:absolute;inset:0;background:rgba(6,4,8,.8);opacity:0;transition:opacity .45s ease}
+.em-scelta.is-open .em-scelta-dim{opacity:1;pointer-events:auto}
+
+.em-scelta-oval{
+  position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:auto;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--em-sc-acc) 60%,transparent);
+  transition:width .62s cubic-bezier(.2,.8,.2,1),height .62s cubic-bezier(.2,.8,.2,1),box-shadow .5s ease;
+}
+.em-scelta.is-open .em-scelta-oval{
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--em-sc-acc) 60%,transparent),0 0 110px color-mix(in srgb,var(--em-sc-acc) 42%,transparent);
+}
+.em-scelta.is-peek .em-scelta-oval{cursor:pointer;animation:emSceltaWait 1.6s ease-in-out infinite}
+.em-scelta.is-peek .em-scelta-oval:focus-visible{outline:2px solid #fff;outline-offset:6px}
+@keyframes emSceltaWait{50%{box-shadow:inset 0 0 0 1.5px var(--em-sc-acc),0 0 42px var(--em-sc-acc)}}
+
+.em-scelta-face{
+  position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--em-sc-acc) 24%,#0a060a),rgba(10,6,10,.98) 58%);
+}
+/* illustrazione dell'Eminenza: riempie la parte alta e sfuma sotto il titolo */
+.em-scelta-art{
+  position:absolute;inset:0;background-size:cover;background-repeat:no-repeat;opacity:0;transition:opacity .5s ease .35s;
+  -webkit-mask-image:linear-gradient(#000 12%,transparent 60%);mask-image:linear-gradient(#000 12%,transparent 60%);
+}
+.em-scelta.is-open .em-scelta-art{opacity:.62}
+.em-scelta-closed{
+  position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:0 10px;
+  font-weight:700;font-size:13px;line-height:1.15;letter-spacing:.1em;text-transform:uppercase;color:#fff;transition:opacity .2s ease;
+}
+.em-scelta-closed small{display:block;margin-bottom:5px;font-size:9px;letter-spacing:.24em;color:var(--em-sc-acc)}
+.em-scelta.is-open .em-scelta-closed{opacity:0}
+.em-scelta-body{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;
+  padding:262px 74px 0;color:#fff;opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.em-scelta.is-open .em-scelta-body{opacity:1;transition:opacity .4s ease .38s}
+.em-scelta-kicker{font-weight:700;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#f3d79a;text-shadow:0 2px 8px #000,0 0 16px #000}
+.em-scelta-name{font-weight:700;line-height:1.04;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 10px #000,0 0 22px #000}
+.em-scelta-text{margin:0;max-width:400px;font-weight:500;line-height:1.42;color:#e6dfe9}
+.em-scelta-note{margin:0;max-width:330px;font-weight:500;font-size:15px;line-height:1.4;color:#c9b9a0}
+
+/* ghiera di rune: le stesse del portale, che scorrono lungo l'ovale */
+.em-scelta-runes{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.em-scelta-runes path{fill:none;stroke:var(--em-sc-acc);stroke-width:.7;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 2px var(--em-sc-acc))}
+
+/* risposte: placche ad arco staccate dalla ghiera */
+.em-scelta-answers{position:absolute;overflow:visible;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.em-scelta.is-open .em-scelta-answers{opacity:1;transition:opacity .35s ease .55s}
+.em-scelta-stop-a{stop-color:color-mix(in srgb,var(--em-sc-acc) 58%,#fff)}
+.em-scelta-stop-b{stop-color:var(--em-sc-acc)}
+.em-scelta-stop-c{stop-color:color-mix(in srgb,var(--em-sc-acc) 58%,#000)}
+.em-scelta-plate{cursor:pointer;outline:none;transition:transform .16s cubic-bezier(.2,.8,.2,1),filter .16s ease;filter:drop-shadow(0 5px 8px rgba(0,0,0,.65))}
+.em-scelta.is-open .em-scelta-plate{pointer-events:auto}
+.em-scelta-plate-body{stroke-width:2.4;stroke-linejoin:round}
+.em-scelta-plate.is-refuse .em-scelta-plate-body{stroke:#c9a86a}
+.em-scelta-plate.is-accept .em-scelta-plate-body{stroke:color-mix(in srgb,var(--em-sc-acc) 45%,#fff)}
+.em-scelta-plate-gloss{fill:none;stroke:#fff;stroke-opacity:.34;stroke-width:2;stroke-linecap:round;pointer-events:none}
+.em-scelta-plate.is-refuse .em-scelta-plate-gloss{stroke-opacity:.14}
+.em-scelta-plate-label,.em-scelta-plate-sub{font-weight:700;text-transform:uppercase;pointer-events:none}
+.em-scelta-plate-label{font-size:23px;letter-spacing:4px}
+.em-scelta-plate-sub{font-size:11px;letter-spacing:3px;fill-opacity:.82}
+.em-scelta-plate.is-accept text{fill:var(--em-sc-ink)}
+.em-scelta-plate.is-refuse text{fill:#f0d8a4}
+.em-scelta-plate:hover,.em-scelta-plate:focus-visible{transform:translate(var(--px),var(--py))}
+.em-scelta-plate.is-accept:hover,.em-scelta-plate.is-accept:focus-visible{filter:drop-shadow(0 5px 8px rgba(0,0,0,.65)) drop-shadow(0 0 12px var(--em-sc-acc)) brightness(1.12)}
+.em-scelta-plate.is-refuse:hover,.em-scelta-plate.is-refuse:focus-visible{filter:drop-shadow(0 5px 8px rgba(0,0,0,.65)) drop-shadow(0 0 10px #c9a86a) brightness(1.25)}
+.em-scelta-plate:focus-visible .em-scelta-plate-body{stroke:#fff;stroke-width:3.4}
+.em-scelta-plate:active{transform:scale(.985)}
+.em-scelta-plate.is-disabled{cursor:not-allowed;filter:grayscale(.8) brightness(.55);transform:none !important}
+
+/* guardare il campo senza rispondere */
+.em-scelta-peek{
+  /* `translate`, non `transform`: lo stile globale dei pulsanti premuti cambia `transform` e lo sposterebbe da sotto il dito */
+  position:absolute;translate:-50% 0;transform:none !important;pointer-events:auto;cursor:pointer;
+  padding:9px 22px;font:700 13px/1 'Chakra Petch','Segoe UI',sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  color:#f3d79a;background:rgba(12,8,8,.92);border:1.5px solid #f3d79a;clip-path:polygon(5% 0,100% 0,95% 100%,0 100%);
+  opacity:0;transition:opacity .3s ease,top .5s cubic-bezier(.2,.8,.2,1),background .15s ease,color .15s ease;
+}
+.em-scelta.is-open .em-scelta-peek,.em-scelta.is-peek .em-scelta-peek{opacity:1}
+.em-scelta-peek:hover,.em-scelta-peek:focus-visible{background:#f3d79a;color:#120806;outline:none}
+
+@media (prefers-reduced-motion:reduce){
+  .em-scelta-oval,.em-scelta-dim,.em-scelta-body,.em-scelta-art,.em-scelta-answers,.em-scelta-peek,.em-scelta-plate{transition:none !important}
+  .em-scelta.is-peek .em-scelta-oval{animation:none}
+  .em-scelta-runes animateMotion{display:none}
+}

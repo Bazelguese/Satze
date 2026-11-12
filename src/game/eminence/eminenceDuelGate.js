@@ -1129,7 +1129,7 @@ function attachPersistentSlotCurses(bundle, matchState, slot) {
  * segmento condizionale dipende dall'esito; ometterlo fa fallire rumorosamente
  * quelle condizioni, non le tratta come false.
  *
- * @returns {{ matchState: object, bundle: object|null, notices: object[] }}
+ * @returns {{ matchState: object, bundle: object|null, notices: object[], stakeOutcomes?: object[] }}
  */
 export function settleEminenceRound(matchState, {
   initiativeSide = SIDES.PLAYER,
@@ -1195,6 +1195,7 @@ export function settleEminenceRound(matchState, {
   return {
     matchState: recordDuelOutcome(applied.matchState, winner, agentIdBySide),
     bundle,
+    stakeOutcomes: stakeOutcomesOf(collected.queue, collected.skipped),
     notices: [
       ...noticesFromAppliedEffects(collected.matchState, queue, {
         skipped: collected.skipped,
@@ -1202,6 +1203,20 @@ export function settleEminenceRound(matchState, {
       ...applied.notices,
     ],
   };
+}
+
+/**
+ * Esito delle condizioni di fine Duello delle abilità (non degli Statici): scattata o no.
+ * Serve all'interfaccia per chiudere le «condizioni in sospeso» mostrate durante il round.
+ */
+function stakeOutcomesOf(queue = [], skipped = []) {
+  const pick = (hit) => (entry) => (
+    !entry?.isStatic && entry?.abilityId && entry.segment?.condition
+      && entry.timing === EFFECT_TIMINGS.AFTER_DUEL_OUTCOME
+      ? [{ side: entry.ownerSide, abilityId: entry.abilityId, condition: entry.segment.condition, hit }]
+      : []
+  );
+  return [...queue.flatMap(pick(true)), ...skipped.flatMap(pick(false))];
 }
 
 /**

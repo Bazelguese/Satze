@@ -58,12 +58,14 @@ export function applyInversionFieldFinalization(state, fieldStatDeltas, battleLo
  * Gli FC non sono modificatori e restano fuori dal conto (entrano nel VA più avanti).
  * Un lato Immune ignora le riduzioni prodotte dall'inversione.
  */
+const STAT_LABELS = { power: 'POT', damage: 'DAN', assault: 'VA' };
+
 export function applySlotStatInversion(state, { pAgent, eAgent } = {}, battleLog = []) {
   if (!state?.fullStatInversion) return false;
   let changed = false;
   const sides = [
-    { agent: pAgent, immune: state.pImmune, label: 'TU', keys: { power: 'pPower', damage: 'pDamage', assault: 'pAssaultMod' } },
-    { agent: eAgent, immune: state.eImmune, label: 'IA', keys: { power: 'ePower', damage: 'eDamage', assault: 'eAssaultMod' } },
+    { agent: pAgent, side: 'player', immune: state.pImmune, label: 'TU', keys: { power: 'pPower', damage: 'pDamage', assault: 'pAssaultMod' } },
+    { agent: eAgent, side: 'enemy', immune: state.eImmune, label: 'IA', keys: { power: 'ePower', damage: 'eDamage', assault: 'eAssaultMod' } },
   ];
   for (const side of sides) {
     const bases = {
@@ -75,8 +77,17 @@ export function applySlotStatInversion(state, { pAgent, eAgent } = {}, battleLog
       const current = state[key];
       let inverted = 2 * bases[stat] - current;
       if (stat === 'damage') inverted = Math.max(0, inverted);
-      if (side.immune && inverted < current) continue;
       if (inverted === current) continue;
+      // Registro per l'interfaccia: il netto di ogni statistica prima e dopo l'inversione.
+      // Un lato Immune tiene la riduzione fuori: la voce resta, senza cambio di segno.
+      const spared = side.immune && inverted < current;
+      (state.statInversions ||= []).push({
+        side: side.side,
+        stat: STAT_LABELS[stat],
+        from: current - bases[stat],
+        to: (spared ? current : inverted) - bases[stat],
+      });
+      if (spared) continue;
       state[key] = inverted;
       battleLog.push?.(`🔄 Maledizione Inversa: ${side.label} ${stat.toUpperCase()} ${current} → ${inverted}`);
       changed = true;

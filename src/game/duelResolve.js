@@ -1074,6 +1074,8 @@ export function computeDuelResolution({
       previousBonus: { player: Boolean(finalPHasBonus && pHasBonus && !pBonusBlocked), enemy: Boolean(finalEHasBonus && eHasBonus && !eBonusBlocked) }} : {}),
       eminenceTriggerRules: eminenceBundle?.triggerRules || null,
       fieldDestroyed: conquestOverride.destroyField,
+      // Maledizione Inversa: netto di ogni statistica prima e dopo, per l'animazione dedicata.
+      statInversions: state.statInversions || [],
       skipConquest: conquestOverride.suppressConquest || conquestOverride.destroyField,
       playerActivationSatisfied: readActivationSatisfied(
         pAgent,

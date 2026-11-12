@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { queryFlightAnchor } from './eminenceMarkCinematic.js';
 import { EFFECT_FX_KINDS } from './eminenceEffectFx.js';
 import { createEffectRun, EFFECT_FX_DURATION_MS } from './effectFxEngine.js';
+import { createAbilityScene } from './abilityScenes.js';
 
 const ANCHOR_TRIES = 24;
 /** Oltre questa densità di pixel il canvas a tutto schermo costa più di quanto renda. */
@@ -63,9 +64,61 @@ export function measureEffectFx(plan) {
   };
 }
 
+const other = (side) => (side === 'enemy' ? 'player' : 'enemy');
+
+/**
+ * Geometria di una scena dedicata, in unità di scena (1600 di larghezza): i riquadri veri
+ * del tavolo per ruolo. Quello che non è in vista (Agente non ancora schierato, lista dei
+ * Campi nascosta nel Duello) ripiega su una posizione attorno al portale.
+ * @param {{ side: string, plateSide?: string, handSide?: string, cardId?: number|string, slotIndex?: number }} spec
+ * @returns {null|{ g: object, k: number, left: number, top: number }}
+ */
+export function measureAbilityScene(spec) {
+  const scene = typeof document !== 'undefined' ? document.querySelector('.satze-scene') : null;
+  const sr = scene?.getBoundingClientRect();
+  if (!sr?.width) return null;
+  const k = sr.width / 1600;
+  const box = (el) => {
+    const r = el?.getBoundingClientRect();
+    return r?.width > 2 ? [(r.left - sr.left) / k, (r.top - sr.top) / k, r.width / k, r.height / k] : null;
+  };
+  const h = sr.height / k;
+  const portal = box([...scene.querySelectorAll('.satze-bf-portal')].find((el) => el.getBoundingClientRect().width > 4));
+  const port = portal ? [portal[0] + portal[2] / 2, portal[1] + portal[3] / 2] : [800, h * 0.458];
+  const agent = (side) => {
+    const zone = scene.querySelector(`[data-field-agent="${side}"]`);
+    return box(scene.querySelector(`[data-duel-card="${side}"]`) || zone?.querySelector('.place-card') || zone)
+      || [port[0] + (side === 'player' ? 121 : -313), port[1] - 89, 192, 281];
+  };
+  const plate = box(scene.querySelector(`.satze-stats-panel--${spec.plateSide || spec.side}`))
+    || (spec.side === 'player' ? [1430, h - 55, 155, 42] : [15, 15, 155, 42]);
+  const annBox = box(document.querySelector(`[data-em-announce="${spec.side}"]`));
+  const hand = [...scene.querySelectorAll(`[data-hand-side="${spec.handSide || other(spec.side)}"]`)].map(box).filter(Boolean);
+  const own = agent(spec.side);
+  return {
+    k,
+    left: sr.left,
+    top: sr.top,
+    g: {
+      h,
+      pad: 600,
+      own,
+      foe: agent(other(spec.side)),
+      port,
+      // nel Duello la lista dei Campi non c'è: la riga ripiega sul portale, che porta il nome del Campo
+      slot: box(spec.slotIndex == null ? null : scene.querySelector(`[data-field-slot="${spec.slotIndex}"]`)) || [port[0] - 150, port[1] - 22, 300, 44],
+      plate,
+      ann: annBox ? [annBox[0] + annBox[2] / 2, annBox[1] + annBox[3] / 2] : [plate[0] + plate[2] / 2, plate[1] + plate[3] / 2],
+      hand,
+      card: box(spec.cardId == null ? null : scene.querySelector(`[data-hand-agent="${spec.cardId}"]`)) || hand[Math.floor(hand.length / 2)] || own,
+    },
+  };
+}
+
 /**
  * Effetti d'attivazione delle Eminenze: un canvas a tutta finestra, disegnato solo mentre
- * c'è un effetto in corso. `play(plans)` accetta i piani di `planEffectFx`; `layer` va reso
+ * c'è un effetto in corso. `play(plans)` accetta i piani di `planEffectFx`, `playScene(id, spec)`
+ * avvia la scena dedicata di un'abilità maggiore; `layer` va reso
  * una volta nella scena. Le ancore possono comparire qualche fotogramma dopo l'avviso:
  * si riprova per poco, poi si rinuncia.
  */
@@ -75,6 +128,7 @@ export function useEminenceEffectFx({ zIndex = 400 } = {}) {
   const rafRef = useRef(0);
   const retryRef = useRef(new Set());
   const seedRef = useRef(1);
+  const sceneTimerRef = useRef(0);
 
   const frame = useCallback(() => {
     rafRef.current = 0;
@@ -92,8 +146,15 @@ export function useEminenceEffectFx({ zIndex = 400 } = {}) {
     ctx.clearRect(0, 0, w, h);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     const now = performance.now();
-    runsRef.current = runsRef.current.filter((entry) => now - entry.t0 < EFFECT_FX_DURATION_MS);
-    runsRef.current.forEach((entry) => entry.run.draw(ctx, now - entry.t0));
+    runsRef.current = runsRef.current.filter((entry) => now - entry.t0 < (entry.duration || EFFECT_FX_DURATION_MS));
+    runsRef.current.forEach((entry) => {
+      if (!entry.xf) { entry.run.draw(ctx, now - entry.t0); return; }
+      // scena dedicata: disegnata in unità di scena, agganciata al riquadro del tavolo
+      ctx.save();
+      ctx.setTransform(ratio * entry.xf.k, 0, 0, ratio * entry.xf.k, entry.xf.left * ratio, entry.xf.top * ratio);
+      entry.run.draw(ctx, now - entry.t0);
+      ctx.restore();
+    });
     if (runsRef.current.length) rafRef.current = window.requestAnimationFrame(frame);
   }, []);
 
@@ -101,6 +162,8 @@ export function useEminenceEffectFx({ zIndex = 400 } = {}) {
     window.cancelAnimationFrame(rafRef.current);
     retryRef.current.forEach((id) => window.cancelAnimationFrame(id));
     retryRef.current.clear();
+    window.clearTimeout(sceneTimerRef.current);
+    document.querySelector('.satze-scene')?.classList.remove('em-scene-play');
     runsRef.current = [];
   }, []);
 
@@ -133,9 +196,28 @@ export function useEminenceEffectFx({ zIndex = 400 } = {}) {
     });
   }, [frame]);
 
+  /** Scena dedicata di un'abilità maggiore (abilityScenes.js): una alla volta. */
+  const playScene = useCallback((id, spec = {}) => {
+    if (reducedMotion() || typeof window === 'undefined') return false;
+    const measured = measureAbilityScene(spec);
+    if (!measured) return false;
+    seedRef.current += 1;
+    const run = createAbilityScene(id, { g: measured.g, data: spec.data || {}, seed: seedRef.current });
+    if (!run) return false;
+    runsRef.current = runsRef.current.filter((entry) => !entry.xf);
+    runsRef.current.push({ t0: performance.now(), duration: run.duration, run, xf: { k: measured.k, left: measured.left, top: measured.top } });
+    // durante la scena il tavolo torna in vista (l'avviso lo terrebbe velato): ci pensa la scena a scurirlo
+    const table = document.querySelector('.satze-scene');
+    table?.classList.add('em-scene-play');
+    window.clearTimeout(sceneTimerRef.current);
+    sceneTimerRef.current = window.setTimeout(() => table?.classList.remove('em-scene-play'), run.duration + 120);
+    if (!rafRef.current) rafRef.current = window.requestAnimationFrame(frame);
+    return true;
+  }, [frame]);
+
   const layer = typeof document !== 'undefined'
     ? createPortal(<canvas ref={canvasRef} className="em-efx-canvas" style={{ ...LAYER_STYLE, zIndex }} aria-hidden />, document.body)
     : null;
 
-  return { play, layer };
+  return { play, playScene, layer };
 }
