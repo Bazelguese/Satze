@@ -86,8 +86,17 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     const initiativeSide = isPlayerFirst ? 'player' : 'enemy';
     const leagueByCardId = collectRoundLeagueByCardId(eminenceMatchState);
     const deployedIsLowestLeagueBySide = {
-      player: isLowestEffectiveLeague(pAgent, playerHand, leagueByCardId),
-      enemy: isLowestEffectiveLeague(eAgent, enemyHand, leagueByCardId),
+      // Male Crescente confronta l'Agente schierato con quelli non ancora usati.
+      player: isLowestEffectiveLeague(
+        pAgent,
+        (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)),
+        leagueByCardId,
+      ),
+      enemy: isLowestEffectiveLeague(
+        eAgent,
+        (enemyHand || []).filter((card) => !enemyUsedCards.includes(card.id)),
+        leagueByCardId,
+      ),
     };
     const prepared = prepareEminenceDuel(eminenceMatchState, {
       initiativeSide,
@@ -198,8 +207,9 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
     setEnemyHP(result.finalEnemyHP);
     setPlayerFocus(result.finalPlayerFC);
     setEnemyFocus(result.finalEnemyFC);
-    setPlayerUsedCards((prev) => [...prev, pAgent.id]);
-    setEnemyUsedCards((prev) => [...prev, eAgent.id]);
+    // Un Agente riusato (Vendetta oltre la Morte) è già fra le carte usate.
+    setPlayerUsedCards((prev) => (prev.includes(pAgent.id) ? prev : [...prev, pAgent.id]));
+    setEnemyUsedCards((prev) => (prev.includes(eAgent.id) ? prev : [...prev, eAgent.id]));
     setLastWinner(result.winner);
     setBattleResult({
       ...result,

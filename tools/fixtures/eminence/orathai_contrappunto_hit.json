@@ -3,7 +3,7 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "orathai_primo_canto",
-    "presence": 3,
+    "presence": 1,
     "abilityId": "orathai_contrappunto",
     "params": null,
     "agent": {
@@ -11,7 +11,7 @@
       "league": 4,
       "power": 3,
       "damage": 2,
-      "trigger": "imboscata",
+      "trigger": "rimonta",
       "focusInvested": 2,
       "anchored": false
     },
@@ -28,27 +28,27 @@
       "league": 4,
       "power": 5,
       "damage": 3,
-      "trigger": "intervention",
+      "trigger": "glory",
       "focusInvested": 3,
       "anchored": false
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
-      "player": true,
+      "player": false,
       "enemy": true
     },
     "activatedTriggerBySide": {
-      "player": "imboscata",
-      "enemy": "intervention"
+      "player": null,
+      "enemy": "glory"
     },
     "aliasUsedBySide": {
       "player": false,
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,

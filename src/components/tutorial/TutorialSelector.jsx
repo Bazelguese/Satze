@@ -3,11 +3,14 @@
 // ============================================================
 // Menù a comparsa in stile Persona: tre percorsi affiancati.
 // Tastiera: ←→ percorso, Invio avvia, Esc chiude.
+// Uscita come "Imposta la partita": la lastra vola via, poi si chiude o si
+// avvia il percorso scelto.
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
 import { useScreenActiveRef } from '../screenCache/ScreenCache.jsx';
 import { playUiClick } from '../../audio/soundBus';
+import { useLeaveThen } from '../../hooks/usePresence';
 
 /** Stesso colore della voce TUTORIAL del menù. */
 export const TUTORIAL_ACCENT = '#d946ef';
@@ -19,8 +22,12 @@ export function TutorialSelector({ isOpen, onClose, onSelect, tracks, wasIntroCo
 
 function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted }) {
   const [active, setActive] = useState(0);
+  // azione da eseguire a uscita finita: chiudere o avviare un percorso
+  const [leaving, leaveThen] = useLeaveThen((action) => action(), 320);
+  const close = () => leaveThen(() => onClose?.());
+  const select = (id) => leaveThen(() => onSelect?.(id));
   const ref = useRef({});
-  ref.current = { active, tracks, onClose, onSelect };
+  ref.current = { active, tracks, leaving, close, select };
   const screenActiveRef = useScreenActiveRef();
 
   useEffect(() => {
@@ -30,7 +37,8 @@ function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted })
       // il menù sotto non deve sentire questi tasti
       e.stopImmediatePropagation();
       const k = ref.current;
-      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.onClose(); return; }
+      if (k.leaving) { e.preventDefault(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.close(); return; }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         playUiClick();
@@ -38,7 +46,7 @@ function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted })
         setActive((a) => (a + d + k.tracks.length) % k.tracks.length);
         return;
       }
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playUiClick(); k.onSelect(k.tracks[k.active].id); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playUiClick(); k.select(k.tracks[k.active].id); }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
@@ -47,14 +55,14 @@ function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted })
   const cur = tracks[active];
 
   return (
-    <div className="tts" style={{ '--accent': TUTORIAL_ACCENT }} onClick={onClose}>
+    <div className={`tts${leaving ? ' is-leaving' : ''}`} style={{ '--accent': TUTORIAL_ACCENT }} onClick={close}>
       <div className="tts-card" role="dialog" aria-modal="true" aria-label="Scegli il percorso tutorial" onClick={(e) => e.stopPropagation()}>
         <div className="tts-sheet">
           <header className="tts-head">
             <span className="tts-eye">GUIDA</span>
             <h2>TUTORIAL</h2>
             <span className="tts-note">PUOI RIPETERLI QUANDO VUOI DAL MENÙ</span>
-            <button type="button" className="tts-x" onClick={onClose} aria-label="Chiudi scelta tutorial">
+            <button type="button" className="tts-x" onClick={close} aria-label="Chiudi scelta tutorial">
               <kbd>ESC</kbd><span>CHIUDI</span>
             </button>
           </header>
@@ -72,7 +80,7 @@ function TutorialSelectorPanel({ onClose, onSelect, tracks, wasIntroCompleted })
                   aria-pressed={on}
                   onMouseMove={(e) => { if ((e.movementX || e.movementY) && !on) setActive(i); }}
                   onFocus={() => setActive(i)}
-                  onClick={() => { playUiClick(); onSelect(t.id); }}
+                  onClick={() => { if (leaving) return; playUiClick(); select(t.id); }}
                 >
                   <span className="tts-track-shadow" aria-hidden="true" />
                   <span className="tts-track-plate">
@@ -128,6 +136,10 @@ function TutorialSelectorStyles() {
       }
       .tts-card { width: 1500px; transform: rotate(-1.2deg); filter: drop-shadow(16px 16px 0 var(--accent)); animation: tts-in .34s cubic-bezier(.2,1.2,.4,1) both; }
       @keyframes tts-in { from { opacity: 0; transform: rotate(-1.2deg) translateY(60px) skewX(-6deg); } }
+      .tts.is-leaving { animation: tts-out-bg .32s ease forwards; }
+      .tts.is-leaving .tts-card { animation: tts-out .3s cubic-bezier(.6,0,.9,.4) forwards; }
+      @keyframes tts-out { to { opacity: 0; transform: rotate(4deg) translate(140px, -220px) skewX(-10deg) scale(.9); } }
+      @keyframes tts-out-bg { to { opacity: 0; } }
       .tts-sheet { position: relative; display: flex; flex-direction: column; background: var(--void); clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%); }
       .tts-sheet::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--accent); }
 

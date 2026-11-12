@@ -17,6 +17,56 @@ export const EMINENZA_DEFAULTS = {
 };
 
 /**
+ * Due stili d'ingresso della carta Eminenza, entrambi per armata:
+ * - `campo`: il gesto storico (CSS, breve) che riprende la rivelazione del Campo dell'armata;
+ * - `agenti`: l'effetto con cui entrano in campo gli Agenti dell'armata (WebGL, vedi fx/effects).
+ *   Si vede alla prima comparsa nello Scontro; le riaperture successive usano il gesto `campo`.
+ */
+export const EMINENCE_ENTRY_STYLES = Object.freeze({ CAMPO: 'campo', AGENTI: 'agenti' });
+
+/** Stile usato dalle Eminenze che non hanno una scelta propria qui sotto. */
+export const EMINENCE_ENTRY_STYLE_DEFAULT = EMINENCE_ENTRY_STYLES.AGENTI;
+
+/**
+ * Scelta per singola Eminenza (id del catalogo → stile).
+ * Esempio: `khemet_maledizioni: 'campo'` tiene il vecchio ingresso per Khemet.
+ */
+export const EMINENCE_ENTRY_STYLE_BY_ID = Object.freeze({
+  apex_sole_verde: 'campo',
+  patto_grande_semaforo: 'campo',
+  mascarada_organizzatore: 'campo',
+  kethran_altare: 'campo',
+  khemet_maledizioni: 'campo',
+  figli_domanda_senza_fine: 'campo',
+  enclave_ascensione: 'campo',
+  calibri_quattro_fronti: 'campo',
+});
+
+/**
+ * Gesto `campo` su misura per una singola Eminenza, al posto di quello della sua armata.
+ * Si vede alla prima comparsa nello Scontro; le riaperture usano il gesto breve d'armata.
+ * `slug` → classi `em-arm-<slug>` / `em-fx-<slug>` in em-card-armate.css; `dur` in secondi.
+ */
+export const EMINENCE_ENTRY_GESTURE_BY_ID = Object.freeze({
+  apex_sole_verde: { slug: 'soleverde', dur: 1.7 },
+  patto_grande_semaforo: { slug: 'semaforo', dur: 1.9 },
+});
+
+/** Gesto su misura dell'Eminenza, o null se usa quello della sua armata. */
+export function resolveEminenceEntryGesture(eminenceId) {
+  return (eminenceId && EMINENCE_ENTRY_GESTURE_BY_ID[eminenceId]) || null;
+}
+
+const ENTRY_STYLE_VALUES = new Set(Object.values(EMINENCE_ENTRY_STYLES));
+
+/** Stile d'ingresso di un'Eminenza: `override` valido > scelta per id > default. */
+export function resolveEminenceEntryStyle(eminenceId, override = null) {
+  if (ENTRY_STYLE_VALUES.has(override)) return override;
+  const own = eminenceId ? EMINENCE_ENTRY_STYLE_BY_ID[eminenceId] : null;
+  return ENTRY_STYLE_VALUES.has(own) ? own : EMINENCE_ENTRY_STYLE_DEFAULT;
+}
+
+/**
  * Ogni armata entra come entra il suo campo.
  * Include sia slug brevi (pacchetto DS) sia nomi canonici del catalogo.
  */
@@ -118,6 +168,15 @@ function makeLiteCardPiece(card) {
 
 function fillEffectLayer(fx, slug, card) {
   fx.innerHTML = '';
+  if (slug === 'semaforo') {
+    // tre luci, accese in ordine rosso → giallo → verde, sopra quelle dell'illustrazione
+    for (const lamp of ['r', 'y', 'g']) {
+      const el = document.createElement('i');
+      el.className = `em-lamp em-lamp-${lamp}`;
+      fx.appendChild(el);
+    }
+    return;
+  }
   if (!card || (slug !== 'kethran' && slug !== 'khemet')) return;
 
   if (slug === 'kethran') {
@@ -316,7 +375,7 @@ export function useEminenzaEntry(opts = {}) {
       return dur * 1000;
     }
 
-    const slug = resolveArmyEntrySlug(merged.army);
+    const slug = merged.slug || resolveArmyEntrySlug(merged.army);
     const nextCardClass = `em-arm em-arm-${slug}`;
     const nextFxClass = `em-fx-${slug}`;
     setCardArmClass(nextCardClass);

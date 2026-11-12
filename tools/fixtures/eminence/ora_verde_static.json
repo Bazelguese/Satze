@@ -3,8 +3,8 @@
   "initiativeSide": "player",
   "player": {
     "eminenceId": "apex_sole_verde",
-    "presence": 3,
-    "abilityId": "apex_furia",
+    "presence": 1,
+    "abilityId": "apex_cielo_smeraldino",
     "params": null,
     "agent": {
       "cardId": 231,

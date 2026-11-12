@@ -4,7 +4,7 @@
     "name": "Maschere Invertite",
     "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
+    "text": "In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -27,6 +27,10 @@
   "choice": {
     "alwaysLegalOption": true,
     "legalAbilities": [
+      {
+        "id": "mascarada_vendere_il_colpo",
+        "presenceDelta": 1
+      },
       {
         "id": "mascarada_scommessa",
         "presenceDelta": 0
@@ -85,7 +89,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -2,
       "side": "player",
-      "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
+      "text": "In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa."
     }
   ],
   "scenario": {
@@ -186,7 +190,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -2,
           "side": "player",
-          "text": "In questo Duello, Gloria può essere soddisfatta anche come Vendetta e viceversa; Conquista può essere soddisfatta anche come Ultimo Desiderio e viceversa."
+          "text": "In questo Duello, per il tuo Agente, Gloria può essere soddisfatta anche come Vendetta e viceversa, e Conquista anche come Ultimo Desiderio e viceversa."
         }
       ],
       "presence": {
@@ -219,6 +223,22 @@
         "player": 0
       },
       "segments": [
+        {
+          "condition": {
+            "detail": "activatedPowerTriggers: (assente) → non ancora valutabile",
+            "keys": [
+              "activatedPowerTriggers"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mascarada_ordine_incontri",
+          "sourceName": "Organizzazione Impeccabile",
+          "target": "SELF",
+          "timing": "AFTER_DUEL_OUTCOME"
+        },
         {
           "condition": {
             "detail": null,

@@ -4,7 +4,7 @@
     "name": "Protocollo Terra Bruciata",
     "presenceDelta": -4,
     "revealGate": "GENERAL",
-    "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
+    "text": "Se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -28,11 +28,15 @@
     "alwaysLegalOption": true,
     "legalAbilities": [
       {
-        "id": "calibri_guerra_attrito",
-        "presenceDelta": 0
+        "id": "calibri_fermo_macchine",
+        "presenceDelta": 1
       },
       {
-        "id": "calibri_contenimento",
+        "id": "calibri_guerra_attrito",
+        "presenceDelta": -1
+      },
+      {
+        "id": "calibri_logoramento",
         "presenceDelta": -2
       },
       {
@@ -85,7 +89,7 @@
       "phaseLabel": "Rivelazione",
       "presenceDelta": -4,
       "side": "player",
-      "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
+      "text": "Se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale."
     }
   ],
   "scenario": {
@@ -178,7 +182,7 @@
           "phaseLabel": "Rivelazione",
           "presenceDelta": -4,
           "side": "player",
-          "text": "Se perdi il Duello, immediatamente dopo la determinazione del vincitore e prima della finestra Conquista, distruggi il Campo corrente. Nessun giocatore lo conquista e nessun effetto Conquista si attiva in questo Duello. Il normale DAN della vittoria e gli effetti non-Conquista proseguono normalmente."
+          "text": "Se perdi il Duello, il Campo corrente viene distrutto: nessun giocatore lo conquista e nessun effetto Conquista si attiva. Il DAN della vittoria viene inflitto normalmente. Un Campo distrutto non conta per nessuno ai fini della vittoria territoriale."
         }
       ],
       "presence": {
@@ -215,6 +219,7 @@
           "condition": {
             "detail": "enemyFinalDamage: (assente) → non ancora valutabile",
             "keys": [
+              "duelWinnerRelative",
               "enemyFinalDamage"
             ],
             "status": "deferred"

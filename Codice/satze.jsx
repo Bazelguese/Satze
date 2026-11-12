@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import { formatAbilityHelper, generateFieldParticles, FIELD_STYLES } from '../src/utils';
 import { FocusCoinSelector, LogPanel, StatsPanel, Icon } from '../src/components/ui';
 import { CardReworkP4AsHtml, CardImage, Hand, GameCard } from '../src/components/cards';
+import { MultiSeatWaitingQueue, playMultiSeatArrival, readMultiSeatRects } from '../src/components/battle/MultiSeatWaitingQueue.jsx';
 import { CardBack } from '../src/components/cards/CardBack';
 import { CardFlightLayer, rectToFlightPoint, useCardFlights } from '../src/components/cards/CardFlight.jsx';
 import { applyPlaceHandoff, prefersReducedMotion, CLICK_FLIGHT_MS, DROP_IMPACT_MS } from '../src/components/battle/placeHandoff.js';
@@ -41,7 +42,8 @@ import {
   DUEL_R5_VICTORY_FLIP_MS,
 } from '../src/components/battle/DuelCinematicOverlays';
 import { DuelDialogueOverlay } from '../src/components/dialogue/DuelDialogueOverlay';
-import { ClaimVictoryPopup, OpponentClaimPendingPopup } from '../src/components/battle/ClaimVictoryPopup';
+import { ClaimVictoryPopup, OpponentClaimPendingPopup, CLAIM_EXIT_MS } from '../src/components/battle/ClaimVictoryPopup';
+import { usePresence } from '../src/hooks/usePresence';
 import { ARMY_COLORS, ARMY_BONUSES, TRIGGER_NAMES, TRIGGER_DESCRIPTIONS, getAbilityExplanation, ARMY_SETS, ARMY_DECKS, ALL_AGENTS, ALL_BATTLEFIELDS, CARD_IMAGES, AGENT_IMAGES, getBattlefieldAnimationType, ARMY_ICONS } from '../src/data';
 import { ACT as CAMPAIGN_ACT } from '../src/campaign/data/atto1.js';
 import { buildDuelConfig as buildCampaignDuelConfig, restartCampaignEncounter } from '../src/campaign/logic/missionAdapter.js';
@@ -58,10 +60,11 @@ import {
 
 import { countAttritionPriorCards, countInitialLeagueCards, battleOutcomeKey } from '../src/game/duel/duelHelpers.js';
 import { resolveRoundInitiative } from '../src/game/duel/resolveRoundInitiative.js';
-import { needsEminenceRoundOpen, openEminenceRound, autoSelectFirstLegalAbility, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, autoResponseForPendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
+import { needsEminenceRoundOpen, openEminenceRound, advanceToNextRevealGate, autoCommitEminenceSetup, commitEminenceSetupChoice, resolvePendingDeal, isEminenceSetupPending } from '../src/game/eminence/eminenceDuelGate.js';
 import { selectEminenceAbility, areSelectionsComplete, getNextGate, setEminenceAbilityParams } from '../src/game/eminence/eminenceRound.js';
 import { EMINENCE_ONLINE_MESSAGES, choiceMessage as eminenceChoiceMessage, setupMessage as eminenceSetupMessage, dealMessage as eminenceDealMessage, applyRemoteChoice, applyRemoteSetup, dealNeedsRemoteResponse, forcedDealResponse } from '../src/game/eminence/eminenceOnline.js';
 import { settleEminenceMatch } from '../src/game/eminence/eminenceDuelGate.js';
+import { chooseAiEminenceSelection, chooseAiDealResponse, orderSetupPreyCandidates } from '../src/game/ai/eminence/aiEminenceChoice.js';
 import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/eminence/eminenceDuelBinding.js';
 import { getEminenceAbility } from '../src/data/eminences.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
@@ -71,7 +74,7 @@ import {
   getEminenceAnnounceHoldMs,
   getEminenceSparkNoticeGapMs,
 } from '../src/utils/eminenceSystemPreference.js';
-import { isEminenceSubsystemEnabled } from '../src/game/eminence/eminenceState.js';
+import { isEminenceSubsystemEnabled, filterDeployableCardIds } from '../src/game/eminence/eminenceState.js';
 import { waitForFieldAgentEntrance } from '../src/components/eminence/eminenceMarkCinematic.js';
 import { stampComposeParams } from '../src/game/eminence/composeAbilityParams.js';
 import { mergeSlotCurseCounts } from '../src/game/eminence/slotCurses.js';
@@ -102,6 +105,8 @@ import { EminenzaZone } from '../src/components/eminence/EminenzaZone.jsx';
 import { EminenzaTableToggle } from '../src/components/eminence/EminenzaTableToggle.jsx';
 import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence/EminenceMarkFlight.jsx';
 import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
+import { useEminenceEffectFx } from '../src/components/eminence/EminenceEffectFx.jsx';
+import { planEffectFx } from '../src/components/eminence/eminenceEffectFx.js';
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
 import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
@@ -143,6 +148,7 @@ import {
   TUTORIAL_STEPS_DEFAULT_MODE,
   TUTORIAL_TRACKS,
 } from '../src/components/tutorial';
+import { ManualBook } from '../src/manual/ManualBook.jsx';
 import { Glossary } from '../src/components/Glossary';
 import { DIFFICULTY_NAMES } from '../src/utils';
 import { abandonFirstActAttempt, loadCampaignRun, saveCampaignRun } from '../src/campaign/state/persistence';
@@ -183,6 +189,18 @@ import { CosmicDeckBuilderWrapper } from '../src/components/menu/cosmic/CosmicDe
 import { BattlefieldGallery } from '../src/components/gallery/BattlefieldGallery';
 import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAnimations';
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
+import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
+import { SpectatorHud } from '../src/components/tournament/SpectatorHud';
+import { SeriesInterlude } from '../src/components/tournament/SeriesInterlude';
+import {
+  ROUND_NAMES, describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult,
+  convertToAi, getPendingAiMatches, recordAiSeries, recordMatchGameResult, withViewer,
+} from '../src/game/tournament/tournamentLogic.js';
+import {
+  createTournamentForPlayer, loadTournament, saveTournament, resolveTournamentCards,
+  hasGameLog, playAiSeries, playPendingAiSeries, replaySavedAiGame,
+  buildTournamentOnlineMatch, createOnlineTournament, detachToOffline, prepareOpenHumanGames,
+} from '../src/game/tournament/tournamentSetup.js';
 import { GAME_MODES, MATCH_FORMATS } from '../src/data/gameModes';
 import { EMINENCE_FORMAT } from '../src/game/eminence/eminenceConstants.js';
 import { loadCustomDecks, isMixedDeck, resolveDeckCards, getHandAccentColor, getDeckVisualMeta } from '../src/utils/deckManager';
@@ -191,7 +209,9 @@ import { registraPartita, nuovoIdPartita, telemetriaAttiva, svuotaCoda, serveNom
 import { roundDuello, partitaDuello, partitaMultiPosto } from '../src/telemetry/recordPartita.js';
 import NomeGiocatoreModal from '../src/components/playtest/NomeGiocatoreModal.jsx';
 import { getMultiplayerWsUrl } from '../src/config/multiplayerConfig';
-import { resolvePublicAssetUrl } from '../src/utils/preloadAssets';
+import { resolvePublicAssetUrl, preloadBattlefieldImages } from '../src/utils/preloadAssets';
+import { selectBattlefields } from '../src/game/fieldLogic';
+import { useTweenedNumber } from '../src/components/tournament/useTweenedNumber.js';
 import { preloadCardImagesForAgents } from '../src/data/images.js';
 import { getCardSprite } from '../src/utils/cardUtils.js';
 import { getMultiplayerManager } from '../src/utils/multiplayer';
@@ -328,6 +348,7 @@ export default function SatzeGame() {
     isOverDropZone, setIsOverDropZone,
     selectedDeckKey, setSelectedDeckKey,
     aiDifficulty, setAiDifficulty,
+    aiPersonality,
     isMultiplayer, setIsMultiplayer,
     multiplayerSession, setMultiplayerSession,
     campaignLevel, setCampaignLevel,
@@ -397,6 +418,12 @@ export default function SatzeGame() {
   const remoteChoiceByRoundRef = useRef(new Map());
   const openedEminenceGatesRef = useRef(new Set());
   const agentsLockedThisRoundRef = useRef(false);
+  /** Stato pubblico per le scelte Eminenza dell'IA (letto nei callback senza allargarne le dipendenze). */
+  const aiEminenceGameRef = useRef(null);
+  aiEminenceGameRef.current = {
+    playerHand, enemyHand, playerUsedCards, enemyUsedCards, playerHP, enemyHP,
+    conqueredFields, battlefields, roundNumber, isPlayerFirst, playerArmyBonuses, enemyArmyBonuses,
+  };
 
   /**
    * Apertura del round Eminenza.
@@ -429,7 +456,8 @@ export default function SatzeGame() {
     // Il giocatore sceglie dalla rail, anche se resta una sola abilità legale.
     if (aiDifficulty !== 'multiplayer') {
       next = selectConcordiaAbility(next, { hand: enemyHand, usedCards: enemyUsedCards, choosesSecond: isPlayerFirst, roundNumber });
-      next = autoSelectFirstLegalAbility(next, 'enemy', {
+      next = chooseAiEminenceSelection(next, 'enemy', {
+        game: aiEminenceGameRef.current,
         paramContext: {
           // Contesto dal punto di vista giocatore; autoSelect lo ruota per l'IA.
           ownUndeployedCardIds: (playerHand || [])
@@ -484,6 +512,34 @@ export default function SatzeGame() {
   const playerUndeployedCardIds = useMemo(
     () => (playerHand || []).filter((card) => !playerUsedCards.includes(card.id)).map((card) => card.id),
     [playerHand, playerUsedCards],
+  );
+  // Iniziativa del round imposta da un'Eminenza (Corteggiamento): sostituisce quella normale
+  // per questo round; il round successivo riparte dall'alternanza consueta.
+  const roundInitiativeOverride = eminenceMatchState?.roundInitiativeOverride ?? null;
+  useEffect(() => {
+    if (!roundInitiativeOverride) return;
+    setIsPlayerFirst(roundInitiativeOverride === 'player');
+  }, [roundInitiativeOverride, setIsPlayerFirst]);
+
+  // Vincoli Eminenza sugli Agenti schierabili in questo Duello (Caccia, Seduzione…).
+  const playerDeployableCardIds = useMemo(
+    () => filterDeployableCardIds(
+      eminenceMatchState,
+      'player',
+      (playerHand || []).map((card) => card.id),
+      playerUsedCards,
+    ),
+    [eminenceMatchState, playerHand, playerUsedCards],
+  );
+  const playerLockedCardIds = useMemo(
+    () => playerUndeployedCardIds.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUndeployedCardIds, playerDeployableCardIds],
+  );
+  // Carte usate ma di nuovo schierabili in questo Duello (Vendetta oltre la Morte): per la
+  // mano e il trascinamento non contano come usate.
+  const playerHandUsedCards = useMemo(
+    () => playerUsedCards.filter((id) => !playerDeployableCardIds.includes(id)),
+    [playerUsedCards, playerDeployableCardIds],
   );
   const slotCurseCounts = useMemo(
     () => mergeSlotCurseCounts(
@@ -695,6 +751,29 @@ export default function SatzeGame() {
     };
   }), []);
 
+  const NOTICE_EFFECT_FX_DELAY_MS = 950;
+  // Effetti d'attivazione: il piano nasce dalle stesse ricette dell'audio, ma qui servono gli
+  // Agenti già in campo (letti dal DOM) e l'armata di chi ha attivato l'abilità.
+  const eminenceEffectFx = useEminenceEffectFx();
+  const playNoticeEffectFxRef = useRef(null);
+  playNoticeEffectFxRef.current = (notice) => {
+    const owner = notice.side === 'player' ? eminenceChoiceView.self : eminenceChoiceView.opponent;
+    const army = owner?.eminence?.army;
+    if (!army || typeof document === 'undefined') return;
+    const accents = { player: playerIdentityColor, enemy: enemyIdentityColor };
+    const cues = resolveNoticeCinematics(notice, {
+      accents,
+      agentsDeployed: {
+        player: Boolean(document.querySelector('[data-field-agent="player"]')),
+        enemy: Boolean(document.querySelector('[data-field-agent="enemy"]')),
+      },
+    });
+    const plans = planEffectFx(cues, { side: notice.side, army, accent: accents[notice.side], abilityName: notice.name, payoffs: notice.payoffs });
+    // l'avviso entra con un'animazione di circa 0,8 s: l'effetto parte quando è al suo posto,
+    // altrimenti verrebbe misurato a metà strada
+    if (plans.length) window.setTimeout(() => eminenceEffectFx.play(plans), NOTICE_EFFECT_FX_DELAY_MS);
+  };
+
   const runNoticeSparkQueue = useCallback(async () => {
     if (sparkRunnerBusyRef.current) return;
     sparkRunnerBusyRef.current = true;
@@ -711,6 +790,8 @@ export default function SatzeGame() {
         setActiveSparkNoticeId(next.id);
 
         const cancelNoticeAudio = playNoticeAudioPreview(resolveNoticeCinematics(next));
+        // Effetto a tema sul tavolo: sciame dall'avviso e impatto sul bersaglio dell'abilità.
+        playNoticeEffectFxRef.current?.(next);
 
         await waitAnnounceMs(getEminenceAnnounceHoldMs());
         cancelNoticeAudio();
@@ -863,12 +944,14 @@ export default function SatzeGame() {
     if (gamePhase === 'shuffleDeal' || gamePhase === 'duelLoading') return;
     if (aiDifficulty === 'multiplayer') return;
     if (!isEminenceSubsystemEnabled(eminenceMatchState)) return;
-    setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', playerUndeployedCardIds));
+    // Preda iniziale dell'IA: la carta più forte del giocatore.
+    setEminenceMatchState((prev) => autoCommitEminenceSetup(prev, 'enemy', orderSetupPreyCandidates(playerUndeployedCardIds, playerHand)));
   }, [
     gamePhase,
     aiDifficulty,
     eminenceMatchState,
     playerUndeployedCardIds,
+    playerHand,
     setEminenceMatchState,
   ]);
 
@@ -919,7 +1002,8 @@ export default function SatzeGame() {
       ?? getHandAccentColor(enemyHand, ARMY_COLORS, '#D946EF'),
     [enemyHand, enemyDeckVisual?.accent],
   );
-  const outcomeOverlayKind = useDuelOutcomeOverlay(gamePhase, gameResult);
+  // Da spettatore (torneo) l'esito non è né vittoria né sconfitta del giocatore: niente sipario.
+  const outcomeOverlayKind = useDuelOutcomeOverlay(gamePhase, gameResult?.spectate ? null : gameResult);
   /** Sigilli esito: fino a 2 armate del mazzo giocatore (doppia armata). */
   const playerArmySealSrcs = useMemo(() => {
     const armies = playerDeckVisual?.armies?.length
@@ -1051,7 +1135,7 @@ export default function SatzeGame() {
     // Online risponde l'altro giocatore: si aspetta il suo messaggio, salvo le scelte forzate.
     for (const deal of pending.filter((entry) => entry.recipientSide === 'enemy')) {
       let response;
-      if (aiDifficulty !== 'multiplayer') response = autoResponseForPendingDeal(deal, nextMatch);
+      if (aiDifficulty !== 'multiplayer') response = chooseAiDealResponse(deal, nextMatch, aiEminenceGameRef.current);
       else if (!dealNeedsRemoteResponse(deal, nextMatch)) response = forcedDealResponse(deal, nextMatch);
       else if (earlyEminenceDealResponsesRef.current.length) response = earlyEminenceDealResponsesRef.current.shift().response || {};
       else {
@@ -1073,6 +1157,15 @@ export default function SatzeGame() {
     // Affari verso il giocatore: una sola scelta legale Salasso → auto; altrimenti UI.
     const playerDeals = [];
     for (const deal of pending.filter((entry) => entry.recipientSide === 'player')) {
+      if (deal.mode === 'OFFER' && deal.mustAccept && !deal.choices?.length) {
+        // Offerta obbligata senza varianti: nulla da decidere, e l'altro client la risolve da solo.
+        const resolved = resolvePendingDeal(nextMatch, deal, { dealAccepted: true }, { initiativeSide });
+        nextMatch = resolved.matchState;
+        notices = [...notices, ...(resolved.notices || [])];
+        playerHp += readHpDelta(resolved.bundle, 'player');
+        enemyHp += readHpDelta(resolved.bundle, 'enemy');
+        continue;
+      }
       if (deal.mode === 'CHOOSE_ONE') {
         const presence = nextMatch.player?.presence ?? 0;
         const legal = (deal.deals || []).filter((option) => (
@@ -1645,6 +1738,17 @@ export default function SatzeGame() {
   const shownPlayerFC = duelHp.displayFC ? duelHp.displayFC.player : playerFocus;
   const shownEnemyFC = duelHp.displayFC ? duelHp.displayFC.enemy : enemyFocus;
   const shownPlayerToxin = duelHp.displayToxin ? duelHp.displayToxin.player : playerToxin;
+  // Tra una partita e l'altra di una serie PV e FC risalgono contando invece di scattare.
+  /**
+   * Torneo, passaggio alla partita successiva della stessa serie senza lasciare il tavolo:
+   * { roundName, gameNumber, rule, score, stage: 'out'|'in'|'leaving' } (vedi runSeriesInterlude).
+   */
+  const [seriesInterlude, setSeriesInterlude] = useState(null);
+  const seriesRefill = seriesInterlude?.stage === 'in';
+  const hudPlayerHP = useTweenedNumber(shownPlayerHP, seriesRefill);
+  const hudEnemyHP = useTweenedNumber(shownEnemyHP, seriesRefill);
+  const hudPlayerFC = useTweenedNumber(shownPlayerFC, seriesRefill);
+  const hudEnemyFC = useTweenedNumber(shownEnemyFC, seriesRefill);
   const shownEnemyToxin = duelHp.displayToxin ? duelHp.displayToxin.enemy : enemyToxin;
   // Conta scenica delle FC: partenza e atterraggio delle monete, bagliore e Overdrive sulla carta
   const duelStamp = gamePhase === 'result' && battleResult
@@ -1709,7 +1813,33 @@ export default function SatzeGame() {
     const ownerEminenceId = eminenceMatchState?.[pendingDeal.ownerSide]?.eminenceId;
     const ability = ownerEminenceId ? getEminenceAbility(ownerEminenceId, pendingDeal.source) : null;
     const title = ability?.name || 'Affare';
-    if (pendingDeal.mode === 'CHOOSE_ONE') {
+    if (pendingDeal.mode === 'OFFER') {
+      // Offerta della Corte: si accetta (scegliendo la variante, se ce ne sono) o si rifiuta.
+      // Dopo un rifiuto, l'Offerta del round successivo va accettata.
+      const choices = pendingDeal.choices || [];
+      const accept = choices.length
+        ? choices.map((choice, i) => ({
+          key: `offer-${choice}`,
+          label: pendingDeal.choiceLabels?.[choice] || choice,
+          variant: i === choices.length - 1 ? 'primary' : 'secondary',
+          onClick: () => confirmPendingEminenceDeal({ dealAccepted: true, dealChoice: choice }),
+        }))
+        : [{ key: 'offer-accept', label: 'Accetta', variant: 'primary', waiting: true, onClick: () => confirmPendingEminenceDeal({ dealAccepted: true }) }];
+      const isChoice = pendingDeal.kind === 'CHOICE';
+      portalDecision = {
+        kicker: isChoice ? 'Scelta' : 'Offerta',
+        name: title,
+        desc: ability?.text || "Accetti l'Offerta?",
+        options: pendingDeal.mustAccept
+          ? accept
+          : [{ key: 'offer-refuse', label: 'Rifiuta', variant: 'secondary', onClick: () => confirmPendingEminenceDeal({ dealAccepted: false, dealResponse: 'refuse' }) }, ...accept],
+        note: isChoice
+          ? 'Scegli una delle opzioni.'
+          : pendingDeal.mustAccept
+            ? "Hai rifiutato l'Offerta precedente: questa va accettata."
+            : 'Se rifiuti non succede nulla, ma la prossima Offerta andrà accettata.',
+      };
+    } else if (pendingDeal.mode === 'CHOOSE_ONE') {
       const presence = eminenceMatchState?.player?.presence ?? 0;
       const names = ['Primo', 'Secondo'];
       const opts = (pendingDeal.deals || []).slice(0, 2);
@@ -1756,14 +1886,29 @@ export default function SatzeGame() {
   const multiSeatSceneRef = useRef({});
   const multiSeat = useMultiSeatDuel({ gameState, sceneRef: multiSeatSceneRef });
   const isMultiSeat = multiSeat.isActive;
+  /** Torneo: partita tra IA mostrata sul tavolo (turni già giocati dal motore, vedi startSpectate). */
+  const [spectate, setSpectate] = useState(null);
+  const spectateRef = useRef(null);
+  spectateRef.current = spectate;
+  const spectating = Boolean(spectate);
   const multiSeatActiveRef = useRef(false);
-  multiSeatActiveRef.current = isMultiSeat;
+  // Anche da spettatore il tavolo è guidato da fuori: niente IA di base né input del giocatore.
+  multiSeatActiveRef.current = isMultiSeat || spectating;
   const multiSeatDeployRef = useRef(false);
   multiSeatDeployRef.current = multiSeat.acceptsHumanDeploy;
   const multiSeatStageTimerRef = useRef(null);
   const [multiSeatLeftTab, setMultiSeatLeftTab] = useState('table');
   // Mano mostrata in ciascun triangolo (indice in multiSeat.handSeats): 0 = quella in gioco.
   const [multiSeatHandView, setMultiSeatHandView] = useState({ player: 0, enemy: 0 });
+  /**
+   * Multiplayer, dal secondo scontro del turno: come entra l'Agente di ogni lato ('advance' dalla
+   * coda sfocata, 'stay' resta in campo, 'swap' arriva dall'altro lato; null = ingresso normale).
+   */
+  const [multiSeatEntry, setMultiSeatEntry] = useState({ player: null, enemy: null });
+  /** Lati il cui Agente esce di scena dopo «Prossimo duello». */
+  const [multiSeatLeaving, setMultiSeatLeaving] = useState(null);
+  /** Rettangoli delle carte (in campo e prime in coda) al clic di «Prossimo duello». */
+  const multiSeatRectsRef = useRef(null);
   // Lista dei Campi scorrevole (più di 5 Campi): quanti ne restano sotto, per l'indicatore.
   const fieldsScrollRef = useRef(null);
   const [fieldsBelow, setFieldsBelow] = useState(0);
@@ -1833,10 +1978,14 @@ export default function SatzeGame() {
   const multiSeatReconnectRef = useRef(null);
   const multiSeatOnlineRef = useRef(false);
   const startMultiOnlineRef = useRef(null);
+  /** Torneo online: messaggi `tn_*` ed eventi di stanza (vedi blocco «Torneo online»). */
+  const tournamentNetRef = useRef(null);
   /** Coda relay peer_move: un solo messaggio non può essere sovrascritto (field poi agent). */
   const [incomingPeerMoveQueue, setIncomingPeerMoveQueue] = useState([]);
   /** Avversario ha 3 campi (R3–4): attende la sua scelta reclamare / continuare (solo online). */
   const [opponentClaimPending, setOpponentClaimPending] = useState(null);
+  // l'attesa resta in scena per la sua uscita quando l'avversario ha deciso
+  const opponentClaimPresence = usePresence(opponentClaimPending, CLAIM_EXIT_MS);
   const [incomingClaimDecision, setIncomingClaimDecision] = useState(null);
   const forceContinueAfterClaimRef = useRef(false);
   /** Evita doppio advance (double-click / doppio timeout) che ribaltava l'iniziativa. */
@@ -1885,6 +2034,7 @@ export default function SatzeGame() {
           return next;
         });
         // Nel Duello l'unico altro giocatore è l'avversario: come se avesse lasciato la stanza.
+        tournamentNetRef.current?.({ type: '__member_left', slot: msg.slot }, null);
         if (onlineModeRef.current === 'duel') {
           setOnlineOpponentLeft(true);
           setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato la stanza."]);
@@ -1894,6 +2044,7 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'peer_left') {
+        tournamentNetRef.current?.({ type: '__room_closed' }, null);
         clearMpSession();
         setMpOpponentAway(false);
         setMpConnectionLost(false);
@@ -1913,6 +2064,7 @@ export default function SatzeGame() {
         return;
       }
       if (msg.type === 'reconnected') {
+        tournamentNetRef.current?.({ type: '__reconnected' }, null);
         multiSeatReconnectRef.current?.(null);
         setMpConnectionLost(false);
         setMpReconnectError('');
@@ -1950,6 +2102,9 @@ export default function SatzeGame() {
         if (ONLINE_MODES[p.mode]) setOnlineMode(p.mode);
         if (p.players === 3 || p.players === 4) setOnlinePlayers(p.players);
         if (p.difficulty) setOnlineDifficulty(p.difficulty);
+      }
+      if (typeof p.type === 'string' && p.type.startsWith('tn_')) {
+        tournamentNetRef.current?.(p, msg.fromSlot);
       }
       if (typeof p.type === 'string' && p.type.startsWith('ms_')) {
         if (p.type === MULTI_MS.START && p.pkg) startMultiOnlineRef.current?.(p.pkg);
@@ -2328,6 +2483,641 @@ export default function SatzeGame() {
 
   const startStandardGameRef = useRef(startStandardGame);
   startStandardGameRef.current = startStandardGame;
+
+  // ── Torneo (vs IA): tabellone salvato in locale, una partita alla volta ──
+  const [tournament, setTournament] = useState(() => loadTournament());
+  /** Scelta armata/esercito avviata dalla voce TORNEO del menù. */
+  const [tournamentSetup, setTournamentSetup] = useState(false);
+  /** La partita in corso (o appena finita) appartiene al torneo. */
+  const [tournamentGameActive, setTournamentGameActive] = useState(false);
+  /** Esito della partita di torneo ancora da registrare. */
+  const tournamentResultPendingRef = useRef(false);
+
+  const storeTournament = useCallback((next) => {
+    setTournament(next);
+    // Il torneo online vive nella stanza: non prende il posto di quello locale salvato.
+    if (!next?.online) saveTournament(next);
+  }, []);
+  /** Torneo online: azioni del blocco «Torneo online», assegnate più sotto a ogni render. */
+  const tnOnlineRef = useRef({});
+
+  const stopAiThinking = useCallback(() => {
+    aiThinkGenerationRef.current += 1;
+    if (aiAgentThinkTimerRef.current) {
+      clearTimeout(aiAgentThinkTimerRef.current);
+      aiAgentThinkTimerRef.current = null;
+    }
+    aiHasSelectedAgent.current = false;
+    setPlayerConfirmedAwaitingAI(false);
+  }, []);
+
+  /** Partita di torneo in corso sul tavolo: { matchId, gameNumber } (per sapere se la serie continua). */
+  const [tournamentGameInfo, setTournamentGameInfo] = useState(null);
+  /**
+   * Passaggio alla partita successiva della stessa serie, senza lasciare il tavolo: le mani
+   * escono, un cartello dice che partita è e quali carte arrivano, poi la nuova distribuzione.
+   * { roundName, gameNumber, rule, score, stage: 'out'|'in'|'leaving' }
+   */
+
+  const seriesInterludeTimersRef = useRef([]);
+  const seriesInterludeRunRef = useRef(0);
+  const runSeriesInterlude = useCallback((info, launch, fields = null) => {
+    seriesInterludeTimersRef.current.forEach(clearTimeout);
+    seriesInterludeTimersRef.current = [];
+    const run = ++seriesInterludeRunRef.current;
+    const later = (fn, ms) => new Promise((resolve) => {
+      seriesInterludeTimersRef.current.push(setTimeout(() => { fn?.(); resolve(); }, ms));
+    });
+    setSeriesInterlude({ ...info, stage: 'out' });
+    // Mentre le carte escono si caricano gli sfondi dei Campi della partita dopo (qui non c'è
+    // la schermata VS a farlo); se tardano non si aspetta oltre un paio di secondi.
+    const assets = fields?.length
+      ? Promise.race([preloadBattlefieldImages(fields).catch(() => {}), later(null, 2400)])
+      : Promise.resolve();
+    Promise.all([assets, later(null, 850)]).then(() => {
+      if (run !== seriesInterludeRunRef.current) return;
+      setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'in' } : prev));
+      launch();
+      later(() => setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'leaving' } : prev)), 1650);
+      later(() => setSeriesInterlude(null), 2000);
+    });
+  }, []);
+  useEffect(() => () => seriesInterludeTimersRef.current.forEach(clearTimeout), []);
+  const seriesDealOf = (gameNumber) => (gameNumber === 2 ? 'remainder' : 'reshuffle');
+
+  /**
+   * Avvia la prossima partita della serie del giocatore, con le mani decise dal torneo.
+   * `continuation`: si è già sul tavolo (partita successiva della stessa serie).
+   */
+  const playTournamentGame = useCallback(({ continuation = false } = {}) => {
+    if (!tournament) return;
+    // Online le mani le serve l'host; contro un altro giocatore la partita la avvia la sfida.
+    if (tournament.online && tnOnlineRef.current.challenge?.()) return;
+    const stay = continuation === true;
+    // serie che continua: i Campi si scelgono subito, così si precaricano mentre le carte escono
+    const nextFields = stay ? selectBattlefields(tournament.settings?.mode || 'classic', ALL_BATTLEFIELDS) : null;
+    const prepared = tournament.online ? tournament : prepareHumanGame(tournament);
+    const info = describeHumanMatch(prepared);
+    const game = info ? getPendingGame(info.match) : null;
+    if (!game) return;
+    const human = prepared.participants[prepared.humanId];
+    const otherSide = info.side === 'a' ? 'b' : 'a';
+    // Esercito bloccato: se quello salvato è stato modificato nel frattempo, valgono le carte iscritte.
+    const customId = typeof human.deckKey === 'string' && human.deckKey.startsWith('custom_') ? human.deckKey.replace('custom_', '') : null;
+    const currentIds = customId ? loadCustomDecks()[customId]?.cards : ARMY_DECKS[human.army]?.[human.deckKey]?.cards;
+    const sameDeck = Array.isArray(currentIds)
+      && currentIds.length === human.cardIds.length
+      && currentIds.every((id) => human.cardIds.includes(id));
+    if (!prepared.online) storeTournament(prepared);
+    tnOnlineRef.current.markLocalGame?.(prepared.online ? { matchId: info.match.id, gameIndex: info.match.series.games.length - 1, side: info.side, peerSlot: null } : null);
+    stopAiThinking();
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    ai.resetAiSession();
+    multiSeat.cancel();
+    clearCardPreview();
+    setDevDialogueDuelActive(false);
+    if (!prepared.online) setIsMultiplayer(false);
+    setCampaignLevel(null);
+    setSelectedMode(prepared.settings.mode || 'classic');
+    setSelectedArmy(human.army);
+    setSelectedDeckKey(human.deckKey);
+    setVsChosenEnemyArmy(info.opponent.army);
+    const launch = () => {
+    tournamentResultPendingRef.current = true;
+    setTournamentGameActive(true);
+    setTournamentGameInfo({ matchId: info.match.id, gameNumber: info.gameNumber });
+    startStandardGame(
+      human.army,
+      sameDeck ? human.deckKey : human.cardIds,
+      prepared.settings.mode || 'classic',
+      prepared.settings.difficulty || 'medium',
+      ALL_BATTLEFIELDS,
+      info.opponent.army,
+      info.opponent.deckKey,
+      null,
+      {
+        eminenceFormat: prepared.settings.eminenceFormat,
+        // Personalità dell'avversario, fissata alla creazione del torneo.
+        aiPersonality: info.opponent.aiTrait || 'neutral',
+        // serie che continua: nuova distribuzione sul tavolo, senza schermata VS
+        seriesDeal: stay ? seriesDealOf(info.gameNumber) : null,
+        ...(nextFields ? { battlefields: nextFields } : {}),
+        fixedHands: {
+          playerHand: resolveTournamentCards(game.hands[info.side]),
+          enemyHand: resolveTournamentCards(game.hands[otherSide]),
+        },
+      }
+    );
+    };
+    if (stay) {
+      runSeriesInterlude({ roundName: info.roundName, gameNumber: info.gameNumber, rule: info.handRule, score: `${info.humanWins}–${info.opponentWins}` }, launch, nextFields);
+    } else {
+      // cortina sul tabellone, poi il VS: niente stacco netto verso il tavolo
+      runCurtain({ label: info.opponent.deckName, kicker: `${info.roundName.toUpperCase()} · PARTITA ${info.gameNumber}`, accent: ARMY_COLORS[human.army]?.accent }, launch);
+    }
+  }, [runSeriesInterlude, runCurtain, tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
+
+  /** Dal tavolo al tabellone (fine partita o abbandono: la partita non conclusa si rigioca con la stessa mano). */
+  const returnToTournamentHub = useCallback(() => {
+    stopAiThinking();
+    runCurtain({ label: 'TORNEO', kicker: 'TABELLONE', dir: 'back' }, () => {
+      ai.resetAiSession();
+      setVictoryCondFx(null);
+      setShowFinalRoundAnimation(false);
+      tournamentResultPendingRef.current = false;
+      setTournamentGameActive(false);
+      setSpectate(null);
+      tnOnlineRef.current.leaveGame?.();
+      resetToMenu();
+      setGamePhaseRaw('tournamentHub');
+    });
+  }, [runCurtain, stopAiThinking, ai, resetToMenu, setShowFinalRoundAnimation, setGamePhaseRaw]);
+
+  /** Spettatore: i duelli proseguono da soli dopo l'esito (si può spegnere dalla fascia). */
+  const [spectateAuto, setSpectateAuto] = useState(true);
+
+  /** Lavoro in corso sul tabellone (serie tra IA che si stanno giocando): { label }. */
+  const [tournamentBusy, setTournamentBusy] = useState(null);
+
+  /**
+   * Mostra sul tavolo una partita tra IA già giocata: il motore la rigioca identica e ogni
+   * duello entra in scena già risolto, come gli scontri delle modalità a più posti.
+   */
+  const startSpectate = useCallback((t, matchId, gameIndex, onCovered = null, continuation = false) => {
+    const match = getMatch(t, matchId);
+    const saved = match?.series.games[gameIndex];
+    if (!hasGameLog(saved)) return;
+    const { handA, handB, battlefields, game } = replaySavedAiGame(t, saved);
+    const sideA = t.participants[match.a];
+    const sideB = t.participants[match.b];
+    const earlier = match.series.games.slice(0, gameIndex);
+    stopAiThinking();
+    const launch = () => {
+    onCovered?.();
+    setVictoryCondFx(null);
+    setShowFinalRoundAnimation(false);
+    ai.resetAiSession();
+    multiSeat.cancel();
+    clearCardPreview();
+    setDevDialogueDuelActive(false);
+    setIsMultiplayer(false);
+    setCampaignLevel(null);
+    setSelectedMode(t.settings.mode || 'classic');
+    setVsChosenEnemyArmy(sideB.army);
+    tournamentResultPendingRef.current = false;
+    setTournamentGameActive(false);
+    setSpectate({
+      matchId,
+      gameIndex,
+      gamesTotal: match.series.games.length,
+      roundName: ROUND_NAMES[match.round],
+      seriesBefore: { a: earlier.filter((g) => g.winner === 'a').length, b: earlier.filter((g) => g.winner === 'b').length },
+      frames: game.frames,
+      index: 0,
+      staged: -1,
+      winner: game.winner,
+      reason: game.reason,
+      names: { a: sideA.deckName, b: sideB.deckName },
+    });
+    startStandardGame(
+      sideA.army,
+      sideA.cardIds,
+      t.settings.mode || 'classic',
+      t.settings.difficulty || 'medium',
+      ALL_BATTLEFIELDS,
+      sideB.army,
+      sideB.cardIds,
+      { fixedFields: battlefields, openingPlayerFirst: saved.aFirst },
+      {
+        eminenceFormat: EMINENCE_FORMAT.DISABLED,
+        // partita successiva della serie: le carte vengono servite sul tavolo, come per chi gioca
+        skipShuffleDeal: !continuation,
+        seriesDeal: continuation ? seriesDealOf(gameIndex + 1) : null,
+        fixedHands: { playerHand: handA, enemyHand: handB },
+      }
+    );
+    };
+    if (continuation) {
+      runSeriesInterlude({ roundName: ROUND_NAMES[match.round], gameNumber: gameIndex + 1, rule: gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${earlier.filter((g) => g.winner === 'a').length}–${earlier.filter((g) => g.winner === 'b').length}` }, launch, battlefields);
+    } else {
+      runCurtain({ label: `${sideA.deckName} – ${sideB.deckName}`, kicker: `SPETTATORE · PARTITA ${gameIndex + 1}` }, launch);
+    }
+  }, [runSeriesInterlude, runCurtain, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
+
+  /** Guarda una serie tra IA: se non è ancora stata giocata la gioca prima per intero. */
+  const watchTournamentSeries = useCallback(async (matchId, gameIndex = 0) => {
+    if (!tournament || tournamentBusy) return;
+    let current = tournament;
+    if (!getMatch(current, matchId)?.winnerId) {
+      setTournamentBusy({ matchId, label: 'Partita 1' });
+      try {
+        current = await playAiSeries(current, matchId, {
+          onGame: (n) => setTournamentBusy({ matchId, label: `Partita ${n}` }),
+        });
+      } catch (err) {
+        console.error('[Torneo] serie IA fallita:', err);
+        setTournamentBusy(null);
+        return;
+      }
+      // L'esito è già salvato, ma il tabellone lo mostra solo al ritorno: prima si guarda la serie.
+      saveTournament(current);
+      const played = current;
+      startSpectate(played, matchId, gameIndex, () => { setTournament(played); setTournamentBusy(null); });
+      return;
+    }
+    startSpectate(current, matchId, gameIndex);
+  }, [tournament, tournamentBusy, startSpectate]);
+
+  /** Aspetta la fine: gioca subito tutte le serie tra IA pronte, senza guardarle. */
+  const concludeTournamentRound = useCallback(async () => {
+    if (!tournament || tournamentBusy) return;
+    setTournamentBusy({ label: 'Serie in corso' });
+    try {
+      const next = await playPendingAiSeries(tournament, {
+        onProgress: ({ match, gameNumber, done, remaining }) => setTournamentBusy({
+          matchId: match.id,
+          label: `Partita ${gameNumber}`,
+          step: done + 1,
+          total: done + remaining,
+        }),
+        // ogni serie finita entra subito nel tabellone, con una pausa per vederla arrivare
+        onSeriesDone: (current) => {
+          storeTournament(current);
+          return new Promise((resolve) => { setTimeout(resolve, 650); });
+        },
+      });
+      storeTournament(next);
+    } catch (err) {
+      console.error('[Torneo] conclusione turno fallita:', err);
+    }
+    setTournamentBusy(null);
+  }, [tournament, tournamentBusy, storeTournament]);
+
+  /** Stato del tavolo da spettatore: lato 'a' sul lato player, lato 'b' sul lato enemy. */
+  const applySpectateTable = useCallback((snap, frames, uptoIndex) => {
+    setPlayerUsedCards(snap.used.a);
+    setEnemyUsedCards(snap.used.b);
+    setPlayerFocus(snap.focus.a);
+    setEnemyFocus(snap.focus.b);
+    setPlayerHP(snap.hp.a);
+    setEnemyHP(snap.hp.b);
+    setPlayerToxin(snap.toxin.a || null);
+    setEnemyToxin(snap.toxin.b || null);
+    setConqueredFields(snap.conqueredFields);
+    setRevealedFields(snap.revealedFields);
+    const outcomes = {};
+    frames.slice(0, uptoIndex).forEach((f) => {
+      outcomes[battleOutcomeKey('player', f.cardA.id)] = f.battleResult.winner === 'player' ? 'winner' : 'loser';
+      outcomes[battleOutcomeKey('enemy', f.cardB.id)] = f.battleResult.winner === 'enemy' ? 'winner' : 'loser';
+    });
+    setCardBattleOutcomes(outcomes);
+  }, [setPlayerUsedCards, setEnemyUsedCards, setPlayerFocus, setEnemyFocus, setPlayerHP, setEnemyHP, setPlayerToxin, setEnemyToxin, setConqueredFields, setRevealedFields, setCardBattleOutcomes]);
+
+  // Spettatore: a ogni turno il duello già risolto entra in scena.
+  useEffect(() => {
+    if (!spectate || gamePhase !== 'selectField' || spectate.staged === spectate.index) return;
+    const frame = spectate.frames[spectate.index];
+    const scene = multiSeatSceneRef.current;
+    setSpectate((prev) => (prev ? { ...prev, staged: prev.index } : prev));
+    scene.resetForProjection();
+    applySpectateTable(frame.before, spectate.frames, spectate.index);
+    setRoundNumber(frame.before.roundNumber);
+    setIsPlayerFirst(frame.before.isPlayerFirst);
+    setLastWinner(null);
+    scene.stageBattle({
+      result: {
+        ...frame.battleResult,
+        presentStart: {
+          hp: { player: frame.before.hp.a, enemy: frame.before.hp.b },
+          toxin: { player: frame.before.toxin.a || null, enemy: frame.before.toxin.b || null },
+        },
+      },
+      playerAgent: frame.cardA,
+      enemyAgent: frame.cardB,
+      playerFocus: frame.focusA,
+      enemyFocus: frame.focusB,
+      fieldIndex: frame.fieldIndex,
+    });
+  }, [spectate, gamePhase, applySpectateTable, setRoundNumber, setIsPlayerFirst, setLastWinner]);
+
+  /** Spettatore, dopo «Continua»: turno successivo oppure esito della partita. */
+  const advanceSpectate = useCallback((toEnd = false) => {
+    const s = spectateRef.current;
+    if (!s) return;
+    const lastIndex = toEnd ? s.frames.length - 1 : s.index;
+    const frame = s.frames[lastIndex];
+    multiSeatSceneRef.current.resetForProjection();
+    applySpectateTable(frame.after, s.frames, lastIndex + 1);
+    if (toEnd) {
+      setIsZoomed(false);
+      setRoundNumber(frame.before.roundNumber);
+      setSpectate({ ...s, index: lastIndex, staged: lastIndex });
+    }
+    if (lastIndex + 1 < s.frames.length) {
+      setSpectate({ ...s, index: s.index + 1 });
+      setGamePhaseRaw('selectField');
+      return;
+    }
+    const fields = Object.values(frame.after.conqueredFields);
+    setGameResult({
+      winner: s.winner === 'a' ? 'player' : s.winner === 'b' ? 'enemy' : 'draw',
+      reason: s.reason,
+      playerFields: fields.filter((f) => f?.winner === 'player').length,
+      enemyFields: fields.filter((f) => f?.winner === 'enemy').length,
+      // partita di sola visione: fuori da storico playtest e telemetria
+      test: true,
+      spectate: true,
+    });
+    setGamePhaseRaw('gameOver');
+  }, [applySpectateTable, setGameResult, setGamePhaseRaw, setIsZoomed, setRoundNumber]);
+
+  // Uscita dal tavolo per un'altra via (es. menù): la partita non è più del torneo.
+  useEffect(() => {
+    if (gamePhase === 'menu') {
+      setTournamentGameActive(false);
+      setSpectate(null);
+    }
+  }, [gamePhase]);
+
+  // Fine partita di torneo: l'esito entra nella serie una volta sola.
+  useEffect(() => {
+    if (!tournamentGameActive || gamePhase !== 'gameOver' || !gameResult || !tournament) return;
+    if (!tournamentResultPendingRef.current) return;
+    tournamentResultPendingRef.current = false;
+    const outcome = gameResult.winner === 'player' ? 'human' : gameResult.winner === 'enemy' ? 'opponent' : 'draw';
+    if (tournament.online) {
+      tnOnlineRef.current.reportResult?.(outcome);
+      return;
+    }
+    storeTournament(recordHumanGameResult(tournament, outcome));
+  }, [tournamentGameActive, gamePhase, gameResult, tournament, storeTournament]);
+
+  // ── Torneo online ────────────────────────────────────────────────────────────────────────
+  // L'host della stanza tiene il tabellone: iscrive i giocatori, serve le mani, gioca le serie
+  // tra IA, registra gli esiti e trasmette lo stato (`tn_state`). Ognuno gioca la propria
+  // serie in contemporanea: contro un'IA la partita è locale e se ne riferisce l'esito; tra due
+  // giocatori è un Duello online i cui messaggi vanno solo all'avversario (`relayTarget`).
+  // Chi lascia la stanza viene sostituito da un'IA; se si chiude la stanza, ognuno prosegue in
+  // locale contro le IA.
+  /** Host: copia autorevole del torneo, aggiornata subito (lo stato React arriva al render dopo). */
+  const hostTournamentRef = useRef(null);
+  /** Partita di torneo in corso su questo client: { matchId, gameIndex, side, peerSlot|null }. */
+  const tournamentOnlineGameRef = useRef(null);
+  /** Host: giocatori pronti alla sfida, per incontro. */
+  const tournamentReadyRef = useRef({});
+  /** Sfida inviata: id dell'incontro per cui si aspetta l'avversario. */
+  const [tournamentWaiting, setTournamentWaiting] = useState(null);
+  const tournamentAiFailedRef = useRef(new Set());
+  const gamePhaseRef = useRef(gamePhase);
+  gamePhaseRef.current = gamePhase;
+  const tournamentRef = useRef(tournament);
+  tournamentRef.current = tournament;
+
+  const tnMySlot = () => {
+    const sess = multiplayerSessionRef.current;
+    return sess ? (sess.slot ?? (sess.role === 'host' ? 0 : 1)) : null;
+  };
+  const tnIsHost = () => multiplayerSessionRef.current?.role === 'host';
+  const tnRelay = (payload, to = 'all') => {
+    const sess = multiplayerSessionRef.current;
+    if (sess?.roomCode) getMultiplayerManager().sendRelay(sess.roomCode, payload, to);
+  };
+
+  /** Il torneo ricevuto (o deciso, per l'host) visto dal proprio posto. */
+  const tnApply = (t) => {
+    const me = `h${tnMySlot()}`;
+    setTournament(withViewer(t, me));
+    // L'avversario della partita in corso ha lasciato: è subentrata un'IA, si riparte dal tabellone.
+    const game = tournamentOnlineGameRef.current;
+    if (game?.peerSlot != null) {
+      const match = getMatch(t, game.matchId);
+      const peer = match ? t.participants[match[game.side === 'a' ? 'b' : 'a']] : null;
+      if (!peer?.isHuman) {
+        setLogs((prev) => [...prev.slice(-200), "[!] L'avversario ha lasciato il torneo: al suo posto gioca un'IA."]);
+        returnToTournamentHub();
+      }
+    }
+    if (tournamentWaiting && getMatch(t, tournamentWaiting)?.winnerId) setTournamentWaiting(null);
+  };
+
+  /** Host: nuovo stato del tabellone, con le prossime partite già servite, a tutti. */
+  const tnHostCommit = (next) => {
+    const prepared = prepareOpenHumanGames(next);
+    hostTournamentRef.current = prepared;
+    tnApply(prepared);
+    tnRelay({ type: 'tn_state', tournament: prepared });
+  };
+
+  /** Avvio di un Duello online tra due giocatori del torneo (su entrambi i client). */
+  const tnStartPeerGame = (msg) => {
+    const t = tournamentRef.current || hostTournamentRef.current;
+    const match = t ? getMatch(t, msg.matchId) : null;
+    const peer = match ? t.participants[match[msg.side === 'a' ? 'b' : 'a']] : null;
+    // già sul tavolo per la stessa serie: la partita successiva arriva senza lasciare la scena
+    const stay = gamePhaseRef.current === 'gameOver' && tournamentOnlineGameRef.current?.matchId === msg.matchId;
+    getMultiplayerManager().relayTarget = [msg.peerSlot];
+    tournamentOnlineGameRef.current = { matchId: msg.matchId, gameIndex: msg.gameIndex, side: msg.side, peerSlot: msg.peerSlot };
+    setTournamentWaiting(null);
+    stopAiThinking();
+    const launch = () => {
+      setVictoryCondFx(null);
+      setShowFinalRoundAnimation(false);
+      ai.resetAiSession();
+      multiSeat.cancel();
+      clearCardPreview();
+      setIncomingPeerMoveQueue([]);
+      setOpponentClaimPending(null);
+      setIncomingClaimDecision(null);
+      setRemoteEminenceQueue([]);
+      setOnlineOpponentLeft(false);
+      setOnlinePeerName(peer?.playerName || null);
+      setVsChosenEnemyArmy(peer?.army || null);
+      setSelectedMode(msg.match.mode === 'bareHands' ? 'bareHands' : 'classic');
+      tournamentResultPendingRef.current = true;
+      setTournamentGameActive(true);
+      setTournamentGameInfo({ matchId: msg.matchId, gameNumber: msg.gameIndex + 1 });
+      try {
+        startOnlineMatch(msg.side === 'a' ? 'host' : 'guest', msg.match, stay ? { seriesDeal: seriesDealOf(msg.gameIndex + 1) } : {});
+      } catch (err) {
+        console.error('[Torneo online] avvio partita:', err);
+        returnToTournamentHub();
+      }
+    };
+    if (stay) {
+      const series = match?.series || { winsA: 0, winsB: 0 };
+      const mine = msg.side === 'a' ? [series.winsA, series.winsB] : [series.winsB, series.winsA];
+      runSeriesInterlude({ roundName: ROUND_NAMES[match?.round ?? 0], gameNumber: msg.gameIndex + 1, rule: msg.gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${mine[0]}–${mine[1]}` }, launch, Array.isArray(msg.match?.battlefields) ? msg.match.battlefields.filter((f) => f && typeof f === 'object') : null);
+    } else {
+      runCurtain({ label: peer?.deckName || 'SFIDA', kicker: `${ROUND_NAMES[match?.round ?? 0].toUpperCase()} · CONTRO ${(peer?.playerName || 'AVVERSARIO').toUpperCase()}` }, launch);
+    }
+  };
+
+  /** Host: un giocatore è pronto alla sfida; con entrambi pronti parte il Duello. */
+  const tnHostReady = (fromSlot, matchId) => {
+    const t = hostTournamentRef.current;
+    const match = t ? getMatch(t, matchId) : null;
+    if (!match || match.winnerId || !getPendingGame(match)) return;
+    const slots = ['a', 'b'].map((side) => t.participants[match[side]]);
+    if (!slots.every((p) => p.isHuman)) return;
+    const ready = (tournamentReadyRef.current[matchId] ||= new Set());
+    ready.add(fromSlot);
+    if (!slots.every((p) => ready.has(p.slot))) return;
+    delete tournamentReadyRef.current[matchId];
+    const seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+    const payload = buildTournamentOnlineMatch(t, match, seed);
+    const gameIndex = match.series.games.length - 1;
+    ['a', 'b'].forEach((side, i) => {
+      const msg = { type: 'tn_match_start', matchId, gameIndex, side, peerSlot: slots[1 - i].slot, match: payload };
+      if (slots[i].slot === tnMySlot()) tnStartPeerGame(msg);
+      else tnRelay(msg, [slots[i].slot]);
+    });
+  };
+
+  /** Host: esito riferito da un giocatore dell'incontro (il primo che arriva vale). */
+  const tnHostResult = (fromSlot, { matchId, gameIndex, winner }) => {
+    const t = hostTournamentRef.current;
+    const match = t ? getMatch(t, matchId) : null;
+    const who = `h${fromSlot}`;
+    if (!match || (match.a !== who && match.b !== who)) return;
+    tnHostCommit(recordMatchGameResult(t, matchId, winner, gameIndex));
+  };
+
+  /** Uscita dal torneo online: si lascia la stanza (all'host arriva l'uscita e subentra un'IA). */
+  const leaveOnlineTournament = () => {
+    getMultiplayerManager().relayTarget = null;
+    tournamentOnlineGameRef.current = null;
+    hostTournamentRef.current = null;
+    tournamentReadyRef.current = {};
+    setTournamentWaiting(null);
+    setTournamentBusy(null);
+    setTournamentGameActive(false);
+    cleanupMultiplayerSession();
+    setTournament(loadTournament());
+    resetToMenu();
+  };
+
+  tnOnlineRef.current = {
+    // true se la sfida è stata gestita qui (avversario umano, o mani non ancora arrivate)
+    challenge: () => {
+      const t = tournamentRef.current;
+      const info = t ? describeHumanMatch(t) : null;
+      if (!info) return true;
+      if (!getPendingGame(info.match)) {
+        tnRelay({ type: 'tn_hello' }, [0]);
+        return true;
+      }
+      if (!info.opponent.isHuman) return false;
+      setTournamentWaiting(info.match.id);
+      if (tnIsHost()) tnHostReady(tnMySlot(), info.match.id);
+      else tnRelay({ type: 'tn_ready', matchId: info.match.id }, [0]);
+      return true;
+    },
+    markLocalGame: (game) => { tournamentOnlineGameRef.current = game; },
+    leaveGame: () => {
+      getMultiplayerManager().relayTarget = null;
+      tournamentOnlineGameRef.current = null;
+      // il Duello tra giocatori lascia la difficoltà su «multiplayer»: sul tabellone torna quella del torneo
+      if (tournamentRef.current?.online) setAiDifficulty(tournamentRef.current.settings?.difficulty || 'medium');
+    },
+    reportResult: (outcome) => {
+      const game = tournamentOnlineGameRef.current;
+      if (!game) return;
+      const other = game.side === 'a' ? 'b' : 'a';
+      const result = { matchId: game.matchId, gameIndex: game.gameIndex, winner: outcome === 'human' ? game.side : outcome === 'opponent' ? other : 'draw' };
+      if (tnIsHost()) tnHostResult(tnMySlot(), result);
+      else tnRelay({ type: 'tn_result', ...result }, [0]);
+    },
+    // Host: i giocatori pronti della stanza diventano il tabellone
+    start: (humans, settings) => {
+      const sess = multiplayerSessionRef.current;
+      const t = createOnlineTournament({ humans, settings, roomCode: sess?.roomCode });
+      hostTournamentRef.current = t;
+      tournamentReadyRef.current = {};
+      tournamentAiFailedRef.current = new Set();
+      tnRelay({ type: 'tn_start', tournament: t });
+      runCurtain({ label: 'TORNEO', kicker: 'TABELLONE ONLINE' }, () => {
+        tnApply(t);
+        setGamePhaseRaw('tournamentHub');
+      });
+    },
+    leave: leaveOnlineTournament,
+  };
+
+  tournamentNetRef.current = (p, fromSlot) => {
+    const t = tournamentRef.current;
+    if (p.type === 'tn_start' && p.tournament && fromSlot === 0) {
+      runCurtain({ label: 'TORNEO', kicker: 'TABELLONE ONLINE' }, () => {
+        tnApply(p.tournament);
+        setGamePhaseRaw('tournamentHub');
+      });
+      return;
+    }
+    if (p.type === 'tn_state' && p.tournament && fromSlot === 0) {
+      tnApply(p.tournament);
+      // rientrato in stanza a torneo già iniziato: si torna al tabellone
+      if (!t?.online && gamePhaseRef.current === 'onlineDeckReady') setGamePhaseRaw('tournamentHub');
+      return;
+    }
+    if (p.type === 'tn_match_start' && p.match && fromSlot === 0) {
+      tnStartPeerGame(p);
+      return;
+    }
+    if (p.type === '__reconnected') {
+      if (t?.online && !tnIsHost()) tnRelay({ type: 'tn_hello' }, [0]);
+      return;
+    }
+    if (p.type === '__room_closed') {
+      // L'host ha chiuso la stanza: il torneo prosegue in locale contro le IA.
+      if (!t?.online) return;
+      const inGame = tournamentOnlineGameRef.current;
+      getMultiplayerManager().relayTarget = null;
+      tournamentOnlineGameRef.current = null;
+      setTournamentWaiting(null);
+      storeTournament(detachToOffline(t, t.humanId));
+      setLogs((prev) => [...prev.slice(-200), "[!] La stanza è stata chiusa: il torneo prosegue in locale contro le IA."]);
+      if (inGame?.peerSlot != null) returnToTournamentHub();
+      // dopo il resto della gestione di «stanza chiusa»: la sessione online non serve più
+      setTimeout(() => cleanupMultiplayerSession(), 0);
+      return;
+    }
+    if (!tnIsHost() || !hostTournamentRef.current) return;
+    if (p.type === '__member_left') {
+      delete tournamentReadyRef.current;
+      tournamentReadyRef.current = {};
+      tnHostCommit(convertToAi(hostTournamentRef.current, `h${p.slot}`));
+    } else if (p.type === 'tn_hello') {
+      tnRelay({ type: 'tn_state', tournament: hostTournamentRef.current }, [fromSlot]);
+    } else if (p.type === 'tn_ready') {
+      tnHostReady(fromSlot, p.matchId);
+    } else if (p.type === 'tn_result') {
+      tnHostResult(fromSlot, p);
+    }
+  };
+
+  // Host sul tabellone: gioca in sottofondo le serie tra IA, una alla volta, e ne trasmette l'esito.
+  useEffect(() => {
+    if (!tournament?.online || !tnIsHost() || gamePhase !== 'tournamentHub' || tournamentBusy) return;
+    const match = getPendingAiMatches(tournament).find((m) => !tournamentAiFailedRef.current.has(m.id));
+    if (!match) return;
+    setTournamentBusy({ matchId: match.id, label: 'Partita 1', soft: true });
+    (async () => {
+      try {
+        const played = await playAiSeries(hostTournamentRef.current, match.id, {
+          onGame: (n) => setTournamentBusy({ matchId: match.id, label: `Partita ${n}`, soft: true }),
+        });
+        const current = hostTournamentRef.current;
+        // si registra sullo stato di adesso: nel frattempo possono essere arrivati altri esiti
+        if (current?.online && !getMatch(current, match.id)?.winnerId) {
+          tnHostCommit(recordAiSeries(current, match.id, getMatch(played, match.id).series.games));
+        }
+      } catch (err) {
+        console.error('[Torneo online] serie IA fallita:', err);
+        tournamentAiFailedRef.current.add(match.id);
+      }
+      setTournamentBusy(null);
+    })();
+  }, [tournament, gamePhase, tournamentBusy]);
 
   const launchDialogueDuelTest = useCallback((playerArmy, shuffleKind) => {
     setDevDialogueDuelActive(true);
@@ -2983,7 +3773,7 @@ export default function SatzeGame() {
       playtestAutoSavedRef.current = false;
       return;
     }
-    if (playtestAutoSavedRef.current || !gameResult) return;
+    if (playtestAutoSavedRef.current || !gameResult || gameResult.spectate) return;
 
     const playerDeckLabel = Array.isArray(selectedDeckKey)
       ? 'campaign_inline'
@@ -3030,7 +3820,7 @@ export default function SatzeGame() {
 
   useEffect(() => {
     const t = telemetriaRef.current;
-    if (gamePhase === 'menu') {
+    if (gamePhase === 'menu' || gamePhase === 'tournamentHub') {
       // Partita abbandonata o finita: la prossima ripartirà da zero.
       telemetriaRef.current = { inCorso: false, inviata: false, idPartita: null, inizio: null, round: [] };
       return;
@@ -3234,6 +4024,7 @@ export default function SatzeGame() {
       setGuidedHint(`Per questo step devi schierare: ${expectedName}.`);
       return;
     }
+    if (agent && !playerDeployableCardIds.includes(agent.id)) return;
     setGuidedHint('');
     if (!agent) {
       playGame(GAME_SOUND.CARD_DESELECT);
@@ -3256,13 +4047,13 @@ export default function SatzeGame() {
     const landMs = prefersReducedMotion() ? 0 : via === 'drop' ? (DROP_IMPACT_MS[placeFx] ?? 0) : CLICK_LAND_MS;
     playGameAt(via === 'drop' ? GAME_SOUND.CARD_PLACE : GAME_SOUND.CARD_SELECT, landMs);
     setSelectedAgent(agent);
-  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
+  }, [eminenceBlocksMatch, guidedMatch.active, guidedMatch.freePlay, currentGuidedRound, playerHand, playerDeployableCardIds, selectedAgent, setSelectedAgent, setGuidedHint, flyDeployedAgentBackToHand]);
 
   const dragAndDrop = useDragAndDrop({
     gamePhase,
     isPlayerFirst,
     enemyAgent,
-    playerUsedCards,
+    playerUsedCards: playerHandUsedCards,
     onAgentSelect: handleAgentSelect,
     selectedAgent,
     gameState,
@@ -4079,8 +4870,11 @@ export default function SatzeGame() {
 
   // Conferma scelta giocatore
   const confirmPlayerChoice = () => {
+    if (spectateRef.current) return;
     if (eminenceAnnounceHold || announcePointerGuard) return;
     if (eminenceBlocksMatch) return;
+    // Un vincolo Eminenza arrivato dopo la scelta (es. Caccia) invalida l'Agente già posato.
+    if (!isMultiSeat && selectedAgent && !playerDeployableCardIds.includes(selectedAgent.id)) return;
     if (isMultiSeat) {
       if (!multiSeat.acceptsHumanConfirm) return;
       if (!selectedAgent || selectedFocus < 1 || selectedFocus > playerFocus) return;
@@ -4382,6 +5176,12 @@ export default function SatzeGame() {
     // Se siamo in fase risultato e c'è un battleResult, attiva l'animazione clash delle carte
     if (gamePhase === 'result' && battleResult && duelPhase >= 4) {
       setShowClashAnimation(true);
+      // Multiplayer: chi non c'è nello scontro dopo esce di scena durante la pausa.
+      if (isMultiSeat && multiSeatQueue?.hasNext) {
+        // posizioni di partenza per l'arrivo dello scontro dopo, prima che chi esce si muova
+        multiSeatRectsRef.current = readMultiSeatRects();
+        setMultiSeatLeaving(multiSeatQueue.transition?.leaves || null);
+      }
       
       // Dopo l'animazione (1 secondo), procedi con il reset
       setTimeout(() => {
@@ -4396,8 +5196,15 @@ export default function SatzeGame() {
   };
   
   const proceedToNextRound = () => {
-    if (isMultiSeat) {
+    if (spectateRef.current) {
       setIsZoomed(false);
+      nextRoundInFlightRef.current = false;
+      advanceSpectate();
+      return;
+    }
+    if (isMultiSeat) {
+      // con un altro scontro nel turno si resta nella vista del duello
+      if (!multiSeatQueue?.hasNext) setIsZoomed(false);
       nextRoundInFlightRef.current = false;
       multiSeat.onScontroDone();
       return;
@@ -4634,6 +5441,15 @@ export default function SatzeGame() {
     }
   };
 
+  // Spettatore con AUTO: a esito mostrato il duello successivo parte da solo.
+  const nextRoundRef = useRef(nextRound);
+  nextRoundRef.current = nextRound;
+  useEffect(() => {
+    if (!spectating || !spectateAuto || gamePhase !== 'result' || !battleResult || duelPhase < 4 || !duelHp.settled) return undefined;
+    const t = setTimeout(() => nextRoundRef.current(), 2200);
+    return () => clearTimeout(t);
+  }, [spectating, spectateAuto, gamePhase, battleResult, duelPhase, duelHp.settled]);
+
   const advanceGuidedRoundState = (playerFields, enemyFields) => {
     const nextRoundNum = roundNumber + 1;
     if (roundAdvanceLockRef.current === nextRoundNum) {
@@ -4796,6 +5612,11 @@ export default function SatzeGame() {
       setup: (params) => confirmEminenceSetup(params),
       affare: (risposta) => confirmPendingEminenceDeal(risposta),
       prossimoRound: () => nextRound(),
+      // chiude subito la partita con l'esito dato (prove del torneo senza giocare ogni duello)
+      concludi: (winner) => { setGameResult({ winner, reason: 'hp' }); setGamePhaseRaw('gameOver'); },
+      torneo: () => tournament,
+      // host di un torneo online: sostituisce il tabellone (prove con accoppiamenti scelti)
+      torneoImposta: (t) => tnHostCommit(t),
       decidiReclamo: (d) => multiSeat.decideClaim(d),
       // Simula una caduta di rete: chiusura non intenzionale → riconnessione automatica.
       cadiConnessione: () => getMultiplayerManager().ws?.close(),
@@ -4887,7 +5708,8 @@ export default function SatzeGame() {
 
   // Azioni della scena usate dal controllore delle modalità a più posti.
   multiSeatSceneRef.current = {
-    resetForProjection: () => {
+    // keepDuel: lo scontro dopo nello stesso turno, senza uscire dalla vista del duello.
+    resetForProjection: ({ keepDuel = false } = {}) => {
       if (multiSeatStageTimerRef.current) {
         clearTimeout(multiSeatStageTimerRef.current);
         multiSeatStageTimerRef.current = null;
@@ -4896,10 +5718,12 @@ export default function SatzeGame() {
       setSelectedFocus(1);
       setEnemyAgent(null);
       setEnemySelectedFocus(1);
-      setCurrentFieldIndex(null);
-      setBattleResult(null);
       setShowClashAnimation(false);
-      setIsZoomed(false);
+      if (!keepDuel) {
+        setCurrentFieldIndex(null);
+        setBattleResult(null);
+        setIsZoomed(false);
+      }
       ai.clearPendingDecision();
       aiThinkGenerationRef.current += 1;
       aiHasSelectedAgent.current = false;
@@ -4909,6 +5733,8 @@ export default function SatzeGame() {
       }
       setPlayerConfirmedAwaitingAI(false);
       nextRoundInFlightRef.current = false;
+      setMultiSeatEntry({ player: null, enemy: null });
+      setMultiSeatLeaving(null);
     },
     setGamePhase: (phase) => setGamePhase(phase),
     showOpponentDeploy: ({ agent, fieldIndex }) => {
@@ -4917,12 +5743,19 @@ export default function SatzeGame() {
       setEnemyAgent(agent);
     },
     // Uno scontro deciso dall'orchestratore: gli Agenti entrano in campo, poi la risoluzione.
-    stageBattle: ({ result, playerAgent, enemyAgent: eAgent, playerFocus: pFocus, enemyFocus: eFocus, fieldIndex }) => {
+    stageBattle: ({ result, playerAgent, enemyAgent: eAgent, playerFocus: pFocus, enemyFocus: eFocus, fieldIndex, entry = null }) => {
       setCurrentFieldIndex(fieldIndex);
       setSelectedFocus(pFocus);
       setEnemySelectedFocus(eFocus);
       setSelectedAgent(playerAgent);
       setEnemyAgent(eAgent);
+      if (entry) {
+        // Scontro dopo nello stesso turno: si resta nella vista del duello. Gli Agenti arrivano
+        // dalla coda sfocata, restano o cambiano lato (playMultiSeatArrival), poi il duello.
+        setMultiSeatEntry({ player: entry.player || null, enemy: entry.enemy || null });
+        presentPrecomputedBattle(result);
+        return;
+      }
       setGamePhase('selectAgent');
       if (multiSeatStageTimerRef.current) clearTimeout(multiSeatStageTimerRef.current);
       // Come nel duello normale: lo scontro parte solo a ingresso finito (posa degli Agenti e
@@ -4953,6 +5786,24 @@ export default function SatzeGame() {
     },
   };
   const multiSeatView = multiSeat.view;
+  // Tasto a fine scontro: «Prossimo duello» se nel turno ne segue un altro.
+  const multiSeatQueue = isMultiSeat ? multiSeatView?.scontroQueue || null : null;
+  // Arrivo degli Agenti nello scontro dopo (vista del duello): dalle posizioni lette al clic.
+  useLayoutEffect(() => {
+    if (!isMultiSeat || gamePhase !== 'result' || !battleResult) return;
+    if (!multiSeatEntry.player && !multiSeatEntry.enemy) return;
+    const rects = multiSeatRectsRef.current;
+    multiSeatRectsRef.current = null;
+    playMultiSeatArrival(multiSeatEntry, rects);
+  }, [isMultiSeat, gamePhase, battleResult, multiSeatEntry]);
+  // Agenti in attesa visibili durante lo scontro (schieramento proiettato e risultato).
+  const multiSeatWaitingShown = Boolean(multiSeatQueue) && (gamePhase === 'selectAgent' || gamePhase === 'result');
+  const multiSeatContinue = (() => {
+    if (!multiSeatQueue?.hasNext) return { label: 'Continua', note: null };
+    const leaves = multiSeatQueue.transition?.leaves;
+    const one = leaves && leaves.player !== leaves.enemy;
+    return { label: 'Prossimo duello', note: one ? 'Premi Prossimo duello per scartare l’Agente sconfitto' : null };
+  })();
   const multiSeatSeatName = (seatId) => multiSeatView?.seats?.find((s) => s.id === seatId)?.name || null;
   const multiSeatPlayerName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.playerSeatId) : null;
   const multiSeatEnemyName = isMultiSeat ? multiSeatSeatName(multiSeatView?.projection?.enemySeatId) : null;
@@ -5020,8 +5871,17 @@ export default function SatzeGame() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [fieldsScrollable, battlefields.length, gamePhase, updateFieldsScrollHint]);
-  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : (multiSeatPlayerName || 'TU');
-  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : (multiSeatEnemyName || 'IA');
+  // Torneo: a fine partita, se la serie non è decisa, la partita successiva si gioca sullo stesso tavolo.
+  const tournamentSeriesNext = (() => {
+    if (!tournamentGameActive || spectating || gamePhase !== 'gameOver' || !tournament || !tournamentGameInfo) return null;
+    const info = describeHumanMatch(tournament);
+    if (!info || info.match.id !== tournamentGameInfo.matchId || info.gameNumber !== tournamentGameInfo.gameNumber + 1) return null;
+    // online le mani della partita dopo le serve l'host: finché non arrivano si aspetta
+    if (!tournament.online ? false : !getPendingGame(info.match)) return null;
+    return { gameNumber: info.gameNumber, waiting: tournamentWaiting === info.match.id };
+  })();
+  const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : spectating ? spectate.names.a : (multiSeatPlayerName || 'TU');
+  const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : spectating ? spectate.names.b : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
   const mpEnemyHandLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : 'Mano Avversario';
 
@@ -5213,14 +6073,33 @@ export default function SatzeGame() {
         sub: 'AVVIO',
         meta: 'VS IA · FORMATO IN SEGUITO',
         accent: MENU_ACCENTS.pink,
-        onClick: () => { setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
+        onClick: () => { setTournamentSetup(false); setSelectedMode('classic'); setIsMultiplayer(false); setCampaignLevel(null); setGamePhaseFromMainMenu('selectArmy'); },
       },
-      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', accent: MENU_ACCENTS.magenta, onClick: () => setGamePhaseFromMainMenu('campaignSlots') },
-      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', accent: MULTIPLAYER_ACCENT, onClick: () => { setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
+      {
+        label: 'TORNEO',
+        sub: tournament ? 'IN CORSO' : 'NUOVO',
+        meta: '12 ARMATE · VS IA · AL MEGLIO DELLE 3',
+        accent: MENU_ACCENTS.pink,
+        onClick: () => {
+          setSelectedMode('classic');
+          setIsMultiplayer(false);
+          setCampaignLevel(null);
+          if (tournament) {
+            setTournamentSetup(false);
+            setGamePhaseFromMainMenu('tournamentHub');
+          } else {
+            setTournamentSetup(true);
+            setGamePhaseFromMainMenu('selectArmy');
+          }
+        },
+      },
+      { label: 'CAMPAGNA', sub: 'STORIA', meta: 'SLOT SALVATAGGIO', accent: MENU_ACCENTS.magenta, onClick: () => { setTournamentSetup(false); setGamePhaseFromMainMenu('campaignSlots'); } },
+      { label: 'MULTIPLAYER', sub: 'ONLINE', meta: 'LOBBY · BETA', accent: MULTIPLAYER_ACCENT, onClick: () => { setTournamentSetup(false); setSelectedMode('multiplayer'); setIsMultiplayer(true); setCampaignLevel(null); setGamePhaseFromMainMenu('multiplayerLobby'); } },
       { label: 'GESTIONE ESERCITI', sub: 'ESERCITO', meta: 'LISTA / BUILDER', onClick: () => { setEditingDeckId(null); setDeckManagerSource('menu'); setDeckManagerView('list'); setShowDeckManager(false); setGamePhaseFromMainMenu('deckManager'); } },
       { label: 'STORICO PLAYTEST', sub: 'DATI', meta: 'MATCH · EXPORT CSV', onClick: () => setGamePhaseFromMainMenu('playtestHistory') },
       { label: 'OPZIONI', sub: 'SISTEMA', meta: 'VIDEO', onClick: () => setGamePhaseFromMainMenu('options') },
       { label: 'TUTORIAL', sub: 'GUIDA', meta: '3 PERCORSI', accent: TUTORIAL_ACCENT, onClick: openTutorialSelector },
+      { label: 'MANUALE', sub: 'LIBRETTO', meta: 'ISTRUZIONI · ANCHE IN PDF', accent: TUTORIAL_ACCENT, onClick: () => setGamePhaseFromMainMenu('manual') },
       { label: 'GALLERIA', sub: 'ARCHIVIO', meta: 'CARTE · EMINENZE · CAMPI', onClick: () => setGamePhaseFromMainMenu('gallery') },
       {
         label: 'STRUMENTI DEV',
@@ -5355,9 +6234,57 @@ export default function SatzeGame() {
     );
   }
 
+  if (gamePhase === 'tournamentHub') {
+    if (!tournament) {
+      return screen('tournamentHub', false, <div style={{ padding: 32, color: 'white' }}><button type="button" onClick={() => setGamePhase('menu')}>Nessun torneo in corso — torna al menù</button></div>);
+    }
+    const startNewTournament = () => {
+      if (tournament.online) { tnOnlineRef.current.leave(); return; }
+      storeTournament(null);
+      setTournamentSetup(true);
+      setSelectedMode('classic');
+      setIsMultiplayer(false);
+      setCampaignLevel(null);
+      runCurtain({ label: 'NUOVO TORNEO', kicker: 'FASE I · SCHIERAMENTO' }, () => setGamePhase('selectArmy'));
+    };
+    return (
+      screen('tournamentHub', false, <TournamentHubScreen
+        tournament={tournament}
+        busy={tournamentBusy}
+        online={tournament.online ? { isHost: multiplayerSession?.role === 'host', waiting: tournamentWaiting } : null}
+        onPlay={playTournamentGame}
+        onWatch={watchTournamentSeries}
+        onConcludeRound={concludeTournamentRound}
+        onMenu={() => {
+          if (tournament.online) {
+            if (window.confirm("Vuoi uscire dal torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+            return;
+          }
+          setGamePhase('menu');
+        }}
+        onNewTournament={startNewTournament}
+        onAbandon={() => {
+          if (tournament.online) {
+            if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+            return;
+          }
+          if (!window.confirm('Vuoi davvero abbandonare il torneo? Il tabellone andrà perso.')) return;
+          storeTournament(null);
+          setGamePhase('menu');
+        }}
+      />)
+    );
+  }
+
   if (gamePhase === 'playtestHistory') {
     return (
       screen('playtestHistory', true, <PlaytestHistoryScreen onClose={() => setGamePhase('menu')} />)
+    );
+  }
+
+  if (gamePhase === 'manual') {
+    return (
+      screen('manual', false, <ManualBook onClose={() => setGamePhase('menu')} />)
     );
   }
 
@@ -5518,8 +6445,34 @@ export default function SatzeGame() {
             accentColor={colors.accent}
             initialMode={selectedMode}
             excludeArmy={isMixedMode ? null : selectedArmy}
+            tournament={tournamentSetup}
             onClose={() => setShowDifficultyPopup(false)}
             onSelect={(choice) => {
+              if (tournamentSetup) {
+                // Torneo: l'esercito scelto resta bloccato, si passa al tabellone.
+                const customId = typeof selectedDeckKey === 'string' && selectedDeckKey.startsWith('custom_') ? selectedDeckKey.replace('custom_', '') : null;
+                const playerCardIds = customId ? loadCustomDecks()[customId]?.cards : ARMY_DECKS[selectedArmy]?.[selectedDeckKey]?.cards;
+                setShowDifficultyPopup(false);
+                clearCardPreview();
+                multiSeat.cancel();
+                try {
+                  storeTournament(createTournamentForPlayer({
+                    playerArmy: selectedArmy,
+                    playerDeckKey: selectedDeckKey,
+                    playerDeckName: resolveSelectedDeckName(),
+                    playerCardIds: playerCardIds || [],
+                    settings: { difficulty: choice.difficulty, mode: choice.mode, eminenceFormat: choice.eminenceFormat, formatId: choice.formatId, personality: choice.personality },
+                  }));
+                } catch (err) {
+                  console.error('[Torneo] iscrizione fallita:', err);
+                  window.alert(`Impossibile avviare il torneo: ${err.message}`);
+                  return;
+                }
+                setTournamentSetup(false);
+                setSelectedMode(choice.mode);
+                runCurtain({ label: 'TORNEO', kicker: 'TABELLONE', accent: colors.accent }, () => setGamePhase('tournamentHub'));
+                return;
+              }
               // INIZIA: si passa subito al VS; la scatola dell'esercito scelto vola da qui
               // al suo posto e la ruota sorteggia l'avversario mentre il duello si carica.
               armVersusHandoff(document.querySelector('.dsk .dsk-tk.is-center')?.getBoundingClientRect() ?? null);
@@ -5536,6 +6489,7 @@ export default function SatzeGame() {
                 multiSeatEnemy = multiSeat.arm({
                   kind: choice.matchMode,
                   teammatePreset: choice.teammatePreset,
+                  personality: choice.personality,
                   players: choice.players,
                   difficulty: choice.difficulty,
                   fieldMode: choice.mode,
@@ -5553,7 +6507,7 @@ export default function SatzeGame() {
                 multiSeatEnemy?.enemyArmy ?? choice.enemyArmy ?? null,
                 multiSeatEnemy?.enemyDeckKey ?? null,
                 null,
-                { eminenceFormat: choice.eminenceFormat }
+                { eminenceFormat: choice.eminenceFormat, aiPersonality: choice.personality }
               );
               window.setTimeout(() => {
                 start();
@@ -5794,6 +6748,28 @@ export default function SatzeGame() {
       if (!tuttiPronti || multiplayerSession.role !== 'host') return;
       const formato = MATCH_FORMATS[onlineFormatId] || MATCH_FORMATS.noEminence;
       const resolved = resolveDeckCardsForArmy(selectedArmy, selectedDeckKey);
+      if (onlineMode === 'tournament') {
+        // Torneo: i giocatori pronti entrano nel tabellone con l'esercito scelto, bloccato.
+        const umani = [
+          { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckName: deck.name, cardIds: resolved.map((c) => c.id) },
+          ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
+            const r = onlineReadies[m.slot] || {};
+            return { slot: m.slot, name: r.playerName || m.name, army: r.army, deckKey: r.deckKey, deckName: r.deckName || 'Esercito', cardIds: r.deckCardIds || [] };
+          }),
+        ];
+        try {
+          tnOnlineRef.current.start(umani, {
+            difficulty: onlineDifficulty,
+            mode: formato.mode === 'bareHands' ? 'bareHands' : 'classic',
+            eminenceFormat: formato.eminenceFormat,
+            formatId: formato.id,
+          });
+        } catch (err) {
+          console.error('[Torneo online] avvio fallito:', err);
+          window.alert(`Impossibile avviare il torneo: ${err.message}`);
+        }
+        return;
+      }
       const readies = [
         { slot: mySlot, name: multiplayerSession.playerName || 'Host', army: selectedArmy, deckKey: selectedDeckKey, deckCardIds: resolved.map((c) => c.id) },
         ...membriConnessi.filter((m) => m.slot !== mySlot).map((m) => {
@@ -5837,9 +6813,11 @@ export default function SatzeGame() {
         ready={{ label: onlineReadyButtonLabel, disabled: onlineLocalReady, onClick: handleOnlineReady }}
         start={isMultiMode && multiplayerSession.role === 'host'
           ? {
-              label: tuttiPronti
-                ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
-                : 'Avvia partita (aspetta che tutti siano pronti)',
+              label: onlineMode === 'tournament'
+                ? (tuttiPronti ? `Avvia torneo (${membriConnessi.length} giocatori + ${12 - membriConnessi.length} IA)` : 'Avvia torneo (aspetta che tutti siano pronti)')
+                : tuttiPronti
+                  ? `Avvia partita (${membriConnessi.length} giocatori${membriConnessi.length < (onlineMode === 'teamDuel' ? 4 : onlinePlayers) ? ' + IA' : ''})`
+                  : 'Avvia partita (aspetta che tutti siano pronti)',
               disabled: !tuttiPronti,
               onClick: avviaMultiOnline,
             }
@@ -5937,6 +6915,7 @@ export default function SatzeGame() {
       gameMode,
       isOnline: isOnlinePvP,
       difficulty: aiDifficulty,
+      personality: aiPersonality,
       selfName: multiplayerSession?.playerName,
       peerName: onlinePeerName,
       playerArmy: duelPlayerArmy,
@@ -5971,7 +6950,9 @@ export default function SatzeGame() {
         eminenceMatchState={eminenceMatchState}
         showChrome={!launchHandoffBusy}
         versus={duelVersus}
-        versusIntro={!isOnlinePvP}
+        // Torneo: avversario ed esercito li ha già decisi il tabellone, quindi niente sorteggio
+        // con la ruota: si va dritti al VS (come nel Duello online).
+        versusIntro={!isOnlinePvP && !tournamentGameActive && !spectating}
         versusDeckArmy={vsChosenEnemyArmy}
         onComplete={() => {
           const next = pendingDuelPhase || (setup ? 'shuffleDeal' : 'selectField');
@@ -6088,7 +7069,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}${seriesInterlude?.stage === 'out' ? ' trn-hands-out' : ''}${seriesInterlude?.stage === 'in' ? ' trn-table-in' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -6243,7 +7224,7 @@ export default function SatzeGame() {
             coinsShown={focusLaunch.landed.player}
             duelVfx={duelVfx}
             accentColor={playerIdentityColor}
-            kicker={isOnlinePvP || isMultiSeat ? mpSelfLabel : 'Tu'}
+            kicker={isOnlinePvP || isMultiSeat || spectating ? mpSelfLabel : 'Tu'}
           />
           {/* Passi del duello: riquadro con fonte e stato, fasci verso il bersaglio */}
           <DuelStepFx battleResult={battleResult} duelPhase={duelPhase} duelEffectStep={visualEffectStep} />
@@ -6535,7 +7516,7 @@ export default function SatzeGame() {
               </div>
             );
             return (
-              <div className="flex justify-between gap-4 mb-1">
+              <div className="flex justify-between gap-4 mb-1 imp-conquest-slots">
                 <div className="flex-1 min-w-0">
                   <Row count={enemyConqueredCount} accent={enemyIdentityColor} />
                 </div>
@@ -6549,9 +7530,14 @@ export default function SatzeGame() {
           {(() => {
             const holdOldVictory = victoryCondFx === 'hold';
             const showAnnihilate = roundNumber >= 5 && !holdOldVictory;
+            // Partita finita: metà del riquadro prende il colore dell'esercito che ha vinto, dal suo
+            // lato (avversario a sinistra, giocatore a destra, come le caselle dei Campi qui sopra).
+            const wonSide = gamePhase === 'gameOver' && !isMultiSeat && (gameResult?.winner === 'player' || gameResult?.winner === 'enemy')
+              ? gameResult.winner
+              : null;
             return (
           <div 
-            className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}`}
+            className={`px-3 py-2 text-center rounded-xl imp-victory${victoryCondFx === 'reveal' ? ' imp-victory-reveal' : ''}${wonSide ? ' imp-victory--won' : ''}`}
             style={{
               background: 'rgba(56, 189, 248, 0.08)',
               border: '1px solid rgba(56, 189, 248, 0.28)',
@@ -6576,6 +7562,14 @@ export default function SatzeGame() {
                 (Vince chi alla fine del turno ha più PV)
               </div>
             )}
+            {/* in coda e non <div>: gli stili del riquadro contano le righe di testo per posizione */}
+            {wonSide ? (
+              <span
+                className={`imp-victory-win is-${wonSide}`}
+                style={{ '--win-color': wonSide === 'player' ? playerIdentityColor : enemyIdentityColor }}
+                aria-hidden="true"
+              />
+            ) : null}
           </div>
             );
           })()}
@@ -6871,7 +7865,8 @@ export default function SatzeGame() {
       <div className="imp-hand imp-hand-player" ref={playerHandWrapRef}>
       <Hand
         hand={playerHandOverride ? playerHandOverride.hand : playerHand}
-        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerUsedCards}
+        usedCards={playerHandOverride ? playerHandOverride.usedCards : playerHandUsedCards}
+        lockedCardIds={playerHandOverride ? [] : playerLockedCardIds}
         fragmentCardIds={eminenceChoiceView.self?.persistent?.fragmentCardIds || []}
         preyCardIds={preyFlight.visibleHandPreyIds(eminenceChoiceView.opponent?.persistent?.preyCardIds || [])}
         arrivingPreyId={preyFlight.preyLandId}
@@ -6979,6 +7974,7 @@ export default function SatzeGame() {
         />
       )}
       <EminencePresenceSparks flights={presenceLink.flights} />
+      {eminenceEffectFx.layer}
 
       {(eminenceAnnounceHold || announcePointerGuard) && (
         <div
@@ -7128,7 +8124,7 @@ export default function SatzeGame() {
         isZoomed={isZoomed}
         selectedAgent={selectedAgent}
         onConfirm={confirmPlayerChoice}
-        sideNames={isMultiSeat ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
+        sideNames={isMultiSeat || spectating ? { player: mpSelfLabel, enemy: mpEnemyLabel } : null}
         confirmDisabled={eminenceAnnounceHold || announcePointerGuard}
         awaitingEnemySelection={playerConfirmedAwaitingAI || Boolean(multiSeatStatus?.wait)}
         waitLabel={multiSeatStatus?.wait || null}
@@ -7137,6 +8133,8 @@ export default function SatzeGame() {
         duelPhase={duelPhase}
         battleResult={battleResult}
         onContinue={nextRound}
+        continueLabel={multiSeatContinue.label}
+        continueNote={multiSeatContinue.note}
         gameResult={gameResult}
         aiDecisionLog={isOnlinePvP ? null : ai.aiDecisionLog}
         onCopyAiDecisionLog={
@@ -7182,10 +8180,34 @@ export default function SatzeGame() {
         }}
         isCampaign={selectedMode === 'campaign'}
         onCampaignRetry={retryCampaignMission}
+        onTournamentContinue={
+          spectating && spectate.gameIndex + 1 < spectate.gamesTotal
+            ? () => startSpectate(tournament, spectate.matchId, spectate.gameIndex + 1, null, true)
+            : tournamentSeriesNext
+              ? () => { if (!tournamentSeriesNext.waiting) playTournamentGame({ continuation: true }); }
+              : tournamentGameActive || spectating ? returnToTournamentHub : undefined
+        }
+        tournamentContinueLabel={
+          spectating && spectate.gameIndex + 1 < spectate.gamesTotal
+            ? `Partita ${spectate.gameIndex + 2}`
+            : tournamentSeriesNext
+              ? (tournamentSeriesNext.waiting ? 'In attesa…' : `Partita ${tournamentSeriesNext.gameNumber}`)
+              : 'Torna al torneo'
+        }
+        onTournamentSecondary={(spectating && spectate.gameIndex + 1 < spectate.gamesTotal) || tournamentSeriesNext ? returnToTournamentHub : undefined}
+        outcomeOverride={spectating && gameResult ? {
+          // il portale è stretto: titolo corto, il nome dell'esercito va nella riga sotto
+          title: `Partita ${spectate.gameIndex + 1}`,
+          desc: gameResult.winner === 'draw'
+            ? 'Pareggio'
+            : `Vince ${gameResult.winner === 'player' ? spectate.names.a : spectate.names.b} · ${gameResult.reason === 'fields' ? 'Conquista' : 'Punti Vita'}`,
+          color: gameResult.winner === 'player' ? playerIdentityColor : gameResult.winner === 'enemy' ? enemyIdentityColor : null,
+        } : null}
         onRematch={
           isOnlinePvP && multiplayerSession && !onlineOpponentLeft
             ? () => requestOnlineRematch('same')
             : !isOnlinePvP &&
+                !tournamentGameActive &&
                 !guidedMatch.active &&
                 selectedMode !== 'campaign' &&
                 selectedMode !== 'multiplayer' &&
@@ -7229,8 +8251,8 @@ export default function SatzeGame() {
         }
         rematchLabel={isOnlinePvP ? 'Rematch (stesso mazzo)' : 'Rematch'}
         rematchChangeDeckLabel="Rematch (cambia mazzo)"
-        endGameActionsReady={!outcomeOverlayKind}
-        onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD ? undefined : () => {
+        endGameActionsReady={!outcomeOverlayKind && !seriesInterlude}
+        onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD || spectating ? undefined : () => {
           setGamePhase('playtestHistory');
         }}
         onReplayDuel={replayDuelAnimation}
@@ -7239,6 +8261,39 @@ export default function SatzeGame() {
         duelEsito={portalDuelEsito}
         decision={portalDecision}
       />
+
+      {seriesInterlude ? <SeriesInterlude {...seriesInterlude} accent={playerIdentityColor} /> : null}
+      {spectating && (() => {
+        const frame = spectate.frames[Math.min(spectate.index, spectate.frames.length - 1)];
+        const shown = gamePhase === 'result' && battleResult && duelPhase >= 4 && duelHp.settled;
+        const field = battlefields[frame.fieldIndex];
+        let line = `Turno ${frame.before.roundNumber} · ${field?.name || 'Campo'} · apre ${frame.before.isPlayerFirst ? spectate.names.a : spectate.names.b}`;
+        if (gamePhase === 'gameOver' && gameResult) {
+          line = gameResult.winner === 'draw'
+            ? 'Partita finita in pareggio'
+            : `${gameResult.winner === 'player' ? spectate.names.a : spectate.names.b} vince la partita ${gameResult.reason === 'fields' ? 'per Conquista' : 'per Punti Vita'}`;
+        } else if (shown) {
+          const aWon = frame.battleResult.winner === 'player';
+          const [w, l] = aWon ? [frame.cardA, frame.cardB] : [frame.cardB, frame.cardA];
+          const [vw, vl] = aWon ? [frame.battleResult.playerAssault, frame.battleResult.enemyAssault] : [frame.battleResult.enemyAssault, frame.battleResult.playerAssault];
+          line = `${w.name} batte ${l.name} · VA ${vw} a ${vl}`;
+        }
+        return (
+          <SpectatorHud
+            roundName={spectate.roundName}
+            gameNumber={spectate.gameIndex + 1}
+            names={spectate.names}
+            colors={{ a: playerIdentityColor, b: enemyIdentityColor }}
+            series={spectate.seriesBefore}
+            hp={{ a: playerHP, b: enemyHP }}
+            line={line}
+            over={gamePhase === 'gameOver'}
+            auto={spectateAuto}
+            onToggleAuto={() => setSpectateAuto((v) => !v)}
+            onSkip={() => advanceSpectate(true)}
+          />
+        );
+      })()}
 
       <GuidedTutorialOverlay
         isActive={guidedMatch.active}
@@ -7274,7 +8329,7 @@ export default function SatzeGame() {
       
       {/* Zona Duello IA - Sinistra del centro */}
       <div 
-        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''} ${
+        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''}${multiSeatLeaving?.enemy ? ' ms-leave-enemy' : ''}${multiSeatEntry.enemy ? ' ms-arrive' : ''} ms-zone-enemy ${
           isZoomed ? '' : ''
         }`}
         style={{
@@ -7294,6 +8349,9 @@ export default function SatzeGame() {
       >
         {gamePhase !== 'result' && (
           <div className="text-red-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">Il Nemico</div>
+        )}
+        {multiSeatWaitingShown && (
+          <MultiSeatWaitingQueue side="enemy" entries={multiSeatQueue.waiting.enemy} cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout} />
         )}
           {showDeployedEnemyAgent && (
           <div className={`relative flex items-center justify-center flex-shrink-0${holdForConfirmedAgentPick ? ' pointer-events-auto' : ''}`} data-field-agent="enemy" style={{ transformStyle: 'flat', '--acc-en': getArmyAccent(enemyAgent, enemyIdentityColor), '--acc': getArmyAccent(enemyAgent, enemyIdentityColor) }}>
@@ -7379,7 +8437,7 @@ export default function SatzeGame() {
       
       {/* Zona Duello Player - Destra del centro */}
       <div 
-        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''} ${
+        className={`absolute bg-transparent border-none rounded-xl flex flex-col items-center justify-center p-5 pointer-events-none ease-in-out${holdForConfirmedAgentPick ? ' em-agent-pick-target' : ''}${multiSeatLeaving?.player ? ' ms-leave-player' : ''}${multiSeatEntry.player ? ' ms-arrive' : ''} ms-zone-player ${
           isZoomed ? '' : ''
         }`}
         style={{
@@ -7399,6 +8457,9 @@ export default function SatzeGame() {
       >
         {gamePhase !== 'result' && (
           <div className="text-blue-400 text-sm font-bold mb-3 uppercase tracking-wide satze-duel-label">L'eroe</div>
+        )}
+        {multiSeatWaitingShown && (
+          <MultiSeatWaitingQueue side="player" entries={multiSeatQueue.waiting.player} cardLayout={galleryCardLayout === 'reworkP4html' ? 'reworkP4' : galleryCardLayout} />
         )}
         {showDeployedPlayerAgent && (
           <div
@@ -7440,7 +8501,7 @@ export default function SatzeGame() {
                           onHover={handlePlayerPreviewClick}
                           onClick={holdForConfirmedAgentPick
                             ? () => tryPickEminenceCard(selectedAgent.id)
-                            : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                            : gamePhase === 'selectAgent' && !spectating ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                           onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                           isDragging={draggingCard?.id === selectedAgent?.id}
                         />
@@ -7470,7 +8531,7 @@ export default function SatzeGame() {
                       onHover={handlePlayerPreviewClick}
                       onClick={holdForConfirmedAgentPick
                         ? () => tryPickEminenceCard(selectedAgent.id)
-                        : gamePhase === 'selectAgent' ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
+                        : gamePhase === 'selectAgent' && !spectating ? () => { flyDeployedAgentBackToHand(selectedAgent); setSelectedAgent(null); } : undefined}
                       onDragStart={gamePhase === 'selectAgent' ? handleDragStart : undefined}
                       isDragging={draggingCard?.id === selectedAgent?.id}
                     />
@@ -7513,6 +8574,10 @@ export default function SatzeGame() {
       </div>
 
       {gamePhase === 'result' && battleResult && duelPhase >= 4 && vfxProfile.clashVfxEnabled && (
+        <div
+          style={{ display: 'contents' }}
+          className={`${multiSeatLeaving?.enemy ? 'ms-leave-enemy' : ''}${multiSeatLeaving?.player ? ' ms-leave-player' : ''}`}
+        >
         <DuelClashAuroraSequence
           battleResult={battleResult}
           duelPhase={duelPhase}
@@ -7525,6 +8590,7 @@ export default function SatzeGame() {
           playerOverdrive={duelOverdriveOn('player')}
           enemyOverdrive={duelOverdriveOn('enemy')}
         />
+        </div>
       )}
 
       {devDialogueDuelActive && gamePhase === 'result' && battleResult && (
@@ -7585,6 +8651,15 @@ export default function SatzeGame() {
           }`}
           style={gamePhase === 'result' ? { pointerEvents: 'none' } : undefined}
           onClick={() => {
+            if (spectating) { returnToTournamentHub(); return; }
+            if (tournamentGameActive && isOnlinePvP) {
+              if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+              return;
+            }
+            if (tournamentGameActive) {
+              if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
+              return;
+            }
             if (window.confirm('Vuoi davvero abbandonare la partita?')) {
               if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
               setCampaignLevel(null);
@@ -7594,6 +8669,15 @@ export default function SatzeGame() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
+              if (spectating) { returnToTournamentHub(); return; }
+              if (tournamentGameActive && isOnlinePvP) {
+                if (window.confirm("Vuoi abbandonare il torneo online? Il tuo esercito passerà a un'IA.")) tnOnlineRef.current.leave();
+                return;
+              }
+              if (tournamentGameActive) {
+                if (window.confirm('Vuoi tornare al tabellone? Questa partita andrà rigiocata con la stessa mano.')) returnToTournamentHub();
+                return;
+              }
               if (window.confirm('Vuoi davvero abbandonare la partita?')) {
               if (campaignDuelMod?.firstAct) abandonFirstActAttempt(campaignSaveSlot);
                 setCampaignLevel(null);
@@ -7611,12 +8695,12 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpEnemyLabel}
-        hp={shownEnemyHP}
+        hp={hudEnemyHP}
         hpBursts={duelHp.bursts.enemy}
         fcBursts={duelHp.fcBursts.enemy}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={shownEnemyFC}
+        focus={hudEnemyFC}
         toxin={shownEnemyToxin}
         position="top-left"
         gamePhase={gamePhase}
@@ -7628,12 +8712,12 @@ export default function SatzeGame() {
       {/* ============================================ */}
       <StatsPanel
         label={mpSelfLabel}
-        hp={shownPlayerHP}
+        hp={hudPlayerHP}
         hpBursts={duelHp.bursts.player}
         fcBursts={duelHp.fcBursts.player}
         fadeOnResult={false}
         styleOverride={gamePhase === 'result' ? { zIndex: 20 } : null /* sopra le barre cinema (z 15) */}
-        focus={shownPlayerFC}
+        focus={hudPlayerFC}
         toxin={shownPlayerToxin}
         position="bottom-right"
         gamePhase={gamePhase}
@@ -7688,8 +8772,12 @@ export default function SatzeGame() {
       )}
 
       {/* Attesa decisione reclamazione avversario (multiplayer, round 3–4) */}
-      {opponentClaimPending && isOnlinePvP && (
-        <OpponentClaimPendingPopup opponentName={onlinePeerName} accentColor={enemyIdentityColor} />
+      {opponentClaimPresence.present && isOnlinePvP && (
+        <OpponentClaimPendingPopup
+          opponentName={onlinePeerName}
+          accentColor={enemyIdentityColor}
+          leaving={opponentClaimPresence.leaving}
+        />
       )}
 
       {/* Carta trascinata: cresce dalla mano, si inclina col moto, si aggancia allo slot.

@@ -2,9 +2,9 @@
   "ability": {
     "id": "khemet_maledizione_stat",
     "name": "Maledizione del Cosmo",
-    "presenceDelta": -3,
+    "presenceDelta": -2,
     "revealGate": "PRE_FIELD",
-    "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA."
+    "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      3,
+      2,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -29,27 +29,27 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 2
+        "presenceDelta": 0
       },
       {
         "id": "khemet_maledizione_va",
-        "presenceDelta": -2
+        "presenceDelta": -1
       },
       {
         "id": "khemet_maledizione_stat",
-        "presenceDelta": -3
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 3,
-    "presenceAvailable": 3,
-    "presenceDelta": -3,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
     "selected": "khemet_maledizione_stat"
   },
   "eminence": {
     "army": "Khemet",
     "id": "khemet_maledizioni",
-    "name": "Il Castello dei Sigillatori"
+    "name": "Il Castello degli Arcanisti Nefasti"
   },
   "notices": [
     {
@@ -84,9 +84,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Campo",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -3,
+      "presenceDelta": -2,
       "side": "player",
-      "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
+      "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
     }
   ],
   "scenario": {
@@ -151,9 +151,9 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Campo",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -3,
+          "presenceDelta": -2,
           "side": "player",
-          "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
+          "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −1 POT, −1 DAN, −1 VA. Campo 3."
         }
       ],
       "presence": {

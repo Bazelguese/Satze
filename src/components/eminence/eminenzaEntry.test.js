@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ARMY_ENTRY, resolveArmyEntrySlug } from '../../lib/eminenzaEntry.js';
+import {
+  ARMY_ENTRY,
+  EMINENCE_ENTRY_GESTURE_BY_ID,
+  EMINENCE_ENTRY_STYLE_BY_ID,
+  EMINENCE_ENTRY_STYLE_DEFAULT,
+  EMINENCE_ENTRY_STYLES,
+  resolveArmyEntrySlug,
+  resolveEminenceEntryStyle,
+} from '../../lib/eminenzaEntry.js';
+import { EMINENCES } from '../../data/eminences.js';
 
 test('ingresso: risolve i nomi canonici del catalogo', () => {
   assert.equal(resolveArmyEntrySlug('Apex'), 'apex');
@@ -30,4 +39,28 @@ test('ingresso: copre tutte le armate con entry dedicata', () => {
     'apex', 'calibri', 'corte', 'enclave', 'indocili', 'kethran',
     'khemet', 'mascarada', 'mounthborn', 'orathai', 'orizzonte', 'ratti',
   ]);
+});
+
+test('stile ingresso: override valido, poi scelta per Eminenza, poi default', () => {
+  assert.equal(resolveEminenceEntryStyle('x', 'campo'), 'campo');
+  assert.equal(resolveEminenceEntryStyle('x', 'agenti'), 'agenti');
+  assert.equal(resolveEminenceEntryStyle('x', 'boh'), EMINENCE_ENTRY_STYLE_DEFAULT);
+  assert.equal(resolveEminenceEntryStyle(null), EMINENCE_ENTRY_STYLE_DEFAULT);
+});
+
+test('stile ingresso: le scelte per Eminenza puntano a id e stili esistenti', () => {
+  const styles = new Set(Object.values(EMINENCE_ENTRY_STYLES));
+  for (const [id, style] of Object.entries(EMINENCE_ENTRY_STYLE_BY_ID)) {
+    assert.ok(EMINENCES[id], `Eminenza sconosciuta: ${id}`);
+    assert.ok(styles.has(style), `stile sconosciuto per ${id}: ${style}`);
+  }
+});
+
+test('gesti su misura: Eminenze esistenti, con stile campo, slug e durata validi', () => {
+  for (const [id, gesture] of Object.entries(EMINENCE_ENTRY_GESTURE_BY_ID)) {
+    assert.ok(EMINENCES[id], `Eminenza sconosciuta: ${id}`);
+    assert.equal(resolveEminenceEntryStyle(id), EMINENCE_ENTRY_STYLES.CAMPO, `${id} deve usare lo stile campo`);
+    assert.match(gesture.slug, /^[a-z]+$/);
+    assert.ok(gesture.dur > 0.3 && gesture.dur < 4);
+  }
 });

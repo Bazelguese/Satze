@@ -4,13 +4,14 @@
 // ============================================
 
 import { useCallback } from 'react';
+import { getMcTrait, resolveTraitChoice } from '../game/ai/mc/mcTraits.js';
 import { ARMY_SETS, ARMY_DECKS, ARMY_COLORS, ALL_BATTLEFIELDS } from '../data';
 import { selectBattlefields } from '../game/fieldLogic';
 import { DIFFICULTY_NAMES, shuffleArray } from '../utils';
 import { loadCustomDeck, attachShuffleDealVisuals, buildDeckVisualIdentity } from '../utils/deckManager';
 import { calcInitialBonuses, normalizeOnlineMatchPayload, buildShuffleDealSetupFromMatch } from '../utils/onlineMatch';
 import { resolveShuffleKindsForDuel } from '../utils/shuffleStylePreference';
-import { computeShuffleDealFromSets } from '../components/shuffle/prepareDuelShuffleHands';
+import { computeShuffleDealFromSets, seriesContinuationSetup } from '../components/shuffle/prepareDuelShuffleHands';
 import { pickDistinctCardBackPair } from '../utils/cardBackPicker';
 import { createMatchEminenceState, resolveEminenceFormat } from '../game/eminence/eminenceSetup';
 import { EMINENCE_FORMAT } from '../game/eminence/eminenceConstants.js';
@@ -53,6 +54,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setGameResult,
     setShowClaimVictoryChoice,
     setAiDifficulty,
+    setAiPersonality,
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
@@ -134,6 +136,9 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setGameMode(mode);
     // Imposta la difficoltà dell'IA
     setAiDifficulty(difficulty);
+    // Personalità scelta nel menu ("random" estrae qui il tratto, così il VS lo mostra già).
+    const aiPersonality = resolveTraitChoice(startOptions?.aiPersonality);
+    setAiPersonality?.(aiPersonality);
     
     // Seleziona le armate
     const armyNames = Object.keys(ARMY_SETS);
@@ -224,7 +229,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
 
     if (!skipShuffleDeal) {
       const { playerShuffleKind, enemyShuffleKind } = resolveShuffleKindsForDuel();
-      setShuffleDealSetup(attachShuffleDealVisuals({
+      setShuffleDealSetup(seriesContinuationSetup(attachShuffleDealVisuals({
         playerSet: deal.playerSet,
         enemySet: deal.enemySet,
         playerFinalOrder: deal.playerFinalOrder,
@@ -239,7 +244,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
         enemyCardBack,
         playerShuffleKind,
         enemyShuffleKind,
-      }, ARMY_COLORS));
+      }, ARMY_COLORS), startOptions?.seriesDeal ?? null));
       setPlayerArmyBonuses({});
       setEnemyArmyBonuses({});
       setPlayerHand([]);
@@ -253,7 +258,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     }
     
     // Estensioni campagna: numero Campi e PV per missione (default 5 / 25)
-    const fields = campaignDuelMod?.fixedFields ?? selectBattlefields(mode, allBattlefields, {
+    // `battlefields`: Campi già scelti da chi avvia (serie di torneo: li sceglie prima per precaricarli).
+    const fields = startOptions?.battlefields ?? campaignDuelMod?.fixedFields ?? selectBattlefields(mode, allBattlefields, {
       fieldCount: campaignDuelMod?.fields ?? undefined,
     });
     setBattlefields(fields);
@@ -314,6 +320,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       `🎖️ Tu comandi: ${playerArmy}`,
       `🎖️ IA comanda: ${enemyArmySelected}`,
       `🎯 Difficoltà IA: ${DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES['medium']}`,
+      aiPersonality !== 'neutral' ? `🎭 Personalità IA: ${getMcTrait(aiPersonality).name}` : '',
       formatLog,
     ].filter(Boolean));
     
@@ -344,7 +351,8 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setLogs(prev => [...prev, `[R1] ${startLog}`]);
     
     const entryPhase = skipShuffleDeal ? 'selectField' : 'shuffleDeal';
-    const campaignReady = mode === 'campaign' && startOptions?.campaignAssetsReady === true;
+    // Partita successiva di una serie (torneo): si resta sul tavolo, senza la schermata VS.
+    const campaignReady = (mode === 'campaign' && startOptions?.campaignAssetsReady === true) || Boolean(startOptions?.seriesDeal);
     setPendingDuelPhase(campaignReady ? null : entryPhase);
     setGamePhase(campaignReady ? entryPhase : 'duelLoading');
   }, [
@@ -376,6 +384,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
     setEnemyToxin,
     setGameResult,
     setAiDifficulty,
+    setAiPersonality,
     setIsPlayerFirst,
     setOpeningPlayerFirst,
     setLogs,
@@ -423,6 +432,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setGameMode(mode);
       // Il multi-posto online usa la scena con le IA dei posti: niente percorsi del Duello online.
       setAiDifficulty(opts.aiDifficulty ?? 'multiplayer');
+      setAiPersonality?.('neutral');
 
       const shuffleSetup = buildShuffleDealSetupFromMatch(perspective, payload);
       const localPlayerSet = perspective === 'host' ? payload.hostPlayerSet : payload.hostEnemySet;
@@ -440,7 +450,7 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       });
 
       if (shuffleSetup) {
-        const enriched = attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS);
+        const enriched = seriesContinuationSetup(attachShuffleDealVisuals(shuffleSetup, ARMY_COLORS), opts.seriesDeal ?? null);
         setShuffleDealSetup(enriched);
         setPlayerDeckVisual(enriched.playerDeckVisual);
         setEnemyDeckVisual(enriched.enemyDeckVisual);
@@ -527,13 +537,20 @@ export function useGameFlow(gameState, animations = null, clearAiPendingDecision
       setIsPlayerFirst(isPlayerFirst);
       // Online il mazzo avversario per il VS arriva dal messaggio «pronto», non da ARMY_DECKS.
       setDuelDeckKeys?.(null);
-      setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
-      setGamePhase('duelLoading');
+      if (opts.seriesDeal) {
+        // serie di torneo tra due giocatori: partita successiva sul tavolo, senza la schermata VS
+        setPendingDuelPhase(null);
+        setGamePhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+      } else {
+        setPendingDuelPhase(shuffleSetup ? 'shuffleDeal' : 'selectField');
+        setGamePhase('duelLoading');
+      }
     },
     [
       setShowClaimVictoryChoice,
       setGameMode,
       setAiDifficulty,
+      setAiPersonality,
       setPlayerArmyBonuses,
       setEnemyArmyBonuses,
       setPlayerHand,

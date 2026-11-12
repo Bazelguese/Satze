@@ -34,7 +34,9 @@ export function useMatchAudio({ gamePhase, duelPhase = 0, battleResult = null })
     }
   }, [gamePhase]);
 
-  // colpo programmato (es. contatto dello scontro): si annulla se la fase cambia prima (Salta)
+  // colpi programmati dello scontro (contatto, esito): seguono l'animazione Aurora, che dura
+  // sempre phaseMs4 anche quando «Velocità duello» accorcia la fase 4 e resta in scena nelle
+  // fasi 5–6. Si annullano solo uscendo dal risultato, non al cambio di fase.
   const pendingRef = useRef(() => {});
 
   useEffect(() => {
@@ -46,8 +48,12 @@ export function useMatchAudio({ gamePhase, duelPhase = 0, battleResult = null })
     }
     if (prevDuelRef.current === duelPhase) return;
     prevDuelRef.current = duelPhase;
-    pendingRef.current();
-    pendingRef.current = playDuelPhaseBeat(duelPhase, battleResult);
+    const before = pendingRef.current;
+    const cancel = playDuelPhaseBeat(duelPhase, battleResult);
+    pendingRef.current = () => {
+      before();
+      cancel();
+    };
   }, [gamePhase, duelPhase, battleResult]);
 
   useEffect(() => () => pendingRef.current(), []);

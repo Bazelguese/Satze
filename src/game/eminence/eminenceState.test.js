@@ -34,6 +34,10 @@ import {
   hasAlwaysLegalOption,
   resolveAbilityPresenceDelta,
 } from './eminenceState.js';
+import { installLegacyApexEminence, installSyntheticCostsEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 // Le 12 Armate canoniche. Duplicate qui di proposito: `src/data/armies.js` importa un modulo
 // JSX e non è caricabile dal runner node:test.
@@ -132,6 +136,10 @@ test('igiene informativa: nessun gate anticipato lascia una sola abilità sigill
   // che l'Eminenza è dichiaratamente a informazione aperta a quel gate.
   for (const [sequenceName, sequence] of Object.entries(GATE_SEQUENCES)) {
     for (const id of EMINENCE_IDS) {
+      // Ratti: Vendetta oltre la Morte è l'unica attiva GENERAL, quindi superato PRE_AGENT
+      // senza aperture la scelta è deducibile. Accettato col rework (11/11/2026): la
+      // Vendetta resta comunque legale solo con 3 Presenza e un Agente sconfitto.
+      if (id === 'ratti_bella_malelabbra') continue;
       const abilities = EMINENCES[id].abilities;
       const opened = new Set();
 
@@ -151,22 +159,26 @@ test('igiene informativa: nessun gate anticipato lascia una sola abilità sigill
   }
 });
 
-test('igiene informativa: Khemet apre tutte e tre le attive a PRE_FIELD', () => {
+test('igiene informativa: Khemet apre tutte e quattro le attive a PRE_FIELD', () => {
   const gates = EMINENCES.khemet_maledizioni.abilities.map((a) => a.revealGate);
   assert.deepEqual(gates, [
+    REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
     REVEAL_GATES.PRE_FIELD,
   ]);
 });
 
-test('igiene informativa: i Figli aprono tutte e tre le attive a GENERAL', () => {
-  const gates = EMINENCES.figli_domanda_senza_fine.abilities.map((a) => a.revealGate);
-  assert.deepEqual(gates, [
-    REVEAL_GATES.GENERAL,
-    REVEAL_GATES.GENERAL,
-    REVEAL_GATES.GENERAL,
-  ]);
+test('igiene informativa: i Figli rivelano prima degli Agenti solo La Domanda si diffonde', () => {
+  const gates = Object.fromEntries(
+    EMINENCES.figli_domanda_senza_fine.abilities.map((a) => [a.id, a.revealGate]),
+  );
+  assert.deepEqual(gates, {
+    figli_deriva: REVEAL_GATES.GENERAL,
+    figli_condensazione: REVEAL_GATES.GENERAL,
+    figli_domanda_si_diffonde: REVEAL_GATES.PRE_AGENT,
+    figli_risposta: REVEAL_GATES.GENERAL,
+  });
 });
 
 // ------------------------------------------------------------------
@@ -223,9 +235,9 @@ test('validazione: il formato disattivato accetta qualunque cosa', () => {
 // ------------------------------------------------------------------
 
 test('stato: la Presenza iniziale viene dal catalogo', () => {
-  assert.equal(createEminenceState('apex_sole_verde').presence, 3);
+  assert.equal(createEminenceState(LEGACY_APEX).presence, 3);
   assert.equal(createEminenceState('patto_grande_semaforo').presence, 0);
-  assert.equal(createEminenceState('khemet_maledizioni').presence, 2);
+  assert.equal(createEminenceState('khemet_maledizioni').presence, 1);
 });
 
 test('stato: il fallback null non è uno stato competitivo', () => {
@@ -245,7 +257,7 @@ test('stato: il formato disattivato non istanzia alcuno stato Eminenza', () => {
 
 test('reset di round: conserva Presenza e stato persistente, azzera la selezione', () => {
   const state = {
-    ...createEminenceState('apex_sole_verde'),
+    ...createEminenceState(LEGACY_APEX),
     presence: 5,
     presenceSpentThisRound: 2,
     totalPresenceSpent: 4,
@@ -271,7 +283,7 @@ test('reset di round: conserva Presenza e stato persistente, azzera la selezione
 });
 
 test('reset di round: il blocco pianificato diventa blocco del round che comincia', () => {
-  const state = { ...createEminenceState('apex_sole_verde'), blockedNextRound: true };
+  const state = { ...createEminenceState(LEGACY_APEX), blockedNextRound: true };
   const next = resetEminenceRoundState(state);
   assert.equal(next.blockedThisRound, true);
   assert.equal(next.blockedNextRound, false);
@@ -281,13 +293,13 @@ test('reset di round: il blocco pianificato diventa blocco del round che cominci
 });
 
 test('reset di round: il checkpoint di selezione riparte dalla Presenza corrente', () => {
-  const state = { ...createEminenceState('apex_sole_verde'), presence: 7 };
+  const state = { ...createEminenceState(LEGACY_APEX), presence: 7 };
   assert.equal(resetEminenceRoundState(state).selectionCheckpointPresence, 7);
 });
 
 test('reset di round: applicato a entrambi i lati', () => {
   const matchState = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
   });
   matchState.player.selectedAbilityId = 'apex_furia';
@@ -304,7 +316,7 @@ test('reset di round: applicato a entrambi i lati', () => {
 
 test('confine informativo: la proiezione pubblica non espone la selezione segreta', () => {
   const state = {
-    ...createEminenceState('apex_sole_verde'),
+    ...createEminenceState(LEGACY_APEX),
     selectedAbilityId: 'apex_cataclisma',
     selectedParams: { slot: 2 },
     selectionSnapshotPresence: 4,
@@ -324,7 +336,7 @@ test('confine informativo: la proiezione pubblica non espone la selezione segret
 
 test('confine informativo: la vista di un lato include solo la propria selezione', () => {
   const matchState = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
   });
   matchState.player.selectedAbilityId = 'apex_furia';
@@ -339,7 +351,7 @@ test('confine informativo: la vista di un lato include solo la propria selezione
 
 test('confine informativo: la Presenza al checkpoint di selezione è pubblica', () => {
   // La deduzione di legalità dell'IA deve poterla leggere senza toccare lo stato segreto.
-  const state = { ...createEminenceState('apex_sole_verde'), selectionCheckpointPresence: 4 };
+  const state = { ...createEminenceState(LEGACY_APEX), selectionCheckpointPresence: 4 };
   assert.equal(selectPublicEminenceState(state).selectionCheckpointPresence, 4);
   assert.equal(selectPrivateEminenceSelection(state).selectedAbilityId, null);
 });
@@ -349,9 +361,9 @@ test('confine informativo: la Presenza al checkpoint di selezione è pubblica', 
 // ------------------------------------------------------------------
 
 test('legalità: le abilità a costo negativo richiedono Presenza sufficiente', () => {
-  assert.deepEqual(getLegalAbilityIds('apex_sole_verde', 0), ['apex_furia']);
-  assert.deepEqual(getLegalAbilityIds('apex_sole_verde', 2), ['apex_furia', 'apex_disprezzo']);
-  assert.equal(getLegalAbilityIds('apex_sole_verde', 4).length, 3);
+  assert.deepEqual(getLegalAbilityIds(LEGACY_APEX, 0), ['apex_furia']);
+  assert.deepEqual(getLegalAbilityIds(LEGACY_APEX, 2), ['apex_furia', 'apex_disprezzo']);
+  assert.equal(getLegalAbilityIds(LEGACY_APEX, 4).length, 3);
 });
 
 test('legalità: il Grande Semaforo a 0 Presenza non può scegliere Rosso', () => {
@@ -361,29 +373,30 @@ test('legalità: il Grande Semaforo a 0 Presenza non può scegliere Rosso', () =
 });
 
 test('legalità: il costo esatto è pagabile', () => {
-  assert.equal(isAbilitySelectable('apex_sole_verde', 'apex_cataclisma', 4), true);
-  assert.equal(isAbilitySelectable('apex_sole_verde', 'apex_cataclisma', 3), false);
+  assert.equal(isAbilitySelectable(LEGACY_APEX, 'apex_cataclisma', 4), true);
+  assert.equal(isAbilitySelectable(LEGACY_APEX, 'apex_cataclisma', 3), false);
 });
 
 test('legalità: i delta persistenti alzano il costo effettivo', () => {
-  const guerra = getEminenceAbility('calibri_quattro_fronti', 'calibri_guerra_attrito');
-  assert.equal(resolveAbilityPresenceDelta(guerra), 0);
+  const id = installSyntheticCostsEminence();
+  const rincaro = getEminenceAbility(id, 'test_rincaro');
+  assert.equal(resolveAbilityPresenceDelta(rincaro), 0);
   assert.equal(
-    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -1 } }),
+    resolveAbilityPresenceDelta(rincaro, { abilityPresenceDeltas: { test_rincaro: -1 } }),
     -1,
   );
   assert.equal(
-    resolveAbilityPresenceDelta(guerra, { abilityPresenceDeltas: { calibri_guerra_attrito: -6 } }),
+    resolveAbilityPresenceDelta(rincaro, { abilityPresenceDeltas: { test_rincaro: -6 } }),
     -4,
   );
-  assert.deepEqual(getLegalAbilityIds('calibri_quattro_fronti', 0), ['calibri_guerra_attrito']);
+  assert.deepEqual(getLegalAbilityIds(id, 0), ['test_rincaro']);
   assert.deepEqual(
-    getLegalAbilityIds('calibri_quattro_fronti', 0, { abilityPresenceDeltas: { calibri_guerra_attrito: -4 } }),
+    getLegalAbilityIds(id, 0, { abilityPresenceDeltas: { test_rincaro: -4 } }),
     [],
   );
   assert.equal(
-    isAbilitySelectable('calibri_quattro_fronti', 'calibri_guerra_attrito', 1, {
-      abilityPresenceDeltas: { calibri_guerra_attrito: -1 },
+    isAbilitySelectable(id, 'test_rincaro', 1, {
+      abilityPresenceDeltas: { test_rincaro: -1 },
     }),
     true,
   );
@@ -396,7 +409,7 @@ test('legalità: i delta persistenti alzano il costo effettivo', () => {
 test('accessori: lookup per id, Armata e abilità', () => {
   assert.equal(getEminence('apex_sole_verde').name, 'Il Sole Verde');
   assert.equal(getEminenceForArmy('Apex').id, 'apex_sole_verde');
-  assert.equal(getEminenceAbility('apex_sole_verde', 'apex_furia').presenceDelta, 1);
+  assert.equal(getEminenceAbility('apex_sole_verde', 'apex_cielo_smeraldino').presenceDelta, 1);
   assert.equal(getEminence('inesistente'), null);
   assert.equal(getEminenceAbility('apex_sole_verde', 'inesistente'), null);
 });

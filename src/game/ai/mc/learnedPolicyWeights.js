@@ -1,0 +1,65 @@
+// Generato da scripts/ai-train-policy.mjs: non modificare a mano.
+// Politica lineare per le simulazioni del motore a simulazione (src/game/ai/mc/mcPolicy.js).
+// Dati: 3151 decisioni di autogioco della Difficile; commit 66ea8a5.
+// Verifica (1 decisione su 5): {"ce":2.5314,"top1":0.274,"regret":0.1186}
+
+export const LEARNED_POLICY = {
+  "features": [
+    "bias",
+    "power",
+    "damage",
+    "league",
+    "hasAbility",
+    "abilityReady",
+    "abilityWasted",
+    "directDamageReady",
+    "focusRatio",
+    "focusRatioSq",
+    "focusShareOfPool",
+    "lastCard",
+    "strengthRank",
+    "respond",
+    "respondMargin",
+    "respondWins",
+    "respondAssault",
+    "respondStopsDamage",
+    "leadPower",
+    "leadFocusRatio",
+    "hpDiffXFocus",
+    "lethal",
+    "fieldDiffXPower",
+    "roundXFocus",
+    "threatXFocus",
+    "lowHpXFocus"
+  ],
+  "tau": 0.05,
+  "decisions": 3151,
+  "weights": [
+    -0.00163,
+    -0.55263,
+    0.18246,
+    0.40264,
+    0.00647,
+    0.34371,
+    -0.43904,
+    -0.43521,
+    -0.68177,
+    0.16219,
+    -0.08897,
+    0,
+    0.24973,
+    0,
+    1.57227,
+    -0.28541,
+    0,
+    0.99314,
+    0.8542,
+    1.051,
+    0.14697,
+    0,
+    0.54028,
+    0.18354,
+    -0.29706,
+    0
+  ]
+};

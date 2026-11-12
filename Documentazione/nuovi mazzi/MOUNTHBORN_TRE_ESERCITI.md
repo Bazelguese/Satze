@@ -18,15 +18,19 @@ Il Bonus modifica contemporaneamente POT e DAN. Quando il giocatore Mounthborn a
 - permette alle carte Imboscata di sommare un secondo vantaggio;
 - rende credibili sacrifici e puntate moderate.
 
-La regola secondo cui chi perde lo scontro precedente gioca per primo nel successivo crea inoltre una sinergia naturale:
+L’iniziativa si alterna a ogni scontro, qualunque sia l’esito: chi sceglie per primo in uno scontro sceglie per secondo nel successivo. La prima posizione è quindi prevedibile e cade a scontri alterni.
+
+Questo crea una sinergia pianificabile: uno scontro ceduto da seconda posizione è seguito da uno in cui il Mounthborn gioca per primo.
 
 ```text
-perdita
+perdita da seconda posizione
+→ scontro successivo in prima posizione (alternanza)
 → Vendetta
-→ prima posizione
 → Bonus Imboscata
 → possibile Rimonta
 ```
+
+Una perdita da prima posizione attiva comunque Vendetta, ma lo scontro successivo si gioca per secondi, senza il Bonus.
 
 I tre eserciti esplorano tre forme diverse della Fame:
 
@@ -290,13 +294,15 @@ deviazione 1,67
 
 Questo esercito sfrutta una delle interazioni più naturali del regolamento di SATZE:
 
-> **Perdere lo scontro precedente permette di giocare per primi nel successivo.**
+> **L’iniziativa si alterna: dopo uno scontro giocato per secondi, il successivo si gioca per primi.**
 
-Per i Mounthborn significa accendere contemporaneamente:
+Cedere uno scontro giocato da seconda posizione permette quindi, nello scontro successivo, di accendere contemporaneamente:
 
 - Vendetta;
 - Bonus Imboscata;
 - spesso Rimonta, se la perdita ha causato uno svantaggio PV.
+
+Se la perdita arriva da prima posizione, lo scontro successivo si gioca per secondi: Vendetta e Rimonta restano disponibili, il Bonus no.
 
 ## Lista
 
@@ -380,14 +386,16 @@ La capacità ponte è sufficiente per contendere normalmente.
 La sequenza più importante è:
 
 ```text
-perdi uno scontro
-→ giochi per primo nel successivo
+perdi uno scontro giocato per secondo
+→ giochi per primo nel successivo (alternanza)
 → Bonus Mounthborn: +1 POT, +1 DAN
 → Vendetta si attiva
 → Rimonta può attivarsi
 ```
 
-Esempi:
+Lo scontro da cedere va quindi scelto fra quelli in cui giochi per secondo. Se perdi giocando per primo, il contrattacco arriva da seconda posizione: Vendetta e Rimonta valgono ancora, ma senza il +1/+1 del Bonus.
+
+Esempi (contrattacco in prima posizione):
 
 **Insetto della Guerra in piena Rimonta**
 
@@ -499,7 +507,7 @@ Il debito è quindi più sano di un deck interamente compensatorio:
 
 - Almeno una carta reattiva in ogni mano.
 - Rimonta e Vendetta insieme nell’83,3% delle mani.
-- Sinergia naturale con la regola dell’iniziativa.
+- Sinergia prevedibile con l’alternanza dell’iniziativa: lo scontro ceduto da secondo prepara un contrattacco da primo.
 - Contrattacchi con POT e DAN elevati.
 - Autolesione capace di attivare Rimonta senza cedere un Campo.
 - Cura dopo la vittoria di recupero.
@@ -510,6 +518,7 @@ Il debito è quindi più sano di un deck interamente compensatorio:
 - Nessuna produzione di Focus.
 - Curva più variabile.
 - La prima sconfitta resta un costo reale.
+- Una sconfitta subita da prima posizione porta il contrattacco in seconda posizione, senza Bonus.
 - Larva Esplosiva può compromettere il differenziale PV.
 - Vendetta e Rimonta possono non attivarsi contemporaneamente.
 - Bruto Corazzato è più forte tardi che presto.
@@ -795,7 +804,7 @@ Insegna:
 
 - Vendetta;
 - Rimonta;
-- la relazione fra sconfitta e prima posizione;
+- la relazione fra sconfitta, alternanza dell’iniziativa e prima posizione;
 - autolesione controllata;
 - contrattacco e recupero.
 

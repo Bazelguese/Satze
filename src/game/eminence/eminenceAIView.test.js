@@ -14,12 +14,16 @@ import {
 } from './eminenceAIView.js';
 import { buildAIInformationSet, validateAIInformationSet, buildPublicDecisionKey } from '../ai/buildAIInformationSet.js';
 import { publicStateHash } from '../ai/publicStateHash.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 // L'IA gioca il lato 'enemy'; il giocatore umano è 'player'.
 const scenario = ({ playerAbility = 'apex_furia', aiAbility = 'semaforo_verde' } = {}) => {
   let matchState = beginEminenceRound(
     createEminenceMatchState({
-      playerEminenceId: 'apex_sole_verde',
+      playerEminenceId: LEGACY_APEX,
       enemyEminenceId: 'patto_grande_semaforo',
     }),
     { roundNumber: 1 }

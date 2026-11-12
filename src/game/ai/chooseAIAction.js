@@ -5,7 +5,7 @@
 import { getAIProfile } from './aiProfiles.js';
 import { defaultRng, AI_SCORE_WEIGHTS, SCORE_TIE_EPSILON } from './aiConstants.js';
 import {
-  getAvailableCards,
+  getLegalAgentCards,
   generateStrategicActionsForSide,
 } from './generateAIActions.js';
 import { getOrdinaryFocusCap } from './focusBudget.js';
@@ -126,7 +126,7 @@ export function chooseAIIndependentAction(context, difficulty, options = {}) {
   const cache = options.cache || new Map();
   const weights = options.weights || AI_SCORE_WEIGHTS;
 
-  const available = getAvailableCards(context.ai.hand, context.ai.usedCardIds);
+  const available = getLegalAgentCards(context.ai);
   if (!available.length) return null;
   if (!context.field) {
     if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {

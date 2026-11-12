@@ -16,7 +16,9 @@
       "anchored": false
     },
     "fragments": [],
-    "prey": []
+    "prey": [
+      118
+    ]
   },
   "enemy": {
     "eminenceId": null,

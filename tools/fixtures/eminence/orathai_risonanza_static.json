@@ -4,7 +4,7 @@
   "player": {
     "eminenceId": "orathai_primo_canto",
     "presence": 1,
-    "abilityId": "orathai_tacet",
+    "abilityId": "orathai_prezzo_del_canto",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -34,13 +34,13 @@
     }
   },
   "outcome": {
-    "winner": "player",
+    "winner": "enemy",
     "powerResolvedBySide": {
-      "player": true,
+      "player": false,
       "enemy": true
     },
     "activatedTriggerBySide": {
-      "player": "rimonta",
+      "player": null,
       "enemy": "glory"
     },
     "aliasUsedBySide": {
@@ -48,15 +48,11 @@
       "enemy": false
     },
     "hpDeltas": {
-      "player": 0,
+      "player": -3,
       "enemy": 0
     },
     "finalPowerBySide": null,
-    "finalPowerByCardId": null,
-    "activationSatisfiedBySide": {
-      "player": true,
-      "enemy": true
-    }
+    "finalPowerByCardId": null
   },
   "name": "orathai_risonanza_static",
   "branch": "hit"

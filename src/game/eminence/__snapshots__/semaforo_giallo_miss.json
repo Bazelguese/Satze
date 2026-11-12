@@ -2,9 +2,9 @@
   "ability": {
     "id": "semaforo_giallo",
     "name": "Giallo",
-    "presenceDelta": 0,
+    "presenceDelta": -2,
     "revealGate": "GENERAL",
-    "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
+    "text": "Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -18,7 +18,7 @@
       0
     ],
     "presencePlayer": [
-      0,
+      2,
       0
     ],
     "segmentsWithoutCue": 0,
@@ -29,17 +29,21 @@
     "legalAbilities": [
       {
         "id": "semaforo_verde",
-        "presenceDelta": 1
+        "presenceDelta": 0
       },
       {
         "id": "semaforo_giallo",
-        "presenceDelta": 0
+        "presenceDelta": -2
+      },
+      {
+        "id": "semaforo_rosso",
+        "presenceDelta": -2
       }
     ],
     "presenceAfterReveal": 0,
-    "presenceAfterSelect": 0,
-    "presenceAvailable": 0,
-    "presenceDelta": 0,
+    "presenceAfterSelect": 2,
+    "presenceAvailable": 2,
+    "presenceDelta": -2,
     "selected": "semaforo_giallo"
   },
   "eminence": {
@@ -83,9 +87,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Duello",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": 0,
+      "presenceDelta": -2,
       "side": "player",
-      "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
+      "text": "Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori."
     }
   ],
   "scenario": {
@@ -104,9 +108,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -118,9 +122,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 2
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 2,
       "timing": null
     },
     {
@@ -184,9 +188,9 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Duello",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": 0,
+          "presenceDelta": -2,
           "side": "player",
-          "text": "Imboscata e Turbo sono considerati soddisfatti in questo round."
+          "text": "Imboscata e Turbo sono considerati soddisfatti in questo round, per entrambi i giocatori."
         }
       ],
       "presence": {

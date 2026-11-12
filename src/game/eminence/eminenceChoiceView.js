@@ -157,7 +157,11 @@ function buildOptions(eminenceId, publicSide, gateProgress, selectedAbilityId, p
   const options = eminence.abilities.map((ability) => {
     const gatePassed = completed.includes(ability.revealGate);
     const affordable = legal.has(ability.id);
-    const presenceDelta = resolveAbilityPresenceDelta(ability, publicSide.persistent);
+    const presenceDelta = resolveAbilityPresenceDelta(
+      ability,
+      publicSide.persistent,
+      publicSide.selectionCheckpointPresence,
+    );
     const paramsSchema = resolveParamsSchema(ability.paramsSchema, publicSide.persistent, paramContext);
 
     let blocker = null;

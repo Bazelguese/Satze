@@ -7,12 +7,20 @@
 
 import { DIFFICULTY_NAMES } from '../../utils/aiConstants.js';
 import { EMINENCE_FORMAT } from '../../game/eminence/eminenceConstants.js';
+import { getMcTrait } from '../../game/ai/mc/mcTraits.js';
 
 /**
  * Etichette dei due lati.
- * Contro l'IA: «TU» vs «IA · <difficoltà>»; online: nomi scelti in lobby.
+ * Contro l'IA: «TU» vs «IA · <difficoltà>» (con la personalità, se non è Neutrale);
+ * online: nomi scelti in lobby.
  */
-export function buildVersusIdentity({ isOnline = false, difficulty = 'medium', selfName = '', peerName = '' } = {}) {
+export function buildVersusIdentity({
+  isOnline = false,
+  difficulty = 'medium',
+  personality = 'neutral',
+  selfName = '',
+  peerName = '',
+} = {}) {
   if (isOnline) {
     return {
       player: { eyebrow: 'TU', name: String(selfName || '').trim() || 'Giocatore', sub: null },
@@ -24,7 +32,12 @@ export function buildVersusIdentity({ isOnline = false, difficulty = 'medium', s
     enemy: {
       eyebrow: 'AVVERSARIO',
       name: 'IA',
-      sub: DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES.medium,
+      sub: [
+        DIFFICULTY_NAMES[difficulty] || DIFFICULTY_NAMES.medium,
+        personality && personality !== 'neutral' ? getMcTrait(personality).name : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
     },
   };
 }
@@ -46,6 +59,7 @@ export function buildDuelVersusData({
   gameMode = 'classic',
   isOnline = false,
   difficulty = 'medium',
+  personality = 'neutral',
   selfName = '',
   peerName = '',
   playerArmy = null,
@@ -59,7 +73,7 @@ export function buildDuelVersusData({
 } = {}) {
   if (gameMode === 'campaign') return null;
 
-  const identity = buildVersusIdentity({ isOnline, difficulty, selfName, peerName });
+  const identity = buildVersusIdentity({ isOnline, difficulty, personality, selfName, peerName });
 
   const playerDeck = {
     army: playerArmy,

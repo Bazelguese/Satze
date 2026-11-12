@@ -150,7 +150,7 @@ Allineati a `eminenceAnnouncements.js`:
 | Frenesia | `Frenesia della Fame: se viene schierata…` | Se una Preda è schierata, il Bonus d'Armata è considerato attivo e non può essere bloccato. |
 | Cannibalismo | `Cannibalismo: se perdi…` | Se perdi il Duello contro una Preda, Cura 3 PV. |
 
-### Khemet — Il Castello dei Sigillatori
+### Khemet — Il Castello degli Arcanisti Nefasti
 
 | | Prima | Dopo |
 |---|---|---|

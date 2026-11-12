@@ -62,6 +62,7 @@
 | **Ultima Chance** | Turno 5+ |
 | **Alleato** | Nella mano iniziale c'era almeno 1 altra carta della stessa Lega della carta giocata |
 | **Rinforzi** | Nella mano iniziale c'erano almeno 2 altre carte della stessa Lega della carta giocata |
+| **Debito X** | Il Potere si attiva senza bisogno di condizioni; quando si attiva, chi lo controlla perde X PV. Un Potere bloccato non si attiva e non fa pagare. Si ottiene solo tramite effetti (es. l'Offerta «Debito» della Corte Rossa) |
 
 ---
 

@@ -4,9 +4,10 @@
 
 /**
  * Aggrega i valori per carta avversaria.
- * Difficile: carta peggiore per l'IA;
- * Normale: pesi sulle carte sensate (peggiori per l'IA);
- * Facile: media semplice.
+ * Modalità (`profile.cardAggregation`, default per livello):
+ * - 'min' (Difficile): carta peggiore per l'IA;
+ * - 'weighted' (Normale): pesi sulle carte sensate (peggiori per l'IA);
+ * - 'mean' (Facile): media semplice.
  *
  * @param {{ cardId?: number, score: number }[]} cardScores
  * @param {{ id?: string }} profile
@@ -14,11 +15,15 @@
 export function aggregatePlayerCardScores(cardScores, profile) {
   if (!cardScores?.length) return -Infinity;
 
-  if (profile?.id === 'hard') {
+  const mode =
+    profile?.cardAggregation ??
+    (profile?.id === 'hard' ? 'min' : profile?.id === 'easy' ? 'mean' : 'weighted');
+
+  if (mode === 'min') {
     return Math.min(...cardScores.map((c) => c.score));
   }
 
-  if (profile?.id === 'easy') {
+  if (mode === 'mean') {
     return cardScores.reduce((sum, c) => sum + c.score, 0) / cardScores.length;
   }
 

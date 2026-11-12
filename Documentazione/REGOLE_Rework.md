@@ -325,6 +325,24 @@ In caso di VA identico:
 
 ---
 
+## MODALITA TORNEO
+
+- **Formato:** eliminazione diretta a **12 partecipanti** (tu + 11 IA, una per armata). Agli Ottavi 4 partecipanti a sorte passano il turno; poi Quarti, Semifinali e Finale.
+- **Incontri al meglio delle 3:** passa chi vince 2 partite.
+- **Esercito bloccato:** il Deck di 10 carte scelto all'iscrizione resta lo stesso per tutto il torneo.
+- **Mani nella serie:**
+  - **Partita 1:** ogni giocatore pesca 5 carte a caso dal proprio Deck.
+  - **Partita 2:** ogni giocatore gioca le **5 carte non pescate** nella partita 1.
+  - **Partita 3 (spareggio):** il Deck viene rimischiato e si pescano 5 carte a caso.
+- **Serie sullo stesso tavolo:** finita una partita, se la serie non e decisa si resta sul tavolo: le mani escono, un cartello annuncia la partita successiva e le nuove carte vengono servite (partita 2 senza mischiata, spareggio con mischiata). Al tabellone si torna a serie conclusa, o volendo con il tasto Tabellone.
+- **PV e FC** ripartono da 25 e 18 a ogni partita; i Campi di Battaglia vengono rigenerati a ogni partita.
+- **Primo giocatore:** sempre chi ha la Lega totale piu bassa in mano (parita: casuale).
+- **Pareggio:** una partita pareggiata non assegna vittorie; se dopo 3 partite la serie e pari si continua con altri spareggi a Deck rimischiato.
+- **Torneo online:** nella stanza multiplayer l'host sceglie la modalita "Torneo": fino a **4 giocatori**, gli altri posti sono IA. Ognuno gioca la propria serie in contemporanea (contro un'IA o contro un altro giocatore, in quel caso la partita parte quando entrambi lanciano la sfida). Il tabellone lo tiene l'host, che gioca anche le serie tra IA. Chi lascia viene sostituito da un'IA; se l'host chiude la stanza, ognuno prosegue il torneo in locale contro le IA.
+- **Serie tra IA:** vengono giocate davvero con le stesse regole (stesse mani, Campi, PV e FC), **senza Eminenze**. Dal tabellone si possono guardare sul tavolo, rileggere nel riepilogo a turni, oppure far concludere subito con "Concludi il turno".
+
+---
+
 ## RIASSUNTO RAPIDO
 
 ```

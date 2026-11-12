@@ -16,7 +16,9 @@ import { EMINENCE_ARMY_ORDER } from '../../../data/eminences.js';
 import { MATCH_FORMATS, getMatchFormat, matchFormatIdFromMode } from '../../../data/gameModes.js';
 import { MENU_ACCENTS } from '../../../theme/hudOratorioPalette';
 import { playUiClick } from '../../../audio/soundBus';
-import { SEAT_AI_PROFILES, TEAMMATE_PRESET_IDS } from '../../../game/multiSeat/seatAI.js';
+import { useLeaveThen } from '../../../hooks/usePresence';
+import { MC_TRAITS, MC_TRAIT_IDS } from '../../../game/ai/mc/mcTraits.js';
+import { TEAMMATE_TRAIT_IDS, teammateTraitFromChoice, trustForTrait } from '../../../game/ai/mcTeam/teamTraits.js';
 
 const ENEMY_PICK = {
   random: 'random',
@@ -32,6 +34,14 @@ const MATCH_MODES = [
   { id: 'kingOfHill', name: 'Re della collina', description: 'Tutti contro tutti' },
 ];
 const PLAYER_COUNTS = [3, 4];
+/** Personalità dell'IA nel Duello: Neutrale (predefinita), Casuale, poi i tratti. */
+const PERSONALITY_IDS = ['neutral', 'random', ...MC_TRAIT_IDS.filter((id) => id !== 'neutral')];
+function personalityInfo(id) {
+  if (id === 'random') {
+    return { name: 'Casuale', description: 'Un tratto a sorpresa, svelato nella schermata VS.' };
+  }
+  return MC_TRAITS[id] || MC_TRAITS.neutral;
+}
 /** Le modalità a più posti non usano le Eminenze. */
 const MULTI_SEAT_FORMAT_IDS = ['noEminence', 'bareHands'];
 
@@ -61,6 +71,8 @@ export function DifficultySelectPopup({
   accentColor = MENU_ACCENTS.magenta,
   initialMode = 'classic',
   excludeArmy = null,
+  /** Torneo: solo formato e difficoltà (duello 1v1, avversari decisi dal tabellone). */
+  tournament = false,
 }) {
   const difficulties = getAllDifficulties();
   const allFormats = useMemo(() => Object.values(MATCH_FORMATS), []);
@@ -76,7 +88,7 @@ export function DifficultySelectPopup({
     initialMode !== 'classic' ? matchFormatIdFromMode(initialMode) : (MATCH_FORMATS[saved?.formatId]?.id ?? MATCH_FORMATS.standard.id)
   );
   const [enemyPick, setEnemyPick] = useState(() =>
-    saved?.enemyPick === ENEMY_PICK.chosen && armyOptions.includes(saved?.enemyArmy) ? ENEMY_PICK.chosen : ENEMY_PICK.random
+    tournament ? ENEMY_PICK.random : saved?.enemyPick === ENEMY_PICK.chosen && armyOptions.includes(saved?.enemyArmy) ? ENEMY_PICK.chosen : ENEMY_PICK.random
   );
   const [chosenEnemyArmy, setChosenEnemyArmy] = useState(() =>
     armyOptions.includes(saved?.enemyArmy) ? saved.enemyArmy : null
@@ -85,12 +97,14 @@ export function DifficultySelectPopup({
     difficulties.some((d) => d.id === saved?.difficulty) ? saved.difficulty : 'medium'
   );
   const [matchModeId, setMatchModeIdState] = useState(() =>
-    MATCH_MODES.some((m) => m.id === saved?.matchMode) ? saved.matchMode : 'duel'
+    tournament ? 'duel' : MATCH_MODES.some((m) => m.id === saved?.matchMode) ? saved.matchMode : 'duel'
   );
-  const [teammatePreset, setTeammatePreset] = useState(() =>
-    TEAMMATE_PRESET_IDS.includes(saved?.teammatePreset) ? saved.teammatePreset : TEAMMATE_PRESET_IDS[0]
-  );
+  // Compagno del 2v2: una personalità (un vecchio preset salvato si converte).
+  const [teammatePreset, setTeammatePreset] = useState(() => teammateTraitFromChoice(saved?.teammatePreset));
   const [playerCount, setPlayerCount] = useState(() => (PLAYER_COUNTS.includes(saved?.players) ? saved.players : 3));
+  const [personalityId, setPersonalityId] = useState(() =>
+    PERSONALITY_IDS.includes(saved?.personality) ? saved.personality : 'neutral'
+  );
   const [focus, setFocusState] = useState(0);
   /** Valori correnti anche tra un tasto e l'altro, prima del nuovo render. */
   const live = useRef({ focus: 0, enemyPick, matchMode: matchModeId });
@@ -105,9 +119,10 @@ export function DifficultySelectPopup({
 
   const canConfirm = isMultiSeat || enemyPick === ENEMY_PICK.random || Boolean(chosenEnemyArmy);
   const rowsFor = (pick, mode = live.current.matchMode) => {
-    if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty'];
-    if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty'];
-    return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty'];
+    if (tournament) return ['format', 'difficulty', 'personality'];
+    if (mode === 'teamDuel') return ['mode', 'format', 'teammate', 'difficulty', 'personality'];
+    if (mode === 'kingOfHill') return ['mode', 'format', 'players', 'difficulty', 'personality'];
+    return ['mode', 'format', 'enemy', ...(pick === ENEMY_PICK.chosen ? ['army'] : []), 'difficulty', 'personality'];
   };
   const setMatchModeId = (id) => {
     live.current.matchMode = id;
@@ -133,20 +148,25 @@ export function DifficultySelectPopup({
   const stepRow = (key, d) => {
     playUiClick();
     if (key === 'mode') setMatchModeId(cycle(MATCH_MODES.map((m) => m.id), live.current.matchMode, d));
-    else if (key === 'teammate') setTeammatePreset((x) => cycle(TEAMMATE_PRESET_IDS, x, d));
+    else if (key === 'teammate') setTeammatePreset((x) => cycle(TEAMMATE_TRAIT_IDS, x, d));
     else if (key === 'players') setPlayerCount((x) => cycle(PLAYER_COUNTS, x, d));
     else if (key === 'format') setFormatId((f) => cycle(formats.map((x) => x.id), formats.some((x) => x.id === f) ? f : formats[0].id, d));
     else if (key === 'enemy') pickEnemy(live.current.enemyPick === ENEMY_PICK.random ? ENEMY_PICK.chosen : ENEMY_PICK.random);
     else if (key === 'army') setChosenEnemyArmy((a) => cycle(armyOptions, a ?? armyOptions[d > 0 ? armyOptions.length - 1 : 0], d));
     else if (key === 'difficulty') setDifficultyId((x) => cycle(difficulties.map((y) => y.id), x, d));
+    else if (key === 'personality') setPersonalityId((x) => cycle(PERSONALITY_IDS, x, d));
   };
 
-  const [leaving, setLeaving] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // Esc, X e clic sullo sfondo: stessa uscita della conferma, poi si chiude
+  const [closing, requestClose] = useLeaveThen(onClose, 320);
+  const leaving = starting || closing;
   const start = () => {
     if (!canConfirm || leaving) return;
     const format = getMatchFormat(effectiveFormatId);
     const enemyArmy = !isMultiSeat && enemyPick === ENEMY_PICK.chosen ? chosenEnemyArmy : null;
-    writeSetup({
+    // Torneo: restano le preferenze della partita locale, cambiano solo formato e difficoltà.
+    writeSetup(tournament ? { ...saved, formatId: format.id, difficulty: difficultyId, personality: personalityId } : {
       formatId: format.id,
       enemyPick,
       enemyArmy: chosenEnemyArmy,
@@ -154,9 +174,10 @@ export function DifficultySelectPopup({
       matchMode: matchModeId,
       teammatePreset,
       players: playerCount,
+      personality: personalityId,
     });
     // il riquadro vola via, poi parte il passaggio al VS
-    setLeaving(true);
+    setStarting(true);
     window.setTimeout(() => onSelect({
       difficulty: difficultyId,
       mode: format.mode,
@@ -166,11 +187,12 @@ export function DifficultySelectPopup({
       matchMode: matchModeId,
       teammatePreset,
       players: playerCount,
+      personality: personalityId,
     }), 280);
   };
 
   const stateRef = useRef({});
-  stateRef.current = { stepRow, start, onClose, leaving };
+  stateRef.current = { stepRow, start, requestClose, leaving };
   live.current.matchMode = matchModeId;
   const screenActiveRef = useScreenActiveRef();
 
@@ -183,7 +205,7 @@ export function DifficultySelectPopup({
       e.stopImmediatePropagation();
       const k = stateRef.current;
       if (k.leaving) return;
-      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.onClose?.(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); playUiClick(); k.requestClose(); return; }
       if (e.key === 'Enter') { e.preventDefault(); k.start(); return; }
       const rs = rowsFor(live.current.enemyPick);
       const cur = Math.min(live.current.focus, rs.length - 1);
@@ -207,7 +229,7 @@ export function DifficultySelectPopup({
   const format = getMatchFormat(effectiveFormatId);
   const difficulty = difficulties.find((d) => d.id === difficultyId) || difficulties[0];
   const modeInfo = MATCH_MODES.find((m) => m.id === matchModeId) || MATCH_MODES[0];
-  const preset = SEAT_AI_PROFILES[teammatePreset];
+  const mateInfo = MC_TRAITS[teammatePreset] || MC_TRAITS.neutral;
   const rowIndex = (key) => rows.indexOf(key);
   const focusProps = (key) => ({
     className: `mst-row${focusKey === key ? ' on' : ''}`,
@@ -223,36 +245,43 @@ export function DifficultySelectPopup({
       : matchModeId === 'kingOfHill'
         ? 'Tutti contro tutti: chi vince resta sulla collina e affronta il successivo.'
         : 'Il duello classico contro un’IA.',
-    teammate: preset ? `${preset.name}: ${preset.description}` : '',
+    teammate: `${mateInfo.name}: ${mateInfo.description} Segue i tuoi consigli ${Math.round(trustForTrait(teammatePreset) * 100)}% delle volte.`,
     players: `${playerCount} giocatori: tu e ${playerCount - 1} IA.`,
     format: format.description,
     enemy: enemyPick === ENEMY_PICK.random ? 'Armata ed esercito dell’IA scelti a caso.' : 'Scegli tu l’armata avversaria.',
     army: chosenEnemyArmy ? `Affronterai ${chosenEnemyArmy}.` : 'Scegli l’armata che affronterai.',
     difficulty: difficulty?.longDescription,
+    personality: tournament && personalityId === 'random'
+      ? 'Casuale: ogni IA del torneo estrae il suo tratto e lo tiene fino alla fine; lo vedi nel tabellone.'
+      : isMultiSeat && personalityId === 'random'
+        ? 'Casuale: ogni avversario estrae il suo tratto, svelato nella schermata VS.'
+        : `${personalityInfo(personalityId).name}: ${personalityInfo(personalityId).description}${tournament ? ' (tutte le IA del torneo)' : isMultiSeat ? ' (tutti gli avversari)' : ''}`,
   }[focusKey];
   const helpLabel = {
     mode: 'MODALITÀ', teammate: 'COMPAGNO', players: 'GIOCATORI',
     format: 'FORMATO', enemy: 'NEMICO', army: 'ARMATA NEMICA', difficulty: 'DIFFICOLTÀ',
+    personality: isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ',
   }[focusKey];
   const rowNumber = (key) => String(rows.indexOf(key) + 1).padStart(2, '0');
 
   return (
-    <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : onClose}>
-      <div className="mst-card" role="dialog" aria-modal="true" aria-label="Imposta la partita" onClick={(e) => e.stopPropagation()}>
+    <div className={`mst${leaving ? ' is-leaving' : ''}`} style={{ '--accent': accentColor }} onClick={leaving ? undefined : requestClose}>
+      <div className="mst-card" role="dialog" aria-modal="true" aria-label={tournament ? 'Imposta il torneo' : 'Imposta la partita'} onClick={(e) => e.stopPropagation()}>
         <div className="mst-sheet">
           <header className="mst-head">
-            <span className="mst-eye">PRIMA DEL DUELLO</span>
-            <h2>IMPOSTA LA PARTITA</h2>
+            <span className="mst-eye">{tournament ? '12 ARMATE · AL MEGLIO DELLE 3' : 'PRIMA DEL DUELLO'}</span>
+            <h2>{tournament ? 'IMPOSTA IL TORNEO' : 'IMPOSTA LA PARTITA'}</h2>
             <div className="mst-who">
               <span className="army">{armyName}</span>
               {deckName ? <span className="deck">{deckName}</span> : null}
             </div>
-            <button type="button" className="mst-x" onClick={onClose} aria-label="Chiudi impostazioni partita">
+            <button type="button" className="mst-x" onClick={requestClose} aria-label="Chiudi impostazioni partita">
               <kbd>ESC</kbd><span>INDIETRO</span>
             </button>
           </header>
 
           <div className="mst-rows">
+            {!tournament && (
             <section {...focusProps('mode')}>
               <h3><span className="n">{rowNumber('mode')}</span>MODALITÀ</h3>
               <div className="mst-chips">
@@ -270,6 +299,7 @@ export function DifficultySelectPopup({
                 ))}
               </div>
             </section>
+            )}
 
             <section {...focusProps('format')}>
               <h3><span className="n">{rowNumber('format')}</span>FORMATO</h3>
@@ -292,19 +322,29 @@ export function DifficultySelectPopup({
             {matchModeId === 'teamDuel' && (
               <section {...focusProps('teammate')}>
                 <h3><span className="n">{rowNumber('teammate')}</span>COMPAGNO</h3>
-                <div className="mst-chips">
-                  {TEAMMATE_PRESET_IDS.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className={`mst-chip${teammatePreset === id ? ' sel' : ''}`}
-                      aria-pressed={teammatePreset === id}
-                      onClick={() => { playUiClick(); setTeammatePreset(id); }}
-                    >
-                      <span className="t">{SEAT_AI_PROFILES[id].name}</span>
-                      <span className="d">IA compagna</span>
-                    </button>
-                  ))}
+                <div className="mst-chips mst-stepper">
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Compagno precedente"
+                    onClick={() => stepRow('teammate', -1)}
+                  >
+                    <span className="t">‹</span>
+                  </button>
+                  <div className="mst-chip sel mst-step-value" aria-live="polite">
+                    <span className="t">{mateInfo.name}</span>
+                    <span className="d">
+                      {`IA compagna · ascolta ${Math.round(trustForTrait(teammatePreset) * 100)}% · ${TEAMMATE_TRAIT_IDS.indexOf(teammatePreset) + 1}/${TEAMMATE_TRAIT_IDS.length}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Compagno successivo"
+                    onClick={() => stepRow('teammate', 1)}
+                  >
+                    <span className="t">›</span>
+                  </button>
                 </div>
               </section>
             )}
@@ -329,7 +369,7 @@ export function DifficultySelectPopup({
               </section>
             )}
 
-            {!isMultiSeat && (
+            {!isMultiSeat && !tournament && (
             <section {...focusProps('enemy')}>
               <h3><span className="n">{rowNumber('enemy')}</span>NEMICO</h3>
               <div className="mst-chips">
@@ -399,6 +439,39 @@ export function DifficultySelectPopup({
                 ))}
               </div>
             </section>
+
+              <section {...focusProps('personality')}>
+                <h3><span className="n">{rowNumber('personality')}</span>{isMultiSeat ? 'AVVERSARI' : 'PERSONALITÀ'}</h3>
+                <div className="mst-chips mst-stepper">
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Personalità precedente"
+                    onClick={() => stepRow('personality', -1)}
+                  >
+                    <span className="t">‹</span>
+                  </button>
+                  <div className="mst-chip sel mst-step-value" aria-live="polite">
+                    <span className="t">{personalityInfo(personalityId).name}</span>
+                    <span className="d">
+                      {personalityId === 'neutral'
+                        ? 'Predefinita'
+                        : personalityId === 'random'
+                          ? (isMultiSeat || tournament ? 'Un tratto a testa' : 'Tratto a sorpresa')
+                          : 'Tratto IA'}
+                      {` · ${PERSONALITY_IDS.indexOf(personalityId) + 1}/${PERSONALITY_IDS.length}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="mst-chip mst-step"
+                    aria-label="Personalità successiva"
+                    onClick={() => stepRow('personality', 1)}
+                  >
+                    <span className="t">›</span>
+                  </button>
+                </div>
+              </section>
           </div>
 
           <footer className="mst-foot">
@@ -511,6 +584,10 @@ function MatchSetupStyles() {
       .mst-chip.sel { background: var(--accent); color: var(--void); box-shadow: 5px 5px 0 var(--ink); transform: skewX(-14deg) translateY(-3px); }
       .mst-chip.sel .t { font-style: italic; }
 
+      .mst-stepper { align-items: stretch; }
+      .mst-step { flex: 0 0 64px; align-items: center; padding: 6px 0; }
+      .mst-step .t { font-size: 30px; }
+      .mst-step-value { flex: 1 1 auto; min-width: 0; cursor: default; }
       .mst-diff { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 14px; }
       .mst-diff .ic { grid-row: 1 / span 2; display: grid; place-items: center; width: 42px; height: 42px; background: color-mix(in srgb, var(--c) 22%, transparent); }
       .mst-diff .t { color: var(--c); }

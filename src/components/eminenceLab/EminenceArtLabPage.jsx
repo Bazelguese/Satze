@@ -16,6 +16,7 @@ import {
   EMINENCE_FOIL_OPTION,
 } from './EminenceTarotCard';
 import { EminenceDuelLab, RangeField, useEminenceArtFrame } from './EminenceDuelLab.jsx';
+import { EminenceEffectLab } from './EminenceEffectLab.jsx';
 import './eminenceArtLab.css';
 
 const EMINENCE_LIST = Object.values(EMINENCES);
@@ -280,10 +281,11 @@ export function EminenceArtLabPage({ onClose }) {
         <div className="mr-1 flex overflow-hidden rounded border border-[var(--st-border)]">
           <TabButton id="duel" label="Duello" active={tab === 'duel'} onClick={setTab} />
           <TabButton id="art" label="Arte" active={tab === 'art'} onClick={setTab} />
+          <TabButton id="effects" label="Effetti" active={tab === 'effects'} onClick={setTab} />
         </div>
       }
     >
-      {tab === 'duel' ? <EminenceDuelLab /> : <EminenceArtStudio />}
+      {tab === 'duel' ? <EminenceDuelLab /> : tab === 'effects' ? <EminenceEffectLab /> : <EminenceArtStudio />}
     </ToolPageShell>
   );
 }

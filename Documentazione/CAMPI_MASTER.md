@@ -171,7 +171,7 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 | 82 | Necropoli Dorata | Conquista · +1 PV | conditional | comune | 2 |
 | 83 | Cripta dei Re-Maghi | Regola · Resistenza · sempre attivo | trigger | raro | 2 |
 
-## Apex *(6)*
+## Apex *(6 + 1 Campo d'Eminenza)*
 
 | id | Nome | Effetto | category | rarità | minTurn |
 |----|------|---------|----------|--------|---------|
@@ -181,6 +181,9 @@ Mapping timing campo → blocchi/fasi duello: **[DUELLO_FASI.md](DUELLO_FASI.md)
 | 87 | Canyon Ghiacciato | In scontro · Chi ha meno Campi conquistati · −1 POT | values | comune | 2 |
 | 88 | Vulcano Dormiente Innevato | Regola · Invasione · sempre attivo | trigger | raro | 1 |
 | 89 | Meridiano del Sole Verde | Regola · Bonus → Invasione: +2 POT, +1 DAN | limit | raro | 1 |
+| 122 | Arena del Violento Gaudio | In scontro · Entrambi · +2 POT, +2 DAN | values | raro | 1 |
+
+*Arena del Violento Gaudio (122) è un Campo d'Eminenza: entra in gioco solo con il Cataclisma Verde di Apex e non fa parte della pesca casuale dei Campi.*
 
 ## Mascarada *(8)*
 

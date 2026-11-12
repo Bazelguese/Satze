@@ -263,6 +263,56 @@ export function playCinematic(recipe, beat, opts = {}) {
   return playSound(cinematicSoundId(recipe, beat), { force: opts.force });
 }
 
+/**
+ * Suono in loop su un elemento suo (fuori dal pool) finché non si ferma: per durate che
+ * cambiano di volta in volta, come la mischiata (2,6–5,8 s secondo lo stile).
+ * @param {string} soundId
+ * @param {{ force?: boolean }} [opts]
+ * @returns {(fadeMs?: number) => void} ferma con una breve dissolvenza
+ */
+export function playLoop(soundId, opts = {}) {
+  const noop = () => {};
+  const src = resolveSoundSrc(soundId);
+  if (!src || typeof Audio === 'undefined') return noop;
+  if (suspendCount > 0 && !opts.force) return noop;
+  bindSettingsListener();
+  const settings = readSettings();
+  if ((settings.muted || settings.sfxVolume <= 0) && !opts.force) return noop;
+  unlockAudio();
+
+  const volume = Math.min(1, Math.max(0, settings.sfxVolume));
+  const el = new Audio(src);
+  el.loop = true;
+  el.volume = volume;
+  try {
+    const p = el.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch {
+    return noop;
+  }
+
+  let stopped = false;
+  return (fadeMs = 250) => {
+    if (stopped) return;
+    stopped = true;
+    if (!(fadeMs > 0) || typeof requestAnimationFrame === 'undefined') {
+      el.pause();
+      return;
+    }
+    const t0 = performance.now();
+    const step = () => {
+      const k = 1 - (performance.now() - t0) / fadeMs;
+      if (k <= 0) {
+        el.pause();
+        return;
+      }
+      el.volume = volume * k;
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+}
+
 /** @param {{ force?: boolean }} [opts] */
 export function playUiClick(opts = {}) {
   return playSound('ui.click', opts);

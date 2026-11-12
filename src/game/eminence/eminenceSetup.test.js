@@ -77,7 +77,7 @@ test('setup completo: i due lati ricevono la propria Eminenza e la Presenza iniz
 
   assert.equal(isEminenceSubsystemEnabled(matchState), true);
   assert.equal(matchState[SIDES.PLAYER].eminenceId, 'apex_sole_verde');
-  assert.equal(matchState[SIDES.PLAYER].presence, 3);
+  assert.equal(matchState[SIDES.PLAYER].presence, 1);
   assert.equal(matchState[SIDES.ENEMY].eminenceId, 'patto_grande_semaforo');
   assert.equal(matchState[SIDES.ENEMY].presence, 0);
 });

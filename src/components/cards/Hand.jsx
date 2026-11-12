@@ -12,6 +12,8 @@ import { HandCard } from './HandCard';
 export const Hand = React.memo(({ 
   hand = [], 
   usedCards = [],
+  /** Carte non schierabili in questo Duello per un vincolo Eminenza (vietate o non imposte). */
+  lockedCardIds = [],
   fragmentCardIds = [],
   preyCardIds = [], 
   selectedAgent, 
@@ -238,6 +240,7 @@ export const Hand = React.memo(({
               };
           
           const isSelected = selectedAgent?.id === agent.id;
+          const locked = lockedCardIds.includes(agent.id);
           const onField = hideSelected && isSelected && gamePhase === 'selectAgent' && !usedCards.includes(agent.id);
           // l'Agente schierato svanisce dalla mano; se torna indietro, riappare
           const slotFx = onField
@@ -249,6 +252,7 @@ export const Hand = React.memo(({
               ref={isSelected && selectedCardRef ? selectedCardRef : undefined}
               className={`absolute${slotFx}`}
               data-hand-agent={agent.id}
+              data-hand-side={battleOutcomeSide || undefined}
               style={cardStyle}
             >
               <HandCard
@@ -257,10 +261,10 @@ export const Hand = React.memo(({
                 selected={isSelected}
                 highlighted={highlightedAgentId === agent.id}
                 preyArriving={arrivingPreyId === agent.id}
-                onClick={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled 
+                onClick={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled && !locked
                   ? () => onAgentSelect?.(agent) 
                   : undefined}
-                disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent) || disabled}
+                disabled={gamePhase !== 'selectAgent' || (!isPlayerFirst && !enemyAgent) || disabled || locked}
                 usedCards={usedCards}
                 fragmentCardIds={fragmentCardIds}
                 preyCardIds={preyCardIds}
@@ -277,7 +281,7 @@ export const Hand = React.memo(({
                     : null
                 }
                 battleOutcome={outcome}
-                onDragStart={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled && onDragStart
+                onDragStart={gamePhase === 'selectAgent' && (isPlayerFirst || enemyAgent) && !disabled && !locked && onDragStart
                   ? onDragStart
                   : undefined}
                 isDragging={draggingCard?.id === agent.id}

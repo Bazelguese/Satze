@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import './runeTitle.css';
 
 /**
  * Titolo che si decifra dalle rune delle carte.

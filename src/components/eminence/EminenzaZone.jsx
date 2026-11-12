@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   CHOICE_STATES,
   abilityRailExpandsDown,
@@ -23,10 +23,16 @@ import { EminenceTarotCard } from '../eminenceLab/EminenceTarotCard.jsx';
 import '../eminenceLab/eminenceArtLab.css';
 import {
   EMINENCE_CARD_SIZE,
+  EMINENCE_ENTRY_STYLES,
   EMINENZA_DEFAULTS,
   entryLayerStyle,
+  resolveEminenceEntryGesture,
+  resolveEminenceEntryStyle,
   useEminenzaEntry,
 } from '../../lib/eminenzaEntry.js';
+import { ElementFx } from '../fx/ElementFx.jsx';
+import { armyEntryFor } from '../fx/effects/index.js';
+import { prefersReducedMotion } from '../battle/placeHandoff.js';
 import {
   APPEARANCES,
   DEFAULT_APPEARANCE,
@@ -34,6 +40,7 @@ import {
   GATE_UI,
   PRESENCE_COLOR,
   RUNES,
+  SHAPES,
   blockerLabel,
   costInk,
   costTextShadow,
@@ -412,7 +419,7 @@ function EminenzaCard({
             >
               {`Statico · ${eminence.staticName}`}
             </div>
-            <div style={{
+            <div className="em-card-static-text" style={{
               marginTop: 5,
               fontFamily: EM_UI_FONT,
               fontSize: 13,
@@ -449,8 +456,6 @@ function EminenzaCard({
             }}
             >
               Presenza
-              <br />
-              iniziale
             </span>
             <span
               key={`presence-${presencePulse}`}
@@ -639,7 +644,7 @@ function EminenzaRailItem({
         justifyContent: 'flex-end',
       }}
       >
-      <div style={{
+      <div className="em-rail-back" style={{
         position: 'absolute',
         inset: 0,
         transform: `translate(${shape['--offx']},${shape['--offy']})`,
@@ -710,7 +715,7 @@ function EminenzaRailItem({
           background: shape['--bar'] || 'transparent',
         }}
         />
-        <div style={{
+        <div className="em-rail-copy" style={{
           position: 'relative',
           flex: 1,
           minWidth: 0,
@@ -719,8 +724,8 @@ function EminenzaRailItem({
           transform: `skewX(${shape['--unskew']})`,
         }}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexDirection: 'row-reverse' }}>
-            <span style={{
+          <div className="em-rail-head" style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexDirection: 'row-reverse' }}>
+            <span className="em-rail-name" style={{
               fontFamily: EM_UI_FONT,
               fontWeight: 800,
               fontSize: shape['--namefs2'] || 16,
@@ -732,7 +737,7 @@ function EminenzaRailItem({
             >
               {option.name || formatPresenceDelta(option.presenceDelta)}
             </span>
-            <span style={{
+            <span className="em-rail-gate" style={{
               fontFamily: EM_UI_FONT,
               fontSize: 8,
               fontWeight: 700,
@@ -744,7 +749,7 @@ function EminenzaRailItem({
               {gate.label}
             </span>
           </div>
-          <div style={{
+          <div className="em-rail-text" style={{
             marginTop: 6,
             fontFamily: EM_UI_FONT,
             fontSize: 12,
@@ -757,7 +762,7 @@ function EminenzaRailItem({
             {option.text}
           </div>
           {note && (
-            <div style={{
+            <div className="em-rail-note" style={{
               marginTop: 4,
               fontFamily: EM_UI_FONT,
               fontSize: 9,
@@ -772,7 +777,7 @@ function EminenzaRailItem({
             </div>
           )}
         </div>
-        <div style={{
+        <div className="em-rail-cost" style={{
           position: 'relative',
           flex: 'none',
           width: shape['--costw'],
@@ -980,7 +985,7 @@ function EminenzaRail({
     : null;
 
   return (
-    <div className="em-rail">
+    <div className={`em-rail em-rail--${SHAPES[shapeId] ? shapeId : DEFAULT_SHAPE}`}>
       {options.map((option, i) => (
         <EminenzaRailItem
           key={option.id}
@@ -1040,6 +1045,12 @@ function isPostDuelAnnounce(notice) {
 }
 
 const ANNOUNCE_EXIT_MS = 460;
+/** Ingresso «agenti»: scarto tra la tua carta e quella avversaria. */
+const ARMY_FX_ENEMY_DELAY_MS = 240;
+/** Margine oltre la durata dell'effetto prima di darlo comunque per concluso. */
+const ARMY_FX_GUARD_MS = 2400;
+/** Attesa massima della foto della carta: oltre, l'effetto si salta e la carta compare. */
+const ARMY_FX_SNAPSHOT_TIMEOUT_MS = 1600;
 
 function EminenceAnnounceBanner({ notice, accent, onDismiss, held = false, autoDismiss = true, edge = false, duel = false }) {
   const holdMs = getEminenceAnnounceHoldMs() || EMINENCE_ANNOUNCE_HOLD_MS_DEFAULT;
@@ -1252,6 +1263,8 @@ export function EminenzaZone({
   appearance = DEFAULT_APPEARANCE,
   shape = DEFAULT_SHAPE,
   entry = EMINENZA_DEFAULTS.entry,
+  /** 'campo' | 'agenti' — null = scelta dell'Eminenza (vedi lib/eminenzaEntry.js). */
+  entryStyle = null,
   embedded = false,
   artX,
   artY,
@@ -1304,6 +1317,26 @@ export function EminenzaZone({
   });
   const [entryRevealed, setEntryRevealed] = useState(Boolean(skipCardEntrance));
 
+  // Ingresso «agenti»: la carta entra con l'effetto d'armata dei suoi Agenti, una volta per Scontro.
+  const armyFx = useMemo(() => {
+    if (!eminence?.army) return null;
+    if (resolveEminenceEntryStyle(eminence.id, entryStyle) !== EMINENCE_ENTRY_STYLES.AGENTI) return null;
+    return prefersReducedMotion() ? null : armyEntryFor(eminence.army);
+  }, [eminence?.id, eminence?.army, entryStyle]);
+  const armyFxParams = useMemo(() => ({ color: accent }), [accent]);
+  /** pending: mai visto · playing: effetto in corso · done: già visto, da qui gesto breve. */
+  const [armyFxPhase, setArmyFxPhase] = useState('pending');
+  const armyFxPhaseRef = useRef('pending');
+  /** id dell'Eminenza il cui gesto su misura è già stato visto in questo Scontro. */
+  const ownGestureSeenRef = useRef(null);
+  const setArmyFx = (phase) => {
+    armyFxPhaseRef.current = phase;
+    setArmyFxPhase(phase);
+  };
+  useLayoutEffect(() => {
+    setArmyFx('pending');
+  }, [eminence?.id, armyFx]);
+
   useLayoutEffect(() => {
     setEntryRevealed(Boolean(skipCardEntrance || announceOnly || !eminence));
   }, [eminence?.id, skipCardEntrance, announceOnly]);
@@ -1315,15 +1348,38 @@ export function EminenzaZone({
   // Un gesto per riproduzione. Nemico in ritardo: non due arm-fx pesanti insieme.
   useLayoutEffect(() => {
     if (!eminence || skipCardEntrance || announceOnly) return undefined;
+    if (armyFx && armyFxPhaseRef.current !== 'done') {
+      // Le due carte partono quasi insieme: l'effetto dura già qualche secondo.
+      const startAt = side === 'enemy' ? ARMY_FX_ENEMY_DELAY_MS : 0;
+      // la carta è coperta dall'effetto: il velo del gesto breve non serve
+      setEntryRevealed(true);
+      const start = window.setTimeout(() => setArmyFx('playing'), startAt);
+      // Se l'effetto non chiude (foto in ritardo, WebGL assente) la carta non resta appesa.
+      const guard = window.setTimeout(
+        () => setArmyFx('done'),
+        startAt + (armyFx.defaults?.durationMs ?? 3000) + ARMY_FX_GUARD_MS,
+      );
+      return () => {
+        window.clearTimeout(start);
+        window.clearTimeout(guard);
+        // interrotto a metà (avviso, zona riposta): non si riprende da capo
+        if (armyFxPhaseRef.current === 'playing') setArmyFx('done');
+      };
+    }
     const delay = side === 'enemy' ? 780 : 0;
+    // Gesto su misura dell'Eminenza: solo alla prima comparsa, poi quello breve d'armata.
+    const gesture = ownGestureSeenRef.current === eminence.id ? null : resolveEminenceEntryGesture(eminence.id);
     const t = window.setTimeout(() => {
-      play({ layer: layerRef.current });
+      if (gesture) ownGestureSeenRef.current = eminence.id;
+      play(gesture ? { layer: layerRef.current, slug: gesture.slug, dur: gesture.dur } : { layer: layerRef.current });
     }, delay);
     return () => window.clearTimeout(t);
-  }, [eminence?.id, side, skipCardEntrance, announceOnly, play, layerRef]);
+  }, [eminence?.id, side, skipCardEntrance, announceOnly, play, layerRef, armyFx]);
 
   if (!eminence) return null;
 
+  /** Prima comparsa con ingresso «agenti»: la carta resta coperta dall'effetto, non dal gesto breve. */
+  const armyFxFirstRun = Boolean(armyFx) && armyFxPhase !== 'done' && !skipCardEntrance && !announceOnly;
   const cardLife = resolveEminenceCardLife(side, displaySettings, { opponentFoil });
   const setupPending = Boolean(setup?.pending && isPlayer);
   const locked = !isPlayer
@@ -1341,6 +1397,31 @@ export function EminenzaZone({
       blocker: null,
     }]
     : options;
+
+  const cardNode = (
+    <EminenzaCard
+      eminence={eminence}
+      presence={presence}
+      presencePulse={presencePulse}
+      accent={accent}
+      appearance={style}
+      artX={artX}
+      artY={artY}
+      artZoom={artZoom}
+      artFocusX={artFocusX}
+      artFocusY={artFocusY}
+      life={cardLife}
+      prey={prey}
+      fragments={fragments}
+      focusedMarkId={focusedMarkId}
+      arrivingMarkId={arrivingMarkId}
+      skipEntrance={skipCardEntrance}
+      cardRef={cardRef}
+      cardArmClass={cardArmClass}
+      holdHidden={!armyFxFirstRun && !skipCardEntrance && !entryRevealed && !cardArmClass}
+      onMarkFocus={onMarkFocus}
+    />
+  );
 
   return (
     <div
@@ -1378,28 +1459,19 @@ export function EminenzaZone({
                 height: EMINENCE_CARD_SIZE.height,
               }}
             >
-              <EminenzaCard
-                eminence={eminence}
-                presence={presence}
-                presencePulse={presencePulse}
-                accent={accent}
-                appearance={style}
-                artX={artX}
-                artY={artY}
-                artZoom={artZoom}
-                artFocusX={artFocusX}
-                artFocusY={artFocusY}
-                life={cardLife}
-                prey={prey}
-                fragments={fragments}
-                focusedMarkId={focusedMarkId}
-                arrivingMarkId={arrivingMarkId}
-                skipEntrance={skipCardEntrance}
-                cardRef={cardRef}
-                cardArmClass={cardArmClass}
-                holdHidden={!skipCardEntrance && !entryRevealed && !cardArmClass}
-                onMarkFocus={onMarkFocus}
-              />
+              {armyFx ? (
+                <ElementFx
+                  effect={armyFx}
+                  active={armyFxPhase === 'playing'}
+                  progress={armyFxFirstRun && armyFxPhase === 'pending' ? 0 : null}
+                  params={armyFxParams}
+                  captureKey={`em-entry-${eminence.id}`}
+                  snapshotTimeoutMs={ARMY_FX_SNAPSHOT_TIMEOUT_MS}
+                  onComplete={() => { if (armyFxPhaseRef.current === 'playing') setArmyFx('done'); }}
+                >
+                  {cardNode}
+                </ElementFx>
+              ) : cardNode}
               <span
                 ref={fxRef}
                 className={['em-arm-fx', fxArmClass].filter(Boolean).join(' ')}

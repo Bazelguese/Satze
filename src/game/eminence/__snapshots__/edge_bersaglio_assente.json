@@ -2,9 +2,9 @@
   "ability": {
     "id": "khemet_maledizione_va",
     "name": "Maledizione della Fama",
-    "presenceDelta": -2,
+    "presenceDelta": -1,
     "revealGate": "PRE_FIELD",
-    "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+    "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega."
   },
   "bilance": {
     "cinematicCues": 1,
@@ -19,7 +19,7 @@
     ],
     "presencePlayer": [
       2,
-      0
+      1
     ],
     "segmentsWithoutCue": 0,
     "segmentsWithoutNotice": 0
@@ -29,23 +29,27 @@
     "legalAbilities": [
       {
         "id": "khemet_devozione",
-        "presenceDelta": 2
+        "presenceDelta": 0
       },
       {
         "id": "khemet_maledizione_va",
+        "presenceDelta": -1
+      },
+      {
+        "id": "khemet_maledizione_stat",
         "presenceDelta": -2
       }
     ],
-    "presenceAfterReveal": 0,
+    "presenceAfterReveal": 1,
     "presenceAfterSelect": 2,
     "presenceAvailable": 2,
-    "presenceDelta": -2,
+    "presenceDelta": -1,
     "selected": "khemet_maledizione_va"
   },
   "eminence": {
     "army": "Khemet",
     "id": "khemet_maledizioni",
-    "name": "Il Castello dei Sigillatori"
+    "name": "Il Castello degli Arcanisti Nefasti"
   },
   "notices": [
     {
@@ -79,9 +83,9 @@
       "phase": "REVEAL",
       "phaseDetail": "Prima del Campo",
       "phaseLabel": "Rivelazione",
-      "presenceDelta": -2,
+      "presenceDelta": -1,
       "side": "player",
-      "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+      "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega."
     }
   ],
   "scenario": {
@@ -144,16 +148,16 @@
           "phase": "REVEAL",
           "phaseDetail": "Prima del Campo",
           "phaseLabel": "Rivelazione",
-          "presenceDelta": -2,
+          "presenceDelta": -1,
           "side": "player",
-          "text": "Scegli uno slot. Per il resto dello Scontro, gli Agenti schierati lì subiscono −VA pari alla propria Lega."
+          "text": "Scegli uno slot: gli Agenti che combatteranno lì subiscono −VA pari alla propria Lega."
         }
       ],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -165,9 +169,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -179,9 +183,9 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
-      "presenceAfterReveal": 0,
+      "presenceAfterReveal": 1,
       "timing": null
     },
     {
@@ -192,7 +196,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "timing": "BEFORE_TRIGGER_CHECK"
     },
@@ -204,7 +208,7 @@
       "notices": [],
       "presence": {
         "enemy": 0,
-        "player": 0
+        "player": 1
       },
       "segments": [
         {

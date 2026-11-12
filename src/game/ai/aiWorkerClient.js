@@ -93,6 +93,83 @@ export function runAiDecisionInWorker(context, difficulty, needsJoint) {
   }).then((stripped) => hydrateAiDecision(stripped, context));
 }
 
+/**
+ * Motore a simulazione nel worker. `maxMs` è il tempo di calcolo concesso al motore;
+ * il timeout del messaggio lascia un margine. Timeout o errore → reject (fallback del caller).
+ *
+ * @param {object} view - da buildMcViewFromGameState (già serializzabile)
+ * @param {object} context - information set, per idratare la carta scelta
+ * @param {string} difficulty
+ * @param {{ maxMs: number, seed?: number, trait?: string }} options
+ */
+export function runMcDecisionInWorker(view, context, difficulty, { maxMs, seed, trait } = {}) {
+  const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(maxMs) || 0) + 4000);
+  return new Promise((resolve, reject) => {
+    let w;
+    try {
+      w = getAiWorker();
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const id = ++nextRequestId;
+    const timer = setTimeout(() => {
+      if (!pending.has(id)) return;
+      pending.delete(id);
+      reject(new Error(`AI worker (simulazione) timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+    pending.set(id, { resolve, reject, timer });
+    try {
+      w.postMessage({ id, kind: 'montecarlo', difficulty, view, maxMs, seed, trait });
+    } catch (err) {
+      pending.delete(id);
+      clearTimeout(timer);
+      reject(err);
+    }
+  }).then((stripped) => hydrateAiDecision(stripped, context));
+}
+
+/**
+ * Decisione delle modalità a più posti (motore a simulazione) nel worker:
+ * 'team-opening' | 'team-response' (2v2) e 'koth-commit' (Re della collina).
+ * Per il 2v2 la si chiama anche "decisione di squadra".
+ * Timeout o errore → reject: il chiamante ricade sull'IA precedente.
+ *
+ * @param {'team-opening'|'team-response'} kind
+ * @param {{ match: object, teamId: string, aiSeatIds: string[], fixedSeats?: object,
+ *   fixedPairing?: string|null, traits?: Record<string, string>, difficulty: string,
+ *   maxMs: number, seed?: number }} payload
+ */
+export function runMultiSeatMcInWorker(kind, payload) {
+  const timeoutMs = Math.max(AI_WORKER_TIMEOUT_MS, (Number(payload.maxMs) || 0) + 4000);
+  return new Promise((resolve, reject) => {
+    let w;
+    try {
+      w = getAiWorker();
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const id = ++nextRequestId;
+    const timer = setTimeout(() => {
+      if (!pending.has(id)) return;
+      pending.delete(id);
+      reject(new Error(`AI worker (2v2) timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+    pending.set(id, { resolve, reject, timer });
+    try {
+      w.postMessage({ id, kind, ...payload, match: cloneContextForWorker(payload.match) });
+    } catch (err) {
+      pending.delete(id);
+      clearTimeout(timer);
+      reject(err);
+    }
+  });
+}
+
+/** Nome storico usato dal 2v2. */
+export const runTeamMcInWorker = runMultiSeatMcInWorker;
+
 export function isAiWorkerSupported() {
   return typeof Worker !== 'undefined';
 }

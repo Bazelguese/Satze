@@ -4,7 +4,7 @@
   "player": {
     "eminenceId": "calibri_quattro_fronti",
     "presence": 1,
-    "abilityId": "calibri_guerra_attrito",
+    "abilityId": "calibri_fermo_macchine",
     "params": null,
     "agent": {
       "cardId": 231,
@@ -27,7 +27,7 @@
       "cardId": 118,
       "league": 4,
       "power": 5,
-      "damage": 2,
+      "damage": 3,
       "trigger": "glory",
       "focusInvested": 3,
       "anchored": false
@@ -52,11 +52,7 @@
       "enemy": 0
     },
     "finalPowerBySide": null,
-    "finalPowerByCardId": null,
-    "finalDamageBySide": {
-      "player": 5,
-      "enemy": 2
-    }
+    "finalPowerByCardId": null
   },
   "name": "calibri_tenere_la_linea_static",
   "branch": "hit"

@@ -1,0 +1,319 @@
+{
+  "ability": {
+    "id": "mounthborn_caccia",
+    "name": "Caccia",
+    "presenceDelta": -3,
+    "revealGate": "PRE_AGENT",
+    "text": "Scegli un Agente nemico non schierato: diventa Preda e l'avversario deve schierarlo in questo Duello."
+  },
+  "bilance": {
+    "cinematicCues": 1,
+    "fragmentsPlayer": [
+      0,
+      0
+    ],
+    "noticesEmitted": 1,
+    "presenceEnemy": [
+      0,
+      0
+    ],
+    "presencePlayer": [
+      3,
+      1
+    ],
+    "segmentsWithoutCue": 1,
+    "segmentsWithoutNotice": 0
+  },
+  "choice": {
+    "alwaysLegalOption": true,
+    "legalAbilities": [
+      {
+        "id": "mounthborn_fame_ricarica",
+        "presenceDelta": 1
+      },
+      {
+        "id": "mounthborn_gorgoglio",
+        "presenceDelta": -1
+      },
+      {
+        "id": "mounthborn_frenesia",
+        "presenceDelta": -2
+      },
+      {
+        "id": "mounthborn_caccia",
+        "presenceDelta": -3
+      }
+    ],
+    "presenceAfterReveal": 0,
+    "presenceAfterSelect": 3,
+    "presenceAvailable": 3,
+    "presenceDelta": -3,
+    "selected": "mounthborn_caccia"
+  },
+  "eminence": {
+    "army": "Mounthborn",
+    "id": "mounthborn_fame",
+    "name": "La Fame"
+  },
+  "notices": [
+    {
+      "badgeText": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "id": "reveal:player:mounthborn_caccia:PRE_AGENT",
+      "kind": "reveal",
+      "name": "Caccia",
+      "outcome": null,
+      "payoffs": [
+        {
+          "primitive": "MARK_CARD",
+          "slot": null,
+          "target": null
+        },
+        {
+          "primitive": "CONSTRAIN_DEPLOY",
+          "slot": null,
+          "target": "OPPONENT"
+        }
+      ],
+      "phase": "REVEAL",
+      "phaseDetail": "Prima dell'Agente",
+      "phaseLabel": "Rivelazione",
+      "presenceDelta": -3,
+      "side": "player",
+      "text": "Scegli un Agente nemico non schierato: diventa Preda e l'avversario deve schierarlo in questo Duello."
+    }
+  ],
+  "scenario": {
+    "branch": "hit",
+    "initiativeSide": "player",
+    "name": "mounthborn_caccia_hit",
+    "roundNumber": 3
+  },
+  "steps": [
+    {
+      "badge": "Prima del Campo",
+      "cues": [],
+      "gate": "PRE_FIELD",
+      "gateLabel": "Prima del Campo",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 3
+      },
+      "presenceAfterReveal": 3,
+      "timing": null
+    },
+    {
+      "badge": "Rivelazione · Prima dell'Agente",
+      "cues": [
+        {
+          "flight": true,
+          "from": {
+            "side": "player",
+            "type": "card"
+          },
+          "holdAnnounce": true,
+          "noticeId": "reveal:player:mounthborn_caccia:PRE_AGENT",
+          "recipe": "REVEAL_OPEN",
+          "to": {
+            "side": "player",
+            "type": "announce"
+          },
+          "waitFor": null
+        }
+      ],
+      "gate": "PRE_AGENT",
+      "gateLabel": "Prima dell'Agente",
+      "kind": "gate",
+      "notices": [
+        {
+          "badgeText": "Rivelazione · Prima dell'Agente",
+          "cues": [
+            {
+              "flight": true,
+              "from": {
+                "side": "player",
+                "type": "card"
+              },
+              "holdAnnounce": true,
+              "recipe": "REVEAL_OPEN",
+              "to": {
+                "side": "player",
+                "type": "announce"
+              },
+              "waitFor": null
+            }
+          ],
+          "id": "reveal:player:mounthborn_caccia:PRE_AGENT",
+          "kind": "reveal",
+          "name": "Caccia",
+          "outcome": null,
+          "payoffs": [
+            {
+              "primitive": "MARK_CARD",
+              "slot": null,
+              "target": null
+            },
+            {
+              "primitive": "CONSTRAIN_DEPLOY",
+              "slot": null,
+              "target": "OPPONENT"
+            }
+          ],
+          "phase": "REVEAL",
+          "phaseDetail": "Prima dell'Agente",
+          "phaseLabel": "Rivelazione",
+          "presenceDelta": -3,
+          "side": "player",
+          "text": "Scegli un Agente nemico non schierato: diventa Preda e l'avversario deve schierarlo in questo Duello."
+        }
+      ],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Prima del Duello",
+      "cues": [],
+      "gate": "GENERAL",
+      "gateLabel": "Prima del Duello",
+      "kind": "gate",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 0
+      },
+      "presenceAfterReveal": 0,
+      "timing": null
+    },
+    {
+      "badge": "Verifica",
+      "cues": [],
+      "gate": null,
+      "kind": "checkpoint",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "timing": "BEFORE_TRIGGER_CHECK"
+    },
+    {
+      "badge": "Risoluzione · Dopo il Duello",
+      "cues": [],
+      "gate": null,
+      "kind": "settle",
+      "notices": [],
+      "presence": {
+        "enemy": 0,
+        "player": 1
+      },
+      "segments": [
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "CHANGE_PRESENCE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": "enemyMarks: (assente) → non ancora valutabile",
+            "keys": [
+              "enemyMarks"
+            ],
+            "status": "deferred"
+          },
+          "expectedNoCue": false,
+          "primitive": "SET_ARMY_BONUS_STATE",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "SELF",
+          "timing": "BEFORE_TRIGGER_CHECK"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": "ENEMY_AGENT",
+          "timing": "POST_BATTLE"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "static-setup",
+          "sourceId": "mounthborn_istinto_predatorio",
+          "sourceName": "Istinto Predatorio",
+          "target": null,
+          "timing": null
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": true,
+          "primitive": "MARK_CARD",
+          "source": "ability",
+          "sourceId": "mounthborn_caccia",
+          "sourceName": "Caccia",
+          "target": null,
+          "timing": "AFTER_REVEAL"
+        },
+        {
+          "condition": {
+            "detail": null,
+            "status": "none"
+          },
+          "expectedNoCue": false,
+          "primitive": "CONSTRAIN_DEPLOY",
+          "source": "ability",
+          "sourceId": "mounthborn_caccia",
+          "sourceName": "Caccia",
+          "target": "OPPONENT",
+          "timing": "AFTER_REVEAL"
+        }
+      ],
+      "timing": "AFTER_DUEL_OUTCOME"
+    }
+  ]
+}

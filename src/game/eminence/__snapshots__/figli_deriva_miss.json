@@ -30,6 +30,10 @@
       {
         "id": "figli_deriva",
         "presenceDelta": 1
+      },
+      {
+        "id": "figli_condensazione",
+        "presenceDelta": -1
       }
     ],
     "presenceAfterReveal": 2,

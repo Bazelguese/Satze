@@ -41,7 +41,7 @@ function candidateFields(operation, battlefields, catalog) {
   }
 
   if (operation.fieldArmy) {
-    return catalog.filter((field) => field.tema === operation.fieldArmy && !onBoard.has(field.id));
+    return catalog.filter((field) => field.tema === operation.fieldArmy && !field.eminenceOnly && !onBoard.has(field.id));
   }
 
   return [];

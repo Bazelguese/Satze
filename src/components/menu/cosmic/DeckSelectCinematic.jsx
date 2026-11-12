@@ -58,7 +58,7 @@ import { GameCard } from '../../cards/GameCard.jsx';
 import { CardShuffleDealStage } from '../../shuffle/CardShuffleDealStage.jsx';
 import { createBattlefieldShuffleDealLayout } from '../../shuffle/cardShuffleDealLayout.js';
 import { BATTLEFIELD_VIEWPORT } from '../../../config/battlefieldHandLayout.js';
-import { GAME_SOUND, playGame, playUiClick } from '../../../audio/gameSounds.js';
+import { GAME_SOUND, playGame, playUiBack, playUiClick, playUiNavigate } from '../../../audio/gameSounds.js';
 import { peekSlabHandoff, clearSlabHandoff, HANDOFF_BG, SlabHandoffTitle } from './slabHandoff.jsx';
 import { useArrivedByCurtain } from '../../cosmic/ScreenTransition';
 import { useScreenActiveRef, useScreenState, useScreenVisit } from '../../screenCache/ScreenCache.jsx';
@@ -484,14 +484,14 @@ export default function DeckSelectCinematic({
     const current = idxRef.current;
     const next = Math.max(0, Math.min(total - 1, current + delta));
     if (next === current) return;
-    playUiClick();
+    playUiNavigate();
     setIdx(next);
     setPulse((p) => p + 1);
   }, [total]);
 
   const goTo = useCallback((i) => {
     if (phaseRef.current !== 'idle' || i === idxRef.current) return;
-    playUiClick();
+    playUiNavigate();
     setIdx(i);
     setPulse((p) => p + 1);
   }, []);
@@ -635,7 +635,7 @@ export default function DeckSelectCinematic({
             <span className="lbl">+ CREA ESERCITO</span>
           </button>
         )}
-        <button className="dsk-back" onClick={() => { playUiClick(); onBack?.(); }}>
+        <button className="dsk-back" onClick={() => { playUiBack(); onBack?.(); }}>
           <span className="ar">←</span>
           <span className="lbl">{isManager ? 'CHIUDI' : 'INDIETRO'}</span>
         </button>
@@ -686,7 +686,7 @@ export default function DeckSelectCinematic({
 
       {/* Top HUD */}
       <header className="dsk-top">
-        <button className="dsk-back" onClick={() => { playUiClick(); onBack?.(); }}>
+        <button className="dsk-back" onClick={() => { playUiBack(); onBack?.(); }}>
           <span className="ar">←</span><span className="lbl">{backLabel}</span>
         </button>
         <div className="dsk-title-block">

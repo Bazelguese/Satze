@@ -9,6 +9,7 @@ import {
   SHAPES,
 } from '../eminence/eminenceUi.js';
 import { EminenzaZone } from '../eminence/EminenzaZone.jsx';
+import { EMINENCE_ENTRY_STYLES, resolveEminenceEntryStyle } from '../../lib/eminenzaEntry.js';
 import {
   getEminenceArtFrame,
   resetEminenceArtFrame,
@@ -28,7 +29,14 @@ const APPEARANCE_NOTES = {
   sciame: 'Le abilità arrivano da direzioni diverse e trovano il proprio posto insieme.',
 };
 
+const ENTRY_STYLE_OPTIONS = [
+  { id: null, label: 'scelta di gioco' },
+  { id: EMINENCE_ENTRY_STYLES.CAMPO, label: 'campo' },
+  { id: EMINENCE_ENTRY_STYLES.AGENTI, label: 'agenti' },
+];
+
 const SHAPE_NOTES = {
+  portale: 'Pelle di gioco: la fascia a bandiera vestita come le schede del duello (vetro scuro, filo chiaro, numeri bianchi).',
   nastro: 'Nastro con pedana colorata sotto, clip a bandiera.',
   strappo: 'Carta chiara con bordo irregolare e grana.',
   scheggia: 'Taglio obliquo, barra d’armata sul filo.',
@@ -170,6 +178,7 @@ export function EminenceDuelLab() {
   const [eminenceId, setEminenceId] = useState('apex_sole_verde');
   const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
   const [shape, setShape] = useState(DEFAULT_SHAPE);
+  const [entryStyle, setEntryStyle] = useState(null);
   const [side, setSide] = useState('player');
   const [presence, setPresence] = useState(3);
   const [pickedId, setPickedId] = useState(null);
@@ -232,6 +241,29 @@ export function EminenceDuelLab() {
         </div>
 
         <div className="satze-tool-panel p-6 space-y-3">
+          <h2 className="text-lg font-bold text-[var(--st-text)]">Ingresso della carta</h2>
+          <div className="flex flex-wrap gap-2">
+            {ENTRY_STYLE_OPTIONS.map(({ id, label }) => (
+              <Chip
+                key={label}
+                label={label}
+                active={entryStyle === id}
+                accent={accent}
+                onClick={() => {
+                  setEntryStyle(id);
+                  setMountKey((k) => k + 1);
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-[var(--st-muted)] leading-relaxed">
+            «campo» è il gesto storico, breve, che riprende la rivelazione del Campo dell'armata.
+            «agenti» è l'effetto con cui entrano gli Agenti dell'armata. «scelta di gioco» mostra
+            quello assegnato a questa Eminenza ({resolveEminenceEntryStyle(eminence.id)}).
+          </p>
+        </div>
+
+        <div className="satze-tool-panel p-6 space-y-3">
           <h2 className="text-lg font-bold text-[var(--st-text)]">Forma losanga</h2>
           <div className="flex flex-wrap gap-2">
             {SHAPE_IDS.map((id) => (
@@ -248,7 +280,7 @@ export function EminenceDuelLab() {
             ))}
           </div>
           <p className="text-xs text-[var(--st-muted)] leading-relaxed">
-            {SHAPE_NOTES[shape]} Stesse sei forme del costruttore.
+            {SHAPE_NOTES[shape]}
           </p>
         </div>
 
@@ -354,7 +386,7 @@ export function EminenceDuelLab() {
       <div className="xl:col-span-2 space-y-3">
         <div className="em-duel-lab-stage">
           <EminenzaZone
-            key={`${mountKey}-${eminence.id}-${appearance}-${shape}-${side}`}
+            key={`${mountKey}-${eminence.id}-${appearance}-${shape}-${side}-${entryStyle}`}
             side={side}
             embedded
             eminence={toZoneEminence(eminence)}
@@ -364,6 +396,7 @@ export function EminenceDuelLab() {
             choiceState={sealed ? CHOICE_STATES.LOCKED_HIDDEN : CHOICE_STATES.CHOOSING}
             appearance={appearance}
             shape={shape}
+            entryStyle={entryStyle}
             artX={frame.artX}
             artY={frame.artY}
             artZoom={frame.zoom}

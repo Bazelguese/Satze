@@ -6,6 +6,10 @@ import { capturePresenceSnapshot } from './presence.js';
 import { createEminenceMatchState } from './eminenceState.js';
 import { buildDuelTurnContexts } from '../duel/duelTurnContexts.js';
 import { SIDES } from './eminenceConstants.js';
+import { installLegacyApexEminence } from './testing/eminenceTestSupport.js';
+
+// La vecchia Apex resta il riferimento numerico dei test generici del motore.
+const LEGACY_APEX = installLegacyApexEminence();
 
 /** Contesto con Eminenza attiva su entrambi i lati. */
 const ctx = (overrides = {}) => ({
@@ -131,7 +135,7 @@ test('assenza di Eminenza su un solo lato: i confronti restano insoddisfatti', (
 
 test('snapshot: i contesti dei due lati sono speculari', () => {
   const matchState = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
     enemyEminenceId: 'patto_grande_semaforo',
   });
   matchState[SIDES.PLAYER].presenceSpentThisRound = 2;
@@ -172,8 +176,8 @@ test('snapshot: i contesti dei due lati sono speculari', () => {
 
 test('snapshot: una variazione successiva non retroagisce sui trigger', () => {
   const matchState = createEminenceMatchState({
-    playerEminenceId: 'apex_sole_verde',
-    enemyEminenceId: 'apex_sole_verde',
+    playerEminenceId: LEGACY_APEX,
+    enemyEminenceId: LEGACY_APEX,
   });
 
   const snapshot = capturePresenceSnapshot(matchState);

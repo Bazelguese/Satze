@@ -40,8 +40,9 @@ describe('fieldLogic — motore rarità v2', () => {
     fields.forEach((f) => expect(f.category).toBe('neutral'));
   });
 
-  it('catalogo master ha 121 campi', () => {
-    expect(ALL_BATTLEFIELDS).toHaveLength(121);
+  it('catalogo master ha 122 campi, di cui uno solo d\'Eminenza', () => {
+    expect(ALL_BATTLEFIELDS).toHaveLength(122);
+    expect(ALL_BATTLEFIELDS.filter((f) => f.eminenceOnly).map((f) => f.id)).toEqual([122]);
   });
 
   it('stesso seed → stessa selezione', () => {
