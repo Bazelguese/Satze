@@ -68,6 +68,8 @@ import { readHpDelta, resolveLivePowerBonusSwapDisplay } from '../src/game/emine
 import { getEminence, getEminenceAbility } from '../src/data/eminences.js';
 import { EminenceChoicePortal } from '../src/components/eminence/EminenceChoicePortal.jsx';
 import { EminenceTargetPicker } from '../src/components/eminence/EminenceTargetPicker.jsx';
+import { EminenceAgentMarks } from '../src/components/eminence/EminenceAgentMarks.jsx';
+import { buildAgentMarks } from '../src/game/eminence/eminenceAgentMarks.js';
 import { resolveTargetRequest, targetParams } from '../src/components/eminence/eminenceTargetRequest.js';
 import { EMINENCE_PRIMITIVES as EP, PRIMITIVE_TARGETS as ET } from '../src/game/eminence/eminenceConstants.js';
 import { applyFieldOperations } from '../src/game/eminence/fieldOperations.js';
@@ -700,6 +702,8 @@ export default function SatzeGame() {
     if (emTargetFallbackId === id) return null;
     return { id, mode: source.mode, abilityId: source.abilityId, eminence: self.eminence, name: source.name, text: source.text, canCancel: source.mode === 'select', request };
   })();
+  // Segni sugli Agenti in gioco: cosa ha cambiato loro un'abilità rivelata, per tutto il Duello
+  const eminenceAgentMarks = useMemo(() => buildAgentMarks(eminenceMatchState), [eminenceMatchState]);
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
     !r5Cinematic
@@ -7947,6 +7951,7 @@ export default function SatzeGame() {
       )}
       <EminencePresenceSparks flights={presenceLink.flights} />
       {eminenceEffectFx.layer}
+      <EminenceAgentMarks marks={eminenceAgentMarks} hidden={showEminenceLayer || eminenceAnnounceHold} />
       <EminenceChoicePortal choice={eminenceChoiceScreen} />
       <EminenceTargetPicker
         pick={eminenceChoiceScreen ? null : eminenceTargetPick}
