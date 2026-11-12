@@ -147,3 +147,25 @@ export function prepareDuelShuffleHands(config = {}) {
 export function prepareRandomDuelShuffleHands() {
   return prepareDuelShuffleHands();
 }
+
+/**
+ * Distribuzione per la partita successiva di una serie (torneo), sul tavolo già aperto.
+ * `seriesDeal`:
+ *  - 'remainder' → si servono le 5 carte rimaste, senza mischiata: il mazzetto è la mano;
+ *  - 'reshuffle' → mischiata normale dell'intero esercito.
+ * In entrambi i casi il tavolo non si riscopre da capo.
+ */
+export function seriesContinuationSetup(setup, seriesDeal) {
+  if (!setup || !seriesDeal) return setup;
+  if (seriesDeal !== 'remainder') return { ...setup, skipReveal: true };
+  const identity = (hand) => hand.map((_, i) => i);
+  return {
+    ...setup,
+    skipReveal: true,
+    dealOnly: true,
+    playerSet: setup.playerHand,
+    enemySet: setup.enemyHand,
+    playerFinalOrder: identity(setup.playerHand),
+    enemyFinalOrder: identity(setup.enemyHand),
+  };
+}

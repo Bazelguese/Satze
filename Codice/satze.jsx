@@ -189,6 +189,7 @@ import { BattlefieldReveal } from '../src/components/gallery/BattlefieldRevealAn
 import { PlaytestHistoryScreen } from '../src/components/playtest/PlaytestHistoryScreen';
 import { TournamentHubScreen } from '../src/components/tournament/TournamentHubScreen';
 import { SpectatorHud } from '../src/components/tournament/SpectatorHud';
+import { SeriesInterlude } from '../src/components/tournament/SeriesInterlude';
 import {
   ROUND_NAMES, describeHumanMatch, getMatch, getPendingGame, prepareHumanGame, recordHumanGameResult,
   convertToAi, getPendingAiMatches, recordAiSeries, recordMatchGameResult, withViewer,
@@ -2470,11 +2471,36 @@ export default function SatzeGame() {
     setPlayerConfirmedAwaitingAI(false);
   }, []);
 
-  /** Avvia la prossima partita della serie del giocatore, con le mani decise dal torneo. */
-  const playTournamentGame = useCallback(() => {
+  /** Partita di torneo in corso sul tavolo: { matchId, gameNumber } (per sapere se la serie continua). */
+  const [tournamentGameInfo, setTournamentGameInfo] = useState(null);
+  /**
+   * Passaggio alla partita successiva della stessa serie, senza lasciare il tavolo: le mani
+   * escono, un cartello dice che partita è e quali carte arrivano, poi la nuova distribuzione.
+   * { roundName, gameNumber, rule, score, stage: 'out'|'in'|'leaving' }
+   */
+  const [seriesInterlude, setSeriesInterlude] = useState(null);
+  const seriesInterludeTimersRef = useRef([]);
+  const runSeriesInterlude = useCallback((info, launch) => {
+    seriesInterludeTimersRef.current.forEach(clearTimeout);
+    setSeriesInterlude({ ...info, stage: 'out' });
+    seriesInterludeTimersRef.current = [
+      setTimeout(() => { setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'in' } : prev)); launch(); }, 850),
+      setTimeout(() => setSeriesInterlude((prev) => (prev ? { ...prev, stage: 'leaving' } : prev)), 2500),
+      setTimeout(() => setSeriesInterlude(null), 2850),
+    ];
+  }, []);
+  useEffect(() => () => seriesInterludeTimersRef.current.forEach(clearTimeout), []);
+  const seriesDealOf = (gameNumber) => (gameNumber === 2 ? 'remainder' : 'reshuffle');
+
+  /**
+   * Avvia la prossima partita della serie del giocatore, con le mani decise dal torneo.
+   * `continuation`: si è già sul tavolo (partita successiva della stessa serie).
+   */
+  const playTournamentGame = useCallback(({ continuation = false } = {}) => {
     if (!tournament) return;
     // Online le mani le serve l'host; contro un altro giocatore la partita la avvia la sfida.
     if (tournament.online && tnOnlineRef.current.challenge?.()) return;
+    const stay = continuation === true;
     const prepared = tournament.online ? tournament : prepareHumanGame(tournament);
     const info = describeHumanMatch(prepared);
     const game = info ? getPendingGame(info.match) : null;
@@ -2502,10 +2528,10 @@ export default function SatzeGame() {
     setSelectedArmy(human.army);
     setSelectedDeckKey(human.deckKey);
     setVsChosenEnemyArmy(info.opponent.army);
-    // cortina sul tabellone, poi il VS: niente stacco netto verso il tavolo
-    runCurtain({ label: info.opponent.deckName, kicker: `${info.roundName.toUpperCase()} · PARTITA ${info.gameNumber}`, accent: ARMY_COLORS[human.army]?.accent }, () => {
+    const launch = () => {
     tournamentResultPendingRef.current = true;
     setTournamentGameActive(true);
+    setTournamentGameInfo({ matchId: info.match.id, gameNumber: info.gameNumber });
     startStandardGame(
       human.army,
       sameDeck ? human.deckKey : human.cardIds,
@@ -2519,14 +2545,22 @@ export default function SatzeGame() {
         eminenceFormat: prepared.settings.eminenceFormat,
         // Personalità dell'avversario, fissata alla creazione del torneo.
         aiPersonality: info.opponent.aiTrait || 'neutral',
+        // serie che continua: nuova distribuzione sul tavolo, senza schermata VS
+        seriesDeal: stay ? seriesDealOf(info.gameNumber) : null,
         fixedHands: {
           playerHand: resolveTournamentCards(game.hands[info.side]),
           enemyHand: resolveTournamentCards(game.hands[otherSide]),
         },
       }
     );
-    });
-  }, [runCurtain, tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
+    };
+    if (stay) {
+      runSeriesInterlude({ roundName: info.roundName, gameNumber: info.gameNumber, rule: info.handRule, score: `${info.humanWins}–${info.opponentWins}` }, launch);
+    } else {
+      // cortina sul tabellone, poi il VS: niente stacco netto verso il tavolo
+      runCurtain({ label: info.opponent.deckName, kicker: `${info.roundName.toUpperCase()} · PARTITA ${info.gameNumber}`, accent: ARMY_COLORS[human.army]?.accent }, launch);
+    }
+  }, [runSeriesInterlude, runCurtain, tournament, storeTournament, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode, setSelectedArmy, setSelectedDeckKey]);
 
   /** Dal tavolo al tabellone (fine partita o abbandono: la partita non conclusa si rigioca con la stessa mano). */
   const returnToTournamentHub = useCallback(() => {
@@ -2554,7 +2588,7 @@ export default function SatzeGame() {
    * Mostra sul tavolo una partita tra IA già giocata: il motore la rigioca identica e ogni
    * duello entra in scena già risolto, come gli scontri delle modalità a più posti.
    */
-  const startSpectate = useCallback((t, matchId, gameIndex, onCovered = null) => {
+  const startSpectate = useCallback((t, matchId, gameIndex, onCovered = null, continuation = false) => {
     const match = getMatch(t, matchId);
     const saved = match?.series.games[gameIndex];
     if (!hasGameLog(saved)) return;
@@ -2563,7 +2597,7 @@ export default function SatzeGame() {
     const sideB = t.participants[match.b];
     const earlier = match.series.games.slice(0, gameIndex);
     stopAiThinking();
-    runCurtain({ label: `${sideA.deckName} – ${sideB.deckName}`, kicker: `SPETTATORE · PARTITA ${gameIndex + 1}` }, () => {
+    const launch = () => {
     onCovered?.();
     setVictoryCondFx(null);
     setShowFinalRoundAnimation(false);
@@ -2601,12 +2635,19 @@ export default function SatzeGame() {
       { fixedFields: battlefields, openingPlayerFirst: saved.aFirst },
       {
         eminenceFormat: EMINENCE_FORMAT.DISABLED,
-        skipShuffleDeal: true,
+        // partita successiva della serie: le carte vengono servite sul tavolo, come per chi gioca
+        skipShuffleDeal: !continuation,
+        seriesDeal: continuation ? seriesDealOf(gameIndex + 1) : null,
         fixedHands: { playerHand: handA, enemyHand: handB },
       }
     );
-    });
-  }, [runCurtain, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
+    };
+    if (continuation) {
+      runSeriesInterlude({ roundName: ROUND_NAMES[match.round], gameNumber: gameIndex + 1, rule: gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${earlier.filter((g) => g.winner === 'a').length}–${earlier.filter((g) => g.winner === 'b').length}` }, launch);
+    } else {
+      runCurtain({ label: `${sideA.deckName} – ${sideB.deckName}`, kicker: `SPETTATORE · PARTITA ${gameIndex + 1}` }, launch);
+    }
+  }, [runSeriesInterlude, runCurtain, stopAiThinking, ai, multiSeat, clearCardPreview, startStandardGame, setShowFinalRoundAnimation, setIsMultiplayer, setCampaignLevel, setSelectedMode]);
 
   /** Guarda una serie tra IA: se non è ancora stata giocata la gioca prima per intero. */
   const watchTournamentSeries = useCallback(async (matchId, gameIndex = 0) => {
@@ -2817,11 +2858,13 @@ export default function SatzeGame() {
     const t = tournamentRef.current || hostTournamentRef.current;
     const match = t ? getMatch(t, msg.matchId) : null;
     const peer = match ? t.participants[match[msg.side === 'a' ? 'b' : 'a']] : null;
+    // già sul tavolo per la stessa serie: la partita successiva arriva senza lasciare la scena
+    const stay = gamePhaseRef.current === 'gameOver' && tournamentOnlineGameRef.current?.matchId === msg.matchId;
     getMultiplayerManager().relayTarget = [msg.peerSlot];
     tournamentOnlineGameRef.current = { matchId: msg.matchId, gameIndex: msg.gameIndex, side: msg.side, peerSlot: msg.peerSlot };
     setTournamentWaiting(null);
     stopAiThinking();
-    runCurtain({ label: peer?.deckName || 'SFIDA', kicker: `${ROUND_NAMES[match?.round ?? 0].toUpperCase()} · CONTRO ${(peer?.playerName || 'AVVERSARIO').toUpperCase()}` }, () => {
+    const launch = () => {
       setVictoryCondFx(null);
       setShowFinalRoundAnimation(false);
       ai.resetAiSession();
@@ -2837,13 +2880,21 @@ export default function SatzeGame() {
       setSelectedMode(msg.match.mode === 'bareHands' ? 'bareHands' : 'classic');
       tournamentResultPendingRef.current = true;
       setTournamentGameActive(true);
+      setTournamentGameInfo({ matchId: msg.matchId, gameNumber: msg.gameIndex + 1 });
       try {
-        startOnlineMatch(msg.side === 'a' ? 'host' : 'guest', msg.match);
+        startOnlineMatch(msg.side === 'a' ? 'host' : 'guest', msg.match, stay ? { seriesDeal: seriesDealOf(msg.gameIndex + 1) } : {});
       } catch (err) {
         console.error('[Torneo online] avvio partita:', err);
         returnToTournamentHub();
       }
-    });
+    };
+    if (stay) {
+      const series = match?.series || { winsA: 0, winsB: 0 };
+      const mine = msg.side === 'a' ? [series.winsA, series.winsB] : [series.winsB, series.winsA];
+      runSeriesInterlude({ roundName: ROUND_NAMES[match?.round ?? 0], gameNumber: msg.gameIndex + 1, rule: msg.gameIndex === 1 ? 'remainder' : 'reshuffle', score: `${mine[0]}–${mine[1]}` }, launch);
+    } else {
+      runCurtain({ label: peer?.deckName || 'SFIDA', kicker: `${ROUND_NAMES[match?.round ?? 0].toUpperCase()} · CONTRO ${(peer?.playerName || 'AVVERSARIO').toUpperCase()}` }, launch);
+    }
   };
 
   /** Host: un giocatore è pronto alla sfida; con entrambi pronti parte il Duello. */
@@ -5764,6 +5815,15 @@ export default function SatzeGame() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [fieldsScrollable, battlefields.length, gamePhase, updateFieldsScrollHint]);
+  // Torneo: a fine partita, se la serie non è decisa, la partita successiva si gioca sullo stesso tavolo.
+  const tournamentSeriesNext = (() => {
+    if (!tournamentGameActive || spectating || gamePhase !== 'gameOver' || !tournament || !tournamentGameInfo) return null;
+    const info = describeHumanMatch(tournament);
+    if (!info || info.match.id !== tournamentGameInfo.matchId || info.gameNumber !== tournamentGameInfo.gameNumber + 1) return null;
+    // online le mani della partita dopo le serve l'host: finché non arrivano si aspetta
+    if (!tournament.online ? false : !getPendingGame(info.match)) return null;
+    return { gameNumber: info.gameNumber, waiting: tournamentWaiting === info.match.id };
+  })();
   const mpSelfLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : spectating ? spectate.names.a : (multiSeatPlayerName || 'TU');
   const mpEnemyLabel = isOnlinePvP ? (onlinePeerName || 'Avversario') : spectating ? spectate.names.b : (multiSeatEnemyName || 'IA');
   const mpSelfHandLabel = isOnlinePvP ? (multiplayerSession?.playerName || 'Tu') : 'La Tua Mano';
@@ -6953,7 +7013,7 @@ export default function SatzeGame() {
 
   return (
     screen('duel', false, <div 
-        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}`}
+        className={`relative overflow-visible satze-scene dep-2 ${duelLayoutBreathClass} sty-a hud-cosmo imp-center${isMultiSeat ? ' msb-on' : ''}${multiSeatView?.board ? ` msb-board-on msb-board--${teamBoardVariant}${teamBoardLayouts.active?.mode === 'pairs' && teamBoardPair === 1 ? ' msb-board-pair-2' : ''}` : ''}${duelHudDiscovering ? ' duel-hud--discovering' : ''}${showEminenceLayer ? ' em-on' : ''}${revealEnemyHandForPrey ? ' em-prey-read' : ''}${revealBoardForSlot ? ' em-slot-pick' : ''}${holdForConfirmedAgentPick ? ' em-agent-pick' : ''}${seriesInterlude?.stage === 'out' ? ' trn-hands-out' : ''}`}
       style={{
         width: '1920px', 
         height: '1080px', 
@@ -8052,11 +8112,19 @@ export default function SatzeGame() {
         onCampaignRetry={retryCampaignMission}
         onTournamentContinue={
           spectating && spectate.gameIndex + 1 < spectate.gamesTotal
-            ? () => startSpectate(tournament, spectate.matchId, spectate.gameIndex + 1)
-            : tournamentGameActive || spectating ? returnToTournamentHub : undefined
+            ? () => startSpectate(tournament, spectate.matchId, spectate.gameIndex + 1, null, true)
+            : tournamentSeriesNext
+              ? () => { if (!tournamentSeriesNext.waiting) playTournamentGame({ continuation: true }); }
+              : tournamentGameActive || spectating ? returnToTournamentHub : undefined
         }
-        tournamentContinueLabel={spectating && spectate.gameIndex + 1 < spectate.gamesTotal ? `Partita ${spectate.gameIndex + 2}` : 'Torna al torneo'}
-        onTournamentSecondary={spectating && spectate.gameIndex + 1 < spectate.gamesTotal ? returnToTournamentHub : undefined}
+        tournamentContinueLabel={
+          spectating && spectate.gameIndex + 1 < spectate.gamesTotal
+            ? `Partita ${spectate.gameIndex + 2}`
+            : tournamentSeriesNext
+              ? (tournamentSeriesNext.waiting ? 'In attesa…' : `Partita ${tournamentSeriesNext.gameNumber}`)
+              : 'Torna al torneo'
+        }
+        onTournamentSecondary={(spectating && spectate.gameIndex + 1 < spectate.gamesTotal) || tournamentSeriesNext ? returnToTournamentHub : undefined}
         outcomeOverride={spectating && gameResult ? {
           // il portale è stretto: titolo corto, il nome dell'esercito va nella riga sotto
           title: `Partita ${spectate.gameIndex + 1}`,
@@ -8113,7 +8181,7 @@ export default function SatzeGame() {
         }
         rematchLabel={isOnlinePvP ? 'Rematch (stesso mazzo)' : 'Rematch'}
         rematchChangeDeckLabel="Rematch (cambia mazzo)"
-        endGameActionsReady={!outcomeOverlayKind}
+        endGameActionsReady={!outcomeOverlayKind && !seriesInterlude}
         onOpenPlaytest={IS_PUBLIC_PLAYTEST_BUILD || spectating ? undefined : () => {
           setGamePhase('playtestHistory');
         }}
@@ -8124,6 +8192,7 @@ export default function SatzeGame() {
         decision={portalDecision}
       />
 
+      {seriesInterlude ? <SeriesInterlude {...seriesInterlude} accent={playerIdentityColor} /> : null}
       {spectating && (() => {
         const frame = spectate.frames[Math.min(spectate.index, spectate.frames.length - 1)];
         const shown = gamePhase === 'result' && battleResult && duelPhase >= 4 && duelHp.settled;
