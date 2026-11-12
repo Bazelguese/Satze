@@ -26,6 +26,11 @@ function portalRect(scene, selector) {
   return { x: (r.left - sr.left + r.width / 2) / k, y: (r.top - sr.top) / k };
 }
 
+// esito a Duello deciso: per un guadagno «riuscita/mancata», per una perdita «scattata/evitata»
+const OUTCOME_COPY = {
+  gain: { hit: '✓ Riuscita', miss: '✕ Mancata' },
+  loss: { hit: '✕ Scattata', miss: '✓ Evitata' },
+};
 const SIDE_LABELS = { player: 'Tu', enemy: 'Nemico' };
 
 export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelector = '.satze-bf-portal' }) {
@@ -50,7 +55,7 @@ export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelect
   if (!any) return null;
 
   return (
-    <div ref={rootRef} className={`em-regole${hidden ? ' is-hidden' : ''}`}>
+    <div ref={rootRef} className={`em-regole${hidden ? ' is-hidden' : ''}${(stakes || []).some((stake) => stake.outcome) ? ' has-outcome' : ''}`}>
       {pos && (
         <ul className="em-regole-list" style={{ left: pos.x, top: pos.y - 40 }}>
           {(rules || []).map((rule) => {
@@ -95,7 +100,7 @@ export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelect
             return (
               <li
                 key={stake.key}
-                className={`em-regole-stake em-regole-stake--${stake.tone}`}
+                className={`em-regole-stake em-regole-stake--${stake.tone}${stake.outcome ? ` is-${stake.outcome}` : ''}`}
                 style={{ '--em-r-acc': accent, '--em-r-ink': inkOn(accent), '--i': i }}
                 title={`${stake.abilityName}: ${stake.text}`}
               >
@@ -104,6 +109,11 @@ export function EminenceRoundRules({ rules, stakes, hidden = false, anchorSelect
                 <span className="em-regole-stake-if">{stake.condition}</span>
                 <i aria-hidden="true">→</i>
                 <strong>{stake.payoff}</strong>
+                {stake.outcome && (
+                  <span key={stake.outcome} className="em-regole-stake-esito">
+                    {OUTCOME_COPY[stake.tone][stake.outcome]}
+                  </span>
+                )}
               </li>
             );
           })}

@@ -51,3 +51,15 @@ test('ogni condizione di fine Duello delle abilità in catalogo ha la sua riga',
     }
   }
 });
+
+test('a Duello deciso ogni riga porta il suo esito; prima resta in sospeso', () => {
+  const state = { player: side('mounthborn_fame', idOf('mounthborn_fame', 'Fame')), enemy: side('calibri_quattro_fronti', null) };
+  assert.deepEqual(buildPendingStakes(state).map((s) => s.outcome), [null, null]);
+  const segs = EMINENCES.mounthborn_fame.abilities.find((a) => a.name === 'Fame').segments;
+  const outcomes = [
+    { side: 'player', abilityId: idOf('mounthborn_fame', 'Fame'), condition: segs[0].condition, hit: true },
+    { side: 'player', abilityId: idOf('mounthborn_fame', 'Fame'), condition: segs[1].condition, hit: false },
+    { side: 'enemy', abilityId: idOf('mounthborn_fame', 'Fame'), condition: segs[1].condition, hit: true },
+  ];
+  assert.deepEqual(buildPendingStakes(state, outcomes).map((s) => s.outcome), ['hit', 'miss']);
+});

@@ -710,7 +710,6 @@ export default function SatzeGame() {
   // Segni sugli Agenti in gioco: cosa ha cambiato loro un'abilità rivelata, per tutto il Duello
   const eminenceAgentMarks = useMemo(() => buildAgentMarks(eminenceMatchState), [eminenceMatchState]);
   const eminenceRoundRules = useMemo(() => buildRoundRules(eminenceMatchState), [eminenceMatchState]);
-  const eminencePendingStakes = useMemo(() => buildPendingStakes(eminenceMatchState), [eminenceMatchState]);
   const eminenceLastingStates = useMemo(() => buildLastingStates(eminenceMatchState), [eminenceMatchState]);
   const eminenceInspectable = !r5Cinematic && isEminenceTableInspectable(eminenceChoiceView, gamePhase);
   const forcedEminenceView =
@@ -1729,6 +1728,12 @@ export default function SatzeGame() {
     showClashAnimation, setShowClashAnimation,
     rainbowTime: _unusedRainbowTime, setRainbowTime,
   } = animations;
+  // Condizioni in sospeso delle Eminenze: l'esito si scopre solo a Duello deciso (come gli avvisi di esito).
+  const eminenceStakeOutcomes = gamePhase === 'result' && duelPhase >= 5 ? (battleResult?.eminenceStakeOutcomes || null) : null;
+  const eminencePendingStakes = useMemo(
+    () => buildPendingStakes(eminenceMatchState, eminenceStakeOutcomes),
+    [eminenceMatchState, eminenceStakeOutcomes],
+  );
   void _unusedRainbowTime;
 
   /** Round 5: tiene la vecchia condizione finché non parte il flip reveal. */

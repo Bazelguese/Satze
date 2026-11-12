@@ -167,6 +167,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
 
     let prepNotices = prepared.notices || [];
     let outcomeNotices = [];
+    let stakeOutcomes = [];
     let result = battleResult;
     if (eminenceActive) {
       const settled = settleEminenceRound(prepared.matchState, {
@@ -192,6 +193,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
       // Solo gli avvisi post-Duello appartengono alla coda di fine risoluzione.
       // Male Crescente (e simili Pre-Trigger) restano in prepNotices e si mostrano all'avvio.
       outcomeNotices = settled.notices || [];
+      stakeOutcomes = settled.stakeOutcomes || [];
       result = {
         ...battleResult,
         finalPlayerHP: Math.max(0, battleResult.finalPlayerHP + readHpDelta(settled.bundle, 'player')),
@@ -215,6 +217,7 @@ export function useBattle(gameState, animations, { revealHpCommittedRef } = {}) 
       ...result,
       eminencePrepNotices: prepNotices,
       eminenceOutcomeNotices: outcomeNotices,
+      eminenceStakeOutcomes: stakeOutcomes,
     });
 
     setDuelPhase(0);

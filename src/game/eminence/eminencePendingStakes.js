@@ -70,12 +70,20 @@ const PAYOFFS = {
   [P.MARK_CARD]: (seg) => (MARK_NAMES[seg.mark] ? `l'Agente diventa ${MARK_NAMES[seg.mark]}` : null),
 };
 
+function outcomeOf(outcomes, side, abilityId, rawCondition) {
+  const found = (outcomes || []).filter((o) => o.side === side && o.abilityId === abilityId && JSON.stringify(o.condition) === rawCondition);
+  if (!found.length) return null;
+  return found.some((o) => o.hit) ? 'hit' : 'miss';
+}
+
 /**
  * @param {object|null} matchState stato Eminenze della partita
- * @returns {Array<{ key, ownerSide, army, abilityName, text, condition: string, payoff: string, tone: 'gain'|'loss' }>}
- *   una riga per ogni condizione di fine Duello ancora aperta delle abilità rivelate
+ * @param {Array<{ side, abilityId, condition, hit }>|null} outcomes esiti a Duello deciso
+ *   (`settleEminenceRound().stakeOutcomes`); null finché il Duello non è deciso
+ * @returns {Array<{ key, ownerSide, army, abilityName, text, condition: string, payoff: string, tone: 'gain'|'loss', outcome: 'hit'|'miss'|null }>}
+ *   una riga per ogni condizione di fine Duello delle abilità rivelate
  */
-export function buildPendingStakes(matchState) {
+export function buildPendingStakes(matchState, outcomes = null) {
   const out = [];
   if (!matchState) return out;
   for (const owner of ['enemy', 'player']) {
@@ -90,7 +98,7 @@ export function buildPendingStakes(matchState) {
       const payoff = PAYOFFS[seg.primitive]?.(seg);
       if (!condition || !payoff) continue;
       const loss = seg.primitive === P.LOSE_HP ? seg.target !== 'OPPONENT' : (seg.primitive === P.CHANGE_PRESENCE && seg.target !== 'OPPONENT' && seg.delta < 0);
-      const entry = byCondition.get(condition) || { payoffs: [], loss: false };
+      const entry = byCondition.get(condition) || { payoffs: [], loss: false, raw: JSON.stringify(seg.condition) };
       entry.payoffs.push(payoff);
       entry.loss = entry.loss || loss;
       byCondition.set(condition, entry);
@@ -106,6 +114,7 @@ export function buildPendingStakes(matchState) {
         condition,
         payoff: entry.payoffs.join(', '),
         tone: entry.loss ? 'loss' : 'gain',
+        outcome: outcomeOf(outcomes, owner, ability.id, entry.raw),
       });
     }
   }
