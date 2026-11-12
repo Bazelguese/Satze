@@ -131,3 +131,17 @@ test('partitaMultiPosto Re della collina', () => {
   assert.deepEqual(p.round[0].scontri[0].eliminati, ['P1']);
   assert.equal(p.round[0].conquista, 'P2');
 });
+
+test('partitaDuello del Torneo: modalità Torneo con incontro e numero di partita', () => {
+  const p = partitaDuello({
+    idPartita: 'P-3', inizio: null, fine: 1, round: [], gameResult: { winner: 'player', reason: 'hp' },
+    online: null, aiDifficulty: 'hard', gameMode: 'classic', eminenze: { enabled: true, player: null, enemy: null },
+    giocatore: {}, avversario: {}, torneo: { incontro: 'QF-2', partita: 3 },
+  });
+  assert.equal(p.modalita, 'torneo');
+  assert.deepEqual(p.torneo, { incontro: 'QF-2', partita: 3 });
+  assert.equal(p.difficolta, 'hard');
+  assert.match(riepilogoPartita({ ...p, versione: '0.1.1', giocatore: { ...p.giocatore, nome: 'Davide' } }), /Torneo Standard/);
+  // Senza torneo il campo resta vuoto.
+  assert.equal(partitaDuello({ idPartita: 'P-4', inizio: null, fine: 1, round: [], gameResult: {}, online: null, gameMode: 'classic', eminenze: {}, giocatore: {}, avversario: {} }).torneo, null);
+});

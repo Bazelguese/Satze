@@ -3826,10 +3826,11 @@ export default function SatzeGame() {
       return;
     }
     const inPartita = ['selectField', 'selectAgent', 'battle', 'result'].includes(gamePhase);
-    if (inPartita && (!t.inCorso || t.inviata)) {
+    // Da spettatore (serie del Torneo tra IA) non gioca nessuno: niente dati.
+    if (inPartita && !spectating && (!t.inCorso || t.inviata)) {
       telemetriaRef.current = { inCorso: true, inviata: false, idPartita: nuovoIdPartita(), inizio: Date.now(), round: [] };
     }
-  }, [gamePhase, roundNumber]);
+  }, [gamePhase, roundNumber, spectating]);
 
   useEffect(() => {
     if (gamePhase !== 'gameOver' || !gameResult) return;
@@ -3837,7 +3838,7 @@ export default function SatzeGame() {
     if (!t.inCorso || t.inviata || !telemetriaAttiva()) return;
     t.inviata = true;
     // Fuori dal test: tutorial guidati, campagna, partite di prova.
-    if (guidedMatch?.active || selectedMode === 'campaign' || gameMode === 'campaign' || gameResult.test || devDialogueDuelActive) return;
+    if (guidedMatch?.active || selectedMode === 'campaign' || gameMode === 'campaign' || gameResult.test || devDialogueDuelActive || spectating) return;
     try {
       const fine = Date.now();
       if (gameResult.telemetria) {
@@ -3855,6 +3856,9 @@ export default function SatzeGame() {
         round: t.round,
         gameResult,
         online: isOnlinePvP ? { stanza: multiplayerSession?.roomCode ?? null } : null,
+        torneo: tournamentGameActive && tournamentGameInfo
+          ? { incontro: tournamentGameInfo.matchId, partita: tournamentGameInfo.gameNumber }
+          : null,
         aiDifficulty,
         gameMode,
         eminenze: { ...eminenceMatchState, enabled: isEminenceSubsystemEnabled(eminenceMatchState) },
@@ -3879,7 +3883,7 @@ export default function SatzeGame() {
   }, [
     gamePhase, gameResult, guidedMatch?.active, selectedMode, gameMode, devDialogueDuelActive, selectedDeckKey,
     isOnlinePvP, multiplayerSession?.roomCode, aiDifficulty, eminenceMatchState, selectedArmy, playerHand, playerHP,
-    onlinePeerName, enemyHand, duelDeckKeys?.enemy, enemyHP,
+    onlinePeerName, enemyHand, duelDeckKeys?.enemy, enemyHP, spectating, tournamentGameActive, tournamentGameInfo,
   ]);
 
   // Rotella mouse sui FC - funziona su panel, sulla carta posizionata e sulla carta in mano

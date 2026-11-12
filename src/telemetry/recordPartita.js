@@ -98,7 +98,7 @@ function mano(hand) {
 /** Partita del Duello 1v1 conclusa (locale contro IA oppure online). */
 export function partitaDuello({
   idPartita, inizio, fine, round, gameResult, online, aiDifficulty, gameMode, eminenze,
-  giocatore, avversario,
+  giocatore, avversario, torneo = null,
 }) {
   const conEminenze = Boolean(eminenze?.enabled);
   return {
@@ -106,8 +106,10 @@ export function partitaDuello({
     inizio: inizio ? new Date(inizio).toISOString() : null,
     fine: new Date(fine).toISOString(),
     durataSecondi: inizio ? Math.round((fine - inizio) / 1000) : null,
-    modalita: online ? 'multiplayer' : 'duello',
+    modalita: torneo ? 'torneo' : online ? 'multiplayer' : 'duello',
     formato: gameMode === 'bareHands' ? 'maniNude' : conEminenze ? 'standard' : 'noEminenza',
+    // Partita di una serie del Torneo: { incontro, partita } (online anche contro una persona).
+    torneo: torneo ? { incontro: torneo.incontro ?? null, partita: torneo.partita ?? null } : null,
     difficolta: online ? null : aiDifficulty ?? null,
     esito: esito(gameResult),
     motivo: motivo(gameResult),

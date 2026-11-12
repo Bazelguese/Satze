@@ -86,7 +86,7 @@ function scriviCoda(coda) {
 }
 
 const ESITI = { vittoria: '🏆 Vittoria', sconfitta: '💀 Sconfitta', pareggio: '🤝 Pareggio' };
-const MODALITA = { duello: 'Duello', '2v2': '2v2', reDellaCollina: 'Re della collina', multiplayer: 'Multiplayer' };
+const MODALITA = { duello: 'Duello', '2v2': '2v2', reDellaCollina: 'Re della collina', multiplayer: 'Multiplayer', torneo: 'Torneo' };
 const FORMATI = { standard: 'Standard', noEminenza: 'No Eminenza', maniNude: 'Mani nude' };
 
 /** Una riga leggibile per il canale Discord; i dati completi sono nel file allegato. */
