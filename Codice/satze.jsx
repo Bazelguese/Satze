@@ -116,6 +116,8 @@ import { useEminencePreyFlight, curseSlotKeys } from '../src/components/eminence
 import { resolveNoticeCinematics } from '../src/game/eminence/eminenceCinematics.js';
 import { useEminenceEffectFx } from '../src/components/eminence/EminenceEffectFx.jsx';
 import { planEffectFx } from '../src/components/eminence/eminenceEffectFx.js';
+import { sceneForNotice, scenesForDuelResult, sceneForDebtEscalation } from '../src/components/eminence/abilitySceneTriggers.js';
+import { getEminenceArtUrl } from '../src/data/eminenceArt.js';
 import { playNoticeAudioPreview } from '../src/audio/cinematicAudio.js';
 import { useMatchAudio } from '../src/audio/useMatchAudio.js';
 import { GAME_SOUND, playGame, playGameAt } from '../src/audio/gameSounds.js';
@@ -810,7 +812,34 @@ export default function SatzeGame() {
     // l'avviso entra con un'animazione di circa 0,8 s: l'effetto parte quando è al suo posto,
     // altrimenti verrebbe misurato a metà strada
     if (plans.length) window.setTimeout(() => eminenceEffectFx.play(plans), NOTICE_EFFECT_FX_DELAY_MS);
+    // Abilità maggiori: oltre all'effetto comune, la scena dedicata.
+    const scene = sceneForNotice(notice, {
+      matchState: eminenceMatchState,
+      agentPowerBySide: { player: selectedAgent?.power ?? null, enemy: enemyAgent?.power ?? null },
+      currentFieldIndex,
+    });
+    if (scene) window.setTimeout(() => playAbilitySceneRef.current?.(scene), NOTICE_EFFECT_FX_DELAY_MS);
   };
+  // Scena dedicata di un'abilità maggiore; l'illustrazione dell'Eminenza serve alle scene che la mostrano.
+  const sceneArtRef = useRef(new Map());
+  const playAbilitySceneRef = useRef(null);
+  playAbilitySceneRef.current = (scene) => {
+    const eminenceId = eminenceMatchState?.[scene.side]?.eminenceId;
+    let art = null;
+    if (eminenceId && typeof Image !== 'undefined') {
+      art = sceneArtRef.current.get(eminenceId) || null;
+      if (!art) { art = new Image(); art.src = getEminenceArtUrl(eminenceId); sceneArtRef.current.set(eminenceId, art); }
+    }
+    return eminenceEffectFx.playScene(scene.id, { ...scene, data: { ...(scene.data || {}), art } });
+  };
+  // Interessi: quando tutte le voci del Registro crescono insieme.
+  const debtSceneStateRef = useRef(null);
+  useEffect(() => {
+    const prev = debtSceneStateRef.current;
+    debtSceneStateRef.current = eminenceMatchState;
+    const scene = prev ? sceneForDebtEscalation(prev, eminenceMatchState) : null;
+    if (scene) playAbilitySceneRef.current?.(scene);
+  }, [eminenceMatchState]);
 
   const runNoticeSparkQueue = useCallback(async () => {
     if (sparkRunnerBusyRef.current) return;
@@ -1728,6 +1757,17 @@ export default function SatzeGame() {
     showClashAnimation, setShowClashAnimation,
     rainbowTime: _unusedRainbowTime, setRainbowTime,
   } = animations;
+  // Scene dedicate legate al Duello: Maledizione Inversa quando parte il calcolo, Terra Bruciata a Duello deciso.
+  const duelScenesPlayedRef = useRef({ result: null, start: false, end: false });
+  useEffect(() => {
+    if (gamePhase !== 'result' || !battleResult) return;
+    const played = duelScenesPlayedRef.current;
+    if (played.result !== battleResult) duelScenesPlayedRef.current = { result: battleResult, start: false, end: false };
+    const state = duelScenesPlayedRef.current;
+    const scenes = scenesForDuelResult(battleResult, eminenceMatchState);
+    if (!state.start && duelPhase >= 1) { state.start = true; scenes.start.forEach((scene) => playAbilitySceneRef.current?.(scene)); }
+    if (!state.end && duelPhase >= 5) { state.end = true; scenes.end.forEach((scene) => playAbilitySceneRef.current?.(scene)); }
+  }, [gamePhase, duelPhase, battleResult, eminenceMatchState]);
   // Condizioni in sospeso delle Eminenze: l'esito si scopre solo a Duello deciso (come gli avvisi di esito).
   const eminenceStakeOutcomes = gamePhase === 'result' && duelPhase >= 5 ? (battleResult?.eminenceStakeOutcomes || null) : null;
   const eminencePendingStakes = useMemo(

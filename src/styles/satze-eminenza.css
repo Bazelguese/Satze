@@ -1066,3 +1066,10 @@ body.graphics-prova .sty-a .imp-fields .imp-row-sel.imp-row-cursed p{
    della carta lontano dal tavolo: in basso per il giocatore, in alto per l'avversario. */
 .em-zone-player .em-stage > .em-announce{align-self:flex-end}
 .em-zone-enemy .em-stage > .em-announce{align-self:flex-start}
+
+/* ── Scena dedicata di un'abilità maggiore (abilityScenes.js) ──────────────
+   La scena lavora sulle carte e sui Campi veri: per la sua durata il velo dell'avviso
+   si alza e le mani tornano piene. A scurire il tavolo pensa la scena stessa. */
+.em-on.em-scene-play::before{opacity:0;pointer-events:none;animation:none}
+.em-on.em-scene-play .imp-hand > div > div[class="absolute"],
+.em-on.em-scene-play .imp-hand > div > div[class="absolute"]:hover{opacity:1;filter:none;transform:none}
