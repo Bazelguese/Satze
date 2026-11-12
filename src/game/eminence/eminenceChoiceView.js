@@ -318,6 +318,7 @@ export function shouldHoldDuelForEminence({
   setupPending = false,
   markFlightHold = false,
   awaitingRevealParams = false,
+  pendingDeals = false,
 } = {}) {
   return Boolean(
     awaitingChoice
@@ -326,7 +327,10 @@ export function shouldHoldDuelForEminence({
     || roundPending
     || setupPending
     || markFlightHold
-    || awaitingRevealParams,
+    || awaitingRevealParams
+    // Un Affare o un'Offerta ancora senza risposta ferma il tavolo: se l'IA sceglie il Campo
+    // nel frattempo, il gate successivo cancella l'Affare e il round perde il passo.
+    || pendingDeals,
   );
 }
 
@@ -362,6 +366,32 @@ export function canAdvanceEminenceGeneralGate({
   fieldIndex = null,
 } = {}) {
   return Boolean(agentsLocked && fieldIndex != null);
+}
+
+/**
+ * Un gate di rivelazione si apre solo se il tavolo è pronto a riceverlo.
+ *
+ * - Con un Affare del giocatore ancora senza risposta nessun gate si apre: aprirlo
+ *   sovrascriverebbe l'Affare in sospeso.
+ * - `GENERAL` porta allo scontro: senza entrambi gli Agenti schierati non si apre mai,
+ *   chiunque lo chieda (es. un secondo «Campo fissato» nello stesso round).
+ */
+export function canOpenEminenceGate({
+  gate = null,
+  agentsReady = false,
+  pendingDeals = false,
+} = {}) {
+  if (pendingDeals) return false;
+  if (gate === REVEAL_GATES.GENERAL && !agentsReady) return false;
+  return true;
+}
+
+/** Lo scontro esiste solo tra due Agenti: senza entrambi la fase `battle` non ha uscita. */
+export function canEnterBattlePhase({
+  playerAgentId = null,
+  enemyAgentId = null,
+} = {}) {
+  return playerAgentId != null && enemyAgentId != null;
 }
 
 /** Vero quando la UI deve fermare il gioco e chiedere: c'è una decisione reale da prendere. */

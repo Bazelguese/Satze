@@ -86,6 +86,8 @@ import {
   shouldHoldDuelForEminence,
   canSelectBattlefield,
   canAdvanceEminenceGeneralGate,
+  canOpenEminenceGate,
+  canEnterBattlePhase,
   shouldShowEminenceAbilityRail,
   shouldShowEminenceSideZone,
   shouldShowEminenceLayer,
@@ -658,6 +660,7 @@ export default function SatzeGame() {
     setupPending: eminenceSetupPending,
     markFlightHold: preyFlight.busy,
     awaitingRevealParams,
+    pendingDeals: pendingEminenceDeals.length > 0,
   });
   const playerEminenceNotice = eminenceNotices.find((notice) => notice.side === 'player') || null;
   const enemyEminenceNotice = eminenceNotices.find((notice) => notice.side === 'enemy') || null;
@@ -967,6 +970,9 @@ export default function SatzeGame() {
       agentsLockedThisRoundRef.current = false;
       // Evita che un avviso setup (es. La Fame) resti montato su loading/shuffle.
       setEminenceNotices((prev) => (prev.length ? [] : prev));
+      // Un Affare lasciato senza risposta nella partita precedente non deve fermare la nuova.
+      setPendingEminenceDeals((prev) => (prev.length ? [] : prev));
+      setPendingEminencePhase(null);
       return;
     }
     // Presentazione inizio Scontro solo dopo che entrambi hanno ricevuto gli Agenti.
@@ -1027,9 +1033,20 @@ export default function SatzeGame() {
     // Regola richiesta: animazione quando clicchi i bottoni del menu principale.
     setGamePhaseAnimated(nextPhase);
   }, [setGamePhaseAnimated, setGamePhaseRaw]);
+  // Agenti e Affari come sono nell'ultimo render: le guardie qui sotto li leggono anche da
+  // callback nate in un render precedente (timer dell'IA, attese dell'ingresso).
+  const agentsOnTableRef = useRef({ playerAgentId: null, enemyAgentId: null });
+  agentsOnTableRef.current = { playerAgentId: selectedAgent?.id ?? null, enemyAgentId: enemyAgent?.id ?? null };
+  const pendingEminenceDealsRef = useRef(pendingEminenceDeals);
+  pendingEminenceDealsRef.current = pendingEminenceDeals;
   const setGamePhase = useCallback((nextPhase) => {
     if (typeof nextPhase !== 'string') {
       setGamePhaseRaw(nextPhase);
+      return;
+    }
+    // Lo scontro senza entrambi gli Agenti non ha uscita: la fase resta dov'è.
+    if (nextPhase === 'battle' && !canEnterBattlePhase(agentsOnTableRef.current)) {
+      console.error('[SATZE] fase battle rifiutata: Agenti non schierati', agentsOnTableRef.current);
       return;
     }
     // Regola richiesta: animazione quando si torna al menu principale.
@@ -1073,6 +1090,16 @@ export default function SatzeGame() {
     }
     const agentsReady = Boolean(selectedAgent?.id && enemyAgent?.id);
     const nextGate = getNextGate(matchState.gateProgress);
+    // Gate non apribile ora (Affare del giocatore senza risposta, o GENERAL senza Agenti):
+    // non si segna come aperto, così chi lo richiede a tavolo pronto lo trova ancora lì.
+    if (nextGate && !canOpenEminenceGate({
+      gate: nextGate,
+      agentsReady,
+      pendingDeals: pendingEminenceDealsRef.current.length > 0,
+    })) {
+      eminenceChoiceFlushedRoundRef.current = null;
+      return { matchState, events: [], notices: [], gate: null, bundle: null, blocked: 'TABLE_NOT_READY' };
+    }
     if (nextGate) {
       const gateKey = `${matchState.roundOpenedAt || 0}:${nextGate}`;
       if (openedEminenceGatesRef.current.has(gateKey)) {
@@ -1205,6 +1232,8 @@ export default function SatzeGame() {
       setEminenceNotices(notices);
       if (phase) setPendingEminencePhase(phase);
     } else if (phase && playerDeals.length === 0 && waitingRemoteDeals === 0) {
+      // La fase di questo gate vale più di una rimasta in sospeso da un gate precedente.
+      setPendingEminencePhase(null);
       setGamePhase(phase);
     } else if (phase) {
       // Affare in sospeso: memorizza la fase ma non avviare il Duello.
