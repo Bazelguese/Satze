@@ -15,6 +15,33 @@ Dove questo documento aggiunge un'interpretazione che non sta nelle fonti, è se
 
 ---
 
+## 0. Traccia compilata (in corso)
+
+Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md). Riportate il più vicino possibile alle sue parole; niente qui è aggiunto dall'assistente.
+
+**1. Come si manifesta la volontà del Giocatore:** aperto.
+
+**3. Il mondo prima**
+- Ispirazione: mondo antico babilonese, sumero, turco.
+- Un popolo guerriero, in parte religioso, ma soprattutto ambizioso.
+- Avevano molto potere sul loro mondo, ma esistevano anche altri popoli.
+- Come i Romani con i barbari: più il territorio si espande, più è difficile mantenerlo.
+
+**4. L'evento che cambia tutto (in corso)**
+- Da quell'esigenza nasce la Spira: una torre enorme che supera il cielo, per poter vivere al di sopra dei nemici.
+- Arrivati in cima, oltre le nuvole, incontrano gli angeli: creature volanti, serafiche, non astratte ma molto fisiche, native di quel mondo, che non scendevano mai sotto le nuvole.
+- Lì parte lo scontro.
+
+**7. I luoghi chiave:** la Spira.
+
+**Elementi della vecchia storia e delle carte che sembrano compatibili [mio, da confermare]**
+- Il nome Keth Vahar, la Spira Ascendente, e i «sacerdoti della sommità» (blocco A).
+- Varethi che «aveva visto cosa i sacerdoti della sommità stavano costruendo lassù» (blocco D).
+- Angelo Ricomposto (223) e Custode della Ziqqurat (204), che «sorvegliava i gradini che salivano al cielo».
+- I nomi Ur-Nammu, Nimrod e Ziqqurat si adattano all'ispirazione babilonese e sumera. Nella tradizione Nimrod è associato alla torre di Babele.
+
+---
+
 ## 1. Metodo, preso dal lavoro sui Figli
 
 1. **I testi li scrive l'autore.** L'assistente prepara il contesto, divide i concetti, fa domande e segnala incoerenze. Nella revisione finale si correggono solo errori evidenti, e ogni proposta non applicata resta segnalata come tale.
