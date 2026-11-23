@@ -19,10 +19,17 @@ Dove questo documento aggiunge un'interpretazione che non sta nelle fonti, è se
 
 Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md). Riportate il più vicino possibile alle sue parole; niente qui è aggiunto dall'assistente.
 
+**Ispirazioni**
+- L'origine di Godrick l'Innestato (*Elden Ring*): prendere parti altrui e innestarle su di sé.
+- Il kintsugi giapponese: riparare ciò che è rotto con l'oro.
+- **[mio]** Sono ispirazioni di concetto: nei testi non vanno ripresi nomi o elementi riconoscibili di *Elden Ring*.
+
 **1. Come si manifesta la volontà del Giocatore (in corso)**
 - Il Giocatore entra in scena dopo la caduta. La Spira è una volontà del popolo, non sua.
 - Si manifesta come una sorta di rabbia che, in certi casi, rende dorate le vene; oppure attraverso il filo che cuce le parti. Non ancora deciso.
-- C'entra molto nella risalita dalla fossa.
+- C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
+- Da trovare: in che modo il Giocatore ha potuto fare queste cose. Possibilmente un orrore di tipo eldritch, come la Nebula per i Figli.
+- Ciò che spinge a prendere le parti altrui non è tanto la volontà quanto l'ambizione, o comunque qualcosa di diverso dalla volontà dei Figli.
 
 **2. Il movente per cui lo seguono senza saperlo:** aperto.
 
@@ -37,6 +44,7 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - Arrivati in cima, oltre le nuvole, incontrano gli angeli: creature volanti, serafiche, non astratte ma molto fisiche, native di quel mondo, che non scendevano mai sotto le nuvole.
 - Lì parte lo scontro.
 - Un uomo, quello definito «l'Eco del Tradimento», aiuta gli angeli a distruggere la torre. Gli angeli rischiavano di perdere, ma per lui non era giusto sovvertire l'ordine naturale: era rimasto affascinato da quelle creature e odiava il suo popolo, ormai belligerante, sanguinoso, violento.
+- Idea in valutazione: il tradimento viene da tutto, dal mondo della terra e dal mondo del cielo, che con la caduta li relegano sottoterra.
 - La Spira cade: crolla su se stessa e apre una voragine profondissima.
 - Sul fondo, dove ormai tutto è distrutto, qualcosa rinasce: lega tutto e tutti, e porta chi ha più volontà a prendere le parti altrui e renderle proprie.
 
