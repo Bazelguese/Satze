@@ -4,6 +4,8 @@ Documento di lavoro, novembre 2026. Non è un canone e non modifica il gioco.
 
 Serve a smontare la storia attuale dei Kethran in blocchi di concetto, così l'autore decide cosa tenere, cosa cambiare e quale Agente racconta cosa. Il canone nuovo e la revisione dei testi verranno dopo, sul modello di [REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md](REVISIONE_NOMI_LORE_CONCORDIA_FIGLI.md) e [LORE_FIGLI_DELL_ORIZZONTE.md](LORE_FIGLI_DELL_ORIZZONTE.md).
 
+I punti da compilare per il canone nuovo sono quelli di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md), valida per tutte le armate.
+
 Fonti usate:
 - [LORE_KETHRAN.md](LORE_KETHRAN.md), versione 1.0 di gennaio 2026 (la storia da rifare);
 - `src/data/cards.js`: nomi, Poteri e flavour attuali delle 30 carte (ID 201–230);
