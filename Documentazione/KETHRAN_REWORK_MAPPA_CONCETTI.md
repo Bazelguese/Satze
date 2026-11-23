@@ -19,7 +19,12 @@ Dove questo documento aggiunge un'interpretazione che non sta nelle fonti, è se
 
 Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md). Riportate il più vicino possibile alle sue parole; niente qui è aggiunto dall'assistente.
 
-**1. Come si manifesta la volontà del Giocatore:** aperto.
+**1. Come si manifesta la volontà del Giocatore (in corso)**
+- Il Giocatore entra in scena dopo la caduta. La Spira è una volontà del popolo, non sua.
+- Si manifesta come una sorta di rabbia che, in certi casi, rende dorate le vene; oppure attraverso il filo che cuce le parti. Non ancora deciso.
+- C'entra molto nella risalita dalla fossa.
+
+**2. Il movente per cui lo seguono senza saperlo:** aperto.
 
 **3. Il mondo prima**
 - Ispirazione: mondo antico babilonese, sumero, turco.
@@ -31,8 +36,17 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - Da quell'esigenza nasce la Spira: una torre enorme che supera il cielo, per poter vivere al di sopra dei nemici.
 - Arrivati in cima, oltre le nuvole, incontrano gli angeli: creature volanti, serafiche, non astratte ma molto fisiche, native di quel mondo, che non scendevano mai sotto le nuvole.
 - Lì parte lo scontro.
+- Un uomo, quello definito «l'Eco del Tradimento», aiuta gli angeli a distruggere la torre. Gli angeli rischiavano di perdere, ma per lui non era giusto sovvertire l'ordine naturale: era rimasto affascinato da quelle creature e odiava il suo popolo, ormai belligerante, sanguinoso, violento.
+- La Spira cade: crolla su se stessa e apre una voragine profondissima.
+- Sul fondo, dove ormai tutto è distrutto, qualcosa rinasce: lega tutto e tutti, e porta chi ha più volontà a prendere le parti altrui e renderle proprie.
 
-**7. I luoghi chiave:** la Spira.
+**5. Il presente**
+- Risalgono dalla fossa ed escono dal suolo.
+- Non danno più la caccia agli angeli, ma a tutto.
+
+**7. I luoghi chiave:** la Spira; la voragine sul fondo della quale tutto rinasce.
+
+**8. Le figure chiave:** l'uomo che tradì, aiutando gli angeli («l'Eco del Tradimento»).
 
 **Elementi della vecchia storia e delle carte che sembrano compatibili [mio, da confermare]**
 - Il nome Keth Vahar, la Spira Ascendente, e i «sacerdoti della sommità» (blocco A).
