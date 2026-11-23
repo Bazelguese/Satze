@@ -31,11 +31,16 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - Sottoterra, attraverso la sua manifestazione, screma: toglie tutto ciò che non gli serve, perché riprendano vita, prendendo parti da altri, solo i più forti, i più valorosi, chi secondo lui può aiutare il suo progetto di guerra.
 - Il filo è un vero filo dorato, non una metafora: qui il tema è ricostruire, ricomporre, unire. Nei Figli i fili sono un modo di immaginare i collegamenti nello spazio; non c'entrano.
 - Oltre al filo: una sorta di rabbia che, in certi casi, rende dorate le vene. Non ancora deciso.
+- Il filo è associato a una creatura leggendaria: per esempio la lana di un animale che il popolo considera divino, e che invece è una delle manifestazioni del Giocatore. Creatura da definire.
+- **Criterio della scrematura** (dal [confronto](KETHRAN_CONFRONTO_E_PROPOSTE.md), 1A + 1C): il filo si attacca solo a chi, sul fondo, non accetta di restare giù (l'ambizione è il criterio); fra loro, i caduti si contendono le parti, e chi vince viene ricucito mentre chi perde diventa parte.
+- **Gli scartati** (2A + 2B + 2C): diventano le parti dei forti; ciò che non torna in vita diventa le fondamenta della città sul fondo; alcuni restano resti vivi che non riescono a ricomporsi.
 - C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
 - Da trovare: in che modo il Giocatore ha potuto fare queste cose. Possibilmente un orrore di tipo eldritch, come la Nebula per i Figli.
 - Ciò che spinge a prendere le parti altrui non è tanto la volontà quanto l'ambizione, o comunque qualcosa di diverso dalla volontà dei Figli.
 
-**2. Il movente per cui lo seguono senza saperlo:** aperto.
+**2. Il movente per cui lo seguono senza saperlo** (4B + 4C)
+- Li hanno traditi la terra e il cielo, quindi nessuno è innocente: prima gli angeli e i popoli che li tradirono, poi chiunque.
+- Devono dimostrarsi degni, sempre: chi smette di combattere viene ricucito in qualcun altro. È più un istinto che una consapevolezza.
 
 **3. Il mondo prima**
 - Ispirazione: mondo antico babilonese, sumero, turco.
