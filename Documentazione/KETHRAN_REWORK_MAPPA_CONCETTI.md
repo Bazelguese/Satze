@@ -39,7 +39,7 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 **6. Cosa sono diventati (in corso)**
 - **Ricuciti:** hanno pezzi altrui, uniti dal filo dorato.
 - **Riparati:** hanno le vene dorate, perché sono stati riparati con il sangue dell'ariete.
-- Ricuciti e riparati sono condizioni simili, pressoché identiche (da chiarire se c'è una differenza pratica).
+- Ricuciti e riparati sono condizioni pressoché identiche: cambia solo come si è stati ricomposti, con il filo e pezzi altrui oppure con il sangue dell'ariete.
 - **Il rito del sangue:** periodicamente, dopo il taglio della lana, all'ariete viene fatto un taglio che poi si rimargina. Da lì si ottiene il sangue.
 - **Non nascono figli.**
 - La vecchia gerarchia della versione 2 (Semplici, Compositi, Plurimi, Custodi) **non si recupera**.
