@@ -75,7 +75,13 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 
 **7. I luoghi chiave:** la Spira; la voragine sul fondo della quale tutto rinasce.
 
-**8. Le figure chiave:** l'uomo che tradì, aiutando gli angeli («l'Eco del Tradimento»).
+**8. Le figure chiave (in corso)**
+- **Ur-Nammu:** il re dei tempi forti, dell'espansione.
+- **Nimrod:** il re che volle la Spira.
+- **Il traditore:** l'uomo che aiutò gli angeli («l'Eco del Tradimento»). Il nome Varethi **non si tiene**: evitare i nomi con la V, già abusati (Vaelith, Valeith e simili).
+- **Il rito della lana e del sangue:** lo celebrano il Vicario Berakol e i suoi adepti.
+- **Crepuscolo** resta nella storia; **La Luccicante** no.
+- Altri ruoli da valutare a partire dalle carte già presenti.
 
 **Elementi della vecchia storia e delle carte che sembrano compatibili [mio, da confermare]**
 - Il nome Keth Vahar, la Spira Ascendente, e i «sacerdoti della sommità» (blocco A).
