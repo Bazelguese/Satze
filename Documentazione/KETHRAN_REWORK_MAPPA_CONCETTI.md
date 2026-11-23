@@ -39,6 +39,11 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 **6. Cosa sono diventati (in corso)**
 - **Ricuciti:** hanno pezzi altrui, uniti dal filo dorato.
 - **Riparati:** hanno le vene dorate, perché sono stati riparati con il sangue dell'ariete.
+- Ricuciti e riparati sono condizioni simili, pressoché identiche (da chiarire se c'è una differenza pratica).
+- **Il rito del sangue:** periodicamente, dopo il taglio della lana, all'ariete viene fatto un taglio che poi si rimargina. Da lì si ottiene il sangue.
+- **Non nascono figli.**
+- La vecchia gerarchia della versione 2 (Semplici, Compositi, Plurimi, Custodi) **non si recupera**.
+- I resti che non si ricompongono: non è deciso se siano una categoria del popolo o fuori dal popolo.
 - **Criterio della scrematura** (dal [confronto](KETHRAN_CONFRONTO_E_PROPOSTE.md), 1A + 1C): il filo si attacca solo a chi, sul fondo, non accetta di restare giù (l'ambizione è il criterio); fra loro, i caduti si contendono le parti, e chi vince viene ricucito mentre chi perde diventa parte.
 - **Gli scartati** (2A + 2B + 2C): diventano le parti dei forti; ciò che non torna in vita diventa le fondamenta della città sul fondo; alcuni restano resti vivi che non riescono a ricomporsi.
 - C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
