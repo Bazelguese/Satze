@@ -25,8 +25,12 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - **[mio]** Sono ispirazioni di concetto: nei testi non vanno ripresi nomi o elementi riconoscibili di *Elden Ring*.
 
 **1. Come si manifesta la volontà del Giocatore (in corso)**
-- Il Giocatore entra in scena dopo la caduta. La Spira è una volontà del popolo, non sua.
-- Si manifesta come una sorta di rabbia che, in certi casi, rende dorate le vene; oppure attraverso il filo che cuce le parti. Non ancora deciso.
+- La Spira è una volontà del popolo, non sua.
+- Il popolo, prospero ed espanso, si è pian piano degradato: è nella fase degli «uomini deboli» del ciclo «tempi difficili creano uomini forti, uomini forti creano tempi di pace, tempi di pace creano uomini deboli, uomini deboli creano tempi difficili».
+- Il Giocatore, prima di perderne il controllo, favorisce il tradimento, così che il popolo sprofondi nelle viscere della terra.
+- Sottoterra, attraverso la sua manifestazione, screma: toglie tutto ciò che non gli serve, perché riprendano vita, prendendo parti da altri, solo i più forti, i più valorosi, chi secondo lui può aiutare il suo progetto di guerra.
+- Il filo è un vero filo dorato, non una metafora: qui il tema è ricostruire, ricomporre, unire. Nei Figli i fili sono un modo di immaginare i collegamenti nello spazio; non c'entrano.
+- Oltre al filo: una sorta di rabbia che, in certi casi, rende dorate le vene. Non ancora deciso.
 - C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
 - Da trovare: in che modo il Giocatore ha potuto fare queste cose. Possibilmente un orrore di tipo eldritch, come la Nebula per i Figli.
 - Ciò che spinge a prendere le parti altrui non è tanto la volontà quanto l'ambizione, o comunque qualcosa di diverso dalla volontà dei Figli.
