@@ -32,8 +32,13 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - Il filo è un vero filo dorato, non una metafora: qui il tema è ricostruire, ricomporre, unire. Nei Figli i fili sono un modo di immaginare i collegamenti nello spazio; non c'entrano.
 - Oltre al filo: una sorta di rabbia che, in certi casi, rende dorate le vene. Non ancora deciso.
 - Il filo è la lana di un **ariete divino**, che il popolo considera divino e che invece è una delle manifestazioni del Giocatore.
-- L'ariete era venerato già in superficie, prima della caduta. Sul fondo della voragine lo ritrovano, e lì si mostra per ciò che è davvero.
-- Le vene dorate restano: sono un'altra manifestazione, accanto all'ariete e al suo filo.
+- In superficie l'ariete era l'animale simbolo del regno. Ne esisteva un solo esemplare, che non poteva riprodursi.
+- Sul fondo della voragine lo ritrovano: nonostante il crollo è rimasto sempre lo stesso, l'unica luce nel buio.
+- Le vene dorate restano, come altra manifestazione: chi ha il sangue dorato è stato «riparato» con il sangue dell'ariete.
+
+**6. Cosa sono diventati (in corso)**
+- **Ricuciti:** hanno pezzi altrui, uniti dal filo dorato.
+- **Riparati:** hanno le vene dorate, perché sono stati riparati con il sangue dell'ariete.
 - **Criterio della scrematura** (dal [confronto](KETHRAN_CONFRONTO_E_PROPOSTE.md), 1A + 1C): il filo si attacca solo a chi, sul fondo, non accetta di restare giù (l'ambizione è il criterio); fra loro, i caduti si contendono le parti, e chi vince viene ricucito mentre chi perde diventa parte.
 - **Gli scartati** (2A + 2B + 2C): diventano le parti dei forti; ciò che non torna in vita diventa le fondamenta della città sul fondo; alcuni restano resti vivi che non riescono a ricomporsi.
 - C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
