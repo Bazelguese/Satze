@@ -55,7 +55,7 @@ Com'è il mondo oggi? Chi ha vinto, chi è sparito, cosa resta?
 ## Il popolo
 
 ### 6. Cosa sono diventati, e le loro categorie
-Che natura hanno ora? In quali gruppi si dividono, e cosa distingue un gruppo dall'altro? Come vivono e come combattono?
+Che natura hanno ora? In quali gruppi si dividono, e cosa distingue un gruppo dall'altro?
 
 > **Figli:** Pesanti e Leggeri, Richiamati e Dubbi; la volontà dà forma e direzione alla Domanda, con eccezioni (il Collezionista di Spade permane grazie alla sua ossessione).
 
@@ -68,6 +68,11 @@ Quali luoghi contano per il popolo? Cosa succede lì?
 Chi ha avuto un ruolo decisivo? Chi ha scoperto, insegnato, guidato, tradito?
 
 > **Figli:** Sorethai, il primo a capire come dare forma alla Domanda, che insegnò il processo ad altri; Ashara, che accolse la Domanda volontariamente; Vega, che attira i Leggeri.
+
+### 8b. Tratti propri dell'armata
+Punto libero: ciò che ha solo questa armata e che gli altri punti non coprono. Può essere una cultura, un rito, un modo di combattere, una regola del corpo o della mente. Ogni armata ha i suoi; si può lasciare vuoto.
+
+> **Figli:** non trattato come punto a sé nel canone attuale.
 
 ### 9. Il lessico proprio
 Quali parole usa solo questa armata? Cosa significa ognuna?
