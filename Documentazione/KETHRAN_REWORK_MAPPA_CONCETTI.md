@@ -31,7 +31,9 @@ Risposte dell'autore ai punti di [TRACCIA_LORE_ARMATA.md](TRACCIA_LORE_ARMATA.md
 - Sottoterra, attraverso la sua manifestazione, screma: toglie tutto ciò che non gli serve, perché riprendano vita, prendendo parti da altri, solo i più forti, i più valorosi, chi secondo lui può aiutare il suo progetto di guerra.
 - Il filo è un vero filo dorato, non una metafora: qui il tema è ricostruire, ricomporre, unire. Nei Figli i fili sono un modo di immaginare i collegamenti nello spazio; non c'entrano.
 - Oltre al filo: una sorta di rabbia che, in certi casi, rende dorate le vene. Non ancora deciso.
-- Il filo è associato a una creatura leggendaria: per esempio la lana di un animale che il popolo considera divino, e che invece è una delle manifestazioni del Giocatore. Creatura da definire.
+- Il filo è la lana di un **ariete divino**, che il popolo considera divino e che invece è una delle manifestazioni del Giocatore.
+- L'ariete era venerato già in superficie, prima della caduta. Sul fondo della voragine lo ritrovano, e lì si mostra per ciò che è davvero.
+- Le vene dorate restano: sono un'altra manifestazione, accanto all'ariete e al suo filo.
 - **Criterio della scrematura** (dal [confronto](KETHRAN_CONFRONTO_E_PROPOSTE.md), 1A + 1C): il filo si attacca solo a chi, sul fondo, non accetta di restare giù (l'ambizione è il criterio); fra loro, i caduti si contendono le parti, e chi vince viene ricucito mentre chi perde diventa parte.
 - **Gli scartati** (2A + 2B + 2C): diventano le parti dei forti; ciò che non torna in vita diventa le fondamenta della città sul fondo; alcuni restano resti vivi che non riescono a ricomporsi.
 - C'entra molto nella risalita dalla fossa: ne sono usciti grazie a qualcosa di sovrannaturale, che è l'essenza stessa del Giocatore.
